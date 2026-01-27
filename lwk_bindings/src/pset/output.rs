@@ -23,6 +23,12 @@ impl AsRef<Output> for PsetOutput {
     }
 }
 
+impl PsetOutput {
+    pub(crate) fn inner(&self) -> &Output {
+        &self.inner
+    }
+}
+
 #[uniffi::export]
 impl PsetOutput {
     /// Get the script pubkey.

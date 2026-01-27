@@ -54,6 +54,14 @@ impl From<elements::pset::Error> for LwkError {
     }
 }
 
+impl From<elements::pset::PsetBlindError> for LwkError {
+    fn from(value: elements::pset::PsetBlindError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
 impl From<elements::encode::Error> for LwkError {
     fn from(value: elements::encode::Error) -> Self {
         LwkError::Generic {

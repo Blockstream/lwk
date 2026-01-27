@@ -4,15 +4,17 @@ mod output;
 pub use input::{PsetInput, PsetInputBuilder};
 pub use output::{PsetOutput, PsetOutputBuilder};
 
-use crate::{LwkError, Transaction, Txid};
+use crate::{LockTime, LwkError, Transaction, TxOutSecrets, Txid};
 
+use std::collections::HashMap;
 use std::fmt::Display;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use elements::pset::PartiallySignedTransaction;
 use elements::{hashes::Hash, BlockHash};
 
 use lwk_wollet::elements_miniscript::psbt::finalize;
+use lwk_wollet::secp256k1::rand::thread_rng;
 use lwk_wollet::EC;
 
 /// A Partially Signed Elements Transaction
@@ -87,6 +89,15 @@ impl Pset {
             .map(|i| Arc::new(PsetInput::from_inner(i.clone())))
             .collect()
     }
+
+    /// Return a copy of the outputs of this PSET
+    pub fn outputs(&self) -> Vec<Arc<PsetOutput>> {
+        self.inner
+            .outputs()
+            .iter()
+            .map(|o| Arc::new(PsetOutput::from(o.clone())))
+            .collect()
+    }
 }
 
 impl Pset {
@@ -95,10 +106,76 @@ impl Pset {
     }
 }
 
+/// Builder for constructing a PSET from scratch
+#[derive(uniffi::Object, Debug)]
+pub struct PsetBuilder {
+    inner: Mutex<Option<PartiallySignedTransaction>>,
+}
+
+#[uniffi::export]
+impl PsetBuilder {
+    /// Create a new PSET v2 builder
+    #[uniffi::constructor]
+    pub fn new_v2() -> Arc<Self> {
+        Arc::new(Self {
+            inner: Mutex::new(Some(PartiallySignedTransaction::new_v2())),
+        })
+    }
+
+    /// Add an input to this PSET
+    pub fn add_input(&self, input: &PsetInput) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let pset = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
+        pset.add_input(input.inner().clone());
+        Ok(())
+    }
+
+    /// Add an output to this PSET
+    pub fn add_output(&self, output: &PsetOutput) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let pset = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
+        pset.add_output(output.inner().clone());
+        Ok(())
+    }
+
+    /// Set the fallback locktime on the PSET global tx_data
+    pub fn set_fallback_locktime(&self, locktime: &LockTime) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let pset = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
+        pset.global.tx_data.fallback_locktime = Some((*locktime).into());
+        Ok(())
+    }
+
+    /// Blind the last output using the provided input secrets map
+    pub fn blind_last(
+        &self,
+        inp_txout_sec: HashMap<u32, Arc<TxOutSecrets>>,
+    ) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let pset = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
+        let converted: HashMap<usize, elements::TxOutSecrets> = inp_txout_sec
+            .into_iter()
+            .map(|(k, v)| (k as usize, *v.inner()))
+            .collect();
+        pset.blind_last(&mut thread_rng(), &EC, &converted)?;
+        Ok(())
+    }
+
+    /// Build the Pset, consuming the builder
+    pub fn build(&self) -> Result<Arc<Pset>, LwkError> {
+        let mut lock = self.inner.lock()?;
+        let pset = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        Ok(Arc::new(Pset::from(pset)))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Pset;
-    use crate::{OutPoint, Script, TxSequence, Txid};
+    use crate::{
+        LockTime, OutPoint, PsetBuilder, PsetInputBuilder, PsetOutputBuilder, Script, TxSequence,
+        Txid,
+    };
 
     #[test]
     fn pset_roundtrip() {
@@ -183,5 +260,50 @@ mod tests {
         let output = builder.build().unwrap();
         assert_eq!(output.amount(), Some(1000));
         assert_eq!(output.blinder_index(), Some(0));
+    }
+
+    #[test]
+    fn pset_builder_add_input_output() {
+        let pset_builder = PsetBuilder::new_v2();
+
+        let txid = Txid::new(
+            &"0000000000000000000000000000000000000000000000000000000000000001"
+                .parse()
+                .unwrap(),
+        )
+        .unwrap();
+        let outpoint = OutPoint::from_parts(&txid, 0);
+        let input_builder = PsetInputBuilder::from_prevout(&outpoint);
+        input_builder.sequence(&TxSequence::zero()).unwrap();
+        let input = input_builder.build().unwrap();
+        pset_builder.add_input(&input).unwrap();
+
+        let script = Script::empty();
+        let asset: crate::types::AssetId = crate::UniffiCustomTypeConverter::into_custom(
+            "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d".to_string(),
+        )
+        .unwrap();
+        let out_builder = PsetOutputBuilder::new_explicit(&script, 1000, asset, None);
+        let output = out_builder.build().unwrap();
+        pset_builder.add_output(&output).unwrap();
+
+        let pset = pset_builder.build().unwrap();
+        assert_eq!(pset.inputs().len(), 1);
+        assert_eq!(pset.outputs().len(), 1);
+        assert_eq!(pset.outputs()[0].amount(), Some(1000));
+    }
+
+    #[test]
+    fn pset_builder_set_fallback_locktime() {
+        let builder = PsetBuilder::new_v2();
+        let locktime = LockTime::from_height(100).unwrap();
+        builder.set_fallback_locktime(&locktime).unwrap();
+
+        let pset = builder.build().unwrap();
+        let inner = pset.inner();
+        assert_eq!(
+            inner.global.tx_data.fallback_locktime,
+            Some(elements::LockTime::from_consensus(100))
+        );
     }
 }

@@ -21,6 +21,10 @@ impl PsetInput {
     pub(crate) fn from_inner(inner: Input) -> Self {
         Self { inner }
     }
+
+    pub(crate) fn inner(&self) -> &Input {
+        &self.inner
+    }
 }
 
 #[uniffi::export]
@@ -75,6 +79,15 @@ impl PsetInput {
     /// Input sighash.
     pub fn sighash(&self) -> u32 {
         self.inner.sighash_type.map(|s| s.to_u32()).unwrap_or(1)
+    }
+
+    /// If the input has an issuance, returns (asset_id, token_id).
+    /// Returns `None` if the input has no issuance.
+    pub fn issuance_ids(&self) -> Option<Vec<AssetId>> {
+        self.inner.has_issuance().then(|| {
+            let (asset, token) = self.inner.issuance_ids();
+            vec![asset.into(), token.into()]
+        })
     }
 }
 

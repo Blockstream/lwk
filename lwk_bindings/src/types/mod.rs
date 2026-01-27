@@ -6,6 +6,7 @@
 
 mod asset_id;
 mod blinding_factor;
+mod contract_hash;
 mod control_block;
 mod hex;
 mod keypair;
@@ -16,8 +17,9 @@ mod tweak;
 mod tx_sequence;
 mod xonly_public_key;
 
-pub use asset_id::AssetId;
+pub use asset_id::{asset_id_from_issuance, reissuance_token_from_issuance, AssetId};
 pub use blinding_factor::{AssetBlindingFactor, ValueBlindingFactor};
+pub use contract_hash::ContractHash;
 pub use control_block::ControlBlock;
 pub use hex::Hex;
 pub use keypair::Keypair;

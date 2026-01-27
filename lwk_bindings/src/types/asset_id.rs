@@ -2,6 +2,8 @@ use std::{fmt::Display, str::FromStr};
 
 use elements::hex::ToHex;
 
+use crate::blockdata::out_point::OutPoint;
+use crate::types::ContractHash;
 use crate::UniffiCustomTypeConverter;
 
 /// A valid asset identifier.
@@ -44,10 +46,30 @@ impl UniffiCustomTypeConverter for AssetId {
     }
 }
 
+/// Compute the asset ID from an issuance outpoint and contract hash.
+#[uniffi::export]
+pub fn asset_id_from_issuance(outpoint: &OutPoint, contract_hash: &ContractHash) -> AssetId {
+    let entropy = elements::AssetId::generate_asset_entropy(outpoint.into(), contract_hash.into());
+    elements::AssetId::from_entropy(entropy).into()
+}
+
+/// Compute the reissuance token ID from an issuance outpoint and contract hash.
+#[uniffi::export]
+pub fn reissuance_token_from_issuance(
+    outpoint: &OutPoint,
+    contract_hash: &ContractHash,
+    is_confidential: bool,
+) -> AssetId {
+    let entropy = elements::AssetId::generate_asset_entropy(outpoint.into(), contract_hash.into());
+    elements::AssetId::reissuance_token_from_entropy(entropy, is_confidential).into()
+}
+
 #[cfg(test)]
 mod tests {
     use super::AssetId;
-    use crate::UniffiCustomTypeConverter;
+    use crate::{ContractHash, OutPoint, UniffiCustomTypeConverter};
+
+    use lwk_wollet::hashes::Hash;
 
     #[test]
     fn asset_id() {
@@ -60,5 +82,46 @@ mod tests {
             .unwrap(),
             asset_id
         );
+    }
+
+    #[test]
+    fn test_asset_id_from_issuance() {
+        let txid_hex = "0000000000000000000000000000000000000000000000000000000000000001";
+        let vout = 0u32;
+        let contract_bytes = [0u8; 32];
+
+        let outpoint = OutPoint::new(&format!("[elements]{txid_hex}:{vout}")).unwrap();
+        let contract_hash = ContractHash::from_bytes(&contract_bytes).unwrap();
+
+        let asset_id = super::asset_id_from_issuance(&outpoint, &contract_hash);
+
+        let el_outpoint =
+            elements::OutPoint::new(txid_hex.parse::<elements::Txid>().unwrap(), vout);
+        let el_contract = elements::ContractHash::from_byte_array(contract_bytes);
+        let entropy = elements::AssetId::generate_asset_entropy(el_outpoint, el_contract);
+        let expected: AssetId = elements::AssetId::from_entropy(entropy).into();
+
+        assert_eq!(asset_id, expected);
+    }
+
+    #[test]
+    fn test_reissuance_token_from_issuance() {
+        let txid_hex = "0000000000000000000000000000000000000000000000000000000000000001";
+        let vout = 0u32;
+        let contract_bytes = [0u8; 32];
+
+        let outpoint = OutPoint::new(&format!("[elements]{txid_hex}:{vout}")).unwrap();
+        let contract_hash = ContractHash::from_bytes(&contract_bytes).unwrap();
+
+        let token_id = super::reissuance_token_from_issuance(&outpoint, &contract_hash, false);
+
+        let el_outpoint =
+            elements::OutPoint::new(txid_hex.parse::<elements::Txid>().unwrap(), vout);
+        let el_contract = elements::ContractHash::from_byte_array(contract_bytes);
+        let entropy = elements::AssetId::generate_asset_entropy(el_outpoint, el_contract);
+        let expected: AssetId =
+            elements::AssetId::reissuance_token_from_entropy(entropy, false).into();
+
+        assert_eq!(token_id, expected);
     }
 }

@@ -118,21 +118,21 @@ impl Transaction {
     }
 }
 
-/// Builder for modifying transactions.
+/// Editor for modifying transactions.
 ///
 /// See [`elements::Transaction`] for more details.
 #[derive(uniffi::Object, Debug)]
-pub struct TransactionBuilder {
+pub struct TransactionEditor {
     inner: Mutex<Option<elements::Transaction>>,
 }
 
-fn builder_consumed() -> LwkError {
+fn editor_consumed() -> LwkError {
     LwkError::ObjectConsumed
 }
 
 #[uniffi::export]
-impl TransactionBuilder {
-    /// Create a builder from an existing transaction.
+impl TransactionEditor {
+    /// Create an editor from an existing transaction.
     #[uniffi::constructor]
     pub fn from_transaction(tx: &Transaction) -> Arc<Self> {
         Arc::new(Self {
@@ -148,7 +148,7 @@ impl TransactionBuilder {
     ) -> Result<(), LwkError> {
         let idx = input_index as usize;
         let mut lock = self.inner.lock()?;
-        let inner = lock.as_mut().ok_or_else(builder_consumed)?;
+        let inner = lock.as_mut().ok_or_else(editor_consumed)?;
         if idx >= inner.input.len() {
             return Err(LwkError::Generic {
                 msg: format!(
@@ -162,10 +162,10 @@ impl TransactionBuilder {
         Ok(())
     }
 
-    /// Build the transaction, consuming the builder.
+    /// Build the transaction, consuming the editor.
     pub fn build(&self) -> Result<Arc<Transaction>, LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_consumed)?;
+        let inner = lock.take().ok_or_else(editor_consumed)?;
         Ok(Arc::new(Transaction { inner }))
     }
 }

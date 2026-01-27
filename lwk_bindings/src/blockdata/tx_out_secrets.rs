@@ -2,13 +2,10 @@
 
 use std::sync::Arc;
 
+use crate::types;
+use crate::types::{AssetId, Hex};
 use elements::secp256k1_zkp::{Generator, PedersenCommitment, Tag};
 use lwk_wollet::EC;
-
-use crate::types::{
-    AssetBlindingFactor as BindingsAssetBlindingFactor, AssetId, Hex,
-    ValueBlindingFactor as BindingsValueBlindingFactor,
-};
 
 /// Contains unblinded information such as the asset and the value of a transaction output
 #[derive(uniffi::Object, PartialEq, Eq, Debug)]
@@ -34,9 +31,9 @@ impl TxOutSecrets {
     #[uniffi::constructor]
     pub fn new(
         asset_id: AssetId,
-        asset_bf: &BindingsAssetBlindingFactor,
+        asset_bf: &types::AssetBlindingFactor,
         value: u64,
-        value_bf: &BindingsValueBlindingFactor,
+        value_bf: &types::ValueBlindingFactor,
     ) -> Arc<Self> {
         Arc::new(Self {
             inner: elements::TxOutSecrets::new(
@@ -66,8 +63,17 @@ impl TxOutSecrets {
         self.inner.asset.into()
     }
 
+    /// Return the asset blinding factor as a hex string.
+    pub fn asset_bf(&self) -> Hex {
+        self.inner
+            .asset_bf
+            .to_string()
+            .parse()
+            .expect("asset_bf to_string creates valid hex")
+    }
+
     /// Return the asset blinding factor.
-    pub fn asset_bf(&self) -> Arc<BindingsAssetBlindingFactor> {
+    pub fn asset_blinding_factor(&self) -> Arc<types::AssetBlindingFactor> {
         Arc::new(self.inner.asset_bf.into())
     }
 
@@ -76,8 +82,17 @@ impl TxOutSecrets {
         self.inner.value
     }
 
+    /// Return the value blinding factor as a hex string.
+    pub fn value_bf(&self) -> Hex {
+        self.inner
+            .value_bf
+            .to_string()
+            .parse()
+            .expect("value_bf to_string creates valid hex")
+    }
+
     /// Return the value blinding factor.
-    pub fn value_bf(&self) -> Arc<BindingsValueBlindingFactor> {
+    pub fn value_blinding_factor(&self) -> Arc<types::ValueBlindingFactor> {
         Arc::new(self.inner.value_bf.into())
     }
 
@@ -161,8 +176,16 @@ mod tests {
         assert!(txoutsecrets_explicit.is_explicit());
         assert_eq!(txoutsecrets_explicit.value(), 1000);
         assert_eq!(txoutsecrets_explicit.asset().to_string(), asset_hex,);
-        assert_eq!(txoutsecrets_explicit.value_bf().to_hex(), zero_hex,);
-        assert_eq!(txoutsecrets_explicit.asset_bf().to_hex(), zero_hex,);
+        assert_eq!(txoutsecrets_explicit.value_bf().to_string(), zero_hex,);
+        assert_eq!(txoutsecrets_explicit.asset_bf().to_string(), zero_hex,);
+        assert_eq!(
+            txoutsecrets_explicit.value_blinding_factor().to_hex(),
+            zero_hex,
+        );
+        assert_eq!(
+            txoutsecrets_explicit.asset_blinding_factor().to_hex(),
+            zero_hex,
+        );
         assert_eq!(txoutsecrets_explicit.asset_commitment().to_string(), "");
         assert_eq!(txoutsecrets_explicit.value_commitment().to_string(), "");
 
@@ -179,8 +202,16 @@ mod tests {
         assert!(!txoutsecrets_blinded.is_explicit());
         assert_eq!(txoutsecrets_blinded.value(), 1000);
         assert_eq!(txoutsecrets_blinded.asset().to_string(), asset_hex,);
-        assert_eq!(txoutsecrets_blinded.asset_bf().to_hex(), abf_hex,);
-        assert_eq!(txoutsecrets_blinded.value_bf().to_hex(), vbf_hex,);
+        assert_eq!(txoutsecrets_blinded.asset_bf().to_string(), abf_hex,);
+        assert_eq!(txoutsecrets_blinded.value_bf().to_string(), vbf_hex,);
+        assert_eq!(
+            txoutsecrets_blinded.asset_blinding_factor().to_hex(),
+            abf_hex,
+        );
+        assert_eq!(
+            txoutsecrets_blinded.value_blinding_factor().to_hex(),
+            vbf_hex,
+        );
         assert_eq!(txoutsecrets_blinded.asset_commitment().to_string(), ac_hex);
         assert_eq!(txoutsecrets_blinded.value_commitment().to_string(), vc_hex);
     }
@@ -199,8 +230,10 @@ mod tests {
 
         assert!(!secrets.is_explicit());
         assert_eq!(secrets.asset().to_string(), asset_hex);
-        assert_eq!(secrets.asset_bf().to_hex(), abf_hex);
+        assert_eq!(secrets.asset_bf().to_string(), abf_hex);
+        assert_eq!(secrets.asset_blinding_factor().to_hex(), abf_hex);
         assert_eq!(secrets.value(), 1000);
-        assert_eq!(secrets.value_bf().to_hex(), vbf_hex);
+        assert_eq!(secrets.value_bf().to_string(), vbf_hex);
+        assert_eq!(secrets.value_blinding_factor().to_hex(), vbf_hex);
     }
 }

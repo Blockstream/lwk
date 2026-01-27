@@ -46,11 +46,17 @@ impl UniffiCustomTypeConverter for AssetId {
     }
 }
 
-/// Return the inner byte-order hex representation of an asset identifier.
+impl AssetId {
+    /// Return the inner byte-order hex representation of the asset identifier.
+    pub fn inner_hex(&self) -> Hex {
+        Hex::from(self.inner.into_inner().to_byte_array().to_vec())
+    }
+}
+
+/// TODO: delete when AssetId is refactored as uniffi::Object.
 #[uniffi::export]
 pub fn asset_id_inner_hex(asset_id: AssetId) -> Hex {
-    let inner: elements::AssetId = asset_id.into();
-    Hex::from(inner.into_inner().to_byte_array().to_vec())
+    asset_id.inner_hex()
 }
 
 /// Generate the asset entropy from the issuance prevout and the contract hash.

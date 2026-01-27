@@ -49,7 +49,8 @@ mod simplicity;
 #[cfg(feature = "simplicity")]
 pub use simplicity::{
     simplicity_control_block, simplicity_derive_xonly_pubkey, SimplicityArguments,
-    SimplicityLogLevel, SimplicityProgram, SimplicityRunResult, SimplicityWitnessValues,
+    SimplicityLogLevel, SimplicityProgram, SimplicityRunResult, SimplicityType,
+    SimplicityTypedValue, SimplicityWitnessValues,
 };
 
 pub use blockdata::address::Address;

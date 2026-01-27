@@ -243,6 +243,15 @@ impl From<lwk_simplicity_options::error::ProgramError> for LwkError {
     }
 }
 
+#[cfg(feature = "simplicity")]
+impl From<lwk_simplicity_options::simplicityhl::error::RichError> for LwkError {
+    fn from(value: lwk_simplicity_options::simplicityhl::error::RichError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value}"),
+        }
+    }
+}
+
 impl From<elements::UnblindError> for LwkError {
     fn from(value: elements::UnblindError) -> Self {
         LwkError::Generic {

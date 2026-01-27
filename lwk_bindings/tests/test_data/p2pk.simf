@@ -1,0 +1,3 @@
+fn main() {
+    jet::bip_0340_verify((param::PUBLIC_KEY, jet::sig_all_hash()), witness::SIGNATURE)
+}

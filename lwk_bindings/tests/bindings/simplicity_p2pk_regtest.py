@@ -1,11 +1,9 @@
+import os
 import time
 from lwk import *
 
-P2PK_SOURCE = """
-fn main() {
-    jet::bip_0340_verify((param::PUBLIC_KEY, jet::sig_all_hash()), witness::SIGNATURE)
-}
-"""
+_TEST_DATA = os.path.join(os.path.dirname(__file__), "..", "test_data")
+P2PK_SOURCE = open(os.path.join(_TEST_DATA, "p2pk.simf")).read()
 
 # 1. Set up regtest environment
 node = LwkTestEnv()

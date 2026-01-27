@@ -33,6 +33,7 @@ python-build-bindings-simplicity: build-bindings-lib-simplicity
 python-test-bindings-simplicity: python-build-bindings-simplicity
     PYTHONPATH=target/release/bindings/ python3 lwk_bindings/tests/bindings/simplicity_p2pk.py
     PYTHONPATH=target/release/bindings/ python3 lwk_bindings/tests/bindings/simplicity_p2pk_regtest.py
+    PYTHONPATH=target/release/bindings/ python3 lwk_bindings/tests/bindings/simplicity_options_regtest.py
 
 # build the python bindings and start a python env with them
 python-env-bindings: python-build-bindings

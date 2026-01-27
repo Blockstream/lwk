@@ -83,8 +83,6 @@ mod tests {
     use super::AssetId;
     use crate::{ContractHash, OutPoint, UniffiCustomTypeConverter};
 
-    use lwk_wollet::hashes::Hash;
-
     #[test]
     fn asset_id() {
         let elements_asset_id = elements::AssetId::default();
@@ -98,44 +96,47 @@ mod tests {
         );
     }
 
+    /// Test against a real on-chain issuance on Liquid testnet:
+    /// txid: d41479844f8aa2182fa46392d41abf9626dee16ebb82156b105c1b47ff94a9f9
     #[test]
     fn test_asset_id_from_issuance() {
-        let txid_hex = "0000000000000000000000000000000000000000000000000000000000000001";
-        let vout = 0u32;
-        let contract_bytes = [0u8; 32];
-
-        let outpoint = OutPoint::new(&format!("[elements]{txid_hex}:{vout}")).unwrap();
-        let contract_hash = ContractHash::from_bytes(&contract_bytes).unwrap();
+        let outpoint = OutPoint::new(
+            "[elements]78b3e3232680f21f4be8c055a4fdb2edf4681bd6c0ae40edeca51331839106b4:1",
+        )
+        .unwrap();
+        let contract_hash = ContractHash::from_hex(
+            "a92d0f0f0a090c09b7970ce43a12448f55c1cc00325a6a8547d57d69f52378ec",
+        )
+        .unwrap();
 
         let asset_id = super::asset_id_from_issuance(&outpoint, &contract_hash);
 
-        let el_outpoint =
-            elements::OutPoint::new(txid_hex.parse::<elements::Txid>().unwrap(), vout);
-        let el_contract = elements::ContractHash::from_byte_array(contract_bytes);
-        let entropy = elements::AssetId::generate_asset_entropy(el_outpoint, el_contract);
-        let expected: AssetId = elements::AssetId::from_entropy(entropy).into();
-
+        let expected: AssetId = UniffiCustomTypeConverter::into_custom(
+            "ccafe2eceac041673d79234ef74b31dca811555284a84f526042dfe8114483b6".to_string(),
+        )
+        .unwrap();
         assert_eq!(asset_id, expected);
     }
 
+    /// Test against a real on-chain issuance on Liquid testnet:
+    /// txid: d41479844f8aa2182fa46392d41abf9626dee16ebb82156b105c1b47ff94a9f9
     #[test]
     fn test_reissuance_token_from_issuance() {
-        let txid_hex = "0000000000000000000000000000000000000000000000000000000000000001";
-        let vout = 0u32;
-        let contract_bytes = [0u8; 32];
-
-        let outpoint = OutPoint::new(&format!("[elements]{txid_hex}:{vout}")).unwrap();
-        let contract_hash = ContractHash::from_bytes(&contract_bytes).unwrap();
+        let outpoint = OutPoint::new(
+            "[elements]78b3e3232680f21f4be8c055a4fdb2edf4681bd6c0ae40edeca51331839106b4:1",
+        )
+        .unwrap();
+        let contract_hash = ContractHash::from_hex(
+            "a92d0f0f0a090c09b7970ce43a12448f55c1cc00325a6a8547d57d69f52378ec",
+        )
+        .unwrap();
 
         let token_id = super::reissuance_token_from_issuance(&outpoint, &contract_hash, false);
 
-        let el_outpoint =
-            elements::OutPoint::new(txid_hex.parse::<elements::Txid>().unwrap(), vout);
-        let el_contract = elements::ContractHash::from_byte_array(contract_bytes);
-        let entropy = elements::AssetId::generate_asset_entropy(el_outpoint, el_contract);
-        let expected: AssetId =
-            elements::AssetId::reissuance_token_from_entropy(entropy, false).into();
-
+        let expected: AssetId = UniffiCustomTypeConverter::into_custom(
+            "4923a84921dcb4836243142ea5fd158d2f0602ce9fc384631ebe64504da3160e".to_string(),
+        )
+        .unwrap();
         assert_eq!(token_id, expected);
     }
 }

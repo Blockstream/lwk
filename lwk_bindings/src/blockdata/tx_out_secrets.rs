@@ -66,13 +66,9 @@ impl TxOutSecrets {
         self.inner.asset.into()
     }
 
-    /// Return the asset blinding factor as a hex string.
-    pub fn asset_bf(&self) -> Hex {
-        self.inner
-            .asset_bf
-            .to_string()
-            .parse()
-            .expect("asset_bf to_string creates valid hex")
+    /// Return the asset blinding factor.
+    pub fn asset_bf(&self) -> Arc<BindingsAssetBlindingFactor> {
+        Arc::new(self.inner.asset_bf.into())
     }
 
     /// Return the value of the output.
@@ -80,13 +76,9 @@ impl TxOutSecrets {
         self.inner.value
     }
 
-    /// Return the value blinding factor as a hex string.
-    pub fn value_bf(&self) -> Hex {
-        self.inner
-            .value_bf
-            .to_string()
-            .parse()
-            .expect("value_bf to_string creates valid hex")
+    /// Return the value blinding factor.
+    pub fn value_bf(&self) -> Arc<BindingsValueBlindingFactor> {
+        Arc::new(self.inner.value_bf.into())
     }
 
     /// Return true if the output is explicit (no blinding factors).
@@ -169,8 +161,8 @@ mod tests {
         assert!(txoutsecrets_explicit.is_explicit());
         assert_eq!(txoutsecrets_explicit.value(), 1000);
         assert_eq!(txoutsecrets_explicit.asset().to_string(), asset_hex,);
-        assert_eq!(txoutsecrets_explicit.value_bf().to_string(), zero_hex,);
-        assert_eq!(txoutsecrets_explicit.asset_bf().to_string(), zero_hex,);
+        assert_eq!(txoutsecrets_explicit.value_bf().to_hex(), zero_hex,);
+        assert_eq!(txoutsecrets_explicit.asset_bf().to_hex(), zero_hex,);
         assert_eq!(txoutsecrets_explicit.asset_commitment().to_string(), "");
         assert_eq!(txoutsecrets_explicit.value_commitment().to_string(), "");
 
@@ -187,8 +179,8 @@ mod tests {
         assert!(!txoutsecrets_blinded.is_explicit());
         assert_eq!(txoutsecrets_blinded.value(), 1000);
         assert_eq!(txoutsecrets_blinded.asset().to_string(), asset_hex,);
-        assert_eq!(txoutsecrets_blinded.asset_bf().to_string(), abf_hex,);
-        assert_eq!(txoutsecrets_blinded.value_bf().to_string(), vbf_hex,);
+        assert_eq!(txoutsecrets_blinded.asset_bf().to_hex(), abf_hex,);
+        assert_eq!(txoutsecrets_blinded.value_bf().to_hex(), vbf_hex,);
         assert_eq!(txoutsecrets_blinded.asset_commitment().to_string(), ac_hex);
         assert_eq!(txoutsecrets_blinded.value_commitment().to_string(), vc_hex);
     }
@@ -207,8 +199,8 @@ mod tests {
 
         assert!(!secrets.is_explicit());
         assert_eq!(secrets.asset().to_string(), asset_hex);
-        assert_eq!(secrets.asset_bf().to_string(), abf_hex);
+        assert_eq!(secrets.asset_bf().to_hex(), abf_hex);
         assert_eq!(secrets.value(), 1000);
-        assert_eq!(secrets.value_bf().to_string(), vbf_hex);
+        assert_eq!(secrets.value_bf().to_hex(), vbf_hex);
     }
 }

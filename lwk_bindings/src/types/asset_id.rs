@@ -3,7 +3,7 @@ use std::{fmt::Display, str::FromStr};
 use elements::hex::ToHex;
 
 use crate::blockdata::out_point::OutPoint;
-use crate::types::ContractHash;
+use crate::types::{ContractHash, Hex};
 use crate::UniffiCustomTypeConverter;
 
 /// A valid asset identifier.
@@ -44,6 +44,20 @@ impl UniffiCustomTypeConverter for AssetId {
     fn from_custom(obj: Self) -> Self::Builtin {
         obj.inner.to_hex()
     }
+}
+
+/// Return the inner byte-order hex representation of an asset identifier.
+#[uniffi::export]
+pub fn asset_id_inner_hex(asset_id: AssetId) -> Hex {
+    let inner: elements::AssetId = asset_id.into();
+    Hex::from(inner.into_inner().to_byte_array().to_vec())
+}
+
+/// Generate the asset entropy from the issuance prevout and the contract hash.
+#[uniffi::export]
+pub fn generate_asset_entropy(outpoint: &OutPoint, contract_hash: &ContractHash) -> Hex {
+    let midstate = elements::AssetId::generate_asset_entropy(outpoint.into(), contract_hash.into());
+    Hex::from(midstate.to_byte_array().to_vec())
 }
 
 /// Compute the asset ID from an issuance outpoint and contract hash.

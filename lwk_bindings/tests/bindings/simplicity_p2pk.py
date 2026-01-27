@@ -25,7 +25,7 @@ assert len(genesis_hash) == 64
 
 # Test loading p2pk program with public key argument
 args = SimplicityArguments()
-args = args.add_bytes("PUBLIC_KEY", TEST_PUBLIC_KEY)
+args = args.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(TEST_PUBLIC_KEY))
 
 program = SimplicityProgram.load(P2PK_SOURCE, args)
 cmr = program.cmr()
@@ -38,13 +38,8 @@ assert str(address) == TEST_ADDRESS
 
 # Test building witness values with signature (64 bytes)
 witness = SimplicityWitnessValues()
-witness = witness.add_bytes("SIGNATURE", TEST_SIGNATURE)
+witness = witness.add_value("SIGNATURE", SimplicityTypedValue.byte_array(TEST_SIGNATURE))
 assert witness is not None
-
-# Test adding numeric values (for other programs that need them)
-args_with_number = SimplicityArguments()
-args_with_number = args_with_number.add_number("THRESHOLD", 2)
-assert args_with_number is not None
 
 # Test creating TxOut from explicit values
 utxo_script = Script(TEST_UTXO_SCRIPT_PUBKEY)
@@ -63,3 +58,37 @@ finalized_tx = program.finalize_transaction(
 assert finalized_tx is not None
 finalized_hex = str(finalized_tx)
 assert finalized_hex == TEST_FINALIZED_TX
+
+# Test SimplicityType constructors
+t_u32 = SimplicityType.u32()
+t_u64 = SimplicityType.u64()
+t_u256 = SimplicityType.u256()
+t_bool = SimplicityType.boolean()
+t_either = SimplicityType.either(t_u32, t_bool)
+t_option = SimplicityType.option(t_u64)
+t_tuple = SimplicityType.tuple([t_u32, t_u256])
+t_parsed = SimplicityType.parse("Either<u32, bool>")
+
+# Test SimplicityTypedValue constructors
+v_u32 = SimplicityTypedValue.u32(42)
+v_u64 = SimplicityTypedValue.u64(1000)
+v_bool = SimplicityTypedValue.boolean(True)
+v_u256 = SimplicityTypedValue.u256(TEST_PUBLIC_KEY)
+v_left = SimplicityTypedValue.left(v_u32, t_bool)
+v_right = SimplicityTypedValue.right(t_u32, v_bool)
+v_tuple = SimplicityTypedValue.tuple([v_u32, v_u256])
+v_none = SimplicityTypedValue.none(t_u64)
+v_some = SimplicityTypedValue.some(v_u64)
+v_parsed = SimplicityTypedValue.parse("Left(42)", t_either)
+
+# Test add_value on builders
+args2 = SimplicityArguments()
+args2 = args2.add_value("MY_PARAM", v_u32)
+witness2 = SimplicityWitnessValues()
+witness2 = witness2.add_value("MY_WITNESS", v_left)
+
+# Verify add_value works for loading a program (regression)
+args3 = SimplicityArguments()
+args3 = args3.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(TEST_PUBLIC_KEY))
+program2 = SimplicityProgram.load(P2PK_SOURCE, args3)
+assert program2.cmr() == TEST_CMR

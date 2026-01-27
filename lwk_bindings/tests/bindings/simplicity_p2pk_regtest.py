@@ -22,7 +22,7 @@ xonly_pubkey = simplicity_derive_xonly_pubkey(signer, derivation_path)
 
 # 3. Compile P2PK program with the public key
 args = SimplicityArguments()
-args = args.add_bytes("PUBLIC_KEY", xonly_pubkey.to_hex())
+args = args.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(xonly_pubkey.to_hex()))
 program = SimplicityProgram.load(P2PK_SOURCE, args)
 
 # 4. Create P2TR address from the program
@@ -88,7 +88,7 @@ signature = program.create_p2pk_signature(
 
 # 11. Finalize transaction with Simplicity witness
 witness = SimplicityWitnessValues()
-witness = witness.add_bytes("SIGNATURE", str(signature))
+witness = witness.add_value("SIGNATURE", SimplicityTypedValue.byte_array(str(signature)))
 
 finalized_tx = program.finalize_transaction(
     unsigned_tx, xonly_pubkey, all_utxos, 0,

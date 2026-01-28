@@ -22,7 +22,7 @@ mod tests {
     use boltz_client::Secp256k1;
     use lwk_boltz::{
         clients::{AnyClient, ElectrumClient},
-        BoltzSession,
+        BoltzSession, SwapAsset, LIQUID_UNCOOPERATIVE_EXTRA,
     };
     use lwk_wollet::bitcoin;
     use lwk_wollet::elements;
@@ -554,7 +554,25 @@ mod tests {
             .await
             .unwrap();
 
-        // Test BTC to LBTC swap
+        // Test BTC to LBTC swap with quote verification
+        let send_amount = 50_000u64;
+
+        // Get quote before creating the swap
+        let quote = session
+            .quote(send_amount)
+            .await
+            .send(SwapAsset::Onchain)
+            .receive(SwapAsset::Liquid)
+            .build()
+            .unwrap();
+        log::info!(
+            "BTC->LBTC Quote: send={}, receive={}, network_fee={}, boltz_fee={}",
+            quote.send_amount,
+            quote.receive_amount,
+            quote.network_fee,
+            quote.boltz_fee
+        );
+
         let refund_address_str = crate::utils::generate_address(BTC_CHAIN.into())
             .await
             .unwrap();
@@ -566,9 +584,27 @@ mod tests {
             .assume_checked();
         let claim_address = elements::Address::from_str(&claim_address_str).unwrap();
         let response = session
-            .btc_to_lbtc(50_000, &refund_address, &claim_address, None)
+            .btc_to_lbtc(send_amount, &refund_address, &claim_address, None)
             .await
             .unwrap();
+
+        // Verify quote matches swap response
+        // For chain swaps: user sends lockup_amount, receives claim_details.amount - claim_fee
+        let claim_fee = response.data.claim_fee.expect("claim_fee should be set");
+        let claim_amount = response.data.create_chain_response.claim_details.amount;
+        // For BTC→L-BTC, claim is on Liquid so we add LIQUID_UNCOOPERATIVE_EXTRA
+        let expected_receive = claim_amount - claim_fee - LIQUID_UNCOOPERATIVE_EXTRA;
+        assert_eq!(
+            expected_receive, quote.receive_amount,
+            "Quote receive_amount ({}) should match claim_amount ({}) - claim_fee ({}) - extra (3) = {}",
+            quote.receive_amount, claim_amount, claim_fee, expected_receive
+        );
+        log::info!(
+            "BTC->LBTC Quote verification passed: claim_amount={}, claim_fee={}, expected_receive={}",
+            claim_amount,
+            claim_fee,
+            expected_receive
+        );
 
         // Assert fees are present and reasonable
         let fee = response.fee().expect("fee should be present");
@@ -598,7 +634,38 @@ mod tests {
         let success = response.complete().await.unwrap();
         assert!(success, "BTC to LBTC swap should succeed");
 
-        // Test LBTC to BTC swap
+        // Verify actual received balance matches quote
+        let actual_balance =
+            crate::utils::get_address_balance(LBTC_CHAIN.into(), &claim_address_str)
+                .await
+                .expect("Failed to get address balance");
+        assert_eq!(
+            actual_balance, quote.receive_amount,
+            "BTC->LBTC: Actual received balance ({}) should match quote.receive_amount ({})",
+            actual_balance, quote.receive_amount
+        );
+        log::info!(
+            "BTC->LBTC Balance verification passed: actual_balance={}, quote.receive_amount={}",
+            actual_balance,
+            quote.receive_amount
+        );
+
+        // Test LBTC to BTC swap with quote verification
+        let quote = session
+            .quote(send_amount)
+            .await
+            .send(SwapAsset::Liquid)
+            .receive(SwapAsset::Onchain)
+            .build()
+            .unwrap();
+        log::info!(
+            "LBTC->BTC Quote: send={}, receive={}, network_fee={}, boltz_fee={}",
+            quote.send_amount,
+            quote.receive_amount,
+            quote.network_fee,
+            quote.boltz_fee
+        );
+
         let refund_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
             .await
             .unwrap();
@@ -610,9 +677,26 @@ mod tests {
             .unwrap()
             .assume_checked();
         let response = session
-            .lbtc_to_btc(50_000, &refund_address, &claim_address, None)
+            .lbtc_to_btc(send_amount, &refund_address, &claim_address, None)
             .await
             .unwrap();
+
+        // Verify quote matches swap response
+        // For LBTC→BTC, claim is on Bitcoin so NO LIQUID_UNCOOPERATIVE_EXTRA
+        let claim_fee = response.data.claim_fee.expect("claim_fee should be set");
+        let claim_amount = response.data.create_chain_response.claim_details.amount;
+        let expected_receive = claim_amount - claim_fee;
+        assert_eq!(
+            expected_receive, quote.receive_amount,
+            "Quote receive_amount ({}) should match claim_amount ({}) - claim_fee ({}) = {}",
+            quote.receive_amount, claim_amount, claim_fee, expected_receive
+        );
+        log::info!(
+            "LBTC->BTC Quote verification passed: claim_amount={}, claim_fee={}, expected_receive={}",
+            claim_amount,
+            claim_fee,
+            expected_receive
+        );
 
         // Assert fees are present and reasonable
         let fee = response.fee().expect("fee should be present");
@@ -641,6 +725,22 @@ mod tests {
         .unwrap();
         let success = response.complete().await.unwrap();
         assert!(success, "LBTC to BTC swap should succeed");
+
+        // Verify actual received balance matches quote
+        let actual_balance =
+            crate::utils::get_address_balance(BTC_CHAIN.into(), &claim_address_str)
+                .await
+                .expect("Failed to get address balance");
+        assert_eq!(
+            actual_balance, quote.receive_amount,
+            "LBTC->BTC: Actual received balance ({}) should match quote.receive_amount ({})",
+            actual_balance, quote.receive_amount
+        );
+        log::info!(
+            "LBTC->BTC Balance verification passed: actual_balance={}, quote.receive_amount={}",
+            actual_balance,
+            quote.receive_amount
+        );
 
         // Test LBTC to BTC swap using advance()
         let refund_address_str = crate::utils::generate_address(LBTC_CHAIN.into())

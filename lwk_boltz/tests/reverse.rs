@@ -20,7 +20,7 @@ mod tests {
     };
     use lwk_boltz::{
         clients::{AnyClient, ElectrumClient},
-        BoltzSession, InvoiceDataSerializable,
+        BoltzSession, InvoiceDataSerializable, SwapAsset,
     };
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
 
@@ -144,13 +144,68 @@ mod tests {
             .await
             .unwrap();
         let claim_address = elements::Address::from_str(&claim_address).unwrap();
+
+        // Get quote before creating the swap
+        let invoice_amount = 100000u64;
+        let quote = session
+            .quote(invoice_amount)
+            .await
+            .send(SwapAsset::Lightning)
+            .receive(SwapAsset::Liquid)
+            .build()
+            .unwrap();
+        log::info!(
+            "Quote: send={}, receive={}, network_fee={}, boltz_fee={}",
+            quote.send_amount,
+            quote.receive_amount,
+            quote.network_fee,
+            quote.boltz_fee
+        );
+
         let invoice = session
-            .invoice(100000, None, &claim_address, None)
+            .invoice(invoice_amount, None, &claim_address, None)
             .await
             .unwrap();
+
+        // Verify that the swap response matches the quote
+        // The onchain_amount from Boltz minus the claim fee should equal the quoted receive amount
+        let claim_fee = invoice.claim_fee().expect("claim_fee should be set");
+        let onchain_amount = invoice.onchain_amount();
+        let expected_receive = onchain_amount - claim_fee - lwk_boltz::LIQUID_UNCOOPERATIVE_EXTRA;
+        assert_eq!(
+            expected_receive, quote.receive_amount,
+            "Quote receive_amount ({}) should match onchain_amount ({}) - claim_fee ({}) - extra (3) = {}",
+            quote.receive_amount, onchain_amount, claim_fee, expected_receive
+        );
+        log::info!(
+            "Quote verification passed: onchain_amount={}, claim_fee={}, expected_receive={}, quote.receive_amount={}",
+            onchain_amount,
+            claim_fee,
+            expected_receive,
+            quote.receive_amount
+        );
+
         log::info!("Invoice: {}", invoice.bolt11_invoice());
         utils::start_pay_invoice_lnd(invoice.bolt11_invoice().to_string());
         invoice.complete_pay().await.unwrap();
+
+        // Verify actual received balance matches quote
+        let actual_balance = utils::get_address_balance(
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+            &claim_address.to_string(),
+        )
+        .await
+        .expect("Failed to get address balance");
+        assert_eq!(
+            actual_balance, quote.receive_amount,
+            "Actual received balance ({}) should match quote.receive_amount ({})",
+            actual_balance, quote.receive_amount
+        );
+        log::info!(
+            "Balance verification passed: actual_balance={}, quote.receive_amount={}",
+            actual_balance,
+            quote.receive_amount
+        );
 
         // complete a pay using advance
         let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))

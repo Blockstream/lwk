@@ -218,7 +218,7 @@ mod serial {
 pub fn register_multisig(signers: &[&AnySigner], name: &str, desc: &str) {
     // Register a multisig descriptor on each *jade* signer
     let desc_orig: WolletDescriptor = desc.parse().unwrap();
-    let desc: JadeDescriptor = desc_orig.as_ref().try_into().unwrap();
+    let desc: JadeDescriptor = desc_orig.ct_descriptor().unwrap().try_into().unwrap();
     let params = RegisterMultisigParams {
         network: lwk_common::Network::LocaltestLiquid,
         multisig_name: name.into(),

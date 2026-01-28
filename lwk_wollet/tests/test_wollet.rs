@@ -261,14 +261,18 @@ impl<C: BlockchainBackend> TestWollet<C> {
         assert!(tx.inputs.iter().filter(|o| o.is_some()).count() > 0);
         assert!(tx.outputs.iter().filter(|o| o.is_some()).count() > 0);
 
-        self.wollet.descriptor().descriptor.for_each_key(|k| {
-            if let DescriptorPublicKey::XPub(x) = k {
-                if let Some(origin) = &x.origin {
-                    assert_eq!(pset.global.xpub.get(&x.xkey).unwrap(), origin);
+        self.wollet
+            .descriptor()
+            .unwrap()
+            .descriptor
+            .for_each_key(|k| {
+                if let DescriptorPublicKey::XPub(x) = k {
+                    if let Some(origin) = &x.origin {
+                        assert_eq!(pset.global.xpub.get(&x.xkey).unwrap(), origin);
+                    }
                 }
-            }
-            true
-        });
+                true
+            });
     }
 
     /// Send all L-BTC
@@ -621,7 +625,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
     }
 
     pub fn check_persistence(wollet: TestWollet<C>) {
-        let descriptor = wollet.wollet.descriptor().to_string();
+        let descriptor = wollet.wollet.descriptor().unwrap().to_string();
         let expected_updates = wollet.wollet.updates().unwrap();
         let expected = wollet.wollet.balance().unwrap();
         let db_root_dir = wollet.db_root_dir();

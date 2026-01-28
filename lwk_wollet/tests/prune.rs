@@ -91,7 +91,7 @@ fn test_prune() {
     assert_eq!(outpoints.len(), 0);
 
     let blinding_key =
-        derive_blinding_key(w_prune_wit.descriptor(), &address.script_pubkey()).unwrap();
+        derive_blinding_key(w_prune_wit.descriptor().unwrap(), &address.script_pubkey()).unwrap();
     let utxos = w_prune_wit.unblind_utxos_with(blinding_key).unwrap();
     assert_eq!(utxos.len(), 0);
 }

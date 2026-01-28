@@ -59,6 +59,7 @@ pub fn address(c: &mut Criterion) {
             let d: WolletDescriptor = desc_str.parse().unwrap();
             let d = d
                 .descriptor()
+                .unwrap()
                 .clone()
                 .into_single_descriptors()
                 .unwrap()

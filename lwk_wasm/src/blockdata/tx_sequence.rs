@@ -104,10 +104,8 @@ impl TxSequence {
     ///
     /// See [`elements::Sequence::from_seconds_floor`].
     pub fn from_seconds_floor(seconds: u32) -> Result<TxSequence, Error> {
-        let inner =
-            elements::Sequence::from_seconds_floor(seconds).map_err(|e| {
-                Error::Generic(format!("TxSequence from_seconds_floor error: {e}"))
-            })?;
+        let inner = elements::Sequence::from_seconds_floor(seconds)
+            .map_err(|e| Error::Generic(format!("TxSequence from_seconds_floor error: {e}")))?;
         Ok(TxSequence { inner })
     }
 
@@ -115,10 +113,8 @@ impl TxSequence {
     ///
     /// See [`elements::Sequence::from_seconds_ceil`].
     pub fn from_seconds_ceil(seconds: u32) -> Result<TxSequence, Error> {
-        let inner =
-            elements::Sequence::from_seconds_ceil(seconds).map_err(|e| {
-                Error::Generic(format!("TxSequence from_seconds_ceil error: {e}"))
-            })?;
+        let inner = elements::Sequence::from_seconds_ceil(seconds)
+            .map_err(|e| Error::Generic(format!("TxSequence from_seconds_ceil error: {e}")))?;
         Ok(TxSequence { inner })
     }
 

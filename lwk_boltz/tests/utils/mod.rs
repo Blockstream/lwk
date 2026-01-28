@@ -180,6 +180,50 @@ pub async fn mine_blocks(n_blocks: u64) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Get the total balance at a specific address by querying listunspent
+///
+/// Returns the total amount in satoshis of all unspent outputs at the given address.
+///
+/// This function polls for UTXOs with a retry mechanism: it will attempt to find
+/// at least one UTXO at the address up to 30 times, sleeping 1 second between attempts.
+/// This is useful after a transaction has been broadcast but may not yet be visible
+/// in the node's UTXO set. If no UTXOs are found after 30 attempts, returns an error.
+pub async fn get_address_balance(chain: Chain, address: &str) -> Result<u64, Box<dyn Error>> {
+    let params = json!([0, 9999999, [address]]);
+
+    for attempt in 1..=30 {
+        let result = json_rpc_request(chain, "listunspent", params.clone()).await?;
+        let utxos = result.as_array().ok_or("Expected array response")?;
+
+        if !utxos.is_empty() {
+            let mut total_sats: u64 = 0;
+            for utxo in utxos {
+                // Amount is in BTC, convert to sats
+                let amount_btc = utxo["amount"].as_f64().ok_or("Missing amount field")?;
+                let amount_sats = (amount_btc * 100_000_000.0).round() as u64;
+                total_sats += amount_sats;
+            }
+            log::info!(
+                "Found {} UTXO(s) at {} after {} attempt(s), total: {} sats",
+                utxos.len(),
+                address,
+                attempt,
+                total_sats
+            );
+            return Ok(total_sats);
+        }
+
+        log::debug!(
+            "No UTXOs found at {} (attempt {}/30), sleeping 1s...",
+            address,
+            attempt
+        );
+        sleep(std::time::Duration::from_secs(1)).await;
+    }
+
+    Err(format!("No UTXOs found at {} after 30 attempts", address).into())
+}
+
 pub fn start_block_mining() -> JoinHandle<()> {
     tokio::spawn(async {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(3));

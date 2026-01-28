@@ -43,7 +43,11 @@ impl WolletDescriptor {
 
     /// Derive the private blinding key
     pub fn derive_blinding_key(&self, script_pubkey: &Script) -> Option<Arc<SecretKey>> {
-        lwk_common::derive_blinding_key(self.inner.as_ref(), &script_pubkey.into())
+        self.inner
+            .ct_descriptor()
+            .map(|d| lwk_common::derive_blinding_key(d, &script_pubkey.into()))
+            .ok()
+            .flatten()
             .map(Into::into)
             .map(Arc::new)
     }
@@ -63,8 +67,8 @@ impl WolletDescriptor {
     }
 
     /// Return the descriptor encoded so that can be part of an URL
-    pub fn url_encoded_descriptor(&self) -> String {
-        self.inner.url_encoded_descriptor()
+    pub fn url_encoded_descriptor(&self) -> Result<String, LwkError> {
+        Ok(self.inner.url_encoded_descriptor()?)
     }
 }
 

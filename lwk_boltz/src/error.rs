@@ -104,6 +104,9 @@ pub enum Error {
 
     #[error("Internal lock error: {0}")]
     LockPoisoned(String),
+
+    #[error("Store error: {0}")]
+    Store(#[source] Box<dyn std::error::Error + Send + Sync>),
 }
 
 impl From<BoltzError> for Error {

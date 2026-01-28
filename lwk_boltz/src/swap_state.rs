@@ -38,6 +38,23 @@ impl SwapStateTrait for SwapStatus {
     }
 }
 
+impl SwapState {
+    /// Returns true if this state is terminal (swap has completed or failed).
+    ///
+    /// Terminal states indicate the swap has reached a final outcome and
+    /// no further `advance()` calls will change it.
+    pub fn is_terminal(&self) -> bool {
+        matches!(
+            self,
+            SwapState::TransactionClaimed
+                | SwapState::TransactionDirect
+                | SwapState::InvoiceSettled
+                | SwapState::InvoiceExpired
+                | SwapState::SwapExpired
+        )
+    }
+}
+
 impl std::fmt::Display for SwapState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {

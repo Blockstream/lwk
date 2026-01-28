@@ -20,6 +20,8 @@ use lwk_wollet::elements;
 use crate::error::Error;
 use crate::prepare_pay_data::{to_prepare_pay_data, PreparePayData, PreparePayDataSerializable};
 use crate::swap_state::SwapStateTrait;
+use crate::DynStore;
+use crate::SwapPersistence;
 use crate::{
     broadcast_tx_with_retry, mnemonic_identifier, next_status, BoltzSession, LightningPayment,
     SwapState, SwapType,
@@ -35,11 +37,27 @@ pub struct PreparePayResponse {
     rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
     polling: bool,
     timeout_advance: Duration,
+    store: Option<Arc<dyn DynStore>>,
 }
 
 impl fmt::Debug for PreparePayResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "PreparePayResponse {{ data: {:?}, swap_script: {:?},  api: {:?}, rx: {:?}, polling: {:?}, timeout_advance: {:?} }}", self.data, self.swap_script, self.api, self.rx, self.polling, self.timeout_advance)
+        write!(f, "PreparePayResponse {{ data: {:?}, swap_script: {:?}, api: {:?}, rx: {:?}, polling: {:?}, timeout_advance: {:?}, store: {:?} }}", self.data, self.swap_script, self.api, self.rx, self.polling, self.timeout_advance, self.store)
+    }
+}
+
+impl SwapPersistence for PreparePayResponse {
+    fn serialize(&self) -> Result<String, Error> {
+        let s: PreparePayDataSerializable = self.data.clone().into();
+        Ok(serde_json::to_string(&s)?)
+    }
+
+    fn swap_id(&self) -> &str {
+        &self.data.create_swap_response.id
+    }
+
+    fn store(&self) -> Option<&Arc<dyn DynStore>> {
+        self.store.as_ref()
     }
 }
 
@@ -144,7 +162,9 @@ impl BoltzSession {
             create_swap_response.address,
             create_swap_response.bip21
         );
-        Ok(PreparePayResponse {
+
+        let store = self.clone_store();
+        let response = PreparePayResponse {
             polling: self.polling,
             timeout_advance: self.timeout_advance,
             data: PreparePayData {
@@ -163,7 +183,13 @@ impl BoltzSession {
             rx,
             api: self.api.clone(),
             chain_client: self.chain_client.clone(),
-        })
+            store,
+        };
+
+        // Persist swap data and add to pending list
+        response.persist_and_add_to_pending()?;
+
+        Ok(response)
     }
 
     pub async fn restore_prepare_pay(
@@ -184,7 +210,7 @@ impl BoltzSession {
         let rx = self.ws.updates();
         self.ws.subscribe_swap(&swap_id).await?;
 
-        Ok(PreparePayResponse {
+        let response = PreparePayResponse {
             polling: self.polling,
             timeout_advance: self.timeout_advance,
             data,
@@ -192,7 +218,15 @@ impl BoltzSession {
             rx,
             api: self.api.clone(),
             chain_client: self.chain_client.clone(),
-        })
+            store: self.clone_store(),
+        };
+
+        // If the swap was already in a terminal state, move it to completed
+        if response.data.last_state.is_terminal() {
+            response.move_to_completed()?;
+        }
+
+        Ok(response)
     }
 
     /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
@@ -300,7 +334,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
 
 impl PreparePayResponse {
     async fn next_status(&mut self) -> Result<SwapStatus, Error> {
-        let swap_id = self.swap_id();
+        let swap_id = self.swap_id().to_string();
         next_status(&mut self.rx, self.timeout_advance, &swap_id, self.polling).await
     }
 
@@ -310,10 +344,11 @@ impl PreparePayResponse {
     ) -> Result<ControlFlow<bool, SwapStatus>, Error> {
         log::info!("submarine_cooperative_claim");
         if let Some(bolt_11_invoice) = &self.data.bolt11_invoice {
+            let swap_id = self.swap_id().to_string();
             let response = self
                 .swap_script
                 .submarine_cooperative_claim(
-                    &self.swap_id(),
+                    &swap_id,
                     &self.data.our_keys,
                     &bolt_11_invoice.to_string(),
                     &self.api,
@@ -378,19 +413,33 @@ impl PreparePayResponse {
                 Ok(ControlFlow::Break(false))
             }
             ref e => Err(Error::UnexpectedUpdate {
-                swap_id: self.swap_id(),
+                swap_id: self.swap_id().to_string(),
                 status: e.to_string(),
                 last_state: self.data.last_state,
             }),
         };
 
-        if let Ok(ControlFlow::Break(_)) = flow.as_ref() {
+        let is_completed = matches!(flow.as_ref(), Ok(ControlFlow::Break(_)));
+
+        if is_completed {
             // if the swap is terminated, but the caller call advance() again we don't
             // want to error for timeout (it will trigger NoBoltzUpdate)
             self.polling = true;
         }
 
         self.data.last_state = update_status;
+
+        // Persist state changes
+        if flow.is_ok() {
+            if is_completed {
+                // Final persist and move to completed list
+                self.persist()?;
+                self.move_to_completed()?;
+            } else {
+                // Persist intermediate state
+                self.persist()?;
+            }
+        }
 
         flow
     }
@@ -419,17 +468,12 @@ impl PreparePayResponse {
                 keys: self.data.our_keys,
                 output_address: self.data.refund_address.to_string(),
                 fee: Fee::Relative(0.12), // TODO make it configurable
-                swap_id: self.swap_id(),
+                swap_id: self.swap_id().to_string(),
                 chain_client: &self.chain_client,
                 boltz_client: &self.api,
                 options: None,
             })
             .await?)
-    }
-
-    pub fn serialize(&self) -> Result<String, Error> {
-        let s: PreparePayDataSerializable = self.data.clone().into();
-        Ok(serde_json::to_string(&s)?)
     }
 
     pub async fn complete_pay(mut self) -> Result<bool, Error> {
@@ -443,10 +487,6 @@ impl PreparePayResponse {
                 }
             }
         }
-    }
-
-    pub fn swap_id(&self) -> String {
-        self.data.create_swap_response.id.clone()
     }
 
     pub fn uri_address(&self) -> Result<elements::Address, Error> {

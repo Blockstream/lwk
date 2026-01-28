@@ -30,10 +30,12 @@ use crate::invoice_data::InvoiceData;
 use crate::invoice_data::InvoiceDataSerializable;
 use crate::mnemonic_identifier;
 use crate::preimage_from_keypair;
-use crate::quote::LIQUID_UNCOOPERATIVE_EXTRA;
 use crate::swap_state::SwapStateTrait;
 use crate::to_invoice_data;
+use crate::DynStore;
+use crate::SwapPersistence;
 use crate::SwapType;
+use crate::LIQUID_UNCOOPERATIVE_EXTRA;
 use crate::{broadcast_tx_with_retry, next_status, BoltzSession, SwapState};
 
 pub struct InvoiceResponse {
@@ -46,11 +48,27 @@ pub struct InvoiceResponse {
     chain_client: Arc<ChainClient>,
     polling: bool,
     timeout_advance: Duration,
+    store: Option<Arc<dyn DynStore>>,
 }
 
 impl fmt::Debug for InvoiceResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "InvoiceResponse {{ data: {:?}, rx: {:?}, swap_script: {:?}, api: {:?}, polling: {:?}, timeout_advance: {:?} }}", self.data, self.rx, self.swap_script, self.api, self.polling, self.timeout_advance)
+        write!(f, "InvoiceResponse {{ data: {:?}, rx: {:?}, swap_script: {:?}, api: {:?}, polling: {:?}, timeout_advance: {:?}, store: {:?} }}", self.data, self.rx, self.swap_script, self.api, self.polling, self.timeout_advance, self.store)
+    }
+}
+
+impl SwapPersistence for InvoiceResponse {
+    fn serialize(&self) -> Result<String, Error> {
+        let x = InvoiceDataSerializable::from(self.data.clone());
+        Ok(serde_json::to_string(&x)?)
+    }
+
+    fn swap_id(&self) -> &str {
+        &self.data.create_reverse_response.id
+    }
+
+    fn store(&self) -> Option<&Arc<dyn DynStore>> {
+        self.store.as_ref()
     }
 }
 
@@ -130,7 +148,8 @@ impl BoltzSession {
         let last_state = update.swap_state()?;
         log::debug!("Waiting for Invoice to be paid: {}", &invoice);
 
-        Ok(InvoiceResponse {
+        let store = self.clone_store();
+        let response = InvoiceResponse {
             polling: self.polling,
             timeout_advance: self.timeout_advance,
             data: InvoiceData {
@@ -153,7 +172,13 @@ impl BoltzSession {
             swap_script,
             api: self.api.clone(),
             chain_client: self.chain_client.clone(),
-        })
+            store,
+        };
+
+        // Persist swap data and add to pending list
+        response.persist_and_add_to_pending()?;
+
+        Ok(response)
     }
 
     pub async fn restore_invoice(
@@ -174,7 +199,7 @@ impl BoltzSession {
         let rx = self.ws.updates();
         self.ws.subscribe_swap(&swap_id).await?;
 
-        Ok(InvoiceResponse {
+        let response = InvoiceResponse {
             polling: self.polling,
             timeout_advance: self.timeout_advance,
             data,
@@ -182,7 +207,15 @@ impl BoltzSession {
             swap_script,
             api: self.api.clone(),
             chain_client: self.chain_client.clone(),
-        })
+            store: self.clone_store(),
+        };
+
+        // If the swap was already in a terminal state, move it to completed
+        if response.data.last_state.is_terminal() {
+            response.move_to_completed()?;
+        }
+
+        Ok(response)
     }
 
     /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
@@ -361,15 +394,6 @@ impl InvoiceResponse {
         Ok(ControlFlow::Continue(update))
     }
 
-    pub fn swap_id(&self) -> &str {
-        &self.data.create_reverse_response.id
-    }
-
-    pub fn serialize(&self) -> Result<String, Error> {
-        let x = InvoiceDataSerializable::from(self.data.clone());
-        Ok(serde_json::to_string(&x)?)
-    }
-
     pub fn bolt11_invoice(&self) -> Bolt11Invoice {
         Bolt11Invoice::from_str(self.data.create_reverse_response.invoice.as_ref().expect(
             "Invoice must be present or we would have errored on the BoltzSession::invoice",
@@ -444,13 +468,27 @@ impl InvoiceResponse {
             }),
         };
 
-        if let Ok(ControlFlow::Break(_)) = flow.as_ref() {
+        let is_completed = matches!(flow.as_ref(), Ok(ControlFlow::Break(_)));
+
+        if is_completed {
             // if the swap is terminated, but the caller call advance() again we don't
             // want to error for timeout (it will trigger NoBoltzUpdate)
             self.polling = true;
         }
 
         self.data.last_state = update_status;
+
+        // Persist state changes
+        if flow.is_ok() {
+            if is_completed {
+                // Final persist and move to completed list
+                self.persist()?;
+                self.move_to_completed()?;
+            } else {
+                // Persist intermediate state
+                self.persist()?;
+            }
+        }
 
         flow
     }

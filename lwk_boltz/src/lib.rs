@@ -14,6 +14,117 @@ mod reverse;
 mod submarine;
 mod swap_state;
 
+/// Store keys for Boltz swap persistence.
+///
+/// All keys are namespaced with `boltz:` to avoid collisions with other store users.
+pub mod store_keys {
+    /// Key for the list of pending swap IDs (JSON array)
+    pub const PENDING_SWAPS: &str = "boltz:pending_swaps";
+    /// Key for the list of completed swap IDs (JSON array)
+    pub const COMPLETED_SWAPS: &str = "boltz:completed_swaps";
+
+    /// Generate the key for a specific swap's data
+    pub fn swap_data(swap_id: &str) -> String {
+        format!("boltz:swap:{swap_id}")
+    }
+}
+
+// Re-export DynStore for convenience
+pub use lwk_common::DynStore;
+
+/// Trait for swap response types that support persistence.
+///
+/// This trait provides the interface needed for persisting swap data to a store.
+/// Implementors must provide serialization, swap ID access, and store access.
+/// Default implementations are provided for persist operations.
+pub trait SwapPersistence {
+    /// Serialize the swap data to a JSON string
+    fn serialize(&self) -> Result<String, error::Error>;
+
+    /// Get the swap ID
+    fn swap_id(&self) -> &str;
+
+    /// Get a reference to the store, if configured
+    fn store(&self) -> Option<&Arc<dyn DynStore>>;
+
+    /// Persist swap data to the store
+    fn persist(&self) -> Result<(), error::Error> {
+        if let Some(store) = self.store() {
+            let data = self.serialize()?;
+            let key = store_keys::swap_data(self.swap_id());
+            store
+                .put(&key, data.as_bytes())
+                .map_err(error::Error::Store)?;
+            log::debug!("Persisted swap data for {}", self.swap_id());
+        }
+        Ok(())
+    }
+
+    /// Persist swap data and add to pending swaps list
+    fn persist_and_add_to_pending(&self) -> Result<(), error::Error> {
+        if let Some(store) = self.store() {
+            // Persist the swap data
+            self.persist()?;
+
+            // Add to pending list
+            let mut pending: Vec<String> = store
+                .get(store_keys::PENDING_SWAPS)
+                .map_err(error::Error::Store)?
+                .map(|data| serde_json::from_slice(&data).unwrap_or_default())
+                .unwrap_or_default();
+
+            let swap_id = self.swap_id().to_string();
+            if !pending.contains(&swap_id) {
+                pending.push(swap_id.clone());
+                let data = serde_json::to_vec(&pending)?;
+                store
+                    .put(store_keys::PENDING_SWAPS, &data)
+                    .map_err(error::Error::Store)?;
+                log::debug!("Added swap {swap_id} to pending list");
+            }
+        }
+        Ok(())
+    }
+
+    /// Move swap from pending to completed list
+    fn move_to_completed(&self) -> Result<(), error::Error> {
+        if let Some(store) = self.store() {
+            let swap_id = self.swap_id().to_string();
+
+            // Remove from pending list
+            let mut pending: Vec<String> = store
+                .get(store_keys::PENDING_SWAPS)
+                .map_err(error::Error::Store)?
+                .map(|data| serde_json::from_slice(&data).unwrap_or_default())
+                .unwrap_or_default();
+
+            pending.retain(|id| id != &swap_id);
+            let data = serde_json::to_vec(&pending)?;
+            store
+                .put(store_keys::PENDING_SWAPS, &data)
+                .map_err(error::Error::Store)?;
+
+            // Add to completed list
+            let mut completed: Vec<String> = store
+                .get(store_keys::COMPLETED_SWAPS)
+                .map_err(error::Error::Store)?
+                .map(|data| serde_json::from_slice(&data).unwrap_or_default())
+                .unwrap_or_default();
+
+            if !completed.contains(&swap_id) {
+                completed.push(swap_id.clone());
+                let data = serde_json::to_vec(&completed)?;
+                store
+                    .put(store_keys::COMPLETED_SWAPS, &data)
+                    .map_err(error::Error::Store)?;
+            }
+
+            log::debug!("Moved swap {swap_id} to completed list");
+        }
+        Ok(())
+    }
+}
+
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -104,6 +215,9 @@ pub struct BoltzSession {
     random_preimages: bool,
 
     swap_info: Mutex<SwapInfo>,
+
+    /// Optional store for persisting swap data
+    store: Option<Arc<dyn DynStore>>,
 }
 
 impl BoltzSession {
@@ -152,6 +266,7 @@ impl BoltzSession {
         referral_id: Option<String>,
         _bitcoin_electrum_client: Option<ElectrumUrl>,
         random_preimages: bool,
+        store: Option<Arc<dyn DynStore>>,
     ) -> Result<Self, Error> {
         let liquid_chain = elements_network_to_liquid_chain(network);
 
@@ -221,6 +336,7 @@ impl BoltzSession {
             referral_id,
             random_preimages,
             swap_info: Mutex::new(swap_info),
+            store,
         })
     }
 
@@ -259,6 +375,16 @@ impl BoltzSession {
             .store(next_index_to_use, Ordering::Relaxed);
     }
 
+    /// Get a reference to the store, if configured
+    pub fn store(&self) -> Option<&Arc<dyn DynStore>> {
+        self.store.as_ref()
+    }
+
+    /// Clone the store Arc for use in swap responses
+    pub(crate) fn clone_store(&self) -> Option<Arc<dyn DynStore>> {
+        self.store.clone()
+    }
+
     /// Generate a rescue file with the lightning session mnemonic.
     ///
     /// The rescue file is a JSON file that contains the swaps mnemonic.
@@ -277,6 +403,101 @@ impl BoltzSession {
         let xpub = derive_xpub_from_mnemonic(&self.mnemonic, network_kind(self.liquid_chain))?;
         let result = self.api.post_swap_restore(&xpub.to_string()).await?;
         Ok(result)
+    }
+
+    /// Get the list of pending swap IDs from the store
+    ///
+    /// Returns `None` if no store is configured, otherwise returns the list of pending swap IDs
+    /// (which may be empty).
+    pub fn pending_swap_ids(&self) -> Result<Option<Vec<String>>, Error> {
+        let Some(store) = &self.store else {
+            return Ok(None);
+        };
+        let pending: Vec<String> = store
+            .get(store_keys::PENDING_SWAPS)
+            .map_err(Error::Store)?
+            .map(|data| serde_json::from_slice(&data).unwrap_or_default())
+            .unwrap_or_default();
+        Ok(Some(pending))
+    }
+
+    /// Get the list of completed swap IDs from the store
+    ///
+    /// Returns `None` if no store is configured, otherwise returns the list of completed swap IDs
+    /// (which may be empty).
+    pub fn completed_swap_ids(&self) -> Result<Option<Vec<String>>, Error> {
+        let Some(store) = &self.store else {
+            return Ok(None);
+        };
+        let completed: Vec<String> = store
+            .get(store_keys::COMPLETED_SWAPS)
+            .map_err(Error::Store)?
+            .map(|data| serde_json::from_slice(&data).unwrap_or_default())
+            .unwrap_or_default();
+        Ok(Some(completed))
+    }
+
+    /// Get the raw swap data for a specific swap ID from the store
+    ///
+    /// Returns `None` if no store is configured or the swap doesn't exist.
+    /// The returned string is the serialized swap data (JSON).
+    pub fn get_swap_data(&self, swap_id: &str) -> Result<Option<String>, Error> {
+        let Some(store) = &self.store else {
+            return Ok(None);
+        };
+        let data = store
+            .get(&store_keys::swap_data(swap_id))
+            .map_err(Error::Store)?
+            .map(|data| String::from_utf8_lossy(&data).to_string());
+        Ok(data)
+    }
+
+    /// Remove a swap from the store
+    ///
+    /// This removes the swap data and removes the swap ID from both the pending and completed lists.
+    /// Returns `Ok(true)` if the swap was removed, `Ok(false)` if no store is configured.
+    pub fn remove_swap(&self, swap_id: &str) -> Result<bool, Error> {
+        let Some(store) = &self.store else {
+            return Ok(false);
+        };
+
+        // Remove the swap data
+        store
+            .remove(&store_keys::swap_data(swap_id))
+            .map_err(Error::Store)?;
+
+        // Remove from pending list
+        let mut pending: Vec<String> = store
+            .get(store_keys::PENDING_SWAPS)
+            .map_err(Error::Store)?
+            .map(|data| serde_json::from_slice(&data).unwrap_or_default())
+            .unwrap_or_default();
+        let was_pending = pending.contains(&swap_id.to_string());
+        pending.retain(|id| id != swap_id);
+        if was_pending {
+            let data = serde_json::to_vec(&pending)?;
+            store
+                .put(store_keys::PENDING_SWAPS, &data)
+                .map_err(Error::Store)?;
+        }
+
+        // Remove from completed list
+        let mut completed: Vec<String> = store
+            .get(store_keys::COMPLETED_SWAPS)
+            .map_err(Error::Store)?
+            .map(|data| serde_json::from_slice(&data).unwrap_or_default())
+            .unwrap_or_default();
+        let was_completed = completed.contains(&swap_id.to_string());
+        completed.retain(|id| id != swap_id);
+        if was_completed {
+            let data = serde_json::to_vec(&completed)?;
+            store
+                .put(store_keys::COMPLETED_SWAPS, &data)
+                .map_err(Error::Store)?;
+        }
+
+        log::debug!("Removed swap {} from store", swap_id);
+        Ok(true)
     }
 
     /// Fetch information, such as min and max amounts, about the swap pairs from the boltz api.
@@ -406,6 +627,7 @@ pub struct BoltzSessionBuilder {
     referral_id: Option<String>,
     bitcoin_electrum_client: Option<ElectrumUrl>,
     random_preimages: bool,
+    store: Option<Arc<dyn DynStore>>,
 }
 
 impl BoltzSessionBuilder {
@@ -422,6 +644,7 @@ impl BoltzSessionBuilder {
             referral_id: None,
             bitcoin_electrum_client: None,
             random_preimages: false,
+            store: None,
         }
     }
 
@@ -496,6 +719,18 @@ impl BoltzSessionBuilder {
         self
     }
 
+    /// Set the store for persisting swap data
+    ///
+    /// When set, swap data will be automatically persisted to the store after creation
+    /// and on each state change. This enables automatic restoration of pending swaps.
+    ///
+    /// The store uses keys prefixed with `boltz:` to avoid collisions with other users.
+    /// See [`store_keys`] for the key format.
+    pub fn store(mut self, store: Arc<dyn DynStore>) -> Self {
+        self.store = Some(store);
+        self
+    }
+
     /// Build the `BoltzSession`
     pub async fn build(self) -> Result<BoltzSession, Error> {
         BoltzSession::initialize(
@@ -509,6 +744,7 @@ impl BoltzSessionBuilder {
             self.referral_id,
             self.bitcoin_electrum_client,
             self.random_preimages,
+            self.store,
         )
         .await
     }

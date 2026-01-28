@@ -14,7 +14,7 @@ use lwk_wollet::elements;
 use crate::{
     prepare_pay_data::PreparePayDataSerializable, ChainSwapData, ChainSwapDataSerializable, Error,
     InvoiceData, InvoiceDataSerializable, LightningPayment, PreparePayData, QuoteBuilder,
-    RescueFile, SwapStatus,
+    RescueFile, SwapPersistence, SwapStatus,
 };
 
 pub struct BoltzSession {
@@ -212,6 +212,34 @@ impl BoltzSession {
         Ok(inner)
     }
 
+    /// Get the list of pending swap IDs from the store
+    ///
+    /// See [`crate::BoltzSession::pending_swap_ids()`]
+    pub fn pending_swap_ids(&self) -> Result<Option<Vec<String>>, Error> {
+        self.inner.pending_swap_ids()
+    }
+
+    /// Get the list of completed swap IDs from the store
+    ///
+    /// See [`crate::BoltzSession::completed_swap_ids()`]
+    pub fn completed_swap_ids(&self) -> Result<Option<Vec<String>>, Error> {
+        self.inner.completed_swap_ids()
+    }
+
+    /// Get the raw swap data for a specific swap ID from the store
+    ///
+    /// See [`crate::BoltzSession::get_swap_data()`]
+    pub fn get_swap_data(&self, swap_id: &str) -> Result<Option<String>, Error> {
+        self.inner.get_swap_data(swap_id)
+    }
+
+    /// Remove a swap from the store
+    ///
+    /// See [`crate::BoltzSession::remove_swap()`]
+    pub fn remove_swap(&self, swap_id: &str) -> Result<bool, Error> {
+        self.inner.remove_swap(swap_id)
+    }
+
     pub fn next_index_to_use(&self) -> u32 {
         self.inner.next_index_to_use()
     }
@@ -267,7 +295,7 @@ impl PreparePayResponse {
         Ok(inner)
     }
 
-    pub fn swap_id(&self) -> String {
+    pub fn swap_id(&self) -> &str {
         self.inner.swap_id()
     }
 
@@ -309,8 +337,8 @@ impl InvoiceResponse {
         Ok(inner)
     }
 
-    pub fn swap_id(&self) -> String {
-        self.inner.swap_id().to_string()
+    pub fn swap_id(&self) -> &str {
+        self.inner.swap_id()
     }
 
     pub fn bolt11_invoice(&self) -> Bolt11Invoice {
@@ -343,7 +371,7 @@ impl InvoiceResponse {
 }
 
 impl LockupResponse {
-    pub fn swap_id(&self) -> String {
+    pub fn swap_id(&self) -> &str {
         self.inner.swap_id()
     }
 

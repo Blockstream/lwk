@@ -19,8 +19,10 @@ use lwk_wollet::elements::bitcoin;
 
 use crate::chain_data::{chain_from_str, to_chain_data, ChainSwapData, ChainSwapDataSerializable};
 use crate::error::Error;
-use crate::quote::LIQUID_UNCOOPERATIVE_EXTRA;
 use crate::swap_state::SwapStateTrait;
+use crate::DynStore;
+use crate::SwapPersistence;
+use crate::LIQUID_UNCOOPERATIVE_EXTRA;
 use crate::{
     broadcast_tx_with_retry, derive_keypair, mnemonic_identifier, next_status,
     preimage_from_keypair, WAIT_TIME,
@@ -38,6 +40,22 @@ pub struct LockupResponse {
     chain_client: Arc<ChainClient>,
     polling: bool,
     timeout_advance: Duration,
+    store: Option<Arc<dyn DynStore>>,
+}
+
+impl SwapPersistence for LockupResponse {
+    fn serialize(&self) -> Result<String, Error> {
+        let s: ChainSwapDataSerializable = self.data.clone().into();
+        Ok(serde_json::to_string(&s)?)
+    }
+
+    fn swap_id(&self) -> &str {
+        &self.data.create_chain_response.id
+    }
+
+    fn store(&self) -> Option<&Arc<dyn DynStore>> {
+        self.store.as_ref()
+    }
 }
 
 impl BoltzSession {
@@ -168,7 +186,8 @@ impl BoltzSession {
             }
         };
 
-        Ok(LockupResponse {
+        let store = self.clone_store();
+        let response = LockupResponse {
             data: ChainSwapData {
                 last_state,
                 swap_type: SwapType::Chain,
@@ -197,7 +216,13 @@ impl BoltzSession {
             chain_client: self.chain_client.clone(),
             polling: self.polling,
             timeout_advance: self.timeout_advance,
-        })
+            store,
+        };
+
+        // Persist swap data and add to pending list
+        response.persist_and_add_to_pending()?;
+
+        Ok(response)
     }
 
     pub async fn restore_lockup(
@@ -231,7 +256,7 @@ impl BoltzSession {
         let rx = self.ws.updates();
         self.ws.subscribe_swap(&swap_id).await?;
 
-        Ok(LockupResponse {
+        let response = LockupResponse {
             data,
             lockup_script,
             claim_script,
@@ -240,7 +265,15 @@ impl BoltzSession {
             chain_client: self.chain_client.clone(),
             polling: self.polling,
             timeout_advance: self.timeout_advance,
-        })
+            store: self.clone_store(),
+        };
+
+        // If the swap was already in a terminal state, move it to completed
+        if response.data.last_state.is_terminal() {
+            response.move_to_completed()?;
+        }
+
+        Ok(response)
     }
 
     /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
@@ -446,12 +479,8 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
 
 impl LockupResponse {
     async fn next_status(&mut self) -> Result<SwapStatus, Error> {
-        let swap_id = self.swap_id();
+        let swap_id = self.swap_id().to_string();
         next_status(&mut self.rx, self.timeout_advance, &swap_id, self.polling).await
-    }
-
-    pub fn swap_id(&self) -> String {
-        self.data.create_chain_response.id.clone()
     }
 
     pub fn lockup_address(&self) -> &str {
@@ -567,7 +596,7 @@ impl LockupResponse {
                             keys: self.data.claim_keys,
                             output_address: self.data.claim_address.clone(),
                             fee,
-                            swap_id: self.swap_id(),
+                            swap_id: self.swap_id().to_string(),
                             chain_client: &self.chain_client,
                             boltz_client: &self.api,
                             options: Some(options),
@@ -591,7 +620,7 @@ impl LockupResponse {
                         keys: self.data.refund_keys,
                         output_address: self.data.refund_address.clone(),
                         fee: Fee::Relative(1.0),
-                        swap_id: self.swap_id(),
+                        swap_id: self.swap_id().to_string(),
                         chain_client: &self.chain_client,
                         boltz_client: &self.api,
                         options: None,
@@ -607,25 +636,35 @@ impl LockupResponse {
                 Ok(ControlFlow::Break(false))
             }
             ref e => Err(Error::UnexpectedUpdate {
-                swap_id: self.swap_id(),
+                swap_id: self.swap_id().to_string(),
                 status: e.to_string(),
                 last_state: self.data.last_state,
             }),
         };
 
-        if let Ok(ControlFlow::Break(_)) = flow.as_ref() {
+        let is_completed = matches!(flow.as_ref(), Ok(ControlFlow::Break(_)));
+
+        if is_completed {
             // if the swap is terminated, but the caller call advance() again we don't
             // want to error for timeout (it will trigger NoBoltzUpdate)
             self.polling = true;
         }
 
         self.data.last_state = update_status;
-        flow
-    }
 
-    pub fn serialize(&self) -> Result<String, Error> {
-        let s: ChainSwapDataSerializable = self.data.clone().into();
-        Ok(serde_json::to_string(&s)?)
+        // Persist state changes
+        if flow.is_ok() {
+            if is_completed {
+                // Final persist and move to completed list
+                self.persist()?;
+                self.move_to_completed()?;
+            } else {
+                // Persist intermediate state
+                self.persist()?;
+            }
+        }
+
+        flow
     }
 
     pub async fn complete(mut self) -> Result<bool, Error> {

@@ -1,36 +1,41 @@
-import glob
 import hashlib
 import json
 import os
-import shutil
 import threading
 import time
 from lwk import *
 
-def save_swap_data(swap_id, data):
-    """Save swap data to a JSON file"""
-    swap_file = f"{swaps_dir}/{swap_id}.json"
-    with open(swap_file, "w") as f:
-        f.write(data)
-    print(f"Swap data saved to {swap_file}")
 
-
-def rename_swap_data(swap_id, status):
-    """Move swap data file to completed or failed directory
+# Implementation of the ForeignStore trait for file-based persistence
+class FileStore(ForeignStore):
+    """A file-based store implementation that persists data to a directory."""
     
-    Args:
-        swap_id: The swap identifier
-        status: Either "completed" or "failed"
-    """
-    src_file = f"{swaps_dir}/{swap_id}.json"
-    dst_file = f"{swaps_dir}/{status}/{swap_id}.json"
-    try:
-        shutil.move(src_file, dst_file)
-        print(f"Swap data moved to {status}: {dst_file}")
-    except FileNotFoundError:
-        print(f"Swap data file not found: {src_file}")
-    except Exception as e:
-        print(f"Error moving swap data: {e}")
+    def __init__(self, store_dir):
+        self.store_dir = store_dir
+        os.makedirs(store_dir, exist_ok=True)
+    
+    def _key_to_path(self, key):
+        """Convert a key to a safe file path"""
+        # Replace colons with underscores for filesystem safety
+        safe_key = key.replace(":", "_").replace("/", "_")
+        return os.path.join(self.store_dir, f"{safe_key}.json")
+    
+    def get(self, key):
+        path = self._key_to_path(key)
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                return f.read()
+        return None
+    
+    def put(self, key, value):
+        path = self._key_to_path(key)
+        with open(path, "wb") as f:
+            f.write(bytes(value))
+    
+    def remove(self, key):
+        path = self._key_to_path(key)
+        if os.path.exists(path):
+            os.remove(path)
 
 # Example implementation of the Logging trait
 class MyLogger(Logging):
@@ -74,18 +79,10 @@ def invoice_thread(invoice_response, claim_address):
         try:
             state = invoice_response.advance()
             print(f"Invoice state for swap {swap_id}: {state}")
-            if state == PaymentState.CONTINUE:
-                data = invoice_response.serialize()
-                save_swap_data(swap_id, data)
-            elif state == PaymentState.SUCCESS:
+            if state == PaymentState.SUCCESS:
                 claim_txid = invoice_response.claim_txid()
-                print(f"Invoice payment completed successfully, received from txid: {claim_txid}!")
-                rename_swap_data(swap_id, "completed")
-                break
-            elif state == PaymentState.FAILED:
-                print("Invoice payment failed!")
-                rename_swap_data(swap_id, "failed")
-                break
+                print(f"Invoice payment completed successfully, received from txid: {claim_txid}!")    
+            break
         except LwkError.NoBoltzUpdate as e:
             print("No update available, continuing polling...")
             time.sleep(1)
@@ -104,17 +101,7 @@ def pay_invoice_thread(prepare_pay_response):
         try:
             state = prepare_pay_response.advance()
             print(f"Payment state for swap {swap_id}: {state}")
-            if state == PaymentState.CONTINUE:
-                data = prepare_pay_response.serialize()
-                save_swap_data(swap_id, data)
-            elif state == PaymentState.SUCCESS:
-                print("Payment completed successfully!")
-                rename_swap_data(swap_id, "completed")
-                break
-            elif state == PaymentState.FAILED:
-                print("Payment failed!")
-                rename_swap_data(swap_id, "failed")
-                break
+            break
         except LwkError.NoBoltzUpdate as e:
             print("No update available, continuing polling...")
             time.sleep(1)
@@ -134,17 +121,7 @@ def lockup_thread(lockup_response):
         try:
             state = lockup_response.advance()
             print(f"Chain swap state for swap {swap_id}: {state}")
-            if state == PaymentState.CONTINUE:
-                data = lockup_response.serialize()
-                save_swap_data(swap_id, data)
-            elif state == PaymentState.SUCCESS:
-                print("Chain swap completed successfully!")
-                rename_swap_data(swap_id, "completed")
-                break
-            elif state == PaymentState.FAILED:
-                print("Chain swap failed!")
-                rename_swap_data(swap_id, "failed")
-                break
+            break
         except LwkError.NoBoltzUpdate as e:
             print("No update available, continuing polling...")
             time.sleep(1)
@@ -188,11 +165,8 @@ def show_invoice(boltz_session, wollet):
     bolt11_invoice = str(bolt11_invoice_obj)
     print(f"Invoice: {bolt11_invoice}")
 
-    data=invoice_response.serialize()
-    swap_id=invoice_response.swap_id()
-
-    # Save swap data to file
-    save_swap_data(swap_id, data)
+    swap_id = invoice_response.swap_id()
+    print(f"Swap ID: {swap_id}")
 
     # Start thread to wait for payment
     thread = threading.Thread(target=invoice_thread, args=(invoice_response, claim_address))
@@ -223,11 +197,6 @@ def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_t
         boltz_fee = prepare_pay_response.boltz_fee()
         print(f"Boltz fee: {boltz_fee}")
 
-        data=prepare_pay_response.serialize()
-        swap_id=prepare_pay_response.swap_id()
-
-        # Save swap data to file
-        save_swap_data(swap_id, data)
 
         # Get the URI for payment
         uri = prepare_pay_response.uri()
@@ -537,10 +506,6 @@ def lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer):
         print(f"From chain: {from_chain}")
         print(f"To chain: {to_chain}")
 
-        # Save swap data
-        data = lockup_response.serialize()
-        save_swap_data(swap_id, data)
-
         # Build and send transaction to the lockup address
         print(f"Sending {expected_amount} sats to {lockup_address}...")
         builder = network.tx_builder()
@@ -612,10 +577,6 @@ def btc_to_lbtc_swap(boltz_session, wollet):
         print(f"To chain: {to_chain}")
         print(f"\n***** PLEASE SEND {expected_amount} sats from your Bitcoin wallet to: {lockup_address} *****\n")
 
-        # Save swap data
-        data = lockup_response.serialize()
-        save_swap_data(swap_id, data)
-
         # Start thread to monitor swap completion
         thread = threading.Thread(target=lockup_thread, args=(lockup_response,))
         thread.daemon = True
@@ -642,15 +603,14 @@ def main():
     mnemonic = Mnemonic(mnemonic_str)
     global network
     network = Network.mainnet()
-    global swaps_dir
-    # Compute hash of mnemonic for wallet-specific directory
-    mnemonic_hash = hashlib.sha256(mnemonic_str.encode('utf-8')).hexdigest()[:16]
-    swaps_dir = "swaps/{}".format(mnemonic_hash)
 
-    os.makedirs("swaps", exist_ok=True)
-    os.makedirs(swaps_dir, exist_ok=True)
-    os.makedirs(f"{swaps_dir}/failed", exist_ok=True)
-    os.makedirs(f"{swaps_dir}/completed", exist_ok=True)
+    # Compute hash of mnemonic for wallet-specific store directory
+    mnemonic_hash = hashlib.sha256(mnemonic_str.encode('utf-8')).hexdigest()[:16]
+    store_dir = f"swaps/{mnemonic_hash}"
+
+    # Create the file-based store for swap persistence
+    file_store = FileStore(store_dir)
+    store_link = ForeignStoreLink(file_store)
 
     b = EsploraClientBuilder(
         base_url="https://waterfalls.liquidwebwallet.org/liquid/api",
@@ -693,75 +653,73 @@ def main():
         referral_id="LWK python example",
         bitcoin_electrum_client_url=bitcoin_electrum_url,
         random_preimages=True,
+        store=store_link,  # Pass the store for automatic swap persistence
     )
     boltz_session = BoltzSession.from_builder(builder)
 
     # Initial balance update
     update_balance(wollet, esplora_client, desc)
 
-    # Find and restore unfinished swaps
+    # Find and restore unfinished swaps from the store
     print("Checking for unfinished swaps...")
-    swap_files = glob.glob(f"{swaps_dir}/*.json")
-    if not swap_files:
+    pending_ids = boltz_session.pending_swap_ids()
+    if pending_ids is None:
+        print("No store configured")
+    elif not pending_ids:
         print("No unfinished swaps found")
-    for swap_file in swap_files:
-        try:
-            with open(swap_file, 'r') as f:
-                data = f.read()
+    else:
+        print(f"Found {len(pending_ids)} pending swap(s)")
+        for swap_id in pending_ids:
+            try:
+                data = boltz_session.get_swap_data(swap_id)
+                if data is None:
+                    print(f"Swap data not found for {swap_id}")
+                    continue
 
-            # Parse JSON to determine swap type
-            swap_data = json.loads(data)
-            swap_type = swap_data.get('swap_type')
-            swap_id = swap_data.get('create_swap_response', {}).get('id') or swap_data.get('create_reverse_response', {}).get('id')
+                # Parse JSON to determine swap type
+                swap_data = json.loads(data)
+                swap_type = swap_data.get('swap_type')
 
-            if swap_type == 'submarine':
-                print(f"Restoring submarine swap {swap_id}...")
-                try:
-                    prepare_pay_response = boltz_session.restore_prepare_pay(data)
-                    # Start thread to monitor payment
-                    thread = threading.Thread(target=pay_invoice_thread, args=(prepare_pay_response,))
-                    thread.daemon = True
-                    thread.start()
-                    print(f"Started monitoring thread for submarine swap {swap_id}")
-                except LwkError.SwapExpired as e:
-                    print(f"Submarine swap {swap_id} has expired, moving to failed directory")
-                    rename_swap_data(swap_id, "failed")
-                except Exception as e:
-                    print(f"Error restoring submarine swap {swap_id}: {e}")
+                if swap_type == 'submarine':
+                    print(f"Restoring submarine swap {swap_id}...")
+                    try:
+                        prepare_pay_response = boltz_session.restore_prepare_pay(data)
+                        # Start thread to monitor payment
+                        thread = threading.Thread(target=pay_invoice_thread, args=(prepare_pay_response,))
+                        thread.daemon = True
+                        thread.start()
+                        print(f"Started monitoring thread for submarine swap {swap_id}")
+                    except Exception as e:
+                        print(f"Error restoring submarine swap {swap_id}: {e}")
 
-            elif swap_type == 'reverse':
-                print(f"Restoring reverse swap {swap_id}...")
-                try:
-                    invoice_response = boltz_session.restore_invoice(data)
-                    # Start thread to monitor invoice
-                    thread = threading.Thread(target=invoice_thread, args=(invoice_response, wollet.address(None).address()))
-                    thread.daemon = True
-                    thread.start()
-                    print(f"Started monitoring thread for reverse swap {swap_id}")
-                except LwkError.SwapExpired as e:
-                    print(f"Reverse swap {swap_id} has expired, moving to failed directory")
-                    rename_swap_data(swap_id, "failed")
-                except Exception as e:
-                    print(f"Error restoring reverse swap {swap_id}: {e}")
-            elif swap_type == 'chain':
-                print(f"Restoring chain swap {swap_id}...")
-                try:
-                    lockup_response = boltz_session.restore_lockup(data)
-                    # Start thread to monitor invoice
-                    thread = threading.Thread(target=lockup_thread, args=(lockup_response,))
-                    thread.daemon = True
-                    thread.start()
-                    print(f"Started monitoring thread for chain swap {swap_id}")
-                except LwkError.SwapExpired as e:
-                    print(f"Chain swap {swap_id} has expired, moving to failed directory")
-                    rename_swap_data(swap_id, "failed")
-                except Exception as e:
-                    print(f"Error restoring chain swap {swap_id}: {e}")
-            else:
-                print(f"Unknown swap type '{swap_type}' in file {swap_file}")
+                elif swap_type == 'reverse':
+                    print(f"Restoring reverse swap {swap_id}...")
+                    try:
+                        invoice_response = boltz_session.restore_invoice(data)
+                        # Start thread to monitor invoice
+                        thread = threading.Thread(target=invoice_thread, args=(invoice_response, wollet.address(None).address()))
+                        thread.daemon = True
+                        thread.start()
+                        print(f"Started monitoring thread for reverse swap {swap_id}")
+                    except Exception as e:
+                        print(f"Error restoring reverse swap {swap_id}: {e}")
 
-        except Exception as e:
-            print(f"Error restoring swap from {swap_file}: {e}")
+                elif swap_type == 'chain':
+                    print(f"Restoring chain swap {swap_id}...")
+                    try:
+                        lockup_response = boltz_session.restore_lockup(data)
+                        # Start thread to monitor chain swap
+                        thread = threading.Thread(target=lockup_thread, args=(lockup_response,))
+                        thread.daemon = True
+                        thread.start()
+                        print(f"Started monitoring thread for chain swap {swap_id}")
+                    except Exception as e:
+                        print(f"Error restoring chain swap {swap_id}: {e}")
+                else:
+                    print(f"Unknown swap type '{swap_type}' for swap {swap_id}")
+
+            except Exception as e:
+                print(f"Error restoring swap {swap_id}: {e}")
 
     # Main menu loop
     while True:
@@ -773,11 +731,14 @@ def main():
         print("5) Generate rescue file")
         print("6) Fetch restorable reverse swaps")
         print("7) Fetch restorable submarine swaps")
-        print("8) List all swaps")
+        print("8) List all swaps (from Boltz API)")
         print("9) Show swaps info")
         print("10) Swap LBTC to BTC (chain swap)")
         print("11) Swap BTC to LBTC (chain swap) (requires external btc wallet)")
         print("12) Get swap quote")
+        print("13) List pending swaps (from local store)")
+        print("14) List completed swaps (from local store)")
+        print("15) Remove swap from store")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -829,6 +790,53 @@ def main():
         elif choice == '12':
             print("\n=== Get Swap Quote ===")
             get_quote(boltz_session)
+        elif choice == '13':
+            print("\n=== Pending Swaps (from local store) ===")
+            pending = boltz_session.pending_swap_ids()
+            if pending is None:
+                print("No store configured")
+            elif not pending:
+                print("No pending swaps")
+            else:
+                print(f"Found {len(pending)} pending swap(s):")
+                for swap_id in pending:
+                    data = boltz_session.get_swap_data(swap_id)
+                    if data:
+                        swap_data = json.loads(data)
+                        swap_type = swap_data.get('swap_type', 'unknown')
+                        last_state = swap_data.get('last_state', 'unknown')
+                        print(f"  - {swap_id} ({swap_type}) - state: {last_state}")
+                    else:
+                        print(f"  - {swap_id} (data not found)")
+        elif choice == '14':
+            print("\n=== Completed Swaps (from local store) ===")
+            completed = boltz_session.completed_swap_ids()
+            if completed is None:
+                print("No store configured")
+            elif not completed:
+                print("No completed swaps")
+            else:
+                print(f"Found {len(completed)} completed swap(s):")
+                for swap_id in completed:
+                    data = boltz_session.get_swap_data(swap_id)
+                    if data:
+                        swap_data = json.loads(data)
+                        swap_type = swap_data.get('swap_type', 'unknown')
+                        last_state = swap_data.get('last_state', 'unknown')
+                        print(f"  - {swap_id} ({swap_type}) - state: {last_state}")
+                    else:
+                        print(f"  - {swap_id} (data not found)")
+        elif choice == '15':
+            print("\n=== Remove Swap from Store ===")
+            swap_id = input("Enter swap ID to remove: ").strip()
+            if swap_id:
+                removed = boltz_session.remove_swap(swap_id)
+                if removed:
+                    print(f"Swap {swap_id} removed from store")
+                else:
+                    print("No store configured or swap not found")
+            else:
+                print("No swap ID provided")
         elif choice == 'q':
             print("Goodbye!")
             break

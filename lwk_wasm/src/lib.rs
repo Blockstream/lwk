@@ -18,6 +18,7 @@ mod esplora;
 mod jade;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod jade_websocket;
+mod keypair;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod ledger;
 mod liquidex;
@@ -28,7 +29,9 @@ mod precision;
 mod prices;
 mod pset;
 mod pset_details;
+mod public_key;
 mod registry;
+mod secret_key;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod serial;
 mod signer;
@@ -67,6 +70,7 @@ pub use esplora::EsploraClient;
 pub use jade::{Jade, Singlesig};
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use jade_websocket::JadeWebSocket;
+pub use keypair::Keypair;
 pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use pos::PosConfig;
@@ -74,7 +78,9 @@ pub use precision::Precision;
 pub use prices::{ExchangeRates, PricesFetcher, PricesFetcherBuilder};
 pub use pset::Pset;
 pub use pset_details::{Issuance, PsetDetails};
+pub use public_key::PublicKey;
 pub use registry::{AssetMeta, Registry, RegistryPost};
+pub use secret_key::SecretKey;
 pub use signer::Signer;
 pub use store::{JsStorage, JsStoreLink, JsTestStore};
 pub use tx_builder::TxBuilder;

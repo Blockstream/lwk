@@ -66,6 +66,15 @@ pub enum Error {
     #[error(transparent)]
     Prices(#[from] lwk_wollet::prices::Error),
 
+    #[error(transparent)]
+    Secp256k1(#[from] lwk_wollet::elements::bitcoin::secp256k1::Error),
+
+    #[error(transparent)]
+    KeyFromSlice(#[from] lwk_wollet::elements::bitcoin::key::FromSliceError),
+
+    #[error(transparent)]
+    FromWif(#[from] lwk_wollet::elements::bitcoin::key::FromWifError),
+
     #[error("{0}")]
     Generic(String),
 
@@ -145,6 +154,9 @@ impl Error {
                 lwk_wollet::prices::Error::NotEnoughSources(_) => "Prices::NotEnoughSources",
                 lwk_wollet::prices::Error::Http(_) => "Prices::Http",
             },
+            Error::Secp256k1(_) => "Secp256k1",
+            Error::KeyFromSlice(_) => "KeyFromSlice",
+            Error::FromWif(_) => "FromWif",
             Error::Generic(_) => "Generic",
         }
     }

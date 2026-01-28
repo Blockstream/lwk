@@ -3,10 +3,16 @@
 //! This module defines the [`Store`] trait, which provides a simple key-value
 //! storage abstraction. Implementations can back this with various storage backends
 //! (files, databases, localStorage, IndexedDB, etc.) while LWK controls what is stored.
+//!
+//! For use with trait objects (`dyn`), see [`DynStore`] which provides an object-safe
+//! version with boxed errors.
 
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Mutex;
+
+/// A boxed error type for use with [`DynStore`].
+pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 /// A generic key-value storage interface.
 ///
@@ -17,6 +23,8 @@ use std::sync::Mutex;
 /// Values are always `Vec<u8>` for binary serialization flexibility.
 ///
 /// See [`MemoryStore`] for a simple in-memory implementation.
+///
+/// For use with trait objects, see [`DynStore`].
 pub trait Store: Send + Sync + Debug {
     /// The error type returned by storage operations.
     type Error: std::error::Error + Send + Sync + 'static;
@@ -33,6 +41,38 @@ pub trait Store: Send + Sync + Debug {
     ///
     /// Returns `Ok(())` even if the key did not exist.
     fn remove<K: AsRef<[u8]>>(&self, key: K) -> Result<(), Self::Error>;
+}
+
+/// An object-safe key-value storage trait for use with `dyn`.
+///
+/// This trait is similar to [`Store`] but uses concrete types instead of generics,
+/// making it usable as a trait object (`dyn DynStore`).
+///
+/// The error type is boxed to allow different implementations to return different errors.
+///
+/// Any type implementing [`Store`] automatically implements `DynStore`.
+pub trait DynStore: Send + Sync + Debug {
+    /// Retrieve a value by key.
+    fn get(&self, key: &str) -> Result<Option<Vec<u8>>, BoxError>;
+    /// Insert or update a value.
+    fn put(&self, key: &str, value: &[u8]) -> Result<(), BoxError>;
+    /// Remove a value by key.
+    fn remove(&self, key: &str) -> Result<(), BoxError>;
+}
+
+/// Blanket implementation of [`DynStore`] for any type implementing [`Store`].
+impl<S: Store> DynStore for S {
+    fn get(&self, key: &str) -> Result<Option<Vec<u8>>, BoxError> {
+        Store::get(self, key).map_err(|e| Box::new(e) as BoxError)
+    }
+
+    fn put(&self, key: &str, value: &[u8]) -> Result<(), BoxError> {
+        Store::put(self, key, value).map_err(|e| Box::new(e) as BoxError)
+    }
+
+    fn remove(&self, key: &str) -> Result<(), BoxError> {
+        Store::remove(self, key).map_err(|e| Box::new(e) as BoxError)
+    }
 }
 
 /// A simple in-memory implementation of [`Store`].
@@ -81,7 +121,7 @@ impl Store for MemoryStore {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use super::{MemoryStore, Store};
 
     #[test]
     fn memory_store() {

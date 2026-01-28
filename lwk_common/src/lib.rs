@@ -41,7 +41,7 @@ pub use crate::segwit::is_provably_segwit;
 #[cfg(feature = "amp0")]
 pub use crate::signer::amp0::{Amp0Signer, Amp0SignerData};
 pub use crate::signer::Signer;
-pub use crate::store::{MemoryStore, Store};
+pub use crate::store::{BoxError, DynStore, MemoryStore, Store};
 pub use fee::*;
 
 /// A trait for async read/write operations used by hardware wallet connections

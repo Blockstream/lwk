@@ -1,6 +1,8 @@
 /*
  * Options
  *
+ * Source: https://github.com/BlockstreamResearch/simplicity-contracts/blob/290d850cb938d18a90f27c0e858257550a175d54/crates/contracts/src/finance/options/source_simf/options.simf
+ *
  * Important: Currently only the LBTC collateral is supported.
  *
  * Based on the https://blockstream.com/assets/downloads/pdf/options-whitepaper.pdf

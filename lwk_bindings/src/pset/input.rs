@@ -1,9 +1,11 @@
-use crate::types::{AssetId, Hex, Tweak};
+use crate::types::{AssetId, ContractHash, Tweak};
 use crate::{Issuance, LwkError, OutPoint, Script, TxOut, TxSequence, Txid};
 
 use std::sync::{Arc, Mutex};
 
 use elements::pset::Input;
+
+use lwk_wollet::hashes::Hash;
 
 /// PSET input (read-only)
 #[derive(uniffi::Object, Debug)]
@@ -151,19 +153,19 @@ impl PsetInputBuilder {
     }
 
     /// Set the issuance asset entropy.
-    pub fn issuance_asset_entropy(&self, entropy: &Hex) -> Result<(), LwkError> {
-        let bytes: [u8; 32] = entropy.as_ref().try_into()?;
+    pub fn issuance_asset_entropy(&self, contract_hash: &ContractHash) -> Result<(), LwkError> {
+        let inner_hash: elements::ContractHash = contract_hash.into();
         let mut lock = self.inner.lock()?;
         let inner = lock.as_mut().ok_or_else(builder_consumed)?;
-        inner.issuance_asset_entropy = Some(bytes);
+        inner.issuance_asset_entropy = Some(inner_hash.to_byte_array());
         Ok(())
     }
 
     /// Set the blinded issuance flag.
-    pub fn blinded_issuance(&self, flag: u8) -> Result<(), LwkError> {
+    pub fn blinded_issuance(&self, flag: bool) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.as_mut().ok_or_else(builder_consumed)?;
-        inner.blinded_issuance = Some(flag);
+        inner.blinded_issuance = Some(u8::from(flag));
         Ok(())
     }
 

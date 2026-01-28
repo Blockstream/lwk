@@ -1,3 +1,4 @@
+// Source: https://github.com/BlockstreamResearch/simplicity-contracts/blob/290d850cb938d18a90f27c0e858257550a175d54/crates/simplicityhl-core/src/source_simf/p2pk.simf
 fn main() {
     jet::bip_0340_verify((param::PUBLIC_KEY, jet::sig_all_hash()), witness::SIGNATURE)
 }

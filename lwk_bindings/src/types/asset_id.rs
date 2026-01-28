@@ -1,10 +1,10 @@
-use std::{fmt::Display, str::FromStr};
-
 use elements::hex::ToHex;
+use std::sync::Arc;
+use std::{fmt::Display, str::FromStr};
 
 use crate::blockdata::out_point::OutPoint;
 use crate::types::{ContractHash, Hex};
-use crate::UniffiCustomTypeConverter;
+use crate::{LwkError, UniffiCustomTypeConverter};
 
 /// A valid asset identifier.
 ///
@@ -61,9 +61,12 @@ pub fn asset_id_inner_hex(asset_id: AssetId) -> Hex {
 
 /// Generate the asset entropy from the issuance prevout and the contract hash.
 #[uniffi::export]
-pub fn generate_asset_entropy(outpoint: &OutPoint, contract_hash: &ContractHash) -> Hex {
+pub fn generate_asset_entropy(
+    outpoint: &OutPoint,
+    contract_hash: &ContractHash,
+) -> Result<Arc<ContractHash>, LwkError> {
     let midstate = elements::AssetId::generate_asset_entropy(outpoint.into(), contract_hash.into());
-    Hex::from(midstate.to_byte_array().to_vec())
+    ContractHash::from_bytes(&midstate.to_byte_array())
 }
 
 /// Compute the asset ID from an issuance outpoint and contract hash.

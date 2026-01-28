@@ -38,7 +38,7 @@ def wait_for_tx(client, txid, retries=30):
             return client.get_tx(txid)
         except LwkError:
             time.sleep(1)
-    raise RuntimeError(f"Could not fetch tx {txid} after {retries} retries")
+    assert False, f"Could not fetch tx {txid} after {retries} retries"
 
 
 def find_output_by_script(tx, script_hex):
@@ -89,9 +89,7 @@ blinding_pubkey = blinder_keypair.public_key()
 funded_sats = 100000
 
 txid1 = node.send_to_address(p2pk_address, funded_sats, asset=None)
-node.generate(1)
 txid2 = node.send_to_address(p2pk_address, funded_sats, asset=None)
-node.generate(1)
 txid3 = node.send_to_address(p2pk_address, funded_sats, asset=None)
 node.generate(1)
 
@@ -113,8 +111,8 @@ inp_builder0 = PsetInputBuilder.from_prevout(outpoint0)
 inp_builder0.witness_utxo(output1)
 inp_builder0.sequence(TxSequence.zero())
 inp_builder0.issuance_inflation_keys(1)
-inp_builder0.issuance_asset_entropy(bytes(option_contract_hash.to_bytes()).hex())
-inp_builder0.blinded_issuance(0x00)
+inp_builder0.issuance_asset_entropy(option_contract_hash)
+inp_builder0.blinded_issuance(False)
 creation_input0 = inp_builder0.build()
 
 outpoint1 = OutPoint.from_parts(txid2, vout2)
@@ -122,8 +120,8 @@ inp_builder1 = PsetInputBuilder.from_prevout(outpoint1)
 inp_builder1.witness_utxo(output2)
 inp_builder1.sequence(TxSequence.zero())
 inp_builder1.issuance_inflation_keys(1)
-inp_builder1.issuance_asset_entropy(bytes(grantor_contract_hash.to_bytes()).hex())
-inp_builder1.blinded_issuance(0x00)
+inp_builder1.issuance_asset_entropy(grantor_contract_hash)
+inp_builder1.blinded_issuance(False)
 creation_input1 = inp_builder1.build()
 
 option_token_asset = asset_id_from_issuance(outpoint0, option_contract_hash)
@@ -151,17 +149,19 @@ options_params = {
     "SETTLEMENT_PER_CONTRACT": SETTLEMENT_PER_CONTRACT,
     "COLLATERAL_ASSET_ID": asset_id_inner_hex(policy_asset),
     "SETTLEMENT_ASSET_ID": asset_id_inner_hex(policy_asset),
-    "ISSUANCE_ASSET_ENTROPY": issuance_entropy,
-    "OPTION_OUTPOINT_TXID": bytes(txid1.bytes()).hex(),
-    "OPTION_OUTPOINT_VOUT": vout1,
-    "OPTION_CONFIDENTIAL": True,
-    "GRANTOR_OUTPOINT_TXID": bytes(txid2.bytes()).hex(),
-    "GRANTOR_OUTPOINT_VOUT": vout2,
-    "GRANTOR_CONFIDENTIAL": True,
     "OPTION_TOKEN_ASSET": asset_id_inner_hex(option_token_asset),
     "OPTION_REISSUANCE_TOKEN_ASSET": asset_id_inner_hex(option_reissuance_token_asset),
     "GRANTOR_TOKEN_ASSET": asset_id_inner_hex(grantor_token_asset),
     "GRANTOR_REISSUANCE_TOKEN_ASSET": asset_id_inner_hex(grantor_reissuance_token_asset),
+    # The parameters below are used only for storing information in the arguments
+    # If they are used, make sure to handle the correct endianness
+    "OPTION_OUTPOINT_TXID": str(txid1),
+    "OPTION_OUTPOINT_VOUT": vout1,
+    "OPTION_CONFIDENTIAL": True,
+    "GRANTOR_OUTPOINT_TXID": str(txid2),
+    "GRANTOR_OUTPOINT_VOUT": vout2,
+    "GRANTOR_CONFIDENTIAL": True,
+    "ISSUANCE_ASSET_ENTROPY": issuance_entropy.to_hex(),
 }
 options_args = build_options_arguments(options_params)
 options_program = SimplicityProgram.load(OPTIONS_SOURCE, options_args)
@@ -217,7 +217,7 @@ creation_tx = creation_pset.extract_tx()
 try:
     creation_tx.verify_tx_amt_proofs([output1, output2])
 except Exception as e:
-    print(f"  Creation tx balance check FAILED: {e}")
+    assert False, f"Creation tx balance check failed: {e}"
 
 # Step 4: Sign and broadcast creation tx
 
@@ -282,7 +282,7 @@ fund_inp_builder0.witness_utxo(creation_out_output0)
 fund_inp_builder0.sequence(TxSequence.zero())
 fund_inp_builder0.issuance_value_amount(NUM_CONTRACTS)
 fund_inp_builder0.issuance_asset_entropy(option_token_entropy)
-fund_inp_builder0.blinded_issuance(0x00)
+fund_inp_builder0.blinded_issuance(False)
 fund_inp_builder0.issuance_blinding_nonce(Tweak.from_hex(secrets0.asset_blinding_factor().to_hex()))
 funding_input0 = fund_inp_builder0.build()
 
@@ -292,7 +292,7 @@ fund_inp_builder1.witness_utxo(creation_out_output1)
 fund_inp_builder1.sequence(TxSequence.zero())
 fund_inp_builder1.issuance_value_amount(NUM_CONTRACTS)
 fund_inp_builder1.issuance_asset_entropy(grantor_token_entropy)
-fund_inp_builder1.blinded_issuance(0x00)
+fund_inp_builder1.blinded_issuance(False)
 fund_inp_builder1.issuance_blinding_nonce(Tweak.from_hex(secrets1.asset_blinding_factor().to_hex()))
 funding_input1 = fund_inp_builder1.build()
 
@@ -369,7 +369,7 @@ funding_utxos = [creation_out_output0, creation_out_output1, output3]
 try:
     funding_tx.verify_tx_amt_proofs(funding_utxos)
 except Exception as e:
-    print(f"  Balance check FAILED before finalization: {e}")
+    assert False, f"Balance check FAILED before finalization: {e}"
 
 # Step 7: Sign and broadcast funding tx
 

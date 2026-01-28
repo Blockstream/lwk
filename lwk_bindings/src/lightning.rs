@@ -6,8 +6,8 @@ use std::{
 };
 
 use crate::{
-    blockdata::address::BitcoinAddress, Address, Bolt11Invoice, ElectrumClient, EsploraClient,
-    LightningPayment, LwkError, Mnemonic, Network,
+    blockdata::address::BitcoinAddress, store::ForeignStoreLink, Address, Bolt11Invoice,
+    ElectrumClient, EsploraClient, LightningPayment, LwkError, Mnemonic, Network,
 };
 use log::{Level, Metadata, Record};
 use lwk_boltz::{
@@ -103,6 +103,12 @@ pub struct BoltzSessionBuilder {
     bitcoin_electrum_client_url: Option<String>,
     #[uniffi(default = false)]
     random_preimages: bool,
+    /// Optional store for persisting swap data
+    ///
+    /// When set, swap data will be automatically persisted to the store after creation
+    /// and on each state change. This enables automatic restoration of pending swaps.
+    #[uniffi(default = None)]
+    store: Option<Arc<ForeignStoreLink>>,
 }
 
 /// A session to pay and receive lightning payments.
@@ -291,6 +297,7 @@ impl BoltzSession {
             referral_id: None,
             bitcoin_electrum_client_url: None,
             random_preimages: false,
+            store: None,
         };
         Self::from_builder(builder)
     }
@@ -357,6 +364,10 @@ impl BoltzSession {
             lwk_builder = lwk_builder.referral_id(referral_id);
         }
         lwk_builder = lwk_builder.random_preimages(builder.random_preimages);
+
+        if let Some(store) = builder.store.clone() {
+            lwk_builder = lwk_builder.store(store);
+        }
 
         let inner = lwk_builder
             .build_blocking()
@@ -543,6 +554,34 @@ impl BoltzSession {
         Ok(SwapList { inner: response })
     }
 
+    /// Get the list of pending swap IDs from the store
+    ///
+    /// Returns `None` if no store is configured.
+    pub fn pending_swap_ids(&self) -> Result<Option<Vec<String>>, LwkError> {
+        Ok(self.inner.pending_swap_ids()?)
+    }
+
+    /// Get the list of completed swap IDs from the store
+    ///
+    /// Returns `None` if no store is configured.
+    pub fn completed_swap_ids(&self) -> Result<Option<Vec<String>>, LwkError> {
+        Ok(self.inner.completed_swap_ids()?)
+    }
+
+    /// Get the raw swap data (JSON) for a specific swap ID from the store
+    ///
+    /// Returns `None` if no store is configured or the swap doesn't exist.
+    pub fn get_swap_data(&self, swap_id: String) -> Result<Option<String>, LwkError> {
+        Ok(self.inner.get_swap_data(&swap_id)?)
+    }
+
+    /// Remove a swap from the store
+    ///
+    /// Returns `true` if the swap was removed, `false` if no store is configured.
+    pub fn remove_swap(&self, swap_id: String) -> Result<bool, LwkError> {
+        Ok(self.inner.remove_swap(&swap_id)?)
+    }
+
     /// Filter the swap list to only include restorable reverse swaps
     pub fn restorable_reverse_swaps(
         &self,
@@ -704,7 +743,8 @@ impl PreparePayResponse {
             .lock()?
             .as_ref()
             .ok_or(LwkError::ObjectConsumed)?
-            .swap_id())
+            .swap_id()
+            .to_string())
     }
 
     /// Serialize the prepare pay response data to a json string
@@ -814,7 +854,8 @@ impl InvoiceResponse {
             .lock()?
             .as_ref()
             .ok_or(LwkError::ObjectConsumed)?
-            .swap_id())
+            .swap_id()
+            .to_string())
     }
 
     /// The fee of the swap provider and the network fee
@@ -904,7 +945,8 @@ impl LockupResponse {
             .lock()?
             .as_ref()
             .ok_or(LwkError::ObjectConsumed)?
-            .swap_id())
+            .swap_id()
+            .to_string())
     }
 
     pub fn lockup_address(&self) -> Result<String, LwkError> {

@@ -169,7 +169,7 @@ impl Jade {
         desc: &WolletDescriptor,
     ) -> Result<bool, Error> {
         self.inner.unlock().await?;
-        let descriptor: JadeDescriptor = desc.as_ref().as_ref().try_into().unwrap();
+        let descriptor: JadeDescriptor = desc.as_ref().ct_descriptor()?.try_into().unwrap();
         let network = self.inner.network();
         let result = self
             .inner

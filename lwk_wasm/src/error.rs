@@ -132,6 +132,7 @@ impl Error {
                 lwk_boltz::Error::MissingQuoteParam(_) => "Boltz::MissingQuoteParam",
                 lwk_boltz::Error::PairNotAvailable => "Boltz::PairNotAvailable",
                 lwk_boltz::Error::LockPoisoned(_) => "Boltz::LockPoisoned",
+                lwk_boltz::Error::Store(_) => "Boltz::Store",
             },
             Error::HexToArray(_) => "HexToArray",
             Error::Wollet(_) => "Wollet",

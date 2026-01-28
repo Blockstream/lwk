@@ -1,6 +1,6 @@
 use std::{fmt, str::FromStr, time::Duration};
 
-use lwk_boltz::{InvoiceDataSerializable, PreparePayDataSerializable};
+use lwk_boltz::{InvoiceDataSerializable, PreparePayDataSerializable, SwapPersistence};
 use wasm_bindgen::prelude::*;
 
 use crate::{Address, Error, Network};

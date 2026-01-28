@@ -346,7 +346,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::WalletUnload {
                     unloaded: response::Wallet {
                         name: r.name,
-                        descriptor: removed.descriptor().to_string(),
+                        descriptor: removed.descriptor()?.to_string(),
                     },
                 })?,
             )
@@ -357,7 +357,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .wollets
                 .iter()
                 .map(|(name, wollet)| response::Wallet {
-                    descriptor: wollet.descriptor().to_string(),
+                    descriptor: wollet.wollet_descriptor().to_string(),
                     name: name.clone(),
                 })
                 .collect();
@@ -644,7 +644,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
 
             let network = s.config.jade_network();
-            let descriptor = s.wollets.get(&r.wallet)?.descriptor().clone();
+            let descriptor = s.wollets.get(&r.wallet)?.descriptor()?.clone();
             let signer = s.get_available_signer(&r.name)?;
 
             if let AnySigner::Jade(jade, _id) = signer {
@@ -748,11 +748,11 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             let wollet = s.wollets.get_mut(&r.name)?;
 
-            let descriptor = wollet.descriptor().to_string();
-            let type_ = match wollet.descriptor().descriptor.desc_type() {
+            let descriptor = wollet.descriptor()?.to_string();
+            let type_ = match wollet.descriptor()?.descriptor.desc_type() {
                 DescriptorType::Wpkh => response::WalletType::Wpkh,
                 DescriptorType::ShWpkh => response::WalletType::ShWpkh,
-                _ => match &wollet.descriptor().descriptor {
+                _ => match &wollet.descriptor()?.descriptor {
                     Descriptor::Wsh(wsh) => match wsh.as_inner() {
                         WshInner::Ms(ms) => match &ms.node {
                             Terminal::Multi(threshold, pubkeys) => {

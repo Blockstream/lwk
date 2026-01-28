@@ -579,7 +579,7 @@ impl State {
         // Wollets
         for (n, w) in self.wollets.iter() {
             let params = request::WalletLoad {
-                descriptor: w.descriptor().to_string(),
+                descriptor: w.wollet_descriptor().to_string(),
                 name: n.to_string(),
             };
             let r = Request {

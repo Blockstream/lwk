@@ -14,7 +14,7 @@ use crate::Error;
 ///
 /// From Boltz web app:
 /// <https://github.com/BoltzExchange/boltz-web-app/blob/f3f14669822dc0e4a7fb950964087a2d5b5cd06d/src/context/Global.tsx#L38>
-const LIQUID_UNCOOPERATIVE_EXTRA: u64 = 3;
+pub const LIQUID_UNCOOPERATIVE_EXTRA: u64 = 3;
 
 /// Asset type for swap quotes
 ///

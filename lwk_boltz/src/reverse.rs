@@ -30,6 +30,7 @@ use crate::invoice_data::InvoiceData;
 use crate::invoice_data::InvoiceDataSerializable;
 use crate::mnemonic_identifier;
 use crate::preimage_from_keypair;
+use crate::quote::LIQUID_UNCOOPERATIVE_EXTRA;
 use crate::swap_state::SwapStateTrait;
 use crate::to_invoice_data;
 use crate::SwapType;
@@ -98,13 +99,16 @@ impl BoltzSession {
             Error::ExpectedAmountLowerThanInvoice(amount, reverse_resp.id.clone()),
         )?;
 
-        let boltz_fee = self
-            .swap_info
-            .lock()
-            .await
-            .reverse_pairs
-            .get_btc_to_lbtc_pair()
-            .map(|pair| pair.fees.boltz(amount));
+        let (boltz_fee, claim_fee) = {
+            let swap_info = self.swap_info.lock().await;
+            match swap_info.reverse_pairs.get_btc_to_lbtc_pair() {
+                Some(pair) => (
+                    Some(pair.fees.boltz(amount)),
+                    Some(pair.fees.claim_estimate()),
+                ),
+                None => (None, None),
+            }
+        };
 
         // Sanity check: Boltz-created invoices should always have the magic routing hint.
         // We use find_magic_routing_hint (local parsing) instead of check_for_mrh
@@ -134,6 +138,7 @@ impl BoltzSession {
                 swap_type: SwapType::Reverse,
                 fee: Some(fee),
                 boltz_fee,
+                claim_fee,
                 claim_txid: None,
                 create_reverse_response: reverse_resp.clone(),
                 our_keys,
@@ -265,8 +270,9 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
     Ok(InvoiceData {
         last_state,
         swap_type: SwapType::Reverse,
-        fee: None,       // Fee information not available in restore response
-        boltz_fee: None, //
+        fee: None, // Fee information not available in restore response
+        boltz_fee: None,
+        claim_fee: None, // Not available in restore response, will use fallback fee rate
         claim_txid: None,
         create_reverse_response,
         our_keys,
@@ -322,6 +328,14 @@ impl InvoiceResponse {
             None => TransactionOptions::default().with_cooperative(true),
         };
 
+        // Use the claim fee from Boltz API to match the quoted amount exactly.
+        // Add LIQUID_UNCOOPERATIVE_EXTRA as buffer for script-path claims.
+        // Fall back to Fee::Relative if claim_fee is not available (e.g., restored swaps).
+        let fee = match self.data.claim_fee {
+            Some(claim_fee) => Fee::Absolute(claim_fee + LIQUID_UNCOOPERATIVE_EXTRA),
+            None => Fee::Relative(0.12),
+        };
+
         let tx = self
             .swap_script
             .construct_claim(
@@ -329,7 +343,7 @@ impl InvoiceResponse {
                 SwapTransactionParams {
                     keys: self.data.our_keys,
                     output_address: self.data.claim_address.to_string(),
-                    fee: Fee::Relative(0.12), // TODO make it configurable
+                    fee,
                     swap_id: self.swap_id().to_string(),
                     options: Some(options),
                     chain_client: &self.chain_client,
@@ -381,6 +395,16 @@ impl InvoiceResponse {
     /// The txid of the claim transaction of the swap
     pub fn claim_txid(&self) -> Option<&str> {
         self.data.claim_txid.as_deref()
+    }
+
+    /// The claim transaction fee estimate from Boltz API (in satoshis)
+    pub fn claim_fee(&self) -> Option<u64> {
+        self.data.claim_fee
+    }
+
+    /// The onchain amount that Boltz locks up for the swap
+    pub fn onchain_amount(&self) -> u64 {
+        self.data.create_reverse_response.onchain_amount
     }
 
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {

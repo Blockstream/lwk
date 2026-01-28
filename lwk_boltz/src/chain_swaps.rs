@@ -19,6 +19,7 @@ use lwk_wollet::elements::bitcoin;
 
 use crate::chain_data::{chain_from_str, to_chain_data, ChainSwapData, ChainSwapDataSerializable};
 use crate::error::Error;
+use crate::quote::LIQUID_UNCOOPERATIVE_EXTRA;
 use crate::swap_state::SwapStateTrait;
 use crate::{
     broadcast_tx_with_retry, derive_keypair, mnemonic_identifier, next_status,
@@ -142,18 +143,28 @@ impl BoltzSession {
         // Fee is what you lock up minus what you receive on the claim side
         let fee = expected_lockup_amount.saturating_sub(create_chain_response.claim_details.amount);
 
-        let boltz_fee = {
+        let (boltz_fee, claim_fee) = {
             let swap_info = self.swap_info.lock().await;
             match (from, to) {
-                (Chain::Bitcoin(_), Chain::Liquid(_)) => swap_info
-                    .chain_pairs
-                    .get_btc_to_lbtc_pair()
-                    .map(|pair| pair.fees.boltz(amount)),
-                (Chain::Liquid(_), Chain::Bitcoin(_)) => swap_info
-                    .chain_pairs
-                    .get_lbtc_to_btc_pair()
-                    .map(|pair| pair.fees.boltz(amount)),
-                _ => None,
+                (Chain::Bitcoin(_), Chain::Liquid(_)) => {
+                    match swap_info.chain_pairs.get_btc_to_lbtc_pair() {
+                        Some(pair) => (
+                            Some(pair.fees.boltz(amount)),
+                            Some(pair.fees.claim_estimate()),
+                        ),
+                        None => (None, None),
+                    }
+                }
+                (Chain::Liquid(_), Chain::Bitcoin(_)) => {
+                    match swap_info.chain_pairs.get_lbtc_to_btc_pair() {
+                        Some(pair) => (
+                            Some(pair.fees.boltz(amount)),
+                            Some(pair.fees.claim_estimate()),
+                        ),
+                        None => (None, None),
+                    }
+                }
+                _ => (None, None),
             }
         };
 
@@ -163,6 +174,7 @@ impl BoltzSession {
                 swap_type: SwapType::Chain,
                 fee: Some(fee),
                 boltz_fee,
+                claim_fee,
                 create_chain_response,
                 claim_keys,
                 refund_keys,
@@ -412,8 +424,9 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
     Ok(ChainSwapData {
         last_state,
         swap_type: SwapType::Chain,
-        fee: None,       // Fee information not available in restore response
-        boltz_fee: None, // Fee information not available in restore response
+        fee: None, // Fee information not available in restore response
+        boltz_fee: None,
+        claim_fee: None, // Not available in restore response, will use fallback fee rate
         create_chain_response,
         claim_keys,
         refund_keys,
@@ -530,6 +543,22 @@ impl LockupResponse {
                         .with_chain_claim(self.data.refund_keys, self.lockup_script.clone()),
                 };
 
+                // Use the claim fee from Boltz API to match the quoted amount exactly.
+                // For Liquid claims (BTC→L-BTC), add LIQUID_UNCOOPERATIVE_EXTRA as buffer.
+                // Fall back to Fee::Relative if claim_fee is not available (e.g., restored swaps).
+                let fee = match self.data.claim_fee {
+                    Some(claim_fee) => {
+                        // Add extra for Liquid claims only (to_chain is Liquid)
+                        let extra = if matches!(self.data.to_chain, Chain::Liquid(_)) {
+                            LIQUID_UNCOOPERATIVE_EXTRA
+                        } else {
+                            0
+                        };
+                        Fee::Absolute(claim_fee + extra)
+                    }
+                    None => Fee::Relative(1.0),
+                };
+
                 let tx = self
                     .claim_script
                     .construct_claim(
@@ -537,7 +566,7 @@ impl LockupResponse {
                         SwapTransactionParams {
                             keys: self.data.claim_keys,
                             output_address: self.data.claim_address.clone(),
-                            fee: Fee::Relative(1.0),
+                            fee,
                             swap_id: self.swap_id(),
                             chain_client: &self.chain_client,
                             boltz_client: &self.api,

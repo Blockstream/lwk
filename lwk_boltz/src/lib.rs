@@ -65,7 +65,7 @@ pub use crate::invoice_data::InvoiceDataSerializable;
 pub use crate::lightning_payment::LightningPayment;
 pub use crate::prepare_pay_data::PreparePayData;
 pub use crate::prepare_pay_data::PreparePayDataSerializable;
-pub use crate::quote::{Quote, QuoteBuilder, SwapAsset};
+pub use crate::quote::{Quote, QuoteBuilder, SwapAsset, LIQUID_UNCOOPERATIVE_EXTRA};
 pub use crate::reverse::InvoiceResponse;
 pub use crate::submarine::PreparePayResponse;
 pub use crate::swap_state::SwapState;

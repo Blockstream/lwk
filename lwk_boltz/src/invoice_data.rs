@@ -27,6 +27,10 @@ pub struct InvoiceData {
     /// The fee of the swap provider
     pub boltz_fee: Option<u64>,
 
+    /// The claim transaction fee estimate from Boltz API (in satoshis)
+    /// Used to ensure the actual claim fee matches the quoted fee
+    pub claim_fee: Option<u64>,
+
     pub claim_txid: Option<String>,
 
     pub(crate) create_reverse_response: CreateReverseResponse,
@@ -44,6 +48,7 @@ pub struct InvoiceDataSerializable {
     pub swap_type: SwapType,
     pub fee: Option<u64>,
     pub boltz_fee: Option<u64>,
+    pub claim_fee: Option<u64>,
     pub claim_txid: Option<String>,
     pub create_reverse_response: CreateReverseResponse,
     pub key_index: u32,
@@ -80,6 +85,7 @@ pub fn to_invoice_data(
         swap_type: i.swap_type,
         fee: i.fee,
         boltz_fee: i.boltz_fee,
+        claim_fee: i.claim_fee,
         claim_txid: i.claim_txid,
         create_reverse_response: i.create_reverse_response,
         our_keys,
@@ -99,6 +105,7 @@ impl From<InvoiceData> for InvoiceDataSerializable {
             swap_type: i.swap_type,
             fee: i.fee,
             boltz_fee: i.boltz_fee,
+            claim_fee: i.claim_fee,
             claim_txid: i.claim_txid,
             create_reverse_response: i.create_reverse_response,
             key_index: i.key_index,

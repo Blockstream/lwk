@@ -20,6 +20,9 @@ pub struct ChainSwapData {
     pub swap_type: SwapType,
     pub fee: Option<u64>,
     pub boltz_fee: Option<u64>,
+    /// The claim transaction fee estimate from Boltz API (in satoshis)
+    /// Used to ensure the actual claim fee matches the quoted fee
+    pub claim_fee: Option<u64>,
     pub create_chain_response: CreateChainResponse,
     pub claim_keys: Keypair,
     pub refund_keys: Keypair,
@@ -42,6 +45,7 @@ pub struct ChainSwapDataSerializable {
     pub swap_type: SwapType,
     pub fee: Option<u64>,
     pub boltz_fee: Option<u64>,
+    pub claim_fee: Option<u64>,
     pub create_chain_response: CreateChainResponse,
     pub claim_key_index: u32,
     pub refund_key_index: u32,
@@ -64,6 +68,7 @@ impl From<ChainSwapData> for ChainSwapDataSerializable {
             swap_type: data.swap_type,
             fee: data.fee,
             boltz_fee: data.boltz_fee,
+            claim_fee: data.claim_fee,
             create_chain_response: data.create_chain_response,
             claim_key_index: data.claim_key_index,
             refund_key_index: data.refund_key_index,
@@ -115,6 +120,7 @@ pub fn to_chain_data(
         swap_type: data.swap_type,
         fee: data.fee,
         boltz_fee: data.boltz_fee,
+        claim_fee: data.claim_fee,
         create_chain_response: data.create_chain_response,
         claim_keys,
         refund_keys,

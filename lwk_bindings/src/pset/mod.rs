@@ -255,8 +255,8 @@ mod tests {
             "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d".to_string(),
         )
         .unwrap();
-        let builder = PsetOutputBuilder::new_explicit(&script, 1000, asset, None);
-        builder.blinder_index(Some(0)).unwrap();
+        let builder = PsetOutputBuilder::new_explicit(&script, 1000, asset);
+        builder.blinder_index(0).unwrap();
         let output = builder.build().unwrap();
         assert_eq!(output.amount(), Some(1000));
         assert_eq!(output.blinder_index(), Some(0));
@@ -283,7 +283,7 @@ mod tests {
             "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d".to_string(),
         )
         .unwrap();
-        let out_builder = PsetOutputBuilder::new_explicit(&script, 1000, asset, None);
+        let out_builder = PsetOutputBuilder::new_explicit(&script, 1000, asset);
         let output = out_builder.build().unwrap();
         pset_builder.add_output(&output).unwrap();
 

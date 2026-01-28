@@ -173,27 +173,29 @@ contract_script_hex = str(contract_script)
 fee_sats = 500
 
 out_builder0 = PsetOutputBuilder.new_explicit(
-    contract_script, 1, option_reissuance_token_asset, blinding_pubkey
+    contract_script, 1, option_reissuance_token_asset
 )
+out_builder0.blinding_pubkey(blinding_pubkey)
 out_builder0.blinder_index(0)
 creation_output0 = out_builder0.build()
 
 out_builder1 = PsetOutputBuilder.new_explicit(
-    contract_script, 1, grantor_reissuance_token_asset, blinding_pubkey
+    contract_script, 1, grantor_reissuance_token_asset
 )
+out_builder1.blinding_pubkey(blinding_pubkey)
 out_builder1.blinder_index(1)
 creation_output1 = out_builder1.build()
 
 total_input_sats = funded_sats * 2
 change_sats = total_input_sats - fee_sats
 out_builder2 = PsetOutputBuilder.new_explicit(
-    p2pk_script, change_sats, policy_asset, None
+    p2pk_script, change_sats, policy_asset
 )
 creation_output2 = out_builder2.build()
 
 fee_script = Script.empty()
 out_builder3 = PsetOutputBuilder.new_explicit(
-    fee_script, fee_sats, policy_asset, None
+    fee_script, fee_sats, policy_asset
 )
 creation_output3 = out_builder3.build()
 
@@ -305,40 +307,42 @@ funding_input2 = fund_inp_builder2.build()
 funding_fee_sats = 500
 
 fund_out_builder0 = PsetOutputBuilder.new_explicit(
-    contract_script, 1, option_reissuance_token_asset, blinding_pubkey
+    contract_script, 1, option_reissuance_token_asset
 )
+fund_out_builder0.blinding_pubkey(blinding_pubkey)
 fund_out_builder0.blinder_index(0)
 funding_output0 = fund_out_builder0.build()
 
 fund_out_builder1 = PsetOutputBuilder.new_explicit(
-    contract_script, 1, grantor_reissuance_token_asset, blinding_pubkey
+    contract_script, 1, grantor_reissuance_token_asset
 )
+fund_out_builder1.blinding_pubkey(blinding_pubkey)
 fund_out_builder1.blinder_index(1)
 funding_output1 = fund_out_builder1.build()
 
 fund_out_builder2 = PsetOutputBuilder.new_explicit(
-    contract_script, collateral_sats, policy_asset, None
+    contract_script, collateral_sats, policy_asset
 )
 funding_output2 = fund_out_builder2.build()
 
 fund_out_builder3 = PsetOutputBuilder.new_explicit(
-    p2pk_script, NUM_CONTRACTS, option_token_asset, None
+    p2pk_script, NUM_CONTRACTS, option_token_asset
 )
 funding_output3 = fund_out_builder3.build()
 
 fund_out_builder4 = PsetOutputBuilder.new_explicit(
-    p2pk_script, NUM_CONTRACTS, grantor_token_asset, None
+    p2pk_script, NUM_CONTRACTS, grantor_token_asset
 )
 funding_output4 = fund_out_builder4.build()
 
 change_sats_funding = funded_sats - collateral_sats - funding_fee_sats
 fund_out_builder5 = PsetOutputBuilder.new_explicit(
-    p2pk_script, change_sats_funding, policy_asset, None
+    p2pk_script, change_sats_funding, policy_asset
 )
 funding_output5 = fund_out_builder5.build()
 
 fund_out_builder6 = PsetOutputBuilder.new_explicit(
-    fee_script, funding_fee_sats, policy_asset, None
+    fee_script, funding_fee_sats, policy_asset
 )
 funding_output6 = fund_out_builder6.build()
 

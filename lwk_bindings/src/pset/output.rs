@@ -73,17 +73,11 @@ impl AsRef<Mutex<Option<Output>>> for PsetOutputBuilder {
 impl PsetOutputBuilder {
     /// Construct a PsetOutputBuilder with explicit asset and value.
     #[uniffi::constructor]
-    pub fn new_explicit(
-        script_pubkey: &Script,
-        satoshi: u64,
-        asset: AssetId,
-        blinding_key: Option<Arc<PublicKey>>,
-    ) -> Arc<Self> {
+    pub fn new_explicit(script_pubkey: &Script, satoshi: u64, asset: AssetId) -> Arc<Self> {
         let inner = Output {
             script_pubkey: script_pubkey.into(),
             amount: Some(satoshi),
             asset: Some(asset.into()),
-            blinding_key: blinding_key.map(|k| k.as_ref().into()),
             ..Default::default()
         };
         Arc::new(Self {
@@ -91,11 +85,43 @@ impl PsetOutputBuilder {
         })
     }
 
-    /// Set the blinder index.
-    pub fn blinder_index(&self, index: Option<u32>) -> Result<(), LwkError> {
+    /// Set the blinding public key.
+    pub fn blinding_pubkey(&self, blinding_key: &PublicKey) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.as_mut().ok_or_else(builder_consumed)?;
-        inner.blinder_index = index;
+        inner.blinding_key = Some(blinding_key.into());
+        Ok(())
+    }
+
+    /// Set the script pubkey.
+    pub fn script_pubkey(&self, script_pubkey: &Script) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.as_mut().ok_or_else(builder_consumed)?;
+        inner.script_pubkey = script_pubkey.into();
+        Ok(())
+    }
+
+    /// Set the explicit amount.
+    pub fn satoshi(&self, satoshi: u64) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.as_mut().ok_or_else(builder_consumed)?;
+        inner.amount = Some(satoshi);
+        Ok(())
+    }
+
+    /// Set the explicit asset ID.
+    pub fn asset(&self, asset: AssetId) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.as_mut().ok_or_else(builder_consumed)?;
+        inner.asset = Some(asset.into());
+        Ok(())
+    }
+
+    /// Set the blinder index.
+    pub fn blinder_index(&self, index: u32) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.as_mut().ok_or_else(builder_consumed)?;
+        inner.blinder_index = Some(index);
         Ok(())
     }
 

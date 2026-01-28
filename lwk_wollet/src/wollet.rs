@@ -281,10 +281,7 @@ impl Wollet {
     /// Whether the wallet is segwit (BIP141)
     pub fn is_segwit(&self) -> bool {
         self.descriptor()
-            .descriptor
-            .desc_type()
-            .segwit_version()
-            .is_some()
+            .is_ok_and(|d| d.descriptor.desc_type().segwit_version().is_some())
     }
 
     /// Whether the wallet is AMP0
@@ -353,8 +350,8 @@ impl Wollet {
     }
 
     /// Get a reference of the wallet descriptor
-    pub fn descriptor(&self) -> &ConfidentialDescriptor<DescriptorPublicKey> {
-        self.descriptor.as_ref()
+    pub fn descriptor(&self) -> Result<&ConfidentialDescriptor<DescriptorPublicKey>, Error> {
+        self.descriptor.ct_descriptor()
     }
 
     /// Get a copy of the wallet descriptor
@@ -826,7 +823,7 @@ impl Wollet {
     /// Get the PSET details with respect to the wallet
     pub fn get_details(&self, pset: &PartiallySignedTransaction) -> Result<PsetDetails, Error> {
         Ok(PsetDetails {
-            balance: pset_balance(pset, self.descriptor(), self.network.address_params())?,
+            balance: pset_balance(pset, self.descriptor()?, self.network.address_params())?,
             sig_details: pset_signatures(pset),
             issuances: pset_issuances(pset),
         })
@@ -882,7 +879,7 @@ impl Wollet {
         }
 
         // Set PSET xpub origin
-        self.descriptor().descriptor.for_each_key(|k| {
+        self.descriptor()?.descriptor.for_each_key(|k| {
             match k {
                 DescriptorPublicKey::XPub(x) => {
                     if let Some(origin) = &x.origin {
@@ -905,13 +902,15 @@ impl Wollet {
     /// Get the signers' fingerprints involved in this descriptor
     pub fn signers(&self) -> Vec<Fingerprint> {
         let mut signers = vec![];
-        self.descriptor().descriptor.for_each_key(|k| {
-            // xpub without key origin and single pubkey unexpectedly return a master fingerprint,
-            // see tests below for the actual behaviour.
-            // This should not be dangerous though, worst case is that we report a signer that
-            // cannot sign.
-            signers.push(k.master_fingerprint());
-            true
+        let _ = self.descriptor().map(|d| {
+            d.descriptor.for_each_key(|k| {
+                // xpub without key origin and single pubkey unexpectedly return a master fingerprint,
+                // see tests below for the actual behaviour.
+                // This should not be dangerous though, worst case is that we report a signer that
+                // cannot sign.
+                signers.push(k.master_fingerprint());
+                true
+            })
         });
         signers
     }

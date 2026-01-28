@@ -18,3 +18,4 @@ docs/book/
 lwk_boltz/Cargo.lock
 lwk_bindings/examples/swaps/
 .cursor/
+swaps/

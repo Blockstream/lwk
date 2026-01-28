@@ -114,13 +114,11 @@ impl PublicKey {
     /// TODO: delete when the version of elements is stabilized
     pub fn to_simplicityhl(
         &self,
-    ) -> Result<lwk_simplicity_options::simplicityhl::elements::bitcoin::PublicKey, LwkError> {
-        lwk_simplicity_options::simplicityhl::elements::bitcoin::PublicKey::from_slice(
-            &self.to_bytes(),
-        )
-        .map_err(|e| LwkError::Generic {
-            msg: format!("Invalid public key: {e}"),
-        })
+    ) -> Result<lwk_simplicity::simplicityhl::elements::bitcoin::PublicKey, LwkError> {
+        lwk_simplicity::simplicityhl::elements::bitcoin::PublicKey::from_slice(&self.to_bytes())
+            .map_err(|e| LwkError::Generic {
+                msg: format!("Invalid public key: {e}"),
+            })
     }
 }
 

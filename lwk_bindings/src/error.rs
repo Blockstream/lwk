@@ -235,8 +235,8 @@ impl From<elements::VerificationError> for LwkError {
 }
 
 #[cfg(feature = "simplicity")]
-impl From<lwk_simplicity_options::error::ProgramError> for LwkError {
-    fn from(value: lwk_simplicity_options::error::ProgramError) -> Self {
+impl From<lwk_simplicity::error::ProgramError> for LwkError {
+    fn from(value: lwk_simplicity::error::ProgramError) -> Self {
         LwkError::Generic {
             msg: format!("{value:?}"),
         }
@@ -244,8 +244,8 @@ impl From<lwk_simplicity_options::error::ProgramError> for LwkError {
 }
 
 #[cfg(feature = "simplicity")]
-impl From<lwk_simplicity_options::simplicityhl::error::RichError> for LwkError {
-    fn from(value: lwk_simplicity_options::simplicityhl::error::RichError) -> Self {
+impl From<lwk_simplicity::simplicityhl::error::RichError> for LwkError {
+    fn from(value: lwk_simplicity::simplicityhl::error::RichError) -> Self {
         LwkError::Generic {
             msg: format!("{value}"),
         }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use lwk_simplicity_options::simplicityhl;
+use lwk_simplicity::simplicityhl;
 use simplicityhl::num::U256;
 use simplicityhl::value::ValueConstructible;
 

@@ -2,9 +2,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use elements::bitcoin::bip32::DerivationPath;
-use lwk_simplicity_options::scripts;
-use lwk_simplicity_options::simplicityhl;
-use lwk_simplicity_options::utils::parse_genesis_hash;
+use lwk_simplicity::scripts;
+use lwk_simplicity::simplicityhl;
+use lwk_simplicity::utils::parse_genesis_hash;
 
 use crate::blockdata::tx_out::TxOut;
 use crate::types::{Hex, XOnlyPublicKey};

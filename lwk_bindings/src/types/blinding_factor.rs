@@ -175,11 +175,9 @@ impl AssetBlindingFactor {
     /// TODO: delete when the version of elements is stabilized
     pub fn to_simplicityhl(
         &self,
-    ) -> Result<
-        lwk_simplicity_options::simplicityhl::elements::confidential::AssetBlindingFactor,
-        LwkError,
-    > {
-        lwk_simplicity_options::simplicityhl::elements::confidential::AssetBlindingFactor::from_slice(
+    ) -> Result<lwk_simplicity::simplicityhl::elements::confidential::AssetBlindingFactor, LwkError>
+    {
+        lwk_simplicity::simplicityhl::elements::confidential::AssetBlindingFactor::from_slice(
             &self.to_bytes(),
         )
         .map_err(|e| LwkError::Generic {
@@ -195,11 +193,9 @@ impl ValueBlindingFactor {
     /// TODO: delete when the version of elements is stabilized
     pub fn to_simplicityhl(
         &self,
-    ) -> Result<
-        lwk_simplicity_options::simplicityhl::elements::confidential::ValueBlindingFactor,
-        LwkError,
-    > {
-        lwk_simplicity_options::simplicityhl::elements::confidential::ValueBlindingFactor::from_slice(
+    ) -> Result<lwk_simplicity::simplicityhl::elements::confidential::ValueBlindingFactor, LwkError>
+    {
+        lwk_simplicity::simplicityhl::elements::confidential::ValueBlindingFactor::from_slice(
             &self.to_bytes(),
         )
         .map_err(|e| LwkError::Generic {

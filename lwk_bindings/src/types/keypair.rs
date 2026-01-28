@@ -104,11 +104,9 @@ impl Keypair {
     /// TODO: delete when the version of elements is stabilized
     pub fn to_simplicityhl(
         &self,
-    ) -> Result<lwk_simplicity_options::simplicityhl::elements::bitcoin::secp256k1::Keypair, LwkError>
-    {
-        let secp =
-            lwk_simplicity_options::simplicityhl::elements::bitcoin::secp256k1::Secp256k1::new();
-        lwk_simplicity_options::simplicityhl::elements::bitcoin::secp256k1::Keypair::from_seckey_slice(
+    ) -> Result<lwk_simplicity::simplicityhl::elements::bitcoin::secp256k1::Keypair, LwkError> {
+        let secp = lwk_simplicity::simplicityhl::elements::bitcoin::secp256k1::Secp256k1::new();
+        lwk_simplicity::simplicityhl::elements::bitcoin::secp256k1::Keypair::from_seckey_slice(
             &secp,
             &self.secret_bytes(),
         )

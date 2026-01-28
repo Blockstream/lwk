@@ -2392,7 +2392,7 @@ dependencies = [
  "lwk_common",
  "lwk_payment_instructions",
  "lwk_signer",
- "lwk_simplicity_options",
+ "lwk_simplicity",
  "lwk_test_util",
  "lwk_wollet",
  "serde_json",
@@ -2551,7 +2551,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lwk_simplicity_options"
+name = "lwk_simplicity"
 version = "0.1.0"
 dependencies = [
  "lwk_common",

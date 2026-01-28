@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use lwk_simplicity_options::runner;
-use lwk_simplicity_options::scripts;
-use lwk_simplicity_options::signer;
-use lwk_simplicity_options::simplicityhl;
-use lwk_simplicity_options::utils::network_to_address_params;
+use lwk_simplicity::runner;
+use lwk_simplicity::scripts;
+use lwk_simplicity::signer;
+use lwk_simplicity::simplicityhl;
+use lwk_simplicity::utils::network_to_address_params;
 
 use crate::blockdata::tx_out::TxOut;
 use crate::types::{Hex, XOnlyPublicKey};
@@ -17,7 +17,7 @@ use super::utils::{convert_utxos, derive_keypair, get_genesis_hash};
 
 /// A compiled Simplicity program ready for use in transactions.
 ///
-/// See [`lwk_simplicity_options::simplicityhl::CompiledProgram`] for more details.
+/// See [`lwk_simplicity::simplicityhl::CompiledProgram`] for more details.
 #[derive(uniffi::Object)]
 pub struct SimplicityProgram {
     inner: simplicityhl::CompiledProgram,

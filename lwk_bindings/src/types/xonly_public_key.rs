@@ -80,9 +80,8 @@ impl XOnlyPublicKey {
     /// TODO: delete when the version of elements is stabilized
     pub fn to_simplicityhl(
         &self,
-    ) -> Result<lwk_simplicity_options::simplicityhl::simplicity::bitcoin::XOnlyPublicKey, LwkError>
-    {
-        lwk_simplicity_options::simplicityhl::simplicity::bitcoin::XOnlyPublicKey::from_slice(
+    ) -> Result<lwk_simplicity::simplicityhl::simplicity::bitcoin::XOnlyPublicKey, LwkError> {
+        lwk_simplicity::simplicityhl::simplicity::bitcoin::XOnlyPublicKey::from_slice(
             &self.serialize(),
         )
         .map_err(|e| LwkError::Generic {

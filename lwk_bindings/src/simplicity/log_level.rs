@@ -1,4 +1,4 @@
-use lwk_simplicity_options::simplicityhl;
+use lwk_simplicity::simplicityhl;
 
 /// Log level for Simplicity program execution tracing.
 #[derive(uniffi::Enum, Clone, Copy, Debug, Default)]

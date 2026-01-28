@@ -17,7 +17,7 @@ members = [
     "lwk_wasm",
     "lwk_boltz",
     "lwk_payment_instructions",
-    "lwk_simplicity_options",
+    "lwk_simplicity",
 ]
 resolver = "2"
 
@@ -34,7 +34,7 @@ lwk_tiny_jrpc = { path = "lwk_tiny_jrpc" }
 lwk_wollet = { path = "lwk_wollet" }
 lwk_boltz = { path = "lwk_boltz" }
 lwk_payment_instructions = { path = "lwk_payment_instructions" }
-lwk_simplicity_options = { path = "lwk_simplicity_options" }
+lwk_simplicity = { path = "lwk_simplicity" }
 
 [profile.release-smaller]
 inherits = "release"

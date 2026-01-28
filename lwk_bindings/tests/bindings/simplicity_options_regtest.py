@@ -2,7 +2,7 @@ import os
 import time
 from lwk import *
 
-_SIMF_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "lwk_simplicity_options", "data")
+_SIMF_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "lwk_simplicity", "data")
 P2PK_SOURCE = open(os.path.join(_SIMF_DIR, "p2pk.simf")).read()
 OPTIONS_SOURCE = open(os.path.join(_SIMF_DIR, "options.simf")).read()
 

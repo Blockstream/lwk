@@ -1,7 +1,7 @@
 import os
 from lwk import *
 
-_SIMF_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "lwk_simplicity_options", "data")
+_SIMF_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "lwk_simplicity", "data")
 P2PK_SOURCE = open(os.path.join(_SIMF_DIR, "p2pk.simf")).read()
 
 TEST_PUBLIC_KEY = "8a65c55726dc32b59b649ad0187eb44490de681bb02601b8d3f58c8b9fff9083"

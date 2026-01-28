@@ -2,8 +2,8 @@ import os
 import time
 from lwk import *
 
-_TEST_DATA = os.path.join(os.path.dirname(__file__), "..", "test_data")
-P2PK_SOURCE = open(os.path.join(_TEST_DATA, "p2pk.simf")).read()
+_SIMF_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "lwk_simplicity_options", "data")
+P2PK_SOURCE = open(os.path.join(_SIMF_DIR, "p2pk.simf")).read()
 
 # 1. Set up regtest environment
 node = LwkTestEnv()

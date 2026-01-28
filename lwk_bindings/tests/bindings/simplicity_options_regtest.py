@@ -2,10 +2,9 @@ import os
 import time
 from lwk import *
 
-_TEST_DATA = os.path.join(os.path.dirname(__file__), "..", "test_data")
-P2PK_SOURCE = open(os.path.join(_TEST_DATA, "p2pk.simf")).read()
-OPTIONS_SOURCE = open(os.path.join(_TEST_DATA, "options.simf")).read()
-
+_SIMF_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "lwk_simplicity_options", "data")
+P2PK_SOURCE = open(os.path.join(_SIMF_DIR, "p2pk.simf")).read()
+OPTIONS_SOURCE = open(os.path.join(_SIMF_DIR, "options.simf")).read()
 
 def build_options_arguments(params):
     args = SimplicityArguments()
@@ -43,10 +42,10 @@ def wait_for_tx(client, txid, retries=30):
 
 
 def find_output_by_script(tx, script_hex):
-    for i, output in enumerate(tx.outputs()):
-        if str(output.script_pubkey()) == script_hex:
-            return i, output
-    raise RuntimeError("Output not found for script")
+    return next(
+        (i, output) for i, output in enumerate(tx.outputs())
+        if str(output.script_pubkey()) == script_hex
+    )
 
 
 def find_outputs_by_script(tx, script_hex):

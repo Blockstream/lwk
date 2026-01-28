@@ -1,13 +1,24 @@
 #!/usr/bin/env bash
 
-# Skip amp0-* tests: they require a live AMP0 backend and credentials.
-set -euo pipefail
+set -uo pipefail
 
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
+FAILED=0
 
 for f in "$DIR"/*.js; do
     name="$(basename "$f")"
-    case "$name" in amp0-*) echo "SKIP $name"; continue;; esac
     echo "RUN  $name"
-    node "$f"
+    if node "$f"; then
+        echo "PASS $name"
+    else
+        echo "FAIL $name"
+        FAILED=1
+    fi
 done
+
+if [ "$FAILED" -eq 1 ]; then
+    echo "Some tests failed"
+    exit 1
+fi
+
+echo "All tests passed"

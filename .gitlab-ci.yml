@@ -83,6 +83,7 @@ test_coverage:
     RUSTFLAGS: "-C instrument-coverage"
     LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
     TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
+    JAVA_OPTS: "-Xmx2g"
 
   script:
     - docker pull tulipan81/blind_pin_server:v0.0.7
@@ -150,6 +151,8 @@ examples:
 
 bindings:
   extends: .base
+  variables:
+    JAVA_OPTS: "-Xmx2g"
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_bindings --features foreign_bindings
@@ -191,6 +194,8 @@ cpp:
 
 just:
   extends: .base
+  variables:
+    JAVA_OPTS: "-Xmx2g"
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - just python-test-bindings

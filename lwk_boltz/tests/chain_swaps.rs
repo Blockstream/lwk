@@ -20,6 +20,7 @@ mod tests {
     use boltz_client::Keypair;
     use boltz_client::PublicKey;
     use boltz_client::Secp256k1;
+    use lwk_boltz::SwapPersistence;
     use lwk_boltz::{
         clients::{AnyClient, ElectrumClient},
         BoltzSession, SwapAsset, LIQUID_UNCOOPERATIVE_EXTRA,
@@ -394,7 +395,7 @@ mod tests {
         log::info!("Found {:?} restorable chain swaps", swaps);
         assert_eq!(swaps.len(), 0); // the just created swap is not restorable.
 
-        let swap_id = response.swap_id();
+        let swap_id = response.swap_id().to_string();
         let lockup_address = response.lockup_address().to_string();
         let expected_amount = response.expected_amount();
 
@@ -431,7 +432,7 @@ mod tests {
             .into_iter()
             .map(|data| data.into())
             .find(|data: &lwk_boltz::ChainSwapDataSerializable| {
-                data.create_chain_response.id == swap_id
+                data.create_chain_response.id == *swap_id
             })
             .expect("Our swap should be in the restorable list");
 
@@ -531,6 +532,144 @@ mod tests {
             "Restored BTC to LBTC swap with random preimages should succeed"
         );
         drop(session);
+
+        // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_session_restore_chain_swaps_with_store() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = crate::utils::start_block_mining();
+
+        let network = ElementsNetwork::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+
+        // Create a shared store that persists across sessions
+        let store = Arc::new(lwk_common::MemoryStore::new());
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic.clone())
+            .store(store.clone())
+            .build()
+            .await
+            .unwrap();
+
+        // Initially no pending swaps
+        let pending = session.pending_swap_ids().unwrap().unwrap();
+        assert!(pending.is_empty(), "Should start with no pending swaps");
+
+        // Test BTC to LBTC swap with store-based persistence
+        let refund_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+            .await
+            .unwrap();
+        let claim_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let refund_address = bitcoin::Address::from_str(&refund_address_str)
+            .unwrap()
+            .assume_checked();
+        let claim_address = elements::Address::from_str(&claim_address_str).unwrap();
+
+        let response = session
+            .btc_to_lbtc(50_000, &refund_address, &claim_address, None)
+            .await
+            .unwrap();
+
+        let swap_id = response.swap_id().to_string();
+        let lockup_address = response.lockup_address().to_string();
+        let expected_amount = response.expected_amount();
+
+        // Verify swap is in pending list
+        let pending = session.pending_swap_ids().unwrap().unwrap();
+        assert!(
+            pending.contains(&swap_id),
+            "Swap should be in pending list after creation"
+        );
+
+        // Verify swap data is stored
+        let swap_data = session.get_swap_data(&swap_id).unwrap();
+        assert!(swap_data.is_some(), "Swap data should be stored");
+
+        // Drop the session and response
+        drop(response);
+        drop(session);
+
+        // Create a new session with the same store
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic)
+            .store(store.clone())
+            .build()
+            .await
+            .unwrap();
+
+        // Verify swap is still in pending list
+        let pending = session.pending_swap_ids().unwrap().unwrap();
+        assert!(
+            pending.contains(&swap_id),
+            "Swap should still be in pending list after session restart"
+        );
+
+        // Restore the swap from store data
+        let swap_data_json = session.get_swap_data(&swap_id).unwrap().unwrap();
+        let data = lwk_boltz::ChainSwapDataSerializable::deserialize(&swap_data_json).unwrap();
+        let response = session.restore_lockup(data).await.unwrap();
+
+        log::info!(
+            "Restored BTC to LBTC swap with store - Lockup address: {}",
+            response.lockup_address()
+        );
+
+        // Send funds and complete the swap
+        crate::utils::send_to_address(BTC_CHAIN.into(), &lockup_address, expected_amount)
+            .await
+            .unwrap();
+
+        let success = response.complete().await.unwrap();
+        assert!(
+            success,
+            "Restored BTC to LBTC swap with store should succeed"
+        );
+
+        // Verify swap moved from pending to completed
+        let pending = session.pending_swap_ids().unwrap().unwrap();
+        let completed = session.completed_swap_ids().unwrap().unwrap();
+        assert!(
+            !pending.contains(&swap_id),
+            "Swap should not be in pending list after completion"
+        );
+        assert!(
+            completed.contains(&swap_id),
+            "Swap should be in completed list after completion"
+        );
+
+        // Test remove_swap
+        session.remove_swap(&swap_id).unwrap();
+        let pending = session.pending_swap_ids().unwrap().unwrap();
+        let completed = session.completed_swap_ids().unwrap().unwrap();
+        assert!(
+            !pending.contains(&swap_id),
+            "Swap should be removed from pending"
+        );
+        assert!(
+            !completed.contains(&swap_id),
+            "Swap should be removed from completed"
+        );
+        assert!(
+            session.get_swap_data(&swap_id).unwrap().is_none(),
+            "Swap data should be removed"
+        );
 
         // Stop the mining task
         mining_handle.abort();

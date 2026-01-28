@@ -284,6 +284,8 @@ publish_snapshot_to_maven:
   tags:
     - m4
   needs: []
+  variables:
+    SIMPLICITY: "1"
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
       when: on_success

@@ -81,7 +81,7 @@ impl ElementsRpcClient {
         range: u32,
     ) -> Result<Vec<WalletTxOut>, Error> {
         let scanobjects = desc
-            .single_bitcoin_descriptors()
+            .single_bitcoin_descriptors()?
             .iter()
             .map(|d| ScanObject {
                 desc: d.to_string(),

@@ -528,7 +528,7 @@ impl EsploraClient {
         if descriptor.is_elip151() {
             return Err(Error::UsingWaterfallsWithElip151);
         }
-        let base_desc = descriptor.bitcoin_descriptor_without_key_origin();
+        let base_desc = descriptor.bitcoin_descriptor_without_key_origin()?;
 
         let mut page = 0;
         let mut data = Data::default();
@@ -609,7 +609,7 @@ impl EsploraClient {
                         waterfalls_result.page as u32 * WATERFALLS_MAX_ADDRESSES as u32 + i as u32,
                     );
                     let ct_desc = ConfidentialDescriptor {
-                        key: descriptor.as_ref().key.clone(),
+                        key: descriptor.ct_descriptor()?.key.clone(),
                         descriptor: desc.clone(),
                     };
                     let (script, blinding_pubkey, cached) =
@@ -675,7 +675,7 @@ impl EsploraClient {
             return Err(Error::UsingWaterfallsWithElip151);
         }
 
-        let base_desc = descriptor.bitcoin_descriptor_without_key_origin();
+        let base_desc = descriptor.bitcoin_descriptor_without_key_origin()?;
         let desc = self.get_or_encrypt_descriptor(&base_desc).await?;
 
         let url = format!(

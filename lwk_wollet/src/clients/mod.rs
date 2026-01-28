@@ -210,8 +210,9 @@ pub struct History {
 pub fn try_unblind(output: &TxOut, descriptor: &WolletDescriptor) -> Result<TxOutSecrets, Error> {
     match (output.asset, output.value, output.nonce) {
         (Asset::Confidential(_), Value::Confidential(_), Nonce::Confidential(_)) => {
-            let receiver_sk = derive_blinding_key(descriptor.as_ref(), &output.script_pubkey)
-                .ok_or_else(|| Error::MissingPrivateBlindingKey)?;
+            let receiver_sk =
+                derive_blinding_key(descriptor.ct_descriptor()?, &output.script_pubkey)
+                    .ok_or_else(|| Error::MissingPrivateBlindingKey)?;
             let txout_secrets = output.unblind(&EC, receiver_sk)?;
 
             Ok(txout_secrets)

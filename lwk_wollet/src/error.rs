@@ -277,6 +277,9 @@ pub enum Error {
     #[cfg(feature = "amp0")]
     #[error("Cannot generate address for AMP0 wallets using this call, use Amp0::address()")]
     Amp0AddressError,
+
+    #[error("Unsupported (wollet does not have CT descriptor)")]
+    UnsupportedWithoutDescriptor,
 }
 
 // cannot derive automatically with this error because of trait bound

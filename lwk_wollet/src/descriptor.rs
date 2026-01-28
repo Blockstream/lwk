@@ -4,6 +4,7 @@ use std::{fmt::Display, str::FromStr};
 use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::Aes256GcmSiv;
 use aes_gcm_siv::KeyInit;
+use elements::bitcoin::secp256k1::SecretKey;
 use elements::bitcoin::{bip32::ChildNumber, WitnessVersion};
 use elements::hashes::{sha256t_hash_newtype, Hash};
 use elements::{bitcoin, Address, AddressParams, Script};
@@ -28,16 +29,27 @@ sha256t_hash_newtype! {
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
+enum DescOrSpks {
+    Desc(ConfidentialDescriptor<DescriptorPublicKey>),
+    #[allow(unused)]
+    Spks(Vec<(Option<SecretKey>, Script)>),
+}
+
+#[derive(Debug, Clone)]
 /// A wrapper that contains only the subset of CT descriptors handled by wollet
 pub struct WolletDescriptor {
-    inner: ConfidentialDescriptor<DescriptorPublicKey>,
+    inner: DescOrSpks,
     #[cfg(feature = "amp0")]
     is_amp0: bool,
 }
 
 impl Display for WolletDescriptor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Display::fmt(&self.inner, f)
+        match &self.inner {
+            DescOrSpks::Desc(d) => Display::fmt(&d, f),
+            DescOrSpks::Spks(_) => todo!(),
+        }
     }
 }
 
@@ -62,13 +74,13 @@ impl<'de> serde::Deserialize<'de> for WolletDescriptor {
 
 impl std::hash::Hash for WolletDescriptor {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.inner.to_string().hash(state);
+        self.to_string().hash(state);
     }
 }
 
 impl PartialEq for WolletDescriptor {
     fn eq(&self, other: &Self) -> bool {
-        self.inner.to_string() == other.inner.to_string()
+        self.to_string() == other.to_string()
     }
 }
 
@@ -159,7 +171,7 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
         if let elements_miniscript::descriptor::DescriptorType::Sh = desc.descriptor.desc_type() {
             if desc.descriptor.to_string().starts_with("elsh(multi(") {
                 return Ok(WolletDescriptor {
-                    inner: desc,
+                    inner: DescOrSpks::Desc(desc),
                     #[cfg(feature = "amp0")]
                     is_amp0,
                 });
@@ -169,12 +181,12 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
         match desc.descriptor.desc_type().segwit_version() {
             None => Err(Self::Error::UnsupportedDescriptorPreSegwit),
             Some(WitnessVersion::V0) => Ok(WolletDescriptor {
-                inner: desc,
+                inner: DescOrSpks::Desc(desc),
                 #[cfg(feature = "amp0")]
                 is_amp0,
             }),
             Some(WitnessVersion::V1) => Ok(WolletDescriptor {
-                inner: desc,
+                inner: DescOrSpks::Desc(desc),
                 #[cfg(feature = "amp0")]
                 is_amp0,
             }),
@@ -249,13 +261,27 @@ impl TryFrom<&ConfidentialDescriptor<DescriptorPublicKey>> for Chain {
 
 impl WolletDescriptor {
     /// Return a reference to the underlying descriptor.
-    pub fn descriptor(&self) -> &Descriptor<DescriptorPublicKey> {
-        &self.inner.descriptor
+    pub fn descriptor(&self) -> Result<&Descriptor<DescriptorPublicKey>, Error> {
+        match &self.inner {
+            DescOrSpks::Desc(d) => Ok(&d.descriptor),
+            DescOrSpks::Spks(_) => Err(Error::UnsupportedWithoutDescriptor),
+        }
+    }
+
+    /// Return a reference to the underlying CT descriptor.
+    pub fn ct_descriptor(&self) -> Result<&ConfidentialDescriptor<DescriptorPublicKey>, Error> {
+        match &self.inner {
+            DescOrSpks::Desc(d) => Ok(d),
+            DescOrSpks::Spks(_) => Err(Error::UnsupportedWithoutDescriptor),
+        }
     }
 
     /// Return the descriptor URL encoded to be used as part of an URL
-    pub fn url_encoded_descriptor(&self) -> String {
-        url_encode_descriptor(&self.inner.to_string())
+    pub fn url_encoded_descriptor(&self) -> Result<String, Error> {
+        match &self.inner {
+            DescOrSpks::Desc(d) => Ok(url_encode_descriptor(&d.to_string())),
+            DescOrSpks::Spks(_) => Err(Error::UnsupportedWithoutDescriptor),
+        }
     }
 
     /// Return the [ELIP152](https://github.com/ElementsProject/ELIPs/blob/main/elip-0152.mediawiki) deterministic wallet identifier.
@@ -286,73 +312,94 @@ impl WolletDescriptor {
 
     /// Return wether the descriptor has a blinding key derived with [Elip151](https://github.com/ElementsProject/ELIPs/blob/main/elip-0151.mediawiki)
     pub fn is_elip151(&self) -> bool {
-        if let Ok(elip151_key) = Key::from_elip151(&self.inner.descriptor) {
-            elip151_key == self.inner.key
-        } else {
-            false
+        match &self.inner {
+            DescOrSpks::Desc(d) => {
+                if let Ok(elip151_key) = Key::from_elip151(&d.descriptor) {
+                    elip151_key == d.key
+                } else {
+                    false
+                }
+            }
+            DescOrSpks::Spks(_) => false,
         }
     }
 
     /// Strip key origin information from the bitcoin descriptor and return it without checksum
-    pub fn bitcoin_descriptor_without_key_origin(&self) -> String {
-        let desc = self.inner.descriptor.to_string();
-        let mut result = String::with_capacity(desc.len());
-        let mut skip = false;
-        for c in desc.chars() {
-            if skip {
-                if c == ']' {
-                    skip = false;
+    pub fn bitcoin_descriptor_without_key_origin(&self) -> Result<String, Error> {
+        match &self.inner {
+            DescOrSpks::Desc(d) => {
+                let desc = d.descriptor.to_string();
+                let mut result = String::with_capacity(desc.len());
+                let mut skip = false;
+                for c in desc.chars() {
+                    if skip {
+                        if c == ']' {
+                            skip = false;
+                        }
+                    } else if c == '[' || c == '#' {
+                        skip = true;
+                    } else {
+                        result.push(c)
+                    }
                 }
-            } else if c == '[' || c == '#' {
-                skip = true;
-            } else {
-                result.push(c)
+                Ok(result)
             }
+            DescOrSpks::Spks(_) => Err(Error::UnsupportedWithoutDescriptor),
         }
-        result
     }
 
     /// return the single descriptor if not multipath, if multipath returns the internal or the
     /// external descriptor accordint to `int_or_ext`
-    fn inner_descriptor_if_available(&self, ext_int: Chain) -> WolletDescriptor {
-        let mut descriptors = self
-            .inner
-            .descriptor
-            .clone()
-            .into_single_descriptors()
-            .expect("already done in TryFrom");
-        assert_ne!(descriptors.len(), 0);
-        let descriptor = if descriptors.len() == 1 {
-            descriptors.pop().expect("inside len==1 branch")
-        } else {
-            match ext_int {
-                Chain::External => descriptors.remove(0),
-                Chain::Internal => descriptors.remove(1),
+    fn inner_descriptor_if_available(&self, ext_int: Chain) -> Result<WolletDescriptor, Error> {
+        match &self.inner {
+            DescOrSpks::Desc(d) => {
+                let mut descriptors = d
+                    .descriptor
+                    .clone()
+                    .into_single_descriptors()
+                    .expect("already done in TryFrom");
+                assert_ne!(descriptors.len(), 0);
+                let descriptor = if descriptors.len() == 1 {
+                    descriptors.pop().expect("inside len==1 branch")
+                } else {
+                    match ext_int {
+                        Chain::External => descriptors.remove(0),
+                        Chain::Internal => descriptors.remove(1),
+                    }
+                };
+                let inner = ConfidentialDescriptor {
+                    key: d.key.clone(),
+                    descriptor,
+                };
+                Ok(WolletDescriptor {
+                    inner: DescOrSpks::Desc(inner),
+                    #[cfg(feature = "amp0")]
+                    is_amp0: self.is_amp0,
+                })
             }
-        };
-        let inner = ConfidentialDescriptor {
-            key: self.inner.key.clone(),
-            descriptor,
-        };
-        WolletDescriptor {
-            inner,
-            #[cfg(feature = "amp0")]
-            is_amp0: self.is_amp0,
+            DescOrSpks::Spks(_) => Err(Error::UnsupportedWithoutDescriptor),
+        }
+    }
+
+    fn is_multipath(&self) -> bool {
+        match &self.inner {
+            DescOrSpks::Desc(d) => d.descriptor.is_multipath(),
+            DescOrSpks::Spks(_) => false,
         }
     }
 
     /// Derive the single path descriptors of this descriptor if it's multipath.
     /// If it's not multipath, return the descriptor itself as a single element.
-    pub fn single_bitcoin_descriptors(&self) -> Vec<String> {
-        let d = self.inner_descriptor_if_available(Chain::External);
-        let d = to_bitcoin_descriptor(&d.descriptor().to_string());
+    pub fn single_bitcoin_descriptors(&self) -> Result<Vec<String>, Error> {
+        let d = self.inner_descriptor_if_available(Chain::External)?;
+        let d = to_bitcoin_descriptor(&d.descriptor()?.to_string());
         let mut v = vec![d];
-        if self.inner.descriptor.is_multipath() {
-            let d = self.inner_descriptor_if_available(Chain::Internal);
-            let d = to_bitcoin_descriptor(&d.descriptor().to_string());
+        if self.is_multipath() {
+            let d = self.inner_descriptor_if_available(Chain::Internal)?;
+            let d = to_bitcoin_descriptor(&d.descriptor()?.to_string());
             v.push(d);
         }
-        v
+        Ok(v)
     }
 
     /// Derive a change address from this descriptor at the given `index`.
@@ -376,6 +423,16 @@ impl WolletDescriptor {
         self.inner_address(index, params, Chain::External)
     }
 
+    fn at_derivation_index(
+        &self,
+        index: u32,
+    ) -> Result<ConfidentialDescriptor<DefiniteDescriptorKey>, Error> {
+        match &self.inner {
+            DescOrSpks::Desc(d) => Ok(d.at_derivation_index(index)?),
+            DescOrSpks::Spks(_) => Err(Error::UnsupportedWithoutDescriptor),
+        }
+    }
+
     fn inner_address(
         &self,
         index: u32,
@@ -387,8 +444,7 @@ impl WolletDescriptor {
             return Err(Error::Amp0AddressError);
         }
         Ok(self
-            .inner_descriptor_if_available(ext_int)
-            .inner
+            .inner_descriptor_if_available(ext_int)?
             .at_derivation_index(index)?
             .address(&EC, params)?)
     }
@@ -399,20 +455,16 @@ impl WolletDescriptor {
         index: u32,
         params: &'static AddressParams,
     ) -> Result<Address, Error> {
-        Ok(self
-            .inner
-            .at_derivation_index(index)?
-            .address(&EC, params)?)
+        Ok(self.at_derivation_index(index)?.address(&EC, params)?)
     }
 
     /// Get a scriptpubkey
     pub fn script_pubkey(&self, ext_int: Chain, index: u32) -> Result<Script, Error> {
-        let v = self.inner.descriptor.clone().into_single_descriptors()?;
-        let d = match ext_int {
-            Chain::External => v.first().expect("at least on descriptor"),
-            Chain::Internal => v.last().expect("at least on descriptor"),
-        };
-        Ok(d.at_derivation_index(index)?.script_pubkey())
+        Ok(self
+            .inner_descriptor_if_available(ext_int)?
+            .at_derivation_index(index)?
+            .descriptor
+            .script_pubkey())
     }
 
     /// Get a definite descriptor
@@ -421,8 +473,8 @@ impl WolletDescriptor {
         ext_int: Chain,
         index: u32,
     ) -> Result<Descriptor<DefiniteDescriptorKey>, Error> {
-        let desc = self.inner_descriptor_if_available(ext_int);
-        Ok(desc.descriptor().at_derivation_index(index)?)
+        let desc = self.inner_descriptor_if_available(ext_int)?;
+        Ok(desc.descriptor()?.at_derivation_index(index)?)
     }
 
     /// Get a CT definite descriptor
@@ -431,10 +483,8 @@ impl WolletDescriptor {
         ext_int: Chain,
         index: u32,
     ) -> Result<ConfidentialDescriptor<DefiniteDescriptorKey>, Error> {
-        Ok(self
-            .inner_descriptor_if_available(ext_int)
-            .inner
-            .at_derivation_index(index)?)
+        self.inner_descriptor_if_available(ext_int)?
+            .at_derivation_index(index)
     }
 
     /// Try also to parse it as a non-multipath descriptor specified on 2 lines,
@@ -448,13 +498,18 @@ impl WolletDescriptor {
 
     /// Returns true if all the xpubs in the descriptors are for mainnet
     pub fn is_mainnet(&self) -> bool {
-        self.descriptor().for_each_key(|k| match k {
-            DescriptorPublicKey::XPub(x) => x.xkey.network == elements::bitcoin::NetworkKind::Main,
-            DescriptorPublicKey::MultiXPub(x) => {
-                x.xkey.network == elements::bitcoin::NetworkKind::Main
-            }
-            DescriptorPublicKey::Single(_) => true,
-        })
+        match &self.inner {
+            DescOrSpks::Desc(d) => d.descriptor.for_each_key(|k| match k {
+                DescriptorPublicKey::XPub(x) => {
+                    x.xkey.network == elements::bitcoin::NetworkKind::Main
+                }
+                DescriptorPublicKey::MultiXPub(x) => {
+                    x.xkey.network == elements::bitcoin::NetworkKind::Main
+                }
+                DescriptorPublicKey::Single(_) => true,
+            }),
+            _ => false,
+        }
     }
 
     /// Return a bitcoin pegin address, btc sent to this address can be redeemed as lbtc
@@ -476,20 +531,28 @@ impl WolletDescriptor {
     pub(crate) fn as_single_descriptors(
         &self,
     ) -> Result<Vec<ConfidentialDescriptor<DescriptorPublicKey>>, Error> {
-        let descriptors = self.inner.descriptor.clone().into_single_descriptors()?;
-        let mut result = Vec::with_capacity(descriptors.len());
-        for descriptor in descriptors {
-            result.push(ConfidentialDescriptor {
-                key: self.inner.key.clone(),
-                descriptor,
-            });
+        match &self.inner {
+            DescOrSpks::Desc(d) => {
+                let descriptors = d.descriptor.clone().into_single_descriptors()?;
+                let mut result = Vec::with_capacity(descriptors.len());
+                for descriptor in descriptors {
+                    result.push(ConfidentialDescriptor {
+                        key: d.key.clone(),
+                        descriptor,
+                    });
+                }
+                Ok(result)
+            }
+            DescOrSpks::Spks(_) => Err(Error::UnsupportedWithoutDescriptor),
         }
-        Ok(result)
     }
 
     /// Whether this descriptor has a wildcard. A descriptor without a wildcard is a single address descriptor.
     pub fn has_wildcard(&self) -> bool {
-        self.inner.descriptor.has_wildcard()
+        match &self.inner {
+            DescOrSpks::Desc(d) => d.descriptor.has_wildcard(),
+            DescOrSpks::Spks(_) => false,
+        }
     }
 
     /// Whether this descriptor is a AMP0 descriptor
@@ -546,12 +609,6 @@ fn to_bitcoin_descriptor(s: &str) -> String {
     format!("{s}#{c}")
 }
 
-impl AsRef<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
-    fn as_ref(&self) -> &ConfidentialDescriptor<DescriptorPublicKey> {
-        &self.inner
-    }
-}
-
 /// Simple URL encoding for common characters found in Bitcoin descriptors
 pub(crate) fn url_encode_descriptor(desc: &str) -> String {
     desc.chars()
@@ -598,7 +655,7 @@ mod test {
     #[track_caller]
     fn chain(desc: &str, expected: Option<Chain>) {
         let wallet_desc = WolletDescriptor::from_str(desc).unwrap();
-        let desc = wallet_desc.descriptor();
+        let desc = wallet_desc.descriptor().unwrap();
         let chain = Chain::try_from(desc);
         match expected {
             Some(expected) => assert_eq!(chain.unwrap(), expected),
@@ -739,7 +796,10 @@ mod test {
         let desc_str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
         let desc: WolletDescriptor = desc_str.parse().unwrap();
         let expected = "elwpkh(tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*)";
-        assert_eq!(expected, desc.bitcoin_descriptor_without_key_origin());
+        assert_eq!(
+            expected,
+            desc.bitcoin_descriptor_without_key_origin().unwrap()
+        );
     }
 
     #[test]
@@ -826,7 +886,7 @@ mod test {
         let xpub = "tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu";
         let d = format!("ct(elip151,elwpkh({keyorigin}{xpub}/<0;1>/*))");
         let d = WolletDescriptor::from_str(&d).unwrap();
-        let ds = d.single_bitcoin_descriptors();
+        let ds = d.single_bitcoin_descriptors().unwrap();
         assert_eq!(ds[0], format!("wpkh({keyorigin}{xpub}/0/*)#vgjcw353"));
         assert_eq!(ds[1], format!("wpkh({keyorigin}{xpub}/1/*)#auhenyyf"));
     }
@@ -855,7 +915,12 @@ mod test {
 
         let desc: WolletDescriptor = lwk_test_util::PEGIN_TEST_DESC.parse().unwrap();
 
-        let desc_vec = desc.descriptor().clone().into_single_descriptors().unwrap();
+        let desc_vec = desc
+            .descriptor()
+            .unwrap()
+            .clone()
+            .into_single_descriptors()
+            .unwrap();
         let pegin = elements_miniscript::descriptor::pegin::Pegin::new(
             d.clone(),
             desc_vec[0].derived_descriptor(&EC, 0).unwrap(),

@@ -30,7 +30,7 @@ pub fn simplicity_control_block(
     let internal_key = internal_key.to_simplicityhl()?;
     let control_block = scripts::control_block(cmr, internal_key);
     let serialized = control_block.serialize();
-    Ok(ControlBlock::from_slice(&serialized)?)
+    ControlBlock::from_slice(&serialized)
 }
 
 pub(crate) fn get_genesis_hash(

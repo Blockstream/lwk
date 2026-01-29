@@ -61,7 +61,11 @@ impl<C: BlockchainBackend> TestWollet<C> {
         let db_root_dir = TempDir::new().unwrap();
 
         let network = ElementsNetwork::default_regtest();
-        let descriptor = add_checksum(desc);
+        let descriptor = if desc.starts_with("ct") {
+            add_checksum(desc)
+        } else {
+            desc.to_string()
+        };
 
         let desc: WolletDescriptor = descriptor.parse().unwrap();
         let mut wollet = Wollet::with_fs_persist(network, desc, &db_root_dir).unwrap();

@@ -56,6 +56,20 @@ pub mod store_keys {
             .transpose()?
             .map_or_else(|| Ok(Vec::new()), Ok)
     }
+
+    /// Write the pending swaps list to the store
+    pub fn set_pending_swaps(store: &dyn DynStore, swaps: &[String]) -> Result<(), error::Error> {
+        let data = serde_json::to_vec(swaps)?;
+        store.put(PENDING_SWAPS, &data).map_err(error::Error::Store)
+    }
+
+    /// Write the completed swaps list to the store
+    pub fn set_completed_swaps(store: &dyn DynStore, swaps: &[String]) -> Result<(), error::Error> {
+        let data = serde_json::to_vec(swaps)?;
+        store
+            .put(COMPLETED_SWAPS, &data)
+            .map_err(error::Error::Store)
+    }
 }
 
 // Re-export DynStore for convenience
@@ -101,10 +115,7 @@ pub trait SwapPersistence {
             let swap_id = self.swap_id().to_string();
             if !pending.contains(&swap_id) {
                 pending.push(swap_id.clone());
-                let data = serde_json::to_vec(&pending)?;
-                store
-                    .put(store_keys::PENDING_SWAPS, &data)
-                    .map_err(error::Error::Store)?;
+                store_keys::set_pending_swaps(store.as_ref(), &pending)?;
                 log::debug!("Added swap {swap_id} to pending list");
             }
         }
@@ -118,22 +129,14 @@ pub trait SwapPersistence {
 
             // Remove from pending list
             let mut pending = store_keys::get_pending_swaps(store.as_ref())?;
-
             pending.retain(|id| id != &swap_id);
-            let data = serde_json::to_vec(&pending)?;
-            store
-                .put(store_keys::PENDING_SWAPS, &data)
-                .map_err(error::Error::Store)?;
+            store_keys::set_pending_swaps(store.as_ref(), &pending)?;
 
             // Add to completed list
             let mut completed = store_keys::get_completed_swaps(store.as_ref())?;
-
             if !completed.contains(&swap_id) {
                 completed.push(swap_id.clone());
-                let data = serde_json::to_vec(&completed)?;
-                store
-                    .put(store_keys::COMPLETED_SWAPS, &data)
-                    .map_err(error::Error::Store)?;
+                store_keys::set_completed_swaps(store.as_ref(), &completed)?;
             }
 
             log::debug!("Moved swap {swap_id} to completed list");
@@ -472,10 +475,7 @@ impl BoltzSession {
         let was_pending = pending.contains(&swap_id.to_string());
         pending.retain(|id| id != swap_id);
         if was_pending {
-            let data = serde_json::to_vec(&pending)?;
-            store
-                .put(store_keys::PENDING_SWAPS, &data)
-                .map_err(Error::Store)?;
+            store_keys::set_pending_swaps(store.as_ref(), &pending)?;
         }
 
         // Remove from completed list
@@ -483,10 +483,7 @@ impl BoltzSession {
         let was_completed = completed.contains(&swap_id.to_string());
         completed.retain(|id| id != swap_id);
         if was_completed {
-            let data = serde_json::to_vec(&completed)?;
-            store
-                .put(store_keys::COMPLETED_SWAPS, &data)
-                .map_err(Error::Store)?;
+            store_keys::set_completed_swaps(store.as_ref(), &completed)?;
         }
 
         log::debug!("Removed swap {} from store", swap_id);

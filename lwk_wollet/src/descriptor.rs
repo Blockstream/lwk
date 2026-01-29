@@ -490,10 +490,18 @@ impl WolletDescriptor {
         if self.is_amp0 {
             return Err(Error::Amp0AddressError);
         }
-        Ok(self
-            .inner_descriptor_if_available(ext_int)?
-            .at_derivation_index(index)?
-            .address(&EC, params)?)
+        match &self.inner {
+            DescOrSpks::Spks(spks) => {
+                let spk = spks.get(index as usize).ok_or(Error::IndexOutOfRange)?;
+                let blinding_pk = spk.blinding_key.public_key(&EC);
+                Address::from_script(&spk.script_pubkey, Some(blinding_pk), params)
+                    .ok_or(Error::UnsupportedWithoutDescriptor)
+            }
+            _ => Ok(self
+                .inner_descriptor_if_available(ext_int)?
+                .at_derivation_index(index)?
+                .address(&EC, params)?),
+        }
     }
 
     #[cfg(feature = "amp0")]

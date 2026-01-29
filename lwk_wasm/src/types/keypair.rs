@@ -1,4 +1,5 @@
-use crate::{Error, PublicKey, SecretKey, XOnlyPublicKey};
+use super::{PublicKey, SecretKey, XOnlyPublicKey};
+use crate::Error;
 
 use lwk_wollet::elements::bitcoin::secp256k1::{self, Message, Secp256k1};
 use lwk_wollet::elements::hex::ToHex;
@@ -106,8 +107,8 @@ impl Keypair {
 
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
+    use super::SecretKey;
     use super::*;
-    use crate::SecretKey;
 
     use lwk_wollet::secp256k1::schnorr;
 

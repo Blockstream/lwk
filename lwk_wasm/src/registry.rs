@@ -1,10 +1,7 @@
 use lwk_wollet::{elements, registry::RegistryCache};
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use crate::{
-    blockdata::asset_id::AssetIds, AssetId, Contract, Error, EsploraClient, Network, Pset,
-    Transaction,
-};
+use crate::{types::AssetIds, AssetId, Contract, Error, EsploraClient, Network, Pset, Transaction};
 
 /// A Registry, a repository to store and retrieve asset metadata, like the name or the ticker of an asset.
 #[wasm_bindgen]

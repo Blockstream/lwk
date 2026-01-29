@@ -11,7 +11,6 @@ mod bip;
 mod blockdata;
 mod boltz;
 mod contract;
-mod control_block;
 mod descriptor;
 mod error;
 mod esplora;
@@ -19,7 +18,6 @@ mod esplora;
 mod jade;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod jade_websocket;
-mod keypair;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod ledger;
 mod liquidex;
@@ -30,15 +28,13 @@ mod precision;
 mod prices;
 mod pset;
 mod pset_details;
-mod public_key;
 mod registry;
-mod secret_key;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod serial;
 mod signer;
 mod store;
-mod tweak;
 mod tx_builder;
+mod types;
 mod update;
 
 // TODO serial is not logically needed here, but it brings in web_sys dep
@@ -46,8 +42,6 @@ mod update;
 mod websocket;
 
 mod wollet;
-mod xonly_public_key;
-mod xpub;
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use amp0::{Amp0, Amp0Pset};
@@ -55,21 +49,15 @@ pub use amp2::{Amp2, Amp2Descriptor};
 pub use balance::Balance;
 pub use bip::Bip;
 pub use blockdata::address::{Address, AddressResult};
-pub use blockdata::asset_id::{AssetId, AssetIds};
-pub use blockdata::blinding_factor::{AssetBlindingFactor, ValueBlindingFactor};
-pub use blockdata::contract_hash::ContractHash;
-pub use blockdata::lock_time::LockTime;
 pub use blockdata::out_point::OutPoint;
 pub use blockdata::script::Script;
 pub use blockdata::transaction::{Transaction, Txid};
 pub use blockdata::tx_out_secrets::TxOutSecrets;
-pub use blockdata::tx_sequence::TxSequence;
 pub use blockdata::wallet_tx::WalletTx;
 pub use blockdata::wallet_tx_out::{OptionWalletTxOut, WalletTxOut};
 pub use boltz::LightningPayment;
 pub use boltz::{BoltzSession, BoltzSessionBuilder};
 pub use contract::Contract;
-pub use control_block::ControlBlock;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use error::MagicRoutingHint;
@@ -78,7 +66,6 @@ pub use esplora::EsploraClient;
 pub use jade::{Jade, Singlesig};
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use jade_websocket::JadeWebSocket;
-pub use keypair::Keypair;
 pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use pos::PosConfig;
@@ -86,21 +73,20 @@ pub use precision::Precision;
 pub use prices::{ExchangeRates, PricesFetcher, PricesFetcherBuilder};
 pub use pset::Pset;
 pub use pset_details::{Issuance, PsetDetails};
-pub use public_key::PublicKey;
 pub use registry::{AssetMeta, Registry, RegistryPost};
-pub use secret_key::SecretKey;
 pub use signer::Signer;
 pub use store::{JsStorage, JsStoreLink, JsTestStore};
-pub use tweak::Tweak;
 pub use tx_builder::TxBuilder;
+pub use types::{
+    AssetBlindingFactor, AssetId, AssetIds, ContractHash, ControlBlock, Keypair, LockTime,
+    PublicKey, SecretKey, Tweak, TxSequence, ValueBlindingFactor, XOnlyPublicKey, Xpub,
+};
 pub use update::Update;
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use websocket::WebSocketSerial;
 
 pub use wollet::Wollet;
-pub use xonly_public_key::XOnlyPublicKey;
-pub use xpub::Xpub;
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use ledger::search_ledger_device;

@@ -1,4 +1,5 @@
-use crate::{Error, XOnlyPublicKey};
+use super::XOnlyPublicKey;
+use crate::Error;
 
 use lwk_wollet::bitcoin::taproot;
 

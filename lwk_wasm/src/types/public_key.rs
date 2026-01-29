@@ -1,4 +1,6 @@
-use crate::{Error, SecretKey, XOnlyPublicKey};
+use crate::Error;
+
+use super::{SecretKey, XOnlyPublicKey};
 
 use std::fmt::Display;
 
@@ -94,8 +96,8 @@ impl PublicKey {
 
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
+    use super::SecretKey;
     use super::*;
-    use crate::SecretKey;
     use wasm_bindgen_test::*;
 
     wasm_bindgen_test_configure!(run_in_browser);

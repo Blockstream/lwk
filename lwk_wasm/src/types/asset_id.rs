@@ -128,7 +128,7 @@ mod tests {
 
     use wasm_bindgen_test::*;
 
-    use crate::{AssetId, AssetIds};
+    use super::{AssetId, AssetIds};
 
     wasm_bindgen_test_configure!(run_in_browser);
 

@@ -60,7 +60,7 @@ impl Xpub {
 
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
-    use crate::Xpub;
+    use super::Xpub;
     use lwk_wollet::bitcoin::bip32;
     use std::str::FromStr;
     use wasm_bindgen_test::*;

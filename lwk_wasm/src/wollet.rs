@@ -1,4 +1,4 @@
-use crate::blockdata::asset_id::AssetIds;
+use crate::types::AssetIds;
 use crate::{
     AddressResult, Balance, Error, Network, Pset, PsetDetails, Transaction, Update, WalletTx,
     WalletTxOut, WolletDescriptor,

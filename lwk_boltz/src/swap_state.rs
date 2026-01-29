@@ -23,6 +23,8 @@ pub enum SwapState {
     SwapExpired,
     ServerTransactionMempool,
     ServerTransactionConfirmed,
+    TransactionZeroconfRejected,
+    TransactionRefunded,
 }
 
 pub trait SwapStateTrait {
@@ -56,6 +58,8 @@ impl std::fmt::Display for SwapState {
             SwapState::SwapExpired => "swap.expired",
             SwapState::ServerTransactionMempool => "transaction.server.mempool",
             SwapState::ServerTransactionConfirmed => "transaction.server.confirmed",
+            SwapState::TransactionZeroconfRejected => "transaction.zeroconf.rejected",
+            SwapState::TransactionRefunded => "transaction.refunded",
         };
         write!(f, "{s}")
     }
@@ -83,6 +87,8 @@ impl std::str::FromStr for SwapState {
             "swap.expired" => Ok(SwapState::SwapExpired),
             "transaction.server.mempool" => Ok(SwapState::ServerTransactionMempool),
             "transaction.server.confirmed" => Ok(SwapState::ServerTransactionConfirmed),
+            "transaction.zeroconf.rejected" => Ok(SwapState::TransactionZeroconfRejected),
+            "transaction.refunded" => Ok(SwapState::TransactionRefunded),
             _ => Err(format!("Unknown swap status: {s}")),
         }
     }
@@ -130,6 +136,8 @@ mod tests {
             SwapState::SwapExpired,
             SwapState::ServerTransactionMempool,
             SwapState::ServerTransactionConfirmed,
+            SwapState::TransactionZeroconfRejected,
+            SwapState::TransactionRefunded,
         ]
     }
 

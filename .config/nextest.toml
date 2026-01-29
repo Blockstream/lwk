@@ -13,6 +13,11 @@ path = "junit.xml"
 [profile.unit]
 slow-timeout = { period = "1s", terminate-after = 1 }
 
+[[profile.unit.overrides]]
+# This test generates 256 cryptographic proofs which takes a few seconds
+filter = 'test(test_add_input_exceeds_limit)'
+slow-timeout = { period = "10s", terminate-after = 1 }
+
 [[profile.default.overrides]]
 # Some AMP0 unit tests are extremely slow
 filter = 'test(slow_amp0)'

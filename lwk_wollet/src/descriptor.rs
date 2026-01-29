@@ -610,6 +610,17 @@ impl WolletDescriptor {
         }
     }
 
+    /// Return the blinding secret key for the given script pubkey.
+    pub(crate) fn blinding_key_for_script(&self, script_pubkey: &Script) -> Option<SecretKey> {
+        match &self.inner {
+            DescOrSpks::Desc(d) => lwk_common::derive_blinding_key(d, script_pubkey),
+            DescOrSpks::Spks(spks) => spks
+                .iter()
+                .find(|s| s.script_pubkey == *script_pubkey)
+                .and_then(|s| s.blinding_key),
+        }
+    }
+
     /// Whether this descriptor has a wildcard. A descriptor without a wildcard is a single address descriptor.
     pub fn has_wildcard(&self) -> bool {
         match &self.inner {

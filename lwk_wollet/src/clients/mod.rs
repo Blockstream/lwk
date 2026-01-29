@@ -10,7 +10,6 @@ use elements::{
     AssetIssuance, LockTime, Script, Sequence, TxInWitness, TxOut, TxOutSecrets,
 };
 use elements::{BlockHash, OutPoint, Txid};
-use lwk_common::derive_blinding_key;
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
@@ -210,9 +209,9 @@ pub struct History {
 pub fn try_unblind(output: &TxOut, descriptor: &WolletDescriptor) -> Result<TxOutSecrets, Error> {
     match (output.asset, output.value, output.nonce) {
         (Asset::Confidential(_), Value::Confidential(_), Nonce::Confidential(_)) => {
-            let receiver_sk =
-                derive_blinding_key(descriptor.ct_descriptor()?, &output.script_pubkey)
-                    .ok_or_else(|| Error::MissingPrivateBlindingKey)?;
+            let receiver_sk = descriptor
+                .blinding_key_for_script(&output.script_pubkey)
+                .ok_or(Error::MissingPrivateBlindingKey)?;
             let txout_secrets = output.unblind(&EC, receiver_sk)?;
 
             Ok(txout_secrets)

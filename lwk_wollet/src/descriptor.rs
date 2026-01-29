@@ -37,18 +37,16 @@ enum DescOrSpks {
 
 #[derive(Debug, Clone)]
 struct Spk {
-    blinding_key: SecretKey,
+    blinding_key: Option<SecretKey>,
     script_pubkey: Script,
 }
 
 impl Display for Spk {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}:{:x}",
-            self.blinding_key.display_secret(),
-            self.script_pubkey
-        )
+        match &self.blinding_key {
+            Some(key) => write!(f, "{}:{:x}", key.display_secret(), self.script_pubkey),
+            None => write!(f, ":{:x}", self.script_pubkey),
+        }
     }
 }
 
@@ -57,7 +55,11 @@ impl FromStr for Spk {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (key_hex, spk_hex) = s.split_once(':').ok_or(Error::InvalidSpkFormat)?;
-        let blinding_key = SecretKey::from_str(key_hex)?;
+        let blinding_key = if key_hex.is_empty() {
+            None
+        } else {
+            Some(SecretKey::from_str(key_hex)?)
+        };
         let script_pubkey = Script::from_str(spk_hex)?;
         Ok(Spk {
             blinding_key,
@@ -493,8 +495,8 @@ impl WolletDescriptor {
         match &self.inner {
             DescOrSpks::Spks(spks) => {
                 let spk = spks.get(index as usize).ok_or(Error::IndexOutOfRange)?;
-                let blinding_pk = spk.blinding_key.public_key(&EC);
-                Address::from_script(&spk.script_pubkey, Some(blinding_pk), params)
+                let blinding_pk = spk.blinding_key.as_ref().map(|k| k.public_key(&EC));
+                Address::from_script(&spk.script_pubkey, blinding_pk, params)
                     .ok_or(Error::UnsupportedWithoutDescriptor)
             }
             _ => Ok(self

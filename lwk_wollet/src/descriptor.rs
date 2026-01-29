@@ -441,7 +441,7 @@ impl WolletDescriptor {
         }
     }
 
-    fn is_multipath(&self) -> bool {
+    pub(crate) fn is_multipath(&self) -> bool {
         match &self.inner {
             DescOrSpks::Desc(d) => d.descriptor.is_multipath(),
             DescOrSpks::Spks(_) => false,

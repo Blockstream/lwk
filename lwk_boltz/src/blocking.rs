@@ -236,7 +236,7 @@ impl BoltzSession {
     /// Remove a swap from the store
     ///
     /// See [`crate::BoltzSession::remove_swap()`]
-    pub fn remove_swap(&self, swap_id: &str) -> Result<bool, Error> {
+    pub fn remove_swap(&self, swap_id: &str) -> Result<(), Error> {
         self.inner.remove_swap(swap_id)
     }
 

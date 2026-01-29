@@ -458,11 +458,9 @@ impl BoltzSession {
     /// Remove a swap from the store
     ///
     /// This removes the swap data and removes the swap ID from both the pending and completed lists.
-    /// Returns `Ok(true)` if the swap was removed, `Ok(false)` if no store is configured.
-    pub fn remove_swap(&self, swap_id: &str) -> Result<bool, Error> {
-        let Some(store) = &self.store else {
-            return Ok(false);
-        };
+    /// Returns an error if no store is configured.
+    pub fn remove_swap(&self, swap_id: &str) -> Result<(), Error> {
+        let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
 
         // Remove the swap data
         store
@@ -492,7 +490,7 @@ impl BoltzSession {
         }
 
         log::debug!("Removed swap {} from store", swap_id);
-        Ok(true)
+        Ok(())
     }
 
     /// Fetch information, such as min and max amounts, about the swap pairs from the boltz api.

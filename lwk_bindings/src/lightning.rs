@@ -577,8 +577,8 @@ impl BoltzSession {
 
     /// Remove a swap from the store
     ///
-    /// Returns `true` if the swap was removed, `false` if no store is configured.
-    pub fn remove_swap(&self, swap_id: String) -> Result<bool, LwkError> {
+    /// Returns an error if no store is configured.
+    pub fn remove_swap(&self, swap_id: String) -> Result<(), LwkError> {
         Ok(self.inner.remove_swap(&swap_id)?)
     }
 

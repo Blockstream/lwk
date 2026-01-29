@@ -3,6 +3,7 @@ mod fees;
 mod prune;
 #[cfg(feature = "registry")]
 mod registry;
+mod spks;
 mod test_jade;
 mod test_ledger;
 mod test_wollet;

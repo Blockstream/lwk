@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "test": "bash scripts/run-tests.sh"
+  },
   "dependencies": {
     "lwk_node": "file:../../pkg_node",
     "ws": "^8.18.3"

@@ -37,12 +37,12 @@ async function runBasicsTest() {
         // TODO: moves example code related to clients.md to a separate file `clients.js`.
         // ANCHOR: esplora_client
         const url_esplora = "https://blockstream.info/liquid/api";
-        const esplora_client = new lwk.EsploraClient(lwk.Network.liquid(), url_esplora, true, 4, false);
+        const esplora_client = new lwk.EsploraClient(lwk.Network.mainnet(), url_esplora, true, 4, false);
         // ANCHOR_END: esplora_client
 
         // ANCHOR: waterfalls_client
         const url_waterfalls = "https://waterfalls.liquidwebwallet.org/liquid/api";
-        const waterfalls_client = new lwk.EsploraClient(lwk.Network.liquid(), url_waterfalls, true, 4, false);
+        const waterfalls_client = new lwk.EsploraClient(lwk.Network.mainnet(), url_waterfalls, true, 4, false);
         // ANCHOR_END: waterfalls_client
 
         // ANCHOR: client

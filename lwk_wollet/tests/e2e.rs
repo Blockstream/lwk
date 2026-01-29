@@ -1053,7 +1053,7 @@ async fn test_esplora_waterfalls_last_used_index() {
         "0000000000000000000000000000000000000000000000000000000000000000"
     );
 
-    println!("result: {:?}", result);
+    println!("result: {result:?}");
 }
 
 #[ignore = "require network calls"]

@@ -231,7 +231,7 @@ mod test {
                 rates.median
             );
             assert_eq!(rate.currency, *currency);
-            assert!(rate.timestamp > 0, "{:?}", rate);
+            assert!(rate.timestamp > 0, "{rate:?}");
         }
 
         println!(

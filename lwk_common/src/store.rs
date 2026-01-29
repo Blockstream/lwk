@@ -40,7 +40,7 @@ pub trait Store: Send + Sync + Debug {
     /// Remove a value by key.
     ///
     /// Returns `Ok(())` even if the key did not exist.
-    fn remove<K: AsRef<[u8]>>(&self, key: K) -> Result<(), Self::Error>;
+    fn remove<K: AsRef<[u8]>>(&self, key: K) -> Result<(), Self::Error>; // TODO: Should return Option<Vec<u8>> of the removed value
 }
 
 /// An object-safe key-value storage trait for use with `dyn`.

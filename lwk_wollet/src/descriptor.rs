@@ -32,8 +32,38 @@ sha256t_hash_newtype! {
 #[allow(clippy::large_enum_variant)]
 enum DescOrSpks {
     Desc(ConfidentialDescriptor<DescriptorPublicKey>),
-    #[allow(unused)]
-    Spks(Vec<(Option<SecretKey>, Script)>),
+    Spks(Vec<Spk>),
+}
+
+#[derive(Debug, Clone)]
+struct Spk {
+    blinding_key: SecretKey,
+    script_pubkey: Script,
+}
+
+impl Display for Spk {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}:{:x}",
+            self.blinding_key.display_secret(),
+            self.script_pubkey
+        )
+    }
+}
+
+impl FromStr for Spk {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (key_hex, spk_hex) = s.split_once(':').ok_or(Error::InvalidSpkFormat)?;
+        let blinding_key = SecretKey::from_str(key_hex)?;
+        let script_pubkey = Script::from_str(spk_hex)?;
+        Ok(Spk {
+            blinding_key,
+            script_pubkey,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -48,7 +78,10 @@ impl Display for WolletDescriptor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.inner {
             DescOrSpks::Desc(d) => Display::fmt(&d, f),
-            DescOrSpks::Spks(_) => todo!(),
+            DescOrSpks::Spks(spks) => {
+                let parts: Vec<String> = spks.iter().map(|s| s.to_string()).collect();
+                write!(f, "{}", parts.join(","))
+            }
         }
     }
 }
@@ -199,7 +232,21 @@ impl FromStr for WolletDescriptor {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        ConfidentialDescriptor::<DescriptorPublicKey>::from_str(s)?.try_into()
+        match ConfidentialDescriptor::<DescriptorPublicKey>::from_str(s) {
+            Ok(desc) => desc.try_into(),
+            Err(first_err) => {
+                // Try parsing as comma-separated "blinding_key_hex:spk_hex" pairs
+                let spks: Result<Vec<Spk>, _> = s.split(',').map(Spk::from_str).collect();
+                match spks {
+                    Ok(spks) if !spks.is_empty() => Ok(WolletDescriptor {
+                        inner: DescOrSpks::Spks(spks),
+                        #[cfg(feature = "amp0")]
+                        is_amp0: false,
+                    }),
+                    _ => Err(first_err.into()),
+                }
+            }
+        }
     }
 }
 

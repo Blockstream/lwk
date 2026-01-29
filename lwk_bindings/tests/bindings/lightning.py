@@ -27,7 +27,7 @@ mnemonic_lightning = signer.derive_bip85_mnemonic(0, 12) # for security reasons 
 builder = BoltzSessionBuilder(
     network=network,
     client=client,
-    # timeout=10, # optional parameter can be omitted, a default will be used
+    timeout=30, # increase timeout for CI environments with variable network latency
     mnemonic=mnemonic_lightning,
     logging=logger,
 )

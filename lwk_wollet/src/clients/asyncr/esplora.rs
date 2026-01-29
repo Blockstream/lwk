@@ -19,7 +19,7 @@ use elements::{
     encode::Decodable, hashes::hex::FromHex, hex::ToHex, pset::serialize::Serialize, BlockHash,
     Script, Txid,
 };
-use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
+use elements_miniscript::DescriptorPublicKey;
 
 #[cfg(target_arch = "wasm32")]
 use futures::lock::Mutex;
@@ -423,7 +423,7 @@ impl EsploraClient {
             let chain: Chain = (&descriptor).try_into().unwrap_or(Chain::External);
             let index = index.max(last_unused[chain]);
             loop {
-                let batch = cache.get_script_batch(batch_count, &descriptor)?;
+                let batch = cache.get_script_batch(batch_count, &descriptor, chain)?;
 
                 let s: Vec<_> = batch.value.iter().map(|e| &e.0).collect();
                 let result: Vec<Vec<History>> = self.get_scripts_history(&s).await?;
@@ -608,13 +608,7 @@ impl EsploraClient {
                     let child = ChildNumber::from(
                         waterfalls_result.page as u32 * WATERFALLS_MAX_ADDRESSES as u32 + i as u32,
                     );
-                    let ct_desc = ConfidentialDescriptor {
-                        key: descriptor.ct_descriptor()?.key.clone(),
-                        descriptor: desc.clone(),
-                    };
-                    let wd: WolletDescriptor = ct_desc.try_into()?;
-                    let (script, blinding_pubkey, cached) =
-                        cache.get_or_derive(chain, child, &wd)?;
+                    let (script, blinding_pubkey, cached) = cache.get_or_derive(chain, child)?;
                     if !cached {
                         data.scripts.insert(script, (chain, child, blinding_pubkey));
                     }

@@ -107,14 +107,12 @@ impl Cache {
         &self,
         batch: u32,
         descriptor: &WolletDescriptor,
+        ext_int: Chain,
     ) -> Result<ScriptBatch, Error> {
         let mut result = ScriptBatch {
             cached: true,
             ..Default::default()
         };
-        if descriptor.is_multipath() {
-            return Err(Error::Generic("Unexpected descriptor".to_string()));
-        }
 
         // For Spks, return all scripts in batch 0, empty for subsequent batches
         if let Some(count) = descriptor.spk_count() {
@@ -135,7 +133,6 @@ impl Cache {
 
         let start = batch * BATCH_SIZE;
         let end = start + BATCH_SIZE;
-        let ext_int: Chain = descriptor.try_into().unwrap_or(Chain::External);
         for j in start..end {
             let child = ChildNumber::from_normal_idx(j)?;
             let (script, blinding_pubkey, cached) =
@@ -206,7 +203,11 @@ mod tests {
         let cache = Cache::default();
 
         let x = cache
-            .get_script_batch(0, &desc.as_single_descriptors().unwrap()[0])
+            .get_script_batch(
+                0,
+                &desc.as_single_descriptors().unwrap()[0],
+                crate::descriptor::Chain::External,
+            )
             .unwrap();
         assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), (External, Normal { index: 0 }, PublicKey(0525054b498a69342d90750ed5e8f91cb6fb4da48735fd7011fdbcfc0e8edee1f0a30ed1e5c1d730e281b73f70f02dec2cbe20d0ac864d3d3d6942a02d66c6e3)))");
         assert_ne!(x.value[0], x.value[1]);

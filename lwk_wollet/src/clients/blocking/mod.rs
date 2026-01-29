@@ -76,7 +76,7 @@ pub trait BlockchainBackend {
             let chain: Chain = (&descriptor).try_into().unwrap_or(Chain::External);
             let index = index.max(last_unused[chain]);
             loop {
-                let batch = state.get_script_batch(batch_count, &descriptor)?;
+                let batch = state.get_script_batch(batch_count, chain)?;
 
                 let s: Vec<_> = batch.value.iter().map(|e| &e.0).collect();
                 let result: Vec<Vec<History>> = self.get_scripts_history(&s)?;

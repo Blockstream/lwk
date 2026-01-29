@@ -107,18 +107,11 @@ pub struct WolletConciseState {
 }
 
 pub trait WolletState {
-    // descriptor must not be multipath and must be consistent with Chain
-    fn get_script_batch(
-        &self,
-        batch: u32,
-        descriptor: &WolletDescriptor,
-    ) -> Result<ScriptBatch, Error>;
-    // descriptor must not be multipath and must be consistent with Chain
+    fn get_script_batch(&self, batch: u32, ext_int: Chain) -> Result<ScriptBatch, Error>;
     fn get_or_derive(
         &self,
         ext_int: Chain,
         child: ChildNumber,
-        descriptor: &WolletDescriptor,
     ) -> Result<(Script, BlindingPublicKey, bool), Error>;
     fn heights(&self) -> &HashMap<Txid, Option<Height>>;
     fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)>;
@@ -131,18 +124,12 @@ pub trait WolletState {
 
 impl WolletState for WolletConciseState {
     // TODO duplicated from Wollet
-    fn get_script_batch(
-        &self,
-        batch: u32,
-        descriptor: &WolletDescriptor,
-    ) -> Result<ScriptBatch, Error> {
+    fn get_script_batch(&self, batch: u32, ext_int: Chain) -> Result<ScriptBatch, Error> {
+        let descriptor = &self.descriptor;
         let mut result = ScriptBatch {
             cached: true,
             ..Default::default()
         };
-        if descriptor.is_multipath() {
-            return Err(Error::Generic("Unexpected descriptor".to_string()));
-        }
 
         // For Spks, return all scripts in batch 0, empty for subsequent batches
         if let Some(count) = descriptor.spk_count() {
@@ -152,7 +139,7 @@ impl WolletState for WolletConciseState {
             for j in 0..count as u32 {
                 let child = ChildNumber::from_normal_idx(j)?;
                 let (script, blinding_pubkey, cached) =
-                    self.get_or_derive(Chain::External, child, descriptor)?;
+                    self.get_or_derive(Chain::External, child)?;
                 result.cached = cached;
                 result
                     .value
@@ -163,11 +150,9 @@ impl WolletState for WolletConciseState {
 
         let start = batch * BATCH_SIZE;
         let end = start + BATCH_SIZE;
-        let ext_int: Chain = descriptor.try_into().unwrap_or(Chain::External);
         for j in start..end {
             let child = ChildNumber::from_normal_idx(j)?;
-            let (script, blinding_pubkey, cached) =
-                self.get_or_derive(ext_int, child, descriptor)?;
+            let (script, blinding_pubkey, cached) = self.get_or_derive(ext_int, child)?;
             result.cached = cached;
             result
                 .value
@@ -181,13 +166,13 @@ impl WolletState for WolletConciseState {
         &self,
         ext_int: Chain,
         child: ChildNumber,
-        descriptor: &WolletDescriptor,
     ) -> Result<(Script, BlindingPublicKey, bool), Error> {
         let opt_script = self.scripts.get(&(ext_int, child));
         let (script, blinding_pubkey, cached) = match opt_script {
             Some((script, blinding_pubkey)) => (script.clone(), *blinding_pubkey, true),
             None => {
-                let (script, blinding_pubkey) = descriptor.derive_script_and_blinding_key(child)?;
+                let (script, blinding_pubkey) =
+                    self.descriptor.derive_script_and_blinding_key(child)?;
                 (script, blinding_pubkey, false)
             }
         };
@@ -230,21 +215,17 @@ impl std::fmt::Debug for Wollet {
 }
 
 impl WolletState for Wollet {
-    fn get_script_batch(
-        &self,
-        batch: u32,
-        descriptor: &WolletDescriptor,
-    ) -> Result<ScriptBatch, Error> {
-        self.cache.get_script_batch(batch, descriptor)
+    fn get_script_batch(&self, batch: u32, ext_int: Chain) -> Result<ScriptBatch, Error> {
+        self.cache
+            .get_script_batch(batch, &self.descriptor, ext_int)
     }
 
     fn get_or_derive(
         &self,
         ext_int: Chain,
         child: ChildNumber,
-        descriptor: &WolletDescriptor,
     ) -> Result<(Script, BlindingPublicKey, bool), Error> {
-        self.cache.get_or_derive(ext_int, child, descriptor)
+        self.cache.get_or_derive(ext_int, child, &self.descriptor)
     }
 
     fn heights(&self) -> &HashMap<Txid, Option<Height>> {

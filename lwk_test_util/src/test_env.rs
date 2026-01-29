@@ -298,6 +298,15 @@ impl TestEnv {
 
     // Elementsd methods
 
+    /// Trigger electrs to sync and wait for indexing to complete
+    fn trigger_electrs_sync(&self) {
+        if let Some(electrsd) = &self.electrsd {
+            electrsd.trigger().unwrap();
+            // Give electrs time to index
+            std::thread::sleep(Duration::from_millis(500));
+        }
+    }
+
     fn rescanblockchain_(client: &Client) {
         client.call::<Value>("rescanblockchain", &[]).unwrap();
     }
@@ -324,10 +333,8 @@ impl TestEnv {
     pub fn elementsd_generate(&self, blocks: u32) {
         Self::elementsd_generate_(&self.elementsd.client, blocks);
 
-        // After we generate blocks, trigger an electrs update
-        if let Some(electrsd) = &self.electrsd {
-            electrsd.trigger().unwrap();
-        }
+        // After we generate blocks, trigger an electrs update and wait for it to sync
+        self.trigger_electrs_sync();
     }
 
     fn elementsd_sweep_initialfreecoins_(client: &Client) {
@@ -379,6 +386,9 @@ impl TestEnv {
                 .call::<Value>("sendtoaddress", &[address.to_string().into(), btc.into()])
                 .unwrap(),
         };
+
+        self.trigger_electrs_sync();
+
         Txid::from_str(r.as_str().unwrap()).unwrap()
     }
 
@@ -390,6 +400,9 @@ impl TestEnv {
             .call::<Value>("issueasset", &[btc.into(), 0.into()])
             .unwrap();
         let asset = r.get("asset").unwrap().as_str().unwrap().to_string();
+
+        self.trigger_electrs_sync();
+
         AssetId::from_str(&asset).unwrap()
     }
 

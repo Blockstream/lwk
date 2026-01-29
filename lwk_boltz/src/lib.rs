@@ -18,6 +18,9 @@ mod swap_state;
 ///
 /// All keys are namespaced with `boltz:` to avoid collisions with other store users.
 pub mod store_keys {
+    use super::error;
+    use super::DynStore;
+
     /// Key for the list of pending swap IDs (JSON array)
     pub const PENDING_SWAPS: &str = "boltz:pending_swaps";
     /// Key for the list of completed swap IDs (JSON array)
@@ -26,6 +29,32 @@ pub mod store_keys {
     /// Generate the key for a specific swap's data
     pub fn swap_data(swap_id: &str) -> String {
         format!("boltz:swap:{swap_id}")
+    }
+
+    /// Read the pending swaps list from the store
+    ///
+    /// Returns an empty Vec if the key doesn't exist, propagates errors on store
+    /// access failure or deserialization failure.
+    pub fn get_pending_swaps(store: &dyn DynStore) -> Result<Vec<String>, error::Error> {
+        store
+            .get(PENDING_SWAPS)
+            .map_err(error::Error::Store)?
+            .map(|data| serde_json::from_slice(&data))
+            .transpose()?
+            .map_or_else(|| Ok(Vec::new()), Ok)
+    }
+
+    /// Read the completed swaps list from the store
+    ///
+    /// Returns an empty Vec if the key doesn't exist, propagates errors on store
+    /// access failure or deserialization failure.
+    pub fn get_completed_swaps(store: &dyn DynStore) -> Result<Vec<String>, error::Error> {
+        store
+            .get(COMPLETED_SWAPS)
+            .map_err(error::Error::Store)?
+            .map(|data| serde_json::from_slice(&data))
+            .transpose()?
+            .map_or_else(|| Ok(Vec::new()), Ok)
     }
 }
 
@@ -67,11 +96,7 @@ pub trait SwapPersistence {
             self.persist()?;
 
             // Add to pending list
-            let mut pending: Vec<String> = store
-                .get(store_keys::PENDING_SWAPS)
-                .map_err(error::Error::Store)?
-                .map(|data| serde_json::from_slice(&data).unwrap_or_default())
-                .unwrap_or_default();
+            let mut pending = store_keys::get_pending_swaps(store.as_ref())?;
 
             let swap_id = self.swap_id().to_string();
             if !pending.contains(&swap_id) {
@@ -92,11 +117,7 @@ pub trait SwapPersistence {
             let swap_id = self.swap_id().to_string();
 
             // Remove from pending list
-            let mut pending: Vec<String> = store
-                .get(store_keys::PENDING_SWAPS)
-                .map_err(error::Error::Store)?
-                .map(|data| serde_json::from_slice(&data).unwrap_or_default())
-                .unwrap_or_default();
+            let mut pending = store_keys::get_pending_swaps(store.as_ref())?;
 
             pending.retain(|id| id != &swap_id);
             let data = serde_json::to_vec(&pending)?;
@@ -105,11 +126,7 @@ pub trait SwapPersistence {
                 .map_err(error::Error::Store)?;
 
             // Add to completed list
-            let mut completed: Vec<String> = store
-                .get(store_keys::COMPLETED_SWAPS)
-                .map_err(error::Error::Store)?
-                .map(|data| serde_json::from_slice(&data).unwrap_or_default())
-                .unwrap_or_default();
+            let mut completed = store_keys::get_completed_swaps(store.as_ref())?;
 
             if !completed.contains(&swap_id) {
                 completed.push(swap_id.clone());
@@ -411,12 +428,7 @@ impl BoltzSession {
     /// (which may be empty).
     pub fn pending_swap_ids(&self) -> Result<Vec<String>, Error> {
         let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
-        let pending: Vec<String> = store
-            .get(store_keys::PENDING_SWAPS)
-            .map_err(Error::Store)?
-            .map(|data| serde_json::from_slice(&data).unwrap_or_default())
-            .unwrap_or_default();
-        Ok(pending)
+        store_keys::get_pending_swaps(store.as_ref())
     }
 
     /// Get the list of completed swap IDs from the store
@@ -425,12 +437,7 @@ impl BoltzSession {
     /// (which may be empty).
     pub fn completed_swap_ids(&self) -> Result<Vec<String>, Error> {
         let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
-        let completed: Vec<String> = store
-            .get(store_keys::COMPLETED_SWAPS)
-            .map_err(Error::Store)?
-            .map(|data| serde_json::from_slice(&data).unwrap_or_default())
-            .unwrap_or_default();
-        Ok(completed)
+        store_keys::get_completed_swaps(store.as_ref())
     }
 
     /// Get the raw swap data for a specific swap ID from the store
@@ -463,11 +470,7 @@ impl BoltzSession {
             .map_err(Error::Store)?;
 
         // Remove from pending list
-        let mut pending: Vec<String> = store
-            .get(store_keys::PENDING_SWAPS)
-            .map_err(Error::Store)?
-            .map(|data| serde_json::from_slice(&data).unwrap_or_default())
-            .unwrap_or_default();
+        let mut pending = store_keys::get_pending_swaps(store.as_ref())?;
         let was_pending = pending.contains(&swap_id.to_string());
         pending.retain(|id| id != swap_id);
         if was_pending {
@@ -478,11 +481,7 @@ impl BoltzSession {
         }
 
         // Remove from completed list
-        let mut completed: Vec<String> = store
-            .get(store_keys::COMPLETED_SWAPS)
-            .map_err(Error::Store)?
-            .map(|data| serde_json::from_slice(&data).unwrap_or_default())
-            .unwrap_or_default();
+        let mut completed = store_keys::get_completed_swaps(store.as_ref())?;
         let was_completed = completed.contains(&swap_id.to_string());
         completed.retain(|id| id != swap_id);
         if was_completed {

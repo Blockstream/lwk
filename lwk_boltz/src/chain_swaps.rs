@@ -392,7 +392,7 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
     // Parse server public keys
     let claim_server_pubkey_bitcoin = BitcoinPublicKey::from_str(&claim_details.server_public_key)
         .map_err(|err| {
-            Error::SwapRestoration(format!("Failed to parse claim server public key: {}", err))
+            Error::SwapRestoration(format!("Failed to parse claim server public key: {err}"))
         })?;
     let claim_server_pubkey = PublicKey {
         inner: claim_server_pubkey_bitcoin.inner,
@@ -401,7 +401,7 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
 
     let refund_server_pubkey_bitcoin =
         BitcoinPublicKey::from_str(&refund_details.server_public_key).map_err(|err| {
-            Error::SwapRestoration(format!("Failed to parse refund server public key: {}", err))
+            Error::SwapRestoration(format!("Failed to parse refund server public key: {err}"))
         })?;
     let refund_server_pubkey = PublicKey {
         inner: refund_server_pubkey_bitcoin.inner,

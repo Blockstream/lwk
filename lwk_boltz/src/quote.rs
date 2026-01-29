@@ -661,22 +661,19 @@ mod tests {
 
             assert!(
                 exact_count > 0,
-                "{}: unexpectedly had no exact cases - this would be a bug!",
-                description
+                "{description}: unexpectedly had no exact cases - this would be a bug!",
             );
 
             // With the ceiling formula, we should never undershoot
             // Overshooting is acceptable (we get slightly more than requested)
             assert_eq!(
                 undershot_count, 0,
-                "{}: unexpectedly had {} undershot cases - this would be a bug!",
-                description, undershot_count
+                "{description}: unexpectedly had {undershot_count} undershot cases - this would be a bug!",
             );
 
             assert_eq!(
                 overshot_count, 0,
-                "{}: unexpectedly had {} overshot cases - this would be a bug!",
-                description, overshot_count
+                "{description}: unexpectedly had {overshot_count} overshot cases - this would be a bug!",
             );
         }
     }
@@ -698,10 +695,7 @@ mod tests {
             // The key invariant: sending `send` must give at least `receive`
             assert!(
                 actual_receive >= receive,
-                "CRITICAL: send={} gives receive={}, but wanted at least {}",
-                send,
-                actual_receive,
-                receive
+                "CRITICAL: send={send} gives receive={actual_receive}, but wanted at least {receive}",
             );
 
             // Ideally they're equal (minimum send for desired receive)

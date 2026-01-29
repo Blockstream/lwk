@@ -612,8 +612,9 @@ impl EsploraClient {
                         key: descriptor.ct_descriptor()?.key.clone(),
                         descriptor: desc.clone(),
                     };
+                    let wd: WolletDescriptor = ct_desc.try_into()?;
                     let (script, blinding_pubkey, cached) =
-                        cache.get_or_derive(chain, child, &ct_desc)?;
+                        cache.get_or_derive(chain, child, &wd)?;
                     if !cached {
                         data.scripts.insert(script, (chain, child, blinding_pubkey));
                     }

@@ -1,9 +1,8 @@
-use crate::descriptor::Chain;
+use crate::descriptor::{Chain, WolletDescriptor};
 use crate::elements::{BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::hashes::Hash;
 use crate::{BlindingPublicKey, Error};
 use elements::bitcoin::bip32::ChildNumber;
-use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -107,12 +106,32 @@ impl Cache {
     pub fn get_script_batch(
         &self,
         batch: u32,
-        descriptor: &ConfidentialDescriptor<DescriptorPublicKey>, // non confidential (we need only script_pubkey), non multipath (we need to be able to derive with index)
+        descriptor: &WolletDescriptor,
     ) -> Result<ScriptBatch, Error> {
         let mut result = ScriptBatch {
             cached: true,
             ..Default::default()
         };
+        if descriptor.is_multipath() {
+            return Err(Error::Generic("Unexpected descriptor".to_string()));
+        }
+
+        // For Spks, return all scripts in batch 0, empty for subsequent batches
+        if let Some(count) = descriptor.spk_count() {
+            if batch > 0 {
+                return Ok(result);
+            }
+            for j in 0..count as u32 {
+                let child = ChildNumber::from_normal_idx(j)?;
+                let (script, blinding_pubkey, cached) =
+                    self.get_or_derive(Chain::External, child, descriptor)?;
+                result.cached = cached;
+                result
+                    .value
+                    .push((script, (Chain::External, child, blinding_pubkey)));
+            }
+            return Ok(result);
+        }
 
         let start = batch * BATCH_SIZE;
         let end = start + BATCH_SIZE;
@@ -134,14 +153,13 @@ impl Cache {
         &self,
         ext_int: Chain,
         child: ChildNumber,
-        descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+        descriptor: &WolletDescriptor,
     ) -> Result<(Script, BlindingPublicKey, bool), Error> {
         let opt_script = self.scripts.get(&(ext_int, child));
         let (script, blinding_pubkey, cached) = match opt_script {
             Some((script, blinding_pubkey)) => (script.clone(), *blinding_pubkey, true),
             None => {
-                let (script, blinding_pubkey) =
-                    crate::wollet::derive_script_and_blinding_key(descriptor, child)?;
+                let (script, blinding_pubkey) = descriptor.derive_script_and_blinding_key(child)?;
                 (script, blinding_pubkey, false)
             }
         };

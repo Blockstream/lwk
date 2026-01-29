@@ -602,22 +602,64 @@ impl WolletDescriptor {
         Ok(pegin_address)
     }
 
-    pub(crate) fn as_single_descriptors(
-        &self,
-    ) -> Result<Vec<ConfidentialDescriptor<DescriptorPublicKey>>, Error> {
+    pub(crate) fn as_single_descriptors(&self) -> Result<Vec<WolletDescriptor>, Error> {
         match &self.inner {
             DescOrSpks::Desc(d) => {
                 let descriptors = d.descriptor.clone().into_single_descriptors()?;
                 let mut result = Vec::with_capacity(descriptors.len());
                 for descriptor in descriptors {
-                    result.push(ConfidentialDescriptor {
-                        key: d.key.clone(),
-                        descriptor,
+                    result.push(WolletDescriptor {
+                        inner: DescOrSpks::Desc(ConfidentialDescriptor {
+                            key: d.key.clone(),
+                            descriptor,
+                        }),
+                        #[cfg(feature = "amp0")]
+                        is_amp0: self.is_amp0,
                     });
                 }
                 Ok(result)
             }
-            DescOrSpks::Spks(_) => Err(Error::UnsupportedWithoutDescriptor),
+            DescOrSpks::Spks(_) => Ok(vec![self.clone()]),
+        }
+    }
+
+    pub(crate) fn derive_script_and_blinding_key(
+        &self,
+        child: ChildNumber,
+    ) -> Result<(Script, crate::BlindingPublicKey), Error> {
+        match &self.inner {
+            DescOrSpks::Desc(d) => {
+                let address = d
+                    .at_derivation_index(child.into())?
+                    .address(&EC, &AddressParams::ELEMENTS)
+                    .expect("all supported descriptors can generate an address");
+                Ok((
+                    address.script_pubkey(),
+                    address
+                        .blinding_pubkey
+                        .expect("descriptor used include blinding key"),
+                ))
+            }
+            DescOrSpks::Spks(spks) => {
+                let index: u32 = child.into();
+                let spk = spks.get(index as usize).ok_or(Error::IndexOutOfRange)?;
+                let blinding_pk = match &spk.blinding_key {
+                    Some(k) => k.public_key(&EC),
+                    None => {
+                        // TODO: make BlindingPublicKey optional in Cache
+                        // In the meantime use a dummy pubkey for which we know the private key
+                        // Dummy blinding pubkey for non-confidential Spks
+                        let sk = SecretKey::from_slice(&{
+                            let mut key = [0u8; 32];
+                            key[31] = 1;
+                            key
+                        })
+                        .expect("valid secret key");
+                        sk.public_key(&EC)
+                    }
+                };
+                Ok((spk.script_pubkey.clone(), blinding_pk))
+            }
         }
     }
 
@@ -629,6 +671,14 @@ impl WolletDescriptor {
                 .iter()
                 .find(|s| s.script_pubkey == *script_pubkey)
                 .and_then(|s| s.blinding_key),
+        }
+    }
+
+    /// Return the number of Spks if this is a Spks descriptor, None otherwise.
+    pub(crate) fn spk_count(&self) -> Option<usize> {
+        match &self.inner {
+            DescOrSpks::Spks(spks) => Some(spks.len()),
+            DescOrSpks::Desc(_) => None,
         }
     }
 
@@ -1161,7 +1211,6 @@ mod test {
         assert!(desc.bitcoin_descriptor_without_key_origin().is_err());
         assert!(desc.definite_descriptor(Chain::External, 0).is_err());
         assert!(desc.single_bitcoin_descriptors().is_err());
-        assert!(desc.as_single_descriptors().is_err());
         assert!(desc.dwid(lwk_common::Network::Liquid).is_err());
         let d: BtcDescriptor<bitcoin::PublicKey> =
             BtcDescriptor::<bitcoin::PublicKey>::from_str(lwk_test_util::FED_PEG_DESC).unwrap();

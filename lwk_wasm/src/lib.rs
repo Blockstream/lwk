@@ -56,6 +56,8 @@ pub use balance::Balance;
 pub use bip::Bip;
 pub use blockdata::address::{Address, AddressResult};
 pub use blockdata::asset_id::{AssetId, AssetIds};
+pub use blockdata::blinding_factor::{AssetBlindingFactor, ValueBlindingFactor};
+pub use blockdata::contract_hash::ContractHash;
 pub use blockdata::lock_time::LockTime;
 pub use blockdata::out_point::OutPoint;
 pub use blockdata::script::Script;

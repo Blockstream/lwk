@@ -11,6 +11,7 @@ mod bip;
 mod blockdata;
 mod boltz;
 mod contract;
+mod control_block;
 mod descriptor;
 mod error;
 mod esplora;
@@ -36,6 +37,7 @@ mod secret_key;
 mod serial;
 mod signer;
 mod store;
+mod tweak;
 mod tx_builder;
 mod update;
 
@@ -44,6 +46,7 @@ mod update;
 mod websocket;
 
 mod wollet;
+mod xonly_public_key;
 mod xpub;
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
@@ -64,6 +67,7 @@ pub use blockdata::wallet_tx_out::{OptionWalletTxOut, WalletTxOut};
 pub use boltz::LightningPayment;
 pub use boltz::{BoltzSession, BoltzSessionBuilder};
 pub use contract::Contract;
+pub use control_block::ControlBlock;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use error::MagicRoutingHint;
@@ -85,6 +89,7 @@ pub use registry::{AssetMeta, Registry, RegistryPost};
 pub use secret_key::SecretKey;
 pub use signer::Signer;
 pub use store::{JsStorage, JsStoreLink, JsTestStore};
+pub use tweak::Tweak;
 pub use tx_builder::TxBuilder;
 pub use update::Update;
 
@@ -92,6 +97,7 @@ pub use update::Update;
 pub use websocket::WebSocketSerial;
 
 pub use wollet::Wollet;
+pub use xonly_public_key::XOnlyPublicKey;
 pub use xpub::Xpub;
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]

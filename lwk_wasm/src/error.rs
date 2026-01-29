@@ -75,6 +75,12 @@ pub enum Error {
     #[error(transparent)]
     FromWif(#[from] lwk_wollet::elements::bitcoin::key::FromWifError),
 
+    #[error(transparent)]
+    Secp256k1Zkp(#[from] lwk_wollet::elements::secp256k1_zkp::Error),
+
+    #[error(transparent)]
+    Taproot(#[from] lwk_wollet::elements::bitcoin::taproot::TaprootError),
+
     #[error("{0}")]
     Generic(String),
 
@@ -157,6 +163,8 @@ impl Error {
             Error::Secp256k1(_) => "Secp256k1",
             Error::KeyFromSlice(_) => "KeyFromSlice",
             Error::FromWif(_) => "FromWif",
+            Error::Secp256k1Zkp(_) => "Secp256k1Zkp",
+            Error::Taproot(_) => "Taproot",
             Error::Generic(_) => "Generic",
         }
     }

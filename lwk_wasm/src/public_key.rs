@@ -1,4 +1,4 @@
-use crate::{Error, SecretKey};
+use crate::{Error, SecretKey, XOnlyPublicKey};
 
 use std::fmt::Display;
 
@@ -85,10 +85,10 @@ impl PublicKey {
         self.inner.compressed
     }
 
-    /// Converts to an x-only public key hex string (32 bytes hex-encoded)
-    #[wasm_bindgen(js_name = toXOnlyHex)]
-    pub fn to_x_only_hex(&self) -> String {
-        self.inner.to_x_only_pubkey().to_string()
+    /// Converts to an x-only public key
+    #[wasm_bindgen(js_name = toXOnly)]
+    pub fn to_x_only(&self) -> XOnlyPublicKey {
+        self.inner.to_x_only_pubkey().into()
     }
 }
 
@@ -130,10 +130,10 @@ mod tests {
     fn test_public_key_to_x_only() {
         let hex = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
         let pk = PublicKey::new(hex).unwrap();
-        let xonly = pk.to_x_only_hex();
-        assert_eq!(xonly.len(), 64);
+        let xonly = pk.to_x_only();
+        assert_eq!(xonly.to_hex().len(), 64);
         assert_eq!(
-            xonly,
+            xonly.to_hex(),
             "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
         );
     }

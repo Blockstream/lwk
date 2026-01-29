@@ -1,4 +1,4 @@
-use crate::{Error, PublicKey, SecretKey};
+use crate::{Error, PublicKey, SecretKey, XOnlyPublicKey};
 
 use lwk_wollet::elements::bitcoin::secp256k1::{self, Message, Secp256k1};
 use lwk_wollet::elements::hex::ToHex;
@@ -78,11 +78,11 @@ impl Keypair {
         pk.into()
     }
 
-    /// Returns the x-only public key as a hex string (32 bytes hex-encoded)
-    #[wasm_bindgen(js_name = xOnlyPublicKeyHex)]
-    pub fn x_only_public_key_hex(&self) -> String {
+    /// Returns the x-only public key
+    #[wasm_bindgen(js_name = xOnlyPublicKey)]
+    pub fn x_only_public_key(&self) -> XOnlyPublicKey {
         let (xonly, _parity) = self.inner.x_only_public_key();
-        xonly.to_string()
+        xonly.into()
     }
 
     /// Signs a 32-byte message hash using Schnorr signature
@@ -146,8 +146,8 @@ mod tests {
     #[wasm_bindgen_test]
     fn test_keypair_x_only_public_key() {
         let kp = Keypair::new(&[1u8; 32]).unwrap();
-        let xonly = kp.x_only_public_key_hex();
-        assert_eq!(xonly.len(), 64);
+        let xonly = kp.x_only_public_key();
+        assert_eq!(xonly.to_hex().len(), 64);
     }
 
     #[wasm_bindgen_test]

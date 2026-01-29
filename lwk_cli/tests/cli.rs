@@ -1629,6 +1629,9 @@ fn test_esplora_waterfalls_backend() {
     // Stop the server
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
+    // We're restarting the CLI using the same port, so wait a bit for port release
+    // TODO: restart CLI using another port
+    std::thread::sleep(std::time::Duration::from_millis(100));
 
     // Start again with a Esplora backend
     let t = {
@@ -1637,7 +1640,7 @@ fn test_esplora_waterfalls_backend() {
             sh(&format!("{cli} server start {esplora_params}"));
         })
     };
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    std::thread::sleep(std::time::Duration::from_millis(500));
 
     assert_eq!(txs(&cli, "w").len(), 1);
     let _ = fund(&env, &cli, "w", 1_000_000);
@@ -1645,6 +1648,7 @@ fn test_esplora_waterfalls_backend() {
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(100)); // Wait for port release
 
     // Start again with a Waterfalls backend
     let t = {
@@ -1653,7 +1657,7 @@ fn test_esplora_waterfalls_backend() {
             sh(&format!("{cli} server start {waterfalls_params}"));
         })
     };
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    std::thread::sleep(std::time::Duration::from_millis(500));
 
     assert_eq!(txs(&cli, "w").len(), 2);
     let _ = fund(&env, &cli, "w", 1_000_000);

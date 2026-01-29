@@ -52,16 +52,14 @@ impl XOnlyPublicKey {
     /// Creates an `XOnlyPublicKey` from a hex string (64 hex characters = 32 bytes).
     #[wasm_bindgen(constructor)]
     pub fn new(hex: &str) -> Result<XOnlyPublicKey, Error> {
-        let inner = bitcoin::XOnlyPublicKey::from_str(hex)
-            .map_err(|e| Error::Generic(format!("Invalid x-only public key: {e}")))?;
+        let inner = bitcoin::XOnlyPublicKey::from_str(hex)?;
         Ok(XOnlyPublicKey { inner })
     }
 
     /// Creates an `XOnlyPublicKey` from raw bytes (32 bytes).
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &[u8]) -> Result<XOnlyPublicKey, Error> {
-        let inner = bitcoin::XOnlyPublicKey::from_slice(bytes)
-            .map_err(|e| Error::Generic(format!("Invalid x-only public key: {e}")))?;
+        let inner = bitcoin::XOnlyPublicKey::from_slice(bytes)?;
         Ok(XOnlyPublicKey { inner })
     }
 
@@ -93,38 +91,25 @@ mod tests {
     wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
-    fn test_xonly_public_key_from_hex() {
-        let hex = "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let key = XOnlyPublicKey::new(hex).unwrap();
-        assert_eq!(key.to_hex(), hex);
-    }
-
-    #[wasm_bindgen_test]
-    fn test_xonly_public_key_from_bytes() {
+    fn test_xonly_public_key() {
         let hex = "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
         let bytes = Vec::<u8>::from_hex(hex).unwrap();
-        let key = XOnlyPublicKey::from_bytes(&bytes).unwrap();
-        assert_eq!(key.to_bytes(), bytes);
-    }
 
-    #[wasm_bindgen_test]
-    fn test_xonly_public_key_roundtrip_hex() {
-        let hex = "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
         let key = XOnlyPublicKey::new(hex).unwrap();
+        assert_eq!(key.to_hex(), hex);
+
+        let key_from_bytes = XOnlyPublicKey::from_bytes(&bytes).unwrap();
+        assert_eq!(key_from_bytes.to_bytes(), bytes);
+
         let key2 = XOnlyPublicKey::new(&key.to_hex()).unwrap();
         assert_eq!(key, key2);
-    }
 
-    #[wasm_bindgen_test]
-    fn test_xonly_public_key_roundtrip_bytes() {
-        let hex = "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let key = XOnlyPublicKey::new(hex).unwrap();
-        let key2 = XOnlyPublicKey::from_bytes(&key.to_bytes()).unwrap();
-        assert_eq!(key, key2);
-    }
+        let key3 = XOnlyPublicKey::from_bytes(&key.to_bytes()).unwrap();
+        assert_eq!(key, key3);
 
-    #[wasm_bindgen_test]
-    fn test_xonly_public_key_invalid_hex() {
+        assert_eq!(key.to_string(), hex);
+        assert_eq!(key.to_string_js(), hex);
+
         assert!(XOnlyPublicKey::new("aabb").is_err());
         assert!(XOnlyPublicKey::new(
             "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f8179800"
@@ -134,20 +119,9 @@ mod tests {
             "xx79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f817"
         )
         .is_err());
-    }
 
-    #[wasm_bindgen_test]
-    fn test_xonly_public_key_invalid_bytes() {
         assert!(XOnlyPublicKey::from_bytes(&[0; 31]).is_err());
         assert!(XOnlyPublicKey::from_bytes(&[0; 33]).is_err());
         assert!(XOnlyPublicKey::from_bytes(&[]).is_err());
-    }
-
-    #[wasm_bindgen_test]
-    fn test_xonly_public_key_display() {
-        let hex = "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let key = XOnlyPublicKey::new(hex).unwrap();
-        assert_eq!(key.to_string(), hex);
-        assert_eq!(key.to_string_js(), hex);
     }
 }

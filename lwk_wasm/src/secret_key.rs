@@ -66,28 +66,19 @@ mod tests {
     wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
-    fn test_secret_key_roundtrip() {
+    fn test_secret_key() {
         let bytes = [0xcd; 32];
         let sk = SecretKey::new(&bytes).unwrap();
         assert_eq!(sk.bytes(), bytes);
-    }
 
-    #[wasm_bindgen_test]
-    fn test_secret_key_from_wif() {
         let wif_test = "cTJTN1hGHqucsgqmYVbhU3g4eU9g5HzE1sxuSY32M1xap1K4sYHF";
         let wif_main = "L2wTu6hQrnDMiFNWA5na6jB12ErGQqtXwqpSL7aWquJaZG8Ai3ch";
         let key_test = SecretKey::from_wif(wif_test).unwrap();
         let key_main = SecretKey::from_wif(wif_main).unwrap();
         assert_eq!(key_test.bytes(), key_main.bytes());
-    }
 
-    #[wasm_bindgen_test]
-    fn test_secret_key_invalid() {
-        // Too short
         assert!(SecretKey::new(&[0; 31]).is_err());
-        // Too long
         assert!(SecretKey::new(&[0; 33]).is_err());
-        // All zeros (invalid for secp256k1)
         assert!(SecretKey::new(&[0; 32]).is_err());
     }
 }

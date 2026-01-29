@@ -116,70 +116,40 @@ mod tests {
     wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
-    fn test_keypair_from_secret_bytes() {
+    fn test_keypair() {
         let bytes = [1u8; 32];
+
         let kp = Keypair::new(&bytes).unwrap();
         assert_eq!(kp.secret_bytes(), bytes);
-    }
 
-    #[wasm_bindgen_test]
-    fn test_keypair_from_secret_key() {
-        let sk = SecretKey::new(&[1u8; 32]).unwrap();
-        let kp = Keypair::from_secret_key(&sk);
-        assert_eq!(kp.secret_bytes(), sk.bytes());
-    }
+        let sk = SecretKey::new(&bytes).unwrap();
+        let kp_from_sk = Keypair::from_secret_key(&sk);
+        assert_eq!(kp_from_sk.secret_bytes(), sk.bytes());
 
-    #[wasm_bindgen_test]
-    fn test_keypair_generate() {
         let kp1 = Keypair::generate();
         let kp2 = Keypair::generate();
         assert_ne!(kp1.secret_bytes(), kp2.secret_bytes());
-    }
 
-    #[wasm_bindgen_test]
-    fn test_keypair_public_key() {
-        let kp = Keypair::new(&[1u8; 32]).unwrap();
         let pk = kp.public_key();
         assert_eq!(pk.to_bytes().len(), 33);
-    }
 
-    #[wasm_bindgen_test]
-    fn test_keypair_x_only_public_key() {
-        let kp = Keypair::new(&[1u8; 32]).unwrap();
         let xonly = kp.x_only_public_key();
         assert_eq!(xonly.to_hex().len(), 64);
-    }
 
-    #[wasm_bindgen_test]
-    fn test_keypair_secret_key() {
-        let bytes = [1u8; 32];
-        let kp = Keypair::new(&bytes).unwrap();
-        let sk = kp.secret_key();
-        assert_eq!(sk.bytes(), bytes);
-    }
+        let sk_extracted = kp.secret_key();
+        assert_eq!(sk_extracted.bytes(), bytes);
 
-    #[wasm_bindgen_test]
-    fn test_keypair_sign_schnorr() {
-        let kp = Keypair::new(&[1u8; 32]).unwrap();
         let msg_hex = "0202020202020202020202020202020202020202020202020202020202020202";
-
         let sig_hex = kp.sign_schnorr(msg_hex).unwrap();
-        assert_eq!(sig_hex.len(), 128); // 64 bytes = 128 hex chars
+        assert_eq!(sig_hex.len(), 128);
 
-        // Verify the signature
         let sig = schnorr::Signature::from_slice(&Vec::<u8>::from_hex(&sig_hex).unwrap()).unwrap();
         let msg_bytes = Vec::<u8>::from_hex(msg_hex).unwrap();
         let message = Message::from_digest(msg_bytes.try_into().unwrap());
+        let (xonly_inner, _) = kp.inner.x_only_public_key();
+        assert!(EC.verify_schnorr(&sig, &message, &xonly_inner).is_ok());
 
-        let (xonly, _) = kp.inner.x_only_public_key();
-        assert!(EC.verify_schnorr(&sig, &message, &xonly).is_ok());
-    }
-
-    #[wasm_bindgen_test]
-    fn test_keypair_invalid_secret() {
-        // All zeros is invalid
         assert!(Keypair::new(&[0; 32]).is_err());
-        // Wrong length
         assert!(Keypair::new(&[1; 31]).is_err());
         assert!(Keypair::new(&[1; 33]).is_err());
     }

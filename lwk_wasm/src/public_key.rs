@@ -101,63 +101,35 @@ mod tests {
     wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
-    fn test_public_key_from_hex() {
+    fn test_public_key() {
         let hex = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
+        let bytes = Vec::<u8>::from_hex(hex).unwrap();
+
         let pk = PublicKey::new(hex).unwrap();
         assert_eq!(pk.to_hex(), hex);
         assert!(pk.is_compressed());
-    }
 
-    #[wasm_bindgen_test]
-    fn test_public_key_from_bytes() {
-        let bytes = Vec::<u8>::from_hex(
-            "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
-        )
-        .unwrap();
-        let pk = PublicKey::from_bytes(&bytes).unwrap();
-        assert_eq!(pk.to_bytes(), bytes);
-    }
+        let pk_from_bytes = PublicKey::from_bytes(&bytes).unwrap();
+        assert_eq!(pk_from_bytes.to_bytes(), bytes);
 
-    #[wasm_bindgen_test]
-    fn test_public_key_from_secret_key() {
+        let pk2 = PublicKey::from_bytes(&pk.to_bytes()).unwrap();
+        assert_eq!(pk, pk2);
+
         let sk = SecretKey::new(&[1u8; 32]).unwrap();
-        let pk = PublicKey::from_secret_key(&sk);
-        assert_eq!(pk.to_bytes().len(), 33);
-        assert!(pk.is_compressed());
-    }
+        let pk_from_sk = PublicKey::from_secret_key(&sk);
+        assert_eq!(pk_from_sk.to_bytes().len(), 33);
+        assert!(pk_from_sk.is_compressed());
 
-    #[wasm_bindgen_test]
-    fn test_public_key_to_x_only() {
-        let hex = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let pk = PublicKey::new(hex).unwrap();
         let xonly = pk.to_x_only();
-        assert_eq!(xonly.to_hex().len(), 64);
-        assert_eq!(
-            xonly.to_hex(),
-            "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
-        );
-    }
+        assert_eq!(xonly.to_hex(), &hex[2..]);
 
-    #[wasm_bindgen_test]
-    fn test_public_key_uncompressed() {
-        let hex = "0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8";
-        let pk = PublicKey::new(hex).unwrap();
-        assert!(!pk.is_compressed());
-        assert_eq!(pk.to_bytes().len(), 65);
-    }
+        let uncompressed_hex = "0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8";
+        let pk_uncompressed = PublicKey::new(uncompressed_hex).unwrap();
+        assert!(!pk_uncompressed.is_compressed());
+        assert_eq!(pk_uncompressed.to_bytes().len(), 65);
 
-    #[wasm_bindgen_test]
-    fn test_public_key_invalid() {
         assert!(PublicKey::from_bytes(&[0; 32]).is_err());
         assert!(PublicKey::from_bytes(&[0; 34]).is_err());
         assert!(PublicKey::from_bytes(&[0; 33]).is_err());
-    }
-
-    #[wasm_bindgen_test]
-    fn test_public_key_roundtrip() {
-        let hex = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let pk = PublicKey::new(hex).unwrap();
-        let pk2 = PublicKey::from_bytes(&pk.to_bytes()).unwrap();
-        assert_eq!(pk, pk2);
     }
 }

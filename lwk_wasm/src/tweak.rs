@@ -97,60 +97,30 @@ mod tests {
     wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
-    fn test_tweak_zero() {
-        let tweak = Tweak::zero();
-        assert_eq!(tweak.to_bytes(), vec![0u8; 32]);
-    }
+    fn test_tweak() {
+        let zero = Tweak::zero();
+        assert_eq!(zero.to_bytes(), vec![0u8; 32]);
 
-    #[wasm_bindgen_test]
-    fn test_tweak_from_bytes() {
         let bytes = [1u8; 32];
         let tweak = Tweak::new(&bytes).unwrap();
         assert_eq!(tweak.to_bytes(), bytes);
-    }
 
-    #[wasm_bindgen_test]
-    fn test_tweak_from_hex() {
-        let hex = "0000000000000000000000000000000000000000000000000000000000000001";
-        let tweak = Tweak::from_hex(hex).unwrap();
-        assert_eq!(tweak.to_hex(), hex);
-    }
+        let hex = "0100000000000000000000000000000000000000000000000000000000000000";
+        let tweak_hex = Tweak::from_hex(hex).unwrap();
+        assert_eq!(tweak_hex.to_hex(), hex);
+        let tweak_hex2 = Tweak::from_hex(&tweak_hex.to_hex()).unwrap();
+        assert_eq!(tweak_hex, tweak_hex2);
 
-    #[wasm_bindgen_test]
-    fn test_tweak_roundtrip_bytes() {
-        let bytes = [2u8; 32];
-        let tweak = Tweak::new(&bytes).unwrap();
         let tweak2 = Tweak::new(&tweak.to_bytes()).unwrap();
         assert_eq!(tweak, tweak2);
-    }
 
-    #[wasm_bindgen_test]
-    fn test_tweak_roundtrip_hex() {
-        let hex = "0000000000000000000000000000000000000000000000000000000000000001";
-        let tweak = Tweak::from_hex(hex).unwrap();
-        let tweak2 = Tweak::from_hex(&tweak.to_hex()).unwrap();
-        assert_eq!(tweak, tweak2);
-    }
+        assert_eq!(tweak_hex.to_string(), hex);
+        assert_eq!(tweak_hex.to_string_js(), hex);
 
-    #[wasm_bindgen_test]
-    fn test_tweak_display() {
-        let tweak = Tweak::zero();
-        assert_eq!(
-            tweak.to_string(),
-            "0000000000000000000000000000000000000000000000000000000000000000"
-        );
-        assert_eq!(tweak.to_string_js(), tweak.to_string());
-    }
-
-    #[wasm_bindgen_test]
-    fn test_tweak_invalid_size() {
         assert!(Tweak::new(&[0; 31]).is_err());
         assert!(Tweak::new(&[0; 33]).is_err());
         assert!(Tweak::new(&[]).is_err());
-    }
 
-    #[wasm_bindgen_test]
-    fn test_tweak_invalid_hex() {
         assert!(Tweak::from_hex("aabb").is_err());
         assert!(Tweak::from_hex("invalid").is_err());
     }

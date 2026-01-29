@@ -72,51 +72,20 @@ mod tests {
     wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
-    fn test_control_block_roundtrip() {
+    fn test_control_block() {
         let cb_hex = "c079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
         let bytes = Vec::<u8>::from_hex(cb_hex).unwrap();
         let cb = ControlBlock::new(&bytes).unwrap();
+
         assert_eq!(cb.serialize(), bytes);
-    }
-
-    #[wasm_bindgen_test]
-    fn test_control_block_leaf_version() {
-        let cb_hex = "c079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let bytes = Vec::<u8>::from_hex(cb_hex).unwrap();
-        let cb = ControlBlock::new(&bytes).unwrap();
         assert_eq!(cb.leaf_version(), 0xc0);
-    }
 
-    #[wasm_bindgen_test]
-    fn test_control_block_internal_key() {
-        let cb_hex = "c079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let bytes = Vec::<u8>::from_hex(cb_hex).unwrap();
-        let cb = ControlBlock::new(&bytes).unwrap();
         let internal_key = cb.internal_key();
-        assert_eq!(
-            internal_key.to_hex(),
-            "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
-        );
-    }
+        assert_eq!(internal_key.to_hex(), &cb_hex[2..]);
 
-    #[wasm_bindgen_test]
-    fn test_control_block_output_key_parity() {
-        let cb_hex = "c079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let bytes = Vec::<u8>::from_hex(cb_hex).unwrap();
-        let cb = ControlBlock::new(&bytes).unwrap();
         assert!(cb.output_key_parity() <= 1);
-    }
-
-    #[wasm_bindgen_test]
-    fn test_control_block_size() {
-        let cb_hex = "c079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let bytes = Vec::<u8>::from_hex(cb_hex).unwrap();
-        let cb = ControlBlock::new(&bytes).unwrap();
         assert_eq!(cb.size(), 33);
-    }
 
-    #[wasm_bindgen_test]
-    fn test_control_block_invalid() {
         assert!(ControlBlock::new(&[]).is_err());
         assert!(ControlBlock::new(&[0; 32]).is_err());
     }

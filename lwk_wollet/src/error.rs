@@ -280,6 +280,9 @@ pub enum Error {
 
     #[error("Unsupported (wollet does not have CT descriptor)")]
     UnsupportedWithoutDescriptor,
+
+    #[error("Invalid SPK format: expected 'blinding_key_hex:script_pubkey_hex'")]
+    InvalidSpkFormat,
 }
 
 // cannot derive automatically with this error because of trait bound

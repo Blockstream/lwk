@@ -69,10 +69,10 @@ impl WolletBuilder {
     /// Build the `Wollet`
     pub fn build(self) -> Result<Wollet, Error> {
         let cache = Cache::default();
-        let max_weight_to_satisfy = self
-            .descriptor
-            .definite_descriptor(Chain::External, 0)?
-            .max_weight_to_satisfy()?;
+        let max_weight_to_satisfy = match self.descriptor.definite_descriptor(Chain::External, 0) {
+            Ok(d) => d.max_weight_to_satisfy()?,
+            Err(_) => 0, // If we don't have the descriptor we don't know this value
+        };
         let mut wollet = Wollet {
             cache,
             network: self.network,

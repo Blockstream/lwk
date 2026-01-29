@@ -222,11 +222,7 @@ wasm:
     - sed -i 's/"lwk_wasm"/"lwk_node"/g' pkg_node/package.json
     - cd tests/node
     - npm install
-    - node network.js
-    - node list_transactions.js
-    - node amp0-setup.js
-    - node amp0-daily-ops.js
-    - node bip85.js
+    - npm run test
   artifacts:
     paths:
       - lwk_wasm/pkg

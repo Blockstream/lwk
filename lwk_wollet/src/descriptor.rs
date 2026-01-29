@@ -515,11 +515,17 @@ impl WolletDescriptor {
 
     /// Get a scriptpubkey
     pub fn script_pubkey(&self, ext_int: Chain, index: u32) -> Result<Script, Error> {
-        Ok(self
-            .inner_descriptor_if_available(ext_int)?
-            .at_derivation_index(index)?
-            .descriptor
-            .script_pubkey())
+        match &self.inner {
+            DescOrSpks::Spks(spks) => spks
+                .get(index as usize)
+                .map(|s| s.script_pubkey.clone())
+                .ok_or(Error::IndexOutOfRange),
+            _ => Ok(self
+                .inner_descriptor_if_available(ext_int)?
+                .at_derivation_index(index)?
+                .descriptor
+                .script_pubkey()),
+        }
     }
 
     /// Get a definite descriptor

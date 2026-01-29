@@ -1088,6 +1088,69 @@ mod test {
     }
 
     #[test]
+    fn test_spks() {
+        let key = "0000000000000000000000000000000000000000000000000000000000000001";
+        let spk_a = "0014000000000000000000000000000000000000000a";
+        let spk_b = "0014000000000000000000000000000000000000000b";
+        let params = &elements::AddressParams::ELEMENTS;
+
+        // Mixed blinding key / no blinding key, roundtrip
+        let input = format!("{key}:{spk_a},{key}:{spk_b},:{spk_a}");
+        let desc = WolletDescriptor::from_str(&input).unwrap();
+        assert_eq!(desc.to_string(), input);
+        assert_eq!(desc, WolletDescriptor::from_str(&desc.to_string()).unwrap());
+
+        // Serde roundtrip
+        let json = serde_json::to_string(&desc).unwrap();
+        assert_eq!(
+            desc,
+            serde_json::from_str::<WolletDescriptor>(&json).unwrap()
+        );
+
+        // script_pubkey returns the spk at the given index, ignoring chain
+        let expected_a = elements::Script::from_str(spk_a).unwrap();
+        let expected_b = elements::Script::from_str(spk_b).unwrap();
+        assert_eq!(desc.script_pubkey(Chain::External, 0).unwrap(), expected_a);
+        assert_eq!(desc.script_pubkey(Chain::Internal, 0).unwrap(), expected_a);
+        assert_eq!(desc.script_pubkey(Chain::External, 1).unwrap(), expected_b);
+        assert_eq!(desc.script_pubkey(Chain::External, 2).unwrap(), expected_a);
+
+        // address/change return the same address (no internal/external distinction)
+        assert_eq!(
+            desc.address(0, params).unwrap(),
+            desc.change(0, params).unwrap()
+        );
+
+        // With vs without blinding key produce different addresses (index 0 vs 2 share spk_a)
+        assert_ne!(
+            desc.address(0, params).unwrap(),
+            desc.address(2, params).unwrap()
+        );
+
+        // IndexOutOfRange
+        assert!(desc.script_pubkey(Chain::External, 3).is_err());
+        assert!(desc.address(3, params).is_err());
+        assert!(desc.change(3, params).is_err());
+
+        // Methods requiring a CT descriptor return Err
+        assert!(desc.descriptor().is_err());
+        assert!(desc.ct_descriptor().is_err());
+        assert!(desc.url_encoded_descriptor().is_err());
+        assert!(desc.bitcoin_descriptor_without_key_origin().is_err());
+        assert!(desc.definite_descriptor(Chain::External, 0).is_err());
+        assert!(desc.single_bitcoin_descriptors().is_err());
+        assert!(desc.as_single_descriptors().is_err());
+        assert!(desc.dwid(lwk_common::Network::Liquid).is_err());
+        let d: BtcDescriptor<bitcoin::PublicKey> =
+            BtcDescriptor::<bitcoin::PublicKey>::from_str(lwk_test_util::FED_PEG_DESC).unwrap();
+        assert!(desc.pegin_address(0, bitcoin::Network::Testnet, d).is_err());
+
+        assert!(!desc.is_elip151());
+        assert!(!desc.has_wildcard());
+        assert!(!desc.is_mainnet()); // No network info
+    }
+
+    #[test]
     #[cfg(feature = "amp0")]
     fn test_wollet_desc_amp0() {
         let desc_singlesig = "ct(elip151,elwpkh([28b3f14e/84'/1'/0']tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu/<0;1>/*))";

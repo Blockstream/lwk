@@ -107,6 +107,9 @@ pub enum Error {
 
     #[error("Store error: {0}")]
     Store(#[source] Box<dyn std::error::Error + Send + Sync>),
+
+    #[error("Store not configured")]
+    StoreNotConfigured,
 }
 
 impl From<BoltzError> for Error {

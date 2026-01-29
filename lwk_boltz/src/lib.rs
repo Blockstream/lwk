@@ -407,34 +407,30 @@ impl BoltzSession {
 
     /// Get the list of pending swap IDs from the store
     ///
-    /// Returns `None` if no store is configured, otherwise returns the list of pending swap IDs
+    /// Returns an error if no store is configured, otherwise returns the list of pending swap IDs
     /// (which may be empty).
-    pub fn pending_swap_ids(&self) -> Result<Option<Vec<String>>, Error> {
-        let Some(store) = &self.store else {
-            return Ok(None);
-        };
+    pub fn pending_swap_ids(&self) -> Result<Vec<String>, Error> {
+        let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
         let pending: Vec<String> = store
             .get(store_keys::PENDING_SWAPS)
             .map_err(Error::Store)?
             .map(|data| serde_json::from_slice(&data).unwrap_or_default())
             .unwrap_or_default();
-        Ok(Some(pending))
+        Ok(pending)
     }
 
     /// Get the list of completed swap IDs from the store
     ///
-    /// Returns `None` if no store is configured, otherwise returns the list of completed swap IDs
+    /// Returns an error if no store is configured, otherwise returns the list of completed swap IDs
     /// (which may be empty).
-    pub fn completed_swap_ids(&self) -> Result<Option<Vec<String>>, Error> {
-        let Some(store) = &self.store else {
-            return Ok(None);
-        };
+    pub fn completed_swap_ids(&self) -> Result<Vec<String>, Error> {
+        let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
         let completed: Vec<String> = store
             .get(store_keys::COMPLETED_SWAPS)
             .map_err(Error::Store)?
             .map(|data| serde_json::from_slice(&data).unwrap_or_default())
             .unwrap_or_default();
-        Ok(Some(completed))
+        Ok(completed)
     }
 
     /// Get the raw swap data for a specific swap ID from the store

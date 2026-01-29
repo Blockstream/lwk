@@ -454,7 +454,7 @@ mod tests {
         .unwrap();
 
         // Initially no pending swaps
-        let pending = session.pending_swap_ids().unwrap().unwrap();
+        let pending = session.pending_swap_ids().unwrap();
         assert!(pending.is_empty(), "Should start with no pending swaps");
 
         // Create a swap - it should be automatically persisted
@@ -466,7 +466,7 @@ mod tests {
         let swap_id = invoice_response.swap_id().to_string();
 
         // Verify swap is in pending list
-        let pending = session.pending_swap_ids().unwrap().unwrap();
+        let pending = session.pending_swap_ids().unwrap();
         assert!(
             pending.contains(&swap_id),
             "Swap should be in pending list after creation"
@@ -493,7 +493,7 @@ mod tests {
         .unwrap();
 
         // Verify swap is still in pending list
-        let pending = session.pending_swap_ids().unwrap().unwrap();
+        let pending = session.pending_swap_ids().unwrap();
         assert!(
             pending.contains(&swap_id),
             "Swap should still be in pending list after session restart"
@@ -509,8 +509,8 @@ mod tests {
         invoice_response.complete_pay().await.unwrap();
 
         // Verify swap moved from pending to completed
-        let pending = session.pending_swap_ids().unwrap().unwrap();
-        let completed = session.completed_swap_ids().unwrap().unwrap();
+        let pending = session.pending_swap_ids().unwrap();
+        let completed = session.completed_swap_ids().unwrap();
         assert!(
             !pending.contains(&swap_id),
             "Swap should not be in pending list after completion"
@@ -522,8 +522,8 @@ mod tests {
 
         // Test remove_swap
         session.remove_swap(&swap_id).unwrap();
-        let pending = session.pending_swap_ids().unwrap().unwrap();
-        let completed = session.completed_swap_ids().unwrap().unwrap();
+        let pending = session.pending_swap_ids().unwrap();
+        let completed = session.completed_swap_ids().unwrap();
         assert!(
             !pending.contains(&swap_id),
             "Swap should be removed from pending"

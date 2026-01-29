@@ -215,14 +215,14 @@ impl BoltzSession {
     /// Get the list of pending swap IDs from the store
     ///
     /// See [`crate::BoltzSession::pending_swap_ids()`]
-    pub fn pending_swap_ids(&self) -> Result<Option<Vec<String>>, Error> {
+    pub fn pending_swap_ids(&self) -> Result<Vec<String>, Error> {
         self.inner.pending_swap_ids()
     }
 
     /// Get the list of completed swap IDs from the store
     ///
     /// See [`crate::BoltzSession::completed_swap_ids()`]
-    pub fn completed_swap_ids(&self) -> Result<Option<Vec<String>>, Error> {
+    pub fn completed_swap_ids(&self) -> Result<Vec<String>, Error> {
         self.inner.completed_swap_ids()
     }
 

@@ -556,15 +556,15 @@ impl BoltzSession {
 
     /// Get the list of pending swap IDs from the store
     ///
-    /// Returns `None` if no store is configured.
-    pub fn pending_swap_ids(&self) -> Result<Option<Vec<String>>, LwkError> {
+    /// Returns an error if no store is configured.
+    pub fn pending_swap_ids(&self) -> Result<Vec<String>, LwkError> {
         Ok(self.inner.pending_swap_ids()?)
     }
 
     /// Get the list of completed swap IDs from the store
     ///
-    /// Returns `None` if no store is configured.
-    pub fn completed_swap_ids(&self) -> Result<Option<Vec<String>>, LwkError> {
+    /// Returns an error if no store is configured.
+    pub fn completed_swap_ids(&self) -> Result<Vec<String>, LwkError> {
         Ok(self.inner.completed_swap_ids()?)
     }
 

@@ -308,6 +308,17 @@ impl TryFrom<&ConfidentialDescriptor<DescriptorPublicKey>> for Chain {
     }
 }
 
+impl TryFrom<&WolletDescriptor> for Chain {
+    type Error = ();
+
+    fn try_from(value: &WolletDescriptor) -> Result<Self, Self::Error> {
+        match &value.inner {
+            DescOrSpks::Desc(d) => d.try_into(),
+            DescOrSpks::Spks(_) => Ok(Chain::External),
+        }
+    }
+}
+
 impl WolletDescriptor {
     /// Return a reference to the underlying descriptor.
     pub fn descriptor(&self) -> Result<&Descriptor<DescriptorPublicKey>, Error> {

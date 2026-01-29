@@ -283,6 +283,9 @@ pub enum Error {
 
     #[error("Invalid SPK format: expected 'blinding_key_hex:script_pubkey_hex'")]
     InvalidSpkFormat,
+
+    #[error("Index out of range")]
+    IndexOutOfRange,
 }
 
 // cannot derive automatically with this error because of trait bound

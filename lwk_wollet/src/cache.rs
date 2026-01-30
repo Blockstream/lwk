@@ -156,7 +156,8 @@ impl Cache {
         let (script, blinding_pubkey, cached) = match opt_script {
             Some((script, blinding_pubkey)) => (script.clone(), *blinding_pubkey, true),
             None => {
-                let (script, blinding_pubkey) = descriptor.derive_script_and_blinding_key(child)?;
+                let (script, blinding_pubkey) =
+                    descriptor.derive_script_and_blinding_key(ext_int, child)?;
                 (script, blinding_pubkey, false)
             }
         };

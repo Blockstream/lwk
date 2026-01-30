@@ -625,11 +625,14 @@ impl WolletDescriptor {
 
     pub(crate) fn derive_script_and_blinding_key(
         &self,
+        ext_int: Chain,
         child: ChildNumber,
     ) -> Result<(Script, crate::BlindingPublicKey), Error> {
         match &self.inner {
-            DescOrSpks::Desc(d) => {
-                let address = d
+            DescOrSpks::Desc(_) => {
+                let address = self
+                    .inner_descriptor_if_available(ext_int)?
+                    .ct_descriptor()?
                     .at_derivation_index(child.into())?
                     .address(&EC, &AddressParams::ELEMENTS)
                     .expect("all supported descriptors can generate an address");

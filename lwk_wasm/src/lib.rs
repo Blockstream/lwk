@@ -89,7 +89,7 @@ pub use network::Network;
 pub use pos::PosConfig;
 pub use precision::Precision;
 pub use prices::{ExchangeRates, PricesFetcher, PricesFetcherBuilder};
-pub use pset::Pset;
+pub use pset::{Pset, PsetBuilder, PsetInput, PsetInputBuilder, PsetOutput, PsetOutputBuilder};
 pub use pset_details::{Issuance, PsetDetails};
 pub use public_key::PublicKey;
 pub use registry::{AssetMeta, Registry, RegistryPost};

@@ -45,6 +45,13 @@ impl Script {
         Ok(inner.into())
     }
 
+    /// Creates an empty `Script`.
+    pub fn empty() -> Script {
+        Script {
+            inner: elements::Script::new(),
+        }
+    }
+
     /// Return the consensus encoded bytes of the script.
     pub fn bytes(&self) -> Vec<u8> {
         self.inner.as_bytes().to_vec()

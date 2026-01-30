@@ -1,5 +1,4 @@
-use crate::TxInWitness;
-use crate::{AssetId, Error};
+use crate::{AssetId, Error, TxIn, TxInWitness, TxOut};
 
 use std::str::FromStr;
 
@@ -78,6 +77,16 @@ impl Transaction {
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{self}")
+    }
+
+    /// Return a clone of the inputs of this transaction
+    pub fn inputs(&self) -> Vec<TxIn> {
+        self.inner.input.iter().map(|i| i.clone().into()).collect()
+    }
+
+    /// Return a clone of the outputs of this transaction
+    pub fn outputs(&self) -> Vec<TxOut> {
+        self.inner.output.iter().map(|o| o.clone().into()).collect()
     }
 }
 

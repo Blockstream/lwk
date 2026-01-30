@@ -33,6 +33,12 @@ pub enum Error {
     #[error(transparent)]
     PsetParse(#[from] lwk_wollet::elements::pset::ParseError),
 
+    #[error("{0:?}")]
+    PsetBlind(#[from] lwk_wollet::elements::pset::PsetBlindError),
+
+    #[error("{0:?}")]
+    PsetFinalize(#[from] lwk_wollet::elements_miniscript::psbt::Error),
+
     #[error(transparent)]
     ParseOutPoint(#[from] lwk_wollet::elements::bitcoin::transaction::ParseOutPointError),
 
@@ -89,9 +95,6 @@ pub enum Error {
 
     #[error("{0:?}")]
     JsVal(JsValue),
-
-    #[error("Object consumed")]
-    ObjectConsumed,
 }
 
 impl Error {
@@ -150,6 +153,8 @@ impl Error {
             Error::HexToBytes(_) => "HexToBytes",
             Error::Pset(_) => "Pset",
             Error::PsetParse(_) => "PsetParse",
+            Error::PsetBlind(_) => "PsetBlind",
+            Error::PsetFinalize(_) => "PsetFinalize",
             Error::ParseOutPoint(_) => "ParseOutPoint",
             Error::Bip39(_) => "Bip39",
             Error::Bip32(_) => "Bip32",
@@ -175,7 +180,6 @@ impl Error {
             Error::Taproot(_) => "Taproot",
             Error::Unblind(_) => "Unblind",
             Error::Generic(_) => "Generic",
-            Error::ObjectConsumed => "ObjectConsumed",
         }
     }
 }

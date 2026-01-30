@@ -988,4 +988,117 @@ mod tests {
             }
         }
     }
+
+    /// Test that TransactionZeroconfRejected triggers an error in advance() because
+    /// it is not yet handled.
+    ///
+    /// This test verifies that the BoltzSession properly returns an UnexpectedUpdate error
+    /// when receiving the TransactionZeroconfRejected state (BTC has maxZeroConfAmount=0).
+    ///
+    /// Once the state is properly handled, this test should be updated to verify the
+    /// correct behavior instead of expecting an error.
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_chain_swap_zeroconf_rejected() {
+        let _ = env_logger::try_init();
+
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+        );
+
+        // Create session WITHOUT automatic block mining - we want to trigger zeroconf rejection
+        let session = BoltzSession::builder(
+            ElementsNetwork::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .timeout_advance(Duration::from_secs(30))
+        .build()
+        .await
+        .unwrap();
+
+        // Generate addresses
+        let refund_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+            .await
+            .unwrap();
+        let refund_address = bitcoin::Address::from_str(&refund_address_str)
+            .unwrap()
+            .assume_checked();
+
+        let claim_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let claim_address = elements::Address::from_str(&claim_address_str).unwrap();
+
+        // Create BTC→L-BTC chain swap using BoltzSession
+        let mut response = session
+            .btc_to_lbtc(50_000, &refund_address, &claim_address, None)
+            .await
+            .unwrap();
+
+        log::info!(
+            "BTC to LBTC swap - Lockup address: {}",
+            response.lockup_address()
+        );
+
+        // Send to the BTC lockup address WITHOUT mining any blocks
+        // This should trigger transaction.zeroconf.rejected since BTC has maxZeroConfAmount=0
+        crate::utils::send_to_address(
+            BTC_CHAIN.into(),
+            response.lockup_address(),
+            response.expected_amount(),
+        )
+        .await
+        .unwrap();
+
+        log::info!("Sent to lockup address, waiting for zeroconf rejection...");
+
+        // Call advance() - this should either:
+        // 1. Return an UnexpectedUpdate error because TransactionZeroconfRejected is not handled
+        // 2. Or if the server doesn't trigger zeroconf rejection, we'll get a different state
+        match response.advance().await {
+            Err(lwk_boltz::Error::UnexpectedUpdate {
+                swap_id,
+                status,
+                last_state,
+            }) => {
+                log::info!(
+                    "Got expected UnexpectedUpdate error: swap_id={}, status={}, last_state={:?}",
+                    swap_id,
+                    status,
+                    last_state
+                );
+                assert_eq!(
+                    status, "transaction.zeroconf.rejected",
+                    "Expected zeroconf rejection status but got: {}",
+                    status
+                );
+                log::info!("Test passed: TransactionZeroconfRejected correctly triggers UnexpectedUpdate error");
+            }
+            Ok(std::ops::ControlFlow::Continue(update)) => {
+                // If we get here, the server didn't trigger zeroconf rejection
+                // This might happen if the configuration changed or blocks are being mined
+                log::warn!(
+                    "Server did not trigger zeroconf rejection, got status: {}",
+                    update.status
+                );
+                panic!(
+                    "Expected TransactionZeroconfRejected but got: {}. \
+                     Make sure BTC maxZeroConfAmount=0 in boltz.conf and no blocks are being mined.",
+                    update.status
+                );
+            }
+            Ok(std::ops::ControlFlow::Break(result)) => {
+                panic!("Unexpected swap completion with result: {}", result);
+            }
+            Err(e) => {
+                panic!("Unexpected error: {:?}", e);
+            }
+        }
+    }
 }

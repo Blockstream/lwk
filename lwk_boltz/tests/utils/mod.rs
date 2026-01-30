@@ -180,6 +180,15 @@ pub async fn mine_blocks(n_blocks: u64) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Mine blocks only on the Bitcoin chain (not Liquid)
+/// This is useful for testing zeroconf rejection scenarios on BTC
+pub async fn mine_btc_blocks(n_blocks: u64) -> Result<(), Box<dyn Error>> {
+    let chain: Chain = BitcoinChain::BitcoinRegtest.into();
+    let address = generate_address(chain).await?;
+    json_rpc_request(chain, "generatetoaddress", json!([n_blocks, address])).await?;
+    Ok(())
+}
+
 /// Get the total balance at a specific address by querying listunspent
 ///
 /// Returns the total amount in satoshis of all unspent outputs at the given address.

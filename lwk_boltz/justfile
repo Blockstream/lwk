@@ -75,6 +75,13 @@ test-onchain-swaps: regtest-env-start
     source .env
     RUST_LOG=info cargo test --test chain_swaps -- test_session_onchain --nocapture --ignored
 
+# Run zeroconf rejection test (must run separately - no block mining)
+test-zeroconf-rejected: regtest-env-start
+    #!/usr/bin/env bash
+    set -ea
+    source .env
+    RUST_LOG=info cargo test --test chain_swaps -- test_chain_swap_zeroconf_rejected --nocapture --ignored
+
 # Run submarine swap test with magic routing hints
 test-mrh: regtest-env-start
     #!/usr/bin/env bash

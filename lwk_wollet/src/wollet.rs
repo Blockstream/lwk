@@ -374,22 +374,31 @@ impl Wollet {
         }
     }
 
+    fn inner_address(&self, chain: Chain, index: Option<u32>) -> Result<AddressResult, Error> {
+        let index = match (chain, index) {
+            (_, Some(i)) => {
+                if !self.descriptor.has_wildcard() {
+                    // TODO: this error should be upstreamed to at_derivation_index https://github.com/rust-bitcoin/rust-miniscript/issues/829
+                    return Err(Error::IndexWithoutWildcard);
+                }
+                i
+            }
+            (Chain::Internal, None) => self.last_unused_internal(),
+            (Chain::External, None) => self.last_unused_external(),
+        };
+
+        let address = self
+            .descriptor
+            .inner_address(index, self.network.address_params(), chain)?;
+        Ok(AddressResult::new(address, index))
+    }
+
     /// Get a wallet address
     ///
     /// If Some return the address at the given index,
     /// otherwise the last unused address.
     pub fn address(&self, index: Option<u32>) -> Result<AddressResult, Error> {
-        if index.is_some() && !self.descriptor.has_wildcard() {
-            // TODO: this error should be upstreamed to at_derivation_index https://github.com/rust-bitcoin/rust-miniscript/issues/829
-            return Err(Error::IndexWithoutWildcard);
-        }
-
-        let index = self.unwrap_or_last_unused(index);
-
-        let address = self
-            .descriptor
-            .address(index, self.network.address_params())?;
-        Ok(AddressResult::new(address, index))
+        self.inner_address(Chain::External, index)
     }
 
     /// Get a wallet pegin address
@@ -442,15 +451,7 @@ impl Wollet {
     /// If Some return the address at the given index,
     /// otherwise the last unused address.
     pub fn change(&self, index: Option<u32>) -> Result<AddressResult, Error> {
-        let index = match index {
-            Some(i) => i,
-            None => self.last_unused_internal(),
-        };
-
-        let address = self
-            .descriptor
-            .change(index, self.network.address_params())?;
-        Ok(AddressResult::new(address, index))
+        self.inner_address(Chain::Internal, index)
     }
 
     fn utxos_inner(&self) -> Result<Vec<WalletTxOut>, Error> {
@@ -1357,11 +1358,16 @@ mod tests {
         let w = new_wollet(&desc);
         let a = w.address(None).unwrap();
         assert_eq!(a.address().to_string(), "tlq1qqtkq6nptvwfycgsvkclsg8uyslwy9pn5mmw6049nmqq02y7l9330a6vmsc5zdfq2xtpyc7tct5rtr80rlvrk7jll6mc5gjfup");
-        let e = w.address(Some(0)).unwrap_err();
-        assert_eq!(
-            e.to_string(),
-            "Cannot use derivation index when the descriptor has no wildcard"
-        );
+        let err = "Cannot use derivation index when the descriptor has no wildcard";
+        assert_eq!(w.address(Some(0)).unwrap_err().to_string(), err);
+        // With change
+        let desc = format!("ct(slip77({k}),elwpkh({x}/<0;1>))");
+        let w = new_wollet(&desc);
+        let a = w.address(None).unwrap().address().to_string();
+        let c = w.change(None).unwrap().address().to_string();
+        assert_ne!(a, c);
+        assert_eq!(w.address(Some(0)).unwrap_err().to_string(), err);
+        assert_eq!(w.change(Some(0)).unwrap_err().to_string(), err);
     }
 
     #[test]

@@ -86,6 +86,9 @@ pub enum Error {
 
     #[error("{0:?}")]
     JsVal(JsValue),
+
+    #[error("Object consumed")]
+    ObjectConsumed,
 }
 
 impl Error {
@@ -168,6 +171,7 @@ impl Error {
             Error::Secp256k1Zkp(_) => "Secp256k1Zkp",
             Error::Taproot(_) => "Taproot",
             Error::Generic(_) => "Generic",
+            Error::ObjectConsumed => "ObjectConsumed",
         }
     }
 }

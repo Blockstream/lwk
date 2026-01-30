@@ -89,6 +89,9 @@ pub enum Error {
 
     #[error("{0:?}")]
     JsVal(JsValue),
+
+    #[error("Object consumed")]
+    ObjectConsumed,
 }
 
 impl Error {
@@ -172,6 +175,7 @@ impl Error {
             Error::Taproot(_) => "Taproot",
             Error::Unblind(_) => "Unblind",
             Error::Generic(_) => "Generic",
+            Error::ObjectConsumed => "ObjectConsumed",
         }
     }
 }

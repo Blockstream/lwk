@@ -175,10 +175,19 @@ impl Wollet {
             return Ok(Recipient::from_address(satoshi, &address, asset));
         }
 
-        let address = if is_change {
-            self.change(Some(*last_unused))?
+        let index = if self.descriptor.has_wildcard() {
+            Some(*last_unused)
+        } else if self.descriptor.spk_count().is_some() {
+            // For wollets without descriptor, for now we do a safe choice and internally always use the first scriptpubkey
+            Some(0)
         } else {
-            self.address(Some(*last_unused))?
+            // Descriptor wollet with no wildcard
+            None
+        };
+        let address = if is_change {
+            self.change(index)?
+        } else {
+            self.address(index)?
         };
         *last_unused += 1;
         Ok(Recipient::from_address(satoshi, address.address(), asset))

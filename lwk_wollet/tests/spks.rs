@@ -19,11 +19,12 @@ fn test_spks() {
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
     let lbtc = wallet.policy_asset();
-    wallet.fund_btc(&env);
-
+    let sats = 1_000_000;
     let addr_from_wd = _wd
         .address(0, lwk_common::Network::LocaltestLiquid.address_params())
         .unwrap();
+    wallet.fund(&env, sats, Some(addr_from_wd.clone()), None);
+
     let tx = &wallet.wollet.transactions().unwrap()[0];
     let addr_from_tx = tx
         .outputs
@@ -41,5 +42,16 @@ fn test_spks() {
     assert!(b > 0);
     assert_eq!(*tx.balance.get(&lbtc).unwrap(), b);
 
-    // TODO: fix Wollet.address(), which is currently broken for all cases
+    let addr = wallet.wollet.address(Some(0)).unwrap().address().clone();
+    let change = wallet.wollet.change(Some(0)).unwrap().address().clone();
+    assert_eq!(addr_from_wd, addr);
+    assert_eq!(addr_from_wd, change);
+    let err = wallet.wollet.address(Some(1)).unwrap_err();
+    assert!(matches!(err, Error::IndexOutOfRange));
+    let err = wallet.wollet.change(Some(1)).unwrap_err();
+    assert!(matches!(err, Error::IndexOutOfRange));
+    let err = wallet.wollet.address(None).unwrap_err();
+    assert!(matches!(err, Error::UnsupportedWithoutDescriptor));
+    let err = wallet.wollet.change(None).unwrap_err();
+    assert!(matches!(err, Error::UnsupportedWithoutDescriptor));
 }

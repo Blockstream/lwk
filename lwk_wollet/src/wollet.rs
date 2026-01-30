@@ -375,14 +375,17 @@ impl Wollet {
     }
 
     fn inner_address(&self, chain: Chain, index: Option<u32>) -> Result<AddressResult, Error> {
+        let has_descriptor = self.descriptor.spk_count().is_none();
+        if has_descriptor && !self.descriptor.has_wildcard() && index.is_some() {
+            // Descriptor wollets without wildcard cannot pass the index
+            return Err(Error::IndexWithoutWildcard);
+        }
+        if !has_descriptor && index.is_none() {
+            // For wollets without descriptors, caller must pass index
+            return Err(Error::UnsupportedWithoutDescriptor);
+        }
         let index = match (chain, index) {
-            (_, Some(i)) => {
-                if !self.descriptor.has_wildcard() {
-                    // TODO: this error should be upstreamed to at_derivation_index https://github.com/rust-bitcoin/rust-miniscript/issues/829
-                    return Err(Error::IndexWithoutWildcard);
-                }
-                i
-            }
+            (_, Some(i)) => i,
             (Chain::Internal, None) => self.last_unused_internal(),
             (Chain::External, None) => self.last_unused_external(),
         };

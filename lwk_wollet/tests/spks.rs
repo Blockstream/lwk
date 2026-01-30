@@ -1,5 +1,6 @@
 use crate::test_wollet::*;
 use elements::hex::ToHex;
+use lwk_common::Signer;
 use lwk_test_util::*;
 use lwk_wollet::*;
 use std::str::FromStr;
@@ -54,4 +55,20 @@ fn test_spks() {
     assert!(matches!(err, Error::UnsupportedWithoutDescriptor));
     let err = wallet.wollet.change(None).unwrap_err();
     assert!(matches!(err, Error::UnsupportedWithoutDescriptor));
+
+    let node_address = env.elementsd_getnewaddress();
+
+    let mut pset = wallet
+        .wollet
+        .tx_builder()
+        .add_lbtc_recipient(&node_address, 10_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    // TODO: wollet: get_details: handle spks
+    assert!(wallet.wollet.get_details(&pset).is_err());
+
+    // Spks wollets do not automatically set the data necessary for the signer, which wont sign
+    assert_eq!(signer.sign(&mut pset).unwrap(), 0);
 }

@@ -863,6 +863,11 @@ impl Wollet {
 
     /// Add the PSET details with respect to the wallet
     pub fn add_details(&self, pset: &mut PartiallySignedTransaction) -> Result<(), Error> {
+        if self.descriptor.spk_count().is_some() {
+            // The wollet does not have a descriptor, nothing to add
+            // Since this method is also called internally, we prefer not to raise an error
+            return Ok(());
+        }
         let pset_clone = pset.clone();
         for (idx, input) in pset_clone.inputs().iter().enumerate() {
             if let Some(txout) = input.witness_utxo.as_ref() {

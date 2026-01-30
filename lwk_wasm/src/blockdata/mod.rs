@@ -6,6 +6,8 @@ pub mod lock_time;
 pub mod out_point;
 pub mod script;
 pub mod transaction;
+pub mod tx_in;
+pub mod tx_in_witness;
 pub mod tx_out_secrets;
 pub mod tx_sequence;
 pub mod wallet_tx;

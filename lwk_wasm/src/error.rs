@@ -81,14 +81,14 @@ pub enum Error {
     #[error(transparent)]
     Taproot(#[from] lwk_wollet::elements::bitcoin::taproot::TaprootError),
 
+    #[error("{0:?}")]
+    Unblind(#[from] lwk_wollet::elements::UnblindError),
+
     #[error("{0}")]
     Generic(String),
 
     #[error("{0:?}")]
     JsVal(JsValue),
-
-    #[error("Object consumed")]
-    ObjectConsumed,
 }
 
 impl Error {
@@ -170,8 +170,8 @@ impl Error {
             Error::FromWif(_) => "FromWif",
             Error::Secp256k1Zkp(_) => "Secp256k1Zkp",
             Error::Taproot(_) => "Taproot",
+            Error::Unblind(_) => "Unblind",
             Error::Generic(_) => "Generic",
-            Error::ObjectConsumed => "ObjectConsumed",
         }
     }
 }

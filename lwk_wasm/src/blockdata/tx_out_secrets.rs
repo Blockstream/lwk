@@ -18,6 +18,12 @@ impl From<elements::TxOutSecrets> for TxOutSecrets {
     }
 }
 
+impl From<&TxOutSecrets> for elements::TxOutSecrets {
+    fn from(value: &TxOutSecrets) -> Self {
+        value.inner
+    }
+}
+
 #[wasm_bindgen]
 impl TxOutSecrets {
     /// Return the asset of the output.

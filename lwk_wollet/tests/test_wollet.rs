@@ -114,8 +114,16 @@ impl<C: BlockchainBackend> TestWollet<C> {
         sync(&mut self.wollet, &mut self.client);
     }
 
+    fn has_descriptor(&self) -> bool {
+        self.wollet
+            .wollet_descriptor()
+            .to_string()
+            .starts_with("ct(")
+    }
+
     pub fn address(&self) -> Address {
-        self.wollet.address(None).unwrap().address().clone()
+        let index = (!self.has_descriptor()).then_some(0);
+        self.wollet.address(index).unwrap().address().clone()
     }
 
     pub fn address_result(&self, last_unused: Option<u32>) -> AddressResult {

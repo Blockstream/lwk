@@ -486,30 +486,48 @@ impl Wollet {
                     (out_point, output, spent.contains(&out_point))
                 })
                 .filter_map(|(outpoint, output, is_spent)| {
-                    if let Some(unblinded) = self.cache.unblinded.get(&outpoint) {
-                        let index = self.index(&output.script_pubkey).ok()?;
-                        let blinding_pubkey = self
-                            .cache
-                            .scripts
-                            .get(&(index.0, index.1.into()))
-                            .map(|(_, blinding_pubkey)| *blinding_pubkey);
-                        let address = Address::from_script(
-                            &output.script_pubkey,
-                            blinding_pubkey,
-                            self.network().address_params(),
-                        )?;
-                        return Some(WalletTxOut {
-                            outpoint,
-                            script_pubkey: output.script_pubkey.clone(),
-                            height: *height,
-                            unblinded: *unblinded,
-                            wildcard_index: index.1,
-                            ext_int: index.0,
-                            is_spent,
-                            address,
-                        });
-                    }
-                    None
+                    let unblinded = if let Some(unblinded) = self.cache.unblinded.get(&outpoint) {
+                        *unblinded
+                    } else if !output.script_pubkey.is_empty()
+                        && output.asset.is_explicit()
+                        && output.value.is_explicit()
+                        && self.cache.paths.contains_key(&output.script_pubkey)
+                    {
+                        // If the TXO is explicit we do not include it in cache.unblinded
+                        TxOutSecrets::new(
+                            output.asset.explicit().expect("explicit"),
+                            AssetBlindingFactor::zero(),
+                            output.value.explicit().expect("explicit"),
+                            ValueBlindingFactor::zero(),
+                        )
+                    } else {
+                        // Not a wallet scriptpubkey
+                        return None;
+                    };
+                    let index = self.index(&output.script_pubkey).ok()?;
+                    let blinding_pubkey = (!is_explicit(&unblinded))
+                        .then(|| {
+                            self.cache
+                                .scripts
+                                .get(&(index.0, index.1.into()))
+                                .map(|(_, blinding_pubkey)| *blinding_pubkey)
+                        })
+                        .flatten();
+                    let address = Address::from_script(
+                        &output.script_pubkey,
+                        blinding_pubkey,
+                        self.network().address_params(),
+                    )?;
+                    Some(WalletTxOut {
+                        outpoint,
+                        script_pubkey: output.script_pubkey.clone(),
+                        height: *height,
+                        unblinded,
+                        wildcard_index: index.1,
+                        ext_int: index.0,
+                        is_spent,
+                        address,
+                    })
                 });
             txos.extend(tx_txos);
         }
@@ -745,17 +763,20 @@ impl Wollet {
                 .ok_or_else(|| Error::Generic(format!("list_tx no tx {txid}")))?;
 
             let balance = tx_balance(**txid, tx, &txos);
-            if balance.is_empty() {
-                // Transaction has no output or input that the wollet can unblind,
-                // ignore this transaction
+            let inputs = tx_inputs(tx, &txos);
+            let outputs = tx_outputs(**txid, tx, &txos);
+            if balance.is_empty()
+                && inputs.iter().all(|i| i.is_none())
+                && outputs.iter().all(|o| o.is_none())
+            {
+                // Transaction has no output or input that the wollet can unblind or
+                // match as explicit, ignore this transaction
                 continue;
             }
             let fee = tx_fee(tx);
             let policy_asset = self.policy_asset();
             let type_ = tx_type(tx, &policy_asset, &balance, fee);
             let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
-            let inputs = tx_inputs(tx, &txos);
-            let outputs = tx_outputs(**txid, tx, &txos);
             txs.push(WalletTx {
                 tx: tx.clone(),
                 txid: **txid,

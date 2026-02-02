@@ -605,9 +605,7 @@ impl Encodable for Update {
                         bytes_written += blinding_pubkey.serialize().consensus_encode(&mut w)?
                     }
                     None => {
-                        return Err(elements::encode::Error::ParseFailed(
-                            "Version 2 update with missing blinding pubkey",
-                        ))
+                        bytes_written += [0u8; 33].consensus_encode(&mut w)?;
                     }
                 }
             }
@@ -683,7 +681,12 @@ impl Decodable for Update {
                 };
                 let child_number: ChildNumber = u32::consensus_decode(&mut d)?.into();
                 let blinding_pubkey = if version == 2 {
-                    Some(BlindingPublicKey::consensus_decode(&mut d)?)
+                    let bytes: [u8; 33] = Decodable::consensus_decode(&mut d)?;
+                    if bytes == [0u8; 33] {
+                        None
+                    } else {
+                        Some(BlindingPublicKey::from_slice(&bytes)?)
+                    }
                 } else {
                     None
                 };

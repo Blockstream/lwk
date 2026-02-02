@@ -41,6 +41,7 @@ pub struct LockupResponse {
     polling: bool,
     timeout_advance: Duration,
     store: Option<Arc<dyn DynStore>>,
+    store_prefix: String,
 }
 
 impl SwapPersistence for LockupResponse {
@@ -55,6 +56,10 @@ impl SwapPersistence for LockupResponse {
 
     fn store(&self) -> Option<&Arc<dyn DynStore>> {
         self.store.as_ref()
+    }
+
+    fn store_prefix(&self) -> &str {
+        &self.store_prefix
     }
 }
 
@@ -187,6 +192,7 @@ impl BoltzSession {
         };
 
         let store = self.clone_store();
+        let store_prefix = self.clone_store_prefix();
         let response = LockupResponse {
             data: ChainSwapData {
                 last_state,
@@ -217,6 +223,7 @@ impl BoltzSession {
             polling: self.polling,
             timeout_advance: self.timeout_advance,
             store,
+            store_prefix,
         };
 
         // Persist swap data and add to pending list
@@ -266,6 +273,7 @@ impl BoltzSession {
             polling: self.polling,
             timeout_advance: self.timeout_advance,
             store: self.clone_store(),
+            store_prefix: self.clone_store_prefix(),
         };
 
         // If the swap was already in a terminal state, move it to completed

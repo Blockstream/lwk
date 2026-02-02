@@ -376,6 +376,8 @@ impl BoltzSession {
         };
 
         // Compute store prefix from mnemonic identifier
+        // TODO: this leaks the mnemonic identifier to the store, is it something we want?
+        // https://gl.blockstream.io/liquid/lwk/-/issues/174
         let store_prefix = mnemonic_identifier(&mnemonic)?.to_string();
 
         Ok(Self {

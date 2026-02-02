@@ -408,6 +408,7 @@ impl Wollet {
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn compute_blinding_pubkey_if_missing(
     scripts_with_blinding_pubkey: Vec<(
         Chain,

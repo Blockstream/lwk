@@ -99,6 +99,7 @@ impl std::hash::Hash for Cache {
 #[derive(Default, Debug)]
 pub struct ScriptBatch {
     pub cached: bool,
+    #[allow(clippy::type_complexity)]
     pub value: Vec<(Script, (Chain, ChildNumber, Option<BlindingPublicKey>))>,
 }
 

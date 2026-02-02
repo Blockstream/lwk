@@ -1825,9 +1825,16 @@ fn test_unblinded_utxo() {
 
     // Fund the wallet with an unblinded UTXO
     let satoshi = 100_000;
-    w.fund_explicit(&env, satoshi, None, None);
+    let txid = w.fund_explicit(&env, satoshi, None, None);
 
     assert_eq!(w.balance(&policy_asset), 0);
+    assert_eq!(w.wollet.transactions().unwrap().len(), 0);
+    let tx = w.wollet.transaction(&txid).unwrap().unwrap();
+    assert!(tx.inputs.iter().all(|i| i.is_none()));
+    assert!(tx.outputs.iter().all(|o| o.is_none()));
+    assert_eq!(*tx.balance.get(&policy_asset).unwrap_or(&0), 0);
+    assert_eq!(w.wollet.utxos().unwrap().len(), 0);
+    assert_eq!(w.wollet.txos().unwrap().len(), 0);
 
     let external_utxo = w.wollet.explicit_utxos().unwrap()[0].clone();
 

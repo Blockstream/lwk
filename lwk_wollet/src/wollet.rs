@@ -461,7 +461,7 @@ impl Wollet {
         Ok(self
             .txos_inner()?
             .into_iter()
-            .filter(|txo| !txo.is_spent)
+            .filter(|txo| !txo.is_spent && !is_explicit(&txo.unblinded))
             .collect())
     }
 

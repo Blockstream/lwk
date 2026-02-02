@@ -486,24 +486,7 @@ impl Wollet {
                     (out_point, output, spent.contains(&out_point))
                 })
                 .filter_map(|(outpoint, output, is_spent)| {
-                    let unblinded = if let Some(unblinded) = self.cache.unblinded.get(&outpoint) {
-                        *unblinded
-                    } else if !output.script_pubkey.is_empty()
-                        && output.asset.is_explicit()
-                        && output.value.is_explicit()
-                        && self.cache.paths.contains_key(&output.script_pubkey)
-                    {
-                        // If the TXO is explicit we do not include it in cache.unblinded
-                        TxOutSecrets::new(
-                            output.asset.explicit().expect("explicit"),
-                            AssetBlindingFactor::zero(),
-                            output.value.explicit().expect("explicit"),
-                            ValueBlindingFactor::zero(),
-                        )
-                    } else {
-                        // Not a wallet scriptpubkey
-                        return None;
-                    };
+                    let unblinded = *self.cache.unblinded.get(&outpoint)?;
                     let index = self.index(&output.script_pubkey).ok()?;
                     let blinding_pubkey = (!is_explicit(&unblinded))
                         .then(|| {

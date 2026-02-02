@@ -16,28 +16,37 @@ mod swap_state;
 
 /// Store keys for Boltz swap persistence.
 ///
-/// All keys are namespaced with `boltz:` to avoid collisions with other store users.
+/// All keys are namespaced with a prefix derived from the mnemonic (e.g., `2e8d7a6ccb9bbae4:boltz:`)
+/// to ensure data isolation between different wallets sharing the same store.
 pub mod store_keys {
     use super::error;
     use super::DynStore;
 
-    /// Key for the list of pending swap IDs (JSON array)
-    pub const PENDING_SWAPS: &str = "boltz:pending_swaps";
-    /// Key for the list of completed swap IDs (JSON array)
-    pub const COMPLETED_SWAPS: &str = "boltz:completed_swaps";
+    /// Generate the key for the list of pending swap IDs
+    pub fn pending_swaps(prefix: &str) -> String {
+        format!("{prefix}:boltz:pending_swaps")
+    }
+
+    /// Generate the key for the list of completed swap IDs
+    pub fn completed_swaps(prefix: &str) -> String {
+        format!("{prefix}:boltz:completed_swaps")
+    }
 
     /// Generate the key for a specific swap's data
-    pub fn swap_data(swap_id: &str) -> String {
-        format!("boltz:swap:{swap_id}")
+    pub fn swap_data(prefix: &str, swap_id: &str) -> String {
+        format!("{prefix}:boltz:swap:{swap_id}")
     }
 
     /// Read the pending swaps list from the store
     ///
     /// Returns an empty Vec if the key doesn't exist, propagates errors on store
     /// access failure or deserialization failure.
-    pub fn get_pending_swaps(store: &dyn DynStore) -> Result<Vec<String>, error::Error> {
+    pub fn get_pending_swaps(
+        store: &dyn DynStore,
+        prefix: &str,
+    ) -> Result<Vec<String>, error::Error> {
         store
-            .get(PENDING_SWAPS)
+            .get(&pending_swaps(prefix))
             .map_err(error::Error::Store)?
             .map(|data| serde_json::from_slice(&data))
             .transpose()?
@@ -48,9 +57,12 @@ pub mod store_keys {
     ///
     /// Returns an empty Vec if the key doesn't exist, propagates errors on store
     /// access failure or deserialization failure.
-    pub fn get_completed_swaps(store: &dyn DynStore) -> Result<Vec<String>, error::Error> {
+    pub fn get_completed_swaps(
+        store: &dyn DynStore,
+        prefix: &str,
+    ) -> Result<Vec<String>, error::Error> {
         store
-            .get(COMPLETED_SWAPS)
+            .get(&completed_swaps(prefix))
             .map_err(error::Error::Store)?
             .map(|data| serde_json::from_slice(&data))
             .transpose()?
@@ -58,16 +70,26 @@ pub mod store_keys {
     }
 
     /// Write the pending swaps list to the store
-    pub fn set_pending_swaps(store: &dyn DynStore, swaps: &[String]) -> Result<(), error::Error> {
+    pub fn set_pending_swaps(
+        store: &dyn DynStore,
+        prefix: &str,
+        swaps: &[String],
+    ) -> Result<(), error::Error> {
         let data = serde_json::to_vec(swaps)?;
-        store.put(PENDING_SWAPS, &data).map_err(error::Error::Store)
+        store
+            .put(&pending_swaps(prefix), &data)
+            .map_err(error::Error::Store)
     }
 
     /// Write the completed swaps list to the store
-    pub fn set_completed_swaps(store: &dyn DynStore, swaps: &[String]) -> Result<(), error::Error> {
+    pub fn set_completed_swaps(
+        store: &dyn DynStore,
+        prefix: &str,
+        swaps: &[String],
+    ) -> Result<(), error::Error> {
         let data = serde_json::to_vec(swaps)?;
         store
-            .put(COMPLETED_SWAPS, &data)
+            .put(&completed_swaps(prefix), &data)
             .map_err(error::Error::Store)
     }
 }
@@ -78,7 +100,7 @@ pub use lwk_common::DynStore;
 /// Trait for swap response types that support persistence.
 ///
 /// This trait provides the interface needed for persisting swap data to a store.
-/// Implementors must provide serialization, swap ID access, and store access.
+/// Implementors must provide serialization, swap ID access, store access, and store prefix.
 /// Default implementations are provided for persist operations.
 pub trait SwapPersistence {
     /// Serialize the swap data to a JSON string
@@ -90,11 +112,14 @@ pub trait SwapPersistence {
     /// Get a reference to the store, if configured
     fn store(&self) -> Option<&Arc<dyn DynStore>>;
 
+    /// Get the store key prefix (derived from mnemonic identifier)
+    fn store_prefix(&self) -> &str;
+
     /// Persist swap data to the store
     fn persist(&self) -> Result<(), error::Error> {
         if let Some(store) = self.store() {
             let data = self.serialize()?;
-            let key = store_keys::swap_data(self.swap_id());
+            let key = store_keys::swap_data(self.store_prefix(), self.swap_id());
             store
                 .put(&key, data.as_bytes())
                 .map_err(error::Error::Store)?;
@@ -106,16 +131,18 @@ pub trait SwapPersistence {
     /// Persist swap data and add to pending swaps list
     fn persist_and_add_to_pending(&self) -> Result<(), error::Error> {
         if let Some(store) = self.store() {
+            let prefix = self.store_prefix();
+
             // Persist the swap data
             self.persist()?;
 
             // Add to pending list
-            let mut pending = store_keys::get_pending_swaps(store.as_ref())?;
+            let mut pending = store_keys::get_pending_swaps(store.as_ref(), prefix)?;
 
             let swap_id = self.swap_id().to_string();
             if !pending.contains(&swap_id) {
                 pending.push(swap_id.clone());
-                store_keys::set_pending_swaps(store.as_ref(), &pending)?;
+                store_keys::set_pending_swaps(store.as_ref(), prefix, &pending)?;
                 log::debug!("Added swap {swap_id} to pending list");
             }
         }
@@ -125,18 +152,19 @@ pub trait SwapPersistence {
     /// Move swap from pending to completed list
     fn move_to_completed(&self) -> Result<(), error::Error> {
         if let Some(store) = self.store() {
+            let prefix = self.store_prefix();
             let swap_id = self.swap_id().to_string();
 
             // Remove from pending list
-            let mut pending = store_keys::get_pending_swaps(store.as_ref())?;
+            let mut pending = store_keys::get_pending_swaps(store.as_ref(), prefix)?;
             pending.retain(|id| id != &swap_id);
-            store_keys::set_pending_swaps(store.as_ref(), &pending)?;
+            store_keys::set_pending_swaps(store.as_ref(), prefix, &pending)?;
 
             // Add to completed list
-            let mut completed = store_keys::get_completed_swaps(store.as_ref())?;
+            let mut completed = store_keys::get_completed_swaps(store.as_ref(), prefix)?;
             if !completed.contains(&swap_id) {
                 completed.push(swap_id.clone());
-                store_keys::set_completed_swaps(store.as_ref(), &completed)?;
+                store_keys::set_completed_swaps(store.as_ref(), prefix, &completed)?;
             }
 
             log::debug!("Moved swap {swap_id} to completed list");
@@ -238,6 +266,9 @@ pub struct BoltzSession {
 
     /// Optional store for persisting swap data
     store: Option<Arc<dyn DynStore>>,
+
+    /// Prefix for store keys, derived from mnemonic identifier (e.g., "2e8d7a6ccb9bbae4:")
+    store_prefix: String,
 }
 
 impl BoltzSession {
@@ -343,6 +374,12 @@ impl BoltzSession {
             }
             None => (0, Mnemonic::generate(12).expect("12 is a valid word count")),
         };
+
+        // Compute store prefix from mnemonic identifier
+        // TODO: this leaks the mnemonic identifier to the store, is it something we want?
+        // https://gl.blockstream.io/liquid/lwk/-/issues/174
+        let store_prefix = mnemonic_identifier(&mnemonic)?.to_string();
+
         Ok(Self {
             next_index_to_use: AtomicU32::new(next_index_to_use),
             mnemonic,
@@ -357,6 +394,7 @@ impl BoltzSession {
             random_preimages,
             swap_info: Mutex::new(swap_info),
             store,
+            store_prefix,
         })
     }
 
@@ -400,9 +438,19 @@ impl BoltzSession {
         self.store.as_ref()
     }
 
+    /// Get the store key prefix (derived from mnemonic identifier)
+    pub fn store_prefix(&self) -> &str {
+        &self.store_prefix
+    }
+
     /// Clone the store Arc for use in swap responses
     pub(crate) fn clone_store(&self) -> Option<Arc<dyn DynStore>> {
         self.store.clone()
+    }
+
+    /// Clone the store prefix for use in swap responses
+    pub(crate) fn clone_store_prefix(&self) -> String {
+        self.store_prefix.clone()
     }
 
     /// Generate a rescue file with the lightning session mnemonic.
@@ -431,7 +479,7 @@ impl BoltzSession {
     /// (which may be empty).
     pub fn pending_swap_ids(&self) -> Result<Vec<String>, Error> {
         let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
-        store_keys::get_pending_swaps(store.as_ref())
+        store_keys::get_pending_swaps(store.as_ref(), &self.store_prefix)
     }
 
     /// Get the list of completed swap IDs from the store
@@ -440,7 +488,7 @@ impl BoltzSession {
     /// (which may be empty).
     pub fn completed_swap_ids(&self) -> Result<Vec<String>, Error> {
         let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
-        store_keys::get_completed_swaps(store.as_ref())
+        store_keys::get_completed_swaps(store.as_ref(), &self.store_prefix)
     }
 
     /// Get the raw swap data for a specific swap ID from the store
@@ -452,7 +500,7 @@ impl BoltzSession {
             return Ok(None);
         };
         let data = store
-            .get(&store_keys::swap_data(swap_id))
+            .get(&store_keys::swap_data(&self.store_prefix, swap_id))
             .map_err(Error::Store)?
             .map(|data| String::from_utf8_lossy(&data).to_string());
         Ok(data)
@@ -464,26 +512,27 @@ impl BoltzSession {
     /// Returns an error if no store is configured.
     pub fn remove_swap(&self, swap_id: &str) -> Result<(), Error> {
         let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
+        let prefix = &self.store_prefix;
 
         // Remove the swap data
         store
-            .remove(&store_keys::swap_data(swap_id))
+            .remove(&store_keys::swap_data(prefix, swap_id))
             .map_err(Error::Store)?;
 
         // Remove from pending list
-        let mut pending = store_keys::get_pending_swaps(store.as_ref())?;
+        let mut pending = store_keys::get_pending_swaps(store.as_ref(), prefix)?;
         let was_pending = pending.contains(&swap_id.to_string());
         pending.retain(|id| id != swap_id);
         if was_pending {
-            store_keys::set_pending_swaps(store.as_ref(), &pending)?;
+            store_keys::set_pending_swaps(store.as_ref(), prefix, &pending)?;
         }
 
         // Remove from completed list
-        let mut completed = store_keys::get_completed_swaps(store.as_ref())?;
+        let mut completed = store_keys::get_completed_swaps(store.as_ref(), prefix)?;
         let was_completed = completed.contains(&swap_id.to_string());
         completed.retain(|id| id != swap_id);
         if was_completed {
-            store_keys::set_completed_swaps(store.as_ref(), &completed)?;
+            store_keys::set_completed_swaps(store.as_ref(), prefix, &completed)?;
         }
 
         log::debug!("Removed swap {} from store", swap_id);

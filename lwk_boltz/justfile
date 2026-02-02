@@ -118,3 +118,6 @@ test-chain-restore: regtest-env-start
     RUST_LOG=info cargo test --test chain_swaps -- tests::test_session_restore_chain_swaps_with_random_preimages --nocapture --exact --ignored
     RUST_LOG=info cargo test --test chain_swaps -- tests::test_session_restore_chain_swaps_from_swap_list --nocapture --exact --ignored
     RUST_LOG=info cargo test --test chain_swaps -- tests::test_session_restore_chain_swaps_with_store --nocapture --exact --ignored
+
+# Run all boltz tests
+test-boltz-all: test-reverse test-submarine test-onchain-swaps test-mrh test-submarine-restore test-reverse-restore test-reverse-concurrent test-chain-restore

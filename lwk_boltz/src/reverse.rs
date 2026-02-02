@@ -49,6 +49,7 @@ pub struct InvoiceResponse {
     polling: bool,
     timeout_advance: Duration,
     store: Option<Arc<dyn DynStore>>,
+    store_prefix: String,
 }
 
 impl fmt::Debug for InvoiceResponse {
@@ -69,6 +70,10 @@ impl SwapPersistence for InvoiceResponse {
 
     fn store(&self) -> Option<&Arc<dyn DynStore>> {
         self.store.as_ref()
+    }
+
+    fn store_prefix(&self) -> &str {
+        &self.store_prefix
     }
 }
 
@@ -149,6 +154,7 @@ impl BoltzSession {
         log::debug!("Waiting for Invoice to be paid: {}", &invoice);
 
         let store = self.clone_store();
+        let store_prefix = self.clone_store_prefix();
         let response = InvoiceResponse {
             polling: self.polling,
             timeout_advance: self.timeout_advance,
@@ -173,6 +179,7 @@ impl BoltzSession {
             api: self.api.clone(),
             chain_client: self.chain_client.clone(),
             store,
+            store_prefix,
         };
 
         // Persist swap data and add to pending list
@@ -208,6 +215,7 @@ impl BoltzSession {
             api: self.api.clone(),
             chain_client: self.chain_client.clone(),
             store: self.clone_store(),
+            store_prefix: self.clone_store_prefix(),
         };
 
         // If the swap was already in a terminal state, move it to completed

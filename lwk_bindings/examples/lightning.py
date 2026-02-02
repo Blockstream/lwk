@@ -604,12 +604,10 @@ def main():
     global network
     network = Network.mainnet()
 
-    # Compute hash of mnemonic for wallet-specific store directory
-    mnemonic_hash = hashlib.sha256(mnemonic_str.encode('utf-8')).hexdigest()[:16]
-    store_dir = f"swaps/{mnemonic_hash}"
-
     # Create the file-based store for swap persistence
-    file_store = FileStore(store_dir)
+    # Note: Keys are automatically namespaced by a hash of the mnemonic internally,
+    # so multiple wallets can safely share the same store directory.
+    file_store = FileStore("swaps")
     store_link = ForeignStoreLink(file_store)
 
     b = EsploraClientBuilder(

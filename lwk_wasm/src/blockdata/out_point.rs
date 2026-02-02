@@ -27,13 +27,26 @@ impl Display for OutPoint {
     }
 }
 
+impl From<&OutPoint> for elements::OutPoint {
+    fn from(o: &OutPoint) -> Self {
+        o.inner
+    }
+}
+
 #[wasm_bindgen]
 impl OutPoint {
-    /// Creates an `OutPoint`
+    /// Creates an `OutPoint` from a string representation.
     #[wasm_bindgen(constructor)]
     pub fn new(s: &str) -> Result<OutPoint, Error> {
         let out_point: elements::OutPoint = s.parse()?;
         Ok(out_point.into())
+    }
+
+    /// Creates an `OutPoint` from a transaction ID and output index.
+    #[wasm_bindgen(js_name = fromParts)]
+    pub fn from_parts(txid: &Txid, vout: u32) -> OutPoint {
+        let inner = elements::OutPoint::new((*txid).into(), vout);
+        OutPoint { inner }
     }
 
     /// Return the transaction identifier.

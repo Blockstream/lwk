@@ -153,7 +153,10 @@ impl ValueBlindingFactor {
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::*;
+
     use wasm_bindgen_test::*;
+
+    use lwk_wollet::elements::hex::ToHex;
 
     wasm_bindgen_test_configure!(run_in_browser);
 

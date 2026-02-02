@@ -1,4 +1,7 @@
-use crate::{AssetId, Error};
+use crate::{AssetId, Error, TxIn, TxInWitness, TxOut};
+
+use std::str::FromStr;
+
 use lwk_wollet::{
     elements::{
         self,
@@ -7,7 +10,7 @@ use lwk_wollet::{
     },
     hashes::hex::FromHex,
 };
-use std::str::FromStr;
+
 use wasm_bindgen::prelude::*;
 
 /// A Liquid transaction
@@ -75,6 +78,16 @@ impl Transaction {
     pub fn to_string_js(&self) -> String {
         format!("{self}")
     }
+
+    /// Return a clone of the inputs of this transaction
+    pub fn inputs(&self) -> Vec<TxIn> {
+        self.inner.input.iter().map(|i| i.clone().into()).collect()
+    }
+
+    /// Return a clone of the outputs of this transaction
+    pub fn outputs(&self) -> Vec<TxOut> {
+        self.inner.output.iter().map(|o| o.clone().into()).collect()
+    }
 }
 
 /// A valid transaction identifier.
@@ -117,6 +130,49 @@ impl Txid {
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{self}")
+    }
+}
+
+/// Editor for modifying transactions.
+///
+/// See [`elements::Transaction`] for more details.
+#[wasm_bindgen]
+pub struct TransactionEditor {
+    inner: elements::Transaction,
+}
+
+#[wasm_bindgen]
+impl TransactionEditor {
+    /// Create an editor from an existing transaction.
+    #[wasm_bindgen(js_name = fromTransaction)]
+    pub fn from_transaction(tx: &Transaction) -> TransactionEditor {
+        TransactionEditor {
+            inner: tx.as_ref().clone(),
+        }
+    }
+
+    /// Set the witness for a specific input.
+    #[wasm_bindgen(js_name = setInputWitness)]
+    pub fn set_input_witness(
+        mut self,
+        input_index: u32,
+        witness: &TxInWitness,
+    ) -> Result<TransactionEditor, Error> {
+        let idx = input_index as usize;
+        if idx >= self.inner.input.len() {
+            return Err(Error::Generic(format!(
+                "Input index {} out of bounds (transaction has {} inputs)",
+                input_index,
+                self.inner.input.len()
+            )));
+        }
+        self.inner.input[idx].witness = witness.as_ref().clone();
+        Ok(self)
+    }
+
+    /// Build the transaction, consuming the editor.
+    pub fn build(self) -> Transaction {
+        Transaction { inner: self.inner }
     }
 }
 

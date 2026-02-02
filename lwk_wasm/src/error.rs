@@ -33,6 +33,12 @@ pub enum Error {
     #[error(transparent)]
     PsetParse(#[from] lwk_wollet::elements::pset::ParseError),
 
+    #[error("{0:?}")]
+    PsetBlind(#[from] lwk_wollet::elements::pset::PsetBlindError),
+
+    #[error("{0:?}")]
+    PsetFinalize(#[from] lwk_wollet::elements_miniscript::psbt::Error),
+
     #[error(transparent)]
     ParseOutPoint(#[from] lwk_wollet::elements::bitcoin::transaction::ParseOutPointError),
 
@@ -80,6 +86,9 @@ pub enum Error {
 
     #[error(transparent)]
     Taproot(#[from] lwk_wollet::elements::bitcoin::taproot::TaprootError),
+
+    #[error("{0:?}")]
+    Unblind(#[from] lwk_wollet::elements::UnblindError),
 
     #[error("{0}")]
     Generic(String),
@@ -144,6 +153,8 @@ impl Error {
             Error::HexToBytes(_) => "HexToBytes",
             Error::Pset(_) => "Pset",
             Error::PsetParse(_) => "PsetParse",
+            Error::PsetBlind(_) => "PsetBlind",
+            Error::PsetFinalize(_) => "PsetFinalize",
             Error::ParseOutPoint(_) => "ParseOutPoint",
             Error::Bip39(_) => "Bip39",
             Error::Bip32(_) => "Bip32",
@@ -167,6 +178,7 @@ impl Error {
             Error::FromWif(_) => "FromWif",
             Error::Secp256k1Zkp(_) => "Secp256k1Zkp",
             Error::Taproot(_) => "Taproot",
+            Error::Unblind(_) => "Unblind",
             Error::Generic(_) => "Generic",
         }
     }

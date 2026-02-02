@@ -1,11 +1,16 @@
 pub mod address;
 pub mod asset_id;
 pub mod blinding_factor;
+pub mod block_header;
 pub mod contract_hash;
+pub mod external_utxo;
 pub mod lock_time;
 pub mod out_point;
 pub mod script;
 pub mod transaction;
+pub mod tx_in;
+pub mod tx_in_witness;
+pub mod tx_out;
 pub mod tx_out_secrets;
 pub mod tx_sequence;
 pub mod wallet_tx;

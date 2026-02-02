@@ -20,7 +20,7 @@ pub struct Cache {
     pub paths: HashMap<Script, (Chain, ChildNumber)>,
 
     /// inverse of `paths`, with the blinding public key for each script
-    pub scripts: HashMap<(Chain, ChildNumber), (Script, BlindingPublicKey)>,
+    pub scripts: HashMap<(Chain, ChildNumber), (Script, Option<BlindingPublicKey>)>,
 
     /// contains only my wallet txs with the relative heights (None if unconfirmed)
     pub heights: HashMap<Txid, Option<Height>>,
@@ -99,7 +99,7 @@ impl std::hash::Hash for Cache {
 #[derive(Default, Debug)]
 pub struct ScriptBatch {
     pub cached: bool,
-    pub value: Vec<(Script, (Chain, ChildNumber, BlindingPublicKey))>,
+    pub value: Vec<(Script, (Chain, ChildNumber, Option<BlindingPublicKey>))>,
 }
 
 impl Cache {
@@ -151,7 +151,7 @@ impl Cache {
         ext_int: Chain,
         child: ChildNumber,
         descriptor: &WolletDescriptor,
-    ) -> Result<(Script, BlindingPublicKey, bool), Error> {
+    ) -> Result<(Script, Option<BlindingPublicKey>, bool), Error> {
         let opt_script = self.scripts.get(&(ext_int, child));
         let (script, blinding_pubkey, cached) = match opt_script {
             Some((script, blinding_pubkey)) => (script.clone(), *blinding_pubkey, true),
@@ -210,11 +210,11 @@ mod tests {
                 crate::descriptor::Chain::External,
             )
             .unwrap();
-        assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), (External, Normal { index: 0 }, PublicKey(0525054b498a69342d90750ed5e8f91cb6fb4da48735fd7011fdbcfc0e8edee1f0a30ed1e5c1d730e281b73f70f02dec2cbe20d0ac864d3d3d6942a02d66c6e3)))");
+        assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), (External, Normal { index: 0 }, Some(PublicKey(0525054b498a69342d90750ed5e8f91cb6fb4da48735fd7011fdbcfc0e8edee1f0a30ed1e5c1d730e281b73f70f02dec2cbe20d0ac864d3d3d6942a02d66c6e3))))");
         assert_ne!(x.value[0], x.value[1]);
         let addr2 = Address::from_script(
             &x.value[0].0,
-            Some(x.value[0].1 .2),
+            x.value[0].1 .2,
             &AddressParams::LIQUID_TESTNET,
         )
         .unwrap();

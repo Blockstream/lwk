@@ -627,7 +627,7 @@ impl WolletDescriptor {
         &self,
         ext_int: Chain,
         child: ChildNumber,
-    ) -> Result<(Script, crate::BlindingPublicKey), Error> {
+    ) -> Result<(Script, Option<crate::BlindingPublicKey>), Error> {
         match &self.inner {
             DescOrSpks::Desc(_) => {
                 let address = self
@@ -638,29 +638,17 @@ impl WolletDescriptor {
                     .expect("all supported descriptors can generate an address");
                 Ok((
                     address.script_pubkey(),
-                    address
-                        .blinding_pubkey
-                        .expect("descriptor used include blinding key"),
+                    Some(
+                        address
+                            .blinding_pubkey
+                            .expect("descriptor used include blinding key"),
+                    ),
                 ))
             }
             DescOrSpks::Spks(spks) => {
                 let index: u32 = child.into();
                 let spk = spks.get(index as usize).ok_or(Error::IndexOutOfRange)?;
-                let blinding_pk = match &spk.blinding_key {
-                    Some(k) => k.public_key(&EC),
-                    None => {
-                        // TODO: make BlindingPublicKey optional in Cache
-                        // In the meantime use a dummy pubkey for which we know the private key
-                        // Dummy blinding pubkey for non-confidential Spks
-                        let sk = SecretKey::from_slice(&{
-                            let mut key = [0u8; 32];
-                            key[31] = 1;
-                            key
-                        })
-                        .expect("valid secret key");
-                        sk.public_key(&EC)
-                    }
-                };
+                let blinding_pk = spk.blinding_key.as_ref().map(|k| k.public_key(&EC));
                 Ok((spk.script_pubkey.clone(), blinding_pk))
             }
         }

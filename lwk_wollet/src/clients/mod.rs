@@ -157,7 +157,7 @@ pub struct Data {
     pub txid_height: HashMap<Txid, Option<Height>>,
 
     /// The new scripts that are involved in the update.
-    pub scripts: HashMap<Script, (Chain, ChildNumber, BlindingPublicKey)>,
+    pub scripts: HashMap<Script, (Chain, ChildNumber, Option<BlindingPublicKey>)>,
 
     /// The last unused index for each chain.
     pub last_unused: LastUnused,

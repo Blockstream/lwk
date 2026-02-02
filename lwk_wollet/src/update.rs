@@ -416,22 +416,29 @@ fn compute_blinding_pubkey_if_missing(
         Option<elements::secp256k1_zkp::PublicKey>,
     )>,
     wollet_descriptor: WolletDescriptor,
-) -> Result<Vec<(Chain, ChildNumber, Script, BlindingPublicKey)>, Error> {
+) -> Result<Vec<(Chain, ChildNumber, Script, Option<BlindingPublicKey>)>, Error> {
     let mut result = Vec::with_capacity(scripts_with_blinding_pubkey.len());
 
     for (chain, child_number, script_pubkey, maybe_blinding_pubkey) in scripts_with_blinding_pubkey
     {
         let blinding_pubkey = match maybe_blinding_pubkey {
-            Some(pubkey) => pubkey,
+            Some(pubkey) => Some(pubkey),
             None => {
-                let desc = wollet_descriptor.ct_definite_descriptor(chain, child_number.into())?;
-                // TODO: derive the blinding pubkey from the descriptor blinding key and scriptpubkey
-                //       (needs function in elements-miniscript)
+                match wollet_descriptor.ct_definite_descriptor(chain, child_number.into()) {
+                    Ok(desc) => {
+                        // TODO: derive the blinding pubkey from the descriptor blinding key and scriptpubkey
+                        //       (needs function in elements-miniscript)
 
-                let address = desc.address(&EC, &elements::AddressParams::ELEMENTS)?; // we don't need the address, we need only the blinding pubkey, thus we can use any params
-                address
-                    .blinding_pubkey
-                    .expect("blinding pubkey is present when using ct descriptors")
+                        let address = desc.address(&EC, &elements::AddressParams::ELEMENTS)?; // we don't need the address, we need only the blinding pubkey, thus we can use any params
+                        Some(
+                            address
+                                .blinding_pubkey
+                                .expect("blinding pubkey is present when using ct descriptors"),
+                        )
+                    }
+                    Err(Error::UnsupportedWithoutDescriptor) => None,
+                    Err(e) => return Err(e),
+                }
             }
         };
         result.push((chain, child_number, script_pubkey, blinding_pubkey));

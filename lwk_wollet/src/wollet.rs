@@ -100,7 +100,7 @@ pub struct WolletConciseState {
     descriptor: WolletDescriptor,
     txs: HashSet<Txid>,
     paths: HashMap<Script, (Chain, ChildNumber)>,
-    scripts: HashMap<(Chain, ChildNumber), (Script, BlindingPublicKey)>,
+    scripts: HashMap<(Chain, ChildNumber), (Script, Option<BlindingPublicKey>)>,
     heights: HashMap<Txid, Option<Height>>,
     tip: (Height, BlockHash),
     last_unused: LastUnused,
@@ -112,7 +112,7 @@ pub trait WolletState {
         &self,
         ext_int: Chain,
         child: ChildNumber,
-    ) -> Result<(Script, BlindingPublicKey, bool), Error>;
+    ) -> Result<(Script, Option<BlindingPublicKey>, bool), Error>;
     fn heights(&self) -> &HashMap<Txid, Option<Height>>;
     fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)>;
     fn txs(&self) -> HashSet<Txid>;
@@ -166,7 +166,7 @@ impl WolletState for WolletConciseState {
         &self,
         ext_int: Chain,
         child: ChildNumber,
-    ) -> Result<(Script, BlindingPublicKey, bool), Error> {
+    ) -> Result<(Script, Option<BlindingPublicKey>, bool), Error> {
         let opt_script = self.scripts.get(&(ext_int, child));
         let (script, blinding_pubkey, cached) = match opt_script {
             Some((script, blinding_pubkey)) => (script.clone(), *blinding_pubkey, true),
@@ -225,7 +225,7 @@ impl WolletState for Wollet {
         &self,
         ext_int: Chain,
         child: ChildNumber,
-    ) -> Result<(Script, BlindingPublicKey, bool), Error> {
+    ) -> Result<(Script, Option<BlindingPublicKey>, bool), Error> {
         self.cache.get_or_derive(ext_int, child, &self.descriptor)
     }
 
@@ -493,7 +493,7 @@ impl Wollet {
                             self.cache
                                 .scripts
                                 .get(&(index.0, index.1.into()))
-                                .map(|(_, blinding_pubkey)| *blinding_pubkey)
+                                .and_then(|(_, blinding_pubkey)| *blinding_pubkey)
                         })
                         .flatten();
                     let address = Address::from_script(

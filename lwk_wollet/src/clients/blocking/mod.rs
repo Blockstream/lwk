@@ -250,7 +250,7 @@ pub trait BlockchainBackend {
             let scripts_with_blinding_pubkey: Vec<(_, _, _, _)> = scripts
                 .iter()
                 .map(|(script, (chain, child, blinding_pubkey))| {
-                    (*chain, *child, script.clone(), Some(*blinding_pubkey))
+                    (*chain, *child, script.clone(), *blinding_pubkey)
                 })
                 .collect();
 
@@ -274,7 +274,7 @@ pub trait BlockchainBackend {
     fn download_txs<S: WolletState>(
         &self,
         history_txs_id: &HashSet<Txid>,
-        scripts: &HashMap<Script, (Chain, ChildNumber, BlindingPublicKey)>,
+        scripts: &HashMap<Script, (Chain, ChildNumber, Option<BlindingPublicKey>)>,
         state: &S,
         descriptor: &WolletDescriptor,
     ) -> Result<DownloadTxResult, Error> {

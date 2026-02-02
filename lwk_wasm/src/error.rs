@@ -93,6 +93,14 @@ pub enum Error {
     #[error("{0}")]
     Generic(String),
 
+    #[cfg(feature = "simplicity")]
+    #[error(transparent)]
+    SimplicityProgram(#[from] lwk_simplicity::error::ProgramError),
+
+    #[cfg(feature = "simplicity")]
+    #[error("{0}")]
+    SimplicityHlRich(String),
+
     #[error("{0:?}")]
     JsVal(JsValue),
 }
@@ -180,6 +188,10 @@ impl Error {
             Error::Taproot(_) => "Taproot",
             Error::Unblind(_) => "Unblind",
             Error::Generic(_) => "Generic",
+            #[cfg(feature = "simplicity")]
+            Error::SimplicityProgram(_) => "SimplicityProgram",
+            #[cfg(feature = "simplicity")]
+            Error::SimplicityHlRich(_) => "SimplicityRich",
         }
     }
 }
@@ -255,5 +267,12 @@ impl TryFrom<lwk_boltz::Error> for MagicRoutingHint {
             }),
             _ => Err(()),
         }
+    }
+}
+
+#[cfg(feature = "simplicity")]
+impl From<lwk_simplicity::simplicityhl::error::RichError> for Error {
+    fn from(value: lwk_simplicity::simplicityhl::error::RichError) -> Self {
+        Error::SimplicityHlRich(format!("{value}"))
     }
 }

@@ -58,6 +58,7 @@ pub struct SimplicityWitnessValues {
 
 impl_value_builder!(SimplicityWitnessValues);
 
+// TODO: replace `from_str_unchecked` with parse from str
 impl SimplicityWitnessValues {
     pub(crate) fn to_inner(&self) -> simplicityhl::WitnessValues {
         let map: HashMap<WitnessName, Value> = self

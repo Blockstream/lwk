@@ -1,3 +1,5 @@
+// TODO: delete those in favor using lwk_common::Network directly
+
 use simplicityhl::elements::AddressParams;
 use simplicityhl::simplicity::hashes::Hash;
 

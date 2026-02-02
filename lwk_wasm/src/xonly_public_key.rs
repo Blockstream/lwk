@@ -82,6 +82,20 @@ impl XOnlyPublicKey {
     }
 }
 
+#[cfg(feature = "simplicity")]
+impl XOnlyPublicKey {
+    /// Convert to simplicityhl XOnlyPublicKey
+    /// TODO: delete when the version of elements is stabilized
+    pub(crate) fn to_simplicityhl(
+        &self,
+    ) -> Result<lwk_simplicity::simplicityhl::elements::secp256k1_zkp::XOnlyPublicKey, Error> {
+        lwk_simplicity::simplicityhl::elements::secp256k1_zkp::XOnlyPublicKey::from_slice(
+            &self.inner.serialize(),
+        )
+        .map_err(|e| Error::Generic(e.to_string()))
+    }
+}
+
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::*;

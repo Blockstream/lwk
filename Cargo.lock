@@ -2603,6 +2603,7 @@ dependencies = [
  "lwk_jade",
  "lwk_ledger",
  "lwk_signer",
+ "lwk_simplicity",
  "lwk_wollet",
  "reqwest",
  "serde",

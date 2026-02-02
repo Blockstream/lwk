@@ -49,6 +49,9 @@ mod wollet;
 mod xonly_public_key;
 mod xpub;
 
+#[cfg(feature = "simplicity")]
+mod simplicity;
+
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use amp0::{Amp0, Amp0Pset};
 pub use amp2::{Amp2, Amp2Descriptor};
@@ -109,6 +112,13 @@ pub use websocket::WebSocketSerial;
 pub use wollet::Wollet;
 pub use xonly_public_key::XOnlyPublicKey;
 pub use xpub::Xpub;
+
+#[cfg(feature = "simplicity")]
+pub use simplicity::{
+    bytes_to_hex, simplicity_control_block, simplicity_derive_xonly_pubkey, SimplicityArguments,
+    SimplicityLogLevel, SimplicityProgram, SimplicityRunResult, SimplicityType,
+    SimplicityTypedValue, SimplicityWitnessValues,
+};
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use ledger::search_ledger_device;

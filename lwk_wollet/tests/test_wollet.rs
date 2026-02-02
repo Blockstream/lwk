@@ -208,7 +208,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         satoshi: u64,
         address: Option<Address>,
         asset: Option<AssetId>,
-    ) {
+    ) -> Txid {
         let explicit_utxos_before = self.wollet.explicit_utxos().unwrap().len();
 
         let address = address
@@ -219,6 +219,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
 
         let explicit_utxos_after = self.wollet.explicit_utxos().unwrap().len();
         assert_eq!(explicit_utxos_after, explicit_utxos_before + 1);
+        txid
     }
 
     /// Send 10_000 satoshi to self with default fee rate.

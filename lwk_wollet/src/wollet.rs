@@ -1032,6 +1032,11 @@ impl Wollet {
     }
 }
 
+fn is_explicit(txoutsecrets: &TxOutSecrets) -> bool {
+    txoutsecrets.asset_bf == AssetBlindingFactor::zero()
+        && txoutsecrets.value_bf == ValueBlindingFactor::zero()
+}
+
 fn tx_balance(
     txid: Txid,
     tx: &Transaction,
@@ -1042,12 +1047,16 @@ fn tx_balance(
 
     for out_idx in 0..tx.output.len() {
         if let Some(txout) = txos.get(&OutPoint::new(txid, out_idx as u32)) {
-            *balance.entry(txout.unblinded.asset).or_default() += txout.unblinded.value as i64;
+            if !is_explicit(&txout.unblinded) {
+                *balance.entry(txout.unblinded.asset).or_default() += txout.unblinded.value as i64;
+            }
         }
     }
     for input in &tx.input {
         if let Some(txout) = txos.get(&input.previous_output) {
-            *balance.entry(txout.unblinded.asset).or_default() -= txout.unblinded.value as i64;
+            if !is_explicit(&txout.unblinded) {
+                *balance.entry(txout.unblinded.asset).or_default() -= txout.unblinded.value as i64;
+            }
         }
     }
     balance

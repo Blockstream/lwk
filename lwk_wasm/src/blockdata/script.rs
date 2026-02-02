@@ -64,6 +64,35 @@ impl Script {
         self.inner.asm()
     }
 
+    /// Creates an OP_RETURN script with the given data.
+    #[wasm_bindgen(js_name = newOpReturn)]
+    pub fn new_op_return(data: &[u8]) -> Script {
+        Script {
+            inner: elements::Script::new_op_return(data),
+        }
+    }
+
+    /// Returns true if the script is provably unspendable.
+    ///
+    /// A script is provably unspendable if it starts with OP_RETURN or is larger
+    /// than the maximum script size.
+    #[wasm_bindgen(js_name = isProvablyUnspendable)]
+    pub fn is_provably_unspendable(&self) -> bool {
+        self.inner.is_provably_unspendable()
+    }
+
+    /// Returns true if this script_pubkey is provably SegWit.
+    ///
+    /// This checks if the script_pubkey is provably SegWit based on the
+    /// script_pubkey itself and an optional redeem_script.
+    #[wasm_bindgen(js_name = isProvablySegwit)]
+    pub fn is_provably_segwit(&self, redeem_script: Option<Script>) -> bool {
+        lwk_common::is_provably_segwit(
+            &self.inner.clone(),
+            &redeem_script.as_ref().map(|s| s.as_ref().clone()),
+        )
+    }
+
     /// Return the string representation of the script (hex encoding of its consensus encoded bytes).
     /// This representation can be used to recreate the script via `new()`
     #[wasm_bindgen(js_name = toString)]
@@ -74,7 +103,6 @@ impl Script {
 
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
-
     use super::Script;
     use lwk_wollet::elements::hex::FromHex;
     use wasm_bindgen_test::*;
@@ -83,7 +111,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     fn script() {
-        let script_str = "76a914088ac47276d105b91cf9aa27a00112421dd5f23c88ac";
+        let script_str = "0020d2e99f0c38089c08e5e1080ff6658c6075afaa7699d384333d956c470881afde";
 
         let script = Script::new(script_str).unwrap();
         assert_eq!(script.to_string(), script_str);
@@ -93,7 +121,15 @@ mod tests {
 
         assert_eq!(
             script.asm(),
-            "OP_DUP OP_HASH160 OP_PUSHBYTES_20 088ac47276d105b91cf9aa27a00112421dd5f23c OP_EQUALVERIFY OP_CHECKSIG"
+            "OP_0 OP_PUSHBYTES_32 d2e99f0c38089c08e5e1080ff6658c6075afaa7699d384333d956c470881afde"
         );
+
+        assert!(script.is_provably_segwit(None));
+
+        assert!(Script::new("6a").unwrap().is_provably_unspendable());
+        assert!(Script::empty().bytes().is_empty());
+        assert!(Script::new_op_return(b"burn")
+            .asm()
+            .starts_with("OP_RETURN"));
     }
 }

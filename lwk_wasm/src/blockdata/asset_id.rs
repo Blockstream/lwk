@@ -1,10 +1,15 @@
+use crate::blockdata::contract_hash::ContractHash;
+use crate::blockdata::out_point::OutPoint;
+use crate::Error;
+
 use std::{
     collections::{BTreeSet, HashSet},
     str::FromStr,
 };
 
-use crate::Error;
 use lwk_wollet::elements;
+use lwk_wollet::elements::hex::ToHex;
+
 use wasm_bindgen::prelude::*;
 
 /// A valid asset identifier.
@@ -38,6 +43,12 @@ impl From<elements::AssetId> for AssetId {
 
 impl From<AssetId> for elements::AssetId {
     fn from(value: AssetId) -> Self {
+        value.inner
+    }
+}
+
+impl From<&AssetId> for elements::AssetId {
+    fn from(value: &AssetId) -> Self {
         value.inner
     }
 }
@@ -104,6 +115,41 @@ impl AssetId {
     pub fn to_string_js(&self) -> String {
         format!("{self}")
     }
+
+    /// Return the inner byte-order hex representation of the asset identifier.
+    // TODO: rename to `reverse_hex`
+    #[wasm_bindgen(js_name = innerHex)]
+    pub fn inner_hex(&self) -> String {
+        self.inner.into_inner().to_byte_array().to_hex()
+    }
+}
+
+/// Generate the asset entropy from the issuance prevout and the contract hash.
+#[wasm_bindgen(js_name = generateAssetEntropy)]
+pub fn generate_asset_entropy(
+    outpoint: &OutPoint,
+    contract_hash: &ContractHash,
+) -> Result<ContractHash, Error> {
+    let midstate = elements::AssetId::generate_asset_entropy(outpoint.into(), contract_hash.into());
+    ContractHash::from_bytes(&midstate.to_byte_array())
+}
+
+/// Compute the asset ID from an issuance outpoint and contract hash.
+#[wasm_bindgen(js_name = assetIdFromIssuance)]
+pub fn asset_id_from_issuance(outpoint: &OutPoint, contract_hash: &ContractHash) -> AssetId {
+    let entropy = elements::AssetId::generate_asset_entropy(outpoint.into(), contract_hash.into());
+    elements::AssetId::from_entropy(entropy).into()
+}
+
+/// Compute the reissuance token ID from an issuance outpoint and contract hash.
+#[wasm_bindgen(js_name = reissuanceTokenFromIssuance)]
+pub fn reissuance_token_from_issuance(
+    outpoint: &OutPoint,
+    contract_hash: &ContractHash,
+    is_confidential: bool,
+) -> AssetId {
+    let entropy = elements::AssetId::generate_asset_entropy(outpoint.into(), contract_hash.into());
+    elements::AssetId::reissuance_token_from_entropy(entropy, is_confidential).into()
 }
 
 #[wasm_bindgen]
@@ -125,10 +171,10 @@ impl AssetIds {
 }
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
-
     use wasm_bindgen_test::*;
 
     use crate::{AssetId, AssetIds};
+    use crate::{ContractHash, OutPoint};
 
     wasm_bindgen_test_configure!(run_in_browser);
 
@@ -159,5 +205,31 @@ mod tests {
         assert_eq!(asset_ids.to_string(), format!("{{{a}, {b}, {c}}}"));
         let asset_ids2: AssetIds = vec![asset_id2, asset_id1, asset_id3].into();
         assert_eq!(asset_ids, asset_ids2);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_asset_id_generators() {
+        let outpoint = OutPoint::new(
+            "[elements]78b3e3232680f21f4be8c055a4fdb2edf4681bd6c0ae40edeca51331839106b4:1",
+        )
+        .unwrap();
+        let contract_hash =
+            ContractHash::new("a92d0f0f0a090c09b7970ce43a12448f55c1cc00325a6a8547d57d69f52378ec")
+                .unwrap();
+
+        let asset_id = super::asset_id_from_issuance(&outpoint, &contract_hash);
+        assert_eq!(
+            asset_id.to_string_js(),
+            "ccafe2eceac041673d79234ef74b31dca811555284a84f526042dfe8114483b6"
+        );
+
+        let token_id = super::reissuance_token_from_issuance(&outpoint, &contract_hash, false);
+        assert_eq!(
+            token_id.to_string_js(),
+            "4923a84921dcb4836243142ea5fd158d2f0602ce9fc384631ebe64504da3160e"
+        );
+
+        let entropy = super::generate_asset_entropy(&outpoint, &contract_hash).unwrap();
+        assert_eq!(entropy.bytes().len(), 32);
     }
 }

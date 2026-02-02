@@ -1,7 +1,9 @@
-use lwk_wollet::elements;
-use wasm_bindgen::prelude::*;
-
 use crate::{AssetId, EsploraClient, TxBuilder};
+
+use lwk_wollet::elements;
+use lwk_wollet::elements::hex::ToHex;
+
+use wasm_bindgen::prelude::*;
 
 /// The network of the elements blockchain such as mainnet, testnet or regtest.
 #[wasm_bindgen]
@@ -22,9 +24,21 @@ impl From<lwk_wollet::ElementsNetwork> for Network {
     }
 }
 
-impl From<Network> for lwk_wollet::ElementsNetwork {
+impl From<&Network> for lwk_common::Network {
+    fn from(value: &Network) -> Self {
+        match value.inner {
+            lwk_wollet::ElementsNetwork::Liquid => lwk_common::Network::Liquid,
+            lwk_wollet::ElementsNetwork::LiquidTestnet => lwk_common::Network::TestnetLiquid,
+            lwk_wollet::ElementsNetwork::ElementsRegtest { .. } => {
+                lwk_common::Network::LocaltestLiquid
+            }
+        }
+    }
+}
+
+impl From<Network> for lwk_common::Network {
     fn from(value: Network) -> Self {
-        value.inner
+        (&value).into()
     }
 }
 
@@ -34,15 +48,9 @@ impl From<&Network> for lwk_wollet::ElementsNetwork {
     }
 }
 
-impl From<Network> for lwk_common::Network {
+impl From<Network> for lwk_wollet::ElementsNetwork {
     fn from(value: Network) -> Self {
-        match value.inner {
-            lwk_wollet::ElementsNetwork::Liquid => lwk_common::Network::Liquid,
-            lwk_wollet::ElementsNetwork::LiquidTestnet => lwk_common::Network::TestnetLiquid,
-            lwk_wollet::ElementsNetwork::ElementsRegtest { .. } => {
-                lwk_common::Network::LocaltestLiquid
-            }
-        }
+        value.inner
     }
 }
 
@@ -119,6 +127,12 @@ impl Network {
     #[wasm_bindgen(js_name = policyAsset)]
     pub fn policy_asset(&self) -> AssetId {
         self.inner.policy_asset().into()
+    }
+
+    /// Return the genesis block hash for this network as hex string.
+    #[wasm_bindgen(js_name = genesisBlockHash)]
+    pub fn genesis_block_hash(&self) -> String {
+        self.inner.genesis_block_hash().to_hex()
     }
 
     /// Return the transaction builder for this network

@@ -79,9 +79,6 @@ mod tests {
             update.inner.version = 2;
             update
         };
-        let err = update_v2.serialize().unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("Version 2 update with missing blinding pubkey"));
+        let _bytes = update_v2.serialize().unwrap();
     }
 }

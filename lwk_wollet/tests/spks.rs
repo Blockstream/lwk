@@ -37,7 +37,6 @@ fn test_spks() {
         .address;
 
     assert_eq!(addr_from_wd, addr_from_tx);
-    // TODO: these do not match if there is no private blinding key
 
     let b = wallet.balance(&lbtc) as i64;
     assert!(b > 0);
@@ -71,4 +70,36 @@ fn test_spks() {
 
     // Spks wollets do not automatically set the data necessary for the signer, which wont sign
     assert_eq!(signer.sign(&mut pset).unwrap(), 0);
+}
+
+#[test]
+fn test_explicit_spks() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
+    let wd = WolletDescriptor::from_str(&desc).unwrap();
+    let spk = wd.script_pubkey(Chain::External, 0).unwrap();
+    let desc = format!(":{}", spk.to_hex());
+    let wd = WolletDescriptor::from_str(&desc).unwrap();
+
+    let client = test_client_electrum(&env.electrum_url());
+    let mut wallet = TestWollet::new(client, &desc);
+    let sats = 1_000_000;
+    let addr_from_wd = wd
+        .address(0, lwk_common::Network::LocaltestLiquid.address_params())
+        .unwrap();
+    wallet.fund_explicit(&env, sats, Some(addr_from_wd.clone()), None);
+
+    let tx = &wallet.wollet.transactions().unwrap()[0];
+    let addr_from_tx = tx
+        .outputs
+        .iter()
+        .find(|o| o.is_some())
+        .unwrap()
+        .clone()
+        .unwrap()
+        .address;
+
+    assert_eq!(addr_from_wd, addr_from_tx);
 }

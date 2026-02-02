@@ -6,7 +6,7 @@ use crate::{
 };
 use elements::{
     bitcoin::bip32::ChildNumber,
-    confidential::{Asset, Nonce, Value},
+    confidential::{Asset, AssetBlindingFactor, Nonce, Value, ValueBlindingFactor},
     AssetIssuance, LockTime, Script, Sequence, TxInWitness, TxOut, TxOutSecrets,
 };
 use elements::{BlockHash, OutPoint, Txid};
@@ -216,6 +216,12 @@ pub fn try_unblind(output: &TxOut, descriptor: &WolletDescriptor) -> Result<TxOu
 
             Ok(txout_secrets)
         }
+        (Asset::Explicit(asset), Value::Explicit(value), _) => Ok(TxOutSecrets::new(
+            asset,
+            AssetBlindingFactor::zero(),
+            value,
+            ValueBlindingFactor::zero(),
+        )),
         _ => Err(Error::Generic(
             "received unconfidential or null asset/value/nonce".into(),
         )),

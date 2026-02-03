@@ -470,6 +470,30 @@ mod tests {
         let pending = session.pending_swap_ids().unwrap();
         assert!(pending.is_empty(), "Should start with no pending swaps");
 
+        // Create a second session with a DIFFERENT mnemonic but the SAME store
+        // This tests that encrypted keys don't collide between sessions
+        let mnemonic2 = Mnemonic::from_str(
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+        )
+        .unwrap();
+        let session2 = BoltzSession::builder(
+            ElementsNetwork::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .create_swap_timeout(TIMEOUT)
+        .mnemonic(mnemonic2.clone())
+        .store(store.clone())
+        .build()
+        .await
+        .unwrap();
+
+        // Session 2 should also see no pending swaps (different mnemonic = different encrypted keys)
+        let pending2 = session2.pending_swap_ids().unwrap();
+        assert!(
+            pending2.is_empty(),
+            "Session 2 should start with no pending swaps"
+        );
+
         // Create a swap - it should be automatically persisted
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
@@ -491,9 +515,21 @@ mod tests {
         let swap_data = session.get_swap_data(&swap_id).unwrap();
         assert!(swap_data.is_some(), "Swap data should be stored");
 
-        // Drop the session and response
+        // IMPORTANT: Verify session2 cannot see session1's swap (key isolation test)
+        let pending2 = session2.pending_swap_ids().unwrap();
+        assert!(
+            !pending2.contains(&swap_id),
+            "Session 2 should NOT see session 1's swap - keys should be isolated"
+        );
+        assert!(
+            session2.get_swap_data(&swap_id).unwrap().is_none(),
+            "Session 2 should NOT be able to read session 1's swap data"
+        );
+
+        // Drop the sessions and response
         drop(prepare_pay_response);
         drop(session);
+        drop(session2);
 
         // Create a new session with the same store
         let session = BoltzSession::builder(

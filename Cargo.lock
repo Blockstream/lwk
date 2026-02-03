@@ -2405,6 +2405,7 @@ dependencies = [
 name = "lwk_boltz"
 version = "0.14.0"
 dependencies = [
+ "aes-gcm-siv",
  "async-trait",
  "base64 0.22.1",
  "bip39",
@@ -2416,6 +2417,7 @@ dependencies = [
  "lwk_common",
  "lwk_signer",
  "lwk_wollet",
+ "rand 0.8.5",
  "reqwest",
  "serde",
  "serde_json",

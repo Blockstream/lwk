@@ -15,10 +15,9 @@ class FileStore(ForeignStore):
         os.makedirs(store_dir, exist_ok=True)
     
     def _key_to_path(self, key):
-        """Convert a key to a safe file path"""
-        # Replace colons with underscores for filesystem safety
-        safe_key = key.replace(":", "_").replace("/", "_")
-        return os.path.join(self.store_dir, f"{safe_key}.json")
+        """Convert a key to a file path"""
+        # key is an hex string, always valid as path
+        return os.path.join(self.store_dir, f"{key}")
     
     def get(self, key):
         path = self._key_to_path(key)

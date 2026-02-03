@@ -93,7 +93,13 @@ impl serde::Serialize for WolletDescriptor {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.to_string())
+        match &self.inner {
+            DescOrSpks::Desc(_) => serializer.serialize_str(&self.to_string()),
+            DescOrSpks::Spks(spks) => {
+                let parts: Vec<String> = spks.iter().map(|s| s.to_string()).collect();
+                parts.serialize(serializer)
+            }
+        }
     }
 }
 
@@ -102,8 +108,35 @@ impl<'de> serde::Deserialize<'de> for WolletDescriptor {
     where
         D: serde::Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        s.parse().map_err(serde::de::Error::custom)
+        use serde::de;
+
+        let value = serde_json::Value::deserialize(deserializer)?;
+        match value {
+            serde_json::Value::String(s) => s.parse().map_err(de::Error::custom),
+            serde_json::Value::Array(arr) => {
+                let spks: Result<Vec<Spk>, _> = arr
+                    .into_iter()
+                    .map(|v| {
+                        let s = v.as_str().ok_or_else(|| {
+                            de::Error::custom("expected string elements in array")
+                        })?;
+                        Spk::from_str(s).map_err(de::Error::custom)
+                    })
+                    .collect();
+                let spks = spks?;
+                if spks.is_empty() {
+                    return Err(de::Error::custom("empty spks array"));
+                }
+                Ok(WolletDescriptor {
+                    inner: DescOrSpks::Spks(spks),
+                    #[cfg(feature = "amp0")]
+                    is_amp0: false,
+                })
+            }
+            _ => Err(de::Error::custom(
+                "expected a string or an array of strings",
+            )),
+        }
     }
 }
 
@@ -1163,8 +1196,10 @@ mod test {
         assert_eq!(desc.to_string(), input);
         assert_eq!(desc, WolletDescriptor::from_str(&desc.to_string()).unwrap());
 
-        // Serde roundtrip
+        // Serde roundtrip - spks serialize as a JSON array of strings
         let json = serde_json::to_string(&desc).unwrap();
+        let expected_json = format!("[\"{key}:{spk_a}\",\"{key}:{spk_b}\",\":{spk_a}\"]");
+        assert_eq!(json, expected_json);
         assert_eq!(
             desc,
             serde_json::from_str::<WolletDescriptor>(&json).unwrap()

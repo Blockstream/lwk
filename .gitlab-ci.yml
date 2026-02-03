@@ -218,7 +218,7 @@ wasm:
     - cd lwk_wasm && RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --features serial && cd -
     # testing nodejs package
     - cd lwk_wasm
-    - RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --target nodejs --out-dir pkg_node -- --features serial
+    - RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --target nodejs --out-dir pkg_node -- --features serial,simplicity
     - sed -i 's/"lwk_wasm"/"lwk_node"/g' pkg_node/package.json
     - cd tests/node
     - npm install

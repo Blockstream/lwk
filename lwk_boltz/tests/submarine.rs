@@ -368,7 +368,7 @@ mod tests {
             .iter()
             .filter(|data| data.create_swap_response.id == swap_id)
             .collect();
-        log::info!("Found {:?} restorable submarine swaps", swaps);
+        log::info!("Found {swaps:?} restorable submarine swaps");
         assert_eq!(swaps.len(), 0); // the just created swap is not restorable.
 
         utils::send_to_address(

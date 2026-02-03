@@ -43,7 +43,7 @@ impl CurrencyCode {
     #[uniffi::constructor]
     pub fn new(alpha3: &str) -> Result<Arc<CurrencyCode>, crate::LwkError> {
         let inner = alpha3.parse().map_err(|_| crate::LwkError::Generic {
-            msg: format!("Invalid currency code: {}", alpha3),
+            msg: format!("Invalid currency code: {alpha3}"),
         })?;
         Ok(Arc::new(CurrencyCode { inner }))
     }

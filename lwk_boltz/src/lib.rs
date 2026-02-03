@@ -535,7 +535,7 @@ impl BoltzSession {
             store_keys::set_completed_swaps(store.as_ref(), prefix, &completed)?;
         }
 
-        log::debug!("Removed swap {} from store", swap_id);
+        log::debug!("Removed swap {swap_id} from store");
         Ok(())
     }
 

@@ -81,7 +81,7 @@ impl PosConfig {
     /// Encode the POS configuration to a URL-safe base64 string
     pub fn encode(&self) -> Result<String, LwkError> {
         self.inner.encode().map_err(|e| LwkError::Generic {
-            msg: format!("Failed to encode POS configuration: {}", e),
+            msg: format!("Failed to encode POS configuration: {e}"),
         })
     }
 

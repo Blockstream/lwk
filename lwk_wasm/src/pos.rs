@@ -73,7 +73,7 @@ impl PosConfig {
     pub fn encode(&self) -> Result<String, Error> {
         self.inner
             .encode()
-            .map_err(|e| Error::Generic(format!("Failed to encode POS configuration: {}", e)))
+            .map_err(|e| Error::Generic(format!("Failed to encode POS configuration: {e}")))
     }
 
     /// Get the wallet descriptor

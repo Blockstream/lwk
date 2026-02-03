@@ -392,7 +392,7 @@ mod tests {
             .iter()
             .filter(|data| data.create_chain_response.id == response.swap_id())
             .collect();
-        log::info!("Found {:?} restorable chain swaps", swaps);
+        log::info!("Found {swaps:?} restorable chain swaps");
         assert_eq!(swaps.len(), 0); // the just created swap is not restorable.
 
         let swap_id = response.swap_id().to_string();
@@ -739,10 +739,7 @@ mod tests {
             quote.receive_amount, claim_amount, claim_fee, expected_receive
         );
         log::info!(
-            "BTC->LBTC Quote verification passed: claim_amount={}, claim_fee={}, expected_receive={}",
-            claim_amount,
-            claim_fee,
-            expected_receive
+            "BTC->LBTC Quote verification passed: claim_amount={claim_amount}, claim_fee={claim_fee}, expected_receive={expected_receive}",
         );
 
         // Assert fees are present and reasonable
@@ -831,10 +828,7 @@ mod tests {
             quote.receive_amount, claim_amount, claim_fee, expected_receive
         );
         log::info!(
-            "LBTC->BTC Quote verification passed: claim_amount={}, claim_fee={}, expected_receive={}",
-            claim_amount,
-            claim_fee,
-            expected_receive
+            "LBTC->BTC Quote verification passed: claim_amount={claim_amount}, claim_fee={claim_fee}, expected_receive={expected_receive}",
         );
 
         // Assert fees are present and reasonable

@@ -213,15 +213,11 @@ pub async fn get_address_balance(chain: Chain, address: &str) -> Result<u64, Box
             return Ok(total_sats);
         }
 
-        log::debug!(
-            "No UTXOs found at {} (attempt {}/30), sleeping 1s...",
-            address,
-            attempt
-        );
+        log::debug!("No UTXOs found at {address} (attempt {attempt}/30), sleeping 1s...",);
         sleep(std::time::Duration::from_secs(1)).await;
     }
 
-    Err(format!("No UTXOs found at {} after 30 attempts", address).into())
+    Err(format!("No UTXOs found at {address} after 30 attempts").into())
 }
 
 pub fn start_block_mining() -> JoinHandle<()> {

@@ -2555,6 +2555,9 @@ name = "lwk_simplicity"
 version = "0.1.0"
 dependencies = [
  "lwk_common",
+ "lwk_signer",
+ "lwk_test_util",
+ "lwk_wollet",
  "simplicityhl",
  "thiserror 2.0.17",
 ]

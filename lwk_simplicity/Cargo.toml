@@ -9,3 +9,8 @@ lwk_common = { version = "0.14.0" }
 simplicityhl = { version = "0.4.0" }
 
 thiserror = "2"
+
+[dev-dependencies]
+lwk_test_util = { version = "0.14.0"}
+lwk_signer = { version = "0.14.0"}
+lwk_wollet = { version = "0.14.0"}

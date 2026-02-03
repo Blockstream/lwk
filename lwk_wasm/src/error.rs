@@ -111,6 +111,7 @@ impl Error {
         match self {
             Error::JsVal(_) => "JsVal",
             Error::Boltz(inner) => match inner {
+                lwk_boltz::Error::Encryption(_) => "Boltz::Encryption",
                 lwk_boltz::Error::MagicRoutingHint { .. } => "Boltz::MagicRoutingHint",
                 lwk_boltz::Error::InvalidElectrumUrl(_) => "Boltz::InvalidElectrumUrl",
                 lwk_boltz::Error::InvalidSwapState(_) => "Boltz::InvalidSwapState",

@@ -4,6 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use aes_gcm_siv::Aes256GcmSiv;
 use bip39::Mnemonic;
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::CreateReverseRequest;
@@ -49,7 +50,7 @@ pub struct InvoiceResponse {
     polling: bool,
     timeout_advance: Duration,
     store: Option<Arc<dyn DynStore>>,
-    store_prefix: String,
+    cipher: Option<Aes256GcmSiv>,
 }
 
 impl fmt::Debug for InvoiceResponse {
@@ -72,8 +73,8 @@ impl SwapPersistence for InvoiceResponse {
         self.store.as_ref()
     }
 
-    fn store_prefix(&self) -> &str {
-        &self.store_prefix
+    fn cipher(&self) -> Option<Aes256GcmSiv> {
+        self.cipher.clone()
     }
 }
 
@@ -154,7 +155,11 @@ impl BoltzSession {
         log::debug!("Waiting for Invoice to be paid: {}", &invoice);
 
         let store = self.clone_store();
-        let store_prefix = self.clone_store_prefix();
+        let cipher = if store.is_some() {
+            Some(self.clone_cipher())
+        } else {
+            None
+        };
         let response = InvoiceResponse {
             polling: self.polling,
             timeout_advance: self.timeout_advance,
@@ -179,7 +184,7 @@ impl BoltzSession {
             api: self.api.clone(),
             chain_client: self.chain_client.clone(),
             store,
-            store_prefix,
+            cipher,
         };
 
         // Persist swap data and add to pending list
@@ -206,6 +211,12 @@ impl BoltzSession {
         let rx = self.ws.updates();
         self.ws.subscribe_swap(&swap_id).await?;
 
+        let store = self.clone_store();
+        let cipher = if store.is_some() {
+            Some(self.clone_cipher())
+        } else {
+            None
+        };
         let response = InvoiceResponse {
             polling: self.polling,
             timeout_advance: self.timeout_advance,
@@ -214,8 +225,8 @@ impl BoltzSession {
             swap_script,
             api: self.api.clone(),
             chain_client: self.chain_client.clone(),
-            store: self.clone_store(),
-            store_prefix: self.clone_store_prefix(),
+            store,
+            cipher,
         };
 
         // If the swap was already in a terminal state, move it to completed

@@ -16,9 +16,13 @@ mod submarine;
 mod swap_state;
 
 // Re-export store module contents for public API
+pub use store::cipher_from_mnemonic;
+pub use store::encrypt_key;
 pub use store::store_keys;
 pub use store::DynStore;
 pub use store::SwapPersistence;
+
+use aes_gcm_siv::Aes256GcmSiv;
 
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
@@ -113,9 +117,6 @@ pub struct BoltzSession {
 
     /// Optional store for persisting swap data
     store: Option<Arc<dyn DynStore>>,
-
-    /// Prefix for store keys, derived from mnemonic identifier (e.g., "2e8d7a6ccb9bbae4:")
-    store_prefix: String,
 }
 
 impl BoltzSession {
@@ -222,11 +223,6 @@ impl BoltzSession {
             None => (0, Mnemonic::generate(12).expect("12 is a valid word count")),
         };
 
-        // Compute store prefix from mnemonic identifier
-        // TODO: this leaks the mnemonic identifier to the store, is it something we want?
-        // https://gl.blockstream.io/liquid/lwk/-/issues/174
-        let store_prefix = mnemonic_identifier(&mnemonic)?.to_string();
-
         Ok(Self {
             next_index_to_use: AtomicU32::new(next_index_to_use),
             mnemonic,
@@ -241,7 +237,6 @@ impl BoltzSession {
             random_preimages,
             swap_info: Mutex::new(swap_info),
             store,
-            store_prefix,
         })
     }
 
@@ -285,9 +280,11 @@ impl BoltzSession {
         self.store.as_ref()
     }
 
-    /// Get the store key prefix (derived from mnemonic identifier)
-    pub fn store_prefix(&self) -> &str {
-        &self.store_prefix
+    /// Get a cipher for encrypting/decrypting store data
+    ///
+    /// The cipher is derived from the mnemonic using a tagged hash.
+    pub fn cipher(&self) -> Aes256GcmSiv {
+        cipher_from_mnemonic(&self.mnemonic)
     }
 
     /// Clone the store Arc for use in swap responses
@@ -295,9 +292,9 @@ impl BoltzSession {
         self.store.clone()
     }
 
-    /// Clone the store prefix for use in swap responses
-    pub(crate) fn clone_store_prefix(&self) -> String {
-        self.store_prefix.clone()
+    /// Clone the cipher for use in swap responses
+    pub(crate) fn clone_cipher(&self) -> Aes256GcmSiv {
+        self.cipher()
     }
 
     /// Generate a rescue file with the lightning session mnemonic.
@@ -326,7 +323,8 @@ impl BoltzSession {
     /// (which may be empty).
     pub fn pending_swap_ids(&self) -> Result<Vec<String>, Error> {
         let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
-        store_keys::get_pending_swaps(store.as_ref(), &self.store_prefix)
+        let mut cipher = self.cipher();
+        store_keys::get_pending_swaps(store.as_ref(), &mut cipher)
     }
 
     /// Get the list of completed swap IDs from the store
@@ -335,7 +333,8 @@ impl BoltzSession {
     /// (which may be empty).
     pub fn completed_swap_ids(&self) -> Result<Vec<String>, Error> {
         let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
-        store_keys::get_completed_swaps(store.as_ref(), &self.store_prefix)
+        let mut cipher = self.cipher();
+        store_keys::get_completed_swaps(store.as_ref(), &mut cipher)
     }
 
     /// Get the raw swap data for a specific swap ID from the store
@@ -346,9 +345,8 @@ impl BoltzSession {
         let Some(store) = &self.store else {
             return Ok(None);
         };
-        let data = store
-            .get(&store_keys::swap_data(&self.store_prefix, swap_id))
-            .map_err(Error::Store)?
+        let mut cipher = self.cipher();
+        let data = store_keys::get_swap_data(store.as_ref(), &mut cipher, swap_id)?
             .map(|data| String::from_utf8_lossy(&data).to_string());
         Ok(data)
     }
@@ -359,27 +357,31 @@ impl BoltzSession {
     /// Returns an error if no store is configured.
     pub fn remove_swap(&self, swap_id: &str) -> Result<(), Error> {
         let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
-        let prefix = &self.store_prefix;
+        let mut cipher = self.cipher();
 
-        // Remove the swap data
-        store
-            .remove(&store_keys::swap_data(prefix, swap_id))
-            .map_err(Error::Store)?;
+        // Remove the swap data by setting empty data (store doesn't have a remove with cipher)
+        // Actually, we need to get the encrypted key to remove, let's use the store_keys helper
+        let encrypted_key = store::encrypt_key(&mut cipher, &format!("boltz:swap:{swap_id}"))?;
+        store.remove(&encrypted_key).map_err(Error::Store)?;
 
         // Remove from pending list
-        let mut pending = store_keys::get_pending_swaps(store.as_ref(), prefix)?;
+        let mut cipher = self.cipher();
+        let mut pending = store_keys::get_pending_swaps(store.as_ref(), &mut cipher)?;
         let was_pending = pending.contains(&swap_id.to_string());
         pending.retain(|id| id != swap_id);
         if was_pending {
-            store_keys::set_pending_swaps(store.as_ref(), prefix, &pending)?;
+            let mut cipher = self.cipher();
+            store_keys::set_pending_swaps(store.as_ref(), &mut cipher, &pending)?;
         }
 
         // Remove from completed list
-        let mut completed = store_keys::get_completed_swaps(store.as_ref(), prefix)?;
+        let mut cipher = self.cipher();
+        let mut completed = store_keys::get_completed_swaps(store.as_ref(), &mut cipher)?;
         let was_completed = completed.contains(&swap_id.to_string());
         completed.retain(|id| id != swap_id);
         if was_completed {
-            store_keys::set_completed_swaps(store.as_ref(), prefix, &completed)?;
+            let mut cipher = self.cipher();
+            store_keys::set_completed_swaps(store.as_ref(), &mut cipher, &completed)?;
         }
 
         log::debug!("Removed swap {swap_id} from store");

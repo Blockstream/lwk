@@ -110,6 +110,9 @@ pub enum Error {
 
     #[error("Store not configured")]
     StoreNotConfigured,
+
+    #[error("Encryption error: {0}")]
+    Encryption(String),
 }
 
 impl From<BoltzError> for Error {
@@ -121,5 +124,11 @@ impl From<BoltzError> for Error {
 impl From<ParseOrSemanticError> for Error {
     fn from(err: ParseOrSemanticError) -> Self {
         Error::InvalidBolt11Invoice(err)
+    }
+}
+
+impl From<aes_gcm_siv::Error> for Error {
+    fn from(err: aes_gcm_siv::Error) -> Self {
+        Error::Encryption(err.to_string())
     }
 }

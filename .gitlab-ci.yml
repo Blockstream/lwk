@@ -72,6 +72,12 @@ test_cli:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_cli
 
+test_simplicity:
+  extends: .base
+  script:
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    - cargo test -p lwk_simplicity
+
 unit_tests:
   extends: .base
   script:

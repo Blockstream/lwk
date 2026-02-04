@@ -91,7 +91,13 @@ pub fn decrypt_with_nonce_prefix(
     Ok(buffer)
 }
 
-/// Encrypt a payload using a deterministic nonce derived from the plaintext SHA256 hash.
+/// Encrypt a payload using a deterministic nonce derived from the plaintext tagged hash.
+///
+/// The nonce is prepended to the ciphertext for later decryption.
+///
+/// NOTE: for normal usage we could have avoided to prefix the nonce to the ciphertext, equality is
+/// guaranteed anyway but we keep the prefix to allow decryption in case we need to do db
+/// migrations or reconstruction.
 #[allow(deprecated)]
 pub fn encrypt_with_deterministic_nonce(
     cipher: &mut Aes256GcmSiv,
@@ -108,7 +114,9 @@ pub fn encrypt_with_deterministic_nonce(
         .encrypt_in_place(nonce, b"", &mut buffer)
         .map_err(|err| CryptoError::Aead(err.to_string()))?;
 
-    Ok(buffer)
+    let mut result = nonce_bytes.to_vec();
+    result.extend(buffer);
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -133,12 +141,21 @@ mod tests {
 
     #[test]
     fn deterministic_nonce_is_stable() {
-        let mut cipher = test_cipher();
         let plaintext = b"deterministic payload";
+        let mut cipher = test_cipher();
         let encrypted1 = encrypt_with_deterministic_nonce(&mut cipher, plaintext).unwrap();
+        assert!(encrypted1.len() > NONCE_LEN);
+
+        let mut cipher = test_cipher();
+        let decrypted1 = decrypt_with_nonce_prefix(&mut cipher, &encrypted1).unwrap();
+        assert_eq!(&plaintext[..], &decrypted1[..]);
 
         let mut cipher = test_cipher();
         let encrypted2 = encrypt_with_deterministic_nonce(&mut cipher, plaintext).unwrap();
         assert_eq!(encrypted1, encrypted2);
+
+        let mut cipher = test_cipher();
+        let decrypted2 = decrypt_with_nonce_prefix(&mut cipher, &encrypted2).unwrap();
+        assert_eq!(&plaintext[..], &decrypted2[..]);
     }
 }

@@ -1,9 +1,6 @@
 use std::{fmt::Display, str::FromStr};
 
-#[allow(deprecated)]
-use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::Aes256GcmSiv;
-use aes_gcm_siv::KeyInit;
 use elements::bitcoin::secp256k1::SecretKey;
 use elements::bitcoin::{bip32::ChildNumber, WitnessVersion};
 use elements::hashes::{sha256t_hash_newtype, Hash};
@@ -15,6 +12,7 @@ use elements_miniscript::{
     descriptor::{DescriptorSecretKey, Wildcard},
     ConfidentialDescriptor, Descriptor, DescriptorPublicKey, ForEachKey,
 };
+use lwk_common::cipher_from_key_bytes;
 use serde::{Deserialize, Serialize};
 
 use crate::{Error, EC};
@@ -507,8 +505,7 @@ impl WolletDescriptor {
     #[allow(deprecated)]
     pub fn cipher(&self) -> Aes256GcmSiv {
         let key_bytes = EncryptionKeyHash::hash(self.to_string().as_bytes()).to_byte_array();
-        let key = GenericArray::from_slice(&key_bytes);
-        Aes256GcmSiv::new(key)
+        cipher_from_key_bytes(key_bytes)
     }
 
     /// Derive an address from this descriptor at the given `index`.

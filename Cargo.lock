@@ -2451,6 +2451,7 @@ dependencies = [
 name = "lwk_common"
 version = "0.14.0"
 dependencies = [
+ "aes-gcm-siv",
  "base64 0.21.7",
  "elements 0.25.2",
  "elements-miniscript",

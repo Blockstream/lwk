@@ -12,6 +12,7 @@
 
 mod address;
 mod balance;
+mod crypto;
 mod descriptor;
 mod error;
 mod fee;
@@ -26,6 +27,10 @@ mod store;
 
 pub use crate::address::{Address, AddressParseError};
 pub use crate::balance::{Balance, SignedBalance};
+pub use crate::crypto::{
+    cipher_from_key_bytes, decrypt_with_nonce_prefix, encrypt_with_deterministic_nonce,
+    encrypt_with_random_nonce, CryptoError, NONCE_LEN,
+};
 pub use crate::descriptor::{
     multisig_desc, singlesig_desc, Bip, DescriptorBlindingKey, InvalidBipVariant,
     InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Multisig,

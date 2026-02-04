@@ -6,9 +6,6 @@ use crate::error::Error;
 use crate::wollet::WolletState;
 use crate::EC;
 use crate::{BlindingPublicKey, Wollet, WolletDescriptor};
-#[allow(deprecated)]
-use aes_gcm_siv::aead::generic_array::GenericArray;
-use aes_gcm_siv::aead::AeadMutInPlace;
 use base64::prelude::*;
 use elements::bitcoin::bip32::ChildNumber;
 use elements::bitcoin::hashes::Hash;
@@ -17,7 +14,7 @@ use elements::encode::{Decodable, Encodable};
 use elements::hash_types::TxMerkleNode;
 use elements::{BlockExtData, BlockHash, BlockHeader, TxInWitness, TxOutWitness};
 use lwk_common::SignedBalance;
-use rand::{thread_rng, Rng};
+use lwk_common::{decrypt_with_nonce_prefix, encrypt_with_random_nonce};
 use std::collections::HashMap;
 use std::sync::atomic;
 
@@ -146,20 +143,10 @@ impl Update {
     /// Serialize an update to a byte array, encrypted with a key derived from the descriptor. Decrypt using [`Self::deserialize_decrypted()`]
     #[allow(deprecated)]
     pub fn serialize_encrypted(&self, desc: &WolletDescriptor) -> Result<Vec<u8>, Error> {
-        let mut plaintext = self.serialize()?;
-
-        let mut nonce_bytes = [0u8; 12];
-        thread_rng().fill(&mut nonce_bytes);
-        let nonce = GenericArray::from_slice(&nonce_bytes);
-
-        desc.cipher().encrypt_in_place(nonce, b"", &mut plaintext)?;
-        let ciphertext = plaintext;
-
-        let mut result = Vec::with_capacity(ciphertext.len() + 12);
-        result.extend(nonce.as_slice());
-        result.extend(&ciphertext);
-
-        Ok(result)
+        let plaintext = self.serialize()?;
+        let mut cipher = desc.cipher();
+        let ciphertext = encrypt_with_random_nonce(&mut cipher, &plaintext)?;
+        Ok(ciphertext)
     }
 
     /// Serialize an update to a base64 encoded string, encrypted with a key derived from the descriptor. Decrypt using [`Self::deserialize_decrypted_base64()`]
@@ -171,17 +158,8 @@ impl Update {
     /// Deserialize an update from a byte array, decrypted with a key derived from the descriptor. Create the byte array using [`Self::serialize_encrypted()`]
     #[allow(deprecated)]
     pub fn deserialize_decrypted(bytes: &[u8], desc: &WolletDescriptor) -> Result<Update, Error> {
-        let nonce_bytes = &bytes
-            .get(..12)
-            .ok_or_else(|| Error::Generic("Missing nonce in encrypted bytes".to_string()))?;
-        let mut ciphertext = bytes[12..].to_vec();
-
-        let nonce = GenericArray::from_slice(nonce_bytes);
-
-        desc.cipher()
-            .decrypt_in_place(nonce, b"", &mut ciphertext)?;
-        let plaintext = ciphertext;
-
+        let mut cipher = desc.cipher();
+        let plaintext = decrypt_with_nonce_prefix(&mut cipher, bytes)?;
         Ok(Update::deserialize(&plaintext)?)
     }
 

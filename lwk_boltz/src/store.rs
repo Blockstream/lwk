@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-#[allow(deprecated)]
-use aes_gcm_siv::aead::generic_array::GenericArray;
-use aes_gcm_siv::aead::AeadMutInPlace;
-use aes_gcm_siv::{Aes256GcmSiv, KeyInit};
+use aes_gcm_siv::Aes256GcmSiv;
+use lwk_common::{
+    cipher_from_key_bytes, decrypt_with_nonce_prefix, encrypt_with_deterministic_nonce,
+    encrypt_with_random_nonce,
+};
 use lwk_wollet::bitcoin::bip32::Xpub;
 use lwk_wollet::hashes::hex::{DisplayHex, FromHex};
-use lwk_wollet::hashes::{sha256, sha256t_hash_newtype, Hash};
-use rand::{thread_rng, Rng};
+use lwk_wollet::hashes::{sha256t_hash_newtype, Hash};
 
 use crate::error;
 pub use lwk_common::DynStore;
@@ -35,8 +35,7 @@ sha256t_hash_newtype! {
 pub fn cipher_from_xpub(xpub: &Xpub) -> Aes256GcmSiv {
     let xpub_string = xpub.to_string();
     let key_bytes = BoltzEncryptionKeyHash::hash(xpub_string.as_bytes()).to_byte_array();
-    let key = GenericArray::from_slice(&key_bytes);
-    Aes256GcmSiv::new(key)
+    cipher_from_key_bytes(key_bytes)
 }
 
 /// Encrypt a store key deterministically.
@@ -45,16 +44,7 @@ pub fn cipher_from_xpub(xpub: &Xpub) -> Aes256GcmSiv {
 /// produces the same encrypted output, enabling GET operations.
 #[allow(deprecated)]
 pub fn encrypt_key(cipher: &mut Aes256GcmSiv, key: &str) -> Result<String, error::Error> {
-    // Derive nonce from key hash (first 12 bytes of SHA256)
-    let hash = sha256::Hash::hash(key.as_bytes());
-    let nonce_bytes: [u8; 12] = hash.as_byte_array()[..12]
-        .try_into()
-        .expect("12 bytes from 32 byte hash");
-    let nonce = GenericArray::from_slice(&nonce_bytes);
-
-    let mut buffer = key.as_bytes().to_vec();
-    cipher.encrypt_in_place(nonce, b"", &mut buffer)?;
-
+    let buffer = encrypt_with_deterministic_nonce(cipher, key.as_bytes())?;
     Ok(buffer.to_lower_hex_string())
 }
 
@@ -87,17 +77,7 @@ pub fn decrypt_key(
 /// The nonce is prepended to the ciphertext for later decryption.
 #[allow(deprecated)]
 pub fn encrypt_value(cipher: &mut Aes256GcmSiv, value: &[u8]) -> Result<Vec<u8>, error::Error> {
-    let mut nonce_bytes = [0u8; 12];
-    thread_rng().fill(&mut nonce_bytes);
-    let nonce = GenericArray::from_slice(&nonce_bytes);
-
-    let mut buffer = value.to_vec();
-    cipher.encrypt_in_place(nonce, b"", &mut buffer)?;
-
-    // Prepend nonce to ciphertext
-    let mut result = nonce_bytes.to_vec();
-    result.extend(buffer);
-    Ok(result)
+    Ok(encrypt_with_random_nonce(cipher, value)?)
 }
 
 /// Decrypt a value that was encrypted with encrypt_value.
@@ -105,21 +85,7 @@ pub fn encrypt_value(cipher: &mut Aes256GcmSiv, value: &[u8]) -> Result<Vec<u8>,
 /// Extracts the nonce from the first 12 bytes of the ciphertext.
 #[allow(deprecated)]
 pub fn decrypt_value(cipher: &mut Aes256GcmSiv, data: &[u8]) -> Result<Vec<u8>, error::Error> {
-    if data.len() < 12 {
-        return Err(error::Error::Encryption(
-            "Encrypted data too short - missing nonce".into(),
-        ));
-    }
-
-    let nonce_bytes: [u8; 12] = data[..12]
-        .try_into()
-        .expect("12 bytes from slice of at least 12 bytes");
-    let nonce = GenericArray::from_slice(&nonce_bytes);
-
-    let mut buffer = data[12..].to_vec();
-    cipher.decrypt_in_place(nonce, b"", &mut buffer)?;
-
-    Ok(buffer)
+    Ok(decrypt_with_nonce_prefix(cipher, data)?)
 }
 
 /// Store keys for Boltz swap persistence with encryption support.

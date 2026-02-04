@@ -44,6 +44,25 @@ pub fn cipher_from_key_bytes(key_bytes: [u8; 32]) -> Aes256GcmSiv {
     Aes256GcmSiv::new(key)
 }
 
+/// Encrypt a payload using the provided nonce, returning `nonce || ciphertext`.
+#[allow(deprecated)]
+fn encrypt_with_nonce(
+    cipher: &mut Aes256GcmSiv,
+    plaintext: &[u8],
+    nonce_bytes: [u8; NONCE_LEN],
+) -> Result<Vec<u8>, CryptoError> {
+    let nonce = GenericArray::from_slice(&nonce_bytes);
+
+    let mut buffer = plaintext.to_vec();
+    cipher
+        .encrypt_in_place(nonce, b"", &mut buffer)
+        .map_err(|err| CryptoError::Aead(err.to_string()))?;
+
+    let mut result = nonce_bytes.to_vec();
+    result.extend(buffer);
+    Ok(result)
+}
+
 /// Encrypt a payload with a random nonce.
 ///
 /// The nonce is prepended to the ciphertext for later decryption.
@@ -56,16 +75,7 @@ pub fn encrypt_with_random_nonce(
 ) -> Result<Vec<u8>, CryptoError> {
     let mut nonce_bytes = [0u8; NONCE_LEN];
     thread_rng().fill(&mut nonce_bytes);
-    let nonce = GenericArray::from_slice(&nonce_bytes);
-
-    let mut buffer = plaintext.to_vec();
-    cipher
-        .encrypt_in_place(nonce, b"", &mut buffer)
-        .map_err(|err| CryptoError::Aead(err.to_string()))?;
-
-    let mut result = nonce_bytes.to_vec();
-    result.extend(buffer);
-    Ok(result)
+    encrypt_with_nonce(cipher, plaintext, nonce_bytes)
 }
 
 /// Decrypt a payload that was encrypted with [`encrypt_with_random_nonce`].
@@ -107,16 +117,7 @@ pub fn encrypt_with_deterministic_nonce(
     let nonce_bytes: [u8; NONCE_LEN] = hash.as_byte_array()[..NONCE_LEN]
         .try_into()
         .expect("nonce slice length validated");
-    let nonce = GenericArray::from_slice(&nonce_bytes);
-
-    let mut buffer = plaintext.to_vec();
-    cipher
-        .encrypt_in_place(nonce, b"", &mut buffer)
-        .map_err(|err| CryptoError::Aead(err.to_string()))?;
-
-    let mut result = nonce_bytes.to_vec();
-    result.extend(buffer);
-    Ok(result)
+    encrypt_with_nonce(cipher, plaintext, nonce_bytes)
 }
 
 #[cfg(test)]

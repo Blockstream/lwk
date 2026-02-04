@@ -58,8 +58,9 @@ fn encrypt_with_nonce(
         .encrypt_in_place(nonce, b"", &mut buffer)
         .map_err(|err| CryptoError::Aead(err.to_string()))?;
 
-    let mut result = nonce_bytes.to_vec();
-    result.extend(buffer);
+    let mut result = Vec::with_capacity(nonce_bytes.len() + buffer.len());
+    result.extend_from_slice(&nonce_bytes);
+    result.extend_from_slice(&buffer);
     Ok(result)
 }
 

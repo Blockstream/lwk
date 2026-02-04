@@ -4,7 +4,7 @@ use std::sync::Arc;
 use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::AeadMutInPlace;
 use aes_gcm_siv::{Aes256GcmSiv, KeyInit};
-use bip39::Mnemonic;
+use lwk_wollet::bitcoin::bip32::Xpub;
 use lwk_wollet::hashes::hex::{DisplayHex, FromHex};
 use lwk_wollet::hashes::{sha256, sha256t_hash_newtype, Hash};
 use rand::{thread_rng, Rng};
@@ -28,13 +28,13 @@ sha256t_hash_newtype! {
     pub struct BoltzStorePrefixHash(_);
 }
 
-/// Create a cipher from a mnemonic for encrypting Boltz store data.
+/// Create a cipher from an xpub for encrypting Boltz store data.
 ///
-/// The encryption key is derived by hashing the mnemonic seed bytes with a tagged hash.
+/// The encryption key is derived by hashing the xpub string bytes with a tagged hash.
 #[allow(deprecated)]
-pub fn cipher_from_mnemonic(mnemonic: &Mnemonic) -> Aes256GcmSiv {
-    let seed = mnemonic.to_seed("");
-    let key_bytes = BoltzEncryptionKeyHash::hash(&seed).to_byte_array();
+pub fn cipher_from_xpub(xpub: &Xpub) -> Aes256GcmSiv {
+    let xpub_string = xpub.to_string();
+    let key_bytes = BoltzEncryptionKeyHash::hash(xpub_string.as_bytes()).to_byte_array();
     let key = GenericArray::from_slice(&key_bytes);
     Aes256GcmSiv::new(key)
 }
@@ -334,7 +334,9 @@ pub trait SwapPersistence {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bip39::Mnemonic;
     use lwk_common::MemoryStore;
+    use lwk_wollet::bitcoin::NetworkKind;
 
     fn test_mnemonic() -> Mnemonic {
         "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
@@ -342,18 +344,15 @@ mod tests {
             .unwrap()
     }
 
-    #[test]
-    fn test_cipher_from_mnemonic() {
-        let mnemonic = test_mnemonic();
-        let _cipher = cipher_from_mnemonic(&mnemonic);
-        // Just verify it doesn't panic
+    fn test_xpub() -> Xpub {
+        crate::derive_xpub_from_mnemonic(&test_mnemonic(), NetworkKind::Test).unwrap()
     }
 
     #[test]
     fn test_key_encryption_is_deterministic() {
-        let mnemonic = test_mnemonic();
-        let mut cipher1 = cipher_from_mnemonic(&mnemonic);
-        let mut cipher2 = cipher_from_mnemonic(&mnemonic);
+        let xpub = test_xpub();
+        let mut cipher1 = cipher_from_xpub(&xpub);
+        let mut cipher2 = cipher_from_xpub(&xpub);
 
         let key = "boltz:pending_swaps";
         let encrypted1 = encrypt_key(&mut cipher1, key).unwrap();
@@ -367,9 +366,9 @@ mod tests {
 
     #[test]
     fn test_value_encryption_is_not_deterministic() {
-        let mnemonic = test_mnemonic();
-        let mut cipher1 = cipher_from_mnemonic(&mnemonic);
-        let mut cipher2 = cipher_from_mnemonic(&mnemonic);
+        let xpub = test_xpub();
+        let mut cipher1 = cipher_from_xpub(&xpub);
+        let mut cipher2 = cipher_from_xpub(&xpub);
 
         let value = b"test value data";
         let encrypted1 = encrypt_value(&mut cipher1, value).unwrap();
@@ -383,14 +382,14 @@ mod tests {
 
     #[test]
     fn test_value_encryption_roundtrip() {
-        let mnemonic = test_mnemonic();
-        let mut cipher = cipher_from_mnemonic(&mnemonic);
+        let xpub = test_xpub();
+        let mut cipher = cipher_from_xpub(&xpub);
 
         let original = b"test value with some data to encrypt";
         let encrypted = encrypt_value(&mut cipher, original).unwrap();
 
         // Need a fresh cipher for decryption
-        let mut cipher = cipher_from_mnemonic(&mnemonic);
+        let mut cipher = cipher_from_xpub(&xpub);
         let decrypted = decrypt_value(&mut cipher, &encrypted).unwrap();
 
         assert_eq!(original.to_vec(), decrypted);
@@ -398,24 +397,24 @@ mod tests {
 
     #[test]
     fn test_store_roundtrip() {
-        let mnemonic = test_mnemonic();
         let store = MemoryStore::new();
-        let mut cipher = cipher_from_mnemonic(&mnemonic);
+        let xpub = test_xpub();
+        let mut cipher = cipher_from_xpub(&xpub);
 
         // Test pending swaps
         let swaps = vec!["swap1".to_string(), "swap2".to_string()];
         store_keys::set_pending_swaps(&store, &mut cipher, &swaps).unwrap();
 
-        let mut cipher = cipher_from_mnemonic(&mnemonic);
+        let mut cipher = cipher_from_xpub(&xpub);
         let loaded = store_keys::get_pending_swaps(&store, &mut cipher).unwrap();
         assert_eq!(swaps, loaded);
 
         // Test swap data
-        let mut cipher = cipher_from_mnemonic(&mnemonic);
+        let mut cipher = cipher_from_xpub(&xpub);
         let swap_data = b"swap json data here";
         store_keys::set_swap_data(&store, &mut cipher, "swap1", swap_data).unwrap();
 
-        let mut cipher = cipher_from_mnemonic(&mnemonic);
+        let mut cipher = cipher_from_xpub(&xpub);
         let loaded_data = store_keys::get_swap_data(&store, &mut cipher, "swap1")
             .unwrap()
             .unwrap();
@@ -429,8 +428,10 @@ mod tests {
             .parse()
             .unwrap();
 
-        let mut cipher1 = cipher_from_mnemonic(&mnemonic1);
-        let mut cipher2 = cipher_from_mnemonic(&mnemonic2);
+        let xpub1 = crate::derive_xpub_from_mnemonic(&mnemonic1, NetworkKind::Test).unwrap();
+        let xpub2 = crate::derive_xpub_from_mnemonic(&mnemonic2, NetworkKind::Test).unwrap();
+        let mut cipher1 = cipher_from_xpub(&xpub1);
+        let mut cipher2 = cipher_from_xpub(&xpub2);
 
         let key = "boltz:pending_swaps";
         let encrypted1 = encrypt_key(&mut cipher1, key).unwrap();

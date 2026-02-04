@@ -16,7 +16,7 @@ mod submarine;
 mod swap_state;
 
 // Re-export store module contents for public API
-pub use store::cipher_from_mnemonic;
+pub use store::cipher_from_xpub;
 pub use store::encrypt_key;
 pub use store::store_keys;
 pub use store::DynStore;
@@ -281,9 +281,9 @@ impl BoltzSession {
 
     /// Get a cipher for encrypting/decrypting store data
     ///
-    /// The cipher is derived from the mnemonic using a tagged hash.
+    /// The cipher is derived from the xpub using a tagged hash.
     pub fn cipher(&self) -> Aes256GcmSiv {
-        cipher_from_mnemonic(&self.mnemonic)
+        cipher_from_xpub(&self.xpub)
     }
 
     /// Clone the store Arc for use in swap responses

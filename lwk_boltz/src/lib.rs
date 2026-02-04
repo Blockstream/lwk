@@ -104,6 +104,7 @@ pub struct BoltzSession {
     timeout: Duration,
 
     mnemonic: Mnemonic,
+    xpub: Xpub,
     next_index_to_use: AtomicU32,
 
     polling: bool,
@@ -210,22 +211,20 @@ impl BoltzSession {
         // Fetch pairs data concurrently
         let swap_info = fetch_swap_info_concurrently(api.clone()).await?;
 
-        let (next_index_to_use, mnemonic) = match mnemonic {
-            Some(mnemonic) => {
-                let next_index_to_use = match next_index_to_use {
-                    Some(next_index_to_use) => next_index_to_use,
-                    None => {
-                        fetch_next_index_to_use(&mnemonic, network_kind(liquid_chain), &api).await?
-                    }
-                };
-                (next_index_to_use, mnemonic)
-            }
-            None => (0, Mnemonic::generate(12).expect("12 is a valid word count")),
+        let provided_mnemonic = mnemonic.is_some();
+        let mnemonic =
+            mnemonic.unwrap_or_else(|| Mnemonic::generate(12).expect("12 is a valid word count"));
+        let xpub = derive_xpub_from_mnemonic(&mnemonic, network_kind(liquid_chain))?;
+        let next_index_to_use = match next_index_to_use {
+            Some(next_index_to_use) => next_index_to_use,
+            None if provided_mnemonic => fetch_next_index_to_use(&xpub, &api).await?,
+            None => 0,
         };
 
         Ok(Self {
             next_index_to_use: AtomicU32::new(next_index_to_use),
             mnemonic,
+            xpub,
             ws,
             api,
             chain_client,
@@ -312,8 +311,7 @@ impl BoltzSession {
     /// This is useful as a swap list but can also be used to restore non-completed swaps that have not
     /// being persisted or that have been lost. TODO: use fn xxx
     pub async fn swap_restore(&self) -> Result<Vec<SwapRestoreResponse>, Error> {
-        let xpub = derive_xpub_from_mnemonic(&self.mnemonic, network_kind(self.liquid_chain))?;
-        let result = self.api.post_swap_restore(&xpub.to_string()).await?;
+        let result = self.api.post_swap_restore(&self.xpub.to_string()).await?;
         Ok(result)
     }
 
@@ -673,12 +671,7 @@ pub(crate) fn mnemonic_identifier(mnemonic: &Mnemonic) -> Result<XKeyIdentifier,
     Ok(xpriv.identifier(&lwk_wollet::EC))
 }
 
-async fn fetch_next_index_to_use(
-    mnemonic: &Mnemonic,
-    network_kind: NetworkKind,
-    client: &BoltzApiClientV2,
-) -> Result<u32, Error> {
-    let xpub = derive_xpub_from_mnemonic(mnemonic, network_kind)?;
+async fn fetch_next_index_to_use(xpub: &Xpub, client: &BoltzApiClientV2) -> Result<u32, Error> {
     log::info!("xpub for restore is: {xpub}");
 
     let result = client.post_swap_restore_index(&xpub.to_string()).await?;

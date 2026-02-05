@@ -1,9 +1,19 @@
 {
+  "type": "module",
   "scripts": {
-    "test": "bash scripts/run-tests.sh"
+    "test": "node --enable-source-maps --import ./loader.mjs ./node_modules/mocha/bin/mocha.js --config .mocharc.json --recursive \"**/*.test.ts\" --timeout 120000 --exit"
   },
   "dependencies": {
     "lwk_node": "file:../../pkg_node",
     "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.10",
+    "chai": "^5.2.0",
+    "mocha": "^11.2.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   }
 }

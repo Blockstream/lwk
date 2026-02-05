@@ -96,16 +96,6 @@ pub mod store_keys {
     /// Key name for the list of completed swap IDs
     const COMPLETED_SWAPS_KEY: &str = "boltz:completed_swaps";
 
-    /// Generate the key for the list of pending swap IDs
-    fn pending_swaps_key() -> &'static str {
-        PENDING_SWAPS_KEY
-    }
-
-    /// Generate the key for the list of completed swap IDs
-    fn completed_swaps_key() -> &'static str {
-        COMPLETED_SWAPS_KEY
-    }
-
     /// Generate the key for a specific swap's data
     fn swap_data_key(swap_id: &str) -> String {
         format!("boltz:swap:{swap_id}")
@@ -124,7 +114,7 @@ pub mod store_keys {
         store: &dyn DynStore,
         cipher: &mut Aes256GcmSiv,
     ) -> Result<Vec<String>, error::Error> {
-        let encrypted_key = encrypt_store_key(cipher, pending_swaps_key())?;
+        let encrypted_key = encrypt_store_key(cipher, PENDING_SWAPS_KEY)?;
         store
             .get(&encrypted_key)
             .map_err(error::Error::Store)?
@@ -144,7 +134,7 @@ pub mod store_keys {
         store: &dyn DynStore,
         cipher: &mut Aes256GcmSiv,
     ) -> Result<Vec<String>, error::Error> {
-        let encrypted_key = encrypt_store_key(cipher, completed_swaps_key())?;
+        let encrypted_key = encrypt_store_key(cipher, COMPLETED_SWAPS_KEY)?;
         store
             .get(&encrypted_key)
             .map_err(error::Error::Store)?
@@ -162,7 +152,7 @@ pub mod store_keys {
         cipher: &mut Aes256GcmSiv,
         swaps: &[String],
     ) -> Result<(), error::Error> {
-        let encrypted_key = encrypt_store_key(cipher, pending_swaps_key())?;
+        let encrypted_key = encrypt_store_key(cipher, PENDING_SWAPS_KEY)?;
         let plaintext = serde_json::to_vec(swaps)?;
         let encrypted_value = encrypt_value(cipher, &plaintext)?;
         store
@@ -176,7 +166,7 @@ pub mod store_keys {
         cipher: &mut Aes256GcmSiv,
         swaps: &[String],
     ) -> Result<(), error::Error> {
-        let encrypted_key = encrypt_store_key(cipher, completed_swaps_key())?;
+        let encrypted_key = encrypt_store_key(cipher, COMPLETED_SWAPS_KEY)?;
         let plaintext = serde_json::to_vec(swaps)?;
         let encrypted_value = encrypt_value(cipher, &plaintext)?;
         store

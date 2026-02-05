@@ -83,18 +83,18 @@ pub fn encrypt_with_random_nonce(
 #[allow(deprecated)]
 pub fn decrypt_with_nonce_prefix(
     cipher: &mut Aes256GcmSiv,
-    data: &[u8],
+    ciphertext: &[u8],
 ) -> Result<Vec<u8>, CryptoError> {
-    if data.len() < NONCE_LEN {
+    if ciphertext.len() < NONCE_LEN {
         return Err(CryptoError::MissingNonce);
     }
 
-    let nonce_bytes: [u8; NONCE_LEN] = data[..NONCE_LEN]
+    let nonce_bytes: [u8; NONCE_LEN] = ciphertext[..NONCE_LEN]
         .try_into()
         .expect("nonce slice length validated");
     let nonce = GenericArray::from_slice(&nonce_bytes);
 
-    let mut buffer = data[NONCE_LEN..].to_vec();
+    let mut buffer = ciphertext[NONCE_LEN..].to_vec();
     cipher
         .decrypt_in_place(nonce, b"", &mut buffer)
         .map_err(|err| CryptoError::Aead(err.to_string()))?;

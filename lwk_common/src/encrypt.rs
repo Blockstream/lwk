@@ -12,11 +12,11 @@ const NONCE_LEN: usize = 12;
 
 sha256t_hash_newtype! {
     /// Tag for deterministic nonce derivation.
-    pub struct DeterministicNonceTag = hash_str("LWK-Deterministic-Nonce/1.0");
+    struct DeterministicNonceTag = hash_str("LWK-Deterministic-Nonce/1.0");
 
     /// Tagged hash for deterministic nonce derivation.
     #[hash_newtype(forward)]
-    pub struct DeterministicNonceHash(_);
+    struct DeterministicNonceHash(_);
 }
 
 /// Errors returned by the crypto helpers.

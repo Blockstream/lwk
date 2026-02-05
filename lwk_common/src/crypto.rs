@@ -79,7 +79,7 @@ pub fn encrypt_with_random_nonce(
     encrypt_with_nonce(cipher, plaintext, nonce_bytes)
 }
 
-/// Decrypt a payload that was encrypted with [`encrypt_with_random_nonce`].
+/// Decrypt a payload that was encrypted with [`encrypt_with_random_nonce`] or [`encrypt_with_deterministic_nonce`].
 #[allow(deprecated)]
 pub fn decrypt_with_nonce_prefix(
     cipher: &mut Aes256GcmSiv,

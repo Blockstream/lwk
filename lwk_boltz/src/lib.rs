@@ -357,8 +357,6 @@ impl BoltzSession {
         let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
         let mut cipher = self.cipher();
 
-        // Remove the swap data by setting empty data (store doesn't have a remove with cipher)
-        // Actually, we need to get the encrypted key to remove, let's use the store_keys helper
         let encrypted_key = store::encrypt_key(&mut cipher, &format!("boltz:swap:{swap_id}"))?;
         store.remove(&encrypted_key).map_err(Error::Store)?;
 

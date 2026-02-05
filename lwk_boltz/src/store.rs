@@ -19,13 +19,6 @@ sha256t_hash_newtype! {
     /// A tagged hash to generate the key for encryption in the Boltz store
     #[hash_newtype(forward)]
     pub struct BoltzEncryptionKeyHash(_);
-
-    /// The tag of the hash for store prefix derivation
-    pub struct BoltzStorePrefixTag = hash_str("LWK-Boltz-Store-Prefix/1.0");
-
-    /// A tagged hash to generate the store key prefix from mnemonic
-    #[hash_newtype(forward)]
-    pub struct BoltzStorePrefixHash(_);
 }
 
 /// Create a cipher from an xpub for encrypting Boltz store data.

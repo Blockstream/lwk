@@ -147,6 +147,10 @@ mod tests {
         let mut cipher = test_cipher();
         let encrypted1 = encrypt_with_deterministic_nonce(&mut cipher, plaintext).unwrap();
         assert!(encrypted1.len() > NONCE_LEN);
+        assert_eq!(
+            &encrypted1[..NONCE_LEN],
+            &[109, 114, 166, 63, 192, 58, 90, 214, 13, 78, 153, 17]
+        );
 
         let mut cipher = test_cipher();
         let decrypted1 = decrypt_with_nonce_prefix(&mut cipher, &encrypted1).unwrap();

@@ -8,7 +8,7 @@ use elements::bitcoin::hashes::{sha256t_hash_newtype, Hash};
 use rand::{thread_rng, Rng};
 
 /// Length in bytes of an AES-GCM-SIV nonce.
-pub const NONCE_LEN: usize = 12;
+const NONCE_LEN: usize = 12;
 
 sha256t_hash_newtype! {
     /// Tag for deterministic nonce derivation.

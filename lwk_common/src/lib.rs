@@ -34,7 +34,7 @@ pub use crate::descriptor::{
 };
 pub use crate::encrypt::{
     cipher_from_key_bytes, decrypt_with_nonce_prefix, encrypt_with_deterministic_nonce,
-    encrypt_with_random_nonce, EncryptError, NONCE_LEN,
+    encrypt_with_random_nonce, EncryptError,
 };
 pub use crate::error::Error;
 pub use crate::keyorigin_xpub::{keyorigin_xpub_from_str, InvalidKeyOriginXpub};

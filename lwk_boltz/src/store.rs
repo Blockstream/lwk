@@ -208,7 +208,7 @@ pub mod store_keys {
 /// Trait for swap response types that support persistence.
 ///
 /// This trait provides the interface needed for persisting swap data to a store.
-/// Implementors must provide serialization, swap ID access, store access, and cipher.
+/// Implementors must provide serialization, swap ID access, and store+cipher access.
 /// Default implementations are provided for persist operations.
 pub trait SwapPersistence {
     /// Serialize the swap data to a JSON string
@@ -217,15 +217,12 @@ pub trait SwapPersistence {
     /// Get the swap ID
     fn swap_id(&self) -> &str;
 
-    /// Get a reference to the store, if configured
-    fn store(&self) -> Option<&Arc<dyn DynStore>>;
-
-    /// Get the cipher for encryption/decryption
-    fn cipher(&self) -> Option<Aes256GcmSiv>;
+    /// Get a store and cipher pair, if configured
+    fn store_and_cipher(&self) -> Option<(Arc<dyn DynStore>, Aes256GcmSiv)>;
 
     /// Persist swap data to the store
     fn persist(&self) -> Result<(), error::Error> {
-        if let (Some(store), Some(mut cipher)) = (self.store(), self.cipher()) {
+        if let Some((store, mut cipher)) = self.store_and_cipher() {
             let data = self.serialize()?;
             store_keys::set_swap_data(
                 store.as_ref(),
@@ -240,7 +237,7 @@ pub trait SwapPersistence {
 
     /// Persist swap data and add to pending swaps list
     fn persist_and_add_to_pending(&self) -> Result<(), error::Error> {
-        if let (Some(store), Some(mut cipher)) = (self.store(), self.cipher()) {
+        if let Some((store, mut cipher)) = self.store_and_cipher() {
             // Persist the swap data
             self.persist()?;
 
@@ -259,7 +256,7 @@ pub trait SwapPersistence {
 
     /// Move swap from pending to completed list
     fn move_to_completed(&self) -> Result<(), error::Error> {
-        if let (Some(store), Some(mut cipher)) = (self.store(), self.cipher()) {
+        if let Some((store, mut cipher)) = self.store_and_cipher() {
             let swap_id = self.swap_id().to_string();
 
             // Remove from pending list

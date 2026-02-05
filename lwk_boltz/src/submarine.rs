@@ -58,12 +58,11 @@ impl SwapPersistence for PreparePayResponse {
         &self.data.create_swap_response.id
     }
 
-    fn store(&self) -> Option<&Arc<dyn DynStore>> {
-        self.store.as_ref()
-    }
-
-    fn cipher(&self) -> Option<Aes256GcmSiv> {
-        self.cipher.clone()
+    fn store_and_cipher(&self) -> Option<(Arc<dyn DynStore>, Aes256GcmSiv)> {
+        match (self.store.as_ref(), self.cipher.as_ref()) {
+            (Some(store), Some(cipher)) => Some((Arc::clone(store), cipher.clone())),
+            _ => None,
+        }
     }
 }
 

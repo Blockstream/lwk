@@ -624,14 +624,8 @@ mod tests {
 
         // IMPORTANT: Verify session2 cannot see session1's swap (key isolation test)
         let pending2 = session2.pending_swap_ids().unwrap();
-        assert!(
-            !pending2.contains(&swap_id),
-            "Session 2 should NOT see session 1's swap - keys should be isolated"
-        );
-        assert!(
-            session2.get_swap_data(&swap_id).unwrap().is_none(),
-            "Session 2 should NOT be able to read session 1's swap data"
-        );
+        assert!(!pending2.contains(&swap_id));
+        assert!(session2.get_swap_data(&swap_id).unwrap().is_none());
 
         // Drop the sessions and response
         drop(response);

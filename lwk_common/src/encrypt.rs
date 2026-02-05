@@ -21,18 +21,18 @@ sha256t_hash_newtype! {
 
 /// Errors returned by the crypto helpers.
 #[derive(Debug)]
-pub enum CryptoError {
+pub enum EncryptError {
     /// Missing nonce prefix in encrypted payloads.
     MissingNonce,
     /// AEAD encryption/decryption error.
     Aead(String),
 }
 
-impl std::fmt::Display for CryptoError {
+impl std::fmt::Display for EncryptError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CryptoError::MissingNonce => write!(f, "Encrypted data too short - missing nonce"),
-            CryptoError::Aead(err) => write!(f, "Aead error: {err}"),
+            EncryptError::MissingNonce => write!(f, "Encrypted data too short - missing nonce"),
+            EncryptError::Aead(err) => write!(f, "Aead error: {err}"),
         }
     }
 }
@@ -50,13 +50,13 @@ fn encrypt_with_nonce(
     cipher: &mut Aes256GcmSiv,
     plaintext: &[u8],
     nonce_bytes: [u8; NONCE_LEN],
-) -> Result<Vec<u8>, CryptoError> {
+) -> Result<Vec<u8>, EncryptError> {
     let nonce = GenericArray::from_slice(&nonce_bytes);
 
     let mut buffer = plaintext.to_vec();
     cipher
         .encrypt_in_place(nonce, b"", &mut buffer)
-        .map_err(|err| CryptoError::Aead(err.to_string()))?;
+        .map_err(|err| EncryptError::Aead(err.to_string()))?;
 
     let mut result = Vec::with_capacity(nonce_bytes.len() + buffer.len());
     result.extend_from_slice(&nonce_bytes);
@@ -73,7 +73,7 @@ fn encrypt_with_nonce(
 pub fn encrypt_with_random_nonce(
     cipher: &mut Aes256GcmSiv,
     plaintext: &[u8],
-) -> Result<Vec<u8>, CryptoError> {
+) -> Result<Vec<u8>, EncryptError> {
     let mut nonce_bytes = [0u8; NONCE_LEN];
     thread_rng().fill(&mut nonce_bytes);
     encrypt_with_nonce(cipher, plaintext, nonce_bytes)
@@ -84,9 +84,9 @@ pub fn encrypt_with_random_nonce(
 pub fn decrypt_with_nonce_prefix(
     cipher: &mut Aes256GcmSiv,
     ciphertext: &[u8],
-) -> Result<Vec<u8>, CryptoError> {
+) -> Result<Vec<u8>, EncryptError> {
     if ciphertext.len() < NONCE_LEN {
-        return Err(CryptoError::MissingNonce);
+        return Err(EncryptError::MissingNonce);
     }
 
     let nonce_bytes: [u8; NONCE_LEN] = ciphertext[..NONCE_LEN]
@@ -97,7 +97,7 @@ pub fn decrypt_with_nonce_prefix(
     let mut buffer = ciphertext[NONCE_LEN..].to_vec();
     cipher
         .decrypt_in_place(nonce, b"", &mut buffer)
-        .map_err(|err| CryptoError::Aead(err.to_string()))?;
+        .map_err(|err| EncryptError::Aead(err.to_string()))?;
 
     Ok(buffer)
 }
@@ -113,7 +113,7 @@ pub fn decrypt_with_nonce_prefix(
 pub fn encrypt_with_deterministic_nonce(
     cipher: &mut Aes256GcmSiv,
     plaintext: &[u8],
-) -> Result<Vec<u8>, CryptoError> {
+) -> Result<Vec<u8>, EncryptError> {
     let hash = DeterministicNonceHash::hash(plaintext);
     let nonce_bytes: [u8; NONCE_LEN] = hash.as_byte_array()[..NONCE_LEN]
         .try_into()

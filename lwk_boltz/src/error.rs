@@ -133,8 +133,8 @@ impl From<aes_gcm_siv::Error> for Error {
     }
 }
 
-impl From<lwk_common::CryptoError> for Error {
-    fn from(err: lwk_common::CryptoError) -> Self {
+impl From<lwk_common::EncryptError> for Error {
+    fn from(err: lwk_common::EncryptError) -> Self {
         Error::Encryption(err.to_string())
     }
 }

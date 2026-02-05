@@ -295,13 +295,13 @@ impl From<aes_gcm_siv::aead::Error> for Error {
     }
 }
 
-impl From<lwk_common::CryptoError> for Error {
-    fn from(err: lwk_common::CryptoError) -> Self {
+impl From<lwk_common::EncryptError> for Error {
+    fn from(err: lwk_common::EncryptError) -> Self {
         match err {
-            lwk_common::CryptoError::MissingNonce => {
+            lwk_common::EncryptError::MissingNonce => {
                 Self::Generic("Missing nonce in encrypted bytes".to_string())
             }
-            lwk_common::CryptoError::Aead(err) => Self::Aes(err),
+            lwk_common::EncryptError::Aead(err) => Self::Aes(err),
         }
     }
 }

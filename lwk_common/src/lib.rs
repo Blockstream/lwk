@@ -12,8 +12,8 @@
 
 mod address;
 mod balance;
-mod crypto;
 mod descriptor;
+mod encrypt;
 mod error;
 mod fee;
 mod keyorigin_xpub;
@@ -27,14 +27,14 @@ mod store;
 
 pub use crate::address::{Address, AddressParseError};
 pub use crate::balance::{Balance, SignedBalance};
-pub use crate::crypto::{
-    cipher_from_key_bytes, decrypt_with_nonce_prefix, encrypt_with_deterministic_nonce,
-    encrypt_with_random_nonce, CryptoError, NONCE_LEN,
-};
 pub use crate::descriptor::{
     multisig_desc, singlesig_desc, Bip, DescriptorBlindingKey, InvalidBipVariant,
     InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Multisig,
     Singlesig,
+};
+pub use crate::encrypt::{
+    cipher_from_key_bytes, decrypt_with_nonce_prefix, encrypt_with_deterministic_nonce,
+    encrypt_with_random_nonce, CryptoError, NONCE_LEN,
 };
 pub use crate::error::Error;
 pub use crate::keyorigin_xpub::{keyorigin_xpub_from_str, InvalidKeyOriginXpub};

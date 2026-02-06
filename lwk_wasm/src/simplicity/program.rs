@@ -45,7 +45,7 @@ impl SimplicityProgram {
         internal_key: &XOnlyPublicKey,
         network: &Network,
     ) -> Result<Address, Error> {
-        let inner_network: lwk_wollet::ElementsNetwork = network.into();
+        let inner_network: lwk_common::Network = network.into();
 
         let x_only_key = internal_key.to_simplicityhl()?;
 
@@ -76,10 +76,7 @@ impl SimplicityProgram {
         input_index: u32,
         network: &Network,
     ) -> Result<String, Error> {
-        let inner_network: lwk_wollet::ElementsNetwork = network.into();
-
         let x_only_key = program_public_key.to_simplicityhl()?;
-
         let utxos_inner = convert_utxos(&utxos);
 
         let message = signer::get_sighash_all(
@@ -88,8 +85,7 @@ impl SimplicityProgram {
             &x_only_key,
             &utxos_inner,
             input_index as usize,
-            inner_network.address_params(),
-            inner_network.genesis_block_hash(),
+            network.into(),
         )?;
 
         // TODO: create a wrapper for the Message type
@@ -109,10 +105,7 @@ impl SimplicityProgram {
         network: &Network,
         log_level: SimplicityLogLevel,
     ) -> Result<Transaction, Error> {
-        let inner_network: lwk_wollet::ElementsNetwork = network.into();
-
         let x_only_key = program_public_key.to_simplicityhl()?;
-
         let utxos_inner = convert_utxos(&utxos);
 
         let finalized = signer::finalize_transaction(
@@ -122,9 +115,7 @@ impl SimplicityProgram {
             &utxos_inner,
             input_index as usize,
             witness_values.to_inner()?,
-            // TODO: signer functions should be refactored to just accept `lwk_wollet::ElementsNetwork` isntead
-            inner_network.address_params(),
-            inner_network.genesis_block_hash(),
+            network.into(),
             log_level.into(),
         )?;
 
@@ -143,11 +134,8 @@ impl SimplicityProgram {
         input_index: u32,
         network: &Network,
     ) -> Result<String, Error> {
-        let inner_network: lwk_wollet::ElementsNetwork = network.into();
-
         let keypair_inner: Keypair = derive_keypair(signer, derivation_path)?.into();
         let x_only_pubkey = keypair_inner.x_only_public_key().0;
-
         let utxos_inner = convert_utxos(&utxos);
 
         let sighash = signer::get_sighash_all(
@@ -156,8 +144,7 @@ impl SimplicityProgram {
             &x_only_pubkey,
             &utxos_inner,
             input_index as usize,
-            inner_network.address_params(),
-            inner_network.genesis_block_hash(),
+            network.into(),
         )?;
 
         let signature = keypair_inner.sign_schnorr(sighash);
@@ -177,10 +164,7 @@ impl SimplicityProgram {
         network: &Network,
         log_level: SimplicityLogLevel,
     ) -> Result<SimplicityRunResult, Error> {
-        let inner_network: lwk_wollet::ElementsNetwork = network.into();
-
         let x_only_key = program_public_key.to_simplicityhl()?;
-
         let utxos_inner = convert_utxos(&utxos);
 
         let env = signer::get_and_verify_env(
@@ -188,8 +172,7 @@ impl SimplicityProgram {
             &self.inner,
             &x_only_key,
             &utxos_inner,
-            inner_network.address_params(),
-            inner_network.genesis_block_hash(),
+            network.into(),
             input_index as usize,
         )?;
 

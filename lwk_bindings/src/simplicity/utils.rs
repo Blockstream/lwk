@@ -4,7 +4,6 @@ use std::sync::Arc;
 use elements::bitcoin::bip32::DerivationPath;
 use lwk_simplicity::scripts;
 use lwk_simplicity::simplicityhl;
-use lwk_simplicity::utils::parse_genesis_hash;
 
 use crate::blockdata::tx_out::TxOut;
 use crate::types::{Hex, XOnlyPublicKey};
@@ -31,14 +30,6 @@ pub fn simplicity_control_block(
     let control_block = scripts::control_block(cmr, internal_key);
     let serialized = control_block.serialize();
     ControlBlock::from_slice(&serialized)
-}
-
-pub(crate) fn get_genesis_hash(
-    genesis_hash: &Hex,
-) -> Result<simplicityhl::elements::BlockHash, LwkError> {
-    parse_genesis_hash(genesis_hash.as_ref()).map_err(|msg| LwkError::Generic {
-        msg: msg.to_string(),
-    })
 }
 
 pub(crate) fn convert_utxos(utxos: &[Arc<TxOut>]) -> Vec<elements::TxOut> {

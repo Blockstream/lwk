@@ -50,7 +50,7 @@ tx = Transaction(TEST_UNSIGNED_TX)
 
 finalized_tx = program.finalize_transaction(
     tx, XOnlyPublicKey(TEST_PUBLIC_KEY), [utxo], 0,
-    witness, network, genesis_hash, SimplicityLogLevel.NONE
+    witness, network, SimplicityLogLevel.NONE
 )
 
 assert finalized_tx is not None

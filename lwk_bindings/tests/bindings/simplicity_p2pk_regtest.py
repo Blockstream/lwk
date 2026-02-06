@@ -9,7 +9,6 @@ P2PK_SOURCE = open(os.path.join(_SIMF_DIR, "p2pk.simf")).read()
 node = LwkTestEnv()
 network = Network.regtest_default()
 policy_asset = network.policy_asset()
-genesis_hash = node.genesis_block_hash()
 client = ElectrumClient.from_url(node.electrum_url())
 
 # 2. Create signer and derive x-only public key
@@ -81,7 +80,7 @@ all_utxos = [funding_output]
 
 signature = program.create_p2pk_signature(
     signer, derivation_path, unsigned_tx,
-    all_utxos, 0, network, genesis_hash
+    all_utxos, 0, network
 )
 
 # 11. Finalize transaction with Simplicity witness
@@ -90,7 +89,7 @@ witness = witness.add_value("SIGNATURE", SimplicityTypedValue.byte_array(str(sig
 
 finalized_tx = program.finalize_transaction(
     unsigned_tx, xonly_pubkey, all_utxos, 0,
-    witness, network, genesis_hash, SimplicityLogLevel.NONE
+    witness, network, SimplicityLogLevel.NONE
 )
 
 # 11b. Verify TxInWitness can be built manually and matches finalize_transaction output
@@ -102,7 +101,7 @@ assert len(finalized_script_witness) == 4, "Simplicity witness should have 4 ele
 # Run the program to get the pruned program and witness bytes
 run_result = program.run(
     unsigned_tx, xonly_pubkey, all_utxos, 0,
-    witness, network, genesis_hash, SimplicityLogLevel.NONE
+    witness, network, SimplicityLogLevel.NONE
 )
 
 # Build the witness manually from its components:

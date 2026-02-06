@@ -28,7 +28,6 @@ fn test_simplicity_p2pk() {
     let params = network.address_params();
     let signer = generate_signer();
     let mut client = electrum_client(&env);
-    let genesis_block_hash = env.elementsd_genesis_block_hash();
 
     // Read p2pk.simf
     let source = include_str!("../data/p2pk.simf");
@@ -88,16 +87,8 @@ fn test_simplicity_p2pk() {
 
     // Compute message and sign
     let input_index = 0;
-    let message = get_sighash_all(
-        &tx,
-        &program,
-        &xonly,
-        &txouts,
-        input_index,
-        params,
-        genesis_block_hash,
-    )
-    .unwrap();
+    let message =
+        get_sighash_all(&tx, &program, &xonly, &txouts, input_index, network.into()).unwrap();
 
     let signature = EC.sign_schnorr(&message, &keypair);
 
@@ -117,8 +108,7 @@ fn test_simplicity_p2pk() {
         &txouts,
         input_index,
         witness_values,
-        params,
-        genesis_block_hash,
+        network.into(),
         log_level,
     )
     .unwrap();
@@ -141,7 +131,6 @@ fn test_simplicity_mixed_p2pk() {
     let network = ElementsNetwork::default_regtest();
     let params = network.address_params();
     let mut client = electrum_client(&env);
-    let genesis_block_hash = env.elementsd_genesis_block_hash();
     let lbtc = network.policy_asset();
 
     // Simplicity signer and wallet
@@ -220,16 +209,8 @@ fn test_simplicity_mixed_p2pk() {
         .collect();
 
     let input_idx_s = 0;
-    let message = get_sighash_all(
-        &tx,
-        &program,
-        &xonly,
-        &utxos,
-        input_idx_s,
-        params,
-        genesis_block_hash,
-    )
-    .unwrap();
+    let message =
+        get_sighash_all(&tx, &program, &xonly, &utxos, input_idx_s, network.into()).unwrap();
 
     let signature = EC.sign_schnorr(&message, &keypair);
 
@@ -248,8 +229,7 @@ fn test_simplicity_mixed_p2pk() {
         &utxos,
         input_idx_s,
         witness_values,
-        params,
-        genesis_block_hash,
+        network.into(),
         log_level,
     )
     .unwrap();

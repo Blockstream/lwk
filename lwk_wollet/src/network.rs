@@ -1,3 +1,6 @@
+// TODO: this should be removed in favor of the `lwk_common`. Currently consts from here are
+// duplicated in the `lwk_common`.
+
 use elements::hashes::Hash;
 use serde::{Deserialize, Serialize};
 

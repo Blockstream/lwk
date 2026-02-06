@@ -67,7 +67,6 @@ EXPIRY_TIME = 2
 node = LwkTestEnv()
 network = Network.regtest_default()
 policy_asset = network.policy_asset()
-genesis_hash = node.genesis_block_hash()
 client = ElectrumClient.from_url(node.electrum_url())
 
 mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
@@ -227,24 +226,24 @@ creation_utxos = [output1, output2]
 
 sig0 = p2pk_program.create_p2pk_signature(
     signer, derivation_path, creation_tx,
-    creation_utxos, 0, network, genesis_hash
+    creation_utxos, 0, network
 )
 witness0 = SimplicityWitnessValues()
 witness0 = witness0.add_value("SIGNATURE", SimplicityTypedValue.byte_array(str(sig0)))
 creation_tx = p2pk_program.finalize_transaction(
     creation_tx, xonly_pubkey, creation_utxos, 0,
-    witness0, network, genesis_hash, SimplicityLogLevel.NONE
+    witness0, network, SimplicityLogLevel.NONE
 )
 
 sig1 = p2pk_program.create_p2pk_signature(
     signer, derivation_path, creation_tx,
-    creation_utxos, 1, network, genesis_hash
+    creation_utxos, 1, network
 )
 witness1 = SimplicityWitnessValues()
 witness1 = witness1.add_value("SIGNATURE", SimplicityTypedValue.byte_array(str(sig1)))
 creation_tx = p2pk_program.finalize_transaction(
     creation_tx, xonly_pubkey, creation_utxos, 1,
-    witness1, network, genesis_hash, SimplicityLogLevel.NONE
+    witness1, network, SimplicityLogLevel.NONE
 )
 
 creation_txid = client.broadcast(creation_tx)
@@ -425,23 +424,23 @@ funding_witness = funding_witness.add_value("PATH", path_value)
 
 funding_tx = options_program.finalize_transaction(
     funding_tx, xonly_pubkey, funding_utxos, 0,
-    funding_witness, network, genesis_hash, SimplicityLogLevel.NONE
+    funding_witness, network, SimplicityLogLevel.NONE
 )
 
 funding_tx = options_program.finalize_transaction(
     funding_tx, xonly_pubkey, funding_utxos, 1,
-    funding_witness, network, genesis_hash, SimplicityLogLevel.NONE
+    funding_witness, network, SimplicityLogLevel.NONE
 )
 
 sig2 = p2pk_program.create_p2pk_signature(
     signer, derivation_path, funding_tx,
-    funding_utxos, 2, network, genesis_hash
+    funding_utxos, 2, network
 )
 witness2 = SimplicityWitnessValues()
 witness2 = witness2.add_value("SIGNATURE", SimplicityTypedValue.byte_array(str(sig2)))
 funding_tx = p2pk_program.finalize_transaction(
     funding_tx, xonly_pubkey, funding_utxos, 2,
-    witness2, network, genesis_hash, SimplicityLogLevel.NONE
+    witness2, network, SimplicityLogLevel.NONE
 )
 
 funding_tx.verify_tx_amt_proofs(funding_utxos)

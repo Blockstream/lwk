@@ -4,7 +4,6 @@ use lwk_simplicity::runner;
 use lwk_simplicity::scripts;
 use lwk_simplicity::signer;
 use lwk_simplicity::simplicityhl;
-use lwk_simplicity::utils::network_to_address_params;
 
 use crate::blockdata::tx_out::TxOut;
 use crate::types::{Hex, XOnlyPublicKey};
@@ -13,7 +12,7 @@ use crate::{Address, LwkError, Network, Transaction};
 use super::arguments::{SimplicityArguments, SimplicityWitnessValues};
 use super::log_level::SimplicityLogLevel;
 use super::run_result::SimplicityRunResult;
-use super::utils::{convert_utxos, derive_keypair, get_genesis_hash};
+use super::utils::{convert_utxos, derive_keypair};
 
 /// A compiled Simplicity program ready for use in transactions.
 ///
@@ -46,9 +45,10 @@ impl SimplicityProgram {
     ) -> Result<Arc<Address>, LwkError> {
         let x_only_key = internal_key.to_simplicityhl()?;
 
-        let params = network_to_address_params(network.into());
+        let inner_network: lwk_common::Network = network.into();
         let cmr = self.inner.commit().cmr();
-        let address = scripts::create_p2tr_address(cmr, &x_only_key, params);
+        let address =
+            scripts::create_p2tr_address(cmr, &x_only_key, inner_network.address_params());
 
         Ok(Arc::new(address.into()))
     }
@@ -71,12 +71,8 @@ impl SimplicityProgram {
         utxos: Vec<Arc<TxOut>>,
         input_index: u32,
         network: &Network,
-        genesis_hash: Hex,
     ) -> Result<Hex, LwkError> {
         let x_only_key = program_public_key.to_simplicityhl()?;
-
-        let genesis = get_genesis_hash(&genesis_hash)?;
-        let params = network_to_address_params(network.into());
         let utxos_inner = convert_utxos(&utxos);
 
         let message = signer::get_sighash_all(
@@ -85,8 +81,7 @@ impl SimplicityProgram {
             &x_only_key,
             &utxos_inner,
             input_index as usize,
-            params,
-            genesis,
+            network.into(),
         )?;
 
         Ok(Hex::from(message.as_ref().to_vec()))
@@ -102,13 +97,9 @@ impl SimplicityProgram {
         input_index: u32,
         witness_values: &SimplicityWitnessValues,
         network: &Network,
-        genesis_hash: Hex,
         log_level: SimplicityLogLevel,
     ) -> Result<Arc<Transaction>, LwkError> {
         let x_only_key = program_public_key.to_simplicityhl()?;
-
-        let genesis = get_genesis_hash(&genesis_hash)?;
-        let params = network_to_address_params(network.into());
         let utxos_inner = convert_utxos(&utxos);
 
         let finalized = signer::finalize_transaction(
@@ -118,8 +109,7 @@ impl SimplicityProgram {
             &utxos_inner,
             input_index as usize,
             witness_values.to_inner(),
-            params,
-            genesis,
+            network.into(),
             log_level.into(),
         )?;
 
@@ -136,13 +126,9 @@ impl SimplicityProgram {
         utxos: Vec<Arc<TxOut>>,
         input_index: u32,
         network: &Network,
-        genesis_hash: Hex,
     ) -> Result<Hex, LwkError> {
         let keypair = derive_keypair(signer, &derivation_path)?;
         let x_only_pubkey = keypair.x_only_public_key().0;
-
-        let genesis = get_genesis_hash(&genesis_hash)?;
-        let params = network_to_address_params(network.into());
         let utxos_inner = convert_utxos(&utxos);
 
         let sighash = signer::get_sighash_all(
@@ -151,8 +137,7 @@ impl SimplicityProgram {
             &x_only_pubkey,
             &utxos_inner,
             input_index as usize,
-            params,
-            genesis,
+            network.into(),
         )?;
 
         let signature = keypair.sign_schnorr(sighash);
@@ -170,13 +155,9 @@ impl SimplicityProgram {
         input_index: u32,
         witness_values: &SimplicityWitnessValues,
         network: &Network,
-        genesis_hash: Hex,
         log_level: SimplicityLogLevel,
     ) -> Result<Arc<SimplicityRunResult>, LwkError> {
         let x_only_key = program_public_key.to_simplicityhl()?;
-
-        let genesis = get_genesis_hash(&genesis_hash)?;
-        let params = network_to_address_params(network.into());
         let utxos_inner = convert_utxos(&utxos);
 
         let env = signer::get_and_verify_env(
@@ -184,8 +165,7 @@ impl SimplicityProgram {
             &self.inner,
             &x_only_key,
             &utxos_inner,
-            params,
-            genesis,
+            network.into(),
             input_index as usize,
         )?;
 

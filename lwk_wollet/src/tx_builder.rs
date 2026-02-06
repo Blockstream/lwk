@@ -468,6 +468,55 @@ impl TxBuilder {
         Ok(self)
     }
 
+    /// Calculate fee and update the change/fee outputs.
+    ///
+    /// Assumes the last two outputs are: change (second-to-last), fee (last).
+    /// Returns the calculated fee.
+    fn calculate_and_apply_fee(
+        ct_discount: bool,
+        fee_rate: f32,
+        pset: &mut PartiallySignedTransaction,
+        inp_txout_sec: &HashMap<usize, TxOutSecrets>,
+        inp_weight: usize,
+        satoshi_in: u64,
+        satoshi_out: u64,
+        policy_asset: AssetId,
+    ) -> Result<u64, Error> {
+        let weight = {
+            let mut rng = thread_rng();
+            let mut temp_pset = pset.clone();
+            temp_pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
+            let tx_weight = {
+                let tx = temp_pset.extract_tx()?;
+                if ct_discount {
+                    tx.discount_weight()
+                } else {
+                    tx.weight()
+                }
+            };
+            inp_weight + tx_weight
+        };
+
+        let fee = calculate_fee(weight, fee_rate);
+        if satoshi_in <= (satoshi_out + fee) {
+            return Err(Error::InsufficientFunds {
+                missing_sats: (satoshi_out + fee + 1) - satoshi_in,
+                asset_id: policy_asset,
+                is_token: false,
+            });
+        }
+        let satoshi_change = satoshi_in - satoshi_out - fee;
+
+        let n_outputs = pset.n_outputs();
+        let outputs = pset.outputs_mut();
+        let change_output = &mut outputs[n_outputs - 2];
+        change_output.amount = Some(satoshi_change);
+        let fee_output = &mut outputs[n_outputs - 1];
+        fee_output.amount = Some(fee);
+
+        Ok(fee)
+    }
+
     /// Set data to take LiquiDEX proposals
     pub fn liquidex_take(
         mut self,
@@ -811,36 +860,16 @@ impl TxBuilder {
             }
         }
 
-        let weight = {
-            let mut temp_pset = pset.clone();
-            temp_pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-            let tx_weight = {
-                let tx = temp_pset.extract_tx()?;
-                if self.ct_discount {
-                    tx.discount_weight()
-                } else {
-                    tx.weight()
-                }
-            };
-            inp_weight + tx_weight
-        };
-
-        let fee = calculate_fee(weight, self.fee_rate);
-        if satoshi_in <= (satoshi_out + fee) {
-            return Err(Error::InsufficientFunds {
-                missing_sats: (satoshi_out + fee + 1) - satoshi_in, // +1 to ensure we have more than just equal
-                asset_id: wollet.policy_asset(),
-                is_token: false,
-            });
-        }
-        let satoshi_change = satoshi_in - satoshi_out - fee;
-        // Replace change and fee outputs
-        let n_outputs = pset.n_outputs();
-        let outputs = pset.outputs_mut();
-        let change_output = &mut outputs[n_outputs - 2]; // index check: we always have the lbtc change and the fee output at least
-        change_output.amount = Some(satoshi_change);
-        let fee_output = &mut outputs[n_outputs - 1];
-        fee_output.amount = Some(fee);
+        Self::calculate_and_apply_fee(
+            self.ct_discount,
+            self.fee_rate,
+            &mut pset,
+            &inp_txout_sec,
+            inp_weight,
+            satoshi_in,
+            satoshi_out,
+            wollet.policy_asset(),
+        )?;
 
         // Blind the transaction
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
@@ -896,6 +925,8 @@ impl TxBuilder {
         let utxos = wollet.utxos_map()?;
 
         let policy_asset = self.network().policy_asset();
+        let ct_discount = self.ct_discount;
+        let fee_rate = self.fee_rate;
         let (addressees_lbtc, addressees_asset): (Vec<_>, Vec<_>) = self
             .recipients
             .into_iter()
@@ -1185,37 +1216,16 @@ impl TxBuilder {
             Output::new_explicit(Script::default(), temp_fee, wollet.policy_asset(), None);
         pset.add_output(fee_output);
 
-        let weight = {
-            let mut rng = thread_rng();
-            let mut temp_pset = pset.clone();
-            temp_pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-            let tx_weight = {
-                let tx = temp_pset.extract_tx()?;
-                if self.ct_discount {
-                    tx.discount_weight()
-                } else {
-                    tx.weight()
-                }
-            };
-            inp_weight + tx_weight
-        };
-
-        let fee = calculate_fee(weight, self.fee_rate);
-        if satoshi_in <= (satoshi_out + fee) {
-            return Err(Error::InsufficientFunds {
-                missing_sats: (satoshi_out + fee + 1) - satoshi_in, // +1 to ensure we have more than just equal
-                asset_id: wollet.policy_asset(),
-                is_token: false,
-            });
-        }
-        let satoshi_change = satoshi_in - satoshi_out - fee;
-        // Replace change and fee outputs
-        let n_outputs = pset.n_outputs();
-        let outputs = pset.outputs_mut();
-        let change_output = &mut outputs[n_outputs - 2]; // index check: we always have the lbtc change and the fee output at least
-        change_output.amount = Some(satoshi_change);
-        let fee_output = &mut outputs[n_outputs - 1];
-        fee_output.amount = Some(fee);
+        Self::calculate_and_apply_fee(
+            ct_discount,
+            fee_rate,
+            &mut pset,
+            &inp_txout_sec,
+            inp_weight,
+            satoshi_in,
+            satoshi_out,
+            wollet.policy_asset(),
+        )?;
 
         // TODO inputs/outputs(except fee) randomization, not trivial because of blinder_index on inputs
 

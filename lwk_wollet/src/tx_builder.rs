@@ -517,6 +517,88 @@ impl TxBuilder {
         Ok(fee)
     }
 
+    #[allow(clippy::too_many_arguments)]
+    fn add_asset_utxos_with_change(
+        add_input_rangeproofs: bool,
+        external_utxos: &[ExternalUtxo],
+        selected_wallet_utxos: Option<&[&crate::WalletTxOut]>,
+        wollet: &Wollet,
+        pset: &mut PartiallySignedTransaction,
+        inp_txout_sec: &mut HashMap<usize, TxOutSecrets>,
+        inp_weight: &mut usize,
+        wallet_utxos: &HashMap<OutPoint, crate::WalletTxOut>,
+        asset: AssetId,
+        satoshi_out: u64,
+        last_unused_internal: &mut u32,
+    ) -> Result<(u64, Vec<TxOutSecrets>), Error> {
+        let mut satoshi_in = 0;
+        let mut added_secrets = Vec::new();
+
+        // Add all external UTXOs for this asset
+        for utxo in external_utxos.iter().filter(|u| u.unblinded.asset == asset) {
+            add_external_input(
+                pset,
+                inp_txout_sec,
+                inp_weight,
+                utxo,
+                add_input_rangeproofs,
+            )?;
+            added_secrets.push(utxo.unblinded);
+            satoshi_in += utxo.unblinded.value;
+        }
+
+        // Add wallet UTXOs
+        if let Some(selected) = selected_wallet_utxos {
+            // Add all selected wallet UTXOs for this asset
+            for utxo in selected.iter().filter(|u| u.unblinded.asset == asset) {
+                wollet.add_input(
+                    pset,
+                    inp_txout_sec,
+                    inp_weight,
+                    utxo,
+                    add_input_rangeproofs,
+                )?;
+                added_secrets.push(utxo.unblinded);
+                satoshi_in += utxo.unblinded.value;
+            }
+        } else {
+            // Auto-select wallet UTXOs until we have enough
+            for utxo in wallet_utxos.values().filter(|u| u.unblinded.asset == asset) {
+                if satoshi_in >= satoshi_out {
+                    break;
+                }
+                wollet.add_input(
+                    pset,
+                    inp_txout_sec,
+                    inp_weight,
+                    utxo,
+                    add_input_rangeproofs,
+                )?;
+                added_secrets.push(utxo.unblinded);
+                satoshi_in += utxo.unblinded.value;
+            }
+        }
+
+        // Add change if needed
+        if satoshi_in > satoshi_out {
+            let satoshi_change = satoshi_in - satoshi_out;
+            let addressee =
+                wollet.addressee_change(satoshi_change, asset, last_unused_internal)?;
+            wollet.add_output(pset, &addressee)?;
+        }
+
+        // Check for insufficient funds
+        if satoshi_in < satoshi_out {
+            return Err(Error::InsufficientFunds {
+                missing_sats: satoshi_out - satoshi_in,
+                asset_id: asset,
+                is_token: false,
+            });
+        }
+
+        Ok((satoshi_in, added_secrets))
+    }
+
     /// Blind the PSET and return blinding nonces.
     fn blind_pset(
         pset: PartiallySignedTransaction,
@@ -835,41 +917,22 @@ impl TxBuilder {
         // Add inputs and change for maker output (if not L-BTC)
         // FIXME: If the wallet is taking a proposal made by the wallet itself, do not add the "maker" input again.
         if maker_output_asset != wollet.policy_asset() {
-            let satoshi_out = maker_output_satoshi;
-            let mut satoshi_in = 0;
-            for utxo in utxos
-                .values()
-                .filter(|u| u.unblinded.asset == maker_output_asset)
-            {
-                wollet.add_input(
-                    &mut pset,
-                    &mut inp_txout_sec,
-                    &mut inp_weight,
-                    utxo,
-                    self.add_input_rangeproofs,
-                )?;
-                let surj_input = elements::SurjectionInput::from_txout_secrets(utxo.unblinded);
+            let (_satoshi_in, added_secrets) = Self::add_asset_utxos_with_change(
+                self.add_input_rangeproofs,
+                &[],   // no external utxos
+                None,  // auto-select from wallet
+                wollet,
+                &mut pset,
+                &mut inp_txout_sec,
+                &mut inp_weight,
+                &utxos,
+                maker_output_asset,
+                maker_output_satoshi,
+                &mut last_unused_internal,
+            )?;
+            for secret in added_secrets {
+                let surj_input = elements::SurjectionInput::from_txout_secrets(secret);
                 input_domain.push(surj_input.surjection_target(&EC).expect("from secrets"));
-                satoshi_in += utxo.unblinded.value;
-                if satoshi_in >= satoshi_out {
-                    if satoshi_in > satoshi_out {
-                        let satoshi_change = satoshi_in - satoshi_out;
-                        let addressee = wollet.addressee_change(
-                            satoshi_change,
-                            maker_output_asset,
-                            &mut last_unused_internal,
-                        )?;
-                        wollet.add_output(&mut pset, &addressee)?;
-                    }
-                    break;
-                }
-            }
-            if satoshi_in < satoshi_out {
-                return Err(Error::InsufficientFunds {
-                    missing_sats: satoshi_out - satoshi_in,
-                    asset_id: maker_output_asset,
-                    is_token: false,
-                });
             }
         }
 
@@ -1039,79 +1102,32 @@ impl TxBuilder {
         // Policy asset is handled separately below
         assets.remove(&policy_asset);
 
+        let selected_wallet_utxos = if self.selected_utxos.is_some() {
+            Some(selected_utxos.as_slice())
+        } else {
+            None
+        };
+
         for asset in assets {
             let mut satoshi_out = 0;
-            let mut satoshi_in = 0;
             for addressee in addressees_asset.iter().filter(|a| a.asset == asset) {
                 wollet.add_output(&mut pset, addressee)?;
                 satoshi_out += addressee.satoshi;
             }
 
-            // Add all external asset utxos
-            for utxo in &self.external_utxos {
-                if utxo.unblinded.asset != asset {
-                    continue;
-                }
-                add_external_input(
-                    &mut pset,
-                    &mut inp_txout_sec,
-                    &mut inp_weight,
-                    utxo,
-                    self.add_input_rangeproofs,
-                )?;
-                satoshi_in += utxo.unblinded.value;
-            }
-
-            if self.selected_utxos.is_some() {
-                // Add only selected asset utxos
-                for utxo in &selected_utxos {
-                    if utxo.unblinded.asset != asset {
-                        continue;
-                    }
-                    wollet.add_input(
-                        &mut pset,
-                        &mut inp_txout_sec,
-                        &mut inp_weight,
-                        utxo,
-                        self.add_input_rangeproofs,
-                    )?;
-                    satoshi_in += utxo.unblinded.value;
-                }
-            } else {
-                // Add more asset utxos until we cover the amount to send
-                if satoshi_in < satoshi_out {
-                    for utxo in utxos.values().filter(|u| u.unblinded.asset == asset) {
-                        wollet.add_input(
-                            &mut pset,
-                            &mut inp_txout_sec,
-                            &mut inp_weight,
-                            utxo,
-                            self.add_input_rangeproofs,
-                        )?;
-                        satoshi_in += utxo.unblinded.value;
-                        if satoshi_in >= satoshi_out {
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // Add change
-            if satoshi_in > satoshi_out {
-                let satoshi_change = satoshi_in - satoshi_out;
-                let addressee =
-                    wollet.addressee_change(satoshi_change, asset, &mut last_unused_internal)?;
-                wollet.add_output(&mut pset, &addressee)?;
-            }
-
-            // Insufficient funds
-            if satoshi_in < satoshi_out {
-                return Err(Error::InsufficientFunds {
-                    missing_sats: satoshi_out - satoshi_in,
-                    asset_id: asset,
-                    is_token: false,
-                });
-            }
+            Self::add_asset_utxos_with_change(
+                self.add_input_rangeproofs,
+                &self.external_utxos,
+                selected_wallet_utxos,
+                wollet,
+                &mut pset,
+                &mut inp_txout_sec,
+                &mut inp_weight,
+                &utxos,
+                asset,
+                satoshi_out,
+                &mut last_unused_internal,
+            )?;
         }
 
         // L-BTC inputs and outputs

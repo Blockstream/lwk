@@ -3,7 +3,8 @@
 use crate::Error;
 
 use super::simplicity_type::SimplicityType;
-use super::utils::{hex_to_bytes, hex_to_bytes_32};
+
+use lwk_wollet::hashes::hex::FromHex;
 
 use lwk_simplicity::simplicityhl::num::U256;
 use lwk_simplicity::simplicityhl::value::ValueConstructible;
@@ -22,6 +23,22 @@ pub struct SimplicityTypedValue {
 
 #[wasm_bindgen]
 impl SimplicityTypedValue {
+    /// Create a `u8` value.
+    #[wasm_bindgen(js_name = fromU8)]
+    pub fn from_u8(value: u8) -> SimplicityTypedValue {
+        Self {
+            inner: Value::u8(value),
+        }
+    }
+
+    /// Create a `u16` value.
+    #[wasm_bindgen(js_name = fromU16)]
+    pub fn from_u16(value: u16) -> SimplicityTypedValue {
+        Self {
+            inner: Value::u16(value),
+        }
+    }
+
     /// Create a `u32` value.
     #[wasm_bindgen(js_name = fromU32)]
     pub fn from_u32(value: u32) -> SimplicityTypedValue {
@@ -38,12 +55,19 @@ impl SimplicityTypedValue {
         }
     }
 
+    /// Create a `u128` value from hex (32 hex characters = 16 bytes).
+    #[wasm_bindgen(js_name = fromU128Hex)]
+    pub fn from_u128_hex(hex: &str) -> Result<SimplicityTypedValue, Error> {
+        Ok(Self {
+            inner: Value::u128(u128::from_be_bytes(<[u8; 16]>::from_hex(hex)?)),
+        })
+    }
+
     /// Create a `u256` value from hex (64 hex characters = 32 bytes).
     #[wasm_bindgen(js_name = fromU256Hex)]
     pub fn from_u256_hex(hex: &str) -> Result<SimplicityTypedValue, Error> {
-        let arr = hex_to_bytes_32(hex)?;
         Ok(Self {
-            inner: Value::u256(U256::from_byte_array(arr)),
+            inner: Value::u256(U256::from_byte_array(<[u8; 32]>::from_hex(hex)?)),
         })
     }
 
@@ -94,7 +118,7 @@ impl SimplicityTypedValue {
     #[wasm_bindgen(js_name = fromByteArrayHex)]
     pub fn from_byte_array_hex(hex: &str) -> Result<SimplicityTypedValue, Error> {
         Ok(Self {
-            inner: Value::byte_array(hex_to_bytes(hex)?),
+            inner: Value::byte_array(Vec::<u8>::from_hex(hex)?),
         })
     }
 
@@ -115,16 +139,25 @@ impl SimplicityTypedValue {
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::*;
+
+    use crate::{SimplicityArguments, SimplicityProgram};
+
     use wasm_bindgen_test::*;
 
     wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
     fn test_simplicity_typed_value() {
+        let _ = SimplicityTypedValue::from_u8(42);
+        let _ = SimplicityTypedValue::from_u16(1000);
         let _ = SimplicityTypedValue::from_u32(42);
         let _ = SimplicityTypedValue::from_u64(1000000);
         let _ = SimplicityTypedValue::from_boolean(true);
         let _ = SimplicityTypedValue::from_boolean(false);
+
+        let u128_hex = "00000000000000000000000000000001";
+        let _ = SimplicityTypedValue::from_u128_hex(u128_hex).unwrap();
+        assert!(SimplicityTypedValue::from_u128_hex("0011").is_err());
 
         let hex = "0000000000000000000000000000000000000000000000000000000000000001";
         let _ = SimplicityTypedValue::from_u256_hex(hex).unwrap();

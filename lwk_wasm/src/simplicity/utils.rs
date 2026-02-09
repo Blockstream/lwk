@@ -20,12 +20,8 @@ pub fn bytes_to_hex(bytes: &[u8]) -> String {
     bytes.to_hex()
 }
 
-/// Parse hex string to bytes.
-pub(crate) fn hex_to_bytes(hex: &str) -> Result<Vec<u8>, Error> {
-    Ok(Vec::<u8>::from_hex(hex)?)
-}
-
 /// Parse hex string to a fixed 32-byte array.
+/// TODO: delete when proper type for the CMR is added
 pub(crate) fn hex_to_bytes_32(hex: &str) -> Result<[u8; 32], Error> {
     Ok(<[u8; 32]>::from_hex(hex)?)
 }

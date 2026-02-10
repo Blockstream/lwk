@@ -1,16 +1,16 @@
 use std::str::FromStr;
 
 use lwk_simplicity::scripts;
-use lwk_simplicity::simplicityhl;
 
 use lwk_wollet::bitcoin::bip32::DerivationPath;
 use lwk_wollet::elements;
 use lwk_wollet::elements::hex::ToHex;
-use lwk_wollet::hashes::hex::FromHex;
 
 use wasm_bindgen::prelude::*;
 
 use crate::{ControlBlock, Error, Keypair, Signer, TxOut, XOnlyPublicKey};
+
+use super::cmr::Cmr;
 
 /// Convert bytes to hex string.
 /// TODO: this is a function for convenience, it is going to be deleted after all interfaces are
@@ -18,12 +18,6 @@ use crate::{ControlBlock, Error, Keypair, Signer, TxOut, XOnlyPublicKey};
 #[wasm_bindgen(js_name = bytesToHex)]
 pub fn bytes_to_hex(bytes: &[u8]) -> String {
     bytes.to_hex()
-}
-
-/// Parse hex string to a fixed 32-byte array.
-/// TODO: delete when proper type for the CMR is added
-pub(crate) fn hex_to_bytes_32(hex: &str) -> Result<[u8; 32], Error> {
-    Ok(<[u8; 32]>::from_hex(hex)?)
 }
 
 /// Get the x-only public key for a given derivation path from a signer.
@@ -40,13 +34,11 @@ pub fn simplicity_derive_xonly_pubkey(
 /// Compute the Taproot control block for Simplicity script-path spending.
 #[wasm_bindgen(js_name = simplicityControlBlock)]
 pub fn simplicity_control_block(
-    cmr_hex: &str,
+    cmr: &Cmr,
     internal_key: &XOnlyPublicKey,
 ) -> Result<ControlBlock, Error> {
-    let cmr_bytes = hex_to_bytes_32(cmr_hex)?;
-    let cmr = simplicityhl::simplicity::Cmr::from_byte_array(cmr_bytes);
     let internal_key_inner = internal_key.to_simplicityhl()?;
-    let control_block = scripts::control_block(cmr, internal_key_inner);
+    let control_block = scripts::control_block(cmr.inner(), internal_key_inner);
     let serialized = control_block.serialize();
     ControlBlock::new(&serialized)
 }
@@ -69,17 +61,24 @@ pub(crate) fn derive_keypair(signer: &Signer, derivation_path: &str) -> Result<K
 mod tests {
     use super::*;
 
+    use crate::simplicity::{SimplicityArguments, SimplicityProgram, SimplicityTypedValue};
+
     use wasm_bindgen_test::*;
 
     wasm_bindgen_test_configure!(run_in_browser);
 
+    const TEST_PUBLIC_KEY: &str =
+        "8a65c55726dc32b59b649ad0187eb44490de681bb02601b8d3f58c8b9fff9083";
+    const P2PK_SOURCE: &str = include_str!("../../../lwk_simplicity/data/p2pk.simf");
+
     #[wasm_bindgen_test]
     fn test_control_block_roundtrip() {
-        let cmr_hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
+        let cmr =
+            Cmr::new("0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470").unwrap();
         let internal_key_hex = "0001460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
         let internal_key = XOnlyPublicKey::new(internal_key_hex).unwrap();
 
-        let cb = simplicity_control_block(cmr_hex, &internal_key).unwrap();
+        let cb = simplicity_control_block(&cmr, &internal_key).unwrap();
         let serialized = cb.serialize();
 
         let cb_roundtrip = ControlBlock::new(&serialized).unwrap();
@@ -89,5 +88,23 @@ mod tests {
         assert_eq!(cb_roundtrip.serialize(), serialized);
         assert_eq!(cb.leaf_version(), cb_roundtrip.leaf_version());
         assert_eq!(cb.output_key_parity(), cb_roundtrip.output_key_parity());
+    }
+
+    #[wasm_bindgen_test]
+    fn test_control_block_matches_program_control_block() {
+        let args = SimplicityArguments::new().add_value(
+            "PUBLIC_KEY",
+            &SimplicityTypedValue::from_u256_hex(TEST_PUBLIC_KEY).unwrap(),
+        );
+        let program = SimplicityProgram::new(P2PK_SOURCE, &args).unwrap();
+        let cmr = program.cmr();
+
+        let internal_key = XOnlyPublicKey::new(TEST_PUBLIC_KEY).unwrap();
+        let control_block = simplicity_control_block(&cmr, &internal_key)
+            .unwrap()
+            .serialize();
+        let control_block_from_program = program.control_block(&internal_key).unwrap().serialize();
+
+        assert_eq!(control_block_from_program, control_block);
     }
 }

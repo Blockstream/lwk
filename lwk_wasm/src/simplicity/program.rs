@@ -3,6 +3,7 @@
 use crate::{Address, ControlBlock, Error, Network, Signer, Transaction, TxOut, XOnlyPublicKey};
 
 use super::arguments::{SimplicityArguments, SimplicityWitnessValues};
+use super::cmr::Cmr;
 use super::log_level::SimplicityLogLevel;
 use super::run_result::SimplicityRunResult;
 use super::utils::{convert_utxos, derive_keypair};
@@ -34,8 +35,8 @@ impl SimplicityProgram {
     }
 
     /// Get the Commitment Merkle Root of the program.
-    pub fn cmr(&self) -> Vec<u8> {
-        self.inner.commit().cmr().as_ref().to_vec()
+    pub fn cmr(&self) -> Cmr {
+        self.inner.commit().cmr().into()
     }
 
     /// Create a P2TR address for this Simplicity program.

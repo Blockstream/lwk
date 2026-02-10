@@ -285,6 +285,61 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_reverse_pay_invoice_twice() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = utils::start_block_mining();
+        let network = ElementsNetwork::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client))
+            .create_swap_timeout(TIMEOUT)
+            .build()
+            .await
+            .unwrap();
+        let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let claim_address = elements::Address::from_str(&claim_address).unwrap();
+
+        let invoice_response = session
+            .invoice(100000, None, &claim_address, None)
+            .await
+            .unwrap();
+        let invoice = invoice_response.bolt11_invoice().to_string();
+
+        // First payment should settle the invoice.
+        utils::start_pay_invoice_lnd(invoice.clone());
+        // Second payment attempt should be rejected by LND, but it must not break swap completion.
+        utils::start_pay_invoice_lnd(invoice);
+
+        let claim_fee = invoice_response
+            .claim_fee()
+            .expect("claim_fee should be set");
+        let expected_receive =
+            invoice_response.onchain_amount() - claim_fee - lwk_boltz::LIQUID_UNCOOPERATIVE_EXTRA;
+
+        invoice_response.complete_pay().await.unwrap();
+
+        let actual_balance = utils::get_address_balance(
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+            &claim_address.to_string(),
+        )
+        .await
+        .expect("Failed to get address balance");
+        assert_eq!(
+            actual_balance, expected_receive,
+            "Swap payout must happen only once even after a second invoice payment attempt"
+        );
+
+        // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_restore_reverse() {
         let _ = env_logger::try_init();
 

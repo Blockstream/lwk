@@ -41,7 +41,7 @@ async function runSimplicityP2pkTest() {
     args = args.addValue("PUBLIC_KEY", lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY));
 
     const program = new lwk.SimplicityProgram(P2PK_SOURCE, args);
-    const cmr = lwk.bytesToHex(program.cmr());
+    const cmr = program.cmr().toHex();
     assertEqual(cmr, TEST_CMR, "CMR mismatch");
 
     // Test creating P2TR address for p2pk program
@@ -92,7 +92,7 @@ async function runSimplicityP2pkTest() {
     let args3 = new lwk.SimplicityArguments();
     args3 = args3.addValue("PUBLIC_KEY", lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY));
     const program2 = new lwk.SimplicityProgram(P2PK_SOURCE, args3);
-    assertEqual(lwk.bytesToHex(program2.cmr()), TEST_CMR, "Program2 CMR mismatch");
+    assertEqual(program2.cmr().toHex(), TEST_CMR, "Program2 CMR mismatch");
   } catch (error) {
     console.error("simplicity_p2pk test failed:", error);
     throw error;

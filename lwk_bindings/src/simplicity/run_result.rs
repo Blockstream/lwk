@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use lwk_simplicity::simplicityhl;
-
 use crate::types::Hex;
+use crate::Cmr;
+use lwk_simplicity::simplicityhl;
 
 /// The result of running a Simplicity program.
 #[derive(uniffi::Object)]
@@ -27,9 +27,8 @@ impl SimplicityRunResult {
     }
 
     /// Get the CMR (Commitment Merkle Root) of the pruned program.
-    pub fn cmr(&self) -> Hex {
-        let cmr = self.pruned.cmr();
-        Hex::from(cmr.as_ref().to_vec())
+    pub fn cmr(&self) -> Arc<Cmr> {
+        Arc::new(self.pruned.cmr().into())
     }
 
     /// Get the resulting value as a string representation.

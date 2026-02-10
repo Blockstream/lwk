@@ -121,7 +121,7 @@ assert control_block_hex == program_control_block_hex, \
 manual_script_witness = [
     str(simplicity_witness_bytes),
     str(simplicity_program_bytes),
-    str(cmr),
+    cmr.to_hex(),
     control_block_hex,
 ]
 

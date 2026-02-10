@@ -115,9 +115,9 @@ pub use xpub::Xpub;
 
 #[cfg(feature = "simplicity")]
 pub use simplicity::{
-    bytes_to_hex, simplicity_control_block, simplicity_derive_xonly_pubkey, SimplicityArguments,
-    SimplicityLogLevel, SimplicityProgram, SimplicityRunResult, SimplicityType,
-    SimplicityTypedValue, SimplicityWitnessValues,
+    bytes_to_hex, simplicity_control_block, simplicity_derive_xonly_pubkey, Cmr,
+    SimplicityArguments, SimplicityLogLevel, SimplicityProgram, SimplicityRunResult,
+    SimplicityType, SimplicityTypedValue, SimplicityWitnessValues,
 };
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]

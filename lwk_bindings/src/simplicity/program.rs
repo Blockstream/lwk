@@ -10,6 +10,7 @@ use crate::types::{Hex, XOnlyPublicKey};
 use crate::{Address, LwkError, Network, Transaction};
 
 use super::arguments::{SimplicityArguments, SimplicityWitnessValues};
+use super::cmr::Cmr;
 use super::log_level::SimplicityLogLevel;
 use super::run_result::SimplicityRunResult;
 use super::utils::{convert_utxos, derive_keypair};
@@ -31,10 +32,9 @@ impl SimplicityProgram {
         Ok(Arc::new(SimplicityProgram { inner: compiled }))
     }
 
-    /// Get the Commitment Merkle Root (CMR) of the program as hex.
-    pub fn cmr(&self) -> Hex {
-        let cmr = self.inner.commit().cmr();
-        Hex::from(cmr.as_ref().to_vec())
+    /// Get the Commitment Merkle Root (CMR) of the program.
+    pub fn cmr(&self) -> Arc<Cmr> {
+        Arc::new(self.inner.commit().cmr().into())
     }
 
     /// Create a P2TR (Pay-to-Taproot) address for this Simplicity program.

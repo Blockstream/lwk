@@ -48,7 +48,7 @@ pub use lightning::{BoltzSession, LogLevel, Logging, LoggingLink};
 mod simplicity;
 #[cfg(feature = "simplicity")]
 pub use simplicity::{
-    simplicity_control_block, simplicity_derive_xonly_pubkey, SimplicityArguments,
+    simplicity_control_block, simplicity_derive_xonly_pubkey, Cmr, SimplicityArguments,
     SimplicityLogLevel, SimplicityProgram, SimplicityRunResult, SimplicityType,
     SimplicityTypedValue, SimplicityWitnessValues,
 };

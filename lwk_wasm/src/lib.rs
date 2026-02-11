@@ -67,6 +67,7 @@ pub use blockdata::block_header::BlockHeader;
 pub use blockdata::contract_hash::ContractHash;
 pub use blockdata::external_utxo::ExternalUtxo;
 pub use blockdata::lock_time::LockTime;
+pub use blockdata::midstate::Midstate;
 pub use blockdata::out_point::OutPoint;
 pub use blockdata::script::Script;
 pub use blockdata::transaction::{Transaction, Txid};

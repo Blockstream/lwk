@@ -5,6 +5,7 @@ pub mod block_header;
 pub mod contract_hash;
 pub mod external_utxo;
 pub mod lock_time;
+pub mod midstate;
 pub mod out_point;
 pub mod script;
 pub mod transaction;

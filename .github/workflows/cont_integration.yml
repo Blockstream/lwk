@@ -10,7 +10,7 @@ env:
   RUSTFLAGS: "--cfg=web_sys_unstable_apis"
 
 jobs:
-  build:
+  build-test:
     strategy:
       matrix:
         os: ["macos-14", "ubuntu-22.04", "windows-2022"]
@@ -23,6 +23,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-22.04' }}
       - run: cargo build
       - run: cargo build --features serial
+      - run: cargo test --lib  # integration tests requires binaries for the test env...
 
   nix:
     runs-on: ubuntu-22.04

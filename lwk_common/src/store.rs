@@ -235,6 +235,17 @@ impl FileStore {
 
         Ok(root.join(name))
     }
+
+    #[cfg(not(target_os = "windows"))]
+    fn sync_dir(path: &Path) -> Result<(), std::io::Error> {
+        fs::File::open(path)?.sync_all()
+    }
+
+    #[cfg(target_os = "windows")]
+    fn sync_dir(_path: &Path) -> Result<(), std::io::Error> {
+        // `std` cannot open directory handles with sync support on Windows.
+        Ok(())
+    }
 }
 impl Store for FileStore {
     type Error = std::io::Error;
@@ -274,6 +285,9 @@ impl Store for FileStore {
             }
             Err(e) => return Err(e.error),
         }
+
+        // Ensure the directory entry is durable after rename/persist.
+        Self::sync_dir(root.as_path())?;
 
         Ok(())
     }

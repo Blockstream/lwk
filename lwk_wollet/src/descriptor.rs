@@ -890,6 +890,13 @@ mod test {
     }
 
     #[test]
+    fn test_encryption_key_hash_empty_input_regression() {
+        let got = <super::EncryptionKeyHash as crate::hashes::Hash>::hash(b"").to_string();
+        let exp = "1fa0594ee956effe074a3e3c515c5b997a460d90ccfcc49404bd9005d437abd2";
+        assert_eq!(got, exp);
+    }
+
+    #[test]
     fn test_dwid() {
         let desc_str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
         let desc: WolletDescriptor = desc_str.parse().unwrap();

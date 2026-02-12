@@ -4,7 +4,7 @@ on:
       - master
   pull_request: {}
 
-name: CI
+name: Continuous Integration
 
 env:
   RUSTFLAGS: "--cfg=web_sys_unstable_apis"

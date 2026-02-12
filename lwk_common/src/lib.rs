@@ -412,6 +412,10 @@ mod test {
 
     use crate::pset_balance;
 
+    fn normalize_newlines(s: &str) -> String {
+        s.replace("\r\n", "\n")
+    }
+
     fn setup_pset_details() -> (AssetId, ConfidentialDescriptor<DescriptorPublicKey>) {
         let asset_id_str = "38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5";
         let asset_id: AssetId = asset_id_str.parse().unwrap();
@@ -495,6 +499,6 @@ mod test {
         let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
         let debug = crate::pset_debug(&pset);
         let expected = include_str!("../test_data/pset_debug.txt");
-        assert_eq!(debug, expected);
+        assert_eq!(normalize_newlines(&debug), normalize_newlines(expected));
     }
 }

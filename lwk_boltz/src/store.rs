@@ -388,4 +388,11 @@ mod tests {
             "Different mnemonics should produce different encrypted keys"
         );
     }
+
+    #[test]
+    fn test_boltz_encryption_key_hash_empty_input_regression() {
+        let got = BoltzEncryptionKeyHash::hash(b"").to_string();
+        let exp = "107900f3750784c733ae53cd00433ec0c10c36517a2a68a904b749d7f98d06e0";
+        assert_eq!(got, exp);
+    }
 }

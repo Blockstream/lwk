@@ -37,6 +37,8 @@ impl std::fmt::Display for EncryptError {
     }
 }
 
+impl std::error::Error for EncryptError {}
+
 /// Create a cipher from 32 key bytes.
 #[allow(deprecated)]
 pub fn cipher_from_key_bytes(key_bytes: [u8; 32]) -> Aes256GcmSiv {
@@ -163,5 +165,12 @@ mod tests {
         let mut cipher = test_cipher();
         let decrypted2 = decrypt_with_nonce_prefix(&mut cipher, &encrypted2).unwrap();
         assert_eq!(&plaintext[..], &decrypted2[..]);
+    }
+
+    #[test]
+    fn deterministic_nonce_hash_empty_input_regression() {
+        let got = DeterministicNonceHash::hash(b"").to_string();
+        let exp = "953d329ceafdac1fa531eefd38f397af65097c560d844c3451bcf376cb511ff7";
+        assert_eq!(got, exp);
     }
 }

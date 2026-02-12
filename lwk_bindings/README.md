@@ -143,3 +143,7 @@ C++ bindings are generated in CI artifacts:
 
 * LWK library in `bindings_<platfrom>` (for ex. `bindings-x86_64-unknown-linux-gnu`)
 * Source and header files `bindings_interface_cpp`
+
+## Guidelines
+
+If you're changing the interface, adding a new objct, method or function, follow our [guidelines](GUIDE.md).

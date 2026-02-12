@@ -256,7 +256,25 @@ impl Store for FileStore {
         let mut tmp = NamedTempFile::new_in(&*root)?;
         tmp.write_all(value.as_ref())?;
         tmp.as_file().sync_all()?;
-        tmp.persist(&path).map_err(|e| e.error)?;
+
+        match tmp.persist(&path) {
+            Ok(_) => {}
+            Err(e) if e.error.kind() == std::io::ErrorKind::AlreadyExists => {
+                // Some platforms do not allow replacing an existing file via rename.
+                // Remove the destination and retry with the same temp file.
+                match fs::remove_file(&path) {
+                    Ok(()) => {}
+                    Err(remove_err) if remove_err.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(remove_err) => return Err(remove_err),
+                }
+
+                e.file
+                    .persist(&path)
+                    .map_err(|persist_err| persist_err.error)?;
+            }
+            Err(e) => return Err(e.error),
+        }
+
         Ok(())
     }
 

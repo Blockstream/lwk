@@ -1233,6 +1233,13 @@ mod tests {
     }
 
     #[test]
+    fn test_directory_id_hash_empty_input_regression() {
+        let got = <crate::persister::DirectoryIdHash as crate::hashes::Hash>::hash(b"").to_string();
+        let exp = "318c87cf9bafe6a65c82e0124e3c2ab31e656d4f64ee8459017b1f9dd91ba818";
+        assert_eq!(got, exp);
+    }
+
+    #[test]
     fn test_blinding_private() {
         // Get a confidential address from a "view" descriptor
         let seed = [0u8; 16];

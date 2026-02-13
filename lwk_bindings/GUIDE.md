@@ -16,6 +16,13 @@ Python is a common choice for tests due to its simplicity and popularity.
 Tests in destination languages also serve as examples, try to make them useful for devs using that language.
 When a function is not self-explanatory or a flow is complex, add comments; name variables to document function parameters.
 
+## Constructors
+Do not use the default constructor `new()` if there are multiple ways in which an object can be created.
+This avoids ambiguity. Use constructors names that explicity mention the format of what should be passed in.
+
+For instance, builders can use `new()` to initialize the builder as empty/default.
+However objects that can appear both in bytes and string, must not use `new()`.
+
 ## (De)serialization
 When using `#[derive(uniffi::Object)]` on a rust struct follow these conventions:
 

@@ -286,3 +286,39 @@ impl Wollet {
             .collect())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lwk_wollet::bitcoin::hashes::Hash;
+
+    #[test]
+    fn test_new_with_datadir_loads_encrypted_update_backward_compat() {
+        let desc_string = lwk_test_util::wollet_descriptor_string2();
+        let desc = WolletDescriptor::new(&desc_string).unwrap();
+        let enc_bytes = lwk_test_util::update_test_vector_encrypted_bytes2();
+
+        let network = Network::testnet();
+        let datadir = tempfile::tempdir().unwrap();
+
+        let mut update_path = datadir.path().to_path_buf();
+        update_path.push(network.inner.as_str());
+        update_path.push("enc_cache");
+        update_path
+            .push(<lwk_wollet::DirectoryIdHash as Hash>::hash(desc_string.as_bytes()).to_string());
+        std::fs::create_dir_all(&update_path).unwrap();
+        update_path.push("000000000000");
+        std::fs::write(update_path, &enc_bytes).unwrap();
+
+        let wollet = Wollet::new(
+            network.as_ref(),
+            desc.as_ref(),
+            Some(datadir.path().to_str().unwrap().to_string()),
+        )
+        .unwrap();
+
+        let inner = wollet.inner_wollet().unwrap();
+        assert_eq!(inner.updates().unwrap().len(), 1);
+        assert_eq!(inner.tip().height(), 1360180);
+    }
+}

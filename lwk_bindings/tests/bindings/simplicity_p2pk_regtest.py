@@ -114,9 +114,9 @@ assert manual_witness.script_witness() == finalized_script_witness, \
     f"Manual witness should match finalized witness:\n  manual={manual_witness.script_witness()}\n  finalized={finalized_script_witness}"
 
 # Test TransactionEditor.set_input_witness produces same result
-tx_builder = TransactionEditor.from_transaction(unsigned_tx)
-tx_builder.set_input_witness(0, manual_witness)
-tx_with_manual_witness = tx_builder.build()
+tx_editor = TransactionEditor.from_transaction(unsigned_tx)
+tx_editor.set_input_witness(0, manual_witness)
+tx_with_manual_witness = tx_editor.build()
 assert tx_with_manual_witness.inputs()[0].witness().script_witness() == finalized_script_witness, \
     "TransactionEditor.set_input_witness should produce matching witness"
 

@@ -1,11 +1,10 @@
-use lwk_wollet::NoPersist;
-
 use crate::desc::WolletDescriptor;
 use crate::network::Network;
+use crate::store::ForeignStoreLink;
 use crate::types::{AssetId, SecretKey};
 use crate::{
-    AddressResult, ExternalUtxo, ForeignPersisterLink, LwkError, Pset, PsetDetails, Transaction,
-    Txid, Update, WalletTx, WalletTxOut,
+    AddressResult, ExternalUtxo, LwkError, Pset, PsetDetails, Transaction, Txid, Update, WalletTx,
+    WalletTxOut,
 };
 use std::sync::{MutexGuard, PoisonError};
 use std::{
@@ -29,14 +28,14 @@ impl Wollet {
 
 #[uniffi::export]
 impl Wollet {
-    /// Construct a Watch-Only wallet object with a caller provided persister
+    /// Construct a Watch-Only wallet object with a caller provided store
     #[uniffi::constructor]
-    pub fn with_custom_persister(
+    pub fn with_custom_store(
         network: &Network,
         descriptor: &WolletDescriptor,
-        persister: Arc<ForeignPersisterLink>,
+        store: Arc<ForeignStoreLink>,
     ) -> Result<Arc<Self>, LwkError> {
-        let inner = lwk_wollet::Wollet::new(network.into(), persister, descriptor.into())?;
+        let inner = lwk_wollet::Wollet::new(network.into(), store, descriptor.into())?;
 
         Ok(Arc::new(Self {
             inner: Mutex::new(inner),
@@ -54,7 +53,7 @@ impl Wollet {
             Some(path) => {
                 lwk_wollet::Wollet::with_fs_persist(network.into(), descriptor.into(), path)?
             }
-            None => lwk_wollet::Wollet::new(network.into(), NoPersist::new(), descriptor.into())?,
+            None => lwk_wollet::Wollet::without_persist(network.into(), descriptor.into())?,
         };
 
         Ok(Arc::new(Self {

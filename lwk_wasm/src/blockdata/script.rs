@@ -1,6 +1,6 @@
 use crate::Error;
 use lwk_wollet::elements::{self, hex::ToHex, pset::serialize::Deserialize};
-use lwk_wollet::hashes::hex::FromHex;
+use lwk_wollet::hashes::{hex::FromHex, sha256, Hash};
 use wasm_bindgen::prelude::*;
 
 /// An Elements (Liquid) script
@@ -55,6 +55,15 @@ impl Script {
     /// Return the consensus encoded bytes of the script.
     pub fn bytes(&self) -> Vec<u8> {
         self.inner.as_bytes().to_vec()
+    }
+
+    /// Returns SHA256 of the script's consensus bytes.
+    ///
+    /// Returns an equivalent value to the `jet::input_script_hash(index)`/`jet::output_script_hash(index)`.
+    pub fn jet_sha256_hex(&self) -> String {
+        sha256::Hash::hash(self.inner.as_bytes())
+            .to_byte_array()
+            .to_hex()
     }
 
     /// Return the string of the script showing op codes and their arguments.
@@ -131,5 +140,14 @@ mod tests {
         assert!(Script::new_op_return(b"burn")
             .asm()
             .starts_with("OP_RETURN"));
+    }
+
+    #[wasm_bindgen_test]
+    fn test_jet_sha256_hex() {
+        let script_str = "51200e3a715a8791642277e1fcb823d974dfb4d8c774ad86deea13a0ba3b2d5ca4d2";
+        let expected_hash = "0ea9adeb75ca64bbda18269a25cb94ef71d76627b77243e506e55e9e2962134d";
+
+        let script = Script::new(script_str).unwrap();
+        assert_eq!(script.jet_sha256_hex(), expected_hash);
     }
 }

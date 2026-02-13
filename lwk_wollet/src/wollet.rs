@@ -31,8 +31,7 @@ use std::cmp;
 use std::collections::{hash_map::Entry, BTreeMap, HashMap, HashSet};
 use std::hash::Hasher;
 use std::path::Path;
-use std::sync::atomic::AtomicUsize;
-use std::sync::{atomic, Arc};
+use std::sync::{atomic, Arc, Mutex};
 
 sha256t_hash_newtype! {
     /// The tag of the hash
@@ -57,7 +56,7 @@ pub struct Wollet {
     pub(crate) store: Arc<dyn DynStore>,
     pub(crate) descriptor: WolletDescriptor,
     /// Counter for the next update key
-    pub(crate) next_update_index: AtomicUsize,
+    pub(crate) next_update_index: Mutex<usize>,
     /// cached value
     max_weight_to_satisfy: usize,
 }
@@ -97,7 +96,7 @@ impl WolletBuilder {
             network: self.network,
             descriptor: self.descriptor,
             store: self.store,
-            next_update_index: AtomicUsize::new(0),
+            next_update_index: Mutex::new(0),
             max_weight_to_satisfy,
         };
 
@@ -111,7 +110,11 @@ impl WolletBuilder {
                 }
                 Ok(None) => {
                     // Update the next index and stop
-                    wollet.next_update_index.store(i, atomic::Ordering::Relaxed);
+                    let mut next_update_index = wollet
+                        .next_update_index
+                        .lock()
+                        .map_err(|_| Error::Generic("next_update_index lock poisoned".into()))?;
+                    *next_update_index = i;
                     break;
                 }
                 Err(e) => return Err(Error::Generic(format!("store error: {e}"))),

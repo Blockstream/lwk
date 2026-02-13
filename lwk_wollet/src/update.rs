@@ -360,11 +360,14 @@ impl Wollet {
 
     /// Persist an update to the store using an indexed key
     fn persist_update(&self, mut update: Update) -> Result<(), Error> {
-        let next_index = self.next_update_index.load(atomic::Ordering::Relaxed);
+        let mut next_index = self
+            .next_update_index
+            .lock()
+            .map_err(|_| Error::Generic("next_update_index lock poisoned".into()))?;
 
         // Check if we can coalesce with the previous update (both are "only tip" updates)
-        if update.only_tip() && next_index > 0 {
-            let prev_key = update_key(next_index - 1);
+        if update.only_tip() && *next_index > 0 {
+            let prev_key = update_key(*next_index - 1);
             if let Ok(Some(prev_bytes)) = self.store.get(&prev_key) {
                 if let Ok(prev_update) = Update::deserialize(&prev_bytes) {
                     if prev_update.only_tip() {
@@ -385,13 +388,12 @@ impl Wollet {
         }
 
         // Store as a new update
-        let key = update_key(next_index);
+        let key = update_key(*next_index);
         let bytes = update.serialize()?;
         self.store
             .put(&key, &bytes)
             .map_err(|e| Error::Generic(format!("store error: {e}")))?;
-        self.next_update_index
-            .fetch_add(1, atomic::Ordering::Relaxed);
+        *next_index += 1;
 
         Ok(())
     }

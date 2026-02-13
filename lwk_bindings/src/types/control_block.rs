@@ -17,6 +17,15 @@ impl From<elements::bitcoin::taproot::ControlBlock> for ControlBlock {
     }
 }
 
+impl TryFrom<elements::taproot::ControlBlock> for ControlBlock {
+    type Error = elements::bitcoin::taproot::TaprootError;
+
+    fn try_from(value: elements::taproot::ControlBlock) -> Result<Self, Self::Error> {
+        let inner = elements::bitcoin::taproot::ControlBlock::decode(value.serialize().as_ref())?;
+        Ok(Self { inner })
+    }
+}
+
 impl AsRef<elements::bitcoin::taproot::ControlBlock> for ControlBlock {
     fn as_ref(&self) -> &elements::bitcoin::taproot::ControlBlock {
         &self.inner

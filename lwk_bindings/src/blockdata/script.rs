@@ -1,6 +1,10 @@
 //! Liquid script
 
-use elements::{hex::ToHex, pset::serialize::Deserialize};
+use elements::{
+    hashes::{sha256, Hash},
+    hex::ToHex,
+    pset::serialize::Deserialize,
+};
 
 use crate::{types::Hex, LwkError};
 use std::{fmt::Display, sync::Arc};
@@ -67,6 +71,17 @@ impl Script {
         self.inner.as_bytes().to_vec()
     }
 
+    /// Returns SHA256 of the script's consensus bytes.
+    ///
+    /// Returns an equivalent value to the `jet::input_script_hash(index)`/`jet::output_script_hash(index)`.
+    pub fn jet_sha256_hex(&self) -> Hex {
+        Hex::from(
+            sha256::Hash::hash(self.inner.as_bytes())
+                .to_byte_array()
+                .to_vec(),
+        )
+    }
+
     // "asm" is a reserved keyword in some target languages, do not use it
     /// Return the string representation of the script showing op codes and their arguments.
     /// For example: "OP_0 OP_PUSHBYTES_32 d2e99f0c38089c08e5e1080ff6658c6075afaa7699d384333d956c470881afde"
@@ -131,5 +146,14 @@ mod tests {
         // OP_RETURN + OP_PUSHBYTES_4 + "burn"
         assert!(script.is_provably_unspendable());
         assert!(script.to_asm().starts_with("OP_RETURN"));
+    }
+
+    #[test]
+    fn test_jet_sha256_hex() {
+        let script_str = "51200e3a715a8791642277e1fcb823d974dfb4d8c774ad86deea13a0ba3b2d5ca4d2";
+        let expected_hash = "0ea9adeb75ca64bbda18269a25cb94ef71d76627b77243e506e55e9e2962134d";
+
+        let script = Script::new(&script_str.parse().unwrap()).unwrap();
+        assert_eq!(script.jet_sha256_hex().to_string(), expected_hash);
     }
 }

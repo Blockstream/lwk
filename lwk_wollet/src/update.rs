@@ -3,7 +3,7 @@ use crate::clients::try_unblind;
 use crate::descriptor::Chain;
 use crate::elements::{OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
-use crate::wollet::WolletState;
+use crate::wollet::{update_key, WolletState};
 use crate::EC;
 use crate::{BlindingPublicKey, Wollet, WolletDescriptor};
 use base64::prelude::*;
@@ -352,8 +352,48 @@ impl Wollet {
         }
 
         if do_persist {
-            self.persister.push(update)?;
+            self.persist_update(update)?;
         }
+
+        Ok(())
+    }
+
+    /// Persist an update to the store using an indexed key
+    fn persist_update(&self, mut update: Update) -> Result<(), Error> {
+        let mut next_index = self
+            .next_update_index
+            .lock()
+            .map_err(|_| Error::Generic("next_update_index lock poisoned".into()))?;
+
+        // Check if we can coalesce with the previous update (both are "only tip" updates)
+        if update.only_tip() && *next_index > 0 {
+            let prev_key = update_key(*next_index - 1);
+            if let Ok(Some(prev_bytes)) = self.store.get(&prev_key) {
+                if let Ok(prev_update) = Update::deserialize(&prev_bytes) {
+                    if prev_update.only_tip() {
+                        // Coalesce: overwrite the previous update
+                        // Keep the previous wollet status so reapplying works correctly
+                        update.wollet_status = prev_update.wollet_status;
+                        // Merge timestamps
+                        update.timestamps = [prev_update.timestamps, update.timestamps].concat();
+
+                        let bytes = update.serialize()?;
+                        self.store
+                            .put(&prev_key, &bytes)
+                            .map_err(|e| Error::Generic(format!("store error: {e}")))?;
+                        return Ok(());
+                    }
+                }
+            }
+        }
+
+        // Store as a new update
+        let key = update_key(*next_index);
+        let bytes = update.serialize()?;
+        self.store
+            .put(&key, &bytes)
+            .map_err(|e| Error::Generic(format!("store error: {e}")))?;
+        *next_index += 1;
 
         Ok(())
     }

@@ -20,16 +20,15 @@
 //!
 //! ### Generate an address
 //! ```rust
-//! # use lwk_wollet::{WolletDescriptor, Wollet, ElementsNetwork, NoPersist};
+//! # use lwk_wollet::{WolletDescriptor, Wollet, ElementsNetwork};
 //! # fn main() -> Result<(), lwk_wollet::Error> {
 //! let desc = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
 //!
 //! // Parse the descriptor and create the watch only wallet
 //! let descriptor: WolletDescriptor = desc.parse()?;
-//! let mut wollet = Wollet::new(
-//!     ElementsNetwork::LiquidTestnet,
-//!     NoPersist::new(), // Do not persist data
-//!     descriptor,
+//! let mut wollet = Wollet::without_persist(
+//!    ElementsNetwork::LiquidTestnet,
+//!    descriptor,
 //! )?;
 //!
 //! // Generate the address
@@ -103,7 +102,6 @@ mod liquidex;
 mod model;
 mod network;
 pub mod pegin;
-mod persister;
 
 #[cfg(feature = "prices")]
 mod pos;
@@ -131,12 +129,18 @@ pub use crate::model::{
 };
 pub use crate::network::ElementsNetwork;
 pub use crate::pegin::fed_peg_script;
-pub use crate::persister::{FsPersister, NoPersist, PersistError, Persister};
 pub use crate::registry::{asset_ids, issuance_ids, Contract, Entity, RegistryAssetData};
+pub use crate::wollet::DirectoryIdHash;
+
+// Re-export store types from lwk_common
 pub use crate::tx_builder::{TxBuilder, WolletTxBuilder};
 pub use crate::update::{DownloadTxResult, Update};
 pub use crate::util::EC;
 pub use crate::wollet::{Tip, Wollet, WolletBuilder};
+pub use lwk_common::{
+    BoxError, DynStore, EncryptedStore, EncryptedStoreError, FakeStore, FileStore, MemoryStore,
+    Store,
+};
 
 #[cfg(feature = "prices")]
 pub use crate::prices::{

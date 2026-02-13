@@ -1120,7 +1120,7 @@ mod tests {
     use crate::{
         asyncr::{esplora::fetch_oauth_token, EsploraClientBuilder},
         clients::{asyncr::async_sleep, TokenProvider},
-        ElementsNetwork, NoPersist, Wollet, WolletDescriptor,
+        ElementsNetwork, Wollet, WolletDescriptor,
     };
 
     use super::EsploraClient;
@@ -1311,8 +1311,7 @@ mod tests {
             let descriptor: WolletDescriptor = descriptor_str.parse().unwrap();
 
             // Create wallet
-            let mut wollet =
-                Wollet::new(ElementsNetwork::Liquid, NoPersist::new(), descriptor).unwrap();
+            let mut wollet = Wollet::without_persist(ElementsNetwork::Liquid, descriptor).unwrap();
 
             // Perform full scan
             let update = client.full_scan(&wollet).await.unwrap();

@@ -1,11 +1,10 @@
-use lwk_wollet::NoPersist;
-
 use crate::desc::WolletDescriptor;
 use crate::network::Network;
+use crate::store::ForeignStoreLink;
 use crate::types::{AssetId, SecretKey};
 use crate::{
-    AddressResult, ExternalUtxo, ForeignPersisterLink, LwkError, Pset, PsetDetails, Transaction,
-    Txid, Update, WalletTx, WalletTxOut,
+    AddressResult, ExternalUtxo, LwkError, Pset, PsetDetails, Transaction, Txid, Update, WalletTx,
+    WalletTxOut,
 };
 use std::sync::{MutexGuard, PoisonError};
 use std::{
@@ -29,14 +28,14 @@ impl Wollet {
 
 #[uniffi::export]
 impl Wollet {
-    /// Construct a Watch-Only wallet object with a caller provided persister
+    /// Construct a Watch-Only wallet object with a caller provided store
     #[uniffi::constructor]
-    pub fn with_custom_persister(
+    pub fn with_custom_store(
         network: &Network,
         descriptor: &WolletDescriptor,
-        persister: Arc<ForeignPersisterLink>,
+        store: Arc<ForeignStoreLink>,
     ) -> Result<Arc<Self>, LwkError> {
-        let inner = lwk_wollet::Wollet::new(network.into(), persister, descriptor.into())?;
+        let inner = lwk_wollet::Wollet::new(network.into(), store, descriptor.into())?;
 
         Ok(Arc::new(Self {
             inner: Mutex::new(inner),
@@ -54,7 +53,7 @@ impl Wollet {
             Some(path) => {
                 lwk_wollet::Wollet::with_fs_persist(network.into(), descriptor.into(), path)?
             }
-            None => lwk_wollet::Wollet::new(network.into(), NoPersist::new(), descriptor.into())?,
+            None => lwk_wollet::Wollet::without_persist(network.into(), descriptor.into())?,
         };
 
         Ok(Arc::new(Self {
@@ -285,5 +284,41 @@ impl Wollet {
             .map(Into::into)
             .map(Arc::new)
             .collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lwk_wollet::bitcoin::hashes::Hash;
+
+    #[test]
+    fn test_new_with_datadir_loads_encrypted_update_backward_compat() {
+        let desc_string = lwk_test_util::wollet_descriptor_string2();
+        let desc = WolletDescriptor::new(&desc_string).unwrap();
+        let enc_bytes = lwk_test_util::update_test_vector_encrypted_bytes2();
+
+        let network = Network::testnet();
+        let datadir = tempfile::tempdir().unwrap();
+
+        let mut update_path = datadir.path().to_path_buf();
+        update_path.push(network.inner.as_str());
+        update_path.push("enc_cache");
+        update_path
+            .push(<lwk_wollet::DirectoryIdHash as Hash>::hash(desc_string.as_bytes()).to_string());
+        std::fs::create_dir_all(&update_path).unwrap();
+        update_path.push("000000000000");
+        std::fs::write(update_path, &enc_bytes).unwrap();
+
+        let wollet = Wollet::new(
+            network.as_ref(),
+            desc.as_ref(),
+            Some(datadir.path().to_str().unwrap().to_string()),
+        )
+        .unwrap();
+
+        let inner = wollet.inner_wollet().unwrap();
+        assert_eq!(inner.updates().unwrap().len(), 1);
+        assert_eq!(inner.tip().height(), 1360180);
     }
 }

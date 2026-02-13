@@ -35,30 +35,13 @@ assert str(simplicity_address) == str(wollet.address(0).address())
 funded_satoshi = 100000
 funding_txid = node.send_to_address(simplicity_address, funded_satoshi, asset=None)
 node.generate(1)
+funding_tx = wollet.wait_for_tx(funding_txid, client).tx()
 
-# 6. Find the funding UTXO - with retry for electrs sync
-# Note: We can't use wollet.wait_for_tx() because:
-#   1. The Simplicity address isn't tracked by the dummy wallet
-#      (it's a script address, not derived from the wallet descriptor)
-#   2. We need the raw Transaction to extract outputs, not a WalletTx
-funding_tx = None
-for _ in range(30):
-    try:
-        funding_tx = client.get_tx(funding_txid)
-        break
-    except LwkError:
-        time.sleep(1)
-assert funding_tx is not None, "Could not fetch funding transaction after 30 retries"
-
-# Find our output by matching script_pubkey
-vout = None
-funding_output = None
-for i, output in enumerate(funding_tx.outputs()):
-    if str(output.script_pubkey()) == str(simplicity_script):
-        vout = i
-        funding_output = output
-        break
-assert vout is not None and funding_output is not None, "Could not find funding output"
+# 6. Find the funding TxOut
+vout, funding_output = next(
+    (idx, out) for (idx, out) in enumerate(funding_tx.outputs())
+    if str(out.script_pubkey()) == str(simplicity_script)
+)
 
 # 7. Create ExternalUtxo for TxBuilder
 SIMPLICITY_WITNESS_WEIGHT = 700  # FIXME(KyrylR): Conservative estimate for Simplicity witness

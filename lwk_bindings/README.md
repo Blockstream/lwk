@@ -146,4 +146,4 @@ C++ bindings are generated in CI artifacts:
 
 ## Guidelines
 
-If you're changing the interface, adding a new objct, method or function, follow our [guidelines](GUIDE.md).
+If you're changing the interface, adding a new obejct, method or function, follow our [guidelines](GUIDE.md).

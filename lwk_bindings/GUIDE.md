@@ -26,7 +26,7 @@ impl MyType {
     /// Note: hex representation is byte-reversed
     #[uniffi::constructor]
     pub fn from_hex(s: &str) -> Result<Arc<Self>, LwkError> { }
-    
+
     #[uniffi::constructor]
     pub fn from_b64(s: &str) -> Result<Arc<Self>, LwkError> { }
 }

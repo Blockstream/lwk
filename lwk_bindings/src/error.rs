@@ -284,6 +284,15 @@ impl From<elements::bitcoin::taproot::HiddenNodesError> for LwkError {
     }
 }
 
+#[cfg(feature = "simplicity")]
+impl From<elements::taproot::TaprootBuilderError> for LwkError {
+    fn from(value: elements::taproot::TaprootBuilderError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
 impl From<lwk_wollet::elements_miniscript::psbt::Error> for LwkError {
     fn from(value: lwk_wollet::elements_miniscript::psbt::Error) -> Self {
         LwkError::Generic {

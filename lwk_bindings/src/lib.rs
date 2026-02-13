@@ -50,7 +50,7 @@ mod simplicity;
 pub use simplicity::{
     simplicity_control_block, simplicity_derive_xonly_pubkey, Cmr, SimplicityArguments,
     SimplicityLogLevel, SimplicityProgram, SimplicityRunResult, SimplicityType,
-    SimplicityTypedValue, SimplicityWitnessValues,
+    SimplicityTypedValue, SimplicityWitnessValues, StateTaprootBuilder, StateTaprootSpendInfo,
 };
 
 pub use blockdata::address::Address;

@@ -5,6 +5,10 @@ This crate has a Rust interface, however that's not the focus.
 What we care about are the interfaces in the destination languages.
 For this reason we don't necessarily follow Rust guidelines.
 
+## Docs
+Documentation of this crate should not use link to rust types such as [`elements::Transaction`] because they are not usable in end-user languages.
+Many types are wrappers of types in LWK crates, in this cases we mostly duplicate the original documentation with context adjustment.
+
 ## (De)serialization
 When using `#[derive(uniffi::Object)]` on a rust struct follow these conventions:
 

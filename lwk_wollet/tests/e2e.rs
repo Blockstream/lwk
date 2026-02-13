@@ -2156,14 +2156,8 @@ fn test_non_standard_gap_limit() {
     let network = ElementsNetwork::default_regtest();
     let satoshi = 1_000_000;
 
-    let mut wollet_std_gap = Wollet::new(
-        network,
-        std::sync::Arc::new(NoPersist {}),
-        wollet_desc.clone(),
-    )
-    .unwrap();
-    let mut wollet_longer_gap =
-        Wollet::new(network, std::sync::Arc::new(NoPersist {}), wollet_desc).unwrap();
+    let mut wollet_std_gap = Wollet::without_persist(network, wollet_desc.clone()).unwrap();
+    let mut wollet_longer_gap = Wollet::without_persist(network, wollet_desc).unwrap();
 
     let i = Some(25);
     let address_after_gap_limit = wollet_std_gap.address(i).unwrap().address().clone();
@@ -2216,7 +2210,7 @@ async fn test_non_standard_gap_limit_esplora() {
     let wollet_desc = WolletDescriptor::from_str(&desc).unwrap();
     let satoshi = 1_000_000;
 
-    let mut wollet = Wollet::new(network, std::sync::Arc::new(NoPersist {}), wollet_desc).unwrap();
+    let mut wollet = Wollet::without_persist(network, wollet_desc).unwrap();
 
     let i = Some(25);
     let address_after_gap_limit = wollet.address(i).unwrap().address().clone();
@@ -2477,12 +2471,7 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
 fn test_liquid_testnet() {
     let desc = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs";
     let wollet_desc = WolletDescriptor::from_str(desc).unwrap();
-    let mut wollet = Wollet::new(
-        ElementsNetwork::LiquidTestnet,
-        std::sync::Arc::new(NoPersist {}),
-        wollet_desc,
-    )
-    .unwrap();
+    let mut wollet = Wollet::without_persist(ElementsNetwork::LiquidTestnet, wollet_desc).unwrap();
     let url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
     let mut client = blocking::EsploraClient::new(url, ElementsNetwork::LiquidTestnet).unwrap();
     let update = client.full_scan(&wollet).unwrap().unwrap();
@@ -2882,12 +2871,7 @@ fn test_no_wildcard() {
 
     // Use esplora client
     let network = ElementsNetwork::default_regtest();
-    let mut esplora_wollet = Wollet::new(
-        network,
-        std::sync::Arc::new(NoPersist {}),
-        desc.parse().unwrap(),
-    )
-    .unwrap();
+    let mut esplora_wollet = Wollet::without_persist(network, desc.parse().unwrap()).unwrap();
 
     let esplora_url = env.esplora_url();
     let mut esplora_client = clients::blocking::EsploraClient::new(&esplora_url, network).unwrap();

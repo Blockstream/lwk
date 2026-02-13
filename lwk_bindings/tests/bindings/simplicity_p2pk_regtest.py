@@ -120,16 +120,6 @@ tx_with_manual_witness = tx_editor.build()
 assert tx_with_manual_witness.inputs()[0].witness().script_witness() == finalized_script_witness, \
     "TransactionEditor.set_input_witness should produce matching witness"
 
-# 12. Broadcast and verify inclusion in block
+# 12. Broadcast and mempool acceptance
 txid = client.broadcast(finalized_tx)
-node.generate(1)
-
-assert txid is not None
-confirmed_tx = None
-for _ in range(30):
-    try:
-        confirmed_tx = client.get_tx(txid)
-        break
-    except LwkError:
-        time.sleep(1)
-assert confirmed_tx is not None, "Transaction not confirmed in block"
+wollet.wait_for_tx(txid, client)

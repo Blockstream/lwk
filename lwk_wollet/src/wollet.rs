@@ -1397,6 +1397,34 @@ mod tests {
     }
 
     #[test]
+    fn test_with_fs_persist_loads_encrypted_update_backward_compat() {
+        let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string2().parse().unwrap();
+        let enc_bytes = lwk_test_util::update_test_vector_encrypted_bytes2();
+        let expected_update = Update::deserialize_decrypted(&enc_bytes, &desc).unwrap();
+
+        let tempdir = tempfile::tempdir().unwrap();
+        let mut update_path = tempdir.path().to_path_buf();
+        update_path.push(ElementsNetwork::LiquidTestnet.as_str());
+        update_path.push("enc_cache");
+        update_path.push(
+            <crate::wollet::DirectoryIdHash as crate::hashes::Hash>::hash(
+                desc.to_string().as_bytes(),
+            )
+            .to_string(),
+        );
+        std::fs::create_dir_all(&update_path).unwrap();
+        update_path.push("000000000000");
+        std::fs::write(update_path, &enc_bytes).unwrap();
+
+        let wollet =
+            Wollet::with_fs_persist(ElementsNetwork::LiquidTestnet, desc, tempdir.path()).unwrap();
+
+        assert_eq!(wollet.updates().unwrap().len(), 1);
+        assert_eq!(wollet.tip().height(), 1360180);
+        assert_eq!(wollet.updates().unwrap()[0], expected_update);
+    }
+
+    #[test]
     fn test_apply_old_update() {
         let bytes = lwk_test_util::update_test_vector_bytes();
 

@@ -26,6 +26,11 @@ program = SimplicityProgram.load(P2PK_SOURCE, args)
 simplicity_address = program.create_p2tr_address(xonly_pubkey, network)
 simplicity_script = simplicity_address.script_pubkey()
 
+# Create Wollet
+desc = WolletDescriptor(f":{simplicity_script}")
+wollet = Wollet(network, desc, datadir=None)
+assert str(simplicity_address) == str(wollet.address(0).address())
+
 # 5. Fund the Simplicity address
 funded_satoshi = 100000
 funding_txid = node.send_to_address(simplicity_address, funded_satoshi, asset=None)

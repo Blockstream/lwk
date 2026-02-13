@@ -230,8 +230,6 @@ mod test {
     use crate::{pset_create::validate_address, ElementsNetwork, Update, WolletDescriptor};
 
     use super::*;
-    use crate::NoPersist;
-
     #[test]
     fn test_validate() {
         let testnet_address = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
@@ -283,12 +281,8 @@ mod test {
         let descriptor = lwk_test_util::wollet_descriptor_many_transactions();
         let descriptor: WolletDescriptor = descriptor.parse().unwrap();
         let update = Update::deserialize(&update).unwrap();
-        let mut wollet = Wollet::new(
-            ElementsNetwork::LiquidTestnet,
-            std::sync::Arc::new(NoPersist {}),
-            descriptor,
-        )
-        .unwrap();
+        let mut wollet =
+            Wollet::without_persist(ElementsNetwork::LiquidTestnet, descriptor).unwrap();
         wollet.apply_update(update).unwrap();
         wollet
     }

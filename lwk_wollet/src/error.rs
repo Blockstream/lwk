@@ -104,9 +104,6 @@ pub enum Error {
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
 
-    #[error(transparent)]
-    PersistError(#[from] crate::persister::PersistError),
-
     #[error("Address must be explicit")]
     NotExplicitAddress,
 

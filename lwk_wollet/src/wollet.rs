@@ -7,15 +7,14 @@ use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::secp256k1_zkp::ZERO_TWEAK;
 use crate::elements::{AssetId, BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
-use crate::hashes::Hash;
+use crate::hashes::{sha256t_hash_newtype, Hash};
 use crate::model::{
     AddressResult, BitcoinAddressResult, ExternalUtxo, IssuanceDetails, WalletTx, WalletTxOut,
 };
-use crate::persister::PersistError;
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::util::EC;
 use crate::ElementsNetwork;
-use crate::{BlindingPublicKey, FsPersister, NoPersist, Persister, Update, WolletDescriptor};
+use crate::{BlindingPublicKey, Update, WolletDescriptor};
 use elements::bitcoin::bip32::ChildNumber;
 use elements::{bitcoin, Address};
 use elements_miniscript::psbt::PsbtExt;
@@ -25,21 +24,41 @@ use elements_miniscript::{
 };
 use fxhash::FxHasher;
 use lwk_common::{
-    burn_script, pset_balance, pset_issuances, pset_signatures, Balance, PsetDetails,
+    burn_script, pset_balance, pset_issuances, pset_signatures, Balance, DynStore, EncryptedStore,
+    FakeStore, FileStore, PsetDetails,
 };
-use std::cmp::Ordering;
+use std::cmp;
 use std::collections::{hash_map::Entry, BTreeMap, HashMap, HashSet};
 use std::hash::Hasher;
 use std::path::Path;
+use std::sync::atomic::AtomicUsize;
 use std::sync::{atomic, Arc};
+
+sha256t_hash_newtype! {
+    /// The tag of the hash
+    pub struct DirectoryIdTag = hash_str("LWK-FS-Directory-Id/1.0");
+
+    /// A tagged hash to generate the name of the subdirectory to store cache content
+    #[hash_newtype(forward)]
+    pub struct DirectoryIdHash(_);
+}
+
+/// Length of the zero-padded update key format (e.g., "000000000000")
+const UPDATE_KEY_LEN: usize = 12;
+
+pub(crate) fn update_key(index: usize) -> String {
+    format!("{index:0>width$}", width = UPDATE_KEY_LEN)
+}
 
 /// A watch-only wallet defined by a CT descriptor.
 pub struct Wollet {
     pub(crate) network: ElementsNetwork,
     pub(crate) cache: Cache,
-    pub(crate) persister: Arc<dyn Persister + Send + Sync>,
+    pub(crate) store: Arc<dyn DynStore>,
     pub(crate) descriptor: WolletDescriptor,
-    // cached value
+    /// Counter for the next update key
+    pub(crate) next_update_index: AtomicUsize,
+    /// cached value
     max_weight_to_satisfy: usize,
 }
 
@@ -47,7 +66,7 @@ pub struct Wollet {
 pub struct WolletBuilder {
     network: ElementsNetwork,
     descriptor: WolletDescriptor,
-    persister: Arc<dyn Persister + Send + Sync>,
+    store: Arc<dyn DynStore>,
 }
 
 impl WolletBuilder {
@@ -56,13 +75,13 @@ impl WolletBuilder {
         Self {
             network,
             descriptor,
-            persister: Arc::new(NoPersist {}),
+            store: Arc::new(FakeStore::new()),
         }
     }
 
-    /// Specify the `Wollet` persister
-    pub fn with_persister(mut self, persister: Arc<dyn Persister + Send + Sync>) -> Self {
-        self.persister = persister;
+    /// Specify the `Wollet` store for persistence
+    pub fn with_store(mut self, store: Arc<dyn DynStore>) -> Self {
+        self.store = store;
         self
     }
 
@@ -77,14 +96,25 @@ impl WolletBuilder {
             cache,
             network: self.network,
             descriptor: self.descriptor,
-            persister: self.persister,
+            store: self.store,
+            next_update_index: AtomicUsize::new(0),
             max_weight_to_satisfy,
         };
 
+        // Restore updates from the store using indexed keys
         for i in 0.. {
-            match wollet.persister.get(i)? {
-                Some(update) => wollet.apply_update_no_persist(update)?,
-                None => break,
+            let key = update_key(i);
+            match wollet.store.get(&key) {
+                Ok(Some(bytes)) => {
+                    let update = Update::deserialize(&bytes)?;
+                    wollet.apply_update_no_persist(update)?;
+                }
+                Ok(None) => {
+                    // Update the next index and stop
+                    wollet.next_update_index.store(i, atomic::Ordering::Relaxed);
+                    break;
+                }
+                Err(e) => return Err(Error::Generic(format!("store error: {e}"))),
             }
         }
 
@@ -271,14 +301,14 @@ impl std::hash::Hash for Wollet {
 }
 
 impl Wollet {
-    /// Create a new  wallet
+    /// Create a new wallet
     pub fn new(
         network: ElementsNetwork,
-        persister: Arc<dyn Persister + Send + Sync>,
+        store: Arc<dyn DynStore>,
         descriptor: WolletDescriptor,
     ) -> Result<Self, Error> {
         WolletBuilder::new(network, descriptor)
-            .with_persister(persister)
+            .with_store(store)
             .build()
     }
 
@@ -323,19 +353,25 @@ impl Wollet {
         descriptor: WolletDescriptor,
         datadir: P,
     ) -> Result<Self, Error> {
-        Self::new(
-            network,
-            FsPersister::new(datadir, network, &descriptor)?,
-            descriptor,
-        )
+        // Build path: datadir/network/enc_cache/hash(descriptor)
+        let mut path = datadir.as_ref().to_path_buf();
+        path.push(network.as_str());
+        path.push("enc_cache");
+        path.push(DirectoryIdHash::hash(descriptor.to_string().as_bytes()).to_string());
+
+        let file_store = FileStore::new(path)?;
+        let key_bytes = descriptor.encryption_key_bytes();
+        let encrypted_store = EncryptedStore::new(file_store, key_bytes);
+
+        Self::new(network, Arc::new(encrypted_store), descriptor)
     }
 
-    /// Create a new wallet which not persist anything
+    /// Create a new wallet which does not persist anything
     pub fn without_persist(
         network: ElementsNetwork,
         descriptor: WolletDescriptor,
     ) -> Result<Self, Error> {
-        Self::new(network, Arc::new(NoPersist {}), descriptor)
+        Self::new(network, Arc::new(FakeStore::new()), descriptor)
     }
 
     /// Get the network policy asset
@@ -732,7 +768,7 @@ impl Wollet {
         my_txids.sort_by(|a, b| {
             let height_cmp = b.1.unwrap_or(u32::MAX).cmp(&a.1.unwrap_or(u32::MAX));
             match height_cmp {
-                Ordering::Equal => b.0.cmp(a.0),
+                cmp::Ordering::Equal => b.0.cmp(a.0),
                 h => h,
             }
         });
@@ -1007,12 +1043,17 @@ impl Wollet {
 
     /// Get all the persisted updates of this wallet.
     /// Applying in the same order these updates to an empty wallet, recreates this wallet state.
-    pub fn updates(&self) -> Result<Vec<Update>, PersistError> {
+    pub fn updates(&self) -> Result<Vec<Update>, Error> {
         let mut updates = vec![];
         for i in 0.. {
-            match self.persister.get(i)? {
-                Some(update) => updates.push(update),
-                None => break,
+            let key = update_key(i);
+            match self.store.get(&key) {
+                Ok(Some(bytes)) => {
+                    let update = Update::deserialize(&bytes)?;
+                    updates.push(update);
+                }
+                Ok(None) => break,
+                Err(e) => return Err(Error::Generic(format!("store error: {e}"))),
             }
         }
         Ok(updates)
@@ -1196,7 +1237,7 @@ impl Wollet {
         let desc = WolletDescriptor::from_str(&desc)?;
         Ok((
             signer,
-            Wollet::new(ElementsNetwork::default_regtest(), NoPersist::new(), desc)?,
+            Wollet::without_persist(ElementsNetwork::default_regtest(), desc)?,
         ))
     }
 }
@@ -1211,7 +1252,7 @@ mod tests {
     use crate::elements::bitcoin::bip32::{Xpriv, Xpub};
     use crate::elements::bitcoin::network::Network;
     use crate::elements::AddressParams;
-    use crate::{DownloadTxResult, NoPersist};
+    use crate::DownloadTxResult;
     use elements_miniscript::confidential::bare::tweak_private_key;
     use elements_miniscript::confidential::Key;
     use elements_miniscript::descriptor::checksum::desc_checksum;
@@ -1234,7 +1275,7 @@ mod tests {
 
     #[test]
     fn test_directory_id_hash_empty_input_regression() {
-        let got = <crate::persister::DirectoryIdHash as crate::hashes::Hash>::hash(b"").to_string();
+        let got = <crate::wollet::DirectoryIdHash as crate::hashes::Hash>::hash(b"").to_string();
         let exp = "318c87cf9bafe6a65c82e0124e3c2ab31e656d4f64ee8459017b1f9dd91ba818";
         assert_eq!(got, exp);
     }
@@ -1277,7 +1318,7 @@ mod tests {
         let desc: WolletDescriptor = format!("{desc}#{}", desc_checksum(desc).unwrap())
             .parse()
             .unwrap();
-        Wollet::new(ElementsNetwork::LiquidTestnet, NoPersist::new(), desc).unwrap()
+        Wollet::without_persist(ElementsNetwork::LiquidTestnet, desc).unwrap()
     }
 
     #[test]
@@ -1317,13 +1358,9 @@ mod tests {
             .unwrap();
 
         let tempdir = tempfile::tempdir().unwrap();
-        let persister = FsPersister::new(&tempdir, ElementsNetwork::LiquidTestnet, &desc).unwrap();
-        let mut wollet = Wollet::new(
-            ElementsNetwork::LiquidTestnet,
-            persister.clone(),
-            desc.clone(),
-        )
-        .unwrap();
+        let mut wollet =
+            Wollet::with_fs_persist(ElementsNetwork::LiquidTestnet, desc.clone(), &tempdir)
+                .unwrap();
 
         let tip = lwk_test_util::liquid_block_1().header;
         let update = Update {
@@ -1351,7 +1388,7 @@ mod tests {
 
         // We restore the wallet and expects the same status
         let restored_wollet =
-            Wollet::new(ElementsNetwork::LiquidTestnet, persister.clone(), desc).unwrap();
+            Wollet::with_fs_persist(ElementsNetwork::LiquidTestnet, desc, &tempdir).unwrap();
 
         assert_eq!(wollet.status(), restored_wollet.status());
     }
@@ -1437,7 +1474,7 @@ mod tests {
                             .parse()
                             .unwrap();
 
-                    let wollet = Wollet::new(network, NoPersist::new(), desc).unwrap();
+                    let wollet = Wollet::without_persist(network, desc).unwrap();
                     let first_address = wollet.address(Some(0)).unwrap();
                     assert_eq!(first_address.address().to_string(), expected[i], "network: {network:?} variant: {script_variant:?} blinding_variant: {blinding_variant:?} i:{i}");
                     i += 1;

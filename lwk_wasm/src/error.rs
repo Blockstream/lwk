@@ -94,6 +94,10 @@ pub enum Error {
     Generic(String),
 
     #[cfg(feature = "simplicity")]
+    #[error("{0}")]
+    TaprootBuilder(#[from] lwk_wollet::elements::taproot::TaprootBuilderError),
+
+    #[cfg(feature = "simplicity")]
     #[error(transparent)]
     SimplicityProgram(#[from] lwk_simplicity::error::ProgramError),
 
@@ -193,6 +197,8 @@ impl Error {
             Error::SimplicityProgram(_) => "SimplicityProgram",
             #[cfg(feature = "simplicity")]
             Error::SimplicityHlRich(_) => "SimplicityRich",
+            #[cfg(feature = "simplicity")]
+            Error::TaprootBuilder(_) => "TaprootBuilderError",
         }
     }
 }

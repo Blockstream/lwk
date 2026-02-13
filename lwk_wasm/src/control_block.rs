@@ -19,6 +19,15 @@ impl From<taproot::ControlBlock> for ControlBlock {
     }
 }
 
+impl TryFrom<lwk_wollet::elements::taproot::ControlBlock> for ControlBlock {
+    type Error = taproot::TaprootError;
+
+    fn try_from(value: lwk_wollet::elements::taproot::ControlBlock) -> Result<Self, Self::Error> {
+        let inner = taproot::ControlBlock::decode(value.serialize().as_ref())?;
+        Ok(Self { inner })
+    }
+}
+
 impl AsRef<taproot::ControlBlock> for ControlBlock {
     fn as_ref(&self) -> &taproot::ControlBlock {
         &self.inner

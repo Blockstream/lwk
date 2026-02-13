@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+There are have been changes in how the wollet handle persistence.
+
+* If you're a lwk_cli user, a lwk_wasm/lwk_node user, a lwk_bindings user using lwk_bindings::Wollet::new there are no change.
+
+* if you're a lwk_bindings user using a custom persister:
+  * removed `ForeignPersister` (trait), replacement `ForeignStore`
+  * removed `ForeignPersisterLink` (concrete "trait"), replacement `ForeignStoreLink`
+  * removed `Wollet::with_custom_persister()`, added `Wollet::with_custom_store()`
+
+* if you're a lwk_wollet user:
+  * removed `PersistError`
+  * removed `Persister` (trait), replacement `lwk_common::Store` and `lwk_common::DynStore`
+  * removed `NoPersist`, replacement `lwk_common::FakeStore`
+  * removed `FsPersister`, replacement `lwk_common::FileStore` and `lwk_common::EncryptedStore`
+  * removed `WolletBuilder::with_persister()`, replacement `WolletBuilder::with_store()`
+  * changed `Wollet::new()`: 2nd argument is a `DynStore` instead of a "`Persister`"
+
+
 * Removed `Wollet::as_ref()`, replaced with `Wollet::ct_descriptor()`
 * The following methods now return a `Result`:
   * `Wollet::descriptor()`

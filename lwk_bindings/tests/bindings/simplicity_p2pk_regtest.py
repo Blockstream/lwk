@@ -48,11 +48,7 @@ SIMPLICITY_WITNESS_WEIGHT = 700  # FIXME(KyrylR): Conservative estimate for Simp
 unblinded = TxOutSecrets.from_explicit(policy_asset, funded_satoshi)
 external_utxo = ExternalUtxo(vout, funding_tx, unblinded, SIMPLICITY_WITNESS_WEIGHT, True)
 
-# 8. Create a dummy Wollet (needed for TxBuilder.finish but won't provide UTXOs)
-dummy_signer = Signer(Mnemonic.from_random(12), network)
-dummy_wollet = Wollet(network, dummy_signer.wpkh_slip77_descriptor(), datadir=None)
-
-# 9. Build transaction using TxBuilder
+# 8. Build transaction using TxBuilder
 recipient_address = node.get_new_address()
 send_amount = 50000
 
@@ -60,9 +56,9 @@ builder = network.tx_builder()
 builder.add_external_utxos([external_utxo])
 builder.add_lbtc_recipient(recipient_address, send_amount)
 builder.drain_lbtc_to(simplicity_address)  # Change back to Simplicity address
-pset = builder.finish(dummy_wollet)
+pset = builder.finish(wollet)
 
-# 10. Extract unsigned transaction and create signature
+# 9. Extract unsigned transaction and create signature
 unsigned_tx = pset.extract_tx()
 all_utxos = [funding_output]
 
@@ -71,7 +67,7 @@ signature = program.create_p2pk_signature(
     all_utxos, 0, network
 )
 
-# 11. Finalize transaction with Simplicity witness
+# 10. Finalize transaction with Simplicity witness
 witness = SimplicityWitnessValues()
 witness = witness.add_value("SIGNATURE", SimplicityTypedValue.byte_array(str(signature)))
 
@@ -80,7 +76,7 @@ finalized_tx = program.finalize_transaction(
     witness, network, SimplicityLogLevel.NONE
 )
 
-# 11b. Verify TxInWitness can be built manually and matches finalize_transaction output
+# 11. Verify TxInWitness can be built manually and matches finalize_transaction output
 finalized_witness = finalized_tx.inputs()[0].witness()
 assert not finalized_witness.is_empty(), "Finalized witness should not be empty"
 finalized_script_witness = finalized_witness.script_witness()

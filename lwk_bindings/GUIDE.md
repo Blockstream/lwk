@@ -1,5 +1,10 @@
 # Guidelines
 
+## Rust interface
+This crate has a Rust interface, however that's not the focus.
+What we care about are the interfaces in the destination languages.
+For this reason we don't necessarily follow Rust guidelines.
+
 ## (De)serialization
 When using `#[derive(uniffi::Object)]` on a rust struct follow these conventions:
 

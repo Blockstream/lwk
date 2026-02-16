@@ -173,6 +173,46 @@ impl Update {
             .map_err(|e| Error::Generic(e.to_string()))?;
         Self::deserialize_decrypted(&vec, desc)
     }
+
+    /// Merge another update into this one.
+    ///
+    /// This is used to squash multiple sequential updates into a single update.
+    ///
+    /// NOTE: it's caller responsibility to ensure that the following update is the next in sequence
+    /// and updates are not mixed up.
+    pub(crate) fn merge(&mut self, following: Update) {
+        // Merge new transactions: add new ones, replace existing ones
+        for (txid, tx) in following.new_txs.txs {
+            self.new_txs.txs.retain(|(t, _)| *t != txid);
+            self.new_txs.txs.push((txid, tx));
+        }
+        self.new_txs.unblinds.extend(following.new_txs.unblinds);
+
+        // Merge txid_height_new: union with override (later wins)
+        for (txid, height) in following.txid_height_new {
+            self.txid_height_new.retain(|(t, _)| *t != txid);
+            self.txid_height_new.push((txid, height));
+        }
+
+        // Remove deleted txids from txid_height_new
+        for txid in &following.txid_height_delete {
+            self.txid_height_new.retain(|(t, _)| t != txid);
+        }
+
+        // Merge deletes
+        self.txid_height_delete.extend(following.txid_height_delete);
+
+        // Merge timestamps and scripts
+        self.timestamps.extend(following.timestamps);
+        self.scripts_with_blinding_pubkey
+            .extend(following.scripts_with_blinding_pubkey);
+
+        // Update tip to other's tip
+        self.tip = following.tip;
+
+        // Update version to latest
+        self.version = following.version;
+    }
 }
 
 fn default_blockheader() -> BlockHeader {

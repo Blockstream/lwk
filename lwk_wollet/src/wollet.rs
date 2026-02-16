@@ -383,7 +383,7 @@ impl Wollet {
     }
 
     /// Creates a transaction builder with a reference to this wallet
-    pub fn tx_builder(&self) -> WolletTxBuilder {
+    pub fn tx_builder(&self) -> WolletTxBuilder<'_> {
         WolletTxBuilder::new(self)
     }
 

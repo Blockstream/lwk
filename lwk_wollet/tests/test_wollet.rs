@@ -94,7 +94,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         }
     }
 
-    pub fn tx_builder(&self) -> WolletTxBuilder {
+    pub fn tx_builder(&self) -> WolletTxBuilder<'_> {
         self.wollet.tx_builder()
     }
 

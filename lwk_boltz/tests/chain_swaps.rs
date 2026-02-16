@@ -1096,6 +1096,13 @@ mod tests {
         response = session.restore_lockup(data).await.unwrap();
         assert!(response.complete().await.unwrap());
 
-        // TODO check balance of refund_address
+        let refund_balance =
+            crate::utils::get_address_balance(LBTC_CHAIN.into(), &refund_address_str)
+                .await
+                .expect("Failed to get refund address balance");
+        assert!(
+            refund_balance > 0,
+            "Expected refund address to receive funds, got {refund_balance} sats"
+        );
     }
 }

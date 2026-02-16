@@ -1,7 +1,9 @@
 //! Liquid transaction output secrets
 
+#[cfg(feature = "simplicity")]
 use std::sync::Arc;
 
+#[cfg(feature = "simplicity")]
 use crate::types;
 use crate::types::{AssetId, Hex};
 use elements::secp256k1_zkp::{Generator, PedersenCommitment, Tag};
@@ -25,6 +27,7 @@ impl From<&TxOutSecrets> for elements::TxOutSecrets {
     }
 }
 
+#[cfg(feature = "simplicity")]
 #[uniffi::export]
 impl TxOutSecrets {
     /// Create TxOutSecrets with explicit blinding factors.
@@ -58,6 +61,19 @@ impl TxOutSecrets {
         })
     }
 
+    /// Return the asset blinding factor.
+    pub fn asset_blinding_factor(&self) -> Arc<types::AssetBlindingFactor> {
+        Arc::new(self.inner.asset_bf.into())
+    }
+
+    /// Return the value blinding factor.
+    pub fn value_blinding_factor(&self) -> Arc<types::ValueBlindingFactor> {
+        Arc::new(self.inner.value_bf.into())
+    }
+}
+
+#[uniffi::export]
+impl TxOutSecrets {
     /// Return the asset identifier of the output.
     pub fn asset(&self) -> AssetId {
         self.inner.asset.into()
@@ -74,11 +90,6 @@ impl TxOutSecrets {
             .expect("asset_bf to_string creates valid hex")
     }
 
-    /// Return the asset blinding factor.
-    pub fn asset_blinding_factor(&self) -> Arc<types::AssetBlindingFactor> {
-        Arc::new(self.inner.asset_bf.into())
-    }
-
     /// Return the value of the output.
     pub fn value(&self) -> u64 {
         self.inner.value
@@ -93,11 +104,6 @@ impl TxOutSecrets {
             .to_string()
             .parse()
             .expect("value_bf to_string creates valid hex")
-    }
-
-    /// Return the value blinding factor.
-    pub fn value_blinding_factor(&self) -> Arc<types::ValueBlindingFactor> {
-        Arc::new(self.inner.value_bf.into())
     }
 
     /// Return true if the output is explicit (no blinding factors).
@@ -139,6 +145,7 @@ impl TxOutSecrets {
 }
 
 impl TxOutSecrets {
+    #[cfg(feature = "simplicity")]
     pub(crate) fn inner(&self) -> &elements::TxOutSecrets {
         &self.inner
     }
@@ -153,7 +160,9 @@ impl TxOutSecrets {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "simplicity")]
     use crate::UniffiCustomTypeConverter;
+    #[cfg(feature = "simplicity")]
     use crate::{types, TxOutSecrets};
 
     use std::str::FromStr;
@@ -162,6 +171,7 @@ mod tests {
     use elements::hex::FromHex;
     use elements::AssetId;
 
+    #[cfg(feature = "simplicity")]
     fn reverse_hex(hex: &str) -> String {
         hex.as_bytes()
             .chunks(2)
@@ -190,10 +200,12 @@ mod tests {
         assert_eq!(txoutsecrets_explicit.asset().to_string(), asset_hex,);
         assert_eq!(txoutsecrets_explicit.value_bf().to_string(), zero_hex,);
         assert_eq!(txoutsecrets_explicit.asset_bf().to_string(), zero_hex,);
+        #[cfg(feature = "simplicity")]
         assert_eq!(
             txoutsecrets_explicit.value_blinding_factor().to_hex(),
             zero_hex,
         );
+        #[cfg(feature = "simplicity")]
         assert_eq!(
             txoutsecrets_explicit.asset_blinding_factor().to_hex(),
             zero_hex,
@@ -216,18 +228,22 @@ mod tests {
         assert_eq!(txoutsecrets_blinded.asset().to_string(), asset_hex,);
         assert_eq!(txoutsecrets_blinded.asset_bf().to_string(), abf_hex,);
         assert_eq!(txoutsecrets_blinded.value_bf().to_string(), vbf_hex,);
+        #[cfg(feature = "simplicity")]
         assert_eq!(
             txoutsecrets_blinded.asset_blinding_factor().to_string(),
             abf_hex,
         );
+        #[cfg(feature = "simplicity")]
         assert_eq!(
             txoutsecrets_blinded.value_blinding_factor().to_string(),
             vbf_hex,
         );
+        #[cfg(feature = "simplicity")]
         assert_eq!(
             txoutsecrets_blinded.asset_blinding_factor().to_hex(),
             reverse_hex(abf_hex),
         );
+        #[cfg(feature = "simplicity")]
         assert_eq!(
             txoutsecrets_blinded.value_blinding_factor().to_hex(),
             reverse_hex(vbf_hex),
@@ -237,6 +253,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "simplicity")]
     fn test_tx_out_secrets_new_with_blinding() {
         let asset_hex = "1111111111111111111111111111111111111111111111111111111111111111";
         let abf_hex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";

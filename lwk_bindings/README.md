@@ -31,7 +31,7 @@ It's a simple make-like tool, you can either install the tool or copy-paste the 
 * [Issue asset](./tests/bindings/issue_asset.py) Issues an asset
 * [Custom persister](./tests/bindings/custom_persister.py) the caller code provide how the wallet updates are persisted
 * [Manual coin selection](./tests/bindings/manual_coin_selection.py) Manually selects the wallet utxos to use in the transaction
-* [Pset details](./tests/bindings/pset_details.py) Inspects the details of a PSET, suchs as the net balance for the wallet
+* [Pset details](./tests/bindings/pset_details.py) Inspects the details of a PSET, such as the net balance for the wallet
 * [Multisig](./tests/bindings/multisig.py) Creates a multisig wallet
 * [AMP2](./tests/bindings/amp2.py) Creates an AMP2 wallet
 * [External unblind](./tests/bindings/external_unblind.py) Add an external (not belonging to the wallet) unblinded output to a PSET
@@ -146,4 +146,4 @@ C++ bindings are generated in CI artifacts:
 
 ## Guidelines
 
-If you're changing the interface, adding a new obejct, method or function, follow our [guidelines](GUIDE.md).
+If you're changing the interface, adding a new object, method or function, follow our [guidelines](GUIDE.md).

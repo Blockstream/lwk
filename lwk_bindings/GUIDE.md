@@ -18,7 +18,7 @@ When a function is not self-explanatory or a flow is complex, add comments; name
 
 ## Constructors
 Do not use the default constructor `new()` if there are multiple ways in which an object can be created.
-This avoids ambiguity. Use constructors names that explicity mention the format of what should be passed in.
+This avoids ambiguity. Use constructors names that explicitly mention the format of what should be passed in.
 
 For instance, builders can use `new()` to initialize the builder as empty/default.
 However objects that can appear both in bytes and string, must not use `new()`.

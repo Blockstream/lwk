@@ -1,6 +1,6 @@
 use crate::{AssetId, Error, Issuance, Script, Transaction, Txid};
 #[cfg(feature = "simplicity")]
-use crate::{ContractHash, LockTime, OutPoint, PublicKey, TxOut, TxOutSecrets, TxSequence, Tweak};
+use crate::{ContractHash, LockTime, OutPoint, PublicKey, Tweak, TxOut, TxOutSecrets, TxSequence};
 
 #[cfg(feature = "simplicity")]
 use std::collections::HashMap;

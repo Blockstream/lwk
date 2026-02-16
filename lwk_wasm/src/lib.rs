@@ -64,11 +64,11 @@ pub use amp2::{Amp2, Amp2Descriptor};
 pub use balance::Balance;
 pub use bip::Bip;
 pub use blockdata::address::{Address, AddressResult};
-pub use blockdata::asset_id::{AssetId, AssetIds};
 #[cfg(feature = "simplicity")]
 pub use blockdata::asset_id::{
     asset_id_from_issuance, generate_asset_entropy, reissuance_token_from_issuance,
 };
+pub use blockdata::asset_id::{AssetId, AssetIds};
 #[cfg(feature = "simplicity")]
 pub use blockdata::blinding_factor::{AssetBlindingFactor, ValueBlindingFactor};
 #[cfg(feature = "simplicity")]

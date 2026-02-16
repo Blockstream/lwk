@@ -1,4 +1,6 @@
-use crate::{AssetId, Error, TxIn, TxInWitness, TxOut};
+use crate::{AssetId, Error};
+#[cfg(feature = "simplicity")]
+use crate::{TxIn, TxInWitness, TxOut};
 
 use std::str::FromStr;
 
@@ -78,7 +80,11 @@ impl Transaction {
     pub fn to_string_js(&self) -> String {
         format!("{self}")
     }
+}
 
+#[cfg(feature = "simplicity")]
+#[wasm_bindgen]
+impl Transaction {
     /// Return a clone of the inputs of this transaction
     pub fn inputs(&self) -> Vec<TxIn> {
         self.inner.input.iter().map(|i| i.clone().into()).collect()
@@ -133,6 +139,7 @@ impl Txid {
     }
 }
 
+#[cfg(feature = "simplicity")]
 /// Editor for modifying transactions.
 ///
 /// See [`elements::Transaction`] for more details.
@@ -141,6 +148,7 @@ pub struct TransactionEditor {
     inner: elements::Transaction,
 }
 
+#[cfg(feature = "simplicity")]
 #[wasm_bindgen]
 impl TransactionEditor {
     /// Create an editor from an existing transaction.

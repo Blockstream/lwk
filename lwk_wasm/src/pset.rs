@@ -1,16 +1,21 @@
-use crate::{
-    AssetId, ContractHash, Error, Issuance, LockTime, OutPoint, PublicKey, Script, Transaction,
-    Tweak, TxOut, TxOutSecrets, TxSequence, Txid,
-};
+use crate::{AssetId, Error, Issuance, Script, Transaction, Txid};
+#[cfg(feature = "simplicity")]
+use crate::{ContractHash, LockTime, OutPoint, PublicKey, TxOut, TxOutSecrets, TxSequence, Tweak};
 
+#[cfg(feature = "simplicity")]
 use std::collections::HashMap;
 use std::fmt::Display;
 
+#[cfg(feature = "simplicity")]
 use lwk_wollet::elements::hashes::Hash;
 use lwk_wollet::elements::pset::{Input, Output, PartiallySignedTransaction};
+#[cfg(feature = "simplicity")]
 use lwk_wollet::elements::BlockHash;
+#[cfg(feature = "simplicity")]
 use lwk_wollet::elements_miniscript::psbt::finalize;
+#[cfg(feature = "simplicity")]
 use lwk_wollet::secp256k1::rand::thread_rng;
+#[cfg(feature = "simplicity")]
 use lwk_wollet::EC;
 
 use wasm_bindgen::prelude::*;
@@ -59,14 +64,6 @@ impl Pset {
         format!("{self}")
     }
 
-    /// Finalize and extract the PSET
-    pub fn finalize(&self) -> Result<Transaction, Error> {
-        let mut pset = self.inner.clone();
-        finalize(&mut pset, &EC, BlockHash::all_zeros())?;
-        let tx: Transaction = pset.extract_tx()?.into();
-        Ok(tx)
-    }
-
     /// Extract the Transaction from a Pset by filling in
     /// the available signature information in place.
     #[wasm_bindgen(js_name = extractTx)]
@@ -98,6 +95,18 @@ impl Pset {
     /// Return a copy of the outputs of this PSET
     pub fn outputs(&self) -> Vec<PsetOutput> {
         self.inner.outputs().iter().map(Into::into).collect()
+    }
+}
+
+#[cfg(feature = "simplicity")]
+#[wasm_bindgen]
+impl Pset {
+    /// Finalize and extract the PSET
+    pub fn finalize(&self) -> Result<Transaction, Error> {
+        let mut pset = self.inner.clone();
+        finalize(&mut pset, &EC, BlockHash::all_zeros())?;
+        let tx: Transaction = pset.extract_tx()?.into();
+        Ok(tx)
     }
 }
 
@@ -197,18 +206,21 @@ impl PsetInput {
     }
 }
 
+#[cfg(feature = "simplicity")]
 impl PsetInput {
     pub(crate) fn inner(&self) -> &Input {
         &self.inner
     }
 }
 
+#[cfg(feature = "simplicity")]
 /// Builder for PSET inputs
 #[wasm_bindgen]
 pub struct PsetInputBuilder {
     inner: Input,
 }
 
+#[cfg(feature = "simplicity")]
 #[wasm_bindgen]
 impl PsetInputBuilder {
     /// Construct a PsetInputBuilder from an outpoint.
@@ -319,18 +331,21 @@ impl PsetOutput {
     }
 }
 
+#[cfg(feature = "simplicity")]
 impl PsetOutput {
     pub(crate) fn inner(&self) -> &Output {
         &self.inner
     }
 }
 
+#[cfg(feature = "simplicity")]
 /// Builder for PSET outputs
 #[wasm_bindgen]
 pub struct PsetOutputBuilder {
     inner: Output,
 }
 
+#[cfg(feature = "simplicity")]
 #[wasm_bindgen]
 impl PsetOutputBuilder {
     /// Construct a PsetOutputBuilder with explicit asset and value.
@@ -388,12 +403,14 @@ impl PsetOutputBuilder {
     }
 }
 
+#[cfg(feature = "simplicity")]
 /// Builder for constructing a PSET from scratch
 #[wasm_bindgen]
 pub struct PsetBuilder {
     inner: PartiallySignedTransaction,
 }
 
+#[cfg(feature = "simplicity")]
 #[wasm_bindgen]
 impl PsetBuilder {
     /// Create a new PSET v2 builder
@@ -492,6 +509,7 @@ mod tests {
         assert!(pset_in.issuance_token().is_none());
     }
 
+    #[cfg(feature = "simplicity")]
     #[wasm_bindgen_test]
     fn pset_builder() {
         let txid =

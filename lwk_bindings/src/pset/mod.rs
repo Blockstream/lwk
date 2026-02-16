@@ -1,19 +1,31 @@
 mod input;
 mod output;
 
-pub use input::{PsetInput, PsetInputBuilder};
-pub use output::{PsetOutput, PsetOutputBuilder};
+pub use input::PsetInput;
+#[cfg(feature = "simplicity")]
+pub use input::PsetInputBuilder;
+pub use output::PsetOutput;
+#[cfg(feature = "simplicity")]
+pub use output::PsetOutputBuilder;
 
-use crate::{LockTime, LwkError, Transaction, TxOutSecrets, Txid};
+#[cfg(feature = "simplicity")]
+use crate::LockTime;
+#[cfg(feature = "simplicity")]
+use crate::TxOutSecrets;
+use crate::{LwkError, Transaction, Txid};
 
+#[cfg(feature = "simplicity")]
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+#[cfg(feature = "simplicity")]
+use std::sync::Mutex;
 
 use elements::pset::PartiallySignedTransaction;
 use elements::{hashes::Hash, BlockHash};
 
 use lwk_wollet::elements_miniscript::psbt::finalize;
+#[cfg(feature = "simplicity")]
 use lwk_wollet::secp256k1::rand::thread_rng;
 use lwk_wollet::EC;
 
@@ -107,12 +119,14 @@ impl Pset {
 }
 
 /// Builder for constructing a PSET from scratch
+#[cfg(feature = "simplicity")]
 #[derive(uniffi::Object, Debug)]
 pub struct PsetBuilder {
     inner: Mutex<Option<PartiallySignedTransaction>>,
 }
 
 #[uniffi::export]
+#[cfg(feature = "simplicity")]
 impl PsetBuilder {
     /// Create a new PSET v2 builder
     #[uniffi::constructor]
@@ -171,11 +185,7 @@ impl PsetBuilder {
 
 #[cfg(test)]
 mod tests {
-    use super::Pset;
-    use crate::{
-        LockTime, OutPoint, PsetBuilder, PsetInputBuilder, PsetOutputBuilder, Script, TxSequence,
-        Txid,
-    };
+    use super::*;
 
     #[test]
     fn pset_roundtrip() {
@@ -230,6 +240,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "simplicity")]
     fn pset_input_builder() {
         use super::PsetInputBuilder;
 
@@ -239,18 +250,19 @@ mod tests {
                 .unwrap(),
         )
         .unwrap();
-        let outpoint = OutPoint::from_parts(&txid, 0);
+        let outpoint = crate::OutPoint::from_parts(&txid, 0);
         let builder = PsetInputBuilder::from_prevout(&outpoint);
-        builder.sequence(&TxSequence::zero()).unwrap();
+        builder.sequence(&crate::TxSequence::zero()).unwrap();
         let input = builder.build().unwrap();
         assert_eq!(input.previous_vout(), 0);
     }
 
     #[test]
+    #[cfg(feature = "simplicity")]
     fn pset_output_builder() {
         use super::PsetOutputBuilder;
 
-        let script = Script::empty();
+        let script = crate::Script::empty();
         let asset: crate::types::AssetId = crate::UniffiCustomTypeConverter::into_custom(
             "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d".to_string(),
         )
@@ -263,6 +275,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "simplicity")]
     fn pset_builder_add_input_output() {
         let pset_builder = PsetBuilder::new_v2();
 
@@ -272,13 +285,13 @@ mod tests {
                 .unwrap(),
         )
         .unwrap();
-        let outpoint = OutPoint::from_parts(&txid, 0);
+        let outpoint = crate::OutPoint::from_parts(&txid, 0);
         let input_builder = PsetInputBuilder::from_prevout(&outpoint);
-        input_builder.sequence(&TxSequence::zero()).unwrap();
+        input_builder.sequence(&crate::TxSequence::zero()).unwrap();
         let input = input_builder.build().unwrap();
         pset_builder.add_input(&input).unwrap();
 
-        let script = Script::empty();
+        let script = crate::Script::empty();
         let asset: crate::types::AssetId = crate::UniffiCustomTypeConverter::into_custom(
             "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d".to_string(),
         )
@@ -294,6 +307,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "simplicity")]
     fn pset_builder_set_fallback_locktime() {
         let builder = PsetBuilder::new_v2();
         let locktime = LockTime::from_height(100).unwrap();

@@ -1,10 +1,22 @@
-use crate::types::{AssetId, ContractHash, Tweak};
-use crate::{Issuance, LwkError, OutPoint, Script, TxOut, TxSequence, Txid};
+use crate::types::AssetId;
+#[cfg(feature = "simplicity")]
+use crate::LwkError;
+#[cfg(feature = "simplicity")]
+use crate::{
+    types::{ContractHash, Tweak},
+    TxSequence,
+};
+use crate::{Issuance, Script, Txid};
+#[cfg(feature = "simplicity")]
+use crate::{OutPoint, TxOut};
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+#[cfg(feature = "simplicity")]
+use std::sync::Mutex;
 
 use elements::pset::Input;
 
+#[cfg(feature = "simplicity")]
 use lwk_wollet::hashes::Hash;
 
 /// PSET input (read-only)
@@ -24,6 +36,7 @@ impl PsetInput {
         Self { inner }
     }
 
+    #[cfg(feature = "simplicity")]
     pub(crate) fn inner(&self) -> &Input {
         &self.inner
     }
@@ -94,22 +107,26 @@ impl PsetInput {
 }
 
 /// Builder for PSET inputs
+#[cfg(feature = "simplicity")]
 #[derive(uniffi::Object, Debug)]
 pub struct PsetInputBuilder {
     /// Uses Mutex for in-place mutation. See [`crate::TxBuilder`] for rationale.
     inner: Mutex<Option<Input>>,
 }
 
+#[cfg(feature = "simplicity")]
 fn builder_consumed() -> LwkError {
     "PsetInputBuilder already consumed".into()
 }
 
+#[cfg(feature = "simplicity")]
 impl AsRef<Mutex<Option<Input>>> for PsetInputBuilder {
     fn as_ref(&self) -> &Mutex<Option<Input>> {
         &self.inner
     }
 }
 
+#[cfg(feature = "simplicity")]
 #[uniffi::export]
 impl PsetInputBuilder {
     /// Construct a PsetInputBuilder from an outpoint.

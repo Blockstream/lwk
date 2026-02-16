@@ -1,7 +1,13 @@
 use crate::types::AssetId;
-use crate::{LwkError, PublicKey, Script};
+#[cfg(feature = "simplicity")]
+use crate::LwkError;
+#[cfg(feature = "simplicity")]
+use crate::PublicKey;
+use crate::Script;
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+#[cfg(feature = "simplicity")]
+use std::sync::Mutex;
 
 use elements::pset::Output;
 
@@ -23,6 +29,7 @@ impl AsRef<Output> for PsetOutput {
     }
 }
 
+#[cfg(feature = "simplicity")]
 impl PsetOutput {
     pub(crate) fn inner(&self) -> &Output {
         &self.inner
@@ -52,6 +59,7 @@ impl PsetOutput {
     }
 }
 
+#[cfg(feature = "simplicity")]
 /// Builder for PSET outputs
 #[derive(uniffi::Object, Debug)]
 pub struct PsetOutputBuilder {
@@ -59,16 +67,19 @@ pub struct PsetOutputBuilder {
     inner: Mutex<Option<Output>>,
 }
 
+#[cfg(feature = "simplicity")]
 fn builder_consumed() -> LwkError {
     "PsetOutputBuilder already consumed".into()
 }
 
+#[cfg(feature = "simplicity")]
 impl AsRef<Mutex<Option<Output>>> for PsetOutputBuilder {
     fn as_ref(&self) -> &Mutex<Option<Output>> {
         &self.inner
     }
 }
 
+#[cfg(feature = "simplicity")]
 #[uniffi::export]
 impl PsetOutputBuilder {
     /// Construct a PsetOutputBuilder with explicit asset and value.

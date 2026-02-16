@@ -1,10 +1,17 @@
 use elements::hex::ToHex;
+#[cfg(feature = "simplicity")]
 use std::sync::Arc;
 use std::{fmt::Display, str::FromStr};
 
+#[cfg(feature = "simplicity")]
 use crate::blockdata::out_point::OutPoint;
-use crate::types::{ContractHash, Hex};
-use crate::{LwkError, UniffiCustomTypeConverter};
+#[cfg(feature = "simplicity")]
+use crate::types::ContractHash;
+#[cfg(feature = "simplicity")]
+use crate::types::Hex;
+#[cfg(feature = "simplicity")]
+use crate::LwkError;
+use crate::UniffiCustomTypeConverter;
 
 /// A valid asset identifier.
 ///
@@ -46,6 +53,7 @@ impl UniffiCustomTypeConverter for AssetId {
     }
 }
 
+#[cfg(feature = "simplicity")]
 impl AssetId {
     /// Return the inner byte-order hex representation of the asset identifier.
     pub fn inner_hex(&self) -> Hex {
@@ -54,12 +62,14 @@ impl AssetId {
 }
 
 /// TODO: delete when AssetId is refactored as uniffi::Object.
+#[cfg(feature = "simplicity")]
 #[uniffi::export]
 pub fn asset_id_inner_hex(asset_id: AssetId) -> Hex {
     asset_id.inner_hex()
 }
 
 /// Generate the asset entropy from the issuance prevout and the contract hash.
+#[cfg(feature = "simplicity")]
 #[uniffi::export]
 pub fn generate_asset_entropy(
     outpoint: &OutPoint,
@@ -70,6 +80,7 @@ pub fn generate_asset_entropy(
 }
 
 /// Compute the asset ID from an issuance outpoint and contract hash.
+#[cfg(feature = "simplicity")]
 #[uniffi::export]
 pub fn asset_id_from_issuance(outpoint: &OutPoint, contract_hash: &ContractHash) -> AssetId {
     let entropy = elements::AssetId::generate_asset_entropy(outpoint.into(), contract_hash.into());
@@ -77,6 +88,7 @@ pub fn asset_id_from_issuance(outpoint: &OutPoint, contract_hash: &ContractHash)
 }
 
 /// Compute the reissuance token ID from an issuance outpoint and contract hash.
+#[cfg(feature = "simplicity")]
 #[uniffi::export]
 pub fn reissuance_token_from_issuance(
     outpoint: &OutPoint,
@@ -89,8 +101,7 @@ pub fn reissuance_token_from_issuance(
 
 #[cfg(test)]
 mod tests {
-    use super::AssetId;
-    use crate::{ContractHash, OutPoint, UniffiCustomTypeConverter};
+    use super::*;
 
     #[test]
     fn asset_id() {
@@ -107,6 +118,7 @@ mod tests {
 
     /// Test against a real on-chain issuance on Liquid testnet:
     /// txid: d41479844f8aa2182fa46392d41abf9626dee16ebb82156b105c1b47ff94a9f9
+    #[cfg(feature = "simplicity")]
     #[test]
     fn test_asset_id_from_issuance() {
         let outpoint = OutPoint::new(
@@ -129,6 +141,7 @@ mod tests {
 
     /// Test against a real on-chain issuance on Liquid testnet:
     /// txid: d41479844f8aa2182fa46392d41abf9626dee16ebb82156b105c1b47ff94a9f9
+    #[cfg(feature = "simplicity")]
     #[test]
     fn test_reissuance_token_from_issuance() {
         let outpoint = OutPoint::new(

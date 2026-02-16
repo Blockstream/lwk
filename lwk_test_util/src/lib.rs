@@ -253,6 +253,29 @@ pub fn update_v2_test_vector_after_many_transactions() -> Vec<u8> {
     include_bytes!("../test_data/update_v2_after_many_txs.bin").to_vec()
 }
 
+/// First of 3 consecutive updates for merge testing
+/// Contains initial wallet sync (tip only)
+pub fn update_merge_test_1() -> Vec<u8> {
+    include_bytes!("../test_data/merge_updates/update_merge_1.bin").to_vec()
+}
+
+/// Second of 3 consecutive updates for merge testing
+/// Contains wallet funding transaction
+pub fn update_merge_test_2() -> Vec<u8> {
+    include_bytes!("../test_data/merge_updates/update_merge_2.bin").to_vec()
+}
+
+/// Third of 3 consecutive updates for merge testing
+/// Contains spending transaction
+pub fn update_merge_test_3() -> Vec<u8> {
+    include_bytes!("../test_data/merge_updates/update_merge_3.bin").to_vec()
+}
+
+/// Descriptor used for the merge test updates
+pub fn update_merge_test_descriptor() -> String {
+    include_str!("../test_data/merge_updates/descriptor.txt").to_string()
+}
+
 pub fn update_test_vector_encrypted_bytes() -> Vec<u8> {
     Vec::<u8>::from_hex(include_str!(
         "../test_data/update_test_vector_encrypted.hex"

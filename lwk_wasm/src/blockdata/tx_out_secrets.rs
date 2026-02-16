@@ -1,3 +1,4 @@
+#[cfg(feature = "simplicity")]
 use crate::blockdata::blinding_factor;
 use crate::AssetId;
 use lwk_wollet::elements;
@@ -25,6 +26,7 @@ impl From<&TxOutSecrets> for elements::TxOutSecrets {
     }
 }
 
+#[cfg(feature = "simplicity")]
 #[wasm_bindgen]
 impl TxOutSecrets {
     /// Creates a new `TxOutSecrets` with the given asset, blinding factors, and value.
@@ -44,7 +46,10 @@ impl TxOutSecrets {
             ),
         }
     }
+}
 
+#[wasm_bindgen]
+impl TxOutSecrets {
     /// Creates a new `TxOutSecrets` for an explicit (unblinded) output.
     ///
     /// The blinding factors are set to zero.
@@ -90,18 +95,6 @@ impl TxOutSecrets {
             .expect("value_bf to_string creates valid hex")
     }
 
-    /// Return the asset blinding factor as a typed object.
-    #[wasm_bindgen(js_name = assetBlindingFactorTyped)]
-    pub fn asset_blinding_factor_typed(&self) -> blinding_factor::AssetBlindingFactor {
-        self.inner.asset_bf.into()
-    }
-
-    /// Return the value blinding factor as a typed object.
-    #[wasm_bindgen(js_name = valueBlindingFactorTyped)]
-    pub fn value_blinding_factor_typed(&self) -> blinding_factor::ValueBlindingFactor {
-        self.inner.value_bf.into()
-    }
-
     /// Return true if the output is explicit (no blinding factors).
     #[wasm_bindgen(js_name = isExplicit)]
     pub fn is_explicit(&self) -> bool {
@@ -143,6 +136,22 @@ impl TxOutSecrets {
     }
 }
 
+#[cfg(feature = "simplicity")]
+#[wasm_bindgen]
+impl TxOutSecrets {
+    /// Return the asset blinding factor as a typed object.
+    #[wasm_bindgen(js_name = assetBlindingFactorTyped)]
+    pub fn asset_blinding_factor_typed(&self) -> blinding_factor::AssetBlindingFactor {
+        self.inner.asset_bf.into()
+    }
+
+    /// Return the value blinding factor as a typed object.
+    #[wasm_bindgen(js_name = valueBlindingFactorTyped)]
+    pub fn value_blinding_factor_typed(&self) -> blinding_factor::ValueBlindingFactor {
+        self.inner.value_bf.into()
+    }
+}
+
 impl TxOutSecrets {
     fn asset_generator(&self) -> Generator {
         let asset = self.inner.asset.into_inner().to_byte_array();
@@ -152,7 +161,7 @@ impl TxOutSecrets {
     }
 }
 
-#[cfg(all(test, target_arch = "wasm32"))]
+#[cfg(all(test, target_arch = "wasm32", feature = "simplicity"))]
 mod tests {
     use crate::blockdata::blinding_factor;
 

@@ -12,7 +12,7 @@ blocking = ["lwk_wollet/electrum"]
 
 [dependencies]
 async-trait = "0.1"
-boltz-client = { version = "0.3.1", features = ["ws", "electrum"] }
+boltz-client = { git = "https://github.com/SatoshiPortal/boltz-rust/", rev = "d069db5c8fb4f87fbdbf4186b7a038ebdf64ba6a", features = ["ws", "electrum"] }
 lwk_common = { version = "0.14.0" }
 lwk_wollet = { version = "0.14.0", default-features = false, features = [
     "esplora",

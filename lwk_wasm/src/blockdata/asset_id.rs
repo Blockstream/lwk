@@ -1,4 +1,6 @@
+#[cfg(feature = "simplicity")]
 use crate::blockdata::contract_hash::ContractHash;
+#[cfg(feature = "simplicity")]
 use crate::blockdata::out_point::OutPoint;
 use crate::Error;
 
@@ -8,6 +10,7 @@ use std::{
 };
 
 use lwk_wollet::elements;
+#[cfg(feature = "simplicity")]
 use lwk_wollet::elements::hex::ToHex;
 
 use wasm_bindgen::prelude::*;
@@ -115,7 +118,11 @@ impl AssetId {
     pub fn to_string_js(&self) -> String {
         format!("{self}")
     }
+}
 
+#[cfg(feature = "simplicity")]
+#[wasm_bindgen]
+impl AssetId {
     /// Return the inner byte-order hex representation of the asset identifier.
     // TODO: rename to `reverse_hex`
     #[wasm_bindgen(js_name = innerHex)]
@@ -124,6 +131,7 @@ impl AssetId {
     }
 }
 
+#[cfg(feature = "simplicity")]
 /// Generate the asset entropy from the issuance prevout and the contract hash.
 #[wasm_bindgen(js_name = generateAssetEntropy)]
 pub fn generate_asset_entropy(
@@ -134,6 +142,7 @@ pub fn generate_asset_entropy(
     ContractHash::from_bytes(&midstate.to_byte_array())
 }
 
+#[cfg(feature = "simplicity")]
 /// Compute the asset ID from an issuance outpoint and contract hash.
 #[wasm_bindgen(js_name = assetIdFromIssuance)]
 pub fn asset_id_from_issuance(outpoint: &OutPoint, contract_hash: &ContractHash) -> AssetId {
@@ -141,6 +150,7 @@ pub fn asset_id_from_issuance(outpoint: &OutPoint, contract_hash: &ContractHash)
     elements::AssetId::from_entropy(entropy).into()
 }
 
+#[cfg(feature = "simplicity")]
 /// Compute the reissuance token ID from an issuance outpoint and contract hash.
 #[wasm_bindgen(js_name = reissuanceTokenFromIssuance)]
 pub fn reissuance_token_from_issuance(
@@ -174,6 +184,7 @@ mod tests {
     use wasm_bindgen_test::*;
 
     use crate::{AssetId, AssetIds};
+    #[cfg(feature = "simplicity")]
     use crate::{ContractHash, OutPoint};
 
     wasm_bindgen_test_configure!(run_in_browser);
@@ -207,6 +218,7 @@ mod tests {
         assert_eq!(asset_ids, asset_ids2);
     }
 
+    #[cfg(feature = "simplicity")]
     #[wasm_bindgen_test]
     fn test_asset_id_generators() {
         let outpoint = OutPoint::new(

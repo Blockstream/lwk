@@ -81,5 +81,11 @@ test-submarine: regtest-env-start
     source .env
     RUST_LOG=info cargo test --test submarine -- --include-ignored --nocapture --test-threads=1
 
+test-single ARGUMENT: regtest-env-start
+    #!/usr/bin/env bash
+    set -ea
+    source .env
+    RUST_LOG=info cargo test -- --include-ignored --nocapture {{ARGUMENT}}
+    
 # Run all boltz tests
 test-boltz-all: test-chain test-mrh test-reverse test-submarine

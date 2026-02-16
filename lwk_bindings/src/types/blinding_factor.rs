@@ -77,11 +77,13 @@ impl AssetBlindingFactor {
     }
 
     /// Returns the bytes (32 bytes).
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_bytes(&self) -> Vec<u8> {
         self.inner.into_inner().as_ref().to_vec()
     }
 
     /// Returns the hex-encoded representation.
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_hex(&self) -> String {
         self.inner.into_inner().as_ref().to_hex()
     }
@@ -158,11 +160,13 @@ impl ValueBlindingFactor {
     }
 
     /// Returns the bytes (32 bytes).
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_bytes(&self) -> Vec<u8> {
         self.inner.into_inner().as_ref().to_vec()
     }
 
     /// Returns the hex-encoded representation.
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_hex(&self) -> String {
         self.inner.into_inner().as_ref().to_hex()
     }

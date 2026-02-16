@@ -654,6 +654,12 @@ impl LockupResponse {
                 self.build_and_broadcast_refund().await?;
                 Ok(ControlFlow::Break(true))
             }
+            SwapState::TransactionRefunded => {
+                log::info!("Boltz refunded their stash, we do the same with ours");
+
+                self.build_and_broadcast_refund().await?;
+                Ok(ControlFlow::Break(true))
+            }
             SwapState::SwapExpired => {
                 log::warn!("Chain swap expired");
                 // TODO: non-cooperative refund if possible

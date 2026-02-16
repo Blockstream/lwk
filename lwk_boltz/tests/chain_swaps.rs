@@ -1094,7 +1094,8 @@ mod tests {
             .unwrap();
         let data = lwk_boltz::ChainSwapDataSerializable::deserialize(&serialized_data).unwrap();
         response = session.restore_lockup(data).await.unwrap();
-        let err = response.advance().await.unwrap_err();
-        assert!(err.to_string().contains("transaction.refunded"));
+        assert!(response.complete().await.unwrap());
+
+        // TODO check balance of refund_address
     }
 }

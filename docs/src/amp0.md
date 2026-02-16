@@ -35,7 +35,7 @@ Then you can:
 * ask AMP0 to cosign transactions (👀)
 * broadcast AMP0 transactions (👀)
 
-Using AMP0 with LWK you can keep the signer separated and operate it accoriding to the desired degree of security and isolation.
+Using AMP0 with LWK you can keep the signer separated and operate it according to the desired degree of security and isolation.
 
 <div class="warning">
 ⚠️ AMP0 is based on a legacy system and it has some pitfalls.
@@ -49,7 +49,7 @@ To use AMP0 with LWK you need to:
 3. Create a Liquid Watch-Only (username and password)
 
 ### 1. Create Liquid wallet
-Create a `Signer` and backup it's mnemonic/seed.
+Create a `Signer` and backup its mnemonic/seed.
 From the signer get its `signer_data` using `Signer::amp0_signer_data()`.
 
 Create a `Amp0Connected::new()` passing the `signer_data`.
@@ -61,11 +61,11 @@ This function returns a `Amp0LoggedIn` instance, which can be used to create new
 
 ### 2. Create an AMP account
 Obtain the number of the next account using `Amp0LoggedIn::next_account()`.
-Use the signer to get the corresponding xpub `Signer::amp0_accont_xpub()`.
+Use the signer to get the corresponding xpub `Signer::amp0_account_xpub()`.
 Now you can create a new AMP0 account with `Amp0LoggedIn::create_amp0_account()`, which returns the AMP ID.
 
 ### 3. Create a Liquid Watch-Only
-Choose your your AMP0 Watch-Only credentials `username` and `password` and call `Amp0LoggedIn::create_watch_only()`.
+Choose your AMP0 Watch-Only credentials `username` and `password` and call `Amp0LoggedIn::create_watch_only()`.
 
 
 Now that you have mnemonic/seed (or Jade), AMP ID and Watch-Only credentials (username and password), you're ready to use AMP0 with LWK.
@@ -133,13 +133,13 @@ You then create a wallet with `Wollet::new()`.
 Once you have the AMP0 `Wollet`, you can get `Wollet::transactions()`, `Wollet::balance()` and other information.
 
 LWK wallets needs to be updated with new data from the Liquid blockchain.
-First create a blockchain client, for insance `EsploraClient::new()`.
+First create a blockchain client, for instance `EsploraClient::new()`.
 Then get an update with `BlockchainBackend::full_scan_to_index()` passing the value returned by `Amp0::last_index()`.
 Finally update the wallet with `Wollet::apply_update()`.
 
 <div class="warning">
 ⚠️ For AMP0 wallets, do not sync the wallet with <code>BlockchainBackend::full_scan()</code>, otherwise some funds might not show up.
-AMP0 accounts do not have the concept of <code>GAP_LIMIT</code> and they can have several unused address in a row.
+AMP0 accounts do not have the concept of <code>GAP_LIMIT</code> and they can have several unused addresses in a row.
 The default scanning mechanism when it sees enough unused addresses in a row it stops.
 So it can happen that some transactions are not returned, and the wallet balance could be incorrect.
 </div>
@@ -188,6 +188,6 @@ If all the AMP0 rules are respected, the transaction is cosigned by AMP0 and can
 </custom-tabs>
 
 ## Examples
-We provide a few examples on how to integrate use AMP0 with LWK:
+We provide a few examples on how to use AMP0 with LWK:
 * [liquidwebwallet.org](https://liquidwebwallet.org) integrates AMP0 using WASM
 * Rust tests in [amp0.rs](../lwk_wollet/src/amp0.rs)

@@ -1634,13 +1634,10 @@ fn test_external_utxo() {
     let address = w2.address();
     w2.fund(&env, 100_000, Some(address), None);
 
-    // ANCHOR: external_utxo_create
     let utxo = &w2.wollet.utxos().unwrap()[0];
     let external_utxo = w2.make_external(utxo);
-    // ANCHOR_END: external_utxo_create
 
     let node_address = env.elementsd_getnewaddress();
-    // ANCHOR: external_utxo_add
     let mut pset = w1
         .tx_builder()
         .add_lbtc_recipient(&node_address, 110_000)
@@ -1649,9 +1646,7 @@ fn test_external_utxo() {
         .unwrap()
         .finish()
         .unwrap();
-    // ANCHOR_END: external_utxo_add
 
-    // ANCHOR: external_utxo_sign
     // Add the details for the extenal wallet to sign
     w2.wollet.add_details(&mut pset).unwrap();
     let details = w1.wollet.get_details(&pset).unwrap();
@@ -1663,7 +1658,6 @@ fn test_external_utxo() {
     for signer in signers {
         w1.sign(signer, &mut pset);
     }
-    // ANCHOR_END: external_utxo_sign
 
     let details = w1.wollet.get_details(&pset).unwrap();
     let fee = details.balance.fee;
@@ -1702,7 +1696,6 @@ fn test_external_utxo() {
     assert_eq!(w1.balance(&asset), 9_000);
     assert_eq!(w2.balance(&asset), 1_000);
 
-    // ANCHOR: external_utxo_mixed
     // Send exact amount (no change) spending only external utxo
     let utxo = &w2.wollet.utxos().unwrap()[0];
     let external_utxo = w2.make_external(utxo);
@@ -1715,7 +1708,6 @@ fn test_external_utxo() {
         .unwrap()
         .finish()
         .unwrap();
-    // ANCHOR_END: external_utxo_mixed
 
     w2.wollet.add_details(&mut pset).unwrap();
     for signer in signers {
@@ -1772,6 +1764,78 @@ fn test_external_utxo() {
 
     assert_eq!(w1.balance(&asset), 0);
     assert_eq!(w2.balance(&asset), 10_000);
+}
+
+#[test]
+fn test_docs_external_utxo() -> Result<(), Box<dyn std::error::Error>> {
+    // Send tx with external utxos
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut wollet_ = TestWollet::new(client, &desc);
+
+    let external_signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, external_signer.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut external_wollet_ = TestWollet::new(client, &desc);
+
+    let asset = wollet_.fund_asset(&env);
+    external_wollet_.fund_btc(&env);
+
+    let external_wollet_address = external_wollet_.address();
+    let node_address = env.elementsd_getnewaddress();
+
+    let external_wollet = &external_wollet_.wollet;
+    // ANCHOR: external_utxo_create
+    // Create an external UTXO (LBTC) from the external wollet
+    let utxo = &external_wollet.utxos()?[0];
+    let txid = utxo.outpoint.txid;
+    let vout = utxo.outpoint.vout as usize;
+    let tx = external_wollet.transaction(&txid)?.expect("from utxo").tx;
+    let txout = tx.output[vout].clone();
+    let external_utxo = ExternalUtxo {
+        outpoint: utxo.outpoint,
+        txout,
+        tx: Some(tx),
+        unblinded: utxo.unblinded,
+        max_weight_to_satisfy: external_wollet.max_weight_to_satisfy(),
+    };
+    // ANCHOR_END: external_utxo_create
+    let wollet = &wollet_.wollet;
+    // ANCHOR: external_utxo_add
+    let mut pset = wollet
+        .tx_builder()
+        // Add external UTXO (LBTC)
+        .add_external_utxos(vec![external_utxo])?
+        // Send asset to the node (funded by wollet's UTXOs)
+        .add_recipient(&node_address, 1, asset)?
+        // Send LBTC back to external wollet
+        .drain_lbtc_wallet()
+        .drain_lbtc_to(external_wollet_address)
+        .finish()?;
+    // ANCHOR_END: external_utxo_add
+    // ANCHOR: external_utxo_sign
+    signer.sign(&mut pset)?;
+
+    // To sign the external UTXO, the external wollet must
+    // augment the PSET with details derived from its wollet
+    external_wollet.add_details(&mut pset)?;
+    external_signer.sign(&mut pset)?;
+    // ANCHOR_END: external_utxo_sign
+
+    wollet_.send(&mut pset);
+    external_wollet_.sync();
+
+    let lbtc = wollet_.policy_asset();
+    assert_eq!(external_wollet_.balance(&asset), 0);
+    assert!(external_wollet_.balance(&lbtc) > 0);
+    assert!(wollet_.balance(&asset) > 0);
+    assert_eq!(wollet_.balance(&lbtc), 0);
+    Ok(())
 }
 
 #[test]

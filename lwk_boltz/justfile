@@ -53,73 +53,33 @@ regtest-env-pull:
     (cd regtest && docker compose pull)
     (cd proxy && docker compose build)
 
-# Run reverse swap test
-test-reverse: regtest-env-start
-    #!/usr/bin/env bash
-    set -ea
-    source .env
-    RUST_LOG=info cargo test --test reverse -- tests::test_session_reverse --nocapture --exact --ignored
-    RUST_LOG=info cargo test --test reverse -- tests::test_session_reverse_pay_invoice_twice --nocapture --exact --ignored
-
-# Run submarine swap test
-test-submarine: regtest-env-start
-    #!/usr/bin/env bash
-    set -ea
-    source .env
-    RUST_LOG=info cargo test --test submarine -- tests::test_session_submarine --nocapture --exact --ignored
-
-
 # Run onchain swap test
-test-onchain-swaps: regtest-env-start
+test-chain: regtest-env-start
     #!/usr/bin/env bash
     set -ea
     source .env
-    RUST_LOG=info cargo test --test chain_swaps -- test_session_onchain --nocapture --ignored
-    RUST_LOG=info cargo test --test chain_swaps -- test_session_lbtc_btc_timeout_refund_repro --nocapture --ignored
+    RUST_LOG=info cargo test --test chain_swaps -- --include-ignored --nocapture --test-threads=1
 
 # Run submarine swap test with magic routing hints
 test-mrh: regtest-env-start
     #!/usr/bin/env bash
     set -ea
     source .env
-    RUST_LOG=info cargo test --test mrh -- test_session_mrh --nocapture --ignored
-
-# Run submarine restore swap test
-test-submarine-restore: regtest-env-start
-    #!/usr/bin/env bash
-    set -ea
-    source .env
-    RUST_LOG=info cargo test --test submarine -- tests::test_session_restore_submarine --nocapture --exact --ignored
-    RUST_LOG=info cargo test --test submarine -- tests::test_session_restore_submarine_from_swap_list --nocapture --exact --ignored
-    RUST_LOG=info cargo test --test submarine -- tests::test_session_restore_submarine_with_store --nocapture --exact --ignored
-
-
-# Run reverse restore swap test
-test-reverse-restore: regtest-env-start
-    #!/usr/bin/env bash
-    set -ea
-    source .env
-    RUST_LOG=info cargo test --test reverse -- tests::test_session_restore_reverse --nocapture --exact --ignored
-    RUST_LOG=info cargo test --test reverse -- tests::test_session_restore_reverse_with_random_preimages --nocapture --exact --ignored
-    RUST_LOG=info cargo test --test reverse -- tests::test_session_restore_reverse_with_store --nocapture --exact --ignored
-
+    RUST_LOG=info cargo test --test mrh -- --include-ignored --nocapture --test-threads=1
 
 # Run reverse swap test
-test-reverse-concurrent: regtest-env-start
+test-reverse: regtest-env-start
     #!/usr/bin/env bash
     set -ea
     source .env
-    RUST_LOG=info cargo test --test reverse -- test_session_reverse_concurrent --nocapture --ignored
+    RUST_LOG=info cargo test --test reverse -- --include-ignored --nocapture --test-threads=1
 
-# Run chain swap restore test
-test-chain-restore: regtest-env-start
+# Run submarine swap test
+test-submarine: regtest-env-start
     #!/usr/bin/env bash
     set -ea
     source .env
-    RUST_LOG=info cargo test --test chain_swaps -- tests::test_session_restore_chain_swaps --nocapture --exact --ignored
-    RUST_LOG=info cargo test --test chain_swaps -- tests::test_session_restore_chain_swaps_with_random_preimages --nocapture --exact --ignored
-    RUST_LOG=info cargo test --test chain_swaps -- tests::test_session_restore_chain_swaps_from_swap_list --nocapture --exact --ignored
-    RUST_LOG=info cargo test --test chain_swaps -- tests::test_session_restore_chain_swaps_with_store --nocapture --exact --ignored
+    RUST_LOG=info cargo test --test submarine -- --include-ignored --nocapture --test-threads=1
 
 # Run all boltz tests
-test-boltz-all: test-reverse test-submarine test-onchain-swaps test-mrh test-submarine-restore test-reverse-restore test-reverse-concurrent test-chain-restore
+test-boltz-all: test-chain test-mrh test-reverse test-submarine

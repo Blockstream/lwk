@@ -1446,6 +1446,76 @@ mod tests {
         );
     }
 
+    /// Test that verifies the merge test updates can be deserialized and applied correctly.
+    /// This is a unit test that uses hard-coded binary data (no external nodes required).
+    #[test]
+    fn test_merge_updates_deserialize() {
+        use lwk_test_util::{
+            update_merge_test_1, update_merge_test_2, update_merge_test_3,
+            update_merge_test_descriptor,
+        };
+
+        // Load the descriptor
+        let desc_str = update_merge_test_descriptor();
+        let desc: WolletDescriptor = desc_str.parse().unwrap();
+
+        // Load and deserialize the three updates
+        let update1_bytes = update_merge_test_1();
+        let update2_bytes = update_merge_test_2();
+        let update3_bytes = update_merge_test_3();
+
+        let update1 = Update::deserialize(&update1_bytes).unwrap();
+        let update2 = Update::deserialize(&update2_bytes).unwrap();
+        let update3 = Update::deserialize(&update3_bytes).unwrap();
+
+        // Verify updates can be applied sequentially
+        let mut wollet =
+            Wollet::without_persist(ElementsNetwork::default_regtest(), desc.clone()).unwrap();
+
+        // After update 1: should be empty (tip only update)
+        wollet.apply_update(update1).unwrap();
+        let balance1 = wollet.balance().unwrap();
+        let txs1 = wollet.transactions().unwrap();
+        let utxos1 = wollet.utxos().unwrap();
+        assert!(
+            balance1.is_empty() || balance1.values().all(|&v| v == 0),
+            "Balance should be 0 after update 1"
+        );
+        assert_eq!(txs1.len(), 0, "Should have 0 transactions after update 1");
+        assert_eq!(utxos1.len(), 0, "Should have 0 UTXOs after update 1");
+
+        // After update 2: should have 1,000,000 sats from funding
+        wollet.apply_update(update2).unwrap();
+        let balance2 = wollet.balance().unwrap();
+        let txs2 = wollet.transactions().unwrap();
+        let utxos2 = wollet.utxos().unwrap();
+        let policy_asset = wollet.policy_asset();
+        let btc_balance2 = balance2.get(&policy_asset).copied().unwrap_or(0);
+        assert_eq!(
+            btc_balance2, 1_000_000,
+            "Balance should be 1,000,000 after funding"
+        );
+        assert_eq!(txs2.len(), 1, "Should have 1 transaction after funding");
+        assert_eq!(utxos2.len(), 1, "Should have 1 UTXO after funding");
+
+        // After update 3: should have reduced balance after spending
+        wollet.apply_update(update3).unwrap();
+        let balance3 = wollet.balance().unwrap();
+        let txs3 = wollet.transactions().unwrap();
+        let utxos3 = wollet.utxos().unwrap();
+        let btc_balance3 = balance3.get(&policy_asset).copied().unwrap_or(0);
+        assert!(
+            btc_balance3 < 900_000,
+            "Balance should be less than 900,000 after spending (sent 100k + fee)"
+        );
+        assert!(
+            btc_balance3 > 800_000,
+            "Balance should be more than 800,000 (fee should be less than 100k)"
+        );
+        assert_eq!(txs3.len(), 2, "Should have 2 transactions after sending");
+        assert_eq!(utxos3.len(), 1, "Should have 1 UTXO after sending (change)");
+    }
+
     #[test]
     fn test_desc_no_wildcard_with_index() {
         let k = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";

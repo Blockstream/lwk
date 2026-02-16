@@ -11,6 +11,7 @@ mod bip;
 mod blockdata;
 mod boltz;
 mod contract;
+#[cfg(feature = "simplicity")]
 mod control_block;
 mod descriptor;
 mod error;
@@ -19,6 +20,7 @@ mod esplora;
 mod jade;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod jade_websocket;
+#[cfg(feature = "simplicity")]
 mod keypair;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod ledger;
@@ -30,13 +32,16 @@ mod precision;
 mod prices;
 mod pset;
 mod pset_details;
+#[cfg(feature = "simplicity")]
 mod public_key;
 mod registry;
+#[cfg(feature = "simplicity")]
 mod secret_key;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod serial;
 mod signer;
 mod store;
+#[cfg(feature = "simplicity")]
 mod tweak;
 mod tx_builder;
 mod update;
@@ -46,6 +51,7 @@ mod update;
 mod websocket;
 
 mod wollet;
+#[cfg(feature = "simplicity")]
 mod xonly_public_key;
 mod xpub;
 
@@ -58,28 +64,38 @@ pub use amp2::{Amp2, Amp2Descriptor};
 pub use balance::Balance;
 pub use bip::Bip;
 pub use blockdata::address::{Address, AddressResult};
+pub use blockdata::asset_id::{AssetId, AssetIds};
+#[cfg(feature = "simplicity")]
 pub use blockdata::asset_id::{
-    asset_id_from_issuance, generate_asset_entropy, reissuance_token_from_issuance, AssetId,
-    AssetIds,
+    asset_id_from_issuance, generate_asset_entropy, reissuance_token_from_issuance,
 };
+#[cfg(feature = "simplicity")]
 pub use blockdata::blinding_factor::{AssetBlindingFactor, ValueBlindingFactor};
+#[cfg(feature = "simplicity")]
 pub use blockdata::block_header::BlockHeader;
+#[cfg(feature = "simplicity")]
 pub use blockdata::contract_hash::ContractHash;
 pub use blockdata::external_utxo::ExternalUtxo;
+#[cfg(feature = "simplicity")]
 pub use blockdata::lock_time::LockTime;
 pub use blockdata::out_point::OutPoint;
 pub use blockdata::script::Script;
 pub use blockdata::transaction::{Transaction, Txid};
+#[cfg(feature = "simplicity")]
 pub use blockdata::tx_in::TxIn;
+#[cfg(feature = "simplicity")]
 pub use blockdata::tx_in_witness::{TxInWitness, TxInWitnessBuilder};
+#[cfg(feature = "simplicity")]
 pub use blockdata::tx_out::TxOut;
 pub use blockdata::tx_out_secrets::TxOutSecrets;
+#[cfg(feature = "simplicity")]
 pub use blockdata::tx_sequence::TxSequence;
 pub use blockdata::wallet_tx::WalletTx;
 pub use blockdata::wallet_tx_out::{OptionWalletTxOut, WalletTxOut};
 pub use boltz::LightningPayment;
 pub use boltz::{BoltzSession, BoltzSessionBuilder};
 pub use contract::Contract;
+#[cfg(feature = "simplicity")]
 pub use control_block::ControlBlock;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
@@ -89,19 +105,25 @@ pub use esplora::EsploraClient;
 pub use jade::{Jade, Singlesig};
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use jade_websocket::JadeWebSocket;
+#[cfg(feature = "simplicity")]
 pub use keypair::Keypair;
 pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use pos::PosConfig;
 pub use precision::Precision;
 pub use prices::{ExchangeRates, PricesFetcher, PricesFetcherBuilder};
-pub use pset::{Pset, PsetBuilder, PsetInput, PsetInputBuilder, PsetOutput, PsetOutputBuilder};
+pub use pset::{Pset, PsetInput, PsetOutput};
+#[cfg(feature = "simplicity")]
+pub use pset::{PsetBuilder, PsetInputBuilder, PsetOutputBuilder};
 pub use pset_details::{Issuance, PsetDetails};
+#[cfg(feature = "simplicity")]
 pub use public_key::PublicKey;
 pub use registry::{AssetMeta, Registry, RegistryPost};
+#[cfg(feature = "simplicity")]
 pub use secret_key::SecretKey;
 pub use signer::Signer;
 pub use store::{JsStorage, JsStoreLink, JsTestStore};
+#[cfg(feature = "simplicity")]
 pub use tweak::Tweak;
 pub use tx_builder::TxBuilder;
 pub use update::Update;
@@ -110,6 +132,7 @@ pub use update::Update;
 pub use websocket::WebSocketSerial;
 
 pub use wollet::Wollet;
+#[cfg(feature = "simplicity")]
 pub use xonly_public_key::XOnlyPublicKey;
 pub use xpub::Xpub;
 

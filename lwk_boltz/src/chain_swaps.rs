@@ -531,6 +531,25 @@ impl LockupResponse {
         self.data.boltz_fee
     }
 
+    async fn build_and_broadcast_refund(&self) -> Result<(), Error> {
+        sleep(WAIT_TIME).await;
+        let tx = self
+            .lockup_script
+            .construct_refund(SwapTransactionParams {
+                keys: self.data.refund_keys,
+                output_address: self.data.refund_address.clone(),
+                fee: Fee::Relative(1.0),
+                swap_id: self.swap_id().to_string(),
+                chain_client: &self.chain_client,
+                boltz_client: &self.api,
+                options: None,
+            })
+            .await?;
+        let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
+        log::info!("Refund transaction broadcasted: {txid}");
+        Ok(())
+    }
+
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
         let update = self.next_status().await?;
         let update_status = update.swap_state()?;
@@ -631,21 +650,8 @@ impl LockupResponse {
             }
             SwapState::TransactionLockupFailed => {
                 log::warn!("User lockup failed, performing refund");
-                sleep(WAIT_TIME).await;
-                let tx = self
-                    .lockup_script
-                    .construct_refund(SwapTransactionParams {
-                        keys: self.data.refund_keys,
-                        output_address: self.data.refund_address.clone(),
-                        fee: Fee::Relative(1.0),
-                        swap_id: self.swap_id().to_string(),
-                        chain_client: &self.chain_client,
-                        boltz_client: &self.api,
-                        options: None,
-                    })
-                    .await?;
-                let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
-                log::info!("Refund transaction broadcasted: {txid}");
+
+                self.build_and_broadcast_refund().await?;
                 Ok(ControlFlow::Break(true))
             }
             SwapState::SwapExpired => {

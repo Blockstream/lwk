@@ -29,6 +29,7 @@ mod tests {
     use lwk_wollet::elements;
     use lwk_wollet::secp256k1::rand::thread_rng;
     use lwk_wollet::ElementsNetwork;
+    use std::ops::ControlFlow;
     use std::str::FromStr;
     use std::sync::Arc;
     use std::time::Duration;
@@ -1008,5 +1009,93 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_session_lbtc_btc_timeout_refund_repro() {
+        let _ = env_logger::try_init();
+
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+
+        let network = ElementsNetwork::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic.clone())
+            .build()
+            .await
+            .unwrap();
+
+        let refund_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let claim_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+            .await
+            .unwrap();
+        let refund_address = elements::Address::from_str(&refund_address_str).unwrap();
+        let claim_address = bitcoin::Address::from_str(&claim_address_str)
+            .unwrap()
+            .assume_checked();
+
+        let mut response = session
+            .lbtc_to_btc(50_000, &refund_address, &claim_address, None)
+            .await
+            .unwrap();
+
+        log::info!(
+            "LBTC->BTC timeout repro - Lockup address: {}",
+            response.lockup_address()
+        );
+        let txid = crate::utils::send_to_address(
+            LBTC_CHAIN.into(),
+            response.lockup_address(),
+            response.expected_amount(),
+        )
+        .await
+        .unwrap();
+        log::info!("Sent to lockup address: {txid}");
+
+        assert!(matches!(
+            response.advance().await.unwrap(),
+            ControlFlow::Continue(update) if &update.status == "transaction.mempool",
+        ));
+        crate::utils::mine_blocks(1).await.unwrap();
+        assert!(matches!(
+            response.advance().await.unwrap(),
+            ControlFlow::Continue(update) if &update.status == "transaction.confirmed",
+        ));
+        assert!(matches!(
+            response.advance().await.unwrap(),
+            ControlFlow::Continue(update) if &update.status == "transaction.server.mempool",
+        ));
+
+        crate::utils::mine_blocks(1441).await.unwrap();
+        log::info!("Mined 1441 blocks");
+        sleep(Duration::from_secs(3)).await;
+
+        let serialized_data = response.serialize().unwrap();
+
+        let err = response.advance().await.unwrap_err().to_string();
+        assert!(
+            err.contains("swap not eligible for a cooperative claim")
+                || err.contains("bad-txns-inputs-missingorspent")
+        );
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic.clone())
+            .build()
+            .await
+            .unwrap();
+        let data = lwk_boltz::ChainSwapDataSerializable::deserialize(&serialized_data).unwrap();
+        response = session.restore_lockup(data).await.unwrap();
+        let err = response.advance().await.unwrap_err();
+        assert!(err.to_string().contains("transaction.refunded"));
     }
 }

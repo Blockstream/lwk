@@ -75,6 +75,7 @@ test-onchain-swaps: regtest-env-start
     set -ea
     source .env
     RUST_LOG=info cargo test --test chain_swaps -- test_session_onchain --nocapture --ignored
+    RUST_LOG=info cargo test --test chain_swaps -- test_session_lbtc_btc_timeout_refund_repro --nocapture --ignored
 
 # Run submarine swap test with magic routing hints
 test-mrh: regtest-env-start

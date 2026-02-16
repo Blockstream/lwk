@@ -23,6 +23,7 @@ w1.wait_for_tx(txid1, client)
 w2.wait_for_tx(txid2, client)
 
 # Get the utxo from w2
+# ANCHOR: external_utxo_create
 utxo_w2 = w2.utxos()[0];
 utxo_w2 = ExternalUtxo(
     utxo_w2.outpoint().vout(),
@@ -31,23 +32,27 @@ utxo_w2 = ExternalUtxo(
     w2.max_weight_to_satisfy(),
     w2.is_segwit()
 )
+# ANCHOR_END: external_utxo_create
 
 # ANCHOR: drain_lbtc_wallet
 node_addr = node.get_new_address()
 # Create speding tx sending all to the node # ANCHOR: ignore
+# ANCHOR: external_utxo_add
 builder = network.tx_builder()
 builder.add_external_utxos([utxo_w2]) # ANCHOR: ignore
 builder.drain_lbtc_wallet()
 builder.drain_lbtc_to(node_addr)
 pset = builder.finish(w1)
+# ANCHOR_END: external_utxo_add
 # ANCHOR_END: drain_lbtc_wallet
 
 pset = s1.sign(pset)
 
 # Add the details for Wallet 2 so that Signer 2 is able to sign
+# ANCHOR: external_utxo_sign
 pset = w2.add_details(pset)
 pset = s2.sign(pset)
-
+# ANCHOR_END: external_utxo_sign
 pset = w1.finalize(pset)
 tx = pset.extract_tx()
 txid = client.broadcast(tx)

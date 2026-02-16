@@ -70,7 +70,6 @@ mod tests {
 
         let secp = Secp256k1::new();
         let preimage = Preimage::random();
-        log::info!("{preimage:#?}");
         let our_claim_keys = Keypair::new(&secp, &mut thread_rng());
         let claim_public_key = PublicKey {
             compressed: true,

@@ -7,14 +7,10 @@ use elements::{
 use lwk_wollet::{WalletTx, EC};
 
 use crate::{
-    blockdata::tx_in_witness::TxInWitness,
     types::{AssetId, Hex},
     LwkError, TxIn, TxOut, Txid,
 };
-use std::{
-    fmt::Display,
-    sync::{Arc, Mutex},
-};
+use std::{fmt::Display, sync::Arc};
 
 /// A Liquid transaction
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone)]
@@ -121,22 +117,25 @@ impl Transaction {
 /// Editor for modifying transactions.
 ///
 /// See [`elements::Transaction`] for more details.
+#[cfg(feature = "simplicity")]
 #[derive(uniffi::Object, Debug)]
 pub struct TransactionEditor {
-    inner: Mutex<Option<elements::Transaction>>,
+    inner: std::sync::Mutex<Option<elements::Transaction>>,
 }
 
+#[cfg(feature = "simplicity")]
 fn editor_consumed() -> LwkError {
     LwkError::ObjectConsumed
 }
 
+#[cfg(feature = "simplicity")]
 #[uniffi::export]
 impl TransactionEditor {
     /// Create an editor from an existing transaction.
     #[uniffi::constructor]
     pub fn from_transaction(tx: &Transaction) -> Arc<Self> {
         Arc::new(Self {
-            inner: Mutex::new(Some(tx.inner.clone())),
+            inner: std::sync::Mutex::new(Some(tx.inner.clone())),
         })
     }
 
@@ -144,7 +143,7 @@ impl TransactionEditor {
     pub fn set_input_witness(
         &self,
         input_index: u32,
-        witness: &TxInWitness,
+        witness: &crate::blockdata::tx_in_witness::TxInWitness,
     ) -> Result<(), LwkError> {
         let idx = input_index as usize;
         let mut lock = self.inner.lock()?;

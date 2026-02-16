@@ -1081,6 +1081,9 @@ mod tests {
         let serialized_data = response.serialize().unwrap();
 
         let err = response.advance().await.unwrap_err().to_string();
+
+        // TODO: should we handle this with a refund?
+        // In practice it's solved with a restore where the transaction.refunded is returned
         assert!(
             err.contains("swap not eligible for a cooperative claim")
                 || err.contains("bad-txns-inputs-missingorspent")

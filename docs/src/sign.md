@@ -9,8 +9,8 @@ This is done with `Wollet::get_details()`, which returns:
 * missing signatures and the respective signers' fingerprints
 * net balance, the effect that transaction has on wallet (e.g. how much funds are sent out of the wallet)
 
-If the `Signer` fingeprint is included in the missing signatures,
-then a `Signer` with that fingeprint expected to sign.
+If the `Signer` fingerprint is included in the missing signatures,
+then a `Signer` with that fingerprint expected to sign.
 
 The balance can be shown to the user or validated against the `Signer` expectations.
 

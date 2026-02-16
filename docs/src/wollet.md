@@ -92,7 +92,7 @@ This address can receive any Liquid asset or amount.
 ## Get Transactions and Balance
 It's possibile to get the list of wallet transactions with `Wollet::transactions()` and the balance `Wollet::balance()`.
 
-Note: Liquid transactions are confidential, meaining that only sender and receiver can see their asset and amount. `Wollet` unblinds the transactions and returns unblinded data that can be shown to the user.
+Note: Liquid transactions are confidential, meaning that only sender and receiver can see their asset and amount. `Wollet` unblinds the transactions and returns unblinded data that can be shown to the user.
 
 `Wollet` however does not have internet access.
 To fetch (new) wallet data, you need to use a "client" that fetches wallet transactions from some server.

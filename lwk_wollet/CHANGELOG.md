@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-There are have been changes in how the wollet handle persistence.
+There have been changes in how the wollet handle persistence.
 
 * If you're a lwk_cli user, a lwk_wasm/lwk_node user, a lwk_bindings user using lwk_bindings::Wollet::new there are no change.
 

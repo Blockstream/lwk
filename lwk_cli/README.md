@@ -25,7 +25,7 @@ Install bash completion with:
 $ lwk_cli generate-completion bash | jq -r . | sudo tee /usr/share/bash-completion/completions/lwk_cli
 ```
 
-Other shell are available: bash, elvish, fish, powershell, zsh.
+Other shells are available: bash, elvish, fish, powershell, zsh.
 The destination file path `/usr/share/bash-completion/completions/cli` may change according to your distro.
 
 ## Server
@@ -58,7 +58,7 @@ $ lwk_cli server stop
 ```
 
 Another way to terminate a server started in background is to type `fg` to bring the background
-process in the forground and then hit `ctrl-c`
+process in the foreground and then hit `ctrl-c`
 
 ## Client
 

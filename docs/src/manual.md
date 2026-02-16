@@ -1,5 +1,5 @@
 # Manual Coin Selection
-Manual coin selection allows you to explicitly choose which UTXOs (unspent transaction outputs) from your wallet to use when building a transaction. By default, LWK automatically add all UTXOs to cover the transaction amount and fees. However, manual coin selection gives you control over which specific UTXOs are spent, which can be useful for privacy, UTXO management, or specific transaction requirements.
+Manual coin selection allows you to explicitly choose which UTXOs (unspent transaction outputs) from your wallet to use when building a transaction. By default, LWK automatically adds all UTXOs to cover the transaction amount and fees. However, manual coin selection gives you control over which specific UTXOs are spent, which can be useful for privacy, UTXO management, or specific transaction requirements.
 
 When you enable manual coin selection, only the UTXOs you specify will be used. The transaction builder will not automatically add additional UTXOs, so you must ensure the selected UTXOs provide sufficient funds to cover the transaction amount and fees.
 

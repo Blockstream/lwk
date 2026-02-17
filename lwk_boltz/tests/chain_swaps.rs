@@ -1073,7 +1073,7 @@ mod tests {
             .await;
 
         crate::utils::mine_blocks(1441).await.unwrap();
-        log::info!("Mined 1441 blocks");
+        log::info!("Mined 1441 blocks -> Boltz ask for a refund because we didn't claim");
         sleep(Duration::from_secs(3)).await;
 
         let serialized_data = response.serialize().unwrap();

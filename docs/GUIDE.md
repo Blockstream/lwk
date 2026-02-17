@@ -13,10 +13,9 @@ Leave setup and most asserts out of those blocks.
 
 Consider renaming variables to make them more descriptive.
 
-### Run
-Code snippets must be runnable locally to ensure they compile and do what they're describing.
-
 ### CI
+Code snippets must be executable locally to ensure they compile, they're up-to-date, and do what they're describing.
+
 Code snippets should be run in CI.
 However in some rare cases, running such test in CI can be problematic;
 in these cases, state explicitly why the test is not run in CI.

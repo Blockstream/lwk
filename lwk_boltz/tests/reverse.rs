@@ -4,7 +4,7 @@ mod utils;
 mod tests {
 
     use crate::utils::{self, DEFAULT_REGTEST_NODE, TIMEOUT, WAIT_TIME};
-    use std::{env, str::FromStr, sync::Arc, time::Duration};
+    use std::{str::FromStr, sync::Arc, time::Duration};
 
     use bip39::Mnemonic;
     use boltz_client::{
@@ -23,88 +23,6 @@ mod tests {
         BoltzSession, InvoiceDataSerializable, SwapAsset, SwapPersistence,
     };
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
-
-    #[tokio::test]
-    #[ignore = "mainnet"]
-    async fn test_session_create_invoice_mainnet() {
-        let _ = env_logger::try_init();
-        let network = ElementsNetwork::Liquid;
-        let session = BoltzSession::builder(
-            network,
-            AnyClient::Electrum(Arc::new(
-                ElectrumClient::new(
-                    "elements-mainnet.blockstream.info:50002",
-                    true,
-                    true,
-                    network,
-                )
-                .unwrap(),
-            )),
-        )
-        .create_swap_timeout(TIMEOUT)
-        .build()
-        .await
-        .unwrap();
-        let mainnet_addr = elements::Address::from_str("lq1qqvp9g33gw9y05xava3dvcpq8pnkv82yj3tdnzp547eyp9yrztz2lkyxrhscd55ev4p7lj2n72jtkn5u4xnj4v577c42jhf3ww").unwrap();
-        log::info!("creating invoice for mainnet address: {mainnet_addr}");
-
-        for _ in 0..10 {
-            let invoice_response = session
-                .invoice(1000, Some("test".to_string()), &mainnet_addr, None)
-                .await;
-            match invoice_response {
-                Ok(invoice_response) => {
-                    assert!(invoice_response
-                        .bolt11_invoice()
-                        .to_string()
-                        .starts_with("lnbc1"));
-                    return;
-                }
-                Err(e) => {
-                    // it happens sometimes that the invoice is not created with:
-                    // [2025-10-02T11:03:52Z WARN  boltz_client::swaps::status_stream] Failed to broadcast update: channel closed
-                    // in this case we retry, testing the capability of the session to retry
-                    log::error!("Error creating invoice: {e:?}");
-                }
-            }
-        }
-        panic!("Invoice not created after 10 attempts");
-    }
-
-    #[tokio::test]
-    #[ignore = "mainnet"]
-    async fn test_session_reverse_mainnet() {
-        let _ = env_logger::try_init();
-
-        use lwk_common::Signer;
-        let mnemonic = env::var("MAINNET_MNEMONIC").unwrap();
-        let network = ElementsNetwork::Liquid;
-        let signer = lwk_signer::SwSigner::new(&mnemonic, true).unwrap();
-        let desc = signer.wpkh_slip77_descriptor().unwrap();
-        let desc: lwk_wollet::WolletDescriptor = desc.parse().unwrap();
-        let claim_address = desc.address(2, network.address_params()).unwrap();
-        log::info!("Claim Address: {claim_address}");
-        let client = ElectrumClient::new(
-            "elements-mainnet.blockstream.info:50002",
-            true,
-            true,
-            network,
-        )
-        .unwrap();
-        let session = BoltzSession::builder(network, AnyClient::Electrum(Arc::new(client)))
-            .create_swap_timeout(TIMEOUT)
-            .build()
-            .await
-            .unwrap();
-        let response = session
-            .invoice(1000, Some("test".to_string()), &claim_address, None)
-            .await
-            .unwrap();
-        log::info!("Invoice Response: {}", response.bolt11_invoice());
-        log::info!("Waiting for invoice to be paid");
-        let result = response.complete_pay().await;
-        log::info!("Complete Pay Result: {result:?}");
-    }
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]

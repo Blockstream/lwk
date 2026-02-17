@@ -4,7 +4,7 @@ mod utils;
 mod tests {
 
     use crate::utils::{self, BOLTZ_REGTEST, DEFAULT_REGTEST_NODE, TIMEOUT, WAIT_TIME};
-    use std::{env, str::FromStr, sync::Arc, time::Duration};
+    use std::{str::FromStr, sync::Arc, time::Duration};
 
     use bip39::Mnemonic;
     use boltz_client::{
@@ -20,63 +20,6 @@ mod tests {
         BoltzSession, LightningPayment, PreparePayDataSerializable, SwapPersistence,
     };
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
-
-    #[tokio::test]
-    #[ignore = "mainnet"]
-    async fn test_session_submarine_mainnet() {
-        let _ = env_logger::try_init();
-
-        let network = ElementsNetwork::Liquid;
-
-        let session = BoltzSession::builder(
-            network,
-            AnyClient::Electrum(Arc::new(
-                ElectrumClient::new(
-                    "elements-mainnet.blockstream.info:50002",
-                    true,
-                    true,
-                    network,
-                )
-                .unwrap(),
-            )),
-        )
-        .create_swap_timeout(TIMEOUT)
-        .build()
-        .await
-        .unwrap();
-
-        // In a real mainnet test, you would need to provide an actual Lightning invoice
-        // This is a placeholder - in practice you'd need to generate this externally
-        let bolt11_invoice = env::var("MAINNET_INVOICE")
-            .expect("MAINNET_INVOICE environment variable must be set for mainnet submarine test");
-        let refund_address = env::var("MAINNET_REFUND_ADDRESS").expect(
-            "MAINNET_REFUND_ADDRESS environment variable must be set for mainnet submarine test",
-        );
-
-        log::info!("Preparing payment for invoice: {bolt11_invoice}");
-
-        let refund_address = elements::Address::from_str(&refund_address).unwrap();
-        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
-
-        let prepare_pay_response = session
-            .prepare_pay(&lightning_payment, &refund_address, None)
-            .await
-            .unwrap();
-        log::info!(
-            "Send {} sats to address: {}",
-            prepare_pay_response
-                .data
-                .create_swap_response
-                .expected_amount,
-            prepare_pay_response.data.create_swap_response.address
-        );
-        log::info!("Waiting for payment to be sent to the address...");
-
-        // Note: In a real test, you would need to send funds to prepare_pay_response.address
-        // with amount prepare_pay_response.amount before calling complete_pay()
-        let result = prepare_pay_response.complete_pay().await;
-        log::info!("Complete Pay Result: {result:?}");
-    }
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]

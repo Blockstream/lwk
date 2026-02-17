@@ -131,6 +131,16 @@ def lockup_thread(lockup_response):
             traceback.print_exc()
             break
 
+def should_start_completion_thread(swap_data):
+    """Ask whether to start monitoring for a restored swap."""
+    swap_id = swap_data.get("id", "unknown")
+    last_state = swap_data.get("last_state", "unknown")
+    answer = input(
+        f"Swap {swap_id} (state: {last_state}). "
+        "Start completion thread? [y/N]: "
+    ).strip().lower()
+    return answer in ("y", "yes")
+
 def show_invoice(boltz_session, wollet):
     """Create and show an invoice"""
     # Ask for the invoice amount
@@ -287,6 +297,18 @@ def restorable_reverse_swaps(boltz_session, wollet):
             swap_data = json.loads(data)
             print(json.dumps(swap_data, indent=2))
             print()
+
+            if should_start_completion_thread(swap_data):
+                invoice_response = boltz_session.restore_invoice(data)
+                thread = threading.Thread(
+                    target=invoice_thread,
+                    args=(invoice_response, claim_address),
+                )
+                thread.daemon = True
+                thread.start()
+                print(f"Started completion thread for restored swap {invoice_response.swap_id()}")
+            else:
+                print("Skipped completion thread startup.")
     except Exception as e:
         print(f"Error fetching reverse swaps: {e}")
 
@@ -314,6 +336,18 @@ def restorable_submarine_swaps(boltz_session, wollet):
             swap_data = json.loads(data)
             print(json.dumps(swap_data, indent=2))
             print()
+
+            if should_start_completion_thread(swap_data):
+                prepare_pay_response = boltz_session.restore_prepare_pay(data)
+                thread = threading.Thread(
+                    target=pay_invoice_thread,
+                    args=(prepare_pay_response,),
+                )
+                thread.daemon = True
+                thread.start()
+                print(f"Started completion thread for restored swap {prepare_pay_response.swap_id()}")
+            else:
+                print("Skipped completion thread startup.")
     except Exception as e:
         print(f"Error fetching submarine swaps: {e}")
 
@@ -345,6 +379,15 @@ def restorable_btc_to_lbtc_swaps(boltz_session, wollet):
             swap_data = json.loads(data)
             print(json.dumps(swap_data, indent=2))
             print()
+
+            if should_start_completion_thread(swap_data):
+                lockup_response = boltz_session.restore_lockup(data)
+                thread = threading.Thread(target=lockup_thread, args=(lockup_response,))
+                thread.daemon = True
+                thread.start()
+                print(f"Started completion thread for restored swap {lockup_response.swap_id()}")
+            else:
+                print("Skipped completion thread startup.")
     except Exception as e:
         print(f"Error fetching BTC to LBTC chain swaps: {e}")
 
@@ -377,12 +420,14 @@ def restorable_lbtc_to_btc_swaps(boltz_session, wollet):
             print(json.dumps(swap_data, indent=2))
             print()
 
-            # Restore and start completion monitoring for the chain swap.
-            lockup_response = boltz_session.restore_lockup(data)
-            thread = threading.Thread(target=lockup_thread, args=(lockup_response,))
-            thread.daemon = True
-            thread.start()
-            print(f"Started completion thread for restored swap {lockup_response.swap_id()}")
+            if should_start_completion_thread(swap_data):
+                lockup_response = boltz_session.restore_lockup(data)
+                thread = threading.Thread(target=lockup_thread, args=(lockup_response,))
+                thread.daemon = True
+                thread.start()
+                print(f"Started completion thread for restored swap {lockup_response.swap_id()}")
+            else:
+                print("Skipped completion thread startup.")
     except Exception as e:
         print(f"Error fetching LBTC to BTC chain swaps: {e}")
 

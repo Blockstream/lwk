@@ -13,7 +13,6 @@
 * [Advanced]() #(advanced.md) ❌
   * [Blockchain Clients](clients.md) ✅
   * [Multisig](multisig.md) ✅
-  * [Custom Wollet Store]() #(store.md) ❌
   * [Issuance](issuance.md) ✅
   * [Reissuance](reissuance.md) ✅
   * [Burn](burn.md) ✅

@@ -24,6 +24,7 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/basics.py",
     "tests/bindings/bip85.py",
     "tests/bindings/dwid.py",
+    "tests/bindings/drain_lbtc.py",
     "tests/bindings/payment_instructions.py"
 );
 

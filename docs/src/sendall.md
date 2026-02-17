@@ -28,7 +28,7 @@ The methods take the following arguments:
 <section>
 
 ```python
-{{#include ../../lwk_bindings/tests/bindings/external_utxos.py:drain_lbtc_wallet}}
+{{#include ../../lwk_bindings/tests/bindings/drain_lbtc.py:drain_lbtc_wallet}}
 ```
 
 </section>

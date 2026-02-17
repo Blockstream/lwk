@@ -34,7 +34,6 @@ utxo_w2 = ExternalUtxo(
 )
 # ANCHOR_END: external_utxo_create
 
-# ANCHOR: drain_lbtc_wallet
 node_addr = node.get_new_address()
 # Create speding tx sending all to the node # ANCHOR: ignore
 # ANCHOR: external_utxo_add
@@ -44,7 +43,6 @@ builder.drain_lbtc_wallet()
 builder.drain_lbtc_to(node_addr)
 pset = builder.finish(w1)
 # ANCHOR_END: external_utxo_add
-# ANCHOR_END: drain_lbtc_wallet
 
 pset = s1.sign(pset)
 

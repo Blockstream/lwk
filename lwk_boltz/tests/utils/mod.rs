@@ -253,3 +253,21 @@ pub async fn next_status(
         }
     }
 }
+
+pub async fn assert_next_continue_status(
+    response: &mut lwk_boltz::LockupResponse,
+    expected_status: &str,
+) {
+    match response.advance().await.expect("advance should not fail") {
+        std::ops::ControlFlow::Continue(update) => {
+            assert_eq!(
+                update.status, expected_status,
+                "Expected update status '{expected_status}', got '{}'",
+                update.status
+            );
+        }
+        std::ops::ControlFlow::Break(result) => {
+            panic!("Expected status '{expected_status}', swap terminated with result: {result}")
+        }
+    }
+}

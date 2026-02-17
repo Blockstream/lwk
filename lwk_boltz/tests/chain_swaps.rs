@@ -29,7 +29,6 @@ mod tests {
     use lwk_wollet::elements;
     use lwk_wollet::secp256k1::rand::thread_rng;
     use lwk_wollet::ElementsNetwork;
-    use std::ops::ControlFlow;
     use std::str::FromStr;
     use std::sync::Arc;
     use std::time::Duration;
@@ -1067,19 +1066,11 @@ mod tests {
         .unwrap();
         log::info!("Sent to lockup address: {txid}");
 
-        assert!(matches!(
-            response.advance().await.unwrap(),
-            ControlFlow::Continue(update) if &update.status == "transaction.mempool",
-        ));
+        crate::utils::assert_next_continue_status(&mut response, "transaction.mempool").await;
         crate::utils::mine_blocks(1).await.unwrap();
-        assert!(matches!(
-            response.advance().await.unwrap(),
-            ControlFlow::Continue(update) if &update.status == "transaction.confirmed",
-        ));
-        assert!(matches!(
-            response.advance().await.unwrap(),
-            ControlFlow::Continue(update) if &update.status == "transaction.server.mempool",
-        ));
+        crate::utils::assert_next_continue_status(&mut response, "transaction.confirmed").await;
+        crate::utils::assert_next_continue_status(&mut response, "transaction.server.mempool")
+            .await;
 
         crate::utils::mine_blocks(1441).await.unwrap();
         log::info!("Mined 1441 blocks");

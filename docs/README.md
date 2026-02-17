@@ -1,5 +1,8 @@
 # LWK docs
 
+## Style
+For new additions or improvement, follow our [guidelines](GUIDE.md).
+
 ## mdBook
 
 Serve the docs locally:

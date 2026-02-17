@@ -15,6 +15,7 @@ pub enum SwapState {
     TransactionClaimPending,
     TransactionClaimed,
     TransactionLockupFailed,
+    TransactionFailed,
     InvoiceFailedToPay,
     SwapCreated,
     TransactionDirect,
@@ -51,6 +52,7 @@ impl SwapState {
                 | SwapState::InvoiceSettled
                 | SwapState::InvoiceExpired
                 | SwapState::SwapExpired
+                | SwapState::TransactionFailed
         )
     }
 }
@@ -67,6 +69,7 @@ impl std::fmt::Display for SwapState {
             SwapState::TransactionClaimPending => "transaction.claim.pending",
             SwapState::TransactionClaimed => "transaction.claimed",
             SwapState::TransactionLockupFailed => "transaction.lockupFailed",
+            SwapState::TransactionFailed => "transaction.failed",
             SwapState::InvoiceFailedToPay => "invoice.failedToPay",
             SwapState::SwapCreated => "swap.created",
             SwapState::TransactionDirect => "transaction.direct",
@@ -96,6 +99,7 @@ impl std::str::FromStr for SwapState {
             "transaction.claim.pending" => Ok(SwapState::TransactionClaimPending),
             "transaction.claimed" => Ok(SwapState::TransactionClaimed),
             "transaction.lockupFailed" => Ok(SwapState::TransactionLockupFailed),
+            "transaction.failed" => Ok(SwapState::TransactionFailed),
             "invoice.failedToPay" => Ok(SwapState::InvoiceFailedToPay),
             "swap.created" => Ok(SwapState::SwapCreated),
             "transaction.direct" => Ok(SwapState::TransactionDirect),
@@ -145,6 +149,7 @@ mod tests {
             SwapState::TransactionClaimPending,
             SwapState::TransactionClaimed,
             SwapState::TransactionLockupFailed,
+            SwapState::TransactionFailed,
             SwapState::InvoiceFailedToPay,
             SwapState::SwapCreated,
             SwapState::TransactionDirect,

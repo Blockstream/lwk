@@ -654,6 +654,15 @@ impl LockupResponse {
                 self.build_and_broadcast_refund().await?;
                 Ok(ControlFlow::Break(true))
             }
+            SwapState::TransactionFailed => {
+                log::warn!(
+                    "Boltz failed server lockup, performing refund. reason: {:?}, details: {:?}",
+                    update.failure_reason,
+                    update.failure_details
+                );
+                self.build_and_broadcast_refund().await?;
+                Ok(ControlFlow::Break(true))
+            }
             SwapState::TransactionRefunded => {
                 log::info!("Boltz refunded their stash, we do the same with ours");
 

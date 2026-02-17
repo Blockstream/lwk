@@ -633,7 +633,12 @@ def main():
 
     wollet = Wollet(network, desc, datadir=None)
 
-    mnemonic_lightning = signer.derive_bip85_mnemonic(0, 12) # for security reasons using a different mnemonic for the lightning session
+    mnemonic_derivation_index = os.getenv('MNEMONIC_DERIVATION_INDEX')
+    if mnemonic_derivation_index:
+        mnemonic_derivation_index = int(mnemonic_derivation_index)
+    else:
+        mnemonic_derivation_index = 26589
+    mnemonic_lightning = signer.derive_bip85_mnemonic(mnemonic_derivation_index, 12) # for security reasons using a different mnemonic for the lightning session
     lightning_client = AnyClient.from_esplora(esplora_client)
     logger = MyLogger()
 

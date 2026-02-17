@@ -243,13 +243,37 @@ nix:
     - nix $EXP_FEAT $CACHE develop . -c rust-analyzer analysis-stats . 2>log # prints ERROR if there are cyclic deps with dev-deps
     - (! grep ERROR log)
 
-boltz:
+boltz_chain:
   extends: .base
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
-    - just test-boltz-all
+    - just test-chain
+
+boltz_mrh:
+  extends: .base
+  script:
+    - cd lwk_boltz
+    - git submodule update --init --recursive
+    - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
+    - just test-mrh
+
+boltz_reverse:
+  extends: .base
+  script:
+    - cd lwk_boltz
+    - git submodule update --init --recursive
+    - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
+    - just test-reverse
+
+boltz_submarine:
+  extends: .base
+  script:
+    - cd lwk_boltz
+    - git submodule update --init --recursive
+    - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
+    - just test-submarine
 
 # maven credentials and gpg settings
 # in runner's ~/.gradle/gradle.properties

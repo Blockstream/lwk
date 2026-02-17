@@ -376,6 +376,13 @@ def restorable_lbtc_to_btc_swaps(boltz_session, wollet):
             swap_data = json.loads(data)
             print(json.dumps(swap_data, indent=2))
             print()
+
+            # Restore and start completion monitoring for the chain swap.
+            lockup_response = boltz_session.restore_lockup(data)
+            thread = threading.Thread(target=lockup_thread, args=(lockup_response,))
+            thread.daemon = True
+            thread.start()
+            print(f"Started completion thread for restored swap {lockup_response.swap_id()}")
     except Exception as e:
         print(f"Error fetching LBTC to BTC chain swaps: {e}")
 

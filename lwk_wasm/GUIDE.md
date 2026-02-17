@@ -37,3 +37,8 @@ for (const [currency, amount] of balance.entries()) {
 // 3. Convert to a plain object
 const balanceObject = Object.fromEntries(balance.entries());
 ```
+
+### Getters
+Use the annotation `#[wasm_bindgen(getter = someData)]` make user code more idiomatic javascript.
+That allows to expose `object.someData`.
+If instead we use `#[wasm_bindgen(js_name = someData)] we would expose `object.someData()`.

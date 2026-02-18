@@ -2,8 +2,9 @@ use crate::test_wollet::*;
 use lwk_common::Signer;
 use lwk_test_util::*;
 use lwk_wollet::clients::blocking::EsploraClient;
-use lwk_wollet::registry::{blocking::Registry, Contract, Entity, RegistryPost};
+use lwk_wollet::registry::{blocking::Registry, RegistryPost};
 use lwk_wollet::ElementsNetwork;
+use lwk_wollet::{Contract, Entity};
 
 #[test]
 fn test_registry() {

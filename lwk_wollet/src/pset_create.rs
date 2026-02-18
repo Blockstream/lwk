@@ -1,4 +1,5 @@
 use crate::bitcoin::PublicKey as BitcoinPublicKey;
+use crate::contract::Contract;
 use crate::elements::confidential::AssetBlindingFactor;
 use crate::elements::issuance::ContractHash;
 use crate::elements::pset::{Output, PartiallySignedTransaction};
@@ -6,7 +7,6 @@ use crate::elements::{Address, AssetId, OutPoint, Transaction, TxOut, TxOutSecre
 use crate::error::Error;
 use crate::hashes::Hash;
 use crate::model::{Recipient, WalletTxOut};
-use crate::registry::Contract;
 use crate::tx_builder::add_input_inner;
 use crate::wollet::Wollet;
 use crate::ElementsNetwork;

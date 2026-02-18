@@ -90,7 +90,7 @@
             # craneLib.crateNameFromCargoToml { cargoToml = ./path/to/Cargo.toml; }
             # but I can't make it work
             pname = "lwk_cli";
-            version = "0.14.0";
+            version = "0.15.0";
           };
           cargoArtifacts = craneLib.buildDepsOnly commonArgs;
           # remember, `set1 // set2` does a shallow merge:

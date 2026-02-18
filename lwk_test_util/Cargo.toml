@@ -1,13 +1,13 @@
 [package]
 name = "lwk_test_util"
-version = "0.14.0"
+version = "0.15.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Test utilities"
 license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_test_util"
 
 [dependencies]
-lwk_common = { version = "0.14.0" }
+lwk_common = { version = "0.15.0" }
 lwk_containers = { version = "0.14.0" }
 
 electrsd = { version = "0.29.0", features = ["legacy"] }

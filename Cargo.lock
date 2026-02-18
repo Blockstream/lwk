@@ -2359,7 +2359,7 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "lwk_app"
-version = "0.13.0"
+version = "0.15.0"
 dependencies = [
  "enum-iterator",
  "home",
@@ -2383,7 +2383,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_bindings"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "elements 0.25.2",
  "log",
@@ -2403,7 +2403,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_boltz"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "aes-gcm-siv",
  "async-trait",
@@ -2428,7 +2428,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_cli"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2449,7 +2449,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_common"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.21.7",
@@ -2480,7 +2480,7 @@ version = "0.10.0"
 
 [[package]]
 name = "lwk_jade"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "base64 0.21.7",
  "elements 0.25.2",
@@ -2505,7 +2505,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_ledger"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "byteorder",
  "elements-miniscript",
@@ -2520,7 +2520,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_payment_instructions"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "bip21",
  "elements 0.25.2",
@@ -2542,7 +2542,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_signer"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "base64 0.21.7",
  "bip39",
@@ -2556,7 +2556,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_simplicity"
-version = "0.1.0"
+version = "0.15.0"
 dependencies = [
  "lwk_common",
  "lwk_signer",
@@ -2568,7 +2568,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_test_util"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "bip39",
  "electrsd",
@@ -2601,7 +2601,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wasm"
-version = "0.14.1"
+version = "0.15.0"
 dependencies = [
  "byteorder",
  "console_error_panic_hook",
@@ -2626,7 +2626,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wollet"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "aes",
  "aes-gcm",

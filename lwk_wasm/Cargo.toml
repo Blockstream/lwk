@@ -1,6 +1,6 @@
 [package]
 name = "lwk_wasm"
-version = "0.14.1"
+version = "0.15.0"
 edition = "2021"
 description = "Liquid Wallet Kit - WASM"
 license = "MIT OR BSD-2-Clause"
@@ -18,25 +18,25 @@ simplicity = ["lwk_simplicity"]
 boltz_regtest = []
 
 [dependencies]
-lwk_jade = { version = "0.14.0", default-features = false, features = [
+lwk_jade = { version = "0.15.0", default-features = false, features = [
     "asyncr",
 ] }
-lwk_signer = { version = "0.14.0", default-features = false, features = [
+lwk_signer = { version = "0.15.0", default-features = false, features = [
     "amp0",
 ] }
-lwk_ledger = { version = "0.14.0", default-features = false, features = [
+lwk_ledger = { version = "0.15.0", default-features = false, features = [
     "asyncr",
 ] }
-lwk_wollet = { version = "0.14.0", default-features = false, features = [
+lwk_wollet = { version = "0.15.0", default-features = false, features = [
     "esplora",
     "amp2",
     "amp0",
     "prices",
     "registry",
 ] }
-lwk_boltz = { version = "0.14.0", default-features = false }
-lwk_common = "0.14.0"
-lwk_simplicity = { version = "0.1.0", optional = true }
+lwk_boltz = { version = "0.15.0", default-features = false }
+lwk_common = "0.15.0"
+lwk_simplicity = { version = "0.15.0", optional = true }
 
 wasm-bindgen = "0.2.84"
 serde_json = "1"

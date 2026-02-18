@@ -1,6 +1,6 @@
 [package]
 name = "lwk_boltz"
-version = "0.14.0"
+version = "0.15.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Boltz integration"
 license = "MIT OR BSD-2-Clause"
@@ -13,8 +13,8 @@ blocking = ["lwk_wollet/electrum"]
 [dependencies]
 async-trait = "0.1"
 boltz-client = { git = "https://github.com/SatoshiPortal/boltz-rust/", rev = "d069db5c8fb4f87fbdbf4186b7a038ebdf64ba6a", features = ["ws", "electrum"] }
-lwk_common = { version = "0.14.0" }
-lwk_wollet = { version = "0.14.0", default-features = false, features = [
+lwk_common = { version = "0.15.0" }
+lwk_wollet = { version = "0.15.0", default-features = false, features = [
     "esplora",
 ] }
 serde = { version = "1.0", features = ["derive"] }
@@ -35,4 +35,4 @@ wasm-bindgen-futures = "0.4.50"
 [dev-dependencies]
 reqwest = { version = "0.12", default-features = false, features = ["json"] }
 base64 = "0.22"
-lwk_signer = { version = "0.14.0" }
+lwk_signer = { version = "0.15.0" }

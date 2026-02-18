@@ -2,6 +2,9 @@
 name = "lwk_simplicity"
 version = "0.1.0"
 edition = "2021"
+description = "Liquid Wallet Kit - Utilities to deal with Simplicity transactions"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_simplicity"
 
 [dependencies]
 lwk_common = { version = "0.14.0" }

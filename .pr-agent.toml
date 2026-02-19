@@ -1,2 +1,4 @@
 [config]
 enable_auto_approval=false
+auto_approve_for_low_review_effort=-1 # -1 to disable, [1-5] to set the threshold for auto-approval
+auto_approve_for_no_suggestions=false # If true, the PR will be auto-approved if there are no suggestions

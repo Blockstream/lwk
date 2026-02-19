@@ -451,6 +451,82 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_restore_chain_swaps_claim_txid() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = crate::utils::start_block_mining();
+
+        let network = ElementsNetwork::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+
+        let session_fn = || {
+            BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+                .create_swap_timeout(TIMEOUT)
+                .mnemonic(mnemonic.clone())
+                .build()
+        };
+        let session = session_fn().await.unwrap();
+
+        let refund_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+            .await
+            .unwrap();
+        let claim_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let refund_address = bitcoin::Address::from_str(&refund_address_str)
+            .unwrap()
+            .assume_checked();
+        let claim_address = elements::Address::from_str(&claim_address_str).unwrap();
+
+        let mut response = session
+            .btc_to_lbtc(50_000, &refund_address, &claim_address, None)
+            .await
+            .unwrap();
+
+        crate::utils::send_to_address(
+            BTC_CHAIN.into(),
+            response.lockup_address(),
+            response.expected_amount(),
+        )
+        .await
+        .unwrap();
+
+        response.advance().await.unwrap();
+        response.advance().await.unwrap();
+        response.advance().await.unwrap();
+        response.advance().await.unwrap();
+
+        let claim_txid = response
+            .claim_txid()
+            .map(|s| s.to_string())
+            .expect("claim_txid should be set");
+        log::info!("claim_txid: {claim_txid}");
+
+        let serialized_data = response.serialize().unwrap();
+        let data = lwk_boltz::ChainSwapDataSerializable::deserialize(&serialized_data).unwrap();
+        assert_eq!(data.claim_txid.as_deref(), Some(claim_txid.as_str()));
+
+        drop(response);
+        drop(session);
+
+        let session = session_fn().await.unwrap();
+        let response = session.restore_lockup(data).await.unwrap();
+        let claim_txid_restored = response.data.claim_txid.expect("claim_txid should be set");
+        assert_eq!(claim_txid, claim_txid_restored);
+
+        // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_restore_chain_swaps_with_random_preimages() {
         let _ = env_logger::try_init();
 

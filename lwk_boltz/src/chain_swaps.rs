@@ -498,6 +498,10 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
 }
 
 impl LockupResponse {
+    pub fn claim_txid(&self) -> Option<&str> {
+        self.data.claim_txid.as_deref()
+    }
+
     async fn next_status(&mut self) -> Result<SwapStatus, Error> {
         let swap_id = self.swap_id().to_string();
         next_status(&mut self.rx, self.timeout_advance, &swap_id, self.polling).await

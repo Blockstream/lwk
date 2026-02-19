@@ -218,6 +218,7 @@ impl BoltzSession {
                 from_chain: from,
                 to_chain: to,
                 random_preimage: self.random_preimages,
+                claim_txid: None,
             },
             lockup_script,
             claim_script,
@@ -492,6 +493,7 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
         from_chain,
         to_chain,
         random_preimage: false, // when trying to restore from boltz only deterministic preimage are supported
+        claim_txid: claim_details.transaction.as_ref().map(|t| t.id.clone()),
     })
 }
 
@@ -640,7 +642,8 @@ impl LockupResponse {
                         },
                     )
                     .await?;
-                broadcast_tx_with_retry(&self.chain_client, &tx).await?;
+                let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
+                self.data.claim_txid = Some(txid);
                 log::info!("Claim transaction broadcasted successfully");
                 Ok(ControlFlow::Continue(update))
             }

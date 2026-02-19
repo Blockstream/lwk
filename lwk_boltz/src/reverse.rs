@@ -324,7 +324,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
         fee: None, // Fee information not available in restore response
         boltz_fee: None,
         claim_fee: None, // Not available in restore response, will use fallback fee rate
-        claim_txid: None,
+        claim_txid: claim_details.transaction.as_ref().map(|t| t.id.clone()),
         create_reverse_response,
         our_keys,
         preimage,

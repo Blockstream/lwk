@@ -322,6 +322,75 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_restore_claim_txid() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = utils::start_block_mining();
+
+        let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let claim_address = elements::Address::from_str(&claim_address).unwrap();
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+        );
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+
+        let session_fn = || {
+            BoltzSession::builder(
+                ElementsNetwork::default_regtest(),
+                AnyClient::Electrum(client.clone()),
+            )
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic.clone())
+            .build()
+        };
+        let session = session_fn().await.unwrap();
+
+        // test restore swap after drop
+        let mut invoice_response = session
+            .invoice(100000, None, &claim_address, None)
+            .await
+            .unwrap();
+        utils::start_pay_invoice_lnd(invoice_response.bolt11_invoice().to_string());
+
+        invoice_response.advance().await.unwrap();
+        invoice_response.advance().await.unwrap();
+        let claim_txid = invoice_response
+            .claim_txid()
+            .map(|s| s.to_string())
+            .expect("claim_txid should be set");
+        log::info!("claim_txid: {claim_txid}");
+        let serialized_data = invoice_response.serialize().unwrap();
+
+        let data: InvoiceDataSerializable = serde_json::from_str(&serialized_data).unwrap();
+
+        drop(invoice_response);
+        drop(session);
+
+        let session = session_fn().await.unwrap();
+        let invoice_response = session.restore_invoice(data).await.unwrap();
+        let claim_txid_restored = invoice_response
+            .claim_txid()
+            .expect("claim_txid should be set");
+        assert_eq!(claim_txid, claim_txid_restored);
+
+        // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_restore_reverse_with_random_preimages() {
         let _ = env_logger::try_init();
 

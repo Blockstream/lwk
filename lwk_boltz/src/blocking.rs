@@ -401,6 +401,11 @@ impl LockupResponse {
         self.inner.boltz_fee()
     }
 
+    /// See [`crate::LockupResponse::claim_txid()`]
+    pub fn claim_txid(&self) -> Option<&str> {
+        self.inner.claim_txid()
+    }
+
     pub fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
         let inner = self.runtime.block_on(self.inner.advance())?;
         Ok(inner)

@@ -42,16 +42,12 @@ Add a _python_ test to check that they roundtrip.
 ### String
 If the object has a natural string representation, implement `Display` and add `#[uniffi::export(Display)]`
 
-For constructors, be explicit about the string format necessary (implement a constructor from string):
+For constructor use `from_str`:
 ```
 impl MyType {
-    // explicitly comment if hex-reversed, eg
-    /// Note: hex representation is byte-reversed
+    // explicitly comment if hex, hex-reversed, base64, etc
     #[uniffi::constructor]
-    pub fn from_hex(s: &str) -> Result<Arc<Self>, LwkError> { }
-
-    #[uniffi::constructor]
-    pub fn from_b64(s: &str) -> Result<Arc<Self>, LwkError> { }
+    pub fn from_str(s: &str) -> Result<Arc<Self>, LwkError> { }
 }
 ```
 

@@ -26,6 +26,9 @@ pub enum LwkError {
     #[error("There are no message to receive on the boltz web socket, continuing polling")]
     NoBoltzUpdate,
 
+    #[error("A swap with this invoice exists already")]
+    SwapWithInvoiceAlreadyExists,
+
     #[error("Calling a function on an object that has already been consumed, like for example calling complete() on object that already is completed")]
     ObjectConsumed,
 }
@@ -334,6 +337,9 @@ impl From<lwk_boltz::Error> for LwkError {
                 LwkError::SwapExpired { swap_id, status }
             }
             lwk_boltz::Error::NoBoltzUpdate => LwkError::NoBoltzUpdate,
+            lwk_boltz::Error::SwapWithInvoiceAlreadyExists => {
+                LwkError::SwapWithInvoiceAlreadyExists
+            }
             _ => LwkError::Generic {
                 msg: format!("{value:?}"),
             },

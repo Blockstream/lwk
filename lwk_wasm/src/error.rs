@@ -156,6 +156,9 @@ impl Error {
                 lwk_boltz::Error::LockPoisoned(_) => "Boltz::LockPoisoned",
                 lwk_boltz::Error::Store(_) => "Boltz::Store",
                 lwk_boltz::Error::StoreNotConfigured => "Boltz::StoreNotConfigured",
+                lwk_boltz::Error::SwapWithInvoiceAlreadyExists => {
+                    "Boltz::SwapWithInvoiceAlreadyExists"
+                }
             },
             Error::HexToArray(_) => "HexToArray",
             Error::Wollet(_) => "Wollet",

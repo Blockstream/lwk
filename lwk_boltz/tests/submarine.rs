@@ -259,6 +259,52 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_submarine_duplicate_invoice_error() {
+        let _ = env_logger::try_init();
+
+        let refund_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let refund_address = elements::Address::from_str(&refund_address).unwrap();
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+        );
+
+        let session = BoltzSession::builder(
+            ElementsNetwork::default_regtest(),
+            AnyClient::Electrum(client),
+        )
+        .create_swap_timeout(TIMEOUT)
+        .build()
+        .await
+        .unwrap();
+
+        let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
+        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
+
+        session
+            .prepare_pay(&lightning_payment, &refund_address, None)
+            .await
+            .unwrap();
+
+        let err = session
+            .prepare_pay(&lightning_payment, &refund_address, None)
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            lwk_boltz::Error::SwapWithInvoiceAlreadyExists
+        ));
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_restore_submarine_from_swap_list() {
         let _ = env_logger::try_init();
 

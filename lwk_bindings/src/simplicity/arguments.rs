@@ -1,11 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use lwk_simplicity::simplicityhl;
-use simplicityhl::str::WitnessName;
-use simplicityhl::Value;
-
-use super::typed_value::SimplicityTypedValue;
+use lwk_simplicity::simplicityhl::parse::ParseFromStr;
+use lwk_simplicity::simplicityhl::str::WitnessName;
+use lwk_simplicity::simplicityhl::{Arguments, Value, WitnessValues};
 
 macro_rules! impl_value_builder {
     ($type:ty) => {
@@ -18,7 +16,11 @@ macro_rules! impl_value_builder {
             }
 
             /// Add a typed Simplicity value.
-            pub fn add_value(&self, name: String, value: &SimplicityTypedValue) -> Arc<Self> {
+            pub fn add_value(
+                &self,
+                name: String,
+                value: &super::typed_value::SimplicityTypedValue,
+            ) -> Arc<Self> {
                 let mut new = self.clone();
                 new.inner.insert(name, value.inner().clone());
                 Arc::new(new)
@@ -36,13 +38,8 @@ pub struct SimplicityArguments {
 impl_value_builder!(SimplicityArguments);
 
 impl SimplicityArguments {
-    pub(crate) fn to_inner(&self) -> simplicityhl::Arguments {
-        let map: HashMap<WitnessName, Value> = self
-            .inner
-            .iter()
-            .map(|(name, val)| (WitnessName::from_str_unchecked(name), val.clone()))
-            .collect();
-        simplicityhl::Arguments::from(map)
+    pub(crate) fn to_inner(&self) -> Result<Arguments, crate::LwkError> {
+        Ok(Arguments::from(try_into_witness_name_map(&self.inner)?))
     }
 }
 
@@ -54,14 +51,16 @@ pub struct SimplicityWitnessValues {
 
 impl_value_builder!(SimplicityWitnessValues);
 
-// TODO: replace `from_str_unchecked` with parse from str
 impl SimplicityWitnessValues {
-    pub(crate) fn to_inner(&self) -> simplicityhl::WitnessValues {
-        let map: HashMap<WitnessName, Value> = self
-            .inner
-            .iter()
-            .map(|(name, val)| (WitnessName::from_str_unchecked(name), val.clone()))
-            .collect();
-        simplicityhl::WitnessValues::from(map)
+    pub(crate) fn to_inner(&self) -> Result<WitnessValues, crate::LwkError> {
+        Ok(WitnessValues::from(try_into_witness_name_map(&self.inner)?))
     }
+}
+
+fn try_into_witness_name_map(
+    map: &HashMap<String, Value>,
+) -> Result<HashMap<WitnessName, Value>, crate::LwkError> {
+    map.iter()
+        .map(|(name, val)| Ok((WitnessName::parse_from_str(name)?, val.clone())))
+        .collect::<Result<_, crate::LwkError>>()
 }

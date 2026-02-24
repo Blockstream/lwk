@@ -26,7 +26,7 @@ impl SimplicityProgram {
     /// Load and compile a Simplicity program from source.
     #[uniffi::constructor]
     pub fn load(source: String, arguments: &SimplicityArguments) -> Result<Arc<Self>, LwkError> {
-        let compiled = scripts::load_program(&source, arguments.to_inner())?;
+        let compiled = scripts::load_program(&source, arguments.to_inner()?)?;
         Ok(Arc::new(SimplicityProgram { inner: compiled }))
     }
 
@@ -106,7 +106,7 @@ impl SimplicityProgram {
             &x_only_key,
             &utxos_inner,
             input_index as usize,
-            witness_values.to_inner(),
+            witness_values.to_inner()?,
             network.into(),
             log_level.into(),
         )?;
@@ -169,7 +169,7 @@ impl SimplicityProgram {
 
         let (pruned, value) = runner::run_program(
             &self.inner,
-            witness_values.to_inner(),
+            witness_values.to_inner()?,
             &env,
             log_level.into(),
         )?;

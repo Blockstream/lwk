@@ -811,6 +811,17 @@ impl PreparePayResponse {
             .boltz_fee())
     }
 
+    /// The txid of the claim transaction of the swap.
+    pub fn claim_txid(&self) -> Result<Option<String>, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .claim_txid()
+            .map(|txid| txid.to_string()))
+    }
+
     pub fn advance(&self) -> Result<PaymentState, LwkError> {
         let mut lock = self.inner.lock()?;
         let mut response = lock.take().ok_or(LwkError::ObjectConsumed)?;

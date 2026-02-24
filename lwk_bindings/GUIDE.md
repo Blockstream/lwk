@@ -47,17 +47,16 @@ Add a _python_ test to check that they roundtrip.
 ### String
 If the object has a natural string representation, implement `Display` and add `#[uniffi::export(Display)]`
 
-For constructors, be explicit about the string format necessary (implement a constructor from string):
+Use a single canonical string interface for parsing/serialization:
 ```
 impl MyType {
-    // explicitly comment if hex-reversed, eg
-    /// Note: hex representation is byte-reversed
     #[uniffi::constructor]
-    pub fn from_hex(s: &str) -> Result<Arc<Self>, LwkError> { }
-
-    #[uniffi::constructor]
-    pub fn from_b64(s: &str) -> Result<Arc<Self>, LwkError> { }
+    pub fn from_string(s: &str) -> Result<Arc<Self>, LwkError> { }
 }
 ```
 
-Add a _python_ test to check that serialization roundtrip
+`to_string()` (via `Display`) must produce the format accepted by `from_string`.
+
+Document any non-obvious detail of that format in the constructor doc comment (for example if `to_string()` returns bytes in a reverse order).
+
+Add a _python_ test to check serialization roundtrip.

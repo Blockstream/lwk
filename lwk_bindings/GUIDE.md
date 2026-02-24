@@ -60,3 +60,12 @@ impl MyType {
 Document any non-obvious detail of that format in the constructor doc comment (for example if `to_string()` returns bytes in a reverse order).
 
 Add a _python_ test to check serialization roundtrip.
+
+## Deprecating functions
+If there are functions that contradict the guidelines above and should be marked as deprecated, add the following comment:
+```
+Deprecated: use `function_name()` instead.
+```
+We do not use deprecation macros because they are ignored in the targeted bindings:
+
+Make sure that deprecated functions are not referenced in examples/tests by running CI or local tests without them.

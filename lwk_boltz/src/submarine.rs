@@ -413,6 +413,7 @@ impl PreparePayResponse {
         let flow = match update_status {
             SwapState::InvoiceSet => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionMempool => {
+                self.data.claim_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
                 log::info!("transaction.mempool Boltz broadcasted funding tx");
                 Ok(ControlFlow::Continue(update))
             }
@@ -430,8 +431,8 @@ impl PreparePayResponse {
             SwapState::InvoicePending => Ok(ControlFlow::Continue(update)),
             SwapState::InvoicePaid => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionClaimed => {
-                self.data.claim_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
                 if self.data.claim_txid.is_none() {
+                    log::warn!("transaction.claimed Boltz claimed funding tx but claim_txid is not set, fetching it");
                     self.data.claim_txid =
                         fetch_claim_txid(self.api.as_ref(), self.swap_id()).await;
                 }

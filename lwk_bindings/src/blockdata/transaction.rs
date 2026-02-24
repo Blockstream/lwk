@@ -59,6 +59,8 @@ impl AsRef<elements::Transaction> for Transaction {
 impl Transaction {
     /// Construct a Transaction object from its hex representation.
     /// To create the hex representation of a transaction use `to_string()`.
+    ///
+    /// Deprecated: use `from_string()` instead.
     #[uniffi::constructor]
     pub fn new(hex: &Hex) -> Result<Arc<Self>, LwkError> {
         let inner: elements::Transaction = elements::Transaction::deserialize(hex.as_ref())?;
@@ -87,6 +89,8 @@ impl Transaction {
     }
 
     /// Return the consensus encoded bytes of the transaction.
+    ///
+    ///  Deprecated: use `to_bytes()` instead.
     pub fn bytes(&self) -> Vec<u8> {
         elements::Transaction::serialize(&self.inner)
     }

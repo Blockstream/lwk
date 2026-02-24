@@ -99,6 +99,10 @@ mod tests {
                 }
             }
         }
+        assert!(
+            prepare_pay_response.claim_txid().is_some(),
+            "claim txid should be available when submarine swap is claimed"
+        );
         // repeatly calling advance on a terminated swap don't timeout
         for _ in 0..10 {
             match prepare_pay_response.advance().await {
@@ -252,6 +256,84 @@ mod tests {
         .await
         .unwrap();
         prepare_pay_response.complete_pay().await.unwrap();
+
+        // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_session_restore_claim_txid_submarine() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = utils::start_block_mining();
+
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+
+        let refund_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let refund_address = elements::Address::from_str(&refund_address).unwrap();
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+        );
+
+        let session_fn = || {
+            BoltzSession::builder(
+                ElementsNetwork::default_regtest(),
+                AnyClient::Electrum(client.clone()),
+            )
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic.clone())
+            .build()
+        };
+
+        let session = session_fn().await.unwrap();
+        let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
+        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
+        let mut prepare_pay_response = session
+            .prepare_pay(&lightning_payment, &refund_address, None)
+            .await
+            .unwrap();
+
+        let serialized_data = prepare_pay_response.serialize().unwrap();
+        let data = PreparePayDataSerializable::deserialize(&serialized_data).unwrap();
+        assert_eq!(data.claim_txid.as_deref(), None);
+
+        utils::send_to_address(
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+            &prepare_pay_response.uri_address().unwrap().to_string(),
+            prepare_pay_response.uri_amount(),
+        )
+        .await
+        .unwrap();
+
+        while let Ok(std::ops::ControlFlow::Continue(_)) = prepare_pay_response.advance().await {}
+
+        let claim_txid = prepare_pay_response
+            .claim_txid()
+            .map(|s| s.to_string())
+            .expect("claim_txid should be set");
+        log::info!("claim_txid: {claim_txid}");
+        drop(prepare_pay_response);
+        drop(session);
+
+        let session = session_fn().await.unwrap();
+        let prepare_pay_response = session.restore_prepare_pay(data).await.unwrap();
+        let claim_txid_restored = prepare_pay_response
+            .claim_txid()
+            .expect("claim_txid should be set");
+        assert_eq!(claim_txid, claim_txid_restored);
 
         // Stop the mining task
         mining_handle.abort();

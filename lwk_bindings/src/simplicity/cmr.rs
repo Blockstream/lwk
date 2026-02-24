@@ -31,11 +31,8 @@ impl Cmr {
     /// Create from raw bytes (32 bytes).
     #[uniffi::constructor]
     pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
-        let arr: [u8; 32] = bytes.try_into().map_err(|_| LwkError::Generic {
-            msg: format!("expected 32 bytes, got {}", bytes.len()),
-        })?;
         Ok(Arc::new(Self {
-            inner: simplicity::Cmr::from_byte_array(arr),
+            inner: simplicity::Cmr::from_byte_array(bytes.try_into()?),
         }))
     }
 

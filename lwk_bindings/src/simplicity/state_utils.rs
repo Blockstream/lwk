@@ -57,9 +57,7 @@ impl StateTaprootBuilder {
 
     /// Add a precomputed hidden hash at `depth`.
     pub fn add_hidden_hash(&self, depth: u8, hash: &[u8]) -> Result<Arc<Self>, LwkError> {
-        let hash: [u8; 32] = hash.try_into().map_err(|_| LwkError::Generic {
-            msg: format!("hidden hash must be 32 bytes, got {}", hash.len()),
-        })?;
+        let hash: [u8; 32] = hash.try_into()?;
         let hash = sha256::Hash::from_byte_array(hash);
         let inner = self.inner.clone().add_hidden(usize::from(depth), hash)?;
         Ok(Arc::new(Self { inner }))

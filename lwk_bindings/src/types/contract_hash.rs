@@ -63,9 +63,7 @@ impl ContractHash {
     /// Creates from a 32-byte slice.
     #[uniffi::constructor]
     pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
-        let array: [u8; 32] = bytes.try_into().map_err(|_| LwkError::Generic {
-            msg: format!("expected 32 bytes, got {}", bytes.len()),
-        })?;
+        let array: [u8; 32] = bytes.try_into()?;
         Ok(Arc::new(ContractHash {
             inner: elements::ContractHash::from_byte_array(array),
         }))

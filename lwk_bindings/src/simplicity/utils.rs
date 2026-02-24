@@ -1,14 +1,16 @@
-use std::str::FromStr;
-use std::sync::Arc;
-
-use elements::bitcoin::bip32::DerivationPath;
-use lwk_simplicity::scripts;
-
 use crate::blockdata::tx_out::TxOut;
 use crate::types::XOnlyPublicKey;
 use crate::{ControlBlock, LwkError};
 
 use super::cmr::Cmr;
+
+use std::str::FromStr;
+use std::sync::Arc;
+
+use elements::bitcoin::bip32::DerivationPath;
+
+use lwk_simplicity::scripts;
+use lwk_wollet::{secp256k1::Keypair, EC};
 
 /// Get the x-only public key for a given derivation path from a signer.
 #[uniffi::export]
@@ -42,16 +44,11 @@ pub(crate) fn convert_utxos(utxos: &[Arc<TxOut>]) -> Vec<elements::TxOut> {
 pub(crate) fn derive_keypair(
     signer: &crate::Signer,
     derivation_path: &str,
-) -> Result<elements::bitcoin::secp256k1::Keypair, LwkError> {
-    let path = DerivationPath::from_str(derivation_path).map_err(|e| LwkError::Generic {
-        msg: format!("Invalid derivation path: {e}"),
-    })?;
-
-    let derived_xprv = signer.inner.derive_xprv(&path)?;
-    Ok(elements::bitcoin::secp256k1::Keypair::from_secret_key(
-        elements::bitcoin::secp256k1::SECP256K1,
-        &derived_xprv.private_key,
-    ))
+) -> Result<Keypair, LwkError> {
+    let derived_xprv = signer
+        .inner
+        .derive_xprv(&DerivationPath::from_str(derivation_path)?)?;
+    Ok(Keypair::from_secret_key(&EC, &derived_xprv.private_key))
 }
 
 #[cfg(test)]

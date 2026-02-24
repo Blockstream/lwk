@@ -1,11 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use lwk_simplicity::simplicityhl;
-use simplicityhl::str::WitnessName;
-use simplicityhl::Value;
-
-use super::typed_value::SimplicityTypedValue;
+use lwk_simplicity::simplicityhl::parse::ParseFromStr;
+use lwk_simplicity::simplicityhl::str::WitnessName;
+use lwk_simplicity::simplicityhl::{Arguments, Value, WitnessValues};
 
 macro_rules! impl_value_builder {
     ($type:ty) => {
@@ -18,7 +16,11 @@ macro_rules! impl_value_builder {
             }
 
             /// Add a typed Simplicity value.
-            pub fn add_value(&self, name: String, value: &SimplicityTypedValue) -> Arc<Self> {
+            pub fn add_value(
+                &self,
+                name: String,
+                value: &super::typed_value::SimplicityTypedValue,
+            ) -> Arc<Self> {
                 let mut new = self.clone();
                 new.inner.insert(name, value.inner().clone());
                 Arc::new(new)

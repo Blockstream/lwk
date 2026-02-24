@@ -4,8 +4,6 @@ use std::fmt::Display;
 use std::sync::Arc;
 
 /// Transaction lock time.
-///
-/// See [`elements::LockTime`] for more details.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 pub struct LockTime {
     inner: elements::LockTime,
@@ -44,8 +42,6 @@ impl Display for LockTime {
 #[uniffi::export]
 impl LockTime {
     /// Create a LockTime from a consensus u32 value.
-    ///
-    /// See [`elements::LockTime::from_consensus`].
     #[uniffi::constructor]
     pub fn from_consensus(value: u32) -> Arc<Self> {
         Arc::new(LockTime {
@@ -54,8 +50,6 @@ impl LockTime {
     }
 
     /// Create a LockTime from a block height.
-    ///
-    /// See [`elements::LockTime::from_height`].
     #[uniffi::constructor]
     pub fn from_height(height: u32) -> Result<Arc<Self>, LwkError> {
         let inner = elements::LockTime::from_height(height)?;
@@ -63,8 +57,6 @@ impl LockTime {
     }
 
     /// Create a LockTime from a Unix timestamp.
-    ///
-    /// See [`elements::LockTime::from_time`].
     #[uniffi::constructor]
     pub fn from_time(time: u32) -> Result<Arc<Self>, LwkError> {
         let inner = elements::LockTime::from_time(time)?;
@@ -72,8 +64,6 @@ impl LockTime {
     }
 
     /// Create a LockTime with value zero (no lock time).
-    ///
-    /// See [`elements::LockTime::ZERO`].
     #[uniffi::constructor]
     pub fn zero() -> Arc<Self> {
         Arc::new(LockTime {
@@ -82,22 +72,16 @@ impl LockTime {
     }
 
     /// Return the consensus u32 value.
-    ///
-    /// See [`elements::LockTime::to_consensus_u32`].
     pub fn to_consensus_u32(&self) -> u32 {
         self.inner.to_consensus_u32()
     }
 
     /// Return true if this lock time represents a block height.
-    ///
-    /// See [`elements::LockTime::is_block_height`].
     pub fn is_block_height(&self) -> bool {
         self.inner.is_block_height()
     }
 
     /// Return true if this lock time represents a Unix timestamp.
-    ///
-    /// See [`elements::LockTime::is_block_time`].
     pub fn is_block_time(&self) -> bool {
         self.inner.is_block_time()
     }

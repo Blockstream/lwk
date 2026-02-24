@@ -28,8 +28,6 @@ macro_rules! impl_value_builder {
 }
 
 /// Builder for Simplicity program arguments.
-///
-/// See [`lwk_simplicity::simplicityhl::Arguments`] for more details.
 #[derive(uniffi::Object, Clone, Default)]
 pub struct SimplicityArguments {
     inner: HashMap<String, Value>,
@@ -49,8 +47,6 @@ impl SimplicityArguments {
 }
 
 /// Builder for Simplicity witness values.
-///
-/// See [`lwk_simplicity::simplicityhl::WitnessValues`] for more details.
 #[derive(uniffi::Object, Clone, Default)]
 pub struct SimplicityWitnessValues {
     inner: HashMap<String, Value>,

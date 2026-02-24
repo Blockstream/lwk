@@ -7,8 +7,6 @@ use std::sync::Arc;
 use elements::hex::ToHex;
 
 /// A blinding factor for asset commitments.
-///
-/// See [`elements::confidential::AssetBlindingFactor`] for more details.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 pub struct AssetBlindingFactor {
     inner: elements::confidential::AssetBlindingFactor,
@@ -55,7 +53,7 @@ impl Display for AssetBlindingFactor {
 
 #[uniffi::export]
 impl AssetBlindingFactor {
-    /// See [`elements::confidential::AssetBlindingFactor::from_slice`].
+    /// Create from bytes.
     #[uniffi::constructor]
     pub fn from_slice(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
         let inner = elements::confidential::AssetBlindingFactor::from_slice(bytes)?;
@@ -68,7 +66,7 @@ impl AssetBlindingFactor {
         Ok(Arc::new(Self::from_str(hex)?))
     }
 
-    /// See [`elements::confidential::AssetBlindingFactor::zero`].
+    /// Get a unblinded/zero asset blinding factor
     #[uniffi::constructor]
     pub fn zero() -> Arc<Self> {
         Arc::new(AssetBlindingFactor {
@@ -90,8 +88,6 @@ impl AssetBlindingFactor {
 }
 
 /// A blinding factor for value commitments.
-///
-/// See [`elements::confidential::ValueBlindingFactor`] for more details.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 pub struct ValueBlindingFactor {
     inner: elements::confidential::ValueBlindingFactor,
@@ -138,7 +134,7 @@ impl Display for ValueBlindingFactor {
 
 #[uniffi::export]
 impl ValueBlindingFactor {
-    /// See [`elements::confidential::ValueBlindingFactor::from_slice`].
+    /// Create from bytes.
     #[uniffi::constructor]
     pub fn from_slice(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
         let inner = elements::confidential::ValueBlindingFactor::from_slice(bytes)?;
@@ -151,7 +147,7 @@ impl ValueBlindingFactor {
         Ok(Arc::new(Self::from_str(hex)?))
     }
 
-    /// See [`elements::confidential::ValueBlindingFactor::zero`].
+    /// Get a unblinded/zero value blinding factor
     #[uniffi::constructor]
     pub fn zero() -> Arc<Self> {
         Arc::new(ValueBlindingFactor {

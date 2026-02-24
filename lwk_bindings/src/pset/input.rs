@@ -110,7 +110,7 @@ impl PsetInput {
 #[cfg(feature = "simplicity")]
 #[derive(uniffi::Object, Debug)]
 pub struct PsetInputBuilder {
-    /// Uses Mutex for in-place mutation. See [`crate::TxBuilder`] for rationale.
+    /// Uses Mutex for in-place mutation.
     inner: Mutex<Option<Input>>,
 }
 

@@ -16,8 +16,6 @@ use super::run_result::SimplicityRunResult;
 use super::utils::{convert_utxos, derive_keypair};
 
 /// A compiled Simplicity program ready for use in transactions.
-///
-/// See [`lwk_simplicity::simplicityhl::CompiledProgram`] for more details.
 #[derive(uniffi::Object)]
 pub struct SimplicityProgram {
     inner: simplicityhl::CompiledProgram,

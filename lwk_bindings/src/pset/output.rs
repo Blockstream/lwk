@@ -63,7 +63,7 @@ impl PsetOutput {
 /// Builder for PSET outputs
 #[derive(uniffi::Object, Debug)]
 pub struct PsetOutputBuilder {
-    /// Uses Mutex for in-place mutation. See [`crate::TxBuilder`] for rationale.
+    /// Uses Mutex for in-place mutation.
     inner: Mutex<Option<Output>>,
 }
 

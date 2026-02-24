@@ -9,8 +9,6 @@ use lwk_simplicity::simplicityhl::simplicity;
 /// Commitment Merkle root
 ///
 /// A Merkle root that commits to a node's combinator and recursively its children.
-///
-/// See [`simplicity::Cmr`] for more details.
 #[derive(uniffi::Object, Clone, Debug)]
 pub struct Cmr {
     inner: simplicity::Cmr,

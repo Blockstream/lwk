@@ -180,6 +180,7 @@ impl BoltzSession {
             data: PreparePayData {
                 last_state: SwapState::InvoiceSet,
                 swap_type: SwapType::Submarine,
+                claim_txid: None,
                 fee: Some(fee),
                 boltz_fee,
                 bolt11_invoice: Some((**bolt11_invoice).clone()),
@@ -207,7 +208,11 @@ impl BoltzSession {
         &self,
         data: PreparePayDataSerializable,
     ) -> Result<PreparePayResponse, Error> {
-        let data = to_prepare_pay_data(data, &self.mnemonic)?;
+        let mut data = to_prepare_pay_data(data, &self.mnemonic)?;
+        if data.claim_txid.is_none() {
+            data.claim_txid =
+                fetch_claim_txid(self.api.as_ref(), &data.create_swap_response.id).await;
+        }
         let p = data.our_keys.public_key();
         let swap_script = SwapScript::submarine_from_swap_resp(
             self.chain(),
@@ -279,6 +284,10 @@ impl BoltzSession {
     }
 }
 
+async fn fetch_claim_txid(api: &BoltzApiClientV2, swap_id: &str) -> Option<String> {
+    api.get_submarine_tx(swap_id).await.map(|tx| tx.id).ok()
+}
+
 pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
     e: &boltz_client::boltz::SwapRestoreResponse,
     mnemonic: &Mnemonic,
@@ -339,6 +348,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
     Ok(PreparePayData {
         last_state,
         swap_type: SwapType::Submarine,
+        claim_txid: None,
         fee: None,            // Fee information not available in restore response
         bolt11_invoice: None, // Invoice information not available in restore response
         our_keys,
@@ -420,6 +430,11 @@ impl PreparePayResponse {
             SwapState::InvoicePending => Ok(ControlFlow::Continue(update)),
             SwapState::InvoicePaid => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionClaimed => {
+                self.data.claim_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
+                if self.data.claim_txid.is_none() {
+                    self.data.claim_txid =
+                        fetch_claim_txid(self.api.as_ref(), self.swap_id()).await;
+                }
                 log::info!("transaction.claimed Boltz claimed funding tx");
                 Ok(ControlFlow::Break(true))
             }
@@ -533,5 +548,10 @@ impl PreparePayResponse {
     /// For example for paying an invoice of 1000 satoshi with a 0.1% rate would be 1 satoshi.
     pub fn boltz_fee(&self) -> Option<u64> {
         self.data.boltz_fee
+    }
+
+    /// The txid of the claim transaction broadcast by Boltz backend.
+    pub fn claim_txid(&self) -> Option<&str> {
+        self.data.claim_txid.as_deref()
     }
 }

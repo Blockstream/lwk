@@ -321,6 +321,11 @@ impl PreparePayResponse {
         self.inner.boltz_fee()
     }
 
+    /// See [`crate::PreparePayResponse::claim_txid()`]
+    pub fn claim_txid(&self) -> Option<&str> {
+        self.inner.claim_txid()
+    }
+
     pub fn serialize(&self) -> Result<String, Error> {
         self.inner.serialize()
     }

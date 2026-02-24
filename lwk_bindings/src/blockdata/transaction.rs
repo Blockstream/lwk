@@ -104,9 +104,20 @@ impl Transaction {
             .collect()
     }
 
-    /// Verify transaction amount proofs against UTXOs.
+    /// Verify that the transaction has correctly calculated blinding factors and they CT
+    /// verification equation holds.
     ///
-    /// See [`elements::Transaction::verify_tx_amt_proofs`].
+    /// This is *NOT* a complete Transaction verification check
+    /// It does *NOT* check whether input witness/script satisfies the script pubkey, or
+    /// inputs are double-spent and other consensus checks.
+    ///
+    /// This method only checks if the `Transaction` verification equation for Confidential
+    /// transactions holds. i.e Sum of inputs = Sum of outputs + fees.
+    ///
+    /// And the corresponding surjection/rangeproofs are correct.
+    /// For checking of surjection proofs and amounts, spent_utxos parameter
+    /// should contain information about the prevouts. Note that the order of
+    /// spent_utxos should be consistent with transaction inputs.
     pub fn verify_tx_amt_proofs(&self, utxos: Vec<Arc<TxOut>>) -> Result<(), LwkError> {
         let utxos_inner: Vec<elements::TxOut> = utxos.iter().map(|u| u.as_ref().into()).collect();
         self.inner.verify_tx_amt_proofs(&EC, &utxos_inner)?;
@@ -115,17 +126,10 @@ impl Transaction {
 }
 
 /// Editor for modifying transactions.
-///
-/// See [`elements::Transaction`] for more details.
 #[cfg(feature = "simplicity")]
 #[derive(uniffi::Object, Debug)]
 pub struct TransactionEditor {
     inner: std::sync::Mutex<Option<elements::Transaction>>,
-}
-
-#[cfg(feature = "simplicity")]
-fn editor_consumed() -> LwkError {
-    LwkError::ObjectConsumed
 }
 
 #[cfg(feature = "simplicity")]
@@ -147,7 +151,7 @@ impl TransactionEditor {
     ) -> Result<(), LwkError> {
         let idx = input_index as usize;
         let mut lock = self.inner.lock()?;
-        let inner = lock.as_mut().ok_or_else(editor_consumed)?;
+        let inner = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
         if idx >= inner.input.len() {
             return Err(LwkError::Generic {
                 msg: format!(
@@ -164,7 +168,7 @@ impl TransactionEditor {
     /// Build the transaction, consuming the editor.
     pub fn build(&self) -> Result<Arc<Transaction>, LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(editor_consumed)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         Ok(Arc::new(Transaction { inner }))
     }
 }

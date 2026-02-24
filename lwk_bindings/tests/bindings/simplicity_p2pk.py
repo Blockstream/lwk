@@ -46,7 +46,7 @@ assert utxo is not None
 assert utxo.value() == TEST_UTXO_VALUE
 
 # Test full transaction finalization with real test vectors
-tx = Transaction(TEST_UNSIGNED_TX)
+tx = Transaction.from_string(TEST_UNSIGNED_TX)
 
 finalized_tx = program.finalize_transaction(
     tx, XOnlyPublicKey(TEST_PUBLIC_KEY), [utxo], 0,

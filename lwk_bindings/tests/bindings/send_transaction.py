@@ -1,4 +1,21 @@
+import os
+
 from lwk import *
+
+
+_TX_HEX_PATH = os.path.join(os.path.dirname(__file__), "..", "test_data", "tx.hex")
+with open(_TX_HEX_PATH) as f:
+    TEST_TX_HEX = f.read().strip()
+
+tx_from_str = Transaction.from_string(TEST_TX_HEX)
+assert str(tx_from_str) == TEST_TX_HEX
+
+tx_bytes = tx_from_str.to_bytes()
+tx_from_bytes = Transaction.from_bytes(tx_bytes)
+
+assert tx_from_bytes.to_bytes() == tx_bytes
+assert str(tx_from_bytes) == TEST_TX_HEX
+assert str(tx_from_str.txid()) == str(tx_from_bytes.txid())
 
 node = LwkTestEnv() # launch electrs and elementsd
 

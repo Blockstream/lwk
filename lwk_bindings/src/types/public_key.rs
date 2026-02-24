@@ -13,8 +13,6 @@ use elements::hex::ToHex;
 use lwk_wollet::elements_miniscript::ToPublicKey;
 
 /// A Bitcoin ECDSA public key.
-///
-/// See [`elements::bitcoin::PublicKey`] for more details.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 pub struct PublicKey {
     inner: elements::bitcoin::PublicKey,
@@ -61,7 +59,7 @@ impl Display for PublicKey {
 
 #[uniffi::export]
 impl PublicKey {
-    /// See [`elements::bitcoin::PublicKey::from_slice`].
+    /// Deserialize a public key from bytes
     #[uniffi::constructor]
     pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
         let inner = elements::bitcoin::PublicKey::from_slice(bytes)?;
@@ -86,7 +84,7 @@ impl PublicKey {
         })
     }
 
-    /// See [`elements::bitcoin::PublicKey::to_bytes`].
+    /// Serialize the public key to bytes
     pub fn to_bytes(&self) -> Vec<u8> {
         self.inner.to_bytes()
     }
@@ -96,7 +94,7 @@ impl PublicKey {
         self.inner.to_bytes().to_hex()
     }
 
-    /// See [`elements::bitcoin::PublicKey::compressed`].
+    /// Whether this public key should be serialized as compressed
     pub fn is_compressed(&self) -> bool {
         self.inner.compressed
     }

@@ -4,8 +4,6 @@ use crate::{LwkError, XOnlyPublicKey};
 use std::sync::Arc;
 
 /// A control block for Taproot script-path spending.
-///
-/// See [`elements::bitcoin::taproot::ControlBlock`] for more details.
 #[derive(uniffi::Object, Debug, Clone)]
 pub struct ControlBlock {
     inner: elements::bitcoin::taproot::ControlBlock,

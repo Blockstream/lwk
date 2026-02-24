@@ -7,8 +7,6 @@ use simplicityhl::types::TypeConstructible;
 use crate::LwkError;
 
 /// Simplicity type descriptor.
-///
-/// See [`simplicityhl::ResolvedType`] for more details.
 #[derive(uniffi::Object, Clone, Debug)]
 pub struct SimplicityType {
     inner: simplicityhl::ResolvedType,

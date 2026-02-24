@@ -8,8 +8,6 @@ use elements::secp256k1_zkp;
 use crate::LwkError;
 
 /// Represents a blinding factor/Tweak on secp256k1 curve
-///
-/// See [`secp256k1_zkp::Tweak`] for more details.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Tweak {
     inner: secp256k1_zkp::Tweak,

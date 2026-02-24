@@ -8,8 +8,6 @@ use elements::hashes::Hash;
 use elements::hex::ToHex;
 
 /// The hash of an asset contract.
-///
-/// See [`elements::ContractHash`] for more details.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 pub struct ContractHash {
     inner: elements::ContractHash,

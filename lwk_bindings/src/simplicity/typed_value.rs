@@ -9,8 +9,6 @@ use lwk_simplicity::simplicityhl::num::U256;
 use lwk_simplicity::simplicityhl::value::ValueConstructible;
 
 /// Typed Simplicity value.
-///
-/// See [`simplicityhl::Value`] for more details.
 #[derive(uniffi::Object, Clone, Debug)]
 pub struct SimplicityTypedValue {
     inner: simplicityhl::Value,

@@ -9,8 +9,6 @@ use lwk_wollet::EC;
 use elements::bitcoin::secp256k1::{self, Message, Secp256k1};
 
 /// A secp256k1 keypair.
-///
-/// See [`secp256k1::Keypair`] for more details.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone)]
 pub struct Keypair {
     inner: secp256k1::Keypair,

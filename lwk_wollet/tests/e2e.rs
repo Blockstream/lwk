@@ -4134,3 +4134,33 @@ fn test_issue_asset() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[test]
+fn test_zmq_endpoint() {
+    let env = TestEnvBuilder::from_env().with_zmq().build();
+
+    // Verify the endpoint has the expected format
+    let zmq_url = env.zmq_endpoint();
+    assert!(zmq_url.starts_with("tcp://0.0.0.0:"));
+    let port: u16 = zmq_url
+        .strip_prefix("tcp://0.0.0.0:")
+        .unwrap()
+        .parse()
+        .unwrap();
+    // Check that the port was assigned dynamically
+    assert!(port > 0);
+
+    // Create a ZMQ subscriber
+    let context = zmq::Context::new();
+    let subscriber = context.socket(zmq::SUB).unwrap();
+    subscriber.connect(&zmq_url).unwrap();
+    subscriber.set_subscribe(b"rawtx").unwrap();
+
+    // Generate a block so elementsd publishes a message
+    env.elementsd_generate(1);
+
+    let msg = subscriber.recv_multipart(0).unwrap();
+
+    assert_eq!(msg[0], b"rawtx");
+    assert!(msg[1].len() > 0);
+}

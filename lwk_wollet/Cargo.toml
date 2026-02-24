@@ -100,6 +100,7 @@ lwk_containers = { version = "0.14.0" }
 lwk_test_util = { version = "0.15.0" }
 
 tempfile = "3.8.0"
+zmq = "0.10.0"
 
 criterion = "0.5.1"
 

@@ -171,7 +171,7 @@ impl TestEnvBuilder {
         };
 
         let zmq_endpoint = if self.with_zmq {
-            let addr = TcpListener::bind("127.0.0.1:0")
+            let addr = TcpListener::bind("0.0.0.0:0")
                 .unwrap()
                 .local_addr()
                 .unwrap()

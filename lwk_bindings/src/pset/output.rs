@@ -68,11 +68,6 @@ pub struct PsetOutputBuilder {
 }
 
 #[cfg(feature = "simplicity")]
-fn builder_consumed() -> LwkError {
-    "PsetOutputBuilder already consumed".into()
-}
-
-#[cfg(feature = "simplicity")]
 impl AsRef<Mutex<Option<Output>>> for PsetOutputBuilder {
     fn as_ref(&self) -> &Mutex<Option<Output>> {
         &self.inner
@@ -99,7 +94,7 @@ impl PsetOutputBuilder {
     /// Set the blinding public key.
     pub fn blinding_pubkey(&self, blinding_key: &PublicKey) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.as_mut().ok_or_else(builder_consumed)?;
+        let inner = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
         inner.blinding_key = Some(blinding_key.into());
         Ok(())
     }
@@ -107,7 +102,7 @@ impl PsetOutputBuilder {
     /// Set the script pubkey.
     pub fn script_pubkey(&self, script_pubkey: &Script) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.as_mut().ok_or_else(builder_consumed)?;
+        let inner = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
         inner.script_pubkey = script_pubkey.into();
         Ok(())
     }
@@ -115,7 +110,7 @@ impl PsetOutputBuilder {
     /// Set the explicit amount.
     pub fn satoshi(&self, satoshi: u64) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.as_mut().ok_or_else(builder_consumed)?;
+        let inner = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
         inner.amount = Some(satoshi);
         Ok(())
     }
@@ -123,7 +118,7 @@ impl PsetOutputBuilder {
     /// Set the explicit asset ID.
     pub fn asset(&self, asset: AssetId) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.as_mut().ok_or_else(builder_consumed)?;
+        let inner = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
         inner.asset = Some(asset.into());
         Ok(())
     }
@@ -131,7 +126,7 @@ impl PsetOutputBuilder {
     /// Set the blinder index.
     pub fn blinder_index(&self, index: u32) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.as_mut().ok_or_else(builder_consumed)?;
+        let inner = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
         inner.blinder_index = Some(index);
         Ok(())
     }
@@ -139,7 +134,7 @@ impl PsetOutputBuilder {
     /// Build the PsetOutput, consuming the builder.
     pub fn build(&self) -> Result<Arc<PsetOutput>, LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_consumed)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         Ok(Arc::new(PsetOutput::from(inner)))
     }
 }

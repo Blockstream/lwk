@@ -9,12 +9,17 @@ For this reason we don't necessarily follow Rust guidelines.
 Documentation of this crate should not use link to rust types such as [`elements::Transaction`] because they are not usable in end-user languages.
 Many types are wrappers of types in LWK crates, in this cases we mostly duplicate the original documentation with context adjustment.
 
+If a function is complex or has non-obvious behavior, add extra caller-facing context (for example by copying/adapting the relevant explanation from upstream docs).
+
 ## Tests
 Rust unit tests are welcome, however testing the Rust intermediate interface is not enough.
-We must have coverage also from a destination language.
+We must have coverage also from a destination language, and we should treat that coverage as required for interface changes.
+
 Python is a common choice for tests due to its simplicity and popularity.
+
 Tests in destination languages also serve as examples, try to make them useful for devs using that language.
-When a function is not self-explanatory or a flow is complex, add comments; name variables to document function parameters.
+
+When adding/changing API surface, include destination-language checks for expected behavior and roundtrip consistency when serialization is involved.
 
 ## Constructors
 Do not use the default constructor `new()` if there are multiple ways in which an object can be created.

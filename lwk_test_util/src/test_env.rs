@@ -16,6 +16,7 @@ use elements::hex::FromHex;
 use elements::{Address, AssetId, BlockHash, Txid};
 
 use serde_json::Value;
+use std::net::TcpListener;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -31,6 +32,7 @@ pub struct TestEnvBuilder {
     with_bitcoind: bool,
     with_waterfalls: bool,
     with_registry: bool,
+    with_zmq: bool,
 }
 
 impl TestEnvBuilder {
@@ -59,6 +61,7 @@ impl TestEnvBuilder {
             with_bitcoind: false,
             with_waterfalls: false,
             with_registry: false,
+            with_zmq: false,
         }
     }
 
@@ -89,6 +92,12 @@ impl TestEnvBuilder {
     /// Start a Asset Registry server
     pub fn with_registry(mut self) -> Self {
         self.with_registry = true;
+        self
+    }
+
+    /// Start elementsd with ZMQ endpoints
+    pub fn with_zmq(mut self) -> Self {
+        self.with_zmq = true;
         self
     }
 
@@ -126,6 +135,11 @@ impl TestEnvBuilder {
         // Start elementsd
         let view_stdout = std::env::var("RUST_LOG").is_ok();
 
+        //TODO remove this bad code once Conf::args is not Vec<&str>
+        fn string_to_static_str(s: String) -> &'static str {
+            Box::leak(s.into_boxed_str())
+        }
+
         let mut args = vec![
             "-fallbackfee=0.0001",
             "-dustrelayfee=0.00000001",
@@ -139,11 +153,6 @@ impl TestEnvBuilder {
             "-blockmintxfee=0",            // test tx with no fees/asset fees
         ];
         if let Some(bitcoind) = bitcoind.as_ref() {
-            //TODO remove this bad code once Conf::args is not Vec<&str>
-            fn string_to_static_str(s: String) -> &'static str {
-                Box::leak(s.into_boxed_str())
-            }
-
             args.push("-validatepegin=1");
             args.push(string_to_static_str(format!(
                 "-mainchainrpccookiefile={}",
@@ -159,6 +168,25 @@ impl TestEnvBuilder {
             )));
         } else {
             args.push("-validatepegin=0");
+        };
+
+        let zmq_endpoint = if self.with_zmq {
+            let addr = TcpListener::bind("127.0.0.1:0")
+                .unwrap()
+                .local_addr()
+                .unwrap()
+                .to_string();
+            let endpoint = format!("tcp://{addr}");
+
+            args.push(string_to_static_str(format!("-zmqpubrawtx={endpoint}")));
+            args.push(string_to_static_str(format!("-zmqpubrawblock={endpoint}")));
+            args.push(string_to_static_str(format!("-zmqpubhashtx={endpoint}")));
+            args.push(string_to_static_str(format!("-zmqpubhashblock={endpoint}")));
+            args.push(string_to_static_str(format!("-zmqpubsequence={endpoint}")));
+
+            Some(endpoint)
+        } else {
+            None
         };
 
         let network = "liquidregtest";
@@ -238,6 +266,7 @@ impl TestEnvBuilder {
             electrsd,
             waterfallsd,
             registryd,
+            zmq_endpoint,
         }
     }
 }
@@ -251,9 +280,14 @@ pub struct TestEnv {
     electrsd: Option<ElectrsD>,
     waterfallsd: Option<WaterfallsD>,
     registryd: Option<RegistryD>,
+    zmq_endpoint: Option<String>,
 }
 
 impl TestEnv {
+    pub fn zmq_endpoint(&self) -> String {
+        self.zmq_endpoint.as_ref().unwrap().clone()
+    }
+
     pub fn electrum_url(&self) -> String {
         let url = &self.electrsd.as_ref().unwrap().electrum_url;
         format!("tcp://{url}")

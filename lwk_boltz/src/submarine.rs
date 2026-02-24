@@ -285,7 +285,17 @@ impl BoltzSession {
 }
 
 async fn fetch_claim_txid(api: &BoltzApiClientV2, swap_id: &str) -> Option<String> {
-    api.get_submarine_tx(swap_id).await.map(|tx| tx.id).ok()
+    match api.get_submarine_tx(swap_id).await {
+        Ok(tx) => Some(tx.id),
+        Err(err) => {
+            log::warn!(
+                "failed to fetch submarine txid for swap {}: {}",
+                swap_id,
+                err
+            );
+            None
+        }
+    }
 }
 
 pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(

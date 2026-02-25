@@ -181,11 +181,10 @@ impl Update {
     /// NOTE: it's caller responsibility to ensure that the following update is the next in sequence
     /// and updates are not mixed up.
     pub(crate) fn merge(&mut self, following: Update) {
-        // Merge new transactions: add new ones, replace existing ones
-        for (txid, tx) in following.new_txs.txs {
-            self.new_txs.txs.retain(|(t, _)| *t != txid);
-            self.new_txs.txs.push((txid, tx));
-        }
+        // By construction there should not be duplicate txs,
+        // even if so when merged in the hashmap they will be overridden.
+        self.new_txs.txs.extend(following.new_txs.txs);
+
         self.new_txs.unblinds.extend(following.new_txs.unblinds);
 
         // Merge txid_height_new: union with override (later wins)

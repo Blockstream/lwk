@@ -379,9 +379,10 @@ mod tests {
             .prepare_pay(&lightning_payment, &refund_address, None)
             .await
             .unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("a swap with this invoice exists already"));
+        assert!(matches!(
+            err,
+            lwk_boltz::Error::BoltzBackendHttpError { status, error } if status == 400 && error.as_ref().unwrap() == "a swap with this invoice exists already"
+        ));
     }
 
     #[tokio::test]

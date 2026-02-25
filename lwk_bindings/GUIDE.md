@@ -26,9 +26,22 @@ Always accept a function argument by an immutable reference.
 
 This is an example of how NOT to do it: `fn some_func(arr: Vec<Arc<TxOut>>)`; instead, do: `fn some_func(arr: &[Arc<TxOut>])`.
 
-This is because, in the targeted language, we won't have any borrowing checks, but in Rust, when the Rust compiler sees 
-that the argument is now owned by the function, it could modify or destroy it. Therefore, if you use it again in the 
-target language, you would have a headache debugging why the value is now broken.
+This is because, in the targeted language, we won't have any borrowing checks, but in Rust, when the Rust compiler sees that the argument is now owned by the function, it could modify or destroy it. Therefore, if you use it again in the target language, you would have a headache debugging why the value is now broken.
+
+### Exceptions
+There are situations where it’s acceptable to bypass this rule.
+Below is a non-exhaustive list of such cases:
+- When the type implements the `Copy` trait, there is no need to add a reference. 
+  - This applies to all types like `u32`, `u64`, etc.
+  - This is ok: `pub fn from_height(height: u32)`
+- When the builder type is consumed
+  - This is ok: `SomeBuilder::add_data(self) -> SomeBuilder`
+  - This is WRONG: `SomeBuilder::add_data(self, Vec<Arc<TxOut>>)`. The second argument should be `&[Arc<TxOut>]`.
+- When the argument is a shared-ownership smart pointer (e.g. `Arc<T>`) and the callee needs to retain it (store it / keep a handle).
+  - In this case, taking it by value is acceptable since cloning is cheap and the intent is to keep a shared owner.
+  - This is ok: `LoggingLink::new(logging: Arc<dyn Logging>)`
+- Or you have another **strong** reason for it
+  - Make sure to explicitly state it in the end-user-facing documentation to prevent misuse.
 
 ## Constructors
 Do not use the default constructor `new()` if there are multiple ways in which an object can be created.

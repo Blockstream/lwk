@@ -60,9 +60,9 @@ impl Script {
 
     /// Create an OP_RETURN script (for burn outputs).
     #[uniffi::constructor]
-    pub fn new_op_return(data: Vec<u8>) -> Arc<Self> {
+    pub fn new_op_return(data: &[u8]) -> Arc<Self> {
         Arc::new(Self {
-            inner: elements::Script::new_op_return(&data),
+            inner: elements::Script::new_op_return(data),
         })
     }
 
@@ -142,7 +142,7 @@ mod tests {
     #[test]
     fn test_script_op_return() {
         let data = b"burn".to_vec();
-        let script = Script::new_op_return(data.clone());
+        let script = Script::new_op_return(&data);
         // OP_RETURN + OP_PUSHBYTES_4 + "burn"
         assert!(script.is_provably_unspendable());
         assert!(script.to_asm().starts_with("OP_RETURN"));

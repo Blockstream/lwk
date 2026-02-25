@@ -32,10 +32,6 @@ impl Display for TxBuilder {
     }
 }
 
-fn builder_finished() -> LwkError {
-    "This transaction builder already called finish or errored".into()
-}
-
 #[uniffi::export]
 impl TxBuilder {
     /// Construct a transaction builder
@@ -51,7 +47,7 @@ impl TxBuilder {
     pub fn finish(&self, wollet: &Wollet) -> Result<Pset, LwkError> {
         let mut lock = self.inner.lock()?;
         let wollet = wollet.inner_wollet()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         Ok(inner.finish(&wollet)?.into())
     }
 
@@ -59,7 +55,7 @@ impl TxBuilder {
     pub fn finish_for_amp0(&self, wollet: &Wollet) -> Result<crate::amp0::Amp0Pset, LwkError> {
         let mut lock = self.inner.lock()?;
         let wollet = wollet.inner_wollet()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         Ok(inner.finish_for_amp0(&wollet)?.into())
     }
 
@@ -67,7 +63,7 @@ impl TxBuilder {
     /// Multiply sats/vb value by 1000 i.e. 1.0 sat/byte = 1000.0 sat/kvb
     pub fn fee_rate(&self, rate: Option<f32>) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock = Some(inner.fee_rate(rate));
         Ok(())
     }
@@ -75,7 +71,7 @@ impl TxBuilder {
     /// Select all available L-BTC inputs
     pub fn drain_lbtc_wallet(&self) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock = Some(inner.drain_lbtc_wallet());
         Ok(())
     }
@@ -83,7 +79,7 @@ impl TxBuilder {
     /// Sets the address to drain excess L-BTC to
     pub fn drain_lbtc_to(&self, address: &Address) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock = Some(inner.drain_lbtc_to(address.into()));
         Ok(())
     }
@@ -126,7 +122,7 @@ impl TxBuilder {
         asset: &AssetId,
     ) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock = Some(inner.add_explicit_recipient(&(address.into()), satoshi, (*asset).into())?);
         Ok(())
     }
@@ -152,7 +148,7 @@ impl TxBuilder {
         contract: Option<Arc<Contract>>,
     ) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         let new_inner = inner.issue_asset(
             asset_sats,
             asset_receiver.map(|e| e.as_ref().into()),
@@ -183,7 +179,7 @@ impl TxBuilder {
         issuance_tx: Option<Arc<Transaction>>,
     ) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         let new_inner = inner.reissue_asset(
             asset_to_reissue.into(),
             satoshi_to_reissue,
@@ -207,7 +203,7 @@ impl TxBuilder {
     /// * Insufficient funds (remember to include L-BTC utxos for fees)
     pub fn set_wallet_utxos(&self, utxos: Vec<Arc<OutPoint>>) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         let utxos = utxos
             .into_iter()
             .map(|arc| elements::OutPoint::from(arc.as_ref()))
@@ -221,7 +217,7 @@ impl TxBuilder {
     /// Note: unblinded UTXOs with the same scriptpubkeys as the wallet, are considered external.
     pub fn add_external_utxos(&self, utxos: Vec<Arc<ExternalUtxo>>) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         let utxos = utxos
             .into_iter()
             .map(|arc| lwk_wollet::ExternalUtxo::from(arc.as_ref()))
@@ -240,7 +236,7 @@ impl TxBuilder {
         asset: AssetId,
     ) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock = Some(inner.liquidex_make(utxo.into(), address.as_ref(), amount, asset.into())?);
         Ok(())
     }
@@ -251,7 +247,7 @@ impl TxBuilder {
         proposals: Vec<Arc<ValidatedLiquidexProposal>>,
     ) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock =
             Some(inner.liquidex_take(proposals.into_iter().map(|p| p.as_ref().into()).collect())?);
         Ok(())
@@ -260,7 +256,7 @@ impl TxBuilder {
     /// Add input rangeproofs
     pub fn add_input_rangeproofs(&self, add_rangeproofs: bool) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock = Some(inner.add_input_rangeproofs(add_rangeproofs));
         Ok(())
     }
@@ -269,7 +265,7 @@ impl TxBuilder {
 impl TxBuilder {
     fn add_validated_recipient(&self, recipient: lwk_wollet::Recipient) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock = Some(inner.add_validated_recipient(recipient));
         Ok(())
     }

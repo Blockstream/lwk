@@ -1,6 +1,6 @@
 //! Liquid transaction input witness
 
-use crate::{types::Hex, LwkError};
+use crate::LwkError;
 use std::sync::{Arc, Mutex};
 
 /// A transaction input witness.
@@ -39,35 +39,23 @@ impl TxInWitness {
 
     /// Create a witness from script witness elements.
     #[uniffi::constructor]
-    pub fn from_script_witness(script_witness: Vec<Hex>) -> Arc<Self> {
-        let witness: Vec<Vec<u8>> = script_witness
-            .into_iter()
-            .map(|h| h.as_ref().to_vec())
-            .collect();
+    pub fn from_script_witness(script_witness: &[Vec<u8>]) -> Arc<Self> {
         Arc::new(Self {
             inner: elements::TxInWitness {
-                script_witness: witness,
+                script_witness: script_witness.to_vec(),
                 ..Default::default()
             },
         })
     }
 
     /// Get the script witness elements.
-    pub fn script_witness(&self) -> Vec<Hex> {
-        self.inner
-            .script_witness
-            .iter()
-            .map(|v| Hex::from(v.as_slice()))
-            .collect()
+    pub fn script_witness(&self) -> Vec<Vec<u8>> {
+        self.inner.script_witness.clone()
     }
 
     /// Get the peg-in witness elements.
-    pub fn pegin_witness(&self) -> Vec<Hex> {
-        self.inner
-            .pegin_witness
-            .iter()
-            .map(|v| Hex::from(v.as_slice()))
-            .collect()
+    pub fn pegin_witness(&self) -> Vec<Vec<u8>> {
+        self.inner.pegin_witness.clone()
     }
 
     /// Check if the witness is empty.
@@ -93,35 +81,35 @@ impl TxInWitnessBuilder {
     }
 
     /// Set the script witness elements.
-    pub fn script_witness(&self, witness: Vec<Hex>) -> Result<(), LwkError> {
+    pub fn script_witness(&self, witness: &[Vec<u8>]) -> Result<(), LwkError> {
         let mut guard = self.inner.lock()?;
         let inner = guard.as_mut().ok_or(LwkError::ObjectConsumed)?;
-        inner.script_witness = witness.into_iter().map(|h| h.as_ref().to_vec()).collect();
+        inner.script_witness = witness.to_vec();
         Ok(())
     }
 
     /// Set the peg-in witness elements.
-    pub fn pegin_witness(&self, witness: Vec<Hex>) -> Result<(), LwkError> {
+    pub fn pegin_witness(&self, witness: &[Vec<u8>]) -> Result<(), LwkError> {
         let mut guard = self.inner.lock()?;
         let inner = guard.as_mut().ok_or(LwkError::ObjectConsumed)?;
-        inner.pegin_witness = witness.into_iter().map(|h| h.as_ref().to_vec()).collect();
+        inner.pegin_witness = witness.to_vec();
         Ok(())
     }
 
     /// Set the amount rangeproof from serialized bytes.
-    pub fn amount_rangeproof(&self, proof: &Hex) -> Result<(), LwkError> {
+    pub fn amount_rangeproof(&self, proof: &[u8]) -> Result<(), LwkError> {
         let mut guard = self.inner.lock()?;
         let inner = guard.as_mut().ok_or(LwkError::ObjectConsumed)?;
-        let rangeproof = elements::secp256k1_zkp::RangeProof::from_slice(proof.as_ref())?;
+        let rangeproof = elements::secp256k1_zkp::RangeProof::from_slice(proof)?;
         inner.amount_rangeproof = Some(Box::new(rangeproof));
         Ok(())
     }
 
     /// Set the inflation keys rangeproof from serialized bytes.
-    pub fn inflation_keys_rangeproof(&self, proof: &Hex) -> Result<(), LwkError> {
+    pub fn inflation_keys_rangeproof(&self, proof: &[u8]) -> Result<(), LwkError> {
         let mut guard = self.inner.lock()?;
         let inner = guard.as_mut().ok_or(LwkError::ObjectConsumed)?;
-        let rangeproof = elements::secp256k1_zkp::RangeProof::from_slice(proof.as_ref())?;
+        let rangeproof = elements::secp256k1_zkp::RangeProof::from_slice(proof)?;
         inner.inflation_keys_rangeproof = Some(Box::new(rangeproof));
         Ok(())
     }

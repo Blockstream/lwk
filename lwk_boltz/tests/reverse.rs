@@ -364,8 +364,8 @@ mod tests {
             .unwrap();
         utils::start_pay_invoice_lnd(invoice_response.bolt11_invoice().to_string());
 
-        invoice_response.advance().await.unwrap();
-        invoice_response.advance().await.unwrap();
+        let _ = invoice_response.advance().await.unwrap();
+        let _ = invoice_response.advance().await.unwrap();
         let claim_txid = invoice_response
             .claim_txid()
             .map(|s| s.to_string())

@@ -1698,7 +1698,7 @@ impl Amp0Pset {
     }
 }
 
-fn unblind_with_shared_secret(
+pub(crate) fn unblind_with_shared_secret(
     txout: &TxOut,
     shared_secret: SecretKey,
 ) -> Result<TxOutSecrets, Error> {

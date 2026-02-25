@@ -21,6 +21,15 @@ Tests in destination languages also serve as examples, try to make them useful f
 
 When adding/changing API surface, include destination-language checks for expected behavior and roundtrip consistency when serialization is involved.
 
+## Function/method arguments
+Always accept a function argument by an immutable reference.
+
+This is an example of how NOT to do it: `fn some_func(arr: Vec<Arc<TxOut>>)`; instead, do: `fn some_func(arr: &[Arc<TxOut>])`.
+
+This is because, in the targeted language, we won't have any borrowing checks, but in Rust, when the Rust compiler sees 
+that the argument is now owned by the function, it could modify or destroy it. Therefore, if you use it again in the 
+target language, you would have a headache debugging why the value is now broken.
+
 ## Constructors
 Do not use the default constructor `new()` if there are multiple ways in which an object can be created.
 This avoids ambiguity. Use constructors names that explicitly mention the format of what should be passed in.

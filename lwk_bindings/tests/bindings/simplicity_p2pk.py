@@ -26,8 +26,17 @@ args = SimplicityArguments()
 args = args.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(TEST_PUBLIC_KEY))
 
 program = SimplicityProgram.load(P2PK_SOURCE, args)
-cmr = program.cmr().to_hex()
-assert cmr == TEST_CMR
+cmr_from_program = program.cmr()
+assert str(cmr_from_program) == TEST_CMR
+
+cmr_from_str = Cmr.from_string(TEST_CMR)
+cmr_bytes = cmr_from_str.to_bytes()
+cmr_from_bytes = Cmr.from_bytes(cmr_bytes)
+
+assert str(cmr_from_str) == TEST_CMR
+assert cmr_from_bytes.to_bytes() == cmr_bytes
+assert str(cmr_from_bytes) == TEST_CMR
+assert cmr_from_program.to_bytes() == cmr_bytes
 
 # Test creating P2TR address for p2pk program
 address = program.create_p2tr_address(XOnlyPublicKey(TEST_PUBLIC_KEY), network)
@@ -89,4 +98,4 @@ witness2 = witness2.add_value("MY_WITNESS", v_left)
 args3 = SimplicityArguments()
 args3 = args3.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(TEST_PUBLIC_KEY))
 program2 = SimplicityProgram.load(P2PK_SOURCE, args3)
-assert program2.cmr().to_hex() == TEST_CMR
+assert str(program2.cmr()) == TEST_CMR

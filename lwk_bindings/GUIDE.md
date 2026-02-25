@@ -37,10 +37,12 @@ There are situations where it’s acceptable to bypass this rule.
 Below is a non-exhaustive list of such cases:
 - When the type implements the `Copy` trait, there is no need to add a reference. 
   - This applies to all types like `u32`, `u64`, etc.
-  - This is ok: `pub fn from_height(height: u32)`
-- When the builder type is consumed
-  - This is ok: `SomeBuilder::add_data(self) -> SomeBuilder`
-  - This is WRONG: `SomeBuilder::add_data(self, Vec<Arc<TxOut>>)`. The second argument should be `&[Arc<TxOut>]`.
+  - This is ok: `LockTime::from_height(height: u32)`
+- When an object is consumed and cannot be used afterwards
+  - This is ok: `Amp0Connected::login(self: Arc<Self>, sig: &str) -> Result<Arc<Amp0LoggedIn>, LwkError>`,
+  for AMP0, when you log in, you cannot log in again with the same `Amp0Connected` object.
+  - This is WRONG: `EsploraClient::from_builder(builder: EsploraClientBuilder)`, argument should `&EsploraClientBuilder`.
+  - This is WRONG: `SomeBuilder::add_data(&self, Vec<Arc<TxOut>>)`. The second argument should be `&[Arc<TxOut>]`.
 - When the argument is a shared-ownership smart pointer (e.g. `Arc<T>`) and the callee needs to retain it (store it / keep a handle).
   - In this case, taking it by value is acceptable since cloning is cheap and the intent is to keep a shared owner.
   - This is ok: `LoggingLink::new(logging: Arc<dyn Logging>)`

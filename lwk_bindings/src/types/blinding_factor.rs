@@ -4,10 +4,11 @@ use std::fmt::Display;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use elements::hex::ToHex;
+use elements::pset::serialize::Serialize;
 
 /// A blinding factor for asset commitments.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
+#[uniffi::export(Display)]
 pub struct AssetBlindingFactor {
     inner: elements::confidential::AssetBlindingFactor,
 }
@@ -55,15 +56,15 @@ impl Display for AssetBlindingFactor {
 impl AssetBlindingFactor {
     /// Create from bytes.
     #[uniffi::constructor]
-    pub fn from_slice(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
         let inner = elements::confidential::AssetBlindingFactor::from_slice(bytes)?;
         Ok(Arc::new(AssetBlindingFactor { inner }))
     }
 
     /// Creates from a hex string.
     #[uniffi::constructor]
-    pub fn from_hex(hex: &str) -> Result<Arc<Self>, LwkError> {
-        Ok(Arc::new(Self::from_str(hex)?))
+    pub fn from_string(s: &str) -> Result<Arc<Self>, LwkError> {
+        Ok(Arc::new(Self::from_str(s)?))
     }
 
     /// Get a unblinded/zero asset blinding factor
@@ -75,20 +76,14 @@ impl AssetBlindingFactor {
     }
 
     /// Returns the bytes (32 bytes).
-    #[allow(clippy::wrong_self_convention)]
     pub fn to_bytes(&self) -> Vec<u8> {
-        self.inner.into_inner().as_ref().to_vec()
-    }
-
-    /// Returns the hex-encoded representation.
-    #[allow(clippy::wrong_self_convention)]
-    pub fn to_hex(&self) -> String {
-        self.inner.into_inner().as_ref().to_hex()
+        self.inner.into_inner().serialize()
     }
 }
 
 /// A blinding factor for value commitments.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
+#[uniffi::export(Display)]
 pub struct ValueBlindingFactor {
     inner: elements::confidential::ValueBlindingFactor,
 }
@@ -136,15 +131,15 @@ impl Display for ValueBlindingFactor {
 impl ValueBlindingFactor {
     /// Create from bytes.
     #[uniffi::constructor]
-    pub fn from_slice(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
         let inner = elements::confidential::ValueBlindingFactor::from_slice(bytes)?;
         Ok(Arc::new(ValueBlindingFactor { inner }))
     }
 
     /// Creates from a hex string.
     #[uniffi::constructor]
-    pub fn from_hex(hex: &str) -> Result<Arc<Self>, LwkError> {
-        Ok(Arc::new(Self::from_str(hex)?))
+    pub fn from_string(s: &str) -> Result<Arc<Self>, LwkError> {
+        Ok(Arc::new(Self::from_str(s)?))
     }
 
     /// Get a unblinded/zero value blinding factor
@@ -156,15 +151,8 @@ impl ValueBlindingFactor {
     }
 
     /// Returns the bytes (32 bytes).
-    #[allow(clippy::wrong_self_convention)]
     pub fn to_bytes(&self) -> Vec<u8> {
-        self.inner.into_inner().as_ref().to_vec()
-    }
-
-    /// Returns the hex-encoded representation.
-    #[allow(clippy::wrong_self_convention)]
-    pub fn to_hex(&self) -> String {
-        self.inner.into_inner().as_ref().to_hex()
+        self.inner.into_inner().serialize()
     }
 }
 
@@ -209,42 +197,46 @@ mod tests {
     use super::{AssetBlindingFactor, ValueBlindingFactor};
 
     #[test]
-    fn test_asset_blinding_factor_zero() {
+    fn test_asset_blinding_factor_from_bytes_and_roundtrip() {
         let abf = AssetBlindingFactor::zero();
         assert_eq!(abf.to_bytes(), vec![0u8; 32]);
+
+        let hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
+
+        let from_hex = AssetBlindingFactor::from_string(hex).unwrap();
+        let from_bytes = AssetBlindingFactor::from_bytes(&from_hex.to_bytes()).unwrap();
+        assert_eq!(from_bytes.to_bytes(), from_hex.to_bytes());
+        assert_eq!(from_bytes.to_string(), from_hex.to_string());
+        assert_eq!(
+            AssetBlindingFactor::from_string(&from_hex.to_string())
+                .unwrap()
+                .to_string(),
+            hex
+        );
+
+        assert!(AssetBlindingFactor::from_bytes(&[0u8; 31]).is_err());
+        assert!(AssetBlindingFactor::from_bytes(&[0u8; 33]).is_err());
     }
 
     #[test]
-    fn test_asset_blinding_factor_from_slice() {
-        let bytes = [1u8; 32];
-        let abf = AssetBlindingFactor::from_slice(&bytes).unwrap();
-        assert_eq!(abf.to_bytes(), bytes);
-    }
-
-    #[test]
-    fn test_asset_blinding_factor_roundtrip() {
-        let hex = "0101010101010101010101010101010101010101010101010101010101010101";
-        let abf = AssetBlindingFactor::from_hex(hex).unwrap();
-        assert_eq!(abf.to_hex(), hex);
-    }
-
-    #[test]
-    fn test_value_blinding_factor_zero() {
+    fn test_value_blinding_factor_from_bytes_and_roundtrip() {
         let vbf = ValueBlindingFactor::zero();
         assert_eq!(vbf.to_bytes(), vec![0u8; 32]);
-    }
 
-    #[test]
-    fn test_value_blinding_factor_from_slice() {
-        let bytes = [2u8; 32];
-        let vbf = ValueBlindingFactor::from_slice(&bytes).unwrap();
-        assert_eq!(vbf.to_bytes(), bytes);
-    }
+        let hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
 
-    #[test]
-    fn test_value_blinding_factor_roundtrip() {
-        let hex = "0202020202020202020202020202020202020202020202020202020202020202";
-        let vbf = ValueBlindingFactor::from_hex(hex).unwrap();
-        assert_eq!(vbf.to_hex(), hex);
+        let from_hex = ValueBlindingFactor::from_string(hex).unwrap();
+        let from_bytes = ValueBlindingFactor::from_bytes(&from_hex.to_bytes()).unwrap();
+        assert_eq!(from_bytes.to_bytes(), from_hex.to_bytes());
+        assert_eq!(from_bytes.to_string(), from_hex.to_string());
+        assert_eq!(
+            ValueBlindingFactor::from_string(&from_hex.to_string())
+                .unwrap()
+                .to_string(),
+            hex
+        );
+
+        assert!(ValueBlindingFactor::from_bytes(&[0u8; 31]).is_err());
+        assert!(ValueBlindingFactor::from_bytes(&[0u8; 33]).is_err());
     }
 }

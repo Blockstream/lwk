@@ -1,5 +1,25 @@
 from lwk import *
 
+TEST_BLINDING_FACTOR_HEX = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+
+abf_from_str = AssetBlindingFactor.from_string(TEST_BLINDING_FACTOR_HEX)
+vbf_from_str = ValueBlindingFactor.from_string(TEST_BLINDING_FACTOR_HEX)
+
+abf_bytes = abf_from_str.to_bytes()
+abf_from_bytes = AssetBlindingFactor.from_bytes(abf_bytes)
+
+vbf_bytes = vbf_from_str.to_bytes()
+vbf_from_bytes = ValueBlindingFactor.from_bytes(vbf_bytes)
+
+assert str(abf_from_str) == TEST_BLINDING_FACTOR_HEX
+assert str(vbf_from_str) == TEST_BLINDING_FACTOR_HEX
+
+assert abf_from_bytes.to_bytes() == abf_bytes
+assert str(abf_from_bytes) == TEST_BLINDING_FACTOR_HEX
+
+assert vbf_from_bytes.to_bytes() == vbf_bytes
+assert str(vbf_from_bytes) == TEST_BLINDING_FACTOR_HEX
+
 # Start nodes
 node = LwkTestEnv()
 

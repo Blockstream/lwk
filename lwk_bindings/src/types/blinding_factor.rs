@@ -165,12 +165,11 @@ impl AssetBlindingFactor {
         &self,
     ) -> Result<lwk_simplicity::simplicityhl::elements::confidential::AssetBlindingFactor, LwkError>
     {
-        lwk_simplicity::simplicityhl::elements::confidential::AssetBlindingFactor::from_slice(
-            &self.to_bytes(),
+        Ok(
+            lwk_simplicity::simplicityhl::elements::confidential::AssetBlindingFactor::from_slice(
+                &self.to_bytes(),
+            )?,
         )
-        .map_err(|e| LwkError::Generic {
-            msg: format!("Invalid asset blinding factor: {e}"),
-        })
     }
 }
 
@@ -183,12 +182,11 @@ impl ValueBlindingFactor {
         &self,
     ) -> Result<lwk_simplicity::simplicityhl::elements::confidential::ValueBlindingFactor, LwkError>
     {
-        lwk_simplicity::simplicityhl::elements::confidential::ValueBlindingFactor::from_slice(
-            &self.to_bytes(),
+        Ok(
+            lwk_simplicity::simplicityhl::elements::confidential::ValueBlindingFactor::from_slice(
+                &self.to_bytes(),
+            )?,
         )
-        .map_err(|e| LwkError::Generic {
-            msg: format!("Invalid value blinding factor: {e}"),
-        })
     }
 }
 

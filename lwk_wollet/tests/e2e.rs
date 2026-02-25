@@ -4152,5 +4152,5 @@ fn test_zmq_endpoint() {
     let msg = subscriber.recv_multipart(0).unwrap();
 
     assert_eq!(msg[0], b"rawtx");
-    assert!(msg[1].len() > 0);
+    assert!(!msg[1].is_empty());
 }

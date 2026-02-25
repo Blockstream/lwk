@@ -172,6 +172,9 @@ mod tests {
     use elements::AssetId;
 
     #[cfg(feature = "simplicity")]
+    use elements::hex::ToHex;
+
+    #[cfg(feature = "simplicity")]
     fn reverse_hex(hex: &str) -> String {
         hex.as_bytes()
             .chunks(2)
@@ -220,8 +223,8 @@ mod tests {
             ValueBlindingFactor::from_hex(vbf_hex).unwrap(),
         )
         .into();
-        let vc_hex = "08e092ca785f8d07681db07467e05f585e562bcf47171ddbe74d0c825f49c535fe";
-        let ac_hex = "0b73d08a80d4df97c7917eb231d2d9949422e49d5243e3b7342cfb7f409d05fae6";
+        let vc_hex = "099be562150e1db49df61c175dad7927c41152f19578ce09660b5346ea9e31e576";
+        let ac_hex = "0baffb010ebadaefcf81343637e2abf439fc2615ce30a8c4157ec36a11f926acb1";
 
         assert!(!txoutsecrets_blinded.is_explicit());
         assert_eq!(txoutsecrets_blinded.value(), 1000);
@@ -240,12 +243,18 @@ mod tests {
         );
         #[cfg(feature = "simplicity")]
         assert_eq!(
-            txoutsecrets_blinded.asset_blinding_factor().to_string(),
+            txoutsecrets_blinded
+                .asset_blinding_factor()
+                .to_bytes()
+                .to_hex(),
             reverse_hex(abf_hex),
         );
         #[cfg(feature = "simplicity")]
         assert_eq!(
-            txoutsecrets_blinded.value_blinding_factor().to_string(),
+            txoutsecrets_blinded
+                .value_blinding_factor()
+                .to_bytes()
+                .to_hex(),
             reverse_hex(vbf_hex),
         );
         assert_eq!(txoutsecrets_blinded.asset_commitment().to_string(), ac_hex);

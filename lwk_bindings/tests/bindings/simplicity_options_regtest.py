@@ -284,7 +284,7 @@ fund_inp_builder0.sequence(TxSequence.zero())
 fund_inp_builder0.issuance_value_amount(NUM_CONTRACTS)
 fund_inp_builder0.issuance_asset_entropy(option_token_entropy)
 fund_inp_builder0.blinded_issuance(False)
-fund_inp_builder0.issuance_blinding_nonce(Tweak.from_hex(secrets0.asset_blinding_factor().to_hex()))
+fund_inp_builder0.issuance_blinding_nonce(Tweak.from_bytes(secrets0.asset_blinding_factor().to_bytes()))
 funding_input0 = fund_inp_builder0.build()
 
 funding_outpoint1 = OutPoint.from_parts(creation_txid, creation_out_vout1)
@@ -294,7 +294,7 @@ fund_inp_builder1.sequence(TxSequence.zero())
 fund_inp_builder1.issuance_value_amount(NUM_CONTRACTS)
 fund_inp_builder1.issuance_asset_entropy(grantor_token_entropy)
 fund_inp_builder1.blinded_issuance(False)
-fund_inp_builder1.issuance_blinding_nonce(Tweak.from_hex(secrets1.asset_blinding_factor().to_hex()))
+fund_inp_builder1.issuance_blinding_nonce(Tweak.from_bytes(secrets1.asset_blinding_factor().to_bytes()))
 funding_input1 = fund_inp_builder1.build()
 
 outpoint2 = OutPoint.from_parts(txid3, vout3)
@@ -397,14 +397,15 @@ path_type = SimplicityType.parse(
     "Either<Either<(u64,u256,u256,u256,u256,u256,u256,u256,u256), Either<(bool,u64,u64,u64),(bool,u64,u64)>>, Either<(bool,u64,u64),(bool,u64,u64)>>"
 )
 
-in_opt_abf = secrets0.asset_blinding_factor().to_hex()
-in_opt_vbf = secrets0.value_blinding_factor().to_hex()
-in_gra_abf = secrets1.asset_blinding_factor().to_hex()
-in_gra_vbf = secrets1.value_blinding_factor().to_hex()
-out_opt_abf = out_secrets0.asset_blinding_factor().to_hex()
-out_opt_vbf = out_secrets0.value_blinding_factor().to_hex()
-out_gra_abf = out_secrets1.asset_blinding_factor().to_hex()
-out_gra_vbf = out_secrets1.value_blinding_factor().to_hex()
+# SimplicityHL requires bindings factors to be in hex reversed order
+in_opt_abf = secrets0.asset_blinding_factor().to_bytes().hex()
+in_opt_vbf = secrets0.value_blinding_factor().to_bytes().hex()
+in_gra_abf = secrets1.asset_blinding_factor().to_bytes().hex()
+in_gra_vbf = secrets1.value_blinding_factor().to_bytes().hex()
+out_opt_abf = out_secrets0.asset_blinding_factor().to_bytes().hex()
+out_opt_vbf = out_secrets0.value_blinding_factor().to_bytes().hex()
+out_gra_abf = out_secrets1.asset_blinding_factor().to_bytes().hex()
+out_gra_vbf = out_secrets1.value_blinding_factor().to_bytes().hex()
 
 path_value_str = (
     f"Left(Left(({settlement_sats},"

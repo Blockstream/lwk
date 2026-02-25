@@ -76,7 +76,7 @@ impl AssetBlindingFactor {
     }
 
     /// Returns the bytes (32 bytes).
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(self) -> Vec<u8> {
         self.inner.into_inner().serialize()
     }
 }
@@ -151,7 +151,7 @@ impl ValueBlindingFactor {
     }
 
     /// Returns the bytes (32 bytes).
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(self) -> Vec<u8> {
         self.inner.into_inner().serialize()
     }
 }
@@ -162,7 +162,7 @@ impl AssetBlindingFactor {
     ///
     /// TODO: delete when the version of elements is stabilized
     pub fn to_simplicityhl(
-        &self,
+        self,
     ) -> Result<lwk_simplicity::simplicityhl::elements::confidential::AssetBlindingFactor, LwkError>
     {
         Ok(
@@ -179,7 +179,7 @@ impl ValueBlindingFactor {
     ///
     /// TODO: delete when the version of elements is stabilized
     pub fn to_simplicityhl(
-        &self,
+        self,
     ) -> Result<lwk_simplicity::simplicityhl::elements::confidential::ValueBlindingFactor, LwkError>
     {
         Ok(
@@ -205,12 +205,7 @@ mod tests {
         let from_bytes = AssetBlindingFactor::from_bytes(&from_hex.to_bytes()).unwrap();
         assert_eq!(from_bytes.to_bytes(), from_hex.to_bytes());
         assert_eq!(from_bytes.to_string(), from_hex.to_string());
-        assert_eq!(
-            AssetBlindingFactor::from_string(&from_hex.to_string())
-                .unwrap()
-                .to_string(),
-            hex
-        );
+        assert_eq!(from_hex.to_string(), hex);
 
         assert!(AssetBlindingFactor::from_bytes(&[0u8; 31]).is_err());
         assert!(AssetBlindingFactor::from_bytes(&[0u8; 33]).is_err());
@@ -227,12 +222,7 @@ mod tests {
         let from_bytes = ValueBlindingFactor::from_bytes(&from_hex.to_bytes()).unwrap();
         assert_eq!(from_bytes.to_bytes(), from_hex.to_bytes());
         assert_eq!(from_bytes.to_string(), from_hex.to_string());
-        assert_eq!(
-            ValueBlindingFactor::from_string(&from_hex.to_string())
-                .unwrap()
-                .to_string(),
-            hex
-        );
+        assert_eq!(from_hex.to_string(), hex);
 
         assert!(ValueBlindingFactor::from_bytes(&[0u8; 31]).is_err());
         assert!(ValueBlindingFactor::from_bytes(&[0u8; 33]).is_err());

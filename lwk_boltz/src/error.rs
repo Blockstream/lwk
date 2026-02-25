@@ -22,6 +22,9 @@ pub enum Error {
     #[error("Boltz API error: {0}")]
     BoltzApi(BoltzError),
 
+    #[error("Boltz backend HTTP error: {status} {error:?}")]
+    BoltzBackendHttpError { status: u16, error: Option<String> },
+
     #[error("Elements address error: {0}")]
     ElementsAddressError(#[from] AddressError),
 
@@ -117,7 +120,16 @@ pub enum Error {
 
 impl From<BoltzError> for Error {
     fn from(err: BoltzError) -> Self {
-        Error::BoltzApi(err)
+        match err {
+            BoltzError::HTTPStatusNotSuccess(status, body) => Error::BoltzBackendHttpError {
+                status: status.as_u16(),
+                error: body
+                    .get("error")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_owned),
+            },
+            _ => Error::BoltzApi(err),
+        }
     }
 }
 

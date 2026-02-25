@@ -78,8 +78,8 @@ mod tests {
         let control_block_from_program = program.control_block(&internal_key).unwrap();
 
         assert_eq!(
-            control_block_from_program,
-            Hex::from(control_block.serialize())
+            control_block_from_program.to_bytes(),
+            control_block.to_bytes()
         );
     }
 }

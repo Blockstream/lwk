@@ -34,13 +34,13 @@ impl AsRef<elements::bitcoin::taproot::ControlBlock> for ControlBlock {
 impl ControlBlock {
     /// Parse a control block from serialized bytes.
     #[uniffi::constructor]
-    pub fn from_slice(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
         let inner = elements::bitcoin::taproot::ControlBlock::decode(bytes)?;
         Ok(Arc::new(Self { inner }))
     }
 
     /// Serialize the control block to bytes.
-    pub fn serialize(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Vec<u8> {
         self.inner.serialize()
     }
 

@@ -28,6 +28,10 @@ This is an example of how NOT to do it: `fn some_func(arr: Vec<Arc<TxOut>>)`; in
 
 This is because, in the targeted language, we won't have any borrowing checks, but in Rust, when the Rust compiler sees that the argument is now owned by the function, it could modify or destroy it. Therefore, if you use it again in the target language, you would have a headache debugging why the value is now broken.
 
+Note that this sometimes implies a performance penalty, with some extra clones.
+This is a deliberate choice to avoid the situation we described above.
+If performance really matters, consider using the Rust crates directly.
+
 ### Exceptions
 There are situations where it’s acceptable to bypass this rule.
 Below is a non-exhaustive list of such cases:

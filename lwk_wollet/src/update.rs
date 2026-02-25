@@ -211,6 +211,8 @@ impl Update {
 
         // Update version to latest
         self.version = following.version;
+
+        // We don't need to update the wollet status, it's right to keep the status of the first update
     }
 }
 

@@ -138,13 +138,9 @@ mod tests {
         let mut state: [u8; 32] = [0u8; 32];
         state[31] = 1;
 
-        let cmr = Cmr::from_hex(
-            crate::types::Hex::from_str(
-                "cbd8d3d0cc95384237c1bf20334c30b579f22058563c37731a3ab2bc76d5a248",
-            )
-            .unwrap(),
-        )
-        .unwrap();
+        let cmr =
+            Cmr::from_string("cbd8d3d0cc95384237c1bf20334c30b579f22058563c37731a3ab2bc76d5a248")
+                .unwrap();
         let internal_key = XOnlyPublicKey::from_str(
             "50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
         )

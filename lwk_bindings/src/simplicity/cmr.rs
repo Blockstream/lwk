@@ -73,7 +73,7 @@ mod tests {
         let expected_hex = TEST_CMR;
         let expected_bytes = Vec::<u8>::from_hex(TEST_CMR).unwrap();
 
-        let cmr = Cmr::from_string(expected_hex.clone()).unwrap();
+        let cmr = Cmr::from_string(expected_hex).unwrap();
         assert_eq!(cmr.to_string(), expected_hex);
         assert_eq!(cmr.to_bytes(), expected_bytes);
 

@@ -4164,3 +4164,77 @@ fn test_zmq_endpoint() {
     assert_eq!(msg[0], b"rawtx");
     assert!(!msg[1].is_empty());
 }
+
+#[test]
+fn test_merge_updates_e2e() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let signer = SwSigner::new(TEST_MNEMONIC, false).unwrap();
+    let signers: [&AnySigner; 1] = [&AnySigner::Software(signer)];
+    let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+    let desc_str = format!(
+        "ct(slip77({}),elwpkh({}/*))",
+        slip77_key,
+        signers[0].xpub().unwrap()
+    );
+    let client = test_client_electrum(&env.electrum_url());
+    let mut wallet = TestWollet::new(client, &desc_str);
+
+    wallet.fund_btc(&env);
+    wallet.send_btc(&signers, None, None);
+
+    let expected_balance = wallet.wollet.balance().unwrap();
+    let expected_tx_count = wallet.wollet.transactions().unwrap().len();
+    let expected_utxo_count = wallet.wollet.utxos().unwrap().len();
+    let num_updates_before = wallet.wollet.updates().unwrap().len();
+    assert_eq!(
+        num_updates_before, 4,
+        "Expected multiple updates before merge, got {num_updates_before}"
+    );
+
+    let descriptor: WolletDescriptor = wallet
+        .wollet
+        .descriptor()
+        .unwrap()
+        .to_string()
+        .parse()
+        .unwrap();
+    let network = ElementsNetwork::default_regtest();
+    let db_root_dir = wallet.db_root_dir();
+
+    // Reconstruct the encrypted file store
+    // this is needed to use the same path/encryption created by the TestWollet ( which use Wollet::with_fs_persist )
+    let mut path = db_root_dir.path().to_path_buf();
+    path.push(network.as_str());
+    path.push("enc_cache");
+    path.push(
+        <DirectoryIdHash as hashes::Hash>::hash(descriptor.to_string().as_bytes()).to_string(),
+    );
+    let file_store = FileStore::new(path).unwrap();
+    let encrypted_store = EncryptedStore::new(file_store, descriptor.encryption_key_bytes());
+
+    let wollet = WolletBuilder::new(network, descriptor.clone())
+        .with_store(std::sync::Arc::new(encrypted_store))
+        .with_merge_threshold(Some(2))
+        .build()
+        .unwrap();
+
+    assert_eq!(expected_balance, wollet.balance().unwrap());
+    assert_eq!(expected_tx_count, wollet.transactions().unwrap().len());
+    assert_eq!(expected_utxo_count, wollet.utxos().unwrap().len());
+
+    let updates_after = wollet.updates().unwrap();
+    assert_eq!(
+        updates_after.len(),
+        1,
+        "Updates should be merged into 1, got {}",
+        updates_after.len()
+    );
+
+    // Verify the merged wallet can be reopened and still has correct state
+    drop(wollet);
+    let wollet = Wollet::with_fs_persist(network, descriptor, &db_root_dir).unwrap();
+    assert_eq!(expected_balance, wollet.balance().unwrap());
+    assert_eq!(expected_tx_count, wollet.transactions().unwrap().len());
+    assert_eq!(expected_utxo_count, wollet.utxos().unwrap().len());
+    assert_eq!(wollet.updates().unwrap().len(), 1);
+}

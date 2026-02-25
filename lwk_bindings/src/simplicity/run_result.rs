@@ -1,7 +1,7 @@
+use crate::Cmr;
+
 use std::sync::Arc;
 
-use crate::types::Hex;
-use crate::Cmr;
 use lwk_simplicity::simplicityhl;
 
 /// The result of running a Simplicity program.
@@ -15,15 +15,13 @@ pub struct SimplicityRunResult {
 #[uniffi::export]
 impl SimplicityRunResult {
     /// Get the serialized program bytes.
-    pub fn program_bytes(&self) -> Hex {
-        let (program_bytes, _) = self.pruned.to_vec_with_witness();
-        Hex::from(program_bytes)
+    pub fn program_bytes(&self) -> Vec<u8> {
+        self.pruned.to_vec_with_witness().0
     }
 
     /// Get the serialized witness bytes.
-    pub fn witness_bytes(&self) -> Hex {
-        let (_, witness_bytes) = self.pruned.to_vec_with_witness();
-        Hex::from(witness_bytes)
+    pub fn witness_bytes(&self) -> Vec<u8> {
+        self.pruned.to_vec_with_witness().1
     }
 
     /// Get the CMR (Commitment Merkle Root) of the pruned program.

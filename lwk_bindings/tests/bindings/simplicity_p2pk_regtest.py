@@ -103,10 +103,10 @@ assert control_block_hex == program_control_block_hex, \
     "simplicity_control_block should match program.control_block()"
 
 manual_script_witness = [
-    str(simplicity_witness_bytes),
-    str(simplicity_program_bytes),
-    cmr.to_hex(),
-    control_block_hex,
+    simplicity_witness_bytes,
+    simplicity_program_bytes,
+    cmr.to_bytes(),
+    control_block.serialize(),
 ]
 
 manual_witness = TxInWitness.from_script_witness(manual_script_witness)

@@ -498,10 +498,10 @@ mod tests {
         .await
         .unwrap();
 
-        response.advance().await.unwrap();
-        response.advance().await.unwrap();
-        response.advance().await.unwrap();
-        response.advance().await.unwrap();
+        let _ = response.advance().await.unwrap();
+        let _ = response.advance().await.unwrap();
+        let _ = response.advance().await.unwrap();
+        let _ = response.advance().await.unwrap();
 
         let claim_txid = response
             .claim_txid()

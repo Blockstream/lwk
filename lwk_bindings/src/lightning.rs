@@ -223,16 +223,12 @@ pub struct QuoteBuilder {
     inner: Mutex<Option<lwk_boltz::QuoteBuilder>>,
 }
 
-fn quote_builder_consumed() -> LwkError {
-    "This quote builder has already been consumed".into()
-}
-
 #[uniffi::export]
 impl QuoteBuilder {
     /// Set the source asset for the swap
     pub fn send(&self, asset: SwapAsset) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let builder = lock.take().ok_or_else(quote_builder_consumed)?;
+        let builder = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock = Some(builder.send(asset.into()));
         Ok(())
     }
@@ -240,7 +236,7 @@ impl QuoteBuilder {
     /// Set the destination asset for the swap
     pub fn receive(&self, asset: SwapAsset) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
-        let builder = lock.take().ok_or_else(quote_builder_consumed)?;
+        let builder = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock = Some(builder.receive(asset.into()));
         Ok(())
     }
@@ -248,7 +244,7 @@ impl QuoteBuilder {
     /// Build the quote, calculating fees and receive amount
     pub fn build(&self) -> Result<Quote, LwkError> {
         let mut lock = self.inner.lock()?;
-        let builder = lock.take().ok_or_else(quote_builder_consumed)?;
+        let builder = lock.take().ok_or(LwkError::ObjectConsumed)?;
         let quote = builder.build()?;
         Ok(quote.into())
     }

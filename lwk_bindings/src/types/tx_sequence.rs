@@ -34,7 +34,7 @@ impl AsRef<elements::Sequence> for TxSequence {
 
 #[uniffi::export]
 impl TxSequence {
-    /// See [`elements::Sequence::from_consensus`].
+    /// Create a sequence from a u32 value.
     #[uniffi::constructor]
     pub fn from_consensus(value: u32) -> Arc<Self> {
         Arc::new(TxSequence {
@@ -42,7 +42,9 @@ impl TxSequence {
         })
     }
 
-    /// See [`elements::Sequence::ZERO`].
+    /// Zero value sequence.
+    ///
+    /// This sequence number enables replace-by-fee and lock-time.
     #[uniffi::constructor]
     pub fn zero() -> Arc<Self> {
         Arc::new(TxSequence {
@@ -50,7 +52,9 @@ impl TxSequence {
         })
     }
 
-    /// See [`elements::Sequence::MAX`].
+    /// The maximum allowable sequence number.
+    ///
+    /// This sequence number disables lock-time and replace-by-fee.
     #[uniffi::constructor]
     pub fn max() -> Arc<Self> {
         Arc::new(TxSequence {
@@ -58,7 +62,8 @@ impl TxSequence {
         })
     }
 
-    /// See [`elements::Sequence::ENABLE_RBF_NO_LOCKTIME`].
+    /// The sequence number that enables replace-by-fee and absolute lock-time but
+    /// disables relative lock-time.
     #[uniffi::constructor]
     pub fn enable_rbf_no_locktime() -> Arc<Self> {
         Arc::new(TxSequence {
@@ -66,7 +71,8 @@ impl TxSequence {
         })
     }
 
-    /// See [`elements::Sequence::ENABLE_LOCKTIME_NO_RBF`].
+    /// The sequence number that enables absolute lock-time but disables replace-by-fee
+    /// and relative lock-time.
     #[uniffi::constructor]
     pub fn enable_locktime_no_rbf() -> Arc<Self> {
         Arc::new(TxSequence {
@@ -74,7 +80,7 @@ impl TxSequence {
         })
     }
 
-    /// See [`elements::Sequence::from_height`].
+    /// Create a relative lock-time using block height.
     #[uniffi::constructor]
     pub fn from_height(height: u16) -> Arc<Self> {
         Arc::new(TxSequence {
@@ -82,7 +88,8 @@ impl TxSequence {
         })
     }
 
-    /// See [`elements::Sequence::from_512_second_intervals`].
+    /// Create a relative lock-time using time intervals where each interval is equivalent
+    /// to 512 seconds.
     #[uniffi::constructor]
     pub fn from_512_second_intervals(intervals: u16) -> Arc<Self> {
         Arc::new(TxSequence {
@@ -90,7 +97,8 @@ impl TxSequence {
         })
     }
 
-    /// See [`elements::Sequence::from_seconds_floor`].
+    /// Create a relative lock-time from seconds, converting the seconds into 512 second
+    /// interval with floor division.
     #[uniffi::constructor]
     pub fn from_seconds_floor(seconds: u32) -> Result<Arc<Self>, LwkError> {
         let inner =
@@ -100,7 +108,8 @@ impl TxSequence {
         Ok(Arc::new(TxSequence { inner }))
     }
 
-    /// See [`elements::Sequence::from_seconds_ceil`].
+    /// Create a relative lock-time from seconds, converting the seconds into 512 second
+    /// interval with ceiling division.
     #[uniffi::constructor]
     pub fn from_seconds_ceil(seconds: u32) -> Result<Arc<Self>, LwkError> {
         let inner =
@@ -110,37 +119,37 @@ impl TxSequence {
         Ok(Arc::new(TxSequence { inner }))
     }
 
-    /// See [`elements::Sequence::to_consensus_u32`].
+    /// Returns the inner 32bit integer value of Sequence.
     pub fn to_consensus_u32(&self) -> u32 {
         self.inner.to_consensus_u32()
     }
 
-    /// See [`elements::Sequence::is_final`].
+    /// Returns `true` if the sequence number indicates that the transaction is finalised.
     pub fn is_final(&self) -> bool {
         self.inner.is_final()
     }
 
-    /// See [`elements::Sequence::is_rbf`].
+    /// Returns true if the transaction opted-in to BIP125 replace-by-fee.
     pub fn is_rbf(&self) -> bool {
         self.inner.is_rbf()
     }
 
-    /// See [`elements::Sequence::is_relative_lock_time`].
+    /// Returns `true` if the sequence has a relative lock-time.
     pub fn is_relative_lock_time(&self) -> bool {
         self.inner.is_relative_lock_time()
     }
 
-    /// See [`elements::Sequence::is_height_locked`].
+    /// Returns `true` if the sequence number encodes a block based relative lock-time.
     pub fn is_height_locked(&self) -> bool {
         self.inner.is_height_locked()
     }
 
-    /// See [`elements::Sequence::is_time_locked`].
+    /// Returns `true` if the sequene number encodes a time interval based relative lock-time.
     pub fn is_time_locked(&self) -> bool {
         self.inner.is_time_locked()
     }
 
-    /// See [`elements::Sequence::enables_absolute_lock_time`].
+    /// Returns `true` if the sequence number enables absolute lock-time.
     pub fn enables_absolute_lock_time(&self) -> bool {
         self.inner.enables_absolute_lock_time()
     }

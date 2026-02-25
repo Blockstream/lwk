@@ -31,7 +31,7 @@ pub fn simplicity_control_block(
     let internal_key = internal_key.to_simplicityhl()?;
     let control_block = scripts::control_block(cmr.inner(), internal_key);
     let serialized = control_block.serialize();
-    ControlBlock::from_slice(&serialized)
+    ControlBlock::from_bytes(&serialized)
 }
 
 pub(crate) fn convert_utxos(utxos: &[Arc<TxOut>]) -> Vec<elements::TxOut> {

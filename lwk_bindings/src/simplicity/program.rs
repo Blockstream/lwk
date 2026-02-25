@@ -6,8 +6,8 @@ use lwk_simplicity::signer;
 use lwk_simplicity::simplicityhl;
 
 use crate::blockdata::tx_out::TxOut;
-use crate::types::{Hex, XOnlyPublicKey};
-use crate::{Address, LwkError, Network, Transaction};
+use crate::types::XOnlyPublicKey;
+use crate::{Address, ControlBlock, LwkError, Network, Transaction};
 
 use super::arguments::{SimplicityArguments, SimplicityWitnessValues};
 use super::cmr::Cmr;
@@ -52,13 +52,16 @@ impl SimplicityProgram {
     }
 
     /// Get the taproot control block for script-path spending.
-    pub fn control_block(&self, internal_key: &XOnlyPublicKey) -> Result<Hex, LwkError> {
+    pub fn control_block(
+        &self,
+        internal_key: &XOnlyPublicKey,
+    ) -> Result<Arc<ControlBlock>, LwkError> {
         let x_only_key = internal_key.to_simplicityhl()?;
 
         let cmr = self.inner.commit().cmr();
         let control_block = scripts::control_block(cmr, x_only_key);
 
-        Ok(Hex::from(control_block.serialize()))
+        ControlBlock::from_bytes(&control_block.serialize())
     }
 
     /// Get the sighash_all message for signing a Simplicity program input.
@@ -69,7 +72,7 @@ impl SimplicityProgram {
         utxos: &[Arc<TxOut>],
         input_index: u32,
         network: &Network,
-    ) -> Result<Hex, LwkError> {
+    ) -> Result<Vec<u8>, LwkError> {
         let x_only_key = program_public_key.to_simplicityhl()?;
         let utxos_inner = convert_utxos(utxos);
 
@@ -82,7 +85,7 @@ impl SimplicityProgram {
             network.into(),
         )?;
 
-        Ok(Hex::from(message.as_ref().to_vec()))
+        Ok(message.as_ref().to_vec())
     }
 
     /// Finalize a transaction with a Simplicity witness for the specified input.
@@ -124,7 +127,7 @@ impl SimplicityProgram {
         utxos: &[Arc<TxOut>],
         input_index: u32,
         network: &Network,
-    ) -> Result<Hex, LwkError> {
+    ) -> Result<Vec<u8>, LwkError> {
         let keypair = derive_keypair(signer, &derivation_path)?;
         let x_only_pubkey = keypair.x_only_public_key().0;
         let utxos_inner = convert_utxos(utxos);
@@ -140,7 +143,7 @@ impl SimplicityProgram {
 
         let signature = keypair.sign_schnorr(sighash);
 
-        Ok(Hex::from(signature.serialize().to_vec()))
+        Ok(signature.serialize().to_vec())
     }
 
     /// Satisfy and execute this program in a transaction environment.

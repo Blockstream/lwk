@@ -9,6 +9,7 @@ use crate::LwkError;
 
 /// Represents a blinding factor/Tweak on secp256k1 curve
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
+#[uniffi::export(Display)]
 pub struct Tweak {
     inner: secp256k1_zkp::Tweak,
 }
@@ -92,36 +93,23 @@ mod tests {
     use super::Tweak;
 
     #[test]
-    fn test_tweak_zero() {
+    fn test_tweak_from_bytes_and_roundtrips() {
+        let hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
+
+        let from_hex = Tweak::from_hex(hex).unwrap();
+        assert_eq!(from_hex.to_hex(), hex);
+
+        let bytes = from_hex.to_bytes();
+        let from_bytes = Tweak::from_bytes(&bytes).unwrap();
+        assert_eq!(from_bytes.to_bytes(), bytes);
+        assert_eq!(from_bytes.to_hex(), hex);
+        assert_eq!(Tweak::from_hex(&from_bytes.to_hex()).unwrap(), from_bytes);
+
+        assert!(Tweak::from_bytes(&[0u8; 31]).is_err());
+        assert!(Tweak::from_bytes(&[0u8; 33]).is_err());
+
         let tweak = Tweak::zero();
         assert_eq!(tweak.to_bytes(), vec![0u8; 32]);
-    }
-
-    #[test]
-    fn test_tweak_from_bytes() {
-        let bytes = [1u8; 32];
-        let tweak = Tweak::from_bytes(&bytes).unwrap();
-        assert_eq!(tweak.to_bytes(), bytes);
-    }
-
-    #[test]
-    fn test_tweak_from_hex() {
-        let hex = "0000000000000000000000000000000000000000000000000000000000000001";
-        let tweak = Tweak::from_hex(hex).unwrap();
-        assert_eq!(tweak.to_hex(), hex);
-    }
-
-    #[test]
-    fn test_tweak_roundtrip() {
-        let bytes = [2u8; 32];
-        let tweak = Tweak::from_bytes(&bytes).unwrap();
-        let tweak2 = Tweak::from_hex(&tweak.to_hex()).unwrap();
-        assert_eq!(*tweak, *tweak2);
-    }
-
-    #[test]
-    fn test_tweak_display() {
-        let tweak = Tweak::zero();
         assert_eq!(
             tweak.to_string(),
             "0000000000000000000000000000000000000000000000000000000000000000"

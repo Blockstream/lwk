@@ -4144,6 +4144,7 @@ fn test_zmq_endpoint() {
     let subscriber = context.socket(zmq::SUB).unwrap();
     subscriber.connect(&zmq_url).unwrap();
     subscriber.set_subscribe(b"rawtx").unwrap();
+    subscriber.set_rcvtimeo(5_000).unwrap();
 
     // Generate a block so elementsd publishes a message
     env.elementsd_generate(1);

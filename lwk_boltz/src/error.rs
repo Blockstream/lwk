@@ -22,9 +22,6 @@ pub enum Error {
     #[error("Boltz API error: {0}")]
     BoltzApi(BoltzError),
 
-    #[error("A swap with this invoice exists already")]
-    SwapWithInvoiceAlreadyExists,
-
     #[error("Elements address error: {0}")]
     ElementsAddressError(#[from] AddressError),
 
@@ -120,19 +117,7 @@ pub enum Error {
 
 impl From<BoltzError> for Error {
     fn from(err: BoltzError) -> Self {
-        match err {
-            BoltzError::HTTPStatusNotSuccess(status, serde_json::Value::Object(body))
-                if status.as_u16() == 400
-                    && matches!(
-                        body.get("error"),
-                        Some(serde_json::Value::String(message))
-                            if message == "a swap with this invoice exists already"
-                    ) =>
-            {
-                Error::SwapWithInvoiceAlreadyExists
-            }
-            other => Error::BoltzApi(other),
-        }
+        Error::BoltzApi(err)
     }
 }
 

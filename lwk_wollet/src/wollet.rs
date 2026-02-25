@@ -54,6 +54,7 @@ pub struct Wollet {
     pub(crate) network: ElementsNetwork,
     pub(crate) cache: Cache,
     pub(crate) store: Arc<dyn DynStore>,
+    pub(crate) unblinded_store: Arc<dyn DynStore>,
     pub(crate) descriptor: WolletDescriptor,
     /// Counter for the next update key
     pub(crate) next_update_index: Mutex<usize>,
@@ -66,6 +67,7 @@ pub struct WolletBuilder {
     network: ElementsNetwork,
     descriptor: WolletDescriptor,
     store: Arc<dyn DynStore>,
+    unblinded_store: Arc<dyn DynStore>,
 }
 
 impl WolletBuilder {
@@ -75,12 +77,32 @@ impl WolletBuilder {
             network,
             descriptor,
             store: Arc::new(FakeStore::new()),
+            unblinded_store: Arc::new(FakeStore::new()),
         }
     }
 
     /// Specify the `Wollet` store for persistence
     pub fn with_store(mut self, store: Arc<dyn DynStore>) -> Self {
         self.store = store;
+        self
+    }
+
+    /// Specify the store for persistence of unblinded values
+    ///
+    /// Data in the "Wollet Store" can be reconstructed from the CT descriptor
+    /// and blockchain data only. This is not the case for unblinded values of
+    /// outputs that do not belong to the "Wollet". These values are (in part)
+    /// generated at random, thus they require an incremental backup. For this
+    /// reason we have this "unblinded store".
+    ///
+    /// If you lose data in the "unblinded store", there might be no way to
+    /// get them back, make sure you have an appropriate backup strategy!
+    ///
+    /// Note: we store all unblinded values here, both the ones that are
+    /// backed up by the CT descriptor (received), and the ones that are drawn
+    /// at random (sent).
+    pub fn with_unblinded_store(mut self, unblinded_store: Arc<dyn DynStore>) -> Self {
+        self.unblinded_store = unblinded_store;
         self
     }
 
@@ -96,6 +118,7 @@ impl WolletBuilder {
             network: self.network,
             descriptor: self.descriptor,
             store: self.store,
+            unblinded_store: self.unblinded_store,
             next_update_index: Mutex::new(0),
             max_weight_to_satisfy,
         };

@@ -4203,7 +4203,7 @@ fn test_merge_updates_e2e() {
     path.push(
         <DirectoryIdHash as hashes::Hash>::hash(descriptor.to_string().as_bytes()).to_string(),
     );
-    let file_store = FileStore::new(path).unwrap();
+    let file_store = FileStore::new(path.clone()).unwrap();
     let encrypted_store = EncryptedStore::new(file_store, descriptor.encryption_key_bytes());
 
     let wollet = WolletBuilder::new(network, descriptor.clone())
@@ -4225,6 +4225,71 @@ fn test_merge_updates_e2e() {
     );
 
     // Verify the merged wallet can be reopened and still has correct state
+    drop(wollet);
+    let mut wollet = Wollet::with_fs_persist(network, descriptor.clone(), &db_root_dir).unwrap();
+    assert_eq!(expected_balance, wollet.balance().unwrap());
+    assert_eq!(expected_tx_count, wollet.transactions().unwrap().len());
+    assert_eq!(expected_utxo_count, wollet.utxos().unwrap().len());
+    assert_eq!(wollet.updates().unwrap().len(), 1);
+
+    // Test merge with txid_height_delete:
+    // Build a tx, apply it without broadcasting, then sync so it gets deleted.
+    let address = wollet.address(None).unwrap().address().clone();
+    let mut pset = wollet
+        .tx_builder()
+        .add_lbtc_recipient(&address, 10_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+    let signer = SwSigner::new(TEST_MNEMONIC, false).unwrap();
+    signer.sign(&mut pset).unwrap();
+    let tx = wollet.finalize(&mut pset).unwrap();
+    let phantom_txid = tx.txid();
+    wollet.apply_transaction(tx).unwrap();
+    assert!(
+        wollet.transaction(&phantom_txid).unwrap().is_some(),
+        "Phantom tx should be in wallet after apply_transaction"
+    );
+
+    // Sync: electrum doesn't know about the phantom tx, so it will be deleted
+    let mut client = test_client_electrum(&env.electrum_url());
+    let update = client.full_scan(&wollet).unwrap().unwrap();
+    assert!(
+        update.txid_height_delete.contains(&phantom_txid),
+        "Sync update should delete the phantom tx"
+    );
+    wollet.apply_update(update).unwrap();
+    assert!(
+        wollet.transaction(&phantom_txid).unwrap().is_none(),
+        "Phantom tx should be gone after sync"
+    );
+
+    // State should be back to what it was before the phantom tx
+    assert_eq!(expected_balance, wollet.balance().unwrap());
+    assert_eq!(expected_tx_count, wollet.transactions().unwrap().len());
+    assert_eq!(expected_utxo_count, wollet.utxos().unwrap().len());
+
+    let num_updates = wollet.updates().unwrap().len();
+    assert_eq!(num_updates, 3);
+
+    // Reopen with merge threshold to trigger merge including txid_height_delete
+    drop(wollet);
+
+    let file_store = FileStore::new(path).unwrap();
+    let encrypted_store = EncryptedStore::new(file_store, descriptor.encryption_key_bytes());
+
+    let wollet = WolletBuilder::new(network, descriptor.clone())
+        .with_store(std::sync::Arc::new(encrypted_store))
+        .with_merge_threshold(Some(2))
+        .build()
+        .unwrap();
+
+    assert_eq!(expected_balance, wollet.balance().unwrap());
+    assert_eq!(expected_tx_count, wollet.transactions().unwrap().len());
+    assert_eq!(expected_utxo_count, wollet.utxos().unwrap().len());
+    assert_eq!(wollet.updates().unwrap().len(), 1,);
+
+    // Final reopen to verify persistence of the merged-with-deletes state
     drop(wollet);
     let wollet = Wollet::with_fs_persist(network, descriptor, &db_root_dir).unwrap();
     assert_eq!(expected_balance, wollet.balance().unwrap());

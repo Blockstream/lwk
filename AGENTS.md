@@ -94,6 +94,8 @@ just kotlin                          # Generate Kotlin bindings
 just mdbook                          # Build documentation
 ```
 
+if you're adding a complex flow, please add a just command.
+
 ## Code Style Guidelines
 
 ### Rust Version

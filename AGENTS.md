@@ -38,7 +38,6 @@ cargo check --target wasm32-unknown-unknown -p lwk_wollet
 
 ## Test Commands
 
-
 ```bash
 
 # Run all tests, including integration tests that spawn executables and Docker containers

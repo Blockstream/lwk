@@ -196,6 +196,7 @@ impl Update {
         self.txid_height_new
             .retain(|(t, _)| !following.txid_height_delete.contains(t));
         for (txid, height) in following.txid_height_new {
+            // In this case we can't extend, we want to keep the height of the newest update in case of duplicates
             self.txid_height_new.retain(|(t, _)| *t != txid);
             self.txid_height_new.push((txid, height));
         }

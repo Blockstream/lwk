@@ -82,7 +82,7 @@ RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo +nightly doc --all-features --no-d
 
 ## Just Commands
 
-The project uses `just` for complex workflows:
+The project uses `just` for complex workflows, some examples include:
 
 ```bash
 just --list                           # List all recipes

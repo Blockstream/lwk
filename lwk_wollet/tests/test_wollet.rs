@@ -27,6 +27,7 @@ pub struct TestWollet<C: BlockchainBackend> {
     pub wollet: Wollet,
     pub client: C,
     db_root_dir: TempDir,
+    _db_root_dir2: TempDir,
 }
 
 fn sync<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S) {
@@ -59,6 +60,7 @@ pub fn wait_for_tx<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S, tx
 impl<C: BlockchainBackend> TestWollet<C> {
     pub fn new(mut client: C, desc: &str) -> Self {
         let db_root_dir = TempDir::new().unwrap();
+        let _db_root_dir2 = TempDir::new().unwrap();
 
         let network = ElementsNetwork::default_regtest();
         let descriptor = if desc.starts_with("ct") {
@@ -73,11 +75,10 @@ impl<C: BlockchainBackend> TestWollet<C> {
         use lwk_wollet::WolletBuilder;
         fn get_store(dir: &TempDir, desc: &WolletDescriptor) -> EncryptedStore<FileStore> {
             let store = FileStore::new(dir.path().to_path_buf()).unwrap();
-            let store = EncryptedStore::new(store, desc.encryption_key_bytes());
-            store
+            EncryptedStore::new(store, desc.encryption_key_bytes())
         }
         let store1 = get_store(&db_root_dir, &desc);
-        let store2 = get_store(&db_root_dir, &desc);
+        let store2 = get_store(&_db_root_dir2, &desc);
 
         let mut wollet = WolletBuilder::new(network, desc)
             .with_store(std::sync::Arc::new(store1))
@@ -105,6 +106,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         Self {
             wollet,
             db_root_dir,
+            _db_root_dir2,
             client,
         }
     }

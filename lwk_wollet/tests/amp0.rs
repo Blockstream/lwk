@@ -30,14 +30,19 @@ fn test_blinders() {
         .unwrap();
 
     w.wollet.apply_amp0pset(&amp0pset).unwrap();
-    // Check that we have the blinders
 
     let mut pset = amp0pset.pset().clone();
 
     let sigs = signer.sign(&mut pset).unwrap();
     assert!(sigs > 0);
 
-    w.send(&mut pset);
+    let txid = w.send(&mut pset);
+    // Check that we have the blinders
+    let tx = w.wollet.transaction(&txid).unwrap().unwrap();
+    assert_eq!(tx.outputs[0].as_ref().unwrap().unblinded.asset, lbtc);
+    assert_eq!(tx.outputs[0].as_ref().unwrap().unblinded.value, 1000);
+    assert_eq!(tx.outputs[1].as_ref().unwrap().unblinded.asset, lbtc);
+    assert_eq!(tx.outputs[1].as_ref().unwrap().unblinded.value, 2000);
 }
 
 #[test]

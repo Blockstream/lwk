@@ -147,6 +147,8 @@ Format: `context: <description>`
 - Integration tests in `tests/` directory
 - Use `lwk_test_util` for shared test utilities
 - E2E tests require Docker environment (Jade emulator, etc.)
+- Possible panics, unchecked index array access, unwraps, are allowed in testing code.
+- Do not suggest safety improvements (e.g., bounds checks, error handling) for these in tests unless they cause compile/run failures.
 
 ## Additional Resources
 - CI Configuration: `.gitlab-ci.yml` (GitLab) and `.github/workflows/` (GitHub)

@@ -68,7 +68,22 @@ impl<C: BlockchainBackend> TestWollet<C> {
         };
 
         let desc: WolletDescriptor = descriptor.parse().unwrap();
-        let mut wollet = Wollet::with_fs_persist(network, desc, &db_root_dir).unwrap();
+
+        use lwk_common::{EncryptedStore, FileStore};
+        use lwk_wollet::WolletBuilder;
+        fn get_store(dir: &TempDir, desc: &WolletDescriptor) -> EncryptedStore<FileStore> {
+            let store = FileStore::new(dir.path().to_path_buf()).unwrap();
+            let store = EncryptedStore::new(store, desc.encryption_key_bytes());
+            store
+        }
+        let store1 = get_store(&db_root_dir, &desc);
+        let store2 = get_store(&db_root_dir, &desc);
+
+        let mut wollet = WolletBuilder::new(network, desc)
+            .with_store(std::sync::Arc::new(store1))
+            .with_unblinded_store(std::sync::Arc::new(store2))
+            .build()
+            .unwrap();
 
         sync(&mut wollet, &mut client);
 

@@ -518,9 +518,16 @@ impl Decodable for DownloadTxResult {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct EncodableTxOutSecrets {
+pub(crate) struct EncodableTxOutSecrets {
     inner: TxOutSecrets,
 }
+
+impl EncodableTxOutSecrets {
+    pub fn from_inner(inner: TxOutSecrets) -> EncodableTxOutSecrets {
+        Self { inner }
+    }
+}
+
 impl Encodable for EncodableTxOutSecrets {
     fn consensus_encode<W: std::io::Write>(
         &self,

@@ -187,18 +187,20 @@ impl Update {
 
         self.new_txs.unblinds.extend(following.new_txs.unblinds);
 
-        // Merge txid_height_new: union with override (later wins)
+        // When we apply an update we first delete then insert the new txs.
+        // Suppose to have Um = U1.merge(U2)
+        // The order would be:
+        // U1.delete, U1.insert, U2.delete, U2.insert
+
+        // Um.insert = (U1.insert \ U2.delete) ∪ U2.insert
+        self.txid_height_new
+            .retain(|(t, _)| !following.txid_height_delete.contains(t));
         for (txid, height) in following.txid_height_new {
             self.txid_height_new.retain(|(t, _)| *t != txid);
             self.txid_height_new.push((txid, height));
         }
 
-        // Remove deleted txids from txid_height_new
-        for txid in &following.txid_height_delete {
-            self.txid_height_new.retain(|(t, _)| t != txid);
-        }
-
-        // Merge deletes
+        // Um.delete = U1.delete ∪ U2.delete
         self.txid_height_delete.extend(following.txid_height_delete);
 
         // Merge timestamps and scripts

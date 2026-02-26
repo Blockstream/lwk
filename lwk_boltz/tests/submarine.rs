@@ -381,7 +381,7 @@ mod tests {
             .unwrap_err();
         assert!(matches!(
             err,
-            lwk_boltz::Error::SwapWithInvoiceAlreadyExists
+            lwk_boltz::Error::BoltzBackendHttpError { status, error } if status == 400 && error.as_ref().unwrap() == "a swap with this invoice exists already"
         ));
     }
 

@@ -1,3 +1,15 @@
+#[derive(Debug, thiserror::Error)]
+pub enum WalletAbiError {
+    #[error("Invalid request: {0}")]
+    InvalidRequest(String),
+
+    #[error("JSON error: {0}")]
+    Serde(#[from] serde_json::Error),
+
+    #[error("Program error: {0}")]
+    Program(#[from] ProgramError),
+}
+
 /// Errors that occur during Simplicity program compilation, execution, or environment setup.
 ///
 /// These errors cover the full lifecycle of working with Simplicity programs:

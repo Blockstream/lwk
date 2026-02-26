@@ -1103,6 +1103,54 @@ impl Wollet {
     }
 }
 
+#[cfg(feature = "amp0")]
+impl Wollet {
+    /// tmp fn to store blinders
+    pub fn apply_amp0pset(&mut self, amp0pset: &crate::amp0::Amp0Pset) -> Result<(), Error> {
+        use crate::amp0::unblind_with_shared_secret;
+        use crate::update::EncodableTxOutSecrets;
+        use elements::encode::Encodable;
+        use elements::secp256k1_zkp::SecretKey;
+        use std::str::FromStr;
+
+        let pset = amp0pset.pset();
+        let blinding_nonces = amp0pset.blinding_nonces();
+        let txid = pset.extract_tx()?.txid();
+        if pset.n_outputs() != blinding_nonces.len() {
+            return Err(Error::Generic("Invalid blinding nonces".into()));
+        }
+
+        let mut unblinded = vec![];
+        for (vout, output) in pset.outputs().iter().enumerate() {
+            let txout = output.to_txout();
+            if txout.is_partially_blinded() {
+                let shared_secret = SecretKey::from_str(&blinding_nonces[vout])?;
+                let txoutsecrets = unblind_with_shared_secret(&txout, shared_secret)?;
+                let outpoint = OutPoint::new(txid, vout as u32);
+                unblinded.push((outpoint, txoutsecrets));
+            }
+        }
+
+        // Persist the unblinded values
+        for (outpoint, txoutsecrets) in &unblinded {
+            let key = format!("unblinded-{}-{}", outpoint.txid, outpoint.vout);
+            let mut value = vec![];
+            let encodable_txoutsecrets = EncodableTxOutSecrets::from_inner(*txoutsecrets);
+            encodable_txoutsecrets.consensus_encode(&mut value)?;
+            println!("persisting: {key}");
+            self.unblinded_store
+                .put(&key, &value)
+                .map_err(|e| Error::Generic(format!("unblinded store error: {e}")))?;
+        }
+
+        // Add to the wollet in-memory stucutres
+        let cache = &mut self.cache;
+        cache.unblinded.extend(unblinded);
+
+        Ok(())
+    }
+}
+
 fn is_explicit(txoutsecrets: &TxOutSecrets) -> bool {
     txoutsecrets.asset_bf == AssetBlindingFactor::zero()
         && txoutsecrets.value_bf == ValueBlindingFactor::zero()

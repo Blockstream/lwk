@@ -132,6 +132,7 @@ just mdbook                          # Build documentation
 ### Commit Messages
 Format: `context: <description>`
 - Context: crate/directory name or `ci`/`fix`/`feat`/`docs`/`refactor`
+- For crates, do not include `lwk_` for example `lwk_wollet:` use just `wollet:`
 - Breaking changes: append `!` after context
 - Title: max 50 chars, imperative mood, no period
 - Body: blank line after title, explain "why", use bullet points

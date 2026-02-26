@@ -4191,13 +4191,7 @@ fn test_merge_updates_e2e() {
         "Expected multiple updates before merge, got {num_updates_before}"
     );
 
-    let descriptor: WolletDescriptor = wallet
-        .wollet
-        .descriptor()
-        .unwrap()
-        .to_string()
-        .parse()
-        .unwrap();
+    let descriptor = wallet.wollet.wollet_descriptor();
     let network = ElementsNetwork::default_regtest();
     let db_root_dir = wallet.db_root_dir();
 

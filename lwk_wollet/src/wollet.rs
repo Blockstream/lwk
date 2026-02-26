@@ -549,15 +549,20 @@ impl Wollet {
                 })
                 .filter_map(|(outpoint, output, is_spent)| {
                     let unblinded = *self.cache.unblinded.get(&outpoint)?;
-                    let index = self.index(&output.script_pubkey).ok()?;
-                    let blinding_pubkey = (!is_explicit(&unblinded))
-                        .then(|| {
-                            self.cache
-                                .scripts
-                                .get(&(index.0, index.1.into()))
-                                .and_then(|(_, blinding_pubkey)| *blinding_pubkey)
-                        })
-                        .flatten();
+                    let (index, blinding_pubkey) =
+                        if let Ok(index) = self.index(&output.script_pubkey) {
+                            let blinding_pubkey = (!is_explicit(&unblinded))
+                                .then(|| {
+                                    self.cache
+                                        .scripts
+                                        .get(&(index.0, index.1.into()))
+                                        .and_then(|(_, blinding_pubkey)| *blinding_pubkey)
+                                })
+                                .flatten();
+                            (index, blinding_pubkey)
+                        } else {
+                            ((Chain::External, 0), None)
+                        };
                     let address = Address::from_script(
                         &output.script_pubkey,
                         blinding_pubkey,

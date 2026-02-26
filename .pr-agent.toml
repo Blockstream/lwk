@@ -3,6 +3,9 @@ enable_auto_approval = false
 auto_approve_for_low_review_effort = -1
 auto_approve_for_no_suggestions = false
 ensure_ticket_compliance = false
+add_repo_metadata = true
+add_repo_metadata_file_list = ["AGENTS.md"]
+
 
 [pr_code_suggestions]
 approve_pr_on_self_review = false

@@ -22,6 +22,7 @@ LWK is a Rust workspace containing libraries for Liquid wallets. It consists of 
 - `lwk_common` - Shared utilities
 - `lwk_cli` - Command line interface
 - `lwk_wasm` - WebAssembly bindings
+- and others
 
 ## Build Commands
 
@@ -37,7 +38,6 @@ cargo check --target wasm32-unknown-unknown -p lwk_wollet
 ```
 
 ## Test Commands
-
 
 ```bash
 
@@ -82,7 +82,7 @@ RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo +nightly doc --all-features --no-d
 
 ## Just Commands
 
-The project uses `just` for complex workflows:
+The project uses `just` for complex workflows, some examples include:
 
 ```bash
 just --list                           # List all recipes
@@ -93,6 +93,8 @@ just android                         # Build Android libs
 just kotlin                          # Generate Kotlin bindings
 just mdbook                          # Build documentation
 ```
+
+if you're adding a complex flow, please add a just command.
 
 ## Code Style Guidelines
 
@@ -127,11 +129,12 @@ just mdbook                          # Build documentation
 ### Type Patterns
 - Use `pub type` aliases for common types (e.g., `pub type BlindingPublicKey = elements::secp256k1_zkp::PublicKey`)
 - Prefer `&str` over `&String` in function parameters
-- Use builder patterns for complex construction (e.g., `TxBuilder`, `WolletBuilder`)
+- Use builder patterns for complex construction (e.g., `TxBuilder`, `WolletBuilder`) and for constructor with large/unknown number of parameters
 
 ### Commit Messages
 Format: `context: <description>`
 - Context: crate/directory name or `ci`/`fix`/`feat`/`docs`/`refactor`
+- For crates, do not include `lwk_` for example `lwk_wollet:` use just `wollet:`
 - Breaking changes: append `!` after context
 - Title: max 50 chars, imperative mood, no period
 - Body: blank line after title, explain "why", use bullet points
@@ -147,6 +150,8 @@ Format: `context: <description>`
 - Integration tests in `tests/` directory
 - Use `lwk_test_util` for shared test utilities
 - E2E tests require Docker environment (Jade emulator, etc.)
+- Possible panics, unchecked index array access, unwraps, are allowed in testing code.
+- Do not suggest safety improvements (e.g., bounds checks, error handling) for these in tests unless they cause compile/run failures.
 
 ## Additional Resources
 - CI Configuration: `.gitlab-ci.yml` (GitLab) and `.github/workflows/` (GitHub)

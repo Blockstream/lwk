@@ -127,7 +127,7 @@ just mdbook                          # Build documentation
 ### Type Patterns
 - Use `pub type` aliases for common types (e.g., `pub type BlindingPublicKey = elements::secp256k1_zkp::PublicKey`)
 - Prefer `&str` over `&String` in function parameters
-- Use builder patterns for complex construction (e.g., `TxBuilder`, `WolletBuilder`)
+- Use builder patterns for complex construction (e.g., `TxBuilder`, `WolletBuilder`) and for constructor with large/unknown number of parameters
 
 ### Commit Messages
 Format: `context: <description>`

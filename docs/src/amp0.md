@@ -82,7 +82,7 @@ Now that you have mnemonic/seed (or Jade), AMP ID and Watch-Only credentials (us
 <section>
 
 ```rust,ignore
-{{#include ../../lwk_wollet/tests/e2e.rs:amp0-setup:ignore}}
+{{#include ../../lwk_wollet/tests/amp0.rs:amp0-setup:ignore}}
 ```
 </section>
 

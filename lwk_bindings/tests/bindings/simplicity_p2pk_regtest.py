@@ -19,7 +19,7 @@ xonly_pubkey = simplicity_derive_xonly_pubkey(signer, derivation_path)
 
 # 3. Compile P2PK program with the public key
 args = SimplicityArguments()
-args = args.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(xonly_pubkey.bytes()))
+args = args.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(xonly_pubkey.to_bytes()))
 program = SimplicityProgram.load(P2PK_SOURCE, args)
 
 # 4. Create P2TR address from the program

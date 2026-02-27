@@ -97,3 +97,5 @@ Deprecated: use `function_name()` instead.
 We do not use deprecation macros because they are ignored in the targeted bindings:
 
 Make sure that deprecated functions are not referenced in examples/tests by running CI or local tests without them.
+
+When deprecating a function/method mention it in the CHANGELOG.md.

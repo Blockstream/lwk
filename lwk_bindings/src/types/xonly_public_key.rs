@@ -38,12 +38,6 @@ impl XOnlyPublicKey {
         let (xonly, _parity) = keypair.x_only_public_key();
         Arc::new(Self::from(xonly))
     }
-
-    /// Serialize to 32 bytes
-    #[must_use]
-    pub fn serialize(&self) -> [u8; 32] {
-        self.inner.serialize()
-    }
 }
 
 impl AsRef<elements::bitcoin::XOnlyPublicKey> for XOnlyPublicKey {
@@ -73,7 +67,7 @@ impl XOnlyPublicKey {
     ) -> Result<lwk_simplicity::simplicityhl::simplicity::bitcoin::XOnlyPublicKey, LwkError> {
         Ok(
             lwk_simplicity::simplicityhl::simplicity::bitcoin::XOnlyPublicKey::from_slice(
-                &self.serialize(),
+                &self.to_bytes(),
             )?,
         )
     }
@@ -123,7 +117,7 @@ mod tests {
         let xonly = XOnlyPublicKey::from_keypair(&keypair);
         let (expected, _parity) = keypair.x_only_public_key();
 
-        assert_eq!(xonly.serialize(), expected.serialize());
+        assert_eq!(xonly.to_bytes(), expected.serialize());
 
         assert!(XOnlyPublicKey::from_bytes(&[0; 31]).is_err());
         assert!(XOnlyPublicKey::from_bytes(&[0; 33]).is_err());

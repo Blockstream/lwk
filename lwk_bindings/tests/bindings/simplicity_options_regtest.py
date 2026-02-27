@@ -75,7 +75,7 @@ derivation_path = "m/86'/1'/0'/0/0"
 xonly_pubkey = simplicity_derive_xonly_pubkey(signer, derivation_path)
 
 p2pk_args = SimplicityArguments()
-p2pk_args = p2pk_args.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(xonly_pubkey.bytes()))
+p2pk_args = p2pk_args.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(xonly_pubkey.to_bytes()))
 p2pk_program = SimplicityProgram.load(P2PK_SOURCE, p2pk_args)
 p2pk_address = p2pk_program.create_p2tr_address(xonly_pubkey, network)
 p2pk_script = p2pk_address.script_pubkey()

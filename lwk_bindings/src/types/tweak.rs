@@ -2,7 +2,6 @@ use std::fmt::Display;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use elements::hex::ToHex;
 use elements::secp256k1_zkp;
 
 use crate::LwkError;

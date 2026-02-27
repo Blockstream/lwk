@@ -31,7 +31,7 @@ impl Wollet {
     /// Create a `Wollet`
     #[wasm_bindgen(constructor)]
     pub fn new(network: &Network, descriptor: &WolletDescriptor) -> Result<Wollet, Error> {
-        let inner = lwk_wollet::Wollet::without_persist(network.into(), descriptor.into())?;
+        let inner = lwk_wollet::WolletBuilder::new(network.into(), descriptor.into()).build()?;
         Ok(Self { inner })
     }
 

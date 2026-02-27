@@ -3,7 +3,7 @@ use std::str::FromStr;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use elements::{pset::PartiallySignedTransaction, Address};
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
-use lwk_wollet::{ElementsNetwork, Update, Wollet, WolletDescriptor};
+use lwk_wollet::{ElementsNetwork, Update, Wollet, WolletBuilder, WolletDescriptor};
 
 criterion_group!(benches, wollet, address, pset);
 criterion_main!(benches);
@@ -115,7 +115,9 @@ pub fn test_wollet_with_many_transactions() -> Wollet {
     let descriptor = lwk_test_util::wollet_descriptor_many_transactions();
     let descriptor: WolletDescriptor = descriptor.parse().unwrap();
     let update = Update::deserialize(&update).unwrap();
-    let mut wollet = Wollet::without_persist(ElementsNetwork::LiquidTestnet, descriptor).unwrap();
+    let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, descriptor)
+        .build()
+        .unwrap();
     wollet.apply_update(update).unwrap();
     wollet
 }

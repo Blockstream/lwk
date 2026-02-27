@@ -95,7 +95,7 @@ fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
     use lwk_common::{Network, Signer};
     use lwk_signer::SwSigner;
     use lwk_wollet::amp0::{blocking::Amp0, Amp0Pset};
-    use lwk_wollet::{clients::blocking::EsploraClient, ElementsNetwork, Wollet};
+    use lwk_wollet::{clients::blocking::EsploraClient, ElementsNetwork, WolletBuilder};
 
     // Signer
     let mnemonic = "<mnemonic>";
@@ -115,7 +115,7 @@ fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create AMP0 Wollet
     let wd = amp0.wollet_descriptor();
-    let mut wollet = Wollet::without_persist(ElementsNetwork::LiquidTestnet, wd)?;
+    let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, wd).build()?;
 
     // Get a new address
     let addr = amp0.address(None);

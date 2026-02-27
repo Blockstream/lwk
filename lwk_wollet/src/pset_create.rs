@@ -227,7 +227,9 @@ pub(crate) fn validate_address(address: &str, network: ElementsNetwork) -> Resul
 
 #[cfg(test)]
 mod test {
-    use crate::{pset_create::validate_address, ElementsNetwork, Update, WolletDescriptor};
+    use crate::{
+        pset_create::validate_address, ElementsNetwork, Update, WolletBuilder, WolletDescriptor,
+    };
 
     use super::*;
     #[test]
@@ -281,8 +283,9 @@ mod test {
         let descriptor = lwk_test_util::wollet_descriptor_many_transactions();
         let descriptor: WolletDescriptor = descriptor.parse().unwrap();
         let update = Update::deserialize(&update).unwrap();
-        let mut wollet =
-            Wollet::without_persist(ElementsNetwork::LiquidTestnet, descriptor).unwrap();
+        let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, descriptor)
+            .build()
+            .unwrap();
         wollet.apply_update(update).unwrap();
         wollet
     }

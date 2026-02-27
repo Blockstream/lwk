@@ -2056,7 +2056,7 @@ mod tests {
     fn amp0_sign(regtest: bool) {
         use super::*;
         use crate::clients::blocking::BlockchainBackend;
-        use crate::{ElectrumClient, ElementsNetwork, Wollet};
+        use crate::{ElectrumClient, ElementsNetwork, Wollet, WolletBuilder};
         use lwk_common::Network;
         use lwk_common::Signer;
         use lwk_signer::SwSigner;
@@ -2090,7 +2090,7 @@ mod tests {
         }
 
         let wd = amp0.wollet_descriptor();
-        let mut wollet = Wollet::without_persist(elements_network, wd).unwrap();
+        let mut wollet = WolletBuilder::new(elements_network, wd).build().unwrap();
 
         fn sync(wollet: &mut Wollet, client: &mut impl BlockchainBackend, amp0: &blocking::Amp0) {
             let update = client

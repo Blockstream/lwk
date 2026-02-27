@@ -1088,7 +1088,9 @@ async fn test_esplora_wasm_waterfalls_missing_txs() {
     let electrum_url = ElectrumUrl::new(LIQUID_TESTNET_SOCKET, true, true).unwrap();
     let mut electrum_client = ElectrumClient::new(&electrum_url).unwrap();
     let desc = WolletDescriptor::from_str(desc).unwrap();
-    let mut wollet = Wollet::without_persist(ElementsNetwork::LiquidTestnet, desc).unwrap();
+    let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc)
+        .build()
+        .unwrap();
     let update = electrum_client.full_scan(&wollet).unwrap().unwrap();
     wollet.apply_update(update).unwrap();
 
@@ -1110,7 +1112,7 @@ async fn test_esplora_wasm_waterfalls_desc(desc: &str, url: &str) -> usize {
     let mut wollets = vec![];
     for waterfalls in [true, false] {
         let start = Instant::now();
-        let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
+        let mut wollet = WolletBuilder::new(network, desc.clone()).build().unwrap();
         let mut client = clients::asyncr::EsploraClientBuilder::new(url, network)
             .waterfalls(waterfalls)
             .concurrency(4)
@@ -1158,13 +1160,13 @@ fn test_esplora_waterfalls_utxo_only() {
     let desc = WolletDescriptor::from_str(&desc).unwrap();
 
     let network = ElementsNetwork::default_regtest();
-    let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
+    let mut wollet = WolletBuilder::new(network, desc.clone()).build().unwrap();
     let mut client = asyncr::EsploraClientBuilder::new(&env.waterfalls_url(), network)
         .waterfalls(true)
         .build_blocking()
         .unwrap();
 
-    let mut wollet_utxo_only = Wollet::without_persist(network, desc.clone()).unwrap();
+    let mut wollet_utxo_only = WolletBuilder::new(network, desc.clone()).build().unwrap();
     let mut client_utxo_only = asyncr::EsploraClientBuilder::new(&env.waterfalls_url(), network)
         .waterfalls(true)
         .utxo_only(true)
@@ -1262,13 +1264,13 @@ async fn test_esplora_waterfalls_balance_comparison(
     let desc = WolletDescriptor::from_str(descriptor)?;
     let network = ElementsNetwork::LiquidTestnet;
 
-    let mut wollet = Wollet::without_persist(network, desc.clone())?;
+    let mut wollet = WolletBuilder::new(network, desc.clone()).build()?;
     let mut client = asyncr::EsploraClientBuilder::new(esplora_url, network)
         .waterfalls(true)
         .concurrency(4)
         .build()?;
 
-    let mut wollet_utxo_only = Wollet::without_persist(network, desc.clone())?;
+    let mut wollet_utxo_only = WolletBuilder::new(network, desc.clone()).build()?;
     let mut client_utxo_only = asyncr::EsploraClientBuilder::new(esplora_url, network)
         .utxo_only(true)
         .waterfalls(true)
@@ -2135,7 +2137,7 @@ fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
     let desc = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer.xpub());
     let desc = WolletDescriptor::from_str(&desc).unwrap();
     let network = ElementsNetwork::default_regtest();
-    let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
+    let mut wollet = WolletBuilder::new(network, desc.clone()).build().unwrap();
     let update = client.full_scan(&wollet).unwrap().unwrap();
     wollet.apply_update(update).unwrap();
 
@@ -2230,8 +2232,10 @@ fn test_non_standard_gap_limit() {
     let network = ElementsNetwork::default_regtest();
     let satoshi = 1_000_000;
 
-    let mut wollet_std_gap = Wollet::without_persist(network, wollet_desc.clone()).unwrap();
-    let mut wollet_longer_gap = Wollet::without_persist(network, wollet_desc).unwrap();
+    let mut wollet_std_gap = WolletBuilder::new(network, wollet_desc.clone())
+        .build()
+        .unwrap();
+    let mut wollet_longer_gap = WolletBuilder::new(network, wollet_desc).build().unwrap();
 
     let i = Some(25);
     let address_after_gap_limit = wollet_std_gap.address(i).unwrap().address().clone();
@@ -2284,7 +2288,7 @@ async fn test_non_standard_gap_limit_esplora() {
     let wollet_desc = WolletDescriptor::from_str(&desc).unwrap();
     let satoshi = 1_000_000;
 
-    let mut wollet = Wollet::without_persist(network, wollet_desc).unwrap();
+    let mut wollet = WolletBuilder::new(network, wollet_desc).build().unwrap();
 
     let i = Some(25);
     let address_after_gap_limit = wollet.address(i).unwrap().address().clone();
@@ -2333,7 +2337,7 @@ fn test_non_standard_gap_limit_waterfalls_esplora() {
     let desc = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer.xpub());
     let desc = WolletDescriptor::from_str(&desc).unwrap();
     let network = ElementsNetwork::default_regtest();
-    let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
+    let mut wollet = WolletBuilder::new(network, desc.clone()).build().unwrap();
 
     let i = Some(25);
     let address_after_gap_limit = wollet.address(i).unwrap().address().clone();
@@ -2545,7 +2549,9 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
 fn test_liquid_testnet() {
     let desc = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs";
     let wollet_desc = WolletDescriptor::from_str(desc).unwrap();
-    let mut wollet = Wollet::without_persist(ElementsNetwork::LiquidTestnet, wollet_desc).unwrap();
+    let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, wollet_desc)
+        .build()
+        .unwrap();
     let url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
     let mut client = blocking::EsploraClient::new(url, ElementsNetwork::LiquidTestnet).unwrap();
     let update = client.full_scan(&wollet).unwrap().unwrap();
@@ -2945,7 +2951,9 @@ fn test_no_wildcard() {
 
     // Use esplora client
     let network = ElementsNetwork::default_regtest();
-    let mut esplora_wollet = Wollet::without_persist(network, desc.parse().unwrap()).unwrap();
+    let mut esplora_wollet = WolletBuilder::new(network, desc.parse().unwrap())
+        .build()
+        .unwrap();
 
     let esplora_url = env.esplora_url();
     let mut esplora_client = clients::blocking::EsploraClient::new(&esplora_url, network).unwrap();
@@ -2959,7 +2967,9 @@ fn test_no_wildcard() {
     assert_eq!(esplora_txs.len(), 2);
 
     // Use waterfalls client
-    let mut waterfalls_wollet = Wollet::without_persist(network, desc.parse().unwrap()).unwrap();
+    let mut waterfalls_wollet = WolletBuilder::new(network, desc.parse().unwrap())
+        .build()
+        .unwrap();
 
     let mut waterfalls_client =
         clients::blocking::EsploraClient::new_waterfalls(&env.waterfalls_url(), network).unwrap();
@@ -3243,11 +3253,11 @@ fn test_sync_high_index() {
     let d2: WolletDescriptor = d2.parse().unwrap();
 
     // Wallet 1: receives from node, sends 2 outputs to w2 in the same tx
-    let mut w1 = Wollet::without_persist(network, d1.clone()).unwrap();
+    let mut w1 = WolletBuilder::new(network, d1.clone()).build().unwrap();
     // Wallet 2: generates 2 addresses and receive
-    let mut w2 = Wollet::without_persist(network, d2.clone()).unwrap();
+    let mut w2 = WolletBuilder::new(network, d2.clone()).build().unwrap();
     // Wallet 3: syncs with low index first, has not generated the high index address
-    let mut w3 = Wollet::without_persist(network, d2.clone()).unwrap();
+    let mut w3 = WolletBuilder::new(network, d2.clone()).build().unwrap();
 
     // w1 receive funds from node
     let addr = w1.address(None).unwrap();
@@ -3788,7 +3798,7 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
     // Override wollet to use regtest
     let wd = WolletDescriptor::from_str(&desc)?;
     let network = ElementsNetwork::default_regtest();
-    let mut wollet = Wollet::without_persist(network, wd)?;
+    let mut wollet = WolletBuilder::new(network, wd).build()?;
 
     // ANCHOR: address
     let addr = wollet.address(None)?;
@@ -3896,7 +3906,7 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     // Carol creates the wollet
     let network = ElementsNetwork::LiquidTestnet;
     let network = ElementsNetwork::default_regtest(); // ANCHOR: ignore
-    let mut wollet_c = Wollet::without_persist(network, wd)?;
+    let mut wollet_c = WolletBuilder::new(network, wd).build()?;
 
     // With the wollet, Carol can obtain addresses, transactions and balance
     let addr = wollet_c.address(None)?;
@@ -3936,7 +3946,7 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     // Carol sends the PSET to Bob
     // Bob wants to analyze the PSET before signing, thus he creates a wollet
     let wd = WolletDescriptor::from_str(&desc)?;
-    let mut wollet_b = Wollet::without_persist(network, wd)?;
+    let mut wollet_b = WolletBuilder::new(network, wd).build()?;
     if let Some(update) = client.full_scan(&wollet_b)? {
         wollet_b.apply_update(update)?;
     }
@@ -4035,7 +4045,7 @@ fn test_issue_asset() -> Result<(), Box<dyn std::error::Error>> {
     let desc = signer.wpkh_slip77_descriptor()?;
     assert!(desc == "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84h/1h/0h]tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#xte2lx9x"); // ANCHOR: ignore
 
-    let mut wollet = Wollet::without_persist(network, WolletDescriptor::from_str(&desc)?)?;
+    let mut wollet = WolletBuilder::new(network, WolletDescriptor::from_str(&desc)?).build()?;
     let wollet_address = wollet.address(None)?;
     assert!(wollet_address.index() == 0); // ANCHOR: ignore
     let wallet_address_str = wollet_address.address().to_string();

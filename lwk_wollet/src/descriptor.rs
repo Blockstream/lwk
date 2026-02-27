@@ -1281,10 +1281,13 @@ mod test {
         assert_eq!(err.to_string(), expected_err);
 
         // For AMP0 Wollet::address() fails too
-        use crate::{ElementsNetwork, Wollet};
-        let w_amp0_test =
-            Wollet::without_persist(ElementsNetwork::LiquidTestnet, wd_amp0_test).unwrap();
-        let w_amp0_main = Wollet::without_persist(ElementsNetwork::Liquid, wd_amp0_main).unwrap();
+        use crate::{ElementsNetwork, WolletBuilder};
+        let w_amp0_test = WolletBuilder::new(ElementsNetwork::LiquidTestnet, wd_amp0_test)
+            .build()
+            .unwrap();
+        let w_amp0_main = WolletBuilder::new(ElementsNetwork::Liquid, wd_amp0_main)
+            .build()
+            .unwrap();
 
         let err = w_amp0_test.address(Some(1)).unwrap_err();
         assert_eq!(err.to_string(), expected_err);

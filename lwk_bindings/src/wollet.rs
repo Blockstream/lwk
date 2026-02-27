@@ -53,7 +53,7 @@ impl Wollet {
             Some(path) => {
                 lwk_wollet::Wollet::with_fs_persist(network.into(), descriptor.into(), path)?
             }
-            None => lwk_wollet::Wollet::without_persist(network.into(), descriptor.into())?,
+            None => lwk_wollet::WolletBuilder::new(network.into(), descriptor.into()).build()?,
         };
 
         Ok(Arc::new(Self {

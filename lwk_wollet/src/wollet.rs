@@ -1240,7 +1240,7 @@ impl Wollet {
         let desc = WolletDescriptor::from_str(&desc)?;
         Ok((
             signer,
-            Wollet::without_persist(ElementsNetwork::default_regtest(), desc)?,
+            WolletBuilder::new(ElementsNetwork::default_regtest(), desc).build()?,
         ))
     }
 }
@@ -1321,7 +1321,9 @@ mod tests {
         let desc: WolletDescriptor = format!("{desc}#{}", desc_checksum(desc).unwrap())
             .parse()
             .unwrap();
-        Wollet::without_persist(ElementsNetwork::LiquidTestnet, desc).unwrap()
+        WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc)
+            .build()
+            .unwrap()
     }
 
     #[test]
@@ -1505,7 +1507,7 @@ mod tests {
                             .parse()
                             .unwrap();
 
-                    let wollet = Wollet::without_persist(network, desc).unwrap();
+                    let wollet = WolletBuilder::new(network, desc).build().unwrap();
                     let first_address = wollet.address(Some(0)).unwrap();
                     assert_eq!(first_address.address().to_string(), expected[i], "network: {network:?} variant: {script_variant:?} blinding_variant: {blinding_variant:?} i:{i}");
                     i += 1;

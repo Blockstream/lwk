@@ -1,7 +1,8 @@
 extern crate lwk_wollet;
 
 use lwk_wollet::{
-    full_scan_with_electrum_client, ElectrumClient, ElementsNetwork, Wollet, WolletDescriptor,
+    full_scan_with_electrum_client, ElectrumClient, ElementsNetwork, WolletBuilder,
+    WolletDescriptor,
 };
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // This example creates a testnet watch only wallet from a CT descriptor
@@ -13,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Parse the descriptor and create the watch only wallet
     let descriptor: WolletDescriptor = desc.parse()?;
-    let mut wollet = Wollet::without_persist(ElementsNetwork::LiquidTestnet, descriptor)?;
+    let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, descriptor).build()?;
 
     // Sync the wallet using an Electrum client
     let electrum_url = "ssl://elements-testnet.blockstream.info:50002".parse()?;

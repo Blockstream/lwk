@@ -737,7 +737,7 @@ mod test {
         Script,
     };
 
-    use crate::{update::DownloadTxResult, Chain, Update, Wollet, WolletDescriptor};
+    use crate::{update::DownloadTxResult, Chain, Update, WolletBuilder, WolletDescriptor};
 
     use super::EncodableTxOutSecrets;
 
@@ -882,7 +882,9 @@ mod test {
         let update_bytes = lwk_test_util::update_test_vector_2_bytes();
         let update = Update::deserialize(&update_bytes).unwrap();
         let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();
-        let wollet = Wollet::without_persist(crate::ElementsNetwork::LiquidTestnet, desc).unwrap();
+        let wollet = WolletBuilder::new(crate::ElementsNetwork::LiquidTestnet, desc)
+            .build()
+            .unwrap();
         assert_eq!(update_bytes.len(), 18436);
         assert_eq!(update.serialize().unwrap().len(), 18436);
         let update_pruned = {

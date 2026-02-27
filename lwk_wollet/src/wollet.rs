@@ -84,6 +84,22 @@ impl WolletBuilder {
         self
     }
 
+    /// Use the legacy `Wollet` store
+    pub fn with_legacy_fs_store<P: AsRef<Path>>(mut self, datadir: P) -> Result<Self, Error> {
+        // Build path: datadir/network/enc_cache/hash(descriptor)
+        let mut path = datadir.as_ref().to_path_buf();
+        path.push(self.network.as_str());
+        path.push("enc_cache");
+        path.push(DirectoryIdHash::hash(self.descriptor.to_string().as_bytes()).to_string());
+
+        let file_store = FileStore::new(path)?;
+        let key_bytes = self.descriptor.encryption_key_bytes();
+        let encrypted_store = EncryptedStore::new(file_store, key_bytes);
+
+        self.store = Arc::new(encrypted_store);
+        Ok(self)
+    }
+
     /// Build the `Wollet`
     pub fn build(self) -> Result<Wollet, Error> {
         let cache = Cache::default();
@@ -356,17 +372,9 @@ impl Wollet {
         descriptor: WolletDescriptor,
         datadir: P,
     ) -> Result<Self, Error> {
-        // Build path: datadir/network/enc_cache/hash(descriptor)
-        let mut path = datadir.as_ref().to_path_buf();
-        path.push(network.as_str());
-        path.push("enc_cache");
-        path.push(DirectoryIdHash::hash(descriptor.to_string().as_bytes()).to_string());
-
-        let file_store = FileStore::new(path)?;
-        let key_bytes = descriptor.encryption_key_bytes();
-        let encrypted_store = EncryptedStore::new(file_store, key_bytes);
-
-        Self::new(network, Arc::new(encrypted_store), descriptor)
+        WolletBuilder::new(network, descriptor)
+            .with_legacy_fs_store(datadir)?
+            .build()
     }
 
     /// Create a new wallet which does not persist anything

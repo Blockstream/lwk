@@ -39,7 +39,7 @@ assert str(cmr_from_bytes) == TEST_CMR
 assert cmr_from_program.to_bytes() == cmr_bytes
 
 # Test creating P2TR address for p2pk program
-address = program.create_p2tr_address(XOnlyPublicKey(TEST_X_ONLY_PUBLIC_KEY), network)
+address = program.create_p2tr_address(XOnlyPublicKey.from_string(TEST_X_ONLY_PUBLIC_KEY), network)
 assert address is not None
 assert str(address) == TEST_ADDRESS
 
@@ -58,7 +58,7 @@ assert utxo.value() == TEST_UTXO_VALUE
 tx = Transaction.from_string(TEST_UNSIGNED_TX)
 
 finalized_tx = program.finalize_transaction(
-    tx, XOnlyPublicKey(TEST_X_ONLY_PUBLIC_KEY), [utxo], 0,
+    tx, XOnlyPublicKey.from_string(TEST_X_ONLY_PUBLIC_KEY), [utxo], 0,
     witness, network, SimplicityLogLevel.NONE
 )
 
@@ -123,3 +123,13 @@ assert str(public_key_str) == TEST_PUBLIC_KEY
 
 assert public_key_from_bytes.to_bytes() == public_key_bytes
 assert str(public_key_from_bytes) == TEST_PUBLIC_KEY
+
+x_only_public_key_str = XOnlyPublicKey.from_string(TEST_X_ONLY_PUBLIC_KEY)
+
+x_only_public_key_bytes = x_only_public_key_str.to_bytes()
+x_only_public_key_from_bytes = XOnlyPublicKey.from_bytes(x_only_public_key_bytes)
+
+assert str(x_only_public_key_str) == TEST_X_ONLY_PUBLIC_KEY
+
+assert x_only_public_key_from_bytes.to_bytes() == x_only_public_key_bytes
+assert str(x_only_public_key_from_bytes) == TEST_X_ONLY_PUBLIC_KEY

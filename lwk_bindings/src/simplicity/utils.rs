@@ -16,9 +16,9 @@ use lwk_wollet::{secp256k1::Keypair, EC};
 #[uniffi::export]
 pub fn simplicity_derive_xonly_pubkey(
     signer: &crate::Signer,
-    derivation_path: String,
+    derivation_path: &str,
 ) -> Result<Arc<XOnlyPublicKey>, LwkError> {
-    let keypair = derive_keypair(signer, &derivation_path)?;
+    let keypair = derive_keypair(signer, derivation_path)?;
     Ok(XOnlyPublicKey::from_keypair(&keypair))
 }
 
@@ -56,7 +56,6 @@ mod tests {
     use super::*;
 
     use crate::simplicity::{SimplicityArguments, SimplicityProgram, SimplicityTypedValue};
-    use crate::types::Hex;
 
     use lwk_wollet::hashes::hex::FromHex;
 
@@ -73,7 +72,7 @@ mod tests {
         let program = SimplicityProgram::load(P2PK_SOURCE, &args).unwrap();
         let cmr = program.cmr();
 
-        let internal_key = XOnlyPublicKey::new(TEST_PUBLIC_KEY).unwrap();
+        let internal_key = XOnlyPublicKey::from_string(TEST_PUBLIC_KEY).unwrap();
         let control_block = simplicity_control_block(cmr.as_ref(), &internal_key).unwrap();
         let control_block_from_program = program.control_block(&internal_key).unwrap();
 

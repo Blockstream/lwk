@@ -30,8 +30,6 @@ From the CT descriptor, you need to generate a `WolletDescriptor`. Calling `Woll
 
 Once you have a `WolletDescriptor` you can create a `Wollet` using either `Wollet::without_persist()` (keeps wallet data in memory) or `Wollet::with_fs_persist()` (stores wallet data on filesystem).
 
-LWK also allows `Wollet`s to have a [custom persister](persister.md).
-
 <custom-tabs category="lang">
 <div slot="title">Rust</div>
 <section>

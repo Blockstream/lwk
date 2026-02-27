@@ -3782,7 +3782,7 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
     let desc = signer.wpkh_slip77_descriptor()?;
     let wd = WolletDescriptor::from_str(&desc)?;
     let network = ElementsNetwork::LiquidTestnet;
-    let mut wollet = Wollet::without_persist(network, wd)?;
+    let mut wollet = WolletBuilder::new(network, wd).build()?;
     // ANCHOR_END: wollet
 
     // Override wollet to use regtest

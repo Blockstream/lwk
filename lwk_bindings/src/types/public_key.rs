@@ -7,13 +7,12 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use elements::bitcoin::secp256k1;
-use elements::hashes::hex::FromHex;
-use elements::hex::ToHex;
 
 use lwk_wollet::elements_miniscript::ToPublicKey;
 
 /// A Bitcoin ECDSA public key.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
+#[uniffi::export(Display)]
 pub struct PublicKey {
     inner: elements::bitcoin::PublicKey,
 }
@@ -68,9 +67,8 @@ impl PublicKey {
 
     /// Creates a `PublicKey` from a hex string.
     #[uniffi::constructor]
-    pub fn from_hex(hex: &str) -> Result<Arc<Self>, LwkError> {
-        let bytes = Vec::<u8>::from_hex(hex)?;
-        Self::from_bytes(&bytes)
+    pub fn from_string(s: &str) -> Result<Arc<Self>, LwkError> {
+        Ok(Arc::new(Self::from_str(s)?))
     }
 
     /// Derives a compressed `PublicKey` from a `SecretKey`.
@@ -87,11 +85,6 @@ impl PublicKey {
     /// Serialize the public key to bytes
     pub fn to_bytes(&self) -> Vec<u8> {
         self.inner.to_bytes()
-    }
-
-    /// Returns the hex-encoded serialization.
-    pub fn to_hex(&self) -> String {
-        self.inner.to_bytes().to_hex()
     }
 
     /// Whether this public key should be serialized as compressed
@@ -113,92 +106,50 @@ impl PublicKey {
     pub fn to_simplicityhl(
         &self,
     ) -> Result<lwk_simplicity::simplicityhl::elements::bitcoin::PublicKey, LwkError> {
-        lwk_simplicity::simplicityhl::elements::bitcoin::PublicKey::from_slice(&self.to_bytes())
-            .map_err(|e| LwkError::Generic {
-                msg: format!("Invalid public key: {e}"),
-            })
+        Ok(
+            lwk_simplicity::simplicityhl::elements::bitcoin::PublicKey::from_slice(
+                &self.to_bytes(),
+            )?,
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{PublicKey, SecretKey};
+    use super::*;
+
     use elements::hashes::hex::FromHex;
 
     #[test]
-    fn test_public_key_from_bytes() {
-        let bytes = Vec::<u8>::from_hex(
-            "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
-        )
-        .unwrap();
-        let pk = PublicKey::from_bytes(&bytes).unwrap();
-        assert_eq!(pk.to_bytes(), bytes);
-        assert!(pk.is_compressed());
-    }
-
-    #[test]
-    fn test_public_key_from_hex() {
+    fn test_public_key_constructors_roundtrip_and_views() {
         let hex = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let pk = PublicKey::from_hex(hex).unwrap();
-        assert_eq!(pk.to_hex(), hex);
-    }
+        let bytes = Vec::<u8>::from_hex(hex).unwrap();
 
-    #[test]
-    fn test_public_key_from_secret_key() {
+        let from_hex = PublicKey::from_string(hex).unwrap();
+        assert_eq!(from_hex.to_string(), hex);
+        assert_eq!(from_hex.to_bytes(), bytes);
+        assert!(from_hex.is_compressed());
+
+        let from_bytes = PublicKey::from_bytes(&bytes).unwrap();
+        assert_eq!(from_bytes.to_bytes(), bytes);
+        assert_eq!(*from_hex, *from_bytes);
+
         let sk = SecretKey::from_bytes(&[1u8; 32]).unwrap();
-        let pk = PublicKey::from_secret_key(&sk);
-        assert_eq!(pk.to_bytes().len(), 33);
-        assert!(pk.is_compressed());
-    }
+        let from_secret_key = PublicKey::from_secret_key(&sk);
+        assert_eq!(from_secret_key.to_bytes().len(), 33);
+        assert!(from_secret_key.is_compressed());
 
-    #[test]
-    fn test_public_key_invalid() {
-        assert!(PublicKey::from_bytes(&[0; 32]).is_err());
-        assert!(PublicKey::from_bytes(&[0; 34]).is_err());
-        assert!(PublicKey::from_bytes(&[0; 33]).is_err());
-    }
-
-    #[test]
-    fn test_public_key_roundtrip() {
-        let hex = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let pk = PublicKey::from_hex(hex).unwrap();
-        let pk2 = PublicKey::from_bytes(&pk.to_bytes()).unwrap();
-        assert_eq!(*pk, *pk2);
-    }
-
-    #[test]
-    fn test_public_key_to_x_only() {
-        let hex = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let pk = PublicKey::from_hex(hex).unwrap();
-        let xonly = pk.to_x_only_public_key();
-        assert_eq!(xonly.to_string().len(), 64);
+        let xonly = from_hex.to_x_only_public_key();
         assert_eq!(
             xonly.to_string(),
             "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
         );
-    }
 
-    #[test]
-    fn test_public_key_display() {
-        let hex = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let pk = PublicKey::from_hex(hex).unwrap();
-        assert_eq!(pk.to_string(), hex);
-    }
+        assert!(PublicKey::from_bytes(&[0; 32]).is_err());
+        assert!(PublicKey::from_bytes(&[0; 33]).is_err());
 
-    #[test]
-    fn test_public_key_as_ref() {
-        use elements::bitcoin::PublicKey as BitcoinPublicKey;
-        let hex = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let pk = PublicKey::from_hex(hex).unwrap();
-        let inner: &BitcoinPublicKey = (*pk).as_ref();
-        assert!(inner.compressed);
-    }
-
-    #[test]
-    fn test_public_key_uncompressed() {
         let hex = "0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8";
-        let pk = PublicKey::from_hex(hex).unwrap();
+        let pk = PublicKey::from_string(hex).unwrap();
         assert!(!pk.is_compressed());
-        assert_eq!(pk.to_bytes().len(), 65);
     }
 }

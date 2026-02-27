@@ -28,7 +28,7 @@ LWK supports more complex spending conditions, such as [multisig](multisig.md).
 ## Create a Wollet
 From the CT descriptor, you need to generate a `WolletDescriptor`. Calling `WolletDescriptor::from_str()` will perform some basic validation of the descriptor, and fails if the descriptor is not supported by LWK.
 
-Once you have a `WolletDescriptor` you can create a `Wollet` using either `Wollet::without_persist()` (keeps wallet data in memory) or `Wollet::with_fs_persist()` (stores wallet data on filesystem).
+Once you have a `WolletDescriptor` you can create a `Wollet`.
 
 <custom-tabs category="lang">
 <div slot="title">Rust</div>

@@ -16,18 +16,10 @@ def build_options_arguments(params):
 
     for key in [
         "COLLATERAL_ASSET_ID", "SETTLEMENT_ASSET_ID",
-        "ISSUANCE_ASSET_ENTROPY",
-        "OPTION_OUTPOINT_TXID", "GRANTOR_OUTPOINT_TXID",
         "OPTION_TOKEN_ASSET", "OPTION_REISSUANCE_TOKEN_ASSET",
         "GRANTOR_TOKEN_ASSET", "GRANTOR_REISSUANCE_TOKEN_ASSET",
     ]:
         args = args.add_value(key, SimplicityTypedValue.u256(bytes.fromhex(params[key])))
-
-    for key in ["OPTION_OUTPOINT_VOUT", "GRANTOR_OUTPOINT_VOUT"]:
-        args = args.add_value(key, SimplicityTypedValue.u32(params[key]))
-
-    for key in ["OPTION_CONFIDENTIAL", "GRANTOR_CONFIDENTIAL"]:
-        args = args.add_value(key, SimplicityTypedValue.boolean(params[key]))
 
     return args
 
@@ -110,7 +102,7 @@ inp_builder0 = PsetInputBuilder.from_prevout(outpoint0)
 inp_builder0.witness_utxo(output1)
 inp_builder0.sequence(TxSequence.zero())
 inp_builder0.issuance_inflation_keys(1)
-inp_builder0.issuance_asset_entropy(option_contract_hash)
+inp_builder0.issuance_asset_entropy(option_contract_hash.to_bytes())
 inp_builder0.blinded_issuance(False)
 creation_input0 = inp_builder0.build()
 
@@ -119,7 +111,7 @@ inp_builder1 = PsetInputBuilder.from_prevout(outpoint1)
 inp_builder1.witness_utxo(output2)
 inp_builder1.sequence(TxSequence.zero())
 inp_builder1.issuance_inflation_keys(1)
-inp_builder1.issuance_asset_entropy(grantor_contract_hash)
+inp_builder1.issuance_asset_entropy(grantor_contract_hash.to_bytes())
 inp_builder1.blinded_issuance(False)
 creation_input1 = inp_builder1.build()
 
@@ -152,15 +144,6 @@ options_params = {
     "OPTION_REISSUANCE_TOKEN_ASSET": asset_id_inner_hex(option_reissuance_token_asset),
     "GRANTOR_TOKEN_ASSET": asset_id_inner_hex(grantor_token_asset),
     "GRANTOR_REISSUANCE_TOKEN_ASSET": asset_id_inner_hex(grantor_reissuance_token_asset),
-    # The parameters below are used only for storing information in the arguments
-    # If they are used, make sure to handle the correct endianness
-    "OPTION_OUTPOINT_TXID": str(txid1),
-    "OPTION_OUTPOINT_VOUT": vout1,
-    "OPTION_CONFIDENTIAL": True,
-    "GRANTOR_OUTPOINT_TXID": str(txid2),
-    "GRANTOR_OUTPOINT_VOUT": vout2,
-    "GRANTOR_CONFIDENTIAL": True,
-    "ISSUANCE_ASSET_ENTROPY": str(issuance_entropy),
 }
 options_args = build_options_arguments(options_params)
 options_program = SimplicityProgram.load(OPTIONS_SOURCE, options_args)
@@ -282,7 +265,7 @@ fund_inp_builder0 = PsetInputBuilder.from_prevout(funding_outpoint0)
 fund_inp_builder0.witness_utxo(creation_out_output0)
 fund_inp_builder0.sequence(TxSequence.zero())
 fund_inp_builder0.issuance_value_amount(NUM_CONTRACTS)
-fund_inp_builder0.issuance_asset_entropy(option_token_entropy)
+fund_inp_builder0.issuance_asset_entropy(option_token_entropy.to_bytes())
 fund_inp_builder0.blinded_issuance(False)
 fund_inp_builder0.issuance_blinding_nonce(Tweak.from_bytes(secrets0.asset_blinding_factor().to_bytes()))
 funding_input0 = fund_inp_builder0.build()
@@ -292,7 +275,7 @@ fund_inp_builder1 = PsetInputBuilder.from_prevout(funding_outpoint1)
 fund_inp_builder1.witness_utxo(creation_out_output1)
 fund_inp_builder1.sequence(TxSequence.zero())
 fund_inp_builder1.issuance_value_amount(NUM_CONTRACTS)
-fund_inp_builder1.issuance_asset_entropy(grantor_token_entropy)
+fund_inp_builder1.issuance_asset_entropy(grantor_token_entropy.to_bytes())
 fund_inp_builder1.blinded_issuance(False)
 fund_inp_builder1.issuance_blinding_nonce(Tweak.from_bytes(secrets1.asset_blinding_factor().to_bytes()))
 funding_input1 = fund_inp_builder1.build()

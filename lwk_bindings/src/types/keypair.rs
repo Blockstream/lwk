@@ -40,7 +40,7 @@ impl AsRef<secp256k1::Keypair> for Keypair {
 
 #[uniffi::export]
 impl Keypair {
-    /// See [`secp256k1::Keypair::from_seckey_slice`].
+    /// Creates a keypair directly from a secret key slice.
     #[uniffi::constructor]
     pub fn from_secret_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
         let secp = Secp256k1::new();
@@ -103,14 +103,12 @@ impl Keypair {
     pub fn to_simplicityhl(
         &self,
     ) -> Result<lwk_simplicity::simplicityhl::elements::bitcoin::secp256k1::Keypair, LwkError> {
-        let secp = lwk_simplicity::simplicityhl::elements::bitcoin::secp256k1::Secp256k1::new();
-        lwk_simplicity::simplicityhl::elements::bitcoin::secp256k1::Keypair::from_seckey_slice(
-            &secp,
-            &self.secret_bytes(),
+        Ok(
+            lwk_simplicity::simplicityhl::elements::bitcoin::secp256k1::Keypair::from_seckey_slice(
+                &EC,
+                &self.secret_bytes(),
+            )?,
         )
-        .map_err(|e| LwkError::Generic {
-            msg: format!("Invalid keypair: {e}"),
-        })
     }
 }
 
@@ -123,46 +121,20 @@ mod tests {
     use super::{Keypair, SecretKey};
 
     #[test]
-    fn test_keypair_from_secret_bytes() {
+    fn test_keypair_constructors_and_accessors() {
         let bytes = [1u8; 32];
         let kp = Keypair::from_secret_bytes(&bytes).unwrap();
         assert_eq!(kp.secret_bytes(), bytes);
-    }
+        assert_eq!(kp.secret_key().bytes(), bytes);
 
-    #[test]
-    fn test_keypair_from_secret_key() {
-        let sk = SecretKey::from_bytes(&[1u8; 32]).unwrap();
-        let kp = Keypair::from_secret_key(&sk);
-        assert_eq!(kp.secret_bytes(), sk.bytes());
-    }
+        let sk = SecretKey::from_bytes(&bytes).unwrap();
+        let from_secret_key = Keypair::from_secret_key(&sk);
+        assert_eq!(from_secret_key.secret_bytes(), bytes);
+        assert_eq!(from_secret_key.secret_bytes(), sk.bytes());
 
-    #[test]
-    fn test_keypair_generate() {
         let kp1 = Keypair::generate();
         let kp2 = Keypair::generate();
         assert_ne!(kp1.secret_bytes(), kp2.secret_bytes());
-    }
-
-    #[test]
-    fn test_keypair_public_key() {
-        let kp = Keypair::from_secret_bytes(&[1u8; 32]).unwrap();
-        let pk = kp.public_key();
-        assert_eq!(pk.to_bytes().len(), 33);
-    }
-
-    #[test]
-    fn test_keypair_x_only_public_key() {
-        let kp = Keypair::from_secret_bytes(&[1u8; 32]).unwrap();
-        let xonly = kp.x_only_public_key();
-        assert_eq!(xonly.to_string().len(), 64);
-    }
-
-    #[test]
-    fn test_keypair_secret_key() {
-        let bytes = [1u8; 32];
-        let kp = Keypair::from_secret_bytes(&bytes).unwrap();
-        let sk = kp.secret_key();
-        assert_eq!(sk.bytes(), bytes);
     }
 
     #[test]

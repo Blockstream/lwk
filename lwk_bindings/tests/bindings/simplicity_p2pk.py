@@ -99,3 +99,15 @@ args3 = SimplicityArguments()
 args3 = args3.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(bytes.fromhex(TEST_PUBLIC_KEY)))
 program2 = SimplicityProgram.load(P2PK_SOURCE, args3)
 assert str(program2.cmr()) == TEST_CMR
+
+TEST_CONTRACT_HASH_HEX = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+
+contract_hash_str = ContractHash.from_string(TEST_CONTRACT_HASH_HEX)
+
+contract_hash_bytes = contract_hash_str.to_bytes()
+contract_hash_from_bytes = ContractHash.from_bytes(contract_hash_bytes)
+
+assert str(contract_hash_str) == TEST_CONTRACT_HASH_HEX
+
+assert contract_hash_from_bytes.to_bytes() == contract_hash_bytes
+assert str(contract_hash_from_bytes) == TEST_CONTRACT_HASH_HEX

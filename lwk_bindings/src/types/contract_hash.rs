@@ -5,10 +5,10 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use elements::hashes::Hash;
-use elements::hex::ToHex;
 
 /// The hash of an asset contract.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
+#[uniffi::export(Display)]
 pub struct ContractHash {
     inner: elements::ContractHash,
 }
@@ -56,22 +56,16 @@ impl Display for ContractHash {
 impl ContractHash {
     /// Creates from a hex string.
     #[uniffi::constructor]
-    pub fn from_hex(hex: &str) -> Result<Arc<Self>, LwkError> {
-        Ok(Arc::new(Self::from_str(hex)?))
+    pub fn from_string(s: &str) -> Result<Arc<Self>, LwkError> {
+        Ok(Arc::new(Self::from_str(s)?))
     }
 
     /// Creates from a 32-byte slice.
     #[uniffi::constructor]
     pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
-        let array: [u8; 32] = bytes.try_into()?;
         Ok(Arc::new(ContractHash {
-            inner: elements::ContractHash::from_byte_array(array),
+            inner: elements::ContractHash::from_byte_array(bytes.try_into()?),
         }))
-    }
-
-    /// Returns the hex-encoded representation.
-    pub fn to_hex(&self) -> String {
-        self.inner.to_hex()
     }
 
     /// Returns the bytes (32 bytes).
@@ -85,22 +79,16 @@ mod tests {
     use super::ContractHash;
 
     #[test]
-    fn test_contract_hash_hex_roundtrip() {
-        let hex = "0101010101010101010101010101010101010101010101010101010101010101";
-        let ch = ContractHash::from_hex(hex).unwrap();
-        assert_eq!(ch.to_hex(), hex);
-    }
+    fn test_contract_hash_from_bytes_and_roundtrip() {
+        let hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
 
-    #[test]
-    fn test_contract_hash_bytes_roundtrip() {
-        let bytes = [42u8; 32];
-        let ch = ContractHash::from_bytes(&bytes).unwrap();
-        assert_eq!(ch.to_bytes(), bytes);
-    }
+        let from_hex = ContractHash::from_string(hex).unwrap();
+        assert_eq!(from_hex.to_string(), hex);
 
-    #[test]
-    fn test_contract_hash_from_bytes_invalid_length() {
-        let bytes = [0u8; 16];
-        assert!(ContractHash::from_bytes(&bytes).is_err());
+        let from_bytes = ContractHash::from_bytes(&from_hex.to_bytes()).unwrap();
+        assert_eq!(from_bytes.to_bytes(), from_hex.to_bytes());
+
+        assert!(ContractHash::from_bytes(&[0u8; 31]).is_err());
+        assert!(ContractHash::from_bytes(&[0u8; 33]).is_err());
     }
 }

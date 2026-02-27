@@ -125,7 +125,7 @@ mod tests {
             "[elements]78b3e3232680f21f4be8c055a4fdb2edf4681bd6c0ae40edeca51331839106b4:1",
         )
         .unwrap();
-        let contract_hash = ContractHash::from_hex(
+        let contract_hash = ContractHash::from_string(
             "a92d0f0f0a090c09b7970ce43a12448f55c1cc00325a6a8547d57d69f52378ec",
         )
         .unwrap();
@@ -148,7 +148,7 @@ mod tests {
             "[elements]78b3e3232680f21f4be8c055a4fdb2edf4681bd6c0ae40edeca51331839106b4:1",
         )
         .unwrap();
-        let contract_hash = ContractHash::from_hex(
+        let contract_hash = ContractHash::from_string(
             "a92d0f0f0a090c09b7970ce43a12448f55c1cc00325a6a8547d57d69f52378ec",
         )
         .unwrap();

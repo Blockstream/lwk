@@ -102,8 +102,8 @@ vout3, output3 = find_output_by_script(funding_tx3, p2pk_script_hex)
 
 # Step 3: Build creation transaction
 
-option_contract_hash = ContractHash.from_hex("0000000000000000000000000000000000000000000000000000000000000001")
-grantor_contract_hash = ContractHash.from_hex("0000000000000000000000000000000000000000000000000000000000000002")
+option_contract_hash = ContractHash.from_string("0000000000000000000000000000000000000000000000000000000000000001")
+grantor_contract_hash = ContractHash.from_string("0000000000000000000000000000000000000000000000000000000000000002")
 
 outpoint0 = OutPoint.from_parts(txid1, vout1)
 inp_builder0 = PsetInputBuilder.from_prevout(outpoint0)
@@ -160,7 +160,7 @@ options_params = {
     "GRANTOR_OUTPOINT_TXID": str(txid2),
     "GRANTOR_OUTPOINT_VOUT": vout2,
     "GRANTOR_CONFIDENTIAL": True,
-    "ISSUANCE_ASSET_ENTROPY": issuance_entropy.to_hex(),
+    "ISSUANCE_ASSET_ENTROPY": str(issuance_entropy),
 }
 options_args = build_options_arguments(options_params)
 options_program = SimplicityProgram.load(OPTIONS_SOURCE, options_args)

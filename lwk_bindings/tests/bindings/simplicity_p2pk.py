@@ -133,3 +133,15 @@ assert str(x_only_public_key_str) == TEST_X_ONLY_PUBLIC_KEY
 
 assert x_only_public_key_from_bytes.to_bytes() == x_only_public_key_bytes
 assert str(x_only_public_key_from_bytes) == TEST_X_ONLY_PUBLIC_KEY
+
+TEST_TWEAK_KEY = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+
+tweak_str = Tweak.from_string(TEST_TWEAK_KEY)
+
+tweak_bytes = tweak_str.to_bytes()
+tweak_from_bytes = Tweak.from_bytes(tweak_bytes)
+
+assert str(tweak_str) == TEST_TWEAK_KEY
+
+assert tweak_from_bytes.to_bytes() == tweak_bytes
+assert str(tweak_from_bytes) == TEST_TWEAK_KEY

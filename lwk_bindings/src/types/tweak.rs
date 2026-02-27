@@ -64,8 +64,8 @@ impl Tweak {
 
     /// Create a Tweak from a hex string.
     #[uniffi::constructor]
-    pub fn from_hex(hex: &str) -> Result<Arc<Self>, LwkError> {
-        let inner = secp256k1_zkp::Tweak::from_str(hex)?;
+    pub fn from_string(s: &str) -> Result<Arc<Self>, LwkError> {
+        let inner = secp256k1_zkp::Tweak::from_str(s)?;
         Ok(Arc::new(Tweak { inner }))
     }
 
@@ -81,11 +81,6 @@ impl Tweak {
     pub fn to_bytes(&self) -> Vec<u8> {
         self.inner.as_ref().to_vec()
     }
-
-    /// Return the hex representation of the tweak.
-    pub fn to_hex(&self) -> String {
-        self.inner.as_ref().to_hex()
-    }
 }
 
 #[cfg(test)]
@@ -96,14 +91,17 @@ mod tests {
     fn test_tweak_from_bytes_and_roundtrips() {
         let hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
 
-        let from_hex = Tweak::from_hex(hex).unwrap();
-        assert_eq!(from_hex.to_hex(), hex);
+        let from_hex = Tweak::from_string(hex).unwrap();
+        assert_eq!(from_hex.to_string(), hex);
 
         let bytes = from_hex.to_bytes();
         let from_bytes = Tweak::from_bytes(&bytes).unwrap();
         assert_eq!(from_bytes.to_bytes(), bytes);
-        assert_eq!(from_bytes.to_hex(), hex);
-        assert_eq!(Tweak::from_hex(&from_bytes.to_hex()).unwrap(), from_bytes);
+        assert_eq!(from_bytes.to_string(), hex);
+        assert_eq!(
+            Tweak::from_string(&from_bytes.to_string()).unwrap(),
+            from_bytes
+        );
 
         assert!(Tweak::from_bytes(&[0u8; 31]).is_err());
         assert!(Tweak::from_bytes(&[0u8; 33]).is_err());

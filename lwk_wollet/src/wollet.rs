@@ -370,6 +370,7 @@ impl Wollet {
     }
 
     /// Create a new wallet which does not persist anything
+    #[deprecated(since = "0.16.0", note = "please use `WolletBuilder` instead")]
     pub fn without_persist(
         network: ElementsNetwork,
         descriptor: WolletDescriptor,

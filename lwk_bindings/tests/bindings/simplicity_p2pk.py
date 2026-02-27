@@ -23,11 +23,20 @@ assert len(genesis_hash) == 64
 
 # Test loading p2pk program with public key argument
 args = SimplicityArguments()
-args = args.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(TEST_PUBLIC_KEY))
+args = args.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(bytes.fromhex(TEST_PUBLIC_KEY)))
 
 program = SimplicityProgram.load(P2PK_SOURCE, args)
-cmr = program.cmr().to_hex()
-assert cmr == TEST_CMR
+cmr_from_program = program.cmr()
+assert str(cmr_from_program) == TEST_CMR
+
+cmr_from_str = Cmr.from_string(TEST_CMR)
+cmr_bytes = cmr_from_str.to_bytes()
+cmr_from_bytes = Cmr.from_bytes(cmr_bytes)
+
+assert str(cmr_from_str) == TEST_CMR
+assert cmr_from_bytes.to_bytes() == cmr_bytes
+assert str(cmr_from_bytes) == TEST_CMR
+assert cmr_from_program.to_bytes() == cmr_bytes
 
 # Test creating P2TR address for p2pk program
 address = program.create_p2tr_address(XOnlyPublicKey(TEST_PUBLIC_KEY), network)
@@ -36,7 +45,7 @@ assert str(address) == TEST_ADDRESS
 
 # Test building witness values with signature (64 bytes)
 witness = SimplicityWitnessValues()
-witness = witness.add_value("SIGNATURE", SimplicityTypedValue.byte_array(TEST_SIGNATURE))
+witness = witness.add_value("SIGNATURE", SimplicityTypedValue.byte_array(bytes.fromhex(TEST_SIGNATURE)))
 assert witness is not None
 
 # Test creating TxOut from explicit values
@@ -71,7 +80,7 @@ t_parsed = SimplicityType.parse("Either<u32, bool>")
 v_u32 = SimplicityTypedValue.u32(42)
 v_u64 = SimplicityTypedValue.u64(1000)
 v_bool = SimplicityTypedValue.boolean(True)
-v_u256 = SimplicityTypedValue.u256(TEST_PUBLIC_KEY)
+v_u256 = SimplicityTypedValue.u256(bytes.fromhex(TEST_PUBLIC_KEY))
 v_left = SimplicityTypedValue.left(v_u32, t_bool)
 v_right = SimplicityTypedValue.right(t_u32, v_bool)
 v_tuple = SimplicityTypedValue.tuple([v_u32, v_u256])
@@ -87,6 +96,6 @@ witness2 = witness2.add_value("MY_WITNESS", v_left)
 
 # Verify add_value works for loading a program (regression)
 args3 = SimplicityArguments()
-args3 = args3.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(TEST_PUBLIC_KEY))
+args3 = args3.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(bytes.fromhex(TEST_PUBLIC_KEY)))
 program2 = SimplicityProgram.load(P2PK_SOURCE, args3)
-assert program2.cmr().to_hex() == TEST_CMR
+assert str(program2.cmr()) == TEST_CMR

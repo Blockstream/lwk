@@ -1,5 +1,4 @@
 use super::simplicity_type::SimplicityType;
-use crate::types::Hex;
 use crate::LwkError;
 
 use std::sync::Arc;
@@ -50,25 +49,17 @@ impl SimplicityTypedValue {
 
     /// Create a `u128` value from hex.
     #[uniffi::constructor]
-    pub fn u128(hex: Hex) -> Result<Arc<Self>, LwkError> {
-        let bytes = hex.as_ref().to_vec();
-        let arr: [u8; 16] = bytes.try_into().map_err(|v: Vec<u8>| LwkError::Generic {
-            msg: format!("u128 requires exactly 16 bytes, got {}", v.len()),
-        })?;
+    pub fn u128(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
         Ok(Arc::new(Self {
-            inner: simplicityhl::Value::u128(u128::from_be_bytes(arr)),
+            inner: simplicityhl::Value::u128(u128::from_be_bytes(bytes.try_into()?)),
         }))
     }
 
     /// Create a `u256` value from hex.
     #[uniffi::constructor]
-    pub fn u256(hex: Hex) -> Result<Arc<Self>, LwkError> {
-        let bytes = hex.as_ref().to_vec();
-        let arr: [u8; 32] = bytes.try_into().map_err(|v: Vec<u8>| LwkError::Generic {
-            msg: format!("u256 requires exactly 32 bytes, got {}", v.len()),
-        })?;
+    pub fn u256(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
         Ok(Arc::new(Self {
-            inner: simplicityhl::Value::u256(U256::from_byte_array(arr)),
+            inner: simplicityhl::Value::u256(U256::from_byte_array(bytes.try_into()?)),
         }))
     }
 
@@ -121,10 +112,9 @@ impl SimplicityTypedValue {
 
     /// Create a byte array value from hex.
     #[uniffi::constructor]
-    pub fn byte_array(hex: Hex) -> Result<Arc<Self>, LwkError> {
-        let bytes = hex.as_ref().to_vec();
+    pub fn byte_array(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
         Ok(Arc::new(Self {
-            inner: simplicityhl::Value::byte_array(bytes),
+            inner: simplicityhl::Value::byte_array(bytes.iter().copied()),
         }))
     }
 

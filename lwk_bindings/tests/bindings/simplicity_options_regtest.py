@@ -21,7 +21,7 @@ def build_options_arguments(params):
         "OPTION_TOKEN_ASSET", "OPTION_REISSUANCE_TOKEN_ASSET",
         "GRANTOR_TOKEN_ASSET", "GRANTOR_REISSUANCE_TOKEN_ASSET",
     ]:
-        args = args.add_value(key, SimplicityTypedValue.u256(params[key]))
+        args = args.add_value(key, SimplicityTypedValue.u256(bytes.fromhex(params[key])))
 
     for key in ["OPTION_OUTPOINT_VOUT", "GRANTOR_OUTPOINT_VOUT"]:
         args = args.add_value(key, SimplicityTypedValue.u32(params[key]))
@@ -75,7 +75,7 @@ derivation_path = "m/86'/1'/0'/0/0"
 xonly_pubkey = simplicity_derive_xonly_pubkey(signer, derivation_path)
 
 p2pk_args = SimplicityArguments()
-p2pk_args = p2pk_args.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(xonly_pubkey.to_hex()))
+p2pk_args = p2pk_args.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(xonly_pubkey.bytes()))
 p2pk_program = SimplicityProgram.load(P2PK_SOURCE, p2pk_args)
 p2pk_address = p2pk_program.create_p2tr_address(xonly_pubkey, network)
 p2pk_script = p2pk_address.script_pubkey()
@@ -229,7 +229,7 @@ sig0 = p2pk_program.create_p2pk_signature(
     creation_utxos, 0, network
 )
 witness0 = SimplicityWitnessValues()
-witness0 = witness0.add_value("SIGNATURE", SimplicityTypedValue.byte_array(str(sig0)))
+witness0 = witness0.add_value("SIGNATURE", SimplicityTypedValue.byte_array(sig0))
 creation_tx = p2pk_program.finalize_transaction(
     creation_tx, xonly_pubkey, creation_utxos, 0,
     witness0, network, SimplicityLogLevel.NONE
@@ -240,7 +240,7 @@ sig1 = p2pk_program.create_p2pk_signature(
     creation_utxos, 1, network
 )
 witness1 = SimplicityWitnessValues()
-witness1 = witness1.add_value("SIGNATURE", SimplicityTypedValue.byte_array(str(sig1)))
+witness1 = witness1.add_value("SIGNATURE", SimplicityTypedValue.byte_array(sig1))
 creation_tx = p2pk_program.finalize_transaction(
     creation_tx, xonly_pubkey, creation_utxos, 1,
     witness1, network, SimplicityLogLevel.NONE
@@ -438,7 +438,7 @@ sig2 = p2pk_program.create_p2pk_signature(
     funding_utxos, 2, network
 )
 witness2 = SimplicityWitnessValues()
-witness2 = witness2.add_value("SIGNATURE", SimplicityTypedValue.byte_array(str(sig2)))
+witness2 = witness2.add_value("SIGNATURE", SimplicityTypedValue.byte_array(sig2))
 funding_tx = p2pk_program.finalize_transaction(
     funding_tx, xonly_pubkey, funding_utxos, 2,
     witness2, network, SimplicityLogLevel.NONE

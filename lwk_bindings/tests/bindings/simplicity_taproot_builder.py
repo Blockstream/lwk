@@ -3,7 +3,7 @@ from lwk import *
 state = bytearray(32)
 state[31] = 1
 
-cmr = Cmr.from_hex(
+cmr = Cmr.from_string(
     "cbd8d3d0cc95384237c1bf20334c30b579f22058563c37731a3ab2bc76d5a248"
 )
 internal_key = XOnlyPublicKey(

@@ -6,8 +6,8 @@ use lwk_simplicity::signer;
 use lwk_simplicity::simplicityhl;
 
 use crate::blockdata::tx_out::TxOut;
-use crate::types::{Hex, XOnlyPublicKey};
-use crate::{Address, LwkError, Network, Transaction};
+use crate::types::XOnlyPublicKey;
+use crate::{Address, ControlBlock, LwkError, Network, Transaction};
 
 use super::arguments::{SimplicityArguments, SimplicityWitnessValues};
 use super::cmr::Cmr;
@@ -25,8 +25,8 @@ pub struct SimplicityProgram {
 impl SimplicityProgram {
     /// Load and compile a Simplicity program from source.
     #[uniffi::constructor]
-    pub fn load(source: String, arguments: &SimplicityArguments) -> Result<Arc<Self>, LwkError> {
-        let compiled = scripts::load_program(&source, arguments.to_inner()?)?;
+    pub fn load(source: &str, arguments: &SimplicityArguments) -> Result<Arc<Self>, LwkError> {
+        let compiled = scripts::load_program(source, arguments.to_inner()?)?;
         Ok(Arc::new(SimplicityProgram { inner: compiled }))
     }
 
@@ -52,13 +52,16 @@ impl SimplicityProgram {
     }
 
     /// Get the taproot control block for script-path spending.
-    pub fn control_block(&self, internal_key: &XOnlyPublicKey) -> Result<Hex, LwkError> {
+    pub fn control_block(
+        &self,
+        internal_key: &XOnlyPublicKey,
+    ) -> Result<Arc<ControlBlock>, LwkError> {
         let x_only_key = internal_key.to_simplicityhl()?;
 
         let cmr = self.inner.commit().cmr();
         let control_block = scripts::control_block(cmr, x_only_key);
 
-        Ok(Hex::from(control_block.serialize()))
+        ControlBlock::from_bytes(&control_block.serialize())
     }
 
     /// Get the sighash_all message for signing a Simplicity program input.
@@ -66,12 +69,12 @@ impl SimplicityProgram {
         &self,
         tx: &Transaction,
         program_public_key: &XOnlyPublicKey,
-        utxos: Vec<Arc<TxOut>>,
+        utxos: &[Arc<TxOut>],
         input_index: u32,
         network: &Network,
-    ) -> Result<Hex, LwkError> {
+    ) -> Result<Vec<u8>, LwkError> {
         let x_only_key = program_public_key.to_simplicityhl()?;
-        let utxos_inner = convert_utxos(&utxos);
+        let utxos_inner = convert_utxos(utxos);
 
         let message = signer::get_sighash_all(
             tx.as_ref(),
@@ -82,7 +85,7 @@ impl SimplicityProgram {
             network.into(),
         )?;
 
-        Ok(Hex::from(message.as_ref().to_vec()))
+        Ok(message.as_ref().to_vec())
     }
 
     /// Finalize a transaction with a Simplicity witness for the specified input.
@@ -91,14 +94,14 @@ impl SimplicityProgram {
         &self,
         tx: &Transaction,
         program_public_key: &XOnlyPublicKey,
-        utxos: Vec<Arc<TxOut>>,
+        utxos: &[Arc<TxOut>],
         input_index: u32,
         witness_values: &SimplicityWitnessValues,
         network: &Network,
         log_level: SimplicityLogLevel,
     ) -> Result<Arc<Transaction>, LwkError> {
         let x_only_key = program_public_key.to_simplicityhl()?;
-        let utxos_inner = convert_utxos(&utxos);
+        let utxos_inner = convert_utxos(utxos);
 
         let finalized = signer::finalize_transaction(
             tx.as_ref().clone(),
@@ -121,13 +124,13 @@ impl SimplicityProgram {
         signer: &crate::Signer,
         derivation_path: String,
         tx: &Transaction,
-        utxos: Vec<Arc<TxOut>>,
+        utxos: &[Arc<TxOut>],
         input_index: u32,
         network: &Network,
-    ) -> Result<Hex, LwkError> {
+    ) -> Result<Vec<u8>, LwkError> {
         let keypair = derive_keypair(signer, &derivation_path)?;
         let x_only_pubkey = keypair.x_only_public_key().0;
-        let utxos_inner = convert_utxos(&utxos);
+        let utxos_inner = convert_utxos(utxos);
 
         let sighash = signer::get_sighash_all(
             tx.as_ref(),
@@ -140,7 +143,7 @@ impl SimplicityProgram {
 
         let signature = keypair.sign_schnorr(sighash);
 
-        Ok(Hex::from(signature.serialize().to_vec()))
+        Ok(signature.serialize().to_vec())
     }
 
     /// Satisfy and execute this program in a transaction environment.
@@ -149,14 +152,14 @@ impl SimplicityProgram {
         &self,
         tx: &Transaction,
         program_public_key: &XOnlyPublicKey,
-        utxos: Vec<Arc<TxOut>>,
+        utxos: &[Arc<TxOut>],
         input_index: u32,
         witness_values: &SimplicityWitnessValues,
         network: &Network,
         log_level: SimplicityLogLevel,
     ) -> Result<Arc<SimplicityRunResult>, LwkError> {
         let x_only_key = program_public_key.to_simplicityhl()?;
-        let utxos_inner = convert_utxos(&utxos);
+        let utxos_inner = convert_utxos(utxos);
 
         let env = signer::get_and_verify_env(
             tx.as_ref(),

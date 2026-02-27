@@ -31,7 +31,7 @@ pub fn simplicity_control_block(
     let internal_key = internal_key.to_simplicityhl()?;
     let control_block = scripts::control_block(cmr.inner(), internal_key);
     let serialized = control_block.serialize();
-    ControlBlock::from_slice(&serialized)
+    ControlBlock::from_bytes(&serialized)
 }
 
 pub(crate) fn convert_utxos(utxos: &[Arc<TxOut>]) -> Vec<elements::TxOut> {
@@ -58,6 +58,8 @@ mod tests {
     use crate::simplicity::{SimplicityArguments, SimplicityProgram, SimplicityTypedValue};
     use crate::types::Hex;
 
+    use lwk_wollet::hashes::hex::FromHex;
+
     const TEST_PUBLIC_KEY: &str =
         "8a65c55726dc32b59b649ad0187eb44490de681bb02601b8d3f58c8b9fff9083";
     const P2PK_SOURCE: &str = include_str!("../../../lwk_simplicity/data/p2pk.simf");
@@ -66,9 +68,9 @@ mod tests {
     fn test_control_block_roundtrip() {
         let args = SimplicityArguments::new().add_value(
             "PUBLIC_KEY".to_string(),
-            &SimplicityTypedValue::u256(Hex::from_str(TEST_PUBLIC_KEY).unwrap()).unwrap(),
+            &SimplicityTypedValue::u256(&Vec::<u8>::from_hex(TEST_PUBLIC_KEY).unwrap()).unwrap(),
         );
-        let program = SimplicityProgram::load(P2PK_SOURCE.to_string(), &args).unwrap();
+        let program = SimplicityProgram::load(P2PK_SOURCE, &args).unwrap();
         let cmr = program.cmr();
 
         let internal_key = XOnlyPublicKey::new(TEST_PUBLIC_KEY).unwrap();
@@ -76,8 +78,8 @@ mod tests {
         let control_block_from_program = program.control_block(&internal_key).unwrap();
 
         assert_eq!(
-            control_block_from_program,
-            Hex::from(control_block.serialize())
+            control_block_from_program.to_bytes(),
+            control_block.to_bytes()
         );
     }
 }

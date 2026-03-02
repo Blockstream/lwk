@@ -81,7 +81,7 @@ async function runMultisigTest() {
 
 	// ANCHOR: multisig-send
 	// Carol creates a transaction send few sats to a certain address
-	const sats = BigInt(1000);
+	const sats = BigInt(100);
 	if (false) { // ANCHOR: ignore
 	const address = new lwk.Address("<address>");
 	const asset = new lwk.AssetId("<asset>");

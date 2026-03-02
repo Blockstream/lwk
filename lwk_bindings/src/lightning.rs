@@ -602,7 +602,13 @@ impl BoltzSession {
         Ok(data)
     }
 
-    /// Filter the swap list to only include restorable submarine swaps
+    /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
+    ///
+    /// - filter the submarine swaps
+    /// - add information from the session
+    /// - return typed data
+    ///
+    /// The refund address doesn't need to be the same used when creating the swap.
     pub fn restorable_submarine_swaps(
         &self,
         swap_list: &SwapList,

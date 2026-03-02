@@ -165,6 +165,7 @@ impl BoltzSession {
         Ok(inner)
     }
 
+    /// Blocking version of [`crate::BoltzSession::restorable_submarine_swaps`]
     pub fn restorable_submarine_swaps(
         &self,
         swaps: &[SwapRestoreResponse],

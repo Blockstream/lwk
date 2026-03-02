@@ -639,7 +639,13 @@ impl BoltzSession {
         Ok(data)
     }
 
-    /// Filter the swap list to only include restorable LBTC to BTC swaps
+    /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
+    ///
+    /// - filter the LBTC to BTC swaps
+    /// - add information from the session
+    /// - return typed data
+    ///
+    /// The claim and refund addresses don't need to be the same used when creating the swap.
     pub fn restorable_lbtc_to_btc_swaps(
         &self,
         swap_list: &SwapList,

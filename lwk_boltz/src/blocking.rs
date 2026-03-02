@@ -192,6 +192,7 @@ impl BoltzSession {
         Ok(inner)
     }
 
+    /// Blocking version of [`crate::BoltzSession::restorable_lbtc_to_btc_swaps`]
     pub fn restorable_lbtc_to_btc_swaps(
         &self,
         swaps: &[SwapRestoreResponse],

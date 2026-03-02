@@ -578,7 +578,13 @@ impl BoltzSession {
         Ok(self.inner.remove_swap(&swap_id)?)
     }
 
-    /// Filter the swap list to only include restorable reverse swaps
+    /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
+    ///
+    /// - filter the reverse swaps
+    /// - add information from the session
+    /// - return typed data
+    ///
+    /// The claim address doesn't need to be the same used when creating the swap.
     pub fn restorable_reverse_swaps(
         &self,
         swap_list: &SwapList,

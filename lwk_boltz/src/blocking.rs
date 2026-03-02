@@ -153,6 +153,7 @@ impl BoltzSession {
         self.inner.rescue_file()
     }
 
+    /// Blocking version of [`crate::BoltzSession::restorable_reverse_swaps`]
     pub fn restorable_reverse_swaps(
         &self,
         swaps: &[SwapRestoreResponse],

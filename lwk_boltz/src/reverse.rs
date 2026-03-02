@@ -238,8 +238,9 @@ impl BoltzSession {
 
     /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
     ///
-    /// - filter the reverse swaps that can be restored
-    /// - Add the private information from the session needed to restore the swap
+    /// - filter the reverse swaps
+    /// - add information from the session
+    /// - return typed data
     ///
     /// The claim address doesn't need to be the same used when creating the swap.
     pub async fn restorable_reverse_swaps(
@@ -250,11 +251,6 @@ impl BoltzSession {
         swaps
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Reverse))
-            .filter(|e| {
-                e.status != "swap.expired"
-                    && e.status != "invoice.settled"
-                    && e.status != "swap.created"
-            })
             .map(|e| {
                 convert_swap_restore_response_to_invoice_data(e, &self.mnemonic, claim_address)
             })

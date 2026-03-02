@@ -893,6 +893,9 @@ impl Wollet {
     }
 
     /// Get a wallet transaction
+    ///
+    /// Note: this returns any transaction that the wallet has in its storage,
+    /// which in some circumstances might include non-wallet txs.
     pub fn transaction(&self, txid: &Txid) -> Result<Option<WalletTx>, Error> {
         let height = self.cache.heights.get(txid).unwrap_or(&None);
         let tx = self.cache.all_txs.get(txid);

@@ -6,26 +6,17 @@ use std::sync::Arc;
 /// A control block for Taproot script-path spending.
 #[derive(uniffi::Object, Debug, Clone)]
 pub struct ControlBlock {
-    inner: elements::bitcoin::taproot::ControlBlock,
+    inner: elements::taproot::ControlBlock,
 }
 
-impl From<elements::bitcoin::taproot::ControlBlock> for ControlBlock {
-    fn from(inner: elements::bitcoin::taproot::ControlBlock) -> Self {
+impl From<elements::taproot::ControlBlock> for ControlBlock {
+    fn from(inner: elements::taproot::ControlBlock) -> Self {
         Self { inner }
     }
 }
 
-impl TryFrom<elements::taproot::ControlBlock> for ControlBlock {
-    type Error = elements::bitcoin::taproot::TaprootError;
-
-    fn try_from(value: elements::taproot::ControlBlock) -> Result<Self, Self::Error> {
-        let inner = elements::bitcoin::taproot::ControlBlock::decode(value.serialize().as_ref())?;
-        Ok(Self { inner })
-    }
-}
-
-impl AsRef<elements::bitcoin::taproot::ControlBlock> for ControlBlock {
-    fn as_ref(&self) -> &elements::bitcoin::taproot::ControlBlock {
+impl AsRef<elements::taproot::ControlBlock> for ControlBlock {
+    fn as_ref(&self) -> &elements::taproot::ControlBlock {
         &self.inner
     }
 }
@@ -35,7 +26,7 @@ impl ControlBlock {
     /// Parse a control block from serialized bytes.
     #[uniffi::constructor]
     pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
-        let inner = elements::bitcoin::taproot::ControlBlock::decode(bytes)?;
+        let inner = elements::taproot::ControlBlock::from_slice(bytes)?;
         Ok(Arc::new(Self { inner }))
     }
 
@@ -46,7 +37,7 @@ impl ControlBlock {
 
     /// Get the leaf version of the control block.
     pub fn leaf_version(&self) -> u8 {
-        self.inner.leaf_version.to_consensus()
+        self.inner.leaf_version.as_u8()
     }
 
     /// Get the internal key of the control block.

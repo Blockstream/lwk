@@ -271,8 +271,8 @@ impl From<elements::bitcoin::taproot::TaprootBuilderError> for LwkError {
     }
 }
 
-impl From<elements::bitcoin::taproot::TaprootError> for LwkError {
-    fn from(value: elements::bitcoin::taproot::TaprootError) -> Self {
+impl From<elements::taproot::TaprootError> for LwkError {
+    fn from(value: elements::taproot::TaprootError) -> Self {
         LwkError::Generic {
             msg: format!("{value:?}"),
         }

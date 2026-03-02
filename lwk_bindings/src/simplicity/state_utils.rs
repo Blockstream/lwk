@@ -114,7 +114,7 @@ impl StateTaprootSpendInfo {
             .ok_or_else(|| LwkError::Generic {
                 msg: "CMR is not part of this taproot spend info".into(),
             })?;
-        Ok(Arc::new(control_block.try_into()?))
+        Ok(Arc::new(control_block.into()))
     }
 
     /// Get script pubkey as v1 P2TR output script for the tweaked output key.

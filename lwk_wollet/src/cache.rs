@@ -172,8 +172,7 @@ impl Cache {
             .all_txs
             .iter()
             .filter(|(_, tx)| tx.output.is_empty()) // Only dummy tx have no outputs
-            .map(|(_, tx)| tx.input.iter().map(|i| i.previous_output))
-            .flatten()
+            .flat_map(|(_, tx)| tx.input.iter().map(|i| i.previous_output))
             .collect();
 
         Ok(self

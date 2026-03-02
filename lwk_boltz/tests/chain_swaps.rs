@@ -392,7 +392,9 @@ mod tests {
             .filter(|data| data.create_chain_response.id == response.swap_id())
             .collect();
         log::info!("Found {swaps:?} restorable chain swaps");
-        assert_eq!(swaps.len(), 0); // the just created swap is not restorable.
+
+        // Every swaps is now restored, independently of the status of the swap.
+        assert_eq!(swaps.len(), 1);
 
         let swap_id = response.swap_id().to_string();
         let lockup_address = response.lockup_address().to_string();

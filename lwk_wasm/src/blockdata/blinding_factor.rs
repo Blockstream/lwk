@@ -3,12 +3,11 @@ use crate::Error;
 use std::str::FromStr;
 
 use lwk_wollet::elements::confidential;
+use lwk_wollet::elements::pset::serialize::Serialize;
 
 use wasm_bindgen::prelude::*;
 
 /// A blinding factor for asset commitments.
-///
-/// See [`confidential::AssetBlindingFactor`] for more details.
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct AssetBlindingFactor {
@@ -41,10 +40,10 @@ impl AsRef<confidential::AssetBlindingFactor> for AssetBlindingFactor {
 
 #[wasm_bindgen]
 impl AssetBlindingFactor {
-    /// Creates an `AssetBlindingFactor` from a hex string.
-    #[wasm_bindgen(constructor)]
-    pub fn new(hex: &str) -> Result<AssetBlindingFactor, Error> {
-        let inner = confidential::AssetBlindingFactor::from_str(hex)?;
+    /// Creates an `AssetBlindingFactor` from a string.
+    #[wasm_bindgen(js_name = fromString)]
+    pub fn from_string(s: &str) -> Result<AssetBlindingFactor, Error> {
+        let inner = confidential::AssetBlindingFactor::from_str(s)?;
         Ok(AssetBlindingFactor { inner })
     }
 
@@ -67,8 +66,9 @@ impl AssetBlindingFactor {
     /// This is the internal representation used by secp256k1. The byte order is
     /// reversed compared to the hex string representation (which uses big-endian,
     /// following Bitcoin display conventions).
-    pub fn bytes(&self) -> Vec<u8> {
-        self.inner.into_inner().as_ref().to_vec()
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.inner.into_inner().serialize()
     }
 
     /// Returns string representation of the ABF
@@ -79,8 +79,6 @@ impl AssetBlindingFactor {
 }
 
 /// A blinding factor for value commitments.
-///
-/// See [`confidential::ValueBlindingFactor`] for more details.
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct ValueBlindingFactor {
@@ -113,10 +111,10 @@ impl AsRef<confidential::ValueBlindingFactor> for ValueBlindingFactor {
 
 #[wasm_bindgen]
 impl ValueBlindingFactor {
-    /// Creates a `ValueBlindingFactor` from a hex string.
-    #[wasm_bindgen(constructor)]
-    pub fn new(hex: &str) -> Result<ValueBlindingFactor, Error> {
-        let inner = confidential::ValueBlindingFactor::from_str(hex)?;
+    /// Creates a `ValueBlindingFactor` from a string.
+    #[wasm_bindgen(js_name = fromString)]
+    pub fn from_string(s: &str) -> Result<ValueBlindingFactor, Error> {
+        let inner = confidential::ValueBlindingFactor::from_str(s)?;
         Ok(ValueBlindingFactor { inner })
     }
 
@@ -139,8 +137,9 @@ impl ValueBlindingFactor {
     /// This is the internal representation used by secp256k1. The byte order is
     /// reversed compared to the hex string representation (which uses big-endian,
     /// following Bitcoin display conventions).
-    pub fn bytes(&self) -> Vec<u8> {
-        self.inner.into_inner().as_ref().to_vec()
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.inner.into_inner().serialize()
     }
 
     /// Returns string representation of the VBF
@@ -171,36 +170,36 @@ mod tests {
     #[wasm_bindgen_test]
     fn test_asset_blinding_factor() {
         let hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
-        let abf = AssetBlindingFactor::new(hex).unwrap();
+        let abf = AssetBlindingFactor::from_string(hex).unwrap();
         assert_eq!(abf.to_string_js(), hex);
-        assert_eq!(abf.bytes().to_hex(), reverse_hex(hex));
+        assert_eq!(abf.to_bytes().to_hex(), reverse_hex(hex));
 
-        let bytes = abf.bytes();
+        let bytes = abf.to_bytes();
         let abf2 = AssetBlindingFactor::from_bytes(&bytes).unwrap();
         assert_eq!(abf, abf2);
 
         let zero = AssetBlindingFactor::zero();
-        assert_eq!(zero.bytes(), vec![0u8; 32]);
+        assert_eq!(zero.to_bytes(), vec![0u8; 32]);
 
-        assert!(AssetBlindingFactor::new("invalid").is_err());
+        assert!(AssetBlindingFactor::from_string("invalid").is_err());
         assert!(AssetBlindingFactor::from_bytes(&[0u8; 16]).is_err());
     }
 
     #[wasm_bindgen_test]
     fn test_value_blinding_factor() {
         let hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
-        let vbf = ValueBlindingFactor::new(hex).unwrap();
+        let vbf = ValueBlindingFactor::from_string(hex).unwrap();
         assert_eq!(vbf.to_string_js(), hex);
-        assert_eq!(vbf.bytes().to_hex(), reverse_hex(hex));
+        assert_eq!(vbf.to_bytes().to_hex(), reverse_hex(hex));
 
-        let bytes = vbf.bytes();
+        let bytes = vbf.to_bytes();
         let vbf2 = ValueBlindingFactor::from_bytes(&bytes).unwrap();
         assert_eq!(vbf, vbf2);
 
         let zero = ValueBlindingFactor::zero();
-        assert_eq!(zero.bytes(), vec![0u8; 32]);
+        assert_eq!(zero.to_bytes(), vec![0u8; 32]);
 
-        assert!(ValueBlindingFactor::new("invalid").is_err());
+        assert!(ValueBlindingFactor::from_string("invalid").is_err());
         assert!(ValueBlindingFactor::from_bytes(&[0u8; 16]).is_err());
     }
 }

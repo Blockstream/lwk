@@ -894,9 +894,9 @@ impl Wollet {
 
     /// Get a wallet transaction
     pub fn transaction(&self, txid: &Txid) -> Result<Option<WalletTx>, Error> {
-        let height = self.cache.heights.get(txid);
+        let height = self.cache.heights.get(txid).unwrap_or(&None);
         let tx = self.cache.all_txs.get(txid);
-        if let (Some(height), Some(tx)) = (height, tx) {
+        if let Some(tx) = tx {
             let txos = self.txos_map()?;
 
             let balance = tx_balance(*txid, tx, &txos);

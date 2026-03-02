@@ -4320,6 +4320,7 @@ fn test_removed_tx() {
     let txs = w.wollet.transactions().unwrap();
     assert!(txs.iter().all(|tx| tx.txid != txid));
 
-    // FIXME: tx should be reachable if you know the txid
-    assert!(w.wollet.transaction(&txid).unwrap().is_none());
+    // Tx should be reachable if you know the txid
+    assert!(w.wollet.transaction(&txid).unwrap().is_some());
+    // Note: some fields (eg inputs and outputs) might not be accurate
 }

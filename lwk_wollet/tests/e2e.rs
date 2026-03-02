@@ -4280,3 +4280,46 @@ fn test_merge_updates_e2e() {
     assert_eq!(expected_utxo_count, wollet.utxos().unwrap().len());
     assert_eq!(wollet.updates().unwrap().len(), 1);
 }
+
+#[test]
+fn test_removed_tx() {
+    // Behavior for a removed tx
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &desc);
+
+    let lbtc = w.policy_asset();
+    w.fund_btc(&env);
+
+    let node_address = env.elementsd_getnewaddress();
+    let mut pset = w
+        .tx_builder()
+        .add_recipient(&node_address, 1000, lbtc)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let txid = tx.txid();
+    w.wollet.apply_transaction(tx).unwrap();
+
+    // Tx is both in list and can be obtained with the txid
+    let txs = w.wollet.transactions().unwrap();
+    assert!(txs.iter().any(|tx| tx.txid == txid));
+    assert!(w.wollet.transaction(&txid).unwrap().is_some());
+
+    // Sync: tx was never broadcast so it disappears from the list
+    w.sync();
+    let txs = w.wollet.transactions().unwrap();
+    assert!(txs.iter().all(|tx| tx.txid != txid));
+
+    // FIXME: tx should be reachable if you know the txid
+    assert!(w.wollet.transaction(&txid).unwrap().is_none());
+}

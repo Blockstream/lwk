@@ -4238,14 +4238,22 @@ fn test_merge_updates_e2e() {
     let tx = wollet.finalize(&mut pset).unwrap();
     let phantom_txid = tx.txid();
     wollet.apply_transaction(tx).unwrap();
-    assert!(wollet.transaction(&phantom_txid).unwrap().is_some());
+    assert!(wollet
+        .transactions()
+        .unwrap()
+        .iter()
+        .any(|tx| tx.txid == phantom_txid));
 
     // Sync: electrum doesn't know about the phantom tx, so it will be deleted
     let mut client = test_client_electrum(&env.electrum_url());
     let update = client.full_scan(&wollet).unwrap().unwrap();
     assert!(update.txid_height_delete.contains(&phantom_txid));
     wollet.apply_update(update).unwrap();
-    assert!(wollet.transaction(&phantom_txid).unwrap().is_none());
+    assert!(wollet
+        .transactions()
+        .unwrap()
+        .iter()
+        .all(|tx| tx.txid != phantom_txid));
 
     // State should be back to what it was before the phantom tx
     assert_eq!(expected_balance, wollet.balance().unwrap());

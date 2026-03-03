@@ -1543,8 +1543,9 @@ mod tests {
         let update3 = Update::deserialize(&update3_bytes).unwrap();
 
         // Verify updates can be applied sequentially
-        let mut wollet =
-            Wollet::without_persist(ElementsNetwork::default_regtest(), desc.clone()).unwrap();
+        let mut wollet = WolletBuilder::new(ElementsNetwork::default_regtest(), desc.clone())
+            .build()
+            .unwrap();
 
         // After update 1: should be empty (tip only update)
         wollet.apply_update(update1).unwrap();
@@ -1677,8 +1678,9 @@ mod tests {
             Update::deserialize(&merged_bytes).expect("Failed to deserialize merged update");
 
         // Apply merged update to a fresh wallet
-        let mut fresh_wollet =
-            Wollet::without_persist(ElementsNetwork::default_regtest(), desc.clone()).unwrap();
+        let mut fresh_wollet = WolletBuilder::new(ElementsNetwork::default_regtest(), desc.clone())
+            .build()
+            .unwrap();
         fresh_wollet
             .apply_update(merged_update)
             .expect("Failed to apply merged update");

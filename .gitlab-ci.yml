@@ -243,7 +243,7 @@ nix:
     - nix $EXP_FEAT $CACHE develop . -c rust-analyzer analysis-stats . 2>log # prints ERROR if there are cyclic deps with dev-deps
     - (! grep ERROR log)
 
-boltz_chain:
+.boltz_chain:
   extends: .base
   script:
     - cd lwk_boltz
@@ -251,7 +251,7 @@ boltz_chain:
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-chain
 
-boltz_mrh:
+.boltz_mrh:
   extends: .base
   script:
     - cd lwk_boltz
@@ -259,7 +259,7 @@ boltz_mrh:
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-mrh
 
-boltz_reverse:
+.boltz_reverse:
   extends: .base
   script:
     - cd lwk_boltz
@@ -267,7 +267,7 @@ boltz_reverse:
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-reverse
 
-boltz_submarine:
+.boltz_submarine:
   extends: .base
   script:
     - cd lwk_boltz

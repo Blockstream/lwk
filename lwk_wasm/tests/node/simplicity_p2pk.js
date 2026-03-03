@@ -4,6 +4,12 @@ const fs = require('fs');
 const path = require('path');
 const lwk = require('lwk_node');
 
+const {
+  assertEqual,
+  assertNotNull,
+  assertStringAndBytesRoundtrip,
+} = require("./scripts/assert-helpers");
+
 const P2PK_SOURCE = fs.readFileSync(path.join(__dirname, '../../../lwk_simplicity/data/p2pk.simf'), 'utf8');
 
 const TEST_PUBLIC_KEY = "8a65c55726dc32b59b649ad0187eb44490de681bb02601b8d3f58c8b9fff9083";
@@ -15,18 +21,6 @@ const TEST_FINALIZED_TX = "02000000010113226c2af4a18516258790b9c6f118afdf0bfe9cb
 
 const TEST_CMR = "b685a4424842507d7d747e6611a740d8c421038e9744e75d423d0e2e9f164d02";
 const TEST_ADDRESS = "tex1plzu3devry87vlds49yj9hjh8d00semdukr0jkg7z4j834hld2a6s6y4amk";
-
-function assertEqual(actual, expected, message) {
-  if (actual !== expected) {
-    throw new Error(`${message}: expected "${expected}", got "${actual}"`);
-  }
-}
-
-function assertNotNull(value, message) {
-  if (value === null || value === undefined) {
-    throw new Error(`${message}: value is null or undefined`);
-  }
-}
 
 async function runSimplicityP2pkTest() {
   try {
@@ -93,6 +87,9 @@ async function runSimplicityP2pkTest() {
     args3 = args3.addValue("PUBLIC_KEY", lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY));
     const program2 = new lwk.SimplicityProgram(P2PK_SOURCE, args3);
     assertEqual(program2.cmr().toHex(), TEST_CMR, "Program2 CMR mismatch");
+
+    // Round-trips
+    assertStringAndBytesRoundtrip(lwk.ContractHash, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
   } catch (error) {
     console.error("simplicity_p2pk test failed:", error);
     throw error;

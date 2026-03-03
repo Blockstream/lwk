@@ -66,7 +66,11 @@ fn test_prune() {
 
     let network = ElementsNetwork::default_regtest();
     let wd: WolletDescriptor = desc.parse().unwrap();
-    let mut w_prune_wit = Wollet::with_fs_persist(network, wd, &tmp_dir).unwrap();
+    let mut w_prune_wit = WolletBuilder::new(network, wd)
+        .with_legacy_fs_store(&tmp_dir)
+        .unwrap()
+        .build()
+        .unwrap();
 
     let mut update = client.full_scan(&w_prune_wit).unwrap().unwrap();
     update.prune_witnesses();

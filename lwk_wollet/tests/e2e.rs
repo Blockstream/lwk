@@ -4193,7 +4193,7 @@ fn test_merge_updates_e2e() {
     let db_root_dir = wallet.db_root_dir();
 
     // Reconstruct the encrypted file store
-    // this is needed to use the same path/encryption created by the TestWollet ( which use Wollet::with_fs_persist )
+    // this is needed to use the same path/encryption created by the TestWollet ( which use with_legacy_fs_store )
     let mut path = db_root_dir.path().to_path_buf();
     path.push(network.as_str());
     path.push("enc_cache");
@@ -4218,7 +4218,11 @@ fn test_merge_updates_e2e() {
 
     // Verify the merged wallet can be reopened and still has correct state
     drop(wollet);
-    let mut wollet = Wollet::with_fs_persist(network, descriptor.clone(), &db_root_dir).unwrap();
+    let mut wollet = WolletBuilder::new(network, descriptor.clone())
+        .with_legacy_fs_store(&db_root_dir)
+        .unwrap()
+        .build()
+        .unwrap();
     assert_eq!(expected_balance, wollet.balance().unwrap());
     assert_eq!(expected_tx_count, wollet.transactions().unwrap().len());
     assert_eq!(expected_utxo_count, wollet.utxos().unwrap().len());
@@ -4282,7 +4286,11 @@ fn test_merge_updates_e2e() {
 
     // Final reopen to verify persistence of the merged-with-deletes state
     drop(wollet);
-    let wollet = Wollet::with_fs_persist(network, descriptor, &db_root_dir).unwrap();
+    let wollet = WolletBuilder::new(network, descriptor)
+        .with_legacy_fs_store(&db_root_dir)
+        .unwrap()
+        .build()
+        .unwrap();
     assert_eq!(expected_balance, wollet.balance().unwrap());
     assert_eq!(expected_tx_count, wollet.transactions().unwrap().len());
     assert_eq!(expected_utxo_count, wollet.utxos().unwrap().len());

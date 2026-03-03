@@ -430,6 +430,7 @@ impl Wollet {
     }
 
     /// Create a new wallet persisting on file system
+    #[deprecated(since = "0.16.0", note = "please use `WolletBuilder` instead")]
     pub fn with_fs_persist<P: AsRef<Path>>(
         network: ElementsNetwork,
         descriptor: WolletDescriptor,
@@ -1438,9 +1439,11 @@ mod tests {
             .unwrap();
 
         let tempdir = tempfile::tempdir().unwrap();
-        let mut wollet =
-            Wollet::with_fs_persist(ElementsNetwork::LiquidTestnet, desc.clone(), &tempdir)
-                .unwrap();
+        let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc.clone())
+            .with_legacy_fs_store(&tempdir)
+            .unwrap()
+            .build()
+            .unwrap();
 
         let tip = lwk_test_util::liquid_block_1().header;
         let update = Update {
@@ -1467,9 +1470,11 @@ mod tests {
         wollet.apply_update(update2).unwrap();
 
         // We restore the wallet and expects the same status
-        let restored_wollet =
-            Wollet::with_fs_persist(ElementsNetwork::LiquidTestnet, desc, &tempdir).unwrap();
-
+        let restored_wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc)
+            .with_legacy_fs_store(&tempdir)
+            .unwrap()
+            .build()
+            .unwrap();
         assert_eq!(wollet.status(), restored_wollet.status());
     }
 
@@ -1493,8 +1498,11 @@ mod tests {
         update_path.push("000000000000");
         std::fs::write(update_path, &enc_bytes).unwrap();
 
-        let wollet =
-            Wollet::with_fs_persist(ElementsNetwork::LiquidTestnet, desc, tempdir.path()).unwrap();
+        let wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc)
+            .with_legacy_fs_store(tempdir.path())
+            .unwrap()
+            .build()
+            .unwrap();
 
         assert_eq!(wollet.updates().unwrap().len(), 1);
         assert_eq!(wollet.tip().height(), 1360180);

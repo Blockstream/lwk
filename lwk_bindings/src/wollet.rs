@@ -49,12 +49,11 @@ impl Wollet {
         descriptor: &WolletDescriptor,
         datadir: Option<String>,
     ) -> Result<Arc<Self>, LwkError> {
-        let inner = match datadir {
-            Some(path) => {
-                lwk_wollet::Wollet::with_fs_persist(network.into(), descriptor.into(), path)?
-            }
-            None => lwk_wollet::WolletBuilder::new(network.into(), descriptor.into()).build()?,
-        };
+        let mut builder = lwk_wollet::WolletBuilder::new(network.into(), descriptor.into());
+        if let Some(path) = datadir {
+            builder = builder.with_legacy_fs_store(&path)?;
+        }
+        let inner = builder.build()?;
 
         Ok(Arc::new(Self {
             inner: Mutex::new(inner),

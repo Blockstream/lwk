@@ -1,16 +1,14 @@
 use crate::Error;
 
+use std::fmt::Display;
 use std::str::FromStr;
 
 use lwk_wollet::elements;
 use lwk_wollet::elements::hashes::Hash;
-use lwk_wollet::elements::hex::ToHex;
 
 use wasm_bindgen::prelude::*;
 
 /// The hash of an asset contract.
-///
-/// See [`elements::ContractHash`] for more details.
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct ContractHash {
@@ -41,35 +39,39 @@ impl AsRef<elements::ContractHash> for ContractHash {
     }
 }
 
+impl Display for ContractHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
+    }
+}
+
 #[wasm_bindgen]
 impl ContractHash {
-    /// Creates a `ContractHash` from a hex string.
-    #[wasm_bindgen(constructor)]
-    pub fn new(hex: &str) -> Result<ContractHash, Error> {
-        let inner = elements::ContractHash::from_str(hex)?;
+    /// Creates a `ContractHash` from a string.
+    #[wasm_bindgen(js_name = fromString)]
+    pub fn from_string(s: &str) -> Result<ContractHash, Error> {
+        let inner = elements::ContractHash::from_str(s)?;
         Ok(ContractHash { inner })
     }
 
     /// Creates a `ContractHash` from a byte slice.
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &[u8]) -> Result<ContractHash, Error> {
-        let array: [u8; 32] = bytes
-            .try_into()
-            .map_err(|_| Error::Generic(format!("expected 32 bytes, got {}", bytes.len())))?;
         Ok(ContractHash {
-            inner: elements::ContractHash::from_byte_array(array),
+            inner: elements::ContractHash::from_byte_array(bytes.try_into()?),
         })
     }
 
     /// Returns the bytes (32 bytes).
-    pub fn bytes(&self) -> Vec<u8> {
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Vec<u8> {
         self.inner.to_byte_array().to_vec()
     }
 
-    /// Returns the hex-encoded representation.
-    #[wasm_bindgen(js_name = toHex)]
-    pub fn to_hex(&self) -> String {
-        self.inner.to_hex()
+    /// Returns the string representation.
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        self.to_string()
     }
 }
 
@@ -83,14 +85,14 @@ mod tests {
     #[wasm_bindgen_test]
     fn test_contract_hash() {
         let hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
-        let ch = ContractHash::new(hex).unwrap();
-        assert_eq!(ch.to_hex(), hex);
+        let ch = ContractHash::from_string(hex).unwrap();
+        assert_eq!(ch.to_string(), hex);
 
-        let bytes = ch.bytes();
+        let bytes = ch.to_bytes();
         let ch2 = ContractHash::from_bytes(&bytes).unwrap();
         assert_eq!(ch, ch2);
 
-        assert!(ContractHash::new("invalid").is_err());
+        assert!(ContractHash::from_string("invalid").is_err());
         assert!(ContractHash::from_bytes(&[0u8; 16]).is_err());
     }
 }

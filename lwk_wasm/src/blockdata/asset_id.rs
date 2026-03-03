@@ -225,9 +225,10 @@ mod tests {
             "[elements]78b3e3232680f21f4be8c055a4fdb2edf4681bd6c0ae40edeca51331839106b4:1",
         )
         .unwrap();
-        let contract_hash =
-            ContractHash::new("a92d0f0f0a090c09b7970ce43a12448f55c1cc00325a6a8547d57d69f52378ec")
-                .unwrap();
+        let contract_hash = ContractHash::from_string(
+            "a92d0f0f0a090c09b7970ce43a12448f55c1cc00325a6a8547d57d69f52378ec",
+        )
+        .unwrap();
 
         let asset_id = super::asset_id_from_issuance(&outpoint, &contract_hash);
         assert_eq!(
@@ -242,6 +243,6 @@ mod tests {
         );
 
         let entropy = super::generate_asset_entropy(&outpoint, &contract_hash).unwrap();
-        assert_eq!(entropy.bytes().len(), 32);
+        assert_eq!(entropy.to_bytes().len(), 32);
     }
 }

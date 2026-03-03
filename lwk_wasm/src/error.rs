@@ -85,6 +85,9 @@ pub enum Error {
     Secp256k1Zkp(#[from] lwk_wollet::elements::secp256k1_zkp::Error),
 
     #[error(transparent)]
+    TryFromSlice(#[from] std::array::TryFromSliceError),
+
+    #[error(transparent)]
     Taproot(#[from] lwk_wollet::elements::bitcoin::taproot::TaprootError),
 
     #[error("{0:?}")]
@@ -191,6 +194,7 @@ impl Error {
             Error::KeyFromSlice(_) => "KeyFromSlice",
             Error::FromWif(_) => "FromWif",
             Error::Secp256k1Zkp(_) => "Secp256k1Zkp",
+            Error::TryFromSlice(_) => "TryFromSlice",
             Error::Taproot(_) => "Taproot",
             Error::Unblind(_) => "Unblind",
             Error::Generic(_) => "Generic",

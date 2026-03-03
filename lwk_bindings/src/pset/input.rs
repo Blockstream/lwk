@@ -2,10 +2,7 @@ use crate::types::AssetId;
 #[cfg(feature = "simplicity")]
 use crate::LwkError;
 #[cfg(feature = "simplicity")]
-use crate::{
-    types::{ContractHash, Tweak},
-    TxSequence,
-};
+use crate::{types::Tweak, TxSequence};
 use crate::{Issuance, Script, Txid};
 #[cfg(feature = "simplicity")]
 use crate::{OutPoint, TxOut};
@@ -15,9 +12,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use elements::pset::Input;
-
-#[cfg(feature = "simplicity")]
-use lwk_wollet::hashes::Hash;
 
 /// PSET input (read-only)
 #[derive(uniffi::Object, Debug)]
@@ -164,12 +158,11 @@ impl PsetInputBuilder {
         Ok(())
     }
 
-    /// Set the issuance asset entropy.
-    pub fn issuance_asset_entropy(&self, contract_hash: &ContractHash) -> Result<(), LwkError> {
-        let inner_hash: elements::ContractHash = contract_hash.into();
+    /// Set the issuance asset entropy (should be exactly 32 bytes long, rejected otherwise).
+    pub fn issuance_asset_entropy(&self, issuance_asset_entropy: &[u8]) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
-        inner.issuance_asset_entropy = Some(inner_hash.to_byte_array());
+        inner.issuance_asset_entropy = Some(issuance_asset_entropy.try_into()?);
         Ok(())
     }
 

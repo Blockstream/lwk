@@ -440,7 +440,9 @@ mod tests {
             .filter(|data| data.create_swap_response.id == swap_id)
             .collect();
         log::info!("Found {swaps:?} restorable submarine swaps");
-        assert_eq!(swaps.len(), 0); // the just created swap is not restorable.
+
+        // Every swaps is now restored, independently of the status of the swap.
+        assert_eq!(swaps.len(), 1);
 
         utils::send_to_address(
             Chain::Liquid(LiquidChain::LiquidRegtest),

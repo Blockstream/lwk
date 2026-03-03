@@ -254,8 +254,9 @@ impl BoltzSession {
 
     /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
     ///
-    /// - filter the submarine swaps that can be restored
-    /// - Add the private information from the session needed to restore the swap
+    /// - filter the submarine swaps
+    /// - add information from the session
+    /// - return typed data
     ///
     /// The refund address doesn't need to be the same used when creating the swap.
     pub async fn restorable_submarine_swaps(
@@ -266,13 +267,6 @@ impl BoltzSession {
         swaps
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Submarine))
-            .filter(|e| {
-                e.status != "swap.expired"
-                    && e.status != "transaction.claimed"
-                    && e.status != "swap.created"
-                    && e.status != "invoice.set"
-                    && e.status != "transaction.refunded"
-            })
             .map(|e| {
                 convert_swap_restore_response_to_prepare_pay_data(
                     e,

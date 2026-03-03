@@ -578,7 +578,13 @@ impl BoltzSession {
         Ok(self.inner.remove_swap(&swap_id)?)
     }
 
-    /// Filter the swap list to only include restorable reverse swaps
+    /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
+    ///
+    /// - filter the reverse swaps
+    /// - add information from the session
+    /// - return typed data
+    ///
+    /// The claim address doesn't need to be the same used when creating the swap.
     pub fn restorable_reverse_swaps(
         &self,
         swap_list: &SwapList,
@@ -596,7 +602,13 @@ impl BoltzSession {
         Ok(data)
     }
 
-    /// Filter the swap list to only include restorable submarine swaps
+    /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
+    ///
+    /// - filter the submarine swaps
+    /// - add information from the session
+    /// - return typed data
+    ///
+    /// The refund address doesn't need to be the same used when creating the swap.
     pub fn restorable_submarine_swaps(
         &self,
         swap_list: &SwapList,
@@ -613,7 +625,13 @@ impl BoltzSession {
         Ok(data)
     }
 
-    /// Filter the swap list to only include restorable BTC to LBTC swaps
+    /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
+    ///
+    /// - filter the BTC to LBTC swaps
+    /// - add information from the session
+    /// - return typed data
+    ///
+    /// The claim and refund addresses don't need to be the same used when creating the swap.
     pub fn restorable_btc_to_lbtc_swaps(
         &self,
         swap_list: &SwapList,
@@ -633,7 +651,13 @@ impl BoltzSession {
         Ok(data)
     }
 
-    /// Filter the swap list to only include restorable LBTC to BTC swaps
+    /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
+    ///
+    /// - filter the LBTC to BTC swaps
+    /// - add information from the session
+    /// - return typed data
+    ///
+    /// The claim and refund addresses don't need to be the same used when creating the swap.
     pub fn restorable_lbtc_to_btc_swaps(
         &self,
         swap_list: &SwapList,

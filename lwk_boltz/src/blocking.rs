@@ -153,6 +153,7 @@ impl BoltzSession {
         self.inner.rescue_file()
     }
 
+    /// Blocking version of [`crate::BoltzSession::restorable_reverse_swaps`]
     pub fn restorable_reverse_swaps(
         &self,
         swaps: &[SwapRestoreResponse],
@@ -164,6 +165,7 @@ impl BoltzSession {
         Ok(inner)
     }
 
+    /// Blocking version of [`crate::BoltzSession::restorable_submarine_swaps`]
     pub fn restorable_submarine_swaps(
         &self,
         swaps: &[SwapRestoreResponse],
@@ -175,6 +177,7 @@ impl BoltzSession {
         Ok(inner)
     }
 
+    /// Blocking version of [`crate::BoltzSession::restorable_btc_to_lbtc_swaps`]
     pub fn restorable_btc_to_lbtc_swaps(
         &self,
         swaps: &[SwapRestoreResponse],
@@ -191,6 +194,7 @@ impl BoltzSession {
         Ok(inner)
     }
 
+    /// Blocking version of [`crate::BoltzSession::restorable_lbtc_to_btc_swaps`]
     pub fn restorable_lbtc_to_btc_swaps(
         &self,
         swaps: &[SwapRestoreResponse],

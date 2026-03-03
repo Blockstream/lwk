@@ -233,7 +233,7 @@ wasm:
     paths:
       - lwk_wasm/pkg
 
-nix:
+.nix:
   image: xenoky/lwk-nix-builder@sha256:65e7e1999ec3eba96f804a30fd8d1ef6d9842d99a61fb02bf4147dee7d53b9dc
   variables:
       EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes

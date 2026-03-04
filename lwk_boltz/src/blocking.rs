@@ -330,6 +330,11 @@ impl PreparePayResponse {
         self.inner.lockup_txid()
     }
 
+    /// See [`crate::PreparePayResponse::set_lockup_txid()`]
+    pub fn set_lockup_txid(&mut self, txid: String) -> Result<(), Error> {
+        self.inner.set_lockup_txid(txid)
+    }
+
     pub fn serialize(&self) -> Result<String, Error> {
         self.inner.serialize()
     }
@@ -418,6 +423,11 @@ impl LockupResponse {
     /// See [`crate::LockupResponse::lockup_txid()`]
     pub fn lockup_txid(&self) -> Option<&str> {
         self.inner.lockup_txid()
+    }
+
+    /// See [`crate::LockupResponse::set_lockup_txid()`]
+    pub fn set_lockup_txid(&mut self, txid: String) -> Result<(), Error> {
+        self.inner.set_lockup_txid(txid)
     }
 
     pub fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {

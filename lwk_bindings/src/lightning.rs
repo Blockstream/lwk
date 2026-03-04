@@ -842,6 +842,20 @@ impl PreparePayResponse {
             .map(|txid| txid.to_string()))
     }
 
+    /// Optionally set the lockup transaction txid.
+    ///
+    /// This can be useful when the app creates and broadcasts the lockup transaction and wants to
+    /// persist the txid immediately before websocket updates arrive from Boltz. It helps avoid a
+    /// race where a fast retry flow could submit the lockup transaction twice.
+    pub fn set_lockup_txid(&self, txid: String) -> Result<(), LwkError> {
+        self.inner
+            .lock()?
+            .as_mut()
+            .ok_or(LwkError::ObjectConsumed)?
+            .set_lockup_txid(txid)?;
+        Ok(())
+    }
+
     pub fn advance(&self) -> Result<PaymentState, LwkError> {
         let mut lock = self.inner.lock()?;
         let mut response = lock.take().ok_or(LwkError::ObjectConsumed)?;
@@ -1063,6 +1077,20 @@ impl LockupResponse {
             .ok_or(LwkError::ObjectConsumed)?
             .lockup_txid()
             .map(|txid| txid.to_string()))
+    }
+
+    /// Optionally set the lockup transaction txid.
+    ///
+    /// This can be useful when the app creates and broadcasts the lockup transaction and wants to
+    /// persist the txid immediately before websocket updates arrive from Boltz. It helps avoid a
+    /// race where a fast retry flow could submit the lockup transaction twice.
+    pub fn set_lockup_txid(&self, txid: String) -> Result<(), LwkError> {
+        self.inner
+            .lock()?
+            .as_mut()
+            .ok_or(LwkError::ObjectConsumed)?
+            .set_lockup_txid(txid)?;
+        Ok(())
     }
 
     pub fn advance(&self) -> Result<PaymentState, LwkError> {

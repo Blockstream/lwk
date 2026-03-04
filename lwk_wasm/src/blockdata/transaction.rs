@@ -52,11 +52,27 @@ impl AsRef<elements::Transaction> for Transaction {
 #[wasm_bindgen]
 impl Transaction {
     /// Creates a `Transaction`
+    ///
+    /// Deprecated: use `fromString()` instead.
     #[wasm_bindgen(constructor)]
     pub fn new(tx_hex: &str) -> Result<Transaction, Error> {
         let bytes = Vec::<u8>::from_hex(tx_hex)?;
         let tx: elements::Transaction = elements::Transaction::deserialize(&bytes)?;
         Ok(tx.into())
+    }
+
+    /// Creates a `Transaction` from hex-encoded consensus bytes.
+    #[wasm_bindgen(js_name = fromString)]
+    pub fn from_string(s: &str) -> Result<Transaction, Error> {
+        let bytes = Vec::<u8>::from_hex(s)?;
+        Self::from_bytes(&bytes)
+    }
+
+    /// Creates a `Transaction` from consensus-encoded bytes.
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(bytes: &[u8]) -> Result<Transaction, Error> {
+        let tx: elements::Transaction = elements::Transaction::deserialize(bytes)?;
+        Ok(Transaction { inner: tx })
     }
 
     /// Return the transaction identifier.
@@ -65,6 +81,14 @@ impl Transaction {
     }
 
     /// Return the consensus encoded bytes of the transaction.
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Vec<u8> {
+        elements::Transaction::serialize(&self.inner)
+    }
+
+    /// Return the consensus encoded bytes of the transaction.
+    ///
+    /// Deprecated: use `toBytes()` instead.
     pub fn bytes(&self) -> Vec<u8> {
         elements::Transaction::serialize(&self.inner)
     }
@@ -141,8 +165,6 @@ impl Txid {
 
 #[cfg(feature = "simplicity")]
 /// Editor for modifying transactions.
-///
-/// See [`elements::Transaction`] for more details.
 #[wasm_bindgen]
 pub struct TransactionEditor {
     inner: elements::Transaction,
@@ -211,14 +233,18 @@ mod tests {
         let hex = "xx";
         assert_eq!(
             expected,
-            format!("{:?}", Transaction::new(hex).unwrap_err())
+            format!("{:?}", Transaction::from_string(hex).unwrap_err())
         );
 
         let expected =
             include_str!("../../../lwk_jade/test_data/pset_to_be_signed_transaction.hex")
                 .to_string();
-        let tx = Transaction::new(&expected).unwrap();
+        let tx = Transaction::from_string(&expected).unwrap();
         assert_eq!(expected, tx.to_string());
+        assert_eq!(
+            expected,
+            Transaction::from_bytes(&tx.to_bytes()).unwrap().to_string()
+        );
 
         let expected = "954f32449d00a9de3c42758dedee895c88ea417cb72999738b2631bcc00e13ad";
         assert_eq!(expected, tx.txid().to_string());

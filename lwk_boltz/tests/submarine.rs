@@ -335,6 +335,30 @@ mod tests {
             .expect("lockup_txid should be set");
         assert_eq!(lockup_txid, lockup_txid_restored);
 
+        // Check set_lockup_txid behavior on a fresh swap, without altering the flow above
+        let bolt11_invoice = utils::generate_invoice_lnd(51_000).await.unwrap();
+        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
+        let mut prepare_pay_response = session
+            .prepare_pay(&lightning_payment, &refund_address, None)
+            .await
+            .unwrap();
+        assert_eq!(prepare_pay_response.lockup_txid(), None);
+        let txid = "1111111111111111111111111111111111111111111111111111111111111111";
+        prepare_pay_response
+            .set_lockup_txid(txid.to_string())
+            .unwrap();
+        assert_eq!(prepare_pay_response.lockup_txid(), Some(txid));
+        let txid2 = "2222222222222222222222222222222222222222222222222222222222222222";
+        prepare_pay_response
+            .set_lockup_txid(txid2.to_string())
+            .unwrap();
+        assert_eq!(prepare_pay_response.lockup_txid(), Some(txid2));
+        let serialized_data = prepare_pay_response.serialize().unwrap();
+        drop(prepare_pay_response);
+        let data = PreparePayDataSerializable::deserialize(&serialized_data).unwrap();
+        let prepare_pay_response = session.restore_prepare_pay(data).await.unwrap();
+        assert_eq!(prepare_pay_response.lockup_txid(), Some(txid2));
+
         // Stop the mining task
         mining_handle.abort();
     }

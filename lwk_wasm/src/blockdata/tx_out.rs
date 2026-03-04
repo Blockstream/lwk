@@ -110,7 +110,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn test_tx_out() {
         let asset_hex = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-        let asset_id = AssetId::new(asset_hex).unwrap();
+        let asset_id = AssetId::from_string(asset_hex).unwrap();
 
         let script = Script::new("0014e8df018c7e326cc253faac7e46cdc51e68542c42").unwrap();
         let tx_out = TxOut::from_explicit(&script, &asset_id, 1000);

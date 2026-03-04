@@ -88,6 +88,9 @@ pub enum Error {
     TryFromSlice(#[from] std::array::TryFromSliceError),
 
     #[error(transparent)]
+    HashesFromSlice(#[from] lwk_wollet::hashes::FromSliceError),
+
+    #[error(transparent)]
     Taproot(#[from] lwk_wollet::elements::bitcoin::taproot::TaprootError),
 
     #[error("{0:?}")]
@@ -204,6 +207,7 @@ impl Error {
             Error::SimplicityHlRich(_) => "SimplicityRich",
             #[cfg(feature = "simplicity")]
             Error::TaprootBuilder(_) => "TaprootBuilderError",
+            Error::HashesFromSlice(_) => "HashesFromSliceError",
         }
     }
 }

@@ -92,6 +92,7 @@ async function runSimplicityP2pkTest() {
     assertStringAndBytesRoundtrip(lwk.ContractHash, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
     assertStringAndBytesRoundtrip(lwk.AssetBlindingFactor, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
     assertStringAndBytesRoundtrip(lwk.ValueBlindingFactor, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
+    assertStringAndBytesRoundtrip(lwk.AssetId, "ccafe2eceac041673d79234ef74b31dca811555284a84f526042dfe8114483b6");
   } catch (error) {
     console.error("simplicity_p2pk test failed:", error);
     throw error;

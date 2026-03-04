@@ -183,9 +183,10 @@ mod tests {
 
         assert!(!utxos.is_empty());
         let utxo = utxos[0].outpoint();
-        let wanted_asset =
-            crate::AssetId::new("38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5")
-                .unwrap();
+        let wanted_asset = crate::AssetId::from_string(
+            "38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5",
+        )
+        .unwrap();
 
         let builder = TxBuilder::new(&network);
         let pset_maker = builder

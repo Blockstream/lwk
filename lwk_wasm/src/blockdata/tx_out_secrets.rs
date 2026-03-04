@@ -231,7 +231,7 @@ mod tests {
         );
 
         // Test wasm constructors
-        let asset_id = crate::AssetId::new(asset_hex).unwrap();
+        let asset_id = crate::AssetId::from_string(asset_hex).unwrap();
         let asset_bf = blinding_factor::AssetBlindingFactor::from_string(abf_hex).unwrap();
         let value_bf = blinding_factor::ValueBlindingFactor::from_string(vbf_hex).unwrap();
         let secrets = crate::TxOutSecrets::new(&asset_id, &asset_bf, 1000, &value_bf);

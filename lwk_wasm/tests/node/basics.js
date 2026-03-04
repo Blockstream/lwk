@@ -60,7 +60,7 @@ async function runBasicsTest() {
         const sats = BigInt(1000);
         if (false) { // ANCHOR: ignore
         const address = new lwk.Address("<address>");
-        const asset = new lwk.AssetId("<asset>");
+        const asset = new lwk.AssetId.fromString("<asset>");
         } // ANCHOR: ignore
         const address = wollet.address(null).address(); // ANCHOR: ignore
         const asset = network.policyAsset(); // ANCHOR: ignore

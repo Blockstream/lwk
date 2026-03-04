@@ -219,6 +219,7 @@ impl BoltzSession {
                 to_chain: to,
                 random_preimage: self.random_preimages,
                 claim_txid: None,
+                lockup_txid: None,
             },
             lockup_script,
             claim_script,
@@ -241,7 +242,11 @@ impl BoltzSession {
         &self,
         data: ChainSwapDataSerializable,
     ) -> Result<LockupResponse, Error> {
-        let data = to_chain_data(data, &self.mnemonic)?;
+        let mut data = to_chain_data(data, &self.mnemonic)?;
+        if data.lockup_txid.is_none() {
+            data.lockup_txid =
+                fetch_lockup_txid(self.api.as_ref(), &data.create_chain_response.id).await;
+        }
         let from = data.from_chain;
         let to = data.to_chain;
         let claim_p = PublicKey {
@@ -353,6 +358,29 @@ impl BoltzSession {
                 )
             })
             .collect()
+    }
+}
+
+async fn fetch_lockup_txid(api: &BoltzApiClientV2, swap_id: &str) -> Option<String> {
+    match api.get_chain_txs(swap_id).await {
+        Ok(txs) => match txs.user_lock {
+            Some(lockup) => Some(lockup.transaction.id),
+            None => {
+                log::warn!(
+                    "failed to fetch chain lockup txid for swap {}: server_lock is missing",
+                    swap_id
+                );
+                None
+            }
+        },
+        Err(err) => {
+            log::warn!(
+                "failed to fetch chain lockup txid for swap {}: {}",
+                swap_id,
+                err
+            );
+            None
+        }
     }
 }
 
@@ -486,12 +514,18 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
         to_chain,
         random_preimage: false, // when trying to restore from boltz only deterministic preimage are supported
         claim_txid: claim_details.transaction.as_ref().map(|t| t.id.clone()),
+        lockup_txid: None, // populated if available in restore_lockup
     })
 }
 
 impl LockupResponse {
     pub fn claim_txid(&self) -> Option<&str> {
         self.data.claim_txid.as_deref()
+    }
+
+    /// The txid of the user lockup transaction of the swap
+    pub fn lockup_txid(&self) -> Option<&str> {
+        self.data.lockup_txid.as_deref()
     }
 
     async fn next_status(&mut self) -> Result<SwapStatus, Error> {
@@ -555,10 +589,12 @@ impl LockupResponse {
         let flow = match update_status {
             SwapState::SwapCreated => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionMempool => {
+                self.data.lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
                 log::info!("User lockup in mempool");
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::TransactionConfirmed => {
+                self.data.lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
                 log::info!("User lockup confirmed, waiting for server lockup");
                 Ok(ControlFlow::Continue(update))
             }
@@ -644,6 +680,11 @@ impl LockupResponse {
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::TransactionClaimed => {
+                if self.data.lockup_txid.is_none() {
+                    log::warn!("transaction.claimed but lockup_txid is not set, fetching it");
+                    self.data.lockup_txid =
+                        fetch_lockup_txid(self.api.as_ref(), self.swap_id()).await;
+                }
                 log::info!("Swap claimed successfully");
                 Ok(ControlFlow::Break(true))
             }

@@ -325,9 +325,9 @@ impl PreparePayResponse {
         self.inner.boltz_fee()
     }
 
-    /// See [`crate::PreparePayResponse::claim_txid()`]
-    pub fn claim_txid(&self) -> Option<&str> {
-        self.inner.claim_txid()
+    /// See [`crate::PreparePayResponse::lockup_txid()`]
+    pub fn lockup_txid(&self) -> Option<&str> {
+        self.inner.lockup_txid()
     }
 
     pub fn serialize(&self) -> Result<String, Error> {
@@ -413,6 +413,11 @@ impl LockupResponse {
     /// See [`crate::LockupResponse::claim_txid()`]
     pub fn claim_txid(&self) -> Option<&str> {
         self.inner.claim_txid()
+    }
+
+    /// See [`crate::LockupResponse::lockup_txid()`]
+    pub fn lockup_txid(&self) -> Option<&str> {
+        self.inner.lockup_txid()
     }
 
     pub fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {

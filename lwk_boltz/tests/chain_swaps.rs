@@ -492,16 +492,25 @@ mod tests {
             .await
             .unwrap();
 
-        crate::utils::send_to_address(
+        let lockup_txid_expected = crate::utils::send_to_address(
             BTC_CHAIN.into(),
             response.lockup_address(),
             response.expected_amount(),
         )
         .await
         .unwrap();
+        log::info!("lockup_txid_expected: {lockup_txid_expected}");
 
         let _ = response.advance().await.unwrap();
         let _ = response.advance().await.unwrap();
+
+        let lockup_txid = response
+            .lockup_txid()
+            .map(|s| s.to_string())
+            .expect("lockup_txid should be set");
+        log::info!("lockup_txid: {lockup_txid}");
+        assert_eq!(lockup_txid, lockup_txid_expected);
+
         let _ = response.advance().await.unwrap();
         let _ = response.advance().await.unwrap();
 
@@ -511,9 +520,12 @@ mod tests {
             .expect("claim_txid should be set");
         log::info!("claim_txid: {claim_txid}");
 
+        assert_ne!(lockup_txid, claim_txid);
+
         let serialized_data = response.serialize().unwrap();
         let data = lwk_boltz::ChainSwapDataSerializable::deserialize(&serialized_data).unwrap();
         assert_eq!(data.claim_txid.as_deref(), Some(claim_txid.as_str()));
+        assert_eq!(data.lockup_txid.as_deref(), Some(lockup_txid.as_str()));
 
         drop(response);
         drop(session);
@@ -522,6 +534,12 @@ mod tests {
         let response = session.restore_lockup(data).await.unwrap();
         let claim_txid_restored = response.data.claim_txid.expect("claim_txid should be set");
         assert_eq!(claim_txid, claim_txid_restored);
+        let lockup_txid_restored = response
+            .data
+            .lockup_txid
+            .expect("lockup_txid should be set");
+        assert_eq!(lockup_txid, lockup_txid_restored);
+        assert_ne!(lockup_txid, claim_txid);
 
         // Stop the mining task
         mining_handle.abort();

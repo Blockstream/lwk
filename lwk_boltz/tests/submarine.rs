@@ -100,8 +100,8 @@ mod tests {
             }
         }
         assert!(
-            prepare_pay_response.claim_txid().is_some(),
-            "claim txid should be available when submarine swap is claimed"
+            prepare_pay_response.lockup_txid().is_some(),
+            "lockup txid should be available when submarine swap is claimed"
         );
         // repeatly calling advance on a terminated swap don't timeout
         for _ in 0..10 {
@@ -263,7 +263,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
-    async fn test_session_restore_claim_txid_submarine() {
+    async fn test_session_restore_lockup_txid_submarine() {
         let _ = env_logger::try_init();
 
         // Start concurrent block mining task
@@ -308,7 +308,7 @@ mod tests {
 
         let serialized_data = prepare_pay_response.serialize().unwrap();
         let data = PreparePayDataSerializable::deserialize(&serialized_data).unwrap();
-        assert_eq!(data.claim_txid.as_deref(), None);
+        assert_eq!(data.lockup_txid.as_deref(), None);
 
         utils::send_to_address(
             Chain::Liquid(LiquidChain::LiquidRegtest),
@@ -320,20 +320,20 @@ mod tests {
 
         while let Ok(std::ops::ControlFlow::Continue(_)) = prepare_pay_response.advance().await {}
 
-        let claim_txid = prepare_pay_response
-            .claim_txid()
+        let lockup_txid = prepare_pay_response
+            .lockup_txid()
             .map(|s| s.to_string())
-            .expect("claim_txid should be set");
-        log::info!("claim_txid: {claim_txid}");
+            .expect("lockup_txid should be set");
+        log::info!("lockup_txid: {lockup_txid}");
         drop(prepare_pay_response);
         drop(session);
 
         let session = session_fn().await.unwrap();
         let prepare_pay_response = session.restore_prepare_pay(data).await.unwrap();
-        let claim_txid_restored = prepare_pay_response
-            .claim_txid()
-            .expect("claim_txid should be set");
-        assert_eq!(claim_txid, claim_txid_restored);
+        let lockup_txid_restored = prepare_pay_response
+            .lockup_txid()
+            .expect("lockup_txid should be set");
+        assert_eq!(lockup_txid, lockup_txid_restored);
 
         // Stop the mining task
         mining_handle.abort();

@@ -831,14 +831,14 @@ impl PreparePayResponse {
             .boltz_fee())
     }
 
-    /// The txid of the claim transaction of the swap.
-    pub fn claim_txid(&self) -> Result<Option<String>, LwkError> {
+    /// The txid of the user lockup transaction of the swap.
+    pub fn lockup_txid(&self) -> Result<Option<String>, LwkError> {
         Ok(self
             .inner
             .lock()?
             .as_ref()
             .ok_or(LwkError::ObjectConsumed)?
-            .claim_txid()
+            .lockup_txid()
             .map(|txid| txid.to_string()))
     }
 
@@ -1051,6 +1051,17 @@ impl LockupResponse {
             .as_ref()
             .ok_or(LwkError::ObjectConsumed)?
             .claim_txid()
+            .map(|txid| txid.to_string()))
+    }
+
+    /// The txid of the lockup transaction of the swap
+    pub fn lockup_txid(&self) -> Result<Option<String>, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .lockup_txid()
             .map(|txid| txid.to_string()))
     }
 

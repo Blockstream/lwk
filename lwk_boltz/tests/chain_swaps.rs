@@ -541,6 +541,24 @@ mod tests {
         assert_eq!(lockup_txid, lockup_txid_restored);
         assert_ne!(lockup_txid, claim_txid);
 
+        // Check set_lockup_txid behavior on a fresh swap, without altering the flow above
+        let mut response = session
+            .btc_to_lbtc(50_001, &refund_address, &claim_address, None)
+            .await
+            .unwrap();
+        assert_eq!(response.lockup_txid(), None);
+        let txid = "3333333333333333333333333333333333333333333333333333333333333333";
+        response.set_lockup_txid(txid.to_string()).unwrap();
+        assert_eq!(response.lockup_txid(), Some(txid));
+        let txid2 = "4444444444444444444444444444444444444444444444444444444444444444";
+        response.set_lockup_txid(txid2.to_string()).unwrap();
+        assert_eq!(response.lockup_txid(), Some(txid2));
+        let serialized_data = response.serialize().unwrap();
+        drop(response);
+        let data = lwk_boltz::ChainSwapDataSerializable::deserialize(&serialized_data).unwrap();
+        let response = session.restore_lockup(data).await.unwrap();
+        assert_eq!(response.lockup_txid(), Some(txid2));
+
         // Stop the mining task
         mining_handle.abort();
     }

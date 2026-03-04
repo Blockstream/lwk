@@ -180,7 +180,7 @@ impl BoltzSession {
             data: PreparePayData {
                 last_state: SwapState::InvoiceSet,
                 swap_type: SwapType::Submarine,
-                claim_txid: None,
+                lockup_txid: None,
                 fee: Some(fee),
                 boltz_fee,
                 bolt11_invoice: Some((**bolt11_invoice).clone()),
@@ -209,9 +209,9 @@ impl BoltzSession {
         data: PreparePayDataSerializable,
     ) -> Result<PreparePayResponse, Error> {
         let mut data = to_prepare_pay_data(data, &self.mnemonic)?;
-        if data.claim_txid.is_none() {
-            data.claim_txid =
-                fetch_claim_txid(self.api.as_ref(), &data.create_swap_response.id).await;
+        if data.lockup_txid.is_none() {
+            data.lockup_txid =
+                fetch_lockup_txid(self.api.as_ref(), &data.create_swap_response.id).await;
         }
         let p = data.our_keys.public_key();
         let swap_script = SwapScript::submarine_from_swap_resp(
@@ -278,7 +278,7 @@ impl BoltzSession {
     }
 }
 
-async fn fetch_claim_txid(api: &BoltzApiClientV2, swap_id: &str) -> Option<String> {
+async fn fetch_lockup_txid(api: &BoltzApiClientV2, swap_id: &str) -> Option<String> {
     match api.get_submarine_tx(swap_id).await {
         Ok(tx) => Some(tx.id),
         Err(err) => {
@@ -352,7 +352,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
     Ok(PreparePayData {
         last_state,
         swap_type: SwapType::Submarine,
-        claim_txid: None,
+        lockup_txid: None,
         fee: None,            // Fee information not available in restore response
         bolt11_invoice: None, // Invoice information not available in restore response
         our_keys,
@@ -417,7 +417,7 @@ impl PreparePayResponse {
         let flow = match update_status {
             SwapState::InvoiceSet => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionMempool => {
-                self.data.claim_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
+                self.data.lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
                 log::info!("transaction.mempool Boltz broadcasted funding tx");
                 Ok(ControlFlow::Continue(update))
             }
@@ -435,10 +435,10 @@ impl PreparePayResponse {
             SwapState::InvoicePending => Ok(ControlFlow::Continue(update)),
             SwapState::InvoicePaid => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionClaimed => {
-                if self.data.claim_txid.is_none() {
-                    log::warn!("transaction.claimed Boltz claimed funding tx but claim_txid is not set, fetching it");
-                    self.data.claim_txid =
-                        fetch_claim_txid(self.api.as_ref(), self.swap_id()).await;
+                if self.data.lockup_txid.is_none() {
+                    log::warn!("transaction.claimed Boltz claimed funding tx but lockup_txid is not set, fetching it");
+                    self.data.lockup_txid =
+                        fetch_lockup_txid(self.api.as_ref(), self.swap_id()).await;
                 }
                 log::info!("transaction.claimed Boltz claimed funding tx");
                 Ok(ControlFlow::Break(true))
@@ -555,8 +555,8 @@ impl PreparePayResponse {
         self.data.boltz_fee
     }
 
-    /// The txid of the claim transaction broadcast by Boltz backend.
-    pub fn claim_txid(&self) -> Option<&str> {
-        self.data.claim_txid.as_deref()
+    /// The txid of the lockup transaction
+    pub fn lockup_txid(&self) -> Option<&str> {
+        self.data.lockup_txid.as_deref()
     }
 }

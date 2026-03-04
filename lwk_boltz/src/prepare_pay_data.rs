@@ -15,7 +15,7 @@ use crate::{derive_keypair, mnemonic_identifier};
 pub struct PreparePayData {
     pub last_state: SwapState,
     pub swap_type: SwapType,
-    pub claim_txid: Option<String>,
+    pub lockup_txid: Option<String>,
 
     /// Fee in satoshi, it's equal to the `amount` less the bolt11 amount
     pub fee: Option<u64>,
@@ -32,7 +32,8 @@ pub struct PreparePayData {
 pub struct PreparePayDataSerializable {
     pub last_state: SwapState,
     pub swap_type: SwapType,
-    pub claim_txid: Option<String>,
+    #[serde(alias = "claim_txid")]
+    pub lockup_txid: Option<String>,
     pub fee: Option<u64>,
     pub boltz_fee: Option<u64>,
     pub bolt11_invoice: Option<String>,
@@ -49,7 +50,7 @@ impl From<PreparePayData> for PreparePayDataSerializable {
         PreparePayDataSerializable {
             last_state: data.last_state,
             swap_type: data.swap_type,
-            claim_txid: data.claim_txid,
+            lockup_txid: data.lockup_txid,
             fee: data.fee,
             bolt11_invoice: data.bolt11_invoice.map(|i| i.to_string()),
             create_swap_response: data.create_swap_response,
@@ -81,7 +82,7 @@ pub fn to_prepare_pay_data(
     Ok(PreparePayData {
         last_state: data.last_state,
         swap_type: data.swap_type,
-        claim_txid: data.claim_txid,
+        lockup_txid: data.lockup_txid,
         fee: data.fee,
         bolt11_invoice,
         create_swap_response: data.create_swap_response,
@@ -117,7 +118,7 @@ mod tests {
         .unwrap();
         let prepare_pay_data = to_prepare_pay_data(deserialized, &mnemonic).unwrap();
         println!("prepare_pay_data: {prepare_pay_data:?}");
-        assert!(prepare_pay_data.claim_txid.is_none());
+        assert!(prepare_pay_data.lockup_txid.is_none());
         assert_eq!(
             prepare_pay_data.our_keys.secret_bytes().to_hex(),
             "70f75e954300859f9b32dfea93dfc5667e6cf71d1fad77602d6d6757fd347b01"

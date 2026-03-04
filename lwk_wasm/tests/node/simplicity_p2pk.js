@@ -52,7 +52,7 @@ async function runSimplicityP2pkTest() {
     assertEqual(utxo.value(), TEST_UTXO_VALUE, "UTXO value mismatch");
 
     // Test full transaction finalization with real test vectors
-    const tx = new lwk.Transaction(TEST_UNSIGNED_TX);
+    const tx = lwk.Transaction.fromString(TEST_UNSIGNED_TX);
 
     const finalizedTx = program.finalizeTransaction(tx, new lwk.XOnlyPublicKey(TEST_PUBLIC_KEY), [utxo], 0, witness, network, lwk.SimplicityLogLevel.None);
 
@@ -89,6 +89,7 @@ async function runSimplicityP2pkTest() {
     assertEqual(program2.cmr().toHex(), TEST_CMR, "Program2 CMR mismatch");
 
     // Round-trips
+    assertStringAndBytesRoundtrip(lwk.Transaction, TEST_UNSIGNED_TX);
     assertStringAndBytesRoundtrip(lwk.ContractHash, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
     assertStringAndBytesRoundtrip(lwk.AssetBlindingFactor, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
     assertStringAndBytesRoundtrip(lwk.ValueBlindingFactor, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");

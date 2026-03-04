@@ -514,7 +514,7 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
         to_chain,
         random_preimage: false, // when trying to restore from boltz only deterministic preimage are supported
         claim_txid: claim_details.transaction.as_ref().map(|t| t.id.clone()),
-        lockup_txid: claim_details.transaction.as_ref().map(|t| t.id.clone()),
+        lockup_txid: None, // populated if available in restore_lockup
     })
 }
 

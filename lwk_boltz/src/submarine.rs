@@ -559,4 +559,15 @@ impl PreparePayResponse {
     pub fn lockup_txid(&self) -> Option<&str> {
         self.data.lockup_txid.as_deref()
     }
+
+    /// Optionally set the lockup transaction txid.
+    ///
+    /// This is useful for apps that create and broadcast the lockup transaction and want to
+    /// immediately store the txid before Boltz websocket updates arrive. Doing so can prevent a
+    /// race where a very fast retry flow might create and send the lockup transaction twice.
+    pub fn set_lockup_txid(&mut self, txid: String) -> Result<(), Error> {
+        self.data.lockup_txid = Some(txid);
+        self.persist()?;
+        Ok(())
+    }
 }

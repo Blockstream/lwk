@@ -58,7 +58,6 @@ pub struct SimfArguments {
 
 impl SimfArguments {
     /// Build payload with only static arguments.
-    #[must_use]
     pub fn new(static_arguments: Arguments) -> Self {
         Self {
             resolved: static_arguments,

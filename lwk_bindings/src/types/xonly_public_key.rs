@@ -33,7 +33,6 @@ impl XOnlyPublicKey {
 
 impl XOnlyPublicKey {
     /// Create from a keypair, returning the x-only public key
-    #[must_use]
     pub fn from_keypair(keypair: &elements::bitcoin::secp256k1::Keypair) -> Arc<Self> {
         let (xonly, _parity) = keypair.x_only_public_key();
         Arc::new(Self::from(xonly))

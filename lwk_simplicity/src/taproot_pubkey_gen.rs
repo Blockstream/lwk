@@ -65,7 +65,6 @@ pub enum TaprootPubkeyGenError {
 }
 
 /// Generate a valid ephemeral public key and its seed; repeats until valid.
-#[must_use]
 pub fn generate_public_key_without_private() -> (PublicKey, Vec<u8>) {
     let derived_public_key;
     loop {
@@ -82,7 +81,6 @@ pub fn generate_public_key_without_private() -> (PublicKey, Vec<u8>) {
 ///
 /// # Panics
 /// Panics if the system random number generator fails.
-#[must_use]
 pub fn get_random_seed() -> [u8; 32] {
     let mut bytes: [u8; 32] = [0; 32];
     thread_rng().fill_bytes(&mut bytes);
@@ -197,7 +195,6 @@ impl TaprootPubkeyGen {
     }
 
     /// Get the X-only public key.
-    #[must_use]
     pub fn get_x_only_pubkey(&self) -> XOnlyPublicKey {
         self.pubkey.to_x_only_pubkey()
     }

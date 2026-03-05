@@ -16,7 +16,6 @@ include:
 stages:
   - security
   - test
-  - build
   - deploy
 
 .base:
@@ -150,7 +149,7 @@ test_coverage:
       junit: target/nextest/ci/junit.xml
 
 build_cli:
-  stage: build
+  stage: test
   extends: .base
   only:
     - master@liquid/lwk
@@ -169,7 +168,7 @@ audit:
     - cargo audit --deny yanked
 
 doc:
-  stage: build
+  stage: test
   extends: .base
   variables:
     RUSTDOCFLAGS: "-D warnings --cfg docsrs"
@@ -198,7 +197,7 @@ examples:
     - cargo run --example list_transactions
 
 bindings:
-  stage: build
+  stage: test
   extends: .base
   variables:
     JAVA_OPTS: "-Xmx2g"
@@ -207,7 +206,7 @@ bindings:
     - cargo test -p lwk_bindings --features foreign_bindings
 
 csharp:
-  stage: build
+  stage: test
   extends: .base
   script:
     - cargo build --release -p lwk_bindings
@@ -224,7 +223,7 @@ csharp:
       - csharp
 
 cpp:
-  stage: build
+  stage: test
   extends: .base
   script:
     - cargo build --release -p lwk_bindings
@@ -255,7 +254,7 @@ just:
     - just kotlin # kotlin-android would require cargo-ndk and various targets, tested on github which produce the kotlin package
 
 wasm:
-  stage: build
+  stage: test
   extends: .base
   variables:
     RUSTFLAGS: "--cfg=web_sys_unstable_apis"
@@ -281,7 +280,7 @@ wasm:
       - lwk_wasm/pkg
 
 .nix:
-  stage: build
+  stage: test
   image: xenoky/lwk-nix-builder@sha256:65e7e1999ec3eba96f804a30fd8d1ef6d9842d99a61fb02bf4147dee7d53b9dc
   variables:
       EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes

@@ -81,7 +81,7 @@ android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64
 
 # Build the kotlin multiplatform interface and android, ios and jvm
 kotlin-multiplatform: ios ios-sim android jvm
-    cargo install --bin gobley-uniffi-bindgen gobley-uniffi-bindgen@0.2.0
+    cargo install --bin gobley-uniffi-bindgen gobley-uniffi-bindgen@0.3.7
     gobley-uniffi-bindgen --config ./lwk_bindings/uniffi.kotlin-multiplatform.toml --library target/aarch64-apple-ios/release/liblwk.a  --out-dir target/release/kotlin-multiplatform
     cp -a target/release/kotlin-multiplatform/* lwk_bindings/android_bindings/lib/src/
     mkdir -p ./lwk_bindings/android_bindings/lib/src/libs/ios-arm64/
@@ -131,7 +131,7 @@ swift: ios ios-sim
     xcodebuild -create-xcframework -library target/lipo-ios-sim/release/liblwk.a -headers target/swift/include -library target/aarch64-apple-ios/release/liblwk.a -headers target/swift/include -output target/lwkFFI.xcframework
 
 csharp-windows: build-bindings-lib
-    cargo install uniffi-bindgen-cs --git https://github.com/RCasatta/uniffi-bindgen-cs --rev fa87c381f88c8cacd26cf3e91e5c63af60162c3f
+    cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.10.0+v0.29.4
     uniffi-bindgen-cs --library target/release/lwk.dll --out-dir target/release/csharp
     cp target/release/lwk.dll target/release/csharp
     cp lwk_bindings/tests/test_data/test-dotnet.csproj target/release/csharp

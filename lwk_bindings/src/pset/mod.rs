@@ -186,6 +186,8 @@ impl PsetBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "simplicity")]
+    use std::str::FromStr;
 
     #[test]
     fn pset_roundtrip() {
@@ -263,10 +265,11 @@ mod tests {
         use super::PsetOutputBuilder;
 
         let script = crate::Script::empty();
-        let asset: crate::types::AssetId = crate::UniffiCustomTypeConverter::into_custom(
-            "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d".to_string(),
+        let asset: crate::types::AssetId = elements::AssetId::from_str(
+            "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d",
         )
-        .unwrap();
+        .unwrap()
+        .into();
         let builder = PsetOutputBuilder::new_explicit(&script, 1000, asset);
         builder.blinder_index(0).unwrap();
         let output = builder.build().unwrap();
@@ -292,10 +295,11 @@ mod tests {
         pset_builder.add_input(&input).unwrap();
 
         let script = crate::Script::empty();
-        let asset: crate::types::AssetId = crate::UniffiCustomTypeConverter::into_custom(
-            "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d".to_string(),
+        let asset: crate::types::AssetId = elements::AssetId::from_str(
+            "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d",
         )
-        .unwrap();
+        .unwrap()
+        .into();
         let out_builder = PsetOutputBuilder::new_explicit(&script, 1000, asset);
         let output = out_builder.build().unwrap();
         pset_builder.add_output(&output).unwrap();

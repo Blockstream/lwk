@@ -11,7 +11,6 @@ use crate::types::ContractHash;
 use crate::types::Hex;
 #[cfg(feature = "simplicity")]
 use crate::LwkError;
-use crate::UniffiCustomTypeConverter;
 
 /// A valid asset identifier.
 ///
@@ -39,19 +38,13 @@ impl From<AssetId> for elements::AssetId {
     }
 }
 
-uniffi::custom_type!(AssetId, String);
-impl UniffiCustomTypeConverter for AssetId {
-    type Builtin = String;
-
-    fn into_custom(val: Self::Builtin) -> uniffi::Result<Self> {
+uniffi::custom_type!(AssetId, String, {
+    try_lift: |val| {
         let inner = elements::AssetId::from_str(&val)?;
         Ok(AssetId { inner })
-    }
-
-    fn from_custom(obj: Self) -> Self::Builtin {
-        obj.inner.to_hex()
-    }
-}
+    },
+    lower: |obj| obj.inner.to_hex(),
+});
 
 #[cfg(feature = "simplicity")]
 impl AssetId {
@@ -107,13 +100,9 @@ mod tests {
     fn asset_id() {
         let elements_asset_id = elements::AssetId::default();
         let asset_id: AssetId = elements_asset_id.into();
-        assert_eq!(
-            <AssetId as UniffiCustomTypeConverter>::into_custom(
-                UniffiCustomTypeConverter::from_custom(asset_id)
-            )
-            .unwrap(),
-            asset_id
-        );
+        let hex = asset_id.to_string();
+        let roundtripped: AssetId = elements::AssetId::from_str(&hex).unwrap().into();
+        assert_eq!(roundtripped, asset_id);
     }
 
     /// Test against a real on-chain issuance on Liquid testnet:
@@ -132,10 +121,11 @@ mod tests {
 
         let asset_id = super::asset_id_from_issuance(&outpoint, &contract_hash);
 
-        let expected: AssetId = UniffiCustomTypeConverter::into_custom(
-            "ccafe2eceac041673d79234ef74b31dca811555284a84f526042dfe8114483b6".to_string(),
+        let expected: AssetId = elements::AssetId::from_str(
+            "ccafe2eceac041673d79234ef74b31dca811555284a84f526042dfe8114483b6",
         )
-        .unwrap();
+        .unwrap()
+        .into();
         assert_eq!(asset_id, expected);
     }
 
@@ -155,10 +145,11 @@ mod tests {
 
         let token_id = super::reissuance_token_from_issuance(&outpoint, &contract_hash, false);
 
-        let expected: AssetId = UniffiCustomTypeConverter::into_custom(
-            "4923a84921dcb4836243142ea5fd158d2f0602ce9fc384631ebe64504da3160e".to_string(),
+        let expected: AssetId = elements::AssetId::from_str(
+            "4923a84921dcb4836243142ea5fd158d2f0602ce9fc384631ebe64504da3160e",
         )
-        .unwrap();
+        .unwrap()
+        .into();
         assert_eq!(token_id, expected);
     }
 }

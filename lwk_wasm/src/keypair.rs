@@ -36,8 +36,8 @@ impl From<&Keypair> for secp256k1::Keypair {
 #[wasm_bindgen]
 impl Keypair {
     /// Creates a `Keypair` from a 32-byte secret key
-    #[wasm_bindgen(constructor)]
-    pub fn new(secret_bytes: &[u8]) -> Result<Keypair, Error> {
+    #[wasm_bindgen(js_name = fromSecretBytes)]
+    pub fn from_secret_bytes(secret_bytes: &[u8]) -> Result<Keypair, Error> {
         let secp = Secp256k1::new();
         let inner = secp256k1::Keypair::from_seckey_slice(&secp, secret_bytes)?;
         Ok(Keypair { inner })
@@ -92,12 +92,7 @@ impl Keypair {
     #[wasm_bindgen(js_name = signSchnorr)]
     pub fn sign_schnorr(&self, msg_hex: &str) -> Result<String, Error> {
         let msg_bytes = Vec::<u8>::from_hex(msg_hex)?;
-        let msg_array: [u8; 32] = msg_bytes.as_slice().try_into().map_err(|_| {
-            Error::Generic(format!(
-                "Message must be exactly 32 bytes, got {}",
-                msg_bytes.len()
-            ))
-        })?;
+        let msg_array: [u8; 32] = msg_bytes.as_slice().try_into()?;
         let message = Message::from_digest(msg_array);
         let sig = EC.sign_schnorr(&message, &self.inner);
         Ok(sig.serialize().to_hex())
@@ -119,7 +114,7 @@ mod tests {
     fn test_keypair() {
         let bytes = [1u8; 32];
 
-        let kp = Keypair::new(&bytes).unwrap();
+        let kp = Keypair::from_secret_bytes(&bytes).unwrap();
         assert_eq!(kp.secret_bytes(), bytes);
 
         let sk = SecretKey::new(&bytes).unwrap();
@@ -149,8 +144,8 @@ mod tests {
         let (xonly_inner, _) = kp.inner.x_only_public_key();
         assert!(EC.verify_schnorr(&sig, &message, &xonly_inner).is_ok());
 
-        assert!(Keypair::new(&[0; 32]).is_err());
-        assert!(Keypair::new(&[1; 31]).is_err());
-        assert!(Keypair::new(&[1; 33]).is_err());
+        assert!(Keypair::from_secret_bytes(&[0; 32]).is_err());
+        assert!(Keypair::from_secret_bytes(&[1; 31]).is_err());
+        assert!(Keypair::from_secret_bytes(&[1; 33]).is_err());
     }
 }

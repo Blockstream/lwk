@@ -77,7 +77,7 @@ mod tests {
             Cmr::from_string("0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
                 .unwrap();
         let internal_key_hex = "0001460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
-        let internal_key = XOnlyPublicKey::new(internal_key_hex).unwrap();
+        let internal_key = XOnlyPublicKey::from_string(internal_key_hex).unwrap();
 
         let cb = simplicity_control_block(&cmr, &internal_key).unwrap();
         let serialized = cb.serialize();
@@ -100,7 +100,7 @@ mod tests {
         let program = SimplicityProgram::load(P2PK_SOURCE, &args).unwrap();
         let cmr = program.cmr();
 
-        let internal_key = XOnlyPublicKey::new(TEST_PUBLIC_KEY).unwrap();
+        let internal_key = XOnlyPublicKey::from_string(TEST_PUBLIC_KEY).unwrap();
         let control_block = simplicity_control_block(&cmr, &internal_key)
             .unwrap()
             .serialize();

@@ -134,7 +134,7 @@ mod tests {
         assert_eq!(pk.to_bytes().len(), 33);
 
         let xonly = kp.x_only_public_key();
-        assert_eq!(xonly.to_hex().len(), 64);
+        assert_eq!(xonly.to_string().len(), 64);
 
         let sk_extracted = kp.secret_key();
         assert_eq!(sk_extracted.to_bytes(), bytes);

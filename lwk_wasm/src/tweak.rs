@@ -3,14 +3,11 @@ use crate::Error;
 use std::fmt::Display;
 use std::str::FromStr;
 
-use lwk_wollet::elements::hex::ToHex;
 use lwk_wollet::elements::secp256k1_zkp;
 
 use wasm_bindgen::prelude::*;
 
 /// Represents a blinding factor/Tweak on secp256k1 curve.
-///
-/// See [`secp256k1_zkp::Tweak`] for more details.
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Tweak {
@@ -50,16 +47,16 @@ impl Display for Tweak {
 #[wasm_bindgen]
 impl Tweak {
     /// Create a Tweak from a 32-byte slice.
-    #[wasm_bindgen(constructor)]
-    pub fn new(bytes: &[u8]) -> Result<Tweak, Error> {
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(bytes: &[u8]) -> Result<Tweak, Error> {
         let inner = secp256k1_zkp::Tweak::from_slice(bytes)?;
         Ok(Tweak { inner })
     }
 
-    /// Create a Tweak from a hex string.
-    #[wasm_bindgen(js_name = fromHex)]
-    pub fn from_hex(hex: &str) -> Result<Tweak, Error> {
-        let inner = secp256k1_zkp::Tweak::from_str(hex)?;
+    /// Create a Tweak from a string.
+    #[wasm_bindgen(js_name = fromString)]
+    pub fn from_string(s: &str) -> Result<Tweak, Error> {
+        let inner = secp256k1_zkp::Tweak::from_str(s)?;
         Ok(Tweak { inner })
     }
 
@@ -74,12 +71,6 @@ impl Tweak {
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Vec<u8> {
         self.inner.as_ref().to_vec()
-    }
-
-    /// Return the hex representation of the tweak.
-    #[wasm_bindgen(js_name = toHex)]
-    pub fn to_hex(&self) -> String {
-        self.inner.as_ref().to_hex()
     }
 
     /// Returns the string representation.
@@ -98,30 +89,28 @@ mod tests {
 
     #[wasm_bindgen_test]
     fn test_tweak() {
-        let zero = Tweak::zero();
-        assert_eq!(zero.to_bytes(), vec![0u8; 32]);
+        let hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
 
-        let bytes = [1u8; 32];
-        let tweak = Tweak::new(&bytes).unwrap();
-        assert_eq!(tweak.to_bytes(), bytes);
+        let from_hex = Tweak::from_string(hex).unwrap();
+        assert_eq!(from_hex.to_string(), hex);
 
-        let hex = "0100000000000000000000000000000000000000000000000000000000000000";
-        let tweak_hex = Tweak::from_hex(hex).unwrap();
-        assert_eq!(tweak_hex.to_hex(), hex);
-        let tweak_hex2 = Tweak::from_hex(&tweak_hex.to_hex()).unwrap();
-        assert_eq!(tweak_hex, tweak_hex2);
+        let bytes = from_hex.to_bytes();
+        let from_bytes = Tweak::from_bytes(&bytes).unwrap();
+        assert_eq!(from_bytes.to_bytes(), bytes);
+        assert_eq!(from_bytes.to_string(), hex);
+        assert_eq!(
+            Tweak::from_string(&from_bytes.to_string()).unwrap(),
+            from_bytes
+        );
 
-        let tweak2 = Tweak::new(&tweak.to_bytes()).unwrap();
-        assert_eq!(tweak, tweak2);
+        assert!(Tweak::from_bytes(&[0u8; 31]).is_err());
+        assert!(Tweak::from_bytes(&[0u8; 33]).is_err());
 
-        assert_eq!(tweak_hex.to_string(), hex);
-        assert_eq!(tweak_hex.to_string_js(), hex);
-
-        assert!(Tweak::new(&[0; 31]).is_err());
-        assert!(Tweak::new(&[0; 33]).is_err());
-        assert!(Tweak::new(&[]).is_err());
-
-        assert!(Tweak::from_hex("aabb").is_err());
-        assert!(Tweak::from_hex("invalid").is_err());
+        let tweak = Tweak::zero();
+        assert_eq!(tweak.to_bytes(), vec![0u8; 32]);
+        assert_eq!(
+            tweak.to_string(),
+            "0000000000000000000000000000000000000000000000000000000000000000"
+        );
     }
 }

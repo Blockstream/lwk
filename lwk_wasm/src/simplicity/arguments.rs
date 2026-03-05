@@ -13,8 +13,6 @@ use lwk_simplicity::simplicityhl::{Arguments, Value, WitnessValues};
 use wasm_bindgen::prelude::*;
 
 /// Builder for Simplicity program arguments.
-///
-/// See [`lwk_simplicity::simplicityhl::Arguments`] for more details.
 #[wasm_bindgen]
 #[derive(Clone, Default)]
 pub struct SimplicityArguments {
@@ -39,18 +37,11 @@ impl SimplicityArguments {
 
 impl SimplicityArguments {
     pub(crate) fn to_inner(&self) -> Result<Arguments, Error> {
-        let map: HashMap<WitnessName, Value> = self
-            .inner
-            .iter()
-            .map(|(name, val)| Ok((WitnessName::parse_from_str(name)?, val.clone())))
-            .collect::<Result<_, Error>>()?;
-        Ok(Arguments::from(map))
+        Ok(Arguments::from(try_into_witness_name_map(&self.inner)?))
     }
 }
 
 /// Builder for Simplicity witness values.
-///
-/// See [`lwk_simplicity::simplicityhl::WitnessValues`] for more details.
 #[wasm_bindgen]
 #[derive(Clone, Default)]
 pub struct SimplicityWitnessValues {
@@ -79,11 +70,14 @@ impl SimplicityWitnessValues {
 
 impl SimplicityWitnessValues {
     pub(crate) fn to_inner(&self) -> Result<WitnessValues, Error> {
-        let map: HashMap<WitnessName, Value> = self
-            .inner
-            .iter()
-            .map(|(name, val)| Ok((WitnessName::parse_from_str(name)?, val.clone())))
-            .collect::<Result<_, Error>>()?;
-        Ok(WitnessValues::from(map))
+        Ok(WitnessValues::from(try_into_witness_name_map(&self.inner)?))
     }
+}
+
+fn try_into_witness_name_map(
+    map: &HashMap<String, Value>,
+) -> Result<HashMap<WitnessName, Value>, Error> {
+    map.iter()
+        .map(|(name, val)| Ok((WitnessName::parse_from_str(name)?, val.clone())))
+        .collect::<Result<_, Error>>()
 }

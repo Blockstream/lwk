@@ -97,7 +97,7 @@ mod tests {
             "PUBLIC_KEY",
             &SimplicityTypedValue::from_u256_hex(TEST_PUBLIC_KEY).unwrap(),
         );
-        let program = SimplicityProgram::new(P2PK_SOURCE, &args).unwrap();
+        let program = SimplicityProgram::load(P2PK_SOURCE, &args).unwrap();
         let cmr = program.cmr();
 
         let internal_key = XOnlyPublicKey::new(TEST_PUBLIC_KEY).unwrap();

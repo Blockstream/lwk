@@ -18,8 +18,6 @@ use lwk_wollet::secp256k1::Keypair;
 use wasm_bindgen::prelude::*;
 
 /// A compiled Simplicity program ready for use in transactions.
-///
-/// See [`lwk_simplicity::simplicityhl::CompiledProgram`] for more details.
 #[wasm_bindgen]
 pub struct SimplicityProgram {
     inner: simplicityhl::CompiledProgram,
@@ -28,8 +26,7 @@ pub struct SimplicityProgram {
 #[wasm_bindgen]
 impl SimplicityProgram {
     /// Load and compile a Simplicity program from source.
-    #[wasm_bindgen(constructor)]
-    pub fn new(source: &str, arguments: &SimplicityArguments) -> Result<SimplicityProgram, Error> {
+    pub fn load(source: &str, arguments: &SimplicityArguments) -> Result<SimplicityProgram, Error> {
         let compiled = scripts::load_program(source, arguments.to_inner()?)?;
         Ok(SimplicityProgram { inner: compiled })
     }

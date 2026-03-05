@@ -105,7 +105,7 @@ mod tests {
             "PUBLIC_KEY",
             &SimplicityTypedValue::from_u256_hex(TEST_PUBLIC_KEY).unwrap(),
         );
-        let program = SimplicityProgram::new(P2PK_SOURCE, &args).unwrap();
+        let program = SimplicityProgram::load(P2PK_SOURCE, &args).unwrap();
         let cmr = program.cmr();
         assert_eq!(cmr.to_string(), TEST_CMR);
         assert_eq!(cmr.to_bytes(), expected_bytes);

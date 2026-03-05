@@ -34,8 +34,8 @@ async function runSimplicityP2pkTest() {
     let args = new lwk.SimplicityArguments();
     args = args.addValue("PUBLIC_KEY", lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY));
 
-    const program = new lwk.SimplicityProgram(P2PK_SOURCE, args);
-    const cmr = program.cmr().toHex();
+    const program = lwk.SimplicityProgram.load(P2PK_SOURCE, args);
+    const cmr = program.cmr().toString();
     assertEqual(cmr, TEST_CMR, "CMR mismatch");
 
     // Test creating P2TR address for p2pk program
@@ -85,8 +85,8 @@ async function runSimplicityP2pkTest() {
     // Verify add_value works for loading a program (regression)
     let args3 = new lwk.SimplicityArguments();
     args3 = args3.addValue("PUBLIC_KEY", lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY));
-    const program2 = new lwk.SimplicityProgram(P2PK_SOURCE, args3);
-    assertEqual(program2.cmr().toHex(), TEST_CMR, "Program2 CMR mismatch");
+    const program2 = lwk.SimplicityProgram.load(P2PK_SOURCE, args3);
+    assertEqual(program2.cmr().toString(), TEST_CMR, "Program2 CMR mismatch");
 
     // Round-trips
     assertStringAndBytesRoundtrip(lwk.Transaction, TEST_UNSIGNED_TX);

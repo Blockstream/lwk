@@ -90,6 +90,7 @@ async function runSimplicityP2pkTest() {
 
     // Round-trips
     assertStringAndBytesRoundtrip(lwk.Transaction, TEST_UNSIGNED_TX);
+    assertStringAndBytesRoundtrip(lwk.PublicKey, "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798");
     assertStringAndBytesRoundtrip(lwk.ContractHash, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
     assertStringAndBytesRoundtrip(lwk.AssetBlindingFactor, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
     assertStringAndBytesRoundtrip(lwk.ValueBlindingFactor, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");

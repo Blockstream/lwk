@@ -7,8 +7,6 @@ use lwk_simplicity::simplicityhl::ResolvedType;
 use wasm_bindgen::prelude::*;
 
 /// Simplicity type descriptor.
-///
-/// See [`ResolvedType`] for more details.
 #[wasm_bindgen]
 #[derive(Clone, Debug)]
 pub struct SimplicityType {

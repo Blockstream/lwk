@@ -13,8 +13,6 @@ use lwk_simplicity::simplicityhl::Value;
 use wasm_bindgen::prelude::*;
 
 /// Typed Simplicity value.
-///
-/// See [`Value`] for more details.
 #[wasm_bindgen]
 #[derive(Clone, Debug)]
 pub struct SimplicityTypedValue {

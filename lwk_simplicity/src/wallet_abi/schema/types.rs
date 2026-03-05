@@ -42,6 +42,15 @@ pub enum WalletAbiErrorCode {
     InvalidRequest,
     Serde,
     ProgramError,
+    Derivation,
+    TryFromInt,
+    Funding,
+    InvalidSignerConfig,
+    InvalidResponse,
+    Pset,
+    PsetBlind,
+    AmountProofVerification,
+    InvalidFinalizationSteps,
     Unknown(String),
 }
 
@@ -51,6 +60,15 @@ impl WalletAbiErrorCode {
             Self::InvalidRequest => "invalid_request",
             Self::Serde => "serde",
             Self::ProgramError => "program_error",
+            Self::Derivation => "derivation",
+            Self::TryFromInt => "try_from_int",
+            Self::Funding => "funding",
+            Self::InvalidSignerConfig => "invalid_signer_config",
+            Self::InvalidResponse => "invalid_response",
+            Self::Pset => "pset",
+            Self::PsetBlind => "pset_blind",
+            Self::AmountProofVerification => "amount_proof_verification",
+            Self::InvalidFinalizationSteps => "invalid_finalization_steps",
             Self::Unknown(value) => value.as_str(),
         }
     }
@@ -62,6 +80,15 @@ impl From<&WalletAbiError> for WalletAbiErrorCode {
             WalletAbiError::InvalidRequest(_) => Self::InvalidRequest,
             WalletAbiError::Serde(_) => Self::Serde,
             WalletAbiError::Program(_) => Self::ProgramError,
+            WalletAbiError::Derivation(_) => Self::Derivation,
+            WalletAbiError::TryFromInt(_) => Self::TryFromInt,
+            WalletAbiError::Funding(_) => Self::Funding,
+            WalletAbiError::InvalidSignerConfig(_) => Self::InvalidSignerConfig,
+            WalletAbiError::InvalidResponse(_) => Self::InvalidResponse,
+            WalletAbiError::Pset(_) => Self::Pset,
+            WalletAbiError::PsetBlind(_) => Self::PsetBlind,
+            WalletAbiError::AmountProofVerification(_) => Self::AmountProofVerification,
+            WalletAbiError::InvalidFinalizationSteps(_) => Self::InvalidFinalizationSteps,
         }
     }
 }
@@ -103,6 +130,15 @@ mod error_code_as_str {
             "invalid_request" => WalletAbiErrorCode::InvalidRequest,
             "serde" => WalletAbiErrorCode::Serde,
             "program_error" => WalletAbiErrorCode::ProgramError,
+            "derivation" => WalletAbiErrorCode::Derivation,
+            "try_from_int" => WalletAbiErrorCode::TryFromInt,
+            "funding" => WalletAbiErrorCode::Funding,
+            "invalid_signer_config" => WalletAbiErrorCode::InvalidSignerConfig,
+            "invalid_response" => WalletAbiErrorCode::InvalidResponse,
+            "pset" => WalletAbiErrorCode::Pset,
+            "pset_blind" => WalletAbiErrorCode::PsetBlind,
+            "amount_proof_verification" => WalletAbiErrorCode::AmountProofVerification,
+            "invalid_finalization_steps" => WalletAbiErrorCode::InvalidFinalizationSteps,
             _ => WalletAbiErrorCode::Unknown(s),
         };
         Ok(code)

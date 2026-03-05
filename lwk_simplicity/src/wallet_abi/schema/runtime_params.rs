@@ -4,10 +4,10 @@
 //! enum variants are serialized in `snake_case` across this schema.
 
 use crate::error::WalletAbiError;
+use crate::scripts::{create_p2tr_address, load_program};
 use crate::taproot_pubkey_gen::TaprootPubkeyGen;
 use crate::wallet_abi::schema::values::resolve_arguments;
-
-use crate::scripts::{create_p2tr_address, load_program};
+use crate::wallet_abi::schema::SignerMeta;
 
 use lwk_wollet::bitcoin::XOnlyPublicKey;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
@@ -58,14 +58,10 @@ pub struct RuntimeParams {
     pub inputs: Vec<InputSchema>,
     /// Declared contract outputs materialized in declaration order.
     ///
-    /// Output id `"fee"` has special meaning:
-    /// runtime validates uniqueness/asset rules and then overwrites or appends the fee output
-    /// to match the converged fee target.
-    ///
     /// Runtime can append deterministic global change outputs (one per residual asset), so this
     /// list is not guaranteed to be the full final output set.
     pub outputs: Vec<OutputSchema>,
-    /// Optional fee-rate override in sat/vB.
+    /// Optional fee-rate override interpreted by runtime as sat/kvB.
     ///
     /// When omitted, runtime uses its built-in default fee-rate policy.
     ///
@@ -76,7 +72,7 @@ pub struct RuntimeParams {
     /// UX note:
     /// zero is accepted but can lead to unexpected relay/broadcast outcomes depending on policy.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub fee_rate_sat_vb: Option<f32>,
+    pub fee_rate_sat_kvb: Option<f32>,
     /// Optional transaction fallback `lock_time`.
     ///
     /// Runtime writes this value to PSET `global.tx_data.fallback_locktime`.
@@ -152,14 +148,14 @@ pub enum AssetFilter {
 /// During wallet candidate filtering:
 /// - `none`: candidate passes regardless of amount.
 /// - `exact`: candidate passes only when
-///   `candidate.unblinded.value == satoshi`.
+///   `candidate.unblinded.value == amount_sat`.
 /// - `min`: candidate passes only when
-///   `candidate.unblinded.value >= satoshi`.
+///   `candidate.unblinded.value >= amount_sat`.
 ///
 /// # Zero-Value Nuance
 ///
-/// - `exact { satoshi: 0 }` accepts only zero-valued UTXOs.
-/// - `min { satoshi: 0 }` behaves as an unconstraining lower bound for amount.
+/// - `exact { amount_sat: 0 }` accepts only zero-valued UTXOs.
+/// - `min { amount_sat: 0 }` behaves as an unconstraining lower bound for amount.
 ///
 /// # UX Guidance
 ///
@@ -173,15 +169,15 @@ pub enum AmountFilter {
     /// No amount constraint.
     #[default]
     None,
-    /// Require exact satoshi amount equality.
+    /// Require exact `amount_sat` equality.
     Exact {
-        /// Target satoshi amount.
-        satoshi: u64,
+        /// Target amount in satoshis.
+        amount_sat: u64,
     },
-    /// Require satoshi amount at least this threshold.
+    /// Require `amount_sat` at least this threshold.
     Min {
-        /// Minimum satoshi threshold (inclusive).
-        satoshi: u64,
+        /// Minimum amount in satoshis (inclusive).
+        amount_sat: u64,
     },
 }
 
@@ -244,7 +240,7 @@ pub struct WalletSourceFilter {
 ///   a deterministic deficit-aware score (not first-match).
 /// - `Provided`:
 ///   runtime fetches the prevout by outpoint from esplora and resolves
-///   unblinding with [`InputBlinder`].
+///   unblinding with [`InputUnblinding`].
 ///
 /// # Determinism
 ///
@@ -476,7 +472,7 @@ impl FinalizerSpec {
     /// Resolve script pubkey for `LockVariant::Finalizer`.
     ///
     /// Behavior contract:
-    /// - `Wallet` returns `InvalidRequest` because no Simplicity lock is present.
+    /// - `Wallet` returns Script pubkey of the Signer's receiver address
     /// - `Simf + BIP0341` resolves arguments, loads `source_simf`, then derives a
     ///   Taproot script pubkey from program CMR + fixed BIP-0341 key + `network`.
     /// - `Simf + External` resolves arguments, loads `source_simf`, derives the
@@ -489,49 +485,52 @@ impl FinalizerSpec {
     ///
     /// Returns `WalletAbiError` on invalid variant use, argument resolution errors, or
     /// Simplicity loading/derivation failures.
-    pub fn try_resolve_script_pubkey(
+    pub fn try_resolve_script_pubkey<Signer: SignerMeta>(
         &self,
+        signer_meta: &Signer,
         pst: &PartiallySignedTransaction,
-        network: lwk_common::Network,
-    ) -> Result<Script, WalletAbiError> {
-        let Self::Simf {
-            source_simf,
-            internal_key,
-            arguments,
-            ..
-        } = self
-        else {
-            return Err(WalletAbiError::InvalidRequest(
-                "trying to get runtime key from non-simplicity".to_string(),
-            ));
-        };
+    ) -> Result<Script, WalletAbiError>
+    where
+        WalletAbiError: From<Signer::Error>,
+    {
+        match self {
+            FinalizerSpec::Wallet => Ok(signer_meta.get_signer_receive_address()?.script_pubkey()),
+            FinalizerSpec::Simf {
+                source_simf,
+                internal_key,
+                arguments,
+                ..
+            } => {
+                let network = signer_meta.get_network();
 
-        let arguments = resolve_arguments(arguments, pst)?;
-        let program = load_program(source_simf, arguments)?;
-        let script = match internal_key {
-            InternalKeySource::Bip0341 => create_p2tr_address(
-                program.commit().cmr(),
-                &bip_0341_example_internal_key(),
-                network.address_params(),
-            )
-            .script_pubkey(),
-            InternalKeySource::External { key } => {
-                let expected_address = create_p2tr_address(
-                    program.commit().cmr(),
-                    &key.get_x_only_pubkey(),
-                    network.address_params(),
-                );
-                if key.address != expected_address {
-                    return Err(WalletAbiError::InvalidRequest(format!(
-                        "external internal key mismatch: expected address {expected_address}, got {}",
-                        key.address
-                    )));
-                }
-                key.address.script_pubkey()
+                let arguments = resolve_arguments(arguments, pst)?;
+                let program = load_program(source_simf, arguments)?;
+                let script = match internal_key {
+                    InternalKeySource::Bip0341 => create_p2tr_address(
+                        program.commit().cmr(),
+                        &bip_0341_example_internal_key(),
+                        network.address_params(),
+                    )
+                    .script_pubkey(),
+                    InternalKeySource::External { key } => {
+                        let expected_address = create_p2tr_address(
+                            program.commit().cmr(),
+                            &key.get_x_only_pubkey(),
+                            network.address_params(),
+                        );
+                        if key.address != expected_address {
+                            return Err(WalletAbiError::InvalidRequest(format!(
+                                "external internal key mismatch: expected address {expected_address}, got {}",
+                                key.address
+                            )));
+                        }
+                        key.address.script_pubkey()
+                    }
+                };
+
+                Ok(script)
             }
-        };
-
-        Ok(script)
+        }
     }
 }
 
@@ -586,11 +585,11 @@ impl FinalizerSpec {
 ///
 /// - Use [`Self::Explicit`] only when the referenced prevout is known explicit.
 /// - Mismatched assumptions produce deterministic request errors, for example:
-///   `"unable to unblind input ... with provided blinder"` or
+///   `"unable to unblind input ... with provided unblinding key"` or
 ///   `"marked input ... as explicit when the confidential was provided"`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
-pub enum InputBlinder {
+pub enum InputUnblinding {
     /// Use wallet-derived blinding key material.
     #[default]
     Wallet,
@@ -613,15 +612,15 @@ pub struct InputSchema {
     ///
     /// Practical behavior matrix (`wallet-abi-0.1`):
     ///
-    /// | `utxo_source` | `blinder` | Runtime behavior |
+    /// | `utxo_source` | `unblinding` | Runtime behavior |
     /// | --- | --- | --- |
-    /// | `wallet` | any variant | Uses wallet snapshot unblinded material for the selected wallet UTXO. |
+    /// | `wallet` | `wallet` | Uses wallet snapshot unblinded material for the selected wallet UTXO. |
     /// | `provided` | `wallet` | Derives wallet blinding key from prevout script and attempts unblinding. |
     /// | `provided` | `provided` | Attempts unblinding with caller-provided `secret_key`. |
     /// | `provided` | `explicit` | Requires explicit prevout asset/value (confidential prevouts fail). |
     ///
     /// Recommendation:
-    /// callers should still set semantically matching source+blinder pairs to
+    /// callers should still set semantically matching source+unblinding pairs to
     /// reduce confusion and future migration risk.
     ///
     /// Security reminders:
@@ -629,9 +628,9 @@ pub struct InputSchema {
     /// - Intermediate PSETs contain resolved input secrets in proprietary metadata.
     ///
     /// UX reminders:
-    /// - [`InputBlinder::Explicit`] should be used only when explicit prevouts are expected.
+    /// - [`InputUnblinding::Explicit`] should be used only when explicit prevouts are expected.
     /// - Misclassification leads to deterministic runtime errors.
-    pub blinder: InputBlinder,
+    pub unblinding: InputUnblinding,
     /// Bitcoin transaction input sequence number.
     ///
     /// The sequence field is used for:
@@ -815,16 +814,13 @@ pub enum BlinderVariant {
 /// One requested output entry in `RuntimeParams.outputs`.
 ///
 /// This struct declares requested outputs only. Runtime may additionally:
-/// - normalize or append the fee output (`id == "fee"` semantics),
+/// - append an explicit fee output,
 /// - append change outputs for residual balances.
 ///
 /// # Field semantics
 ///
-/// - `id`: caller label used for diagnostics and special fee placeholder handling.
-///   - `id == "fee"` marks a fee placeholder candidate.
-///   - duplicate `"fee"` ids are rejected.
+/// - `id`: caller label used for diagnostics.
 /// - `amount_sat`: requested amount for this output.
-///   - if `id == "fee"`, runtime overwrites this value with the resolved fee target.
 /// - `lock`: locking rule (`script` or finalizer-derived script).
 /// - `asset`: explicit or issuance-derived asset selector.
 /// - `blinder`: output blinding policy.
@@ -836,11 +832,9 @@ pub enum BlinderVariant {
 /// the intended recipient flow.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OutputSchema {
-    /// Output identifier used for diagnostics and fee placeholder recognition.
+    /// Output identifier used for diagnostics.
     pub id: String,
     /// Requested output amount in satoshis.
-    ///
-    /// For `id == "fee"`, this field is treated as placeholder and replaced by runtime.
     pub amount_sat: u64,
     /// Locking selector for this output.
     pub lock: LockVariant,

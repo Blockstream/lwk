@@ -48,6 +48,7 @@ secret_detection:
 
 fmt_clippy:
   stage: test
+  needs: []
   extends: .base
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
@@ -56,12 +57,14 @@ fmt_clippy:
 
 test_clean:
   stage: test
+  needs: []
   image: rust:1.75
   script:
     - cargo build
 
 test_wollet:
   stage: test
+  needs: []
   extends: .base
   script:
     - docker pull xenoky/local-jade-emulator:1.0.27
@@ -70,6 +73,7 @@ test_wollet:
 
 test_jade:
   stage: test
+  needs: []
   extends: .base
   variables:
       TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
@@ -80,12 +84,14 @@ test_jade:
 
 test_ledger:
   stage: test
+  needs: []
   extends: .base
   script:
     - cargo test -p lwk_ledger --features asyncr
 
 test_serial:
   stage: test
+  needs: []
   extends: .base
   variables:
   script:
@@ -95,12 +101,14 @@ test_serial:
 # run tests for minor crates all together
 test_minor:
   stage: test
+  needs: []
   extends: .base
   script:
     - cargo test -p lwk_tiny_jrpc -p lwk_app -p lwk_containers -p lwk_common -p lwk_hwi -p lwk_rpc_model -p lwk_signer
 
 test_cli:
   stage: test
+  needs: []
   extends: .base
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
@@ -108,6 +116,7 @@ test_cli:
 
 test_simplicity:
   stage: test
+  needs: []
   extends: .base
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
@@ -115,12 +124,14 @@ test_simplicity:
 
 unit_tests:
   stage: test
+  needs: []
   extends: .base
   script:
     - cargo nextest run --lib --profile unit # ensure unit tests don't take more than a sec each
 
 test_coverage:
   stage: test
+  needs: []
   extends: .base
   variables:
     RUSTFLAGS: "-C instrument-coverage"
@@ -150,6 +161,7 @@ test_coverage:
 
 build_cli:
   stage: test
+  needs: []
   extends: .base
   only:
     - master@liquid/lwk
@@ -163,12 +175,14 @@ build_cli:
 
 audit:
   stage: test
+  needs: []
   extends: .base
   script:
     - cargo audit --deny yanked
 
 doc:
   stage: test
+  needs: []
   extends: .base
   variables:
     RUSTDOCFLAGS: "-D warnings --cfg docsrs"
@@ -192,12 +206,14 @@ doc:
 
 examples:
   stage: test
+  needs: []
   extends: .base
   script:
     - cargo run --example list_transactions
 
 bindings:
   stage: test
+  needs: []
   extends: .base
   variables:
     JAVA_OPTS: "-Xmx2g"
@@ -207,6 +223,7 @@ bindings:
 
 csharp:
   stage: test
+  needs: []
   extends: .base
   script:
     - cargo build --release -p lwk_bindings
@@ -224,6 +241,7 @@ csharp:
 
 cpp:
   stage: test
+  needs: []
   extends: .base
   script:
     - cargo build --release -p lwk_bindings
@@ -244,6 +262,7 @@ cpp:
 
 just:
   stage: test
+  needs: []
   extends: .base
   variables:
     JAVA_OPTS: "-Xmx2g"
@@ -255,6 +274,7 @@ just:
 
 wasm:
   stage: test
+  needs: []
   extends: .base
   variables:
     RUSTFLAGS: "--cfg=web_sys_unstable_apis"
@@ -281,6 +301,7 @@ wasm:
 
 .nix:
   stage: test
+  needs: []
   image: xenoky/lwk-nix-builder@sha256:65e7e1999ec3eba96f804a30fd8d1ef6d9842d99a61fb02bf4147dee7d53b9dc
   variables:
       EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes
@@ -292,6 +313,7 @@ wasm:
 
 boltz_chain:
   stage: test
+  needs: []
   extends: .base
   script:
     - cd lwk_boltz
@@ -302,6 +324,7 @@ boltz_chain:
 
 boltz_mrh:
   stage: test
+  needs: []
   extends: .base
   script:
     - cd lwk_boltz
@@ -312,6 +335,7 @@ boltz_mrh:
 
 boltz_reverse:
   stage: test
+  needs: []
   extends: .base
   script:
     - cd lwk_boltz
@@ -322,6 +346,7 @@ boltz_reverse:
 
 boltz_submarine:
   stage: test
+  needs: []
   extends: .base
   script:
     - cd lwk_boltz

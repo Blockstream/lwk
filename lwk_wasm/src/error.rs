@@ -88,6 +88,9 @@ pub enum Error {
     Locktime(#[from] lwk_wollet::elements::locktime::Error),
 
     #[error(transparent)]
+    ParsePublicKey(#[from] lwk_wollet::elements::bitcoin::key::ParsePublicKeyError),
+
+    #[error(transparent)]
     TryFromSlice(#[from] std::array::TryFromSliceError),
 
     #[error(transparent)]
@@ -212,6 +215,7 @@ impl Error {
             #[cfg(feature = "simplicity")]
             Error::TaprootBuilder(_) => "TaprootBuilderError",
             Error::HashesFromSlice(_) => "HashesFromSliceError",
+            Error::ParsePublicKey(_) => "ParsePublicKeyError",
         }
     }
 }

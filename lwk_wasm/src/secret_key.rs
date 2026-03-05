@@ -32,8 +32,8 @@ impl From<&SecretKey> for secp256k1::SecretKey {
 #[wasm_bindgen]
 impl SecretKey {
     /// Creates a `SecretKey` from a 32-byte array
-    #[wasm_bindgen(constructor)]
-    pub fn new(bytes: &[u8]) -> Result<SecretKey, Error> {
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(bytes: &[u8]) -> Result<SecretKey, Error> {
         let inner = secp256k1::SecretKey::from_slice(bytes)?;
         Ok(SecretKey { inner })
     }
@@ -46,13 +46,13 @@ impl SecretKey {
     }
 
     /// Returns the bytes of the secret key (32 bytes)
-    pub fn bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Vec<u8> {
         self.inner.secret_bytes().to_vec()
     }
 
     /// Sign the given `pset`
-    pub fn sign(&self, pset: Pset) -> Result<Pset, Error> {
-        let mut pset_inner = pset.into();
+    pub fn sign(&self, pset: &Pset) -> Result<Pset, Error> {
+        let mut pset_inner = pset.clone().into();
         lwk_signer::sign_with_seckey(self.inner, &mut pset_inner)?;
         Ok(pset_inner.into())
     }
@@ -68,17 +68,17 @@ mod tests {
     #[wasm_bindgen_test]
     fn test_secret_key() {
         let bytes = [0xcd; 32];
-        let sk = SecretKey::new(&bytes).unwrap();
-        assert_eq!(sk.bytes(), bytes);
+        let sk = SecretKey::from_bytes(&bytes).unwrap();
+        assert_eq!(sk.to_bytes(), bytes);
 
         let wif_test = "cTJTN1hGHqucsgqmYVbhU3g4eU9g5HzE1sxuSY32M1xap1K4sYHF";
         let wif_main = "L2wTu6hQrnDMiFNWA5na6jB12ErGQqtXwqpSL7aWquJaZG8Ai3ch";
         let key_test = SecretKey::from_wif(wif_test).unwrap();
         let key_main = SecretKey::from_wif(wif_main).unwrap();
-        assert_eq!(key_test.bytes(), key_main.bytes());
+        assert_eq!(key_test.to_bytes(), key_main.to_bytes());
 
-        assert!(SecretKey::new(&[0; 31]).is_err());
-        assert!(SecretKey::new(&[0; 33]).is_err());
-        assert!(SecretKey::new(&[0; 32]).is_err());
+        assert!(SecretKey::from_bytes(&[0; 31]).is_err());
+        assert!(SecretKey::from_bytes(&[0; 33]).is_err());
+        assert!(SecretKey::from_bytes(&[0; 32]).is_err());
     }
 }

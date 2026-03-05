@@ -102,8 +102,10 @@ impl PublicKey {
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::*;
-    use crate::SecretKey;
+
     use wasm_bindgen_test::*;
+
+    use lwk_wollet::hashes::hex::FromHex;
 
     wasm_bindgen_test_configure!(run_in_browser);
 

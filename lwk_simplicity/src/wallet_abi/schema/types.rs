@@ -46,7 +46,6 @@ pub enum WalletAbiErrorCode {
 }
 
 impl WalletAbiErrorCode {
-    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             Self::InvalidRequest => "invalid_request",

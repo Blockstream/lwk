@@ -13,7 +13,6 @@ use uuid::Uuid;
 pub const TX_CREATE_ABI_VERSION: &str = "wallet-abi-0.1";
 
 /// Generate a fresh canonical request identifier.
-#[must_use]
 pub fn generate_request_id() -> Uuid {
     Uuid::new_v4()
 }
@@ -146,7 +145,6 @@ pub struct TxCreateResponse {
 
 impl TxCreateResponse {
     /// Build a successful ABI response envelope.
-    #[must_use]
     pub fn ok(
         request: &TxCreateRequest,
         transaction: TransactionInfo,
@@ -167,7 +165,6 @@ impl TxCreateResponse {
     ///
     /// Intended for transport/adapters that must always return ABI responses
     /// instead of bubbling runtime errors.
-    #[must_use]
     pub fn error(request: &TxCreateRequest, error: &WalletAbiError) -> Self {
         Self {
             abi_version: TX_CREATE_ABI_VERSION.to_string(),

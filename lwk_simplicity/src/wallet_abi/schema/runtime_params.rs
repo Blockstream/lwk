@@ -396,7 +396,6 @@ impl InternalKeySource {
     ///
     /// This method does **not** validate that `External.key.address` matches the
     /// extracted pubkey or the declared Simplicity program/arguments.
-    #[must_use]
     pub fn get_x_only_pubkey(&self) -> XOnlyPublicKey {
         match self {
             Self::Bip0341 => bip_0341_example_internal_key(),
@@ -697,7 +696,6 @@ impl InputSchema {
     ///   Treat it as high-impact request input.
     /// - Prefer stable declared-input ordering once outputs reference
     ///   `input_index` values, to avoid surprising derived-asset changes.
-    #[must_use]
     pub const fn with_issuance(mut self, issuance: InputIssuance) -> Self {
         self.issuance = Some(issuance);
         self

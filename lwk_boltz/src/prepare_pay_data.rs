@@ -32,7 +32,6 @@ pub struct PreparePayData {
 pub struct PreparePayDataSerializable {
     pub last_state: SwapState,
     pub swap_type: SwapType,
-    #[serde(alias = "claim_txid")]
     pub lockup_txid: Option<String>,
     pub fee: Option<u64>,
     pub boltz_fee: Option<u64>,

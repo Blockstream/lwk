@@ -716,6 +716,9 @@ impl InputSchema {
 ///
 /// # Nuance notes
 ///
+/// - empty script is rejected at runtime.
+///   Default runtime owns fee output construction; manual fee output injection is unsupported.
+///
 /// - `FinalizerSpec::Simf + InternalKeySource::External` validates that
 ///   `key.address` matches script derivation from
 ///   `(source_simf, arguments, key.pubkey, network)`.

@@ -90,7 +90,11 @@ pub trait SignerMeta {
     ///
     /// Coupling contract:
     /// - signature MUST verify under `xonly_public_key`
-    fn sign_schnorr(&self, message: Message, xonly_public_key: XOnlyPublicKey) -> Result<Signature, Self::Error>;
+    fn sign_schnorr(
+        &self,
+        message: Message,
+        xonly_public_key: XOnlyPublicKey,
+    ) -> Result<Signature, Self::Error>;
 }
 
 /// Runtime-provided wallet/backend capabilities required by transaction resolution.

@@ -2632,6 +2632,7 @@ dependencies = [
 name = "lwk_simplicity"
 version = "0.15.0"
 dependencies = [
+ "log",
  "lwk_common",
  "lwk_signer",
  "lwk_test_util",

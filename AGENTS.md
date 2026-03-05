@@ -28,13 +28,13 @@ LWK is a Rust workspace containing libraries for Liquid wallets. It consists of 
 
 ```bash
 # Build the entire workspace
-cargo build
+cargo -q build
 
 # Build specific crate
-cargo build -p lwk_wollet
+cargo -q build -p lwk_wollet
 
 # Cross-compile for WASM
-cargo check --target wasm32-unknown-unknown -p lwk_wollet
+cargo -q check --target wasm32-unknown-unknown -p lwk_wollet
 ```
 
 ## Test Commands
@@ -42,42 +42,42 @@ cargo check --target wasm32-unknown-unknown -p lwk_wollet
 ```bash
 
 # Run all tests, including integration tests that spawn executables and Docker containers
-cargo test
+cargo -q test
 
 # Run all unit tests, much faster; every unit test should run in less than a second
-cargo test --lib
+cargo -q test --lib
 
 # Run tests for specific package
-cargo test -p lwk_wollet
+cargo -q test -p lwk_wollet
 
 # Run a single test
-cargo test -p lwk_wollet test_name_here
+cargo -q test -p lwk_wollet test_name_here
 
 # Run bindings tests
-cargo test -p lwk_bindings --features foreign_bindings
+cargo -q test -p lwk_bindings --features foreign_bindings
 
 # Build tests without running
-cargo test --no-run
+cargo -q test --no-run
 ```
 
 ## Lint Commands
 
 ```bash
 # Format code
-cargo fmt
+cargo -q fmt
 
 # Check formatting
-cargo fmt --check
+cargo -q fmt --check
 
 # Run clippy
-cargo clippy --all-features --all-targets -- -D warnings
+cargo -q clippy --all-features --all-targets -- -D warnings
 
 # Security audit
 cargo audit --deny yanked
 
 # Generate documentation
-cargo doc --no-deps -p lwk_wollet --all-features
-RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo +nightly doc --all-features --no-deps
+cargo -q doc --no-deps -p lwk_wollet --all-features
+RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo +nightly -q doc --all-features --no-deps
 ```
 
 ## Just Commands

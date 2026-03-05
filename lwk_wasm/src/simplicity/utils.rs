@@ -2,8 +2,8 @@ use std::str::FromStr;
 
 use lwk_simplicity::scripts;
 
-use lwk_wollet::bitcoin::bip32::DerivationPath;
 use lwk_wollet::elements;
+use lwk_wollet::elements::bitcoin::bip32::DerivationPath;
 use lwk_wollet::elements::hex::ToHex;
 
 use wasm_bindgen::prelude::*;
@@ -40,7 +40,7 @@ pub fn simplicity_control_block(
     let internal_key_inner = internal_key.to_simplicityhl()?;
     let control_block = scripts::control_block(cmr.inner(), internal_key_inner);
     let serialized = control_block.serialize();
-    ControlBlock::new(&serialized)
+    ControlBlock::from_bytes(&serialized)
 }
 
 pub(crate) fn convert_utxos(utxos: &[TxOut]) -> Vec<elements::TxOut> {
@@ -74,18 +74,19 @@ mod tests {
     #[wasm_bindgen_test]
     fn test_control_block_roundtrip() {
         let cmr =
-            Cmr::new("0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470").unwrap();
+            Cmr::from_string("0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
+                .unwrap();
         let internal_key_hex = "0001460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
-        let internal_key = XOnlyPublicKey::new(internal_key_hex).unwrap();
+        let internal_key = XOnlyPublicKey::from_string(internal_key_hex).unwrap();
 
         let cb = simplicity_control_block(&cmr, &internal_key).unwrap();
-        let serialized = cb.serialize();
+        let serialized = cb.to_bytes();
 
-        let cb_roundtrip = ControlBlock::new(&serialized).unwrap();
+        let cb_roundtrip = ControlBlock::from_bytes(&serialized).unwrap();
 
-        assert_eq!(cb.internal_key().to_hex(), internal_key_hex);
-        assert_eq!(cb_roundtrip.internal_key().to_hex(), internal_key_hex);
-        assert_eq!(cb_roundtrip.serialize(), serialized);
+        assert_eq!(cb.internal_key().to_string(), internal_key_hex);
+        assert_eq!(cb_roundtrip.internal_key().to_string(), internal_key_hex);
+        assert_eq!(cb_roundtrip.to_bytes(), serialized);
         assert_eq!(cb.leaf_version(), cb_roundtrip.leaf_version());
         assert_eq!(cb.output_key_parity(), cb_roundtrip.output_key_parity());
     }
@@ -96,14 +97,14 @@ mod tests {
             "PUBLIC_KEY",
             &SimplicityTypedValue::from_u256_hex(TEST_PUBLIC_KEY).unwrap(),
         );
-        let program = SimplicityProgram::new(P2PK_SOURCE, &args).unwrap();
+        let program = SimplicityProgram::load(P2PK_SOURCE, &args).unwrap();
         let cmr = program.cmr();
 
-        let internal_key = XOnlyPublicKey::new(TEST_PUBLIC_KEY).unwrap();
+        let internal_key = XOnlyPublicKey::from_string(TEST_PUBLIC_KEY).unwrap();
         let control_block = simplicity_control_block(&cmr, &internal_key)
             .unwrap()
-            .serialize();
-        let control_block_from_program = program.control_block(&internal_key).unwrap().serialize();
+            .to_bytes();
+        let control_block_from_program = program.control_block(&internal_key).unwrap().to_bytes();
 
         assert_eq!(control_block_from_program, control_block);
     }

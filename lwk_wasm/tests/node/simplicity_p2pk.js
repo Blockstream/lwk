@@ -7,6 +7,7 @@ const lwk = require('lwk_node');
 const {
   assertEqual,
   assertNotNull,
+  assertBytesEqual,
   assertStringAndBytesRoundtrip,
 } = require("./scripts/assert-helpers");
 
@@ -34,12 +35,12 @@ async function runSimplicityP2pkTest() {
     let args = new lwk.SimplicityArguments();
     args = args.addValue("PUBLIC_KEY", lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY));
 
-    const program = new lwk.SimplicityProgram(P2PK_SOURCE, args);
-    const cmr = program.cmr().toHex();
+    const program = lwk.SimplicityProgram.load(P2PK_SOURCE, args);
+    const cmr = program.cmr().toString();
     assertEqual(cmr, TEST_CMR, "CMR mismatch");
 
     // Test creating P2TR address for p2pk program
-    const address = program.createP2trAddress(new lwk.XOnlyPublicKey(TEST_PUBLIC_KEY), network);
+    const address = program.createP2trAddress(lwk.XOnlyPublicKey.fromString(TEST_PUBLIC_KEY), network);
     assertEqual(address.toString(), TEST_ADDRESS, "Address mismatch");
 
     // Test building witness values with signature (64 bytes)
@@ -54,7 +55,7 @@ async function runSimplicityP2pkTest() {
     // Test full transaction finalization with real test vectors
     const tx = lwk.Transaction.fromString(TEST_UNSIGNED_TX);
 
-    const finalizedTx = program.finalizeTransaction(tx, new lwk.XOnlyPublicKey(TEST_PUBLIC_KEY), [utxo], 0, witness, network, lwk.SimplicityLogLevel.None);
+    const finalizedTx = program.finalizeTransaction(tx, lwk.XOnlyPublicKey.fromString(TEST_PUBLIC_KEY), [utxo], 0, witness, network, lwk.SimplicityLogLevel.None);
 
     assertNotNull(finalizedTx, "Finalized transaction should not be null");
     const finalizedHex = finalizedTx.toString();
@@ -85,15 +86,21 @@ async function runSimplicityP2pkTest() {
     // Verify add_value works for loading a program (regression)
     let args3 = new lwk.SimplicityArguments();
     args3 = args3.addValue("PUBLIC_KEY", lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY));
-    const program2 = new lwk.SimplicityProgram(P2PK_SOURCE, args3);
-    assertEqual(program2.cmr().toHex(), TEST_CMR, "Program2 CMR mismatch");
+    const program2 = lwk.SimplicityProgram.load(P2PK_SOURCE, args3);
+    assertEqual(program2.cmr().toString(), TEST_CMR, "Program2 CMR mismatch");
 
     // Round-trips
     assertStringAndBytesRoundtrip(lwk.Transaction, TEST_UNSIGNED_TX);
+    assertStringAndBytesRoundtrip(lwk.XOnlyPublicKey, TEST_PUBLIC_KEY);
+    assertStringAndBytesRoundtrip(lwk.Tweak, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
+    assertStringAndBytesRoundtrip(lwk.PublicKey, "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798");
     assertStringAndBytesRoundtrip(lwk.ContractHash, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
     assertStringAndBytesRoundtrip(lwk.AssetBlindingFactor, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
     assertStringAndBytesRoundtrip(lwk.ValueBlindingFactor, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
     assertStringAndBytesRoundtrip(lwk.AssetId, "ccafe2eceac041673d79234ef74b31dca811555284a84f526042dfe8114483b6");
+
+    let control_block = lwk.simplicityControlBlock(program.cmr(), lwk.XOnlyPublicKey.fromString(TEST_PUBLIC_KEY))
+    assertBytesEqual(lwk.ControlBlock.fromBytes(control_block.toBytes()).toBytes(), control_block.toBytes(), `ControlBlock toBytes roundtrip mismatch`);
   } catch (error) {
     console.error("simplicity_p2pk test failed:", error);
     throw error;

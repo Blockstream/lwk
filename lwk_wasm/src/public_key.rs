@@ -1,11 +1,10 @@
 use crate::{Error, SecretKey, XOnlyPublicKey};
 
 use std::fmt::Display;
+use std::str::FromStr;
 
 use lwk_wollet::elements::bitcoin::secp256k1;
-use lwk_wollet::elements::hex::ToHex;
 use lwk_wollet::elements_miniscript::ToPublicKey;
-use lwk_wollet::hashes::hex::FromHex;
 
 use wasm_bindgen::prelude::*;
 
@@ -34,6 +33,15 @@ impl From<&PublicKey> for lwk_wollet::elements::bitcoin::PublicKey {
     }
 }
 
+impl FromStr for PublicKey {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let inner = lwk_wollet::elements::bitcoin::PublicKey::from_str(s)?;
+        Ok(Self { inner })
+    }
+}
+
 impl Display for PublicKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner)
@@ -42,11 +50,10 @@ impl Display for PublicKey {
 
 #[wasm_bindgen]
 impl PublicKey {
-    /// Creates a `PublicKey` from a hex string
-    #[wasm_bindgen(constructor)]
-    pub fn new(hex: &str) -> Result<PublicKey, Error> {
-        let bytes = Vec::<u8>::from_hex(hex)?;
-        Self::from_bytes(&bytes)
+    /// Creates a `PublicKey` from a string.
+    #[wasm_bindgen(js_name = fromString)]
+    pub fn from_string(s: &str) -> Result<PublicKey, Error> {
+        Self::from_str(s)
     }
 
     /// Creates a `PublicKey` from a byte array (33 or 65 bytes)
@@ -73,12 +80,6 @@ impl PublicKey {
         self.inner.to_bytes()
     }
 
-    /// Returns the hex-encoded serialization
-    #[wasm_bindgen(js_name = toHex)]
-    pub fn to_hex(&self) -> String {
-        self.inner.to_bytes().to_hex()
-    }
-
     /// Returns whether this public key is compressed (33 bytes) or uncompressed (65 bytes)
     #[wasm_bindgen(js_name = isCompressed)]
     pub fn is_compressed(&self) -> bool {
@@ -86,17 +87,25 @@ impl PublicKey {
     }
 
     /// Converts to an x-only public key
-    #[wasm_bindgen(js_name = toXOnly)]
-    pub fn to_x_only(&self) -> XOnlyPublicKey {
+    #[wasm_bindgen(js_name = toXOnlyPublicKey)]
+    pub fn to_x_only_public_key(&self) -> XOnlyPublicKey {
         self.inner.to_x_only_pubkey().into()
+    }
+
+    /// Returns the string representation.
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        self.to_string()
     }
 }
 
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::*;
-    use crate::SecretKey;
+
     use wasm_bindgen_test::*;
+
+    use lwk_wollet::hashes::hex::FromHex;
 
     wasm_bindgen_test_configure!(run_in_browser);
 
@@ -105,31 +114,31 @@ mod tests {
         let hex = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
         let bytes = Vec::<u8>::from_hex(hex).unwrap();
 
-        let pk = PublicKey::new(hex).unwrap();
-        assert_eq!(pk.to_hex(), hex);
-        assert!(pk.is_compressed());
+        let from_hex = PublicKey::from_string(hex).unwrap();
+        assert_eq!(from_hex.to_string(), hex);
+        assert_eq!(from_hex.to_bytes(), bytes);
+        assert!(from_hex.is_compressed());
 
-        let pk_from_bytes = PublicKey::from_bytes(&bytes).unwrap();
-        assert_eq!(pk_from_bytes.to_bytes(), bytes);
+        let from_bytes = PublicKey::from_bytes(&bytes).unwrap();
+        assert_eq!(from_bytes.to_bytes(), bytes);
+        assert_eq!(from_hex, from_bytes);
 
-        let pk2 = PublicKey::from_bytes(&pk.to_bytes()).unwrap();
-        assert_eq!(pk, pk2);
+        let sk = SecretKey::from_bytes(&[1u8; 32]).unwrap();
+        let from_secret_key = PublicKey::from_secret_key(&sk);
+        assert_eq!(from_secret_key.to_bytes().len(), 33);
+        assert!(from_secret_key.is_compressed());
 
-        let sk = SecretKey::new(&[1u8; 32]).unwrap();
-        let pk_from_sk = PublicKey::from_secret_key(&sk);
-        assert_eq!(pk_from_sk.to_bytes().len(), 33);
-        assert!(pk_from_sk.is_compressed());
-
-        let xonly = pk.to_x_only();
-        assert_eq!(xonly.to_hex(), &hex[2..]);
-
-        let uncompressed_hex = "0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8";
-        let pk_uncompressed = PublicKey::new(uncompressed_hex).unwrap();
-        assert!(!pk_uncompressed.is_compressed());
-        assert_eq!(pk_uncompressed.to_bytes().len(), 65);
+        let xonly = from_hex.to_x_only_public_key();
+        assert_eq!(
+            xonly.to_string(),
+            "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+        );
 
         assert!(PublicKey::from_bytes(&[0; 32]).is_err());
-        assert!(PublicKey::from_bytes(&[0; 34]).is_err());
         assert!(PublicKey::from_bytes(&[0; 33]).is_err());
+
+        let hex = "0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8";
+        let pk = PublicKey::from_string(hex).unwrap();
+        assert!(!pk.is_compressed());
     }
 }

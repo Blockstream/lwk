@@ -88,13 +88,16 @@ pub enum Error {
     Locktime(#[from] lwk_wollet::elements::locktime::Error),
 
     #[error(transparent)]
+    ParsePublicKey(#[from] lwk_wollet::elements::bitcoin::key::ParsePublicKeyError),
+
+    #[error(transparent)]
     TryFromSlice(#[from] std::array::TryFromSliceError),
 
     #[error(transparent)]
     HashesFromSlice(#[from] lwk_wollet::hashes::FromSliceError),
 
     #[error(transparent)]
-    Taproot(#[from] lwk_wollet::elements::bitcoin::taproot::TaprootError),
+    Taproot(#[from] lwk_wollet::elements::taproot::TaprootError),
 
     #[error("{0:?}")]
     Unblind(#[from] lwk_wollet::elements::UnblindError),
@@ -212,6 +215,7 @@ impl Error {
             #[cfg(feature = "simplicity")]
             Error::TaprootBuilder(_) => "TaprootBuilderError",
             Error::HashesFromSlice(_) => "HashesFromSliceError",
+            Error::ParsePublicKey(_) => "ParsePublicKeyError",
         }
     }
 }

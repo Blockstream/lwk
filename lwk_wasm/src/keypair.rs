@@ -122,9 +122,9 @@ mod tests {
         let kp = Keypair::new(&bytes).unwrap();
         assert_eq!(kp.secret_bytes(), bytes);
 
-        let sk = SecretKey::new(&bytes).unwrap();
+        let sk = SecretKey::from_bytes(&bytes).unwrap();
         let kp_from_sk = Keypair::from_secret_key(&sk);
-        assert_eq!(kp_from_sk.secret_bytes(), sk.bytes());
+        assert_eq!(kp_from_sk.secret_bytes(), sk.to_bytes());
 
         let kp1 = Keypair::generate();
         let kp2 = Keypair::generate();
@@ -134,10 +134,10 @@ mod tests {
         assert_eq!(pk.to_bytes().len(), 33);
 
         let xonly = kp.x_only_public_key();
-        assert_eq!(xonly.to_hex().len(), 64);
+        assert_eq!(xonly.to_string().len(), 64);
 
         let sk_extracted = kp.secret_key();
-        assert_eq!(sk_extracted.bytes(), bytes);
+        assert_eq!(sk_extracted.to_bytes(), bytes);
 
         let msg_hex = "0202020202020202020202020202020202020202020202020202020202020202";
         let sig_hex = kp.sign_schnorr(msg_hex).unwrap();

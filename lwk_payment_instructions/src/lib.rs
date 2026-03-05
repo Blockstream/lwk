@@ -257,7 +257,7 @@ fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<Payment, String> {
         .query_pairs()
         .find(|(key, _)| key == "assetid")
         .map(|(_, value)| value)
-        .ok_or_else(|| "error".to_string())?;
+        .ok_or_else(|| "Invalid payment request: assetID needs to be specified".to_string())?;
     let asset = AssetId::from_str(&asset_str).map_err(|e| e.to_string())?;
 
     // BIP21 amounts are in BTC (decimal), convert to satoshis (optional)
@@ -519,6 +519,16 @@ mod tests {
     fn test_parse_liquid_bip21_only_asset() {
         let liquid_bip21 = "liquidnetwork:VJLGMJ6mExPjidy3evXx5qjfbL4G4iVnyLLmaCTdzSUna3NbXrAR6MheMk3xcSGs3A1TYuJn1C8dQ8W5?assetid=ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2";
         let _payment_category = Payment::from_str(liquid_bip21).unwrap();
+    }
+
+    #[test]
+    fn test_parse_liquid_bip21_missing_asset() {
+        let liquid_bip21 = "liquidnetwork:VJL67HETqJCTg8Jak34N4RQaZD8HopbuhiU6F5kdo4d8QBJKTNJY3N1ictsXc1KAVNpaTEuCEoUCAzEj?amount=0.00001000";
+        let err = Payment::from_str(liquid_bip21).unwrap_err();
+        assert_eq!(
+            err,
+            "Invalid payment request: assetID needs to be specified"
+        );
     }
 
     #[test]

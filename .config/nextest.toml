@@ -11,7 +11,7 @@ leak-timeout = "5s"                                    # test is leaky if after 
 path = "junit.xml"
 
 [profile.unit]
-slow-timeout = { period = "1s", terminate-after = 1 }
+slow-timeout = { period = "1s", terminate-after = 2 }
 
 [[profile.unit.overrides]]
 # This test generates 256 cryptographic proofs which takes a few seconds

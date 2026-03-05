@@ -522,6 +522,16 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_liquid_bip21_missing_asset() {
+        let liquid_bip21 = "liquidnetwork:VJL67HETqJCTg8Jak34N4RQaZD8HopbuhiU6F5kdo4d8QBJKTNJY3N1ictsXc1KAVNpaTEuCEoUCAzEj?amount=0.00001000";
+        let err = Payment::from_str(liquid_bip21).unwrap_err();
+        assert_eq!(
+            err,
+            "Invalid payment request: assetID needs to be specified"
+        );
+    }
+
+    #[test]
     fn test_parse_no_schema() {
         let bitcoin_address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
         let result = parse_no_schema(bitcoin_address).unwrap();

@@ -257,7 +257,7 @@ fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<Payment, String> {
         .query_pairs()
         .find(|(key, _)| key == "assetid")
         .map(|(_, value)| value)
-        .ok_or_else(|| "error".to_string())?;
+        .ok_or_else(|| "Invalid payment request: assetID needs to be specified".to_string())?;
     let asset = AssetId::from_str(&asset_str).map_err(|e| e.to_string())?;
 
     // BIP21 amounts are in BTC (decimal), convert to satoshis (optional)

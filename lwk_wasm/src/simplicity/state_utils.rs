@@ -65,10 +65,7 @@ impl StateTaprootBuilder {
     /// Add a precomputed hidden hash at `depth`.
     #[wasm_bindgen(js_name = addHiddenHash)]
     pub fn add_hidden_hash(&self, depth: u8, hash: &[u8]) -> Result<StateTaprootBuilder, Error> {
-        let hash: [u8; 32] = hash.try_into().map_err(|_| {
-            Error::Generic(format!("hidden hash must be 32 bytes, got {}", hash.len()))
-        })?;
-        let hash = sha256::Hash::from_byte_array(hash);
+        let hash = sha256::Hash::from_byte_array(hash.try_into()?);
         let inner = self.inner.clone().add_hidden(usize::from(depth), hash)?;
         Ok(StateTaprootBuilder { inner })
     }
@@ -122,7 +119,7 @@ impl StateTaprootSpendInfo {
             .inner
             .control_block(&script_version(cmr.inner()))
             .ok_or_else(|| Error::Generic("CMR is not part of this taproot spend info".into()))?;
-        Ok(control_block.try_into()?)
+        Ok(control_block.into())
     }
 
     /// Get script pubkey as v1 P2TR output script for the tweaked output key.

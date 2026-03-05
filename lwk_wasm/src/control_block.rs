@@ -1,12 +1,10 @@
 use crate::{Error, XOnlyPublicKey};
 
-use lwk_wollet::bitcoin::taproot;
+use lwk_wollet::elements::taproot;
 
 use wasm_bindgen::prelude::*;
 
 /// A control block for Taproot script-path spending.
-///
-/// See [`taproot::ControlBlock`] for more details.
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct ControlBlock {
@@ -19,15 +17,6 @@ impl From<taproot::ControlBlock> for ControlBlock {
     }
 }
 
-impl TryFrom<lwk_wollet::elements::taproot::ControlBlock> for ControlBlock {
-    type Error = taproot::TaprootError;
-
-    fn try_from(value: lwk_wollet::elements::taproot::ControlBlock) -> Result<Self, Self::Error> {
-        let inner = taproot::ControlBlock::decode(value.serialize().as_ref())?;
-        Ok(Self { inner })
-    }
-}
-
 impl AsRef<taproot::ControlBlock> for ControlBlock {
     fn as_ref(&self) -> &taproot::ControlBlock {
         &self.inner
@@ -37,21 +26,22 @@ impl AsRef<taproot::ControlBlock> for ControlBlock {
 #[wasm_bindgen]
 impl ControlBlock {
     /// Parse a control block from serialized bytes.
-    #[wasm_bindgen(constructor)]
-    pub fn new(bytes: &[u8]) -> Result<ControlBlock, Error> {
-        let inner = taproot::ControlBlock::decode(bytes)?;
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(bytes: &[u8]) -> Result<ControlBlock, Error> {
+        let inner = taproot::ControlBlock::from_slice(bytes)?;
         Ok(ControlBlock { inner })
     }
 
     /// Serialize the control block to bytes.
-    pub fn serialize(&self) -> Vec<u8> {
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Vec<u8> {
         self.inner.serialize()
     }
 
     /// Get the leaf version of the control block.
     #[wasm_bindgen(js_name = leafVersion)]
     pub fn leaf_version(&self) -> u8 {
-        self.inner.leaf_version.to_consensus()
+        self.inner.leaf_version.as_u8()
     }
 
     /// Get the internal key of the control block.
@@ -84,18 +74,18 @@ mod tests {
     fn test_control_block() {
         let cb_hex = "c079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
         let bytes = Vec::<u8>::from_hex(cb_hex).unwrap();
-        let cb = ControlBlock::new(&bytes).unwrap();
+        let cb = ControlBlock::from_bytes(&bytes).unwrap();
 
-        assert_eq!(cb.serialize(), bytes);
+        assert_eq!(cb.to_bytes(), bytes);
         assert_eq!(cb.leaf_version(), 0xc0);
 
         let internal_key = cb.internal_key();
-        assert_eq!(internal_key.to_hex(), &cb_hex[2..]);
+        assert_eq!(internal_key.to_string(), &cb_hex[2..]);
 
         assert!(cb.output_key_parity() <= 1);
         assert_eq!(cb.size(), 33);
 
-        assert!(ControlBlock::new(&[]).is_err());
-        assert!(ControlBlock::new(&[0; 32]).is_err());
+        assert!(ControlBlock::from_bytes(&[]).is_err());
+        assert!(ControlBlock::from_bytes(&[0; 32]).is_err());
     }
 }

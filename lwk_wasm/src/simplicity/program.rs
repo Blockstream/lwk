@@ -61,7 +61,7 @@ impl SimplicityProgram {
 
         let control_block = scripts::control_block(self.inner.commit().cmr(), x_only_key);
 
-        ControlBlock::new(&control_block.serialize())
+        ControlBlock::from_bytes(&control_block.serialize())
     }
 
     /// Get the sighash_all message for signing a Simplicity program input.

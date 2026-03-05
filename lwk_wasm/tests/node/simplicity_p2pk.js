@@ -7,6 +7,7 @@ const lwk = require('lwk_node');
 const {
   assertEqual,
   assertNotNull,
+  assertBytesEqual,
   assertStringAndBytesRoundtrip,
 } = require("./scripts/assert-helpers");
 
@@ -39,7 +40,7 @@ async function runSimplicityP2pkTest() {
     assertEqual(cmr, TEST_CMR, "CMR mismatch");
 
     // Test creating P2TR address for p2pk program
-    const address = program.createP2trAddress(new lwk.XOnlyPublicKey(TEST_PUBLIC_KEY), network);
+    const address = program.createP2trAddress(lwk.XOnlyPublicKey.fromString(TEST_PUBLIC_KEY), network);
     assertEqual(address.toString(), TEST_ADDRESS, "Address mismatch");
 
     // Test building witness values with signature (64 bytes)
@@ -54,7 +55,7 @@ async function runSimplicityP2pkTest() {
     // Test full transaction finalization with real test vectors
     const tx = lwk.Transaction.fromString(TEST_UNSIGNED_TX);
 
-    const finalizedTx = program.finalizeTransaction(tx, new lwk.XOnlyPublicKey(TEST_PUBLIC_KEY), [utxo], 0, witness, network, lwk.SimplicityLogLevel.None);
+    const finalizedTx = program.finalizeTransaction(tx, lwk.XOnlyPublicKey.fromString(TEST_PUBLIC_KEY), [utxo], 0, witness, network, lwk.SimplicityLogLevel.None);
 
     assertNotNull(finalizedTx, "Finalized transaction should not be null");
     const finalizedHex = finalizedTx.toString();
@@ -97,6 +98,9 @@ async function runSimplicityP2pkTest() {
     assertStringAndBytesRoundtrip(lwk.AssetBlindingFactor, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
     assertStringAndBytesRoundtrip(lwk.ValueBlindingFactor, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
     assertStringAndBytesRoundtrip(lwk.AssetId, "ccafe2eceac041673d79234ef74b31dca811555284a84f526042dfe8114483b6");
+
+    let control_block = lwk.simplicityControlBlock(program.cmr(), lwk.XOnlyPublicKey.fromString(TEST_PUBLIC_KEY))
+    assertBytesEqual(lwk.ControlBlock.fromBytes(control_block.toBytes()).toBytes(), control_block.toBytes(), `ControlBlock toBytes roundtrip mismatch`);
   } catch (error) {
     console.error("simplicity_p2pk test failed:", error);
     throw error;

@@ -97,7 +97,7 @@ pub enum Error {
     HashesFromSlice(#[from] lwk_wollet::hashes::FromSliceError),
 
     #[error(transparent)]
-    Taproot(#[from] lwk_wollet::elements::bitcoin::taproot::TaprootError),
+    Taproot(#[from] lwk_wollet::elements::taproot::TaprootError),
 
     #[error("{0:?}")]
     Unblind(#[from] lwk_wollet::elements::UnblindError),

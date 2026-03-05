@@ -87,7 +87,7 @@ impl XOnlyPublicKey {
     /// Convert to simplicityhl XOnlyPublicKey
     /// TODO: delete when the version of elements is stabilized
     pub(crate) fn to_simplicityhl(
-        &self,
+        self,
     ) -> Result<lwk_simplicity::simplicityhl::elements::secp256k1_zkp::XOnlyPublicKey, Error> {
         Ok(
             lwk_simplicity::simplicityhl::elements::secp256k1_zkp::XOnlyPublicKey::from_slice(

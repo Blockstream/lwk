@@ -3,6 +3,21 @@ variables:
   DOCKER_DRIVER: overlay2
   DOCKER_HOST: tcp://localhost:2375
   DOCKER_TLS_CERTDIR: ""
+  GITLAB_ADVANCED_SAST_ENABLED: "true"
+  SECURE_LOG_LEVEL: "info"
+  SECRET_DETECTION_ENABLED: "true"
+  DS_GRADLE_RESOLUTION_POLICY: "none"
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+
+stages:
+  - security
+  - test
+  - build
+  - deploy
 
 .base:
   image: xenoky/lwk-builder@sha256:ccc64ed4333a28fe4e882fcb024d3732d98b0e6621641665aba6fe8c726eaafd
@@ -20,7 +35,20 @@ variables:
     - cp /usr/local/cargo/bin/waterfalls /bin/waterfalls_b8818e1
 
 
+sast:
+ stage: security
+ needs: []
+
+dependency_scanning:
+ stage: security
+ needs: []
+
+secret_detection:
+  stage: security
+  needs: []
+
 fmt_clippy:
+  stage: test
   extends: .base
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
@@ -28,11 +56,13 @@ fmt_clippy:
     - cargo clippy --all-targets -- -D warnings
 
 test_clean:
+  stage: test
   image: rust:1.75
   script:
     - cargo build
 
 test_wollet:
+  stage: test
   extends: .base
   script:
     - docker pull xenoky/local-jade-emulator:1.0.27
@@ -40,6 +70,7 @@ test_wollet:
     - cargo test -p lwk_wollet -p lwk_signer
 
 test_jade:
+  stage: test
   extends: .base
   variables:
       TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
@@ -49,11 +80,13 @@ test_jade:
     - cargo test -p lwk_jade
 
 test_ledger:
+  stage: test
   extends: .base
   script:
     - cargo test -p lwk_ledger --features asyncr
 
 test_serial:
+  stage: test
   extends: .base
   variables:
   script:
@@ -62,28 +95,33 @@ test_serial:
 
 # run tests for minor crates all together
 test_minor:
+  stage: test
   extends: .base
   script:
     - cargo test -p lwk_tiny_jrpc -p lwk_app -p lwk_containers -p lwk_common -p lwk_hwi -p lwk_rpc_model -p lwk_signer
 
 test_cli:
+  stage: test
   extends: .base
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_cli
 
 test_simplicity:
+  stage: test
   extends: .base
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_simplicity
 
 unit_tests:
+  stage: test
   extends: .base
   script:
     - cargo nextest run --lib --profile unit # ensure unit tests don't take more than a sec each
 
 test_coverage:
+  stage: test
   extends: .base
   variables:
     RUSTFLAGS: "-C instrument-coverage"
@@ -112,6 +150,7 @@ test_coverage:
       junit: target/nextest/ci/junit.xml
 
 build_cli:
+  stage: build
   extends: .base
   only:
     - master@liquid/lwk
@@ -124,11 +163,13 @@ build_cli:
     expire_in: 14 days
 
 audit:
+  stage: test
   extends: .base
   script:
     - cargo audit --deny yanked
 
 doc:
+  stage: build
   extends: .base
   variables:
     RUSTDOCFLAGS: "-D warnings --cfg docsrs"
@@ -151,11 +192,13 @@ doc:
     - cargo +nightly doc --no-deps -p lwk_bindings --features foreign_bindings
 
 examples:
+  stage: test
   extends: .base
   script:
     - cargo run --example list_transactions
 
 bindings:
+  stage: build
   extends: .base
   variables:
     JAVA_OPTS: "-Xmx2g"
@@ -164,6 +207,7 @@ bindings:
     - cargo test -p lwk_bindings --features foreign_bindings
 
 csharp:
+  stage: build
   extends: .base
   script:
     - cargo build --release -p lwk_bindings
@@ -180,6 +224,7 @@ csharp:
       - csharp
 
 cpp:
+  stage: build
   extends: .base
   script:
     - cargo build --release -p lwk_bindings
@@ -199,6 +244,7 @@ cpp:
       - cpp
 
 just:
+  stage: test
   extends: .base
   variables:
     JAVA_OPTS: "-Xmx2g"
@@ -209,6 +255,7 @@ just:
     - just kotlin # kotlin-android would require cargo-ndk and various targets, tested on github which produce the kotlin package
 
 wasm:
+  stage: build
   extends: .base
   variables:
     RUSTFLAGS: "--cfg=web_sys_unstable_apis"
@@ -234,6 +281,7 @@ wasm:
       - lwk_wasm/pkg
 
 .nix:
+  stage: build
   image: xenoky/lwk-nix-builder@sha256:65e7e1999ec3eba96f804a30fd8d1ef6d9842d99a61fb02bf4147dee7d53b9dc
   variables:
       EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes
@@ -244,6 +292,7 @@ wasm:
     - (! grep ERROR log)
 
 boltz_chain:
+  stage: test
   extends: .base
   script:
     - cd lwk_boltz
@@ -253,6 +302,7 @@ boltz_chain:
     - just test-chain
 
 boltz_mrh:
+  stage: test
   extends: .base
   script:
     - cd lwk_boltz
@@ -262,6 +312,7 @@ boltz_mrh:
     - just test-mrh
 
 boltz_reverse:
+  stage: test
   extends: .base
   script:
     - cd lwk_boltz
@@ -271,6 +322,7 @@ boltz_reverse:
     - just test-reverse
 
 boltz_submarine:
+  stage: test
   extends: .base
   script:
     - cd lwk_boltz

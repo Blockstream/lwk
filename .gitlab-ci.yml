@@ -19,7 +19,7 @@ stages:
   - deploy
 
 .base:
-  image: xenoky/lwk-builder@sha256:ccc64ed4333a28fe4e882fcb024d3732d98b0e6621641665aba6fe8c726eaafd
+  image: xenoky/lwk-builder@sha256:4a7fc684f084f41ab32110eeb80eec073fd2813fc5bf88afff8637fc1b4207e4
   tags:
     - cloud
   retry:

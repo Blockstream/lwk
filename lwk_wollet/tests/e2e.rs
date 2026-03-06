@@ -1,4 +1,5 @@
 mod amp0;
+mod elements_wallet;
 mod fees;
 mod prune;
 #[cfg(feature = "registry")]

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* uniffi upgrade 0.28.2 -> 0.29.4
+
+## 0.15.0
+
 * removed `ForeignPersister` (trait), replacement `ForeignStore`
 * removed `ForeignPersisterLink` (concrete "trait"), replacement `ForeignStoreLink`
 * removed `Wollet::with_custom_persister()`, added `Wollet::with_custom_store()`

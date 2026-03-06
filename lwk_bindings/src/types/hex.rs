@@ -2,8 +2,6 @@ use std::{fmt::Display, str::FromStr};
 
 use elements::{hashes::hex::FromHex, hex::ToHex};
 
-use crate::UniffiCustomTypeConverter;
-
 /// A valid hex string.
 ///
 /// Even number of characters and only numerical and from 'a' to 'e'
@@ -46,36 +44,25 @@ impl Display for Hex {
     }
 }
 
-uniffi::custom_type!(Hex, String);
-impl UniffiCustomTypeConverter for Hex {
-    type Builtin = String;
-
-    fn into_custom(val: Self::Builtin) -> uniffi::Result<Self> {
+uniffi::custom_type!(Hex, String, {
+    try_lift: |val| {
         let inner = Vec::<u8>::from_hex(&val)?;
         Ok(Hex { inner })
-    }
-
-    fn from_custom(obj: Self) -> Self::Builtin {
-        obj.inner.to_hex()
-    }
-}
+    },
+    lower: |obj| obj.inner.to_hex(),
+});
 
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
 
     use super::Hex;
-    use crate::UniffiCustomTypeConverter;
 
     #[test]
     fn hex() {
         let hex: Hex = Hex::from_str("aa").unwrap();
-        assert_eq!(
-            <Hex as UniffiCustomTypeConverter>::into_custom(
-                UniffiCustomTypeConverter::from_custom(hex.clone())
-            )
-            .unwrap(),
-            hex
-        );
+        let s = hex.to_string();
+        let roundtripped = Hex::from_str(&s).unwrap();
+        assert_eq!(roundtripped, hex);
     }
 }

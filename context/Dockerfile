@@ -36,11 +36,11 @@ RUN sh ./get-docker.sh
 RUN wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 RUN apt update -qq && apt install -y dotnet-sdk-10.0
 
-RUN cargo install uniffi-bindgen-cs --git https://github.com/RCasatta/uniffi-bindgen-cs --rev fa87c381f88c8cacd26cf3e91e5c63af60162c3f
+RUN cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.10.0+v0.29.4
 
 # Install Node.js LTS using official binaries
 RUN curl -fsSL https://nodejs.org/dist/v20.18.0/node-v20.18.0-linux-x64.tar.xz | tar -xJ -C /usr/local --strip-components=1
 
-RUN cargo install uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --rev f02896c3e9fdce2f374656a32c46ae14c0051a26 # v0.7.3+v0.28.3
+RUN cargo install uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --tag v0.8.1+v0.29.4
 
 RUN cargo install waterfalls --locked

@@ -161,8 +161,6 @@ impl TxOutSecrets {
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "simplicity")]
-    use crate::UniffiCustomTypeConverter;
-    #[cfg(feature = "simplicity")]
     use crate::{types, TxOutSecrets};
 
     use std::str::FromStr;
@@ -268,7 +266,7 @@ mod tests {
         let abf_hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a471";
         let vbf_hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a472";
 
-        let asset_id = types::AssetId::into_custom(asset_hex.to_string()).unwrap();
+        let asset_id: types::AssetId = elements::AssetId::from_str(asset_hex).unwrap().into();
         let asset_bf = types::AssetBlindingFactor::from_string(abf_hex).unwrap();
         let value_bf = types::ValueBlindingFactor::from_string(vbf_hex).unwrap();
 

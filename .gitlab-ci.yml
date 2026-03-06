@@ -7,6 +7,7 @@ variables:
   SECURE_LOG_LEVEL: "info"
   SECRET_DETECTION_ENABLED: "true"
   DS_GRADLE_RESOLUTION_POLICY: "none"
+  DS_EXCLUDED_PATHS:  "spec, test, tests, tmp, proxy"
 
 include:
   - template: Security/SAST.gitlab-ci.yml

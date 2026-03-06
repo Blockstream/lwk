@@ -98,6 +98,7 @@ pub mod clients;
 mod contract;
 mod descriptor;
 mod domain;
+mod elements_wallet;
 mod error;
 mod liquidex;
 mod model;

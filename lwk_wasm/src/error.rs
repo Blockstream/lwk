@@ -114,6 +114,14 @@ pub enum Error {
     SimplicityProgram(#[from] lwk_simplicity::error::ProgramError),
 
     #[cfg(feature = "simplicity")]
+    #[error(transparent)]
+    WalletAbi(#[from] lwk_simplicity::error::WalletAbiError),
+
+    #[cfg(feature = "simplicity")]
+    #[error(transparent)]
+    TaprootPubkeyGen(#[from] lwk_simplicity::taproot_pubkey_gen::TaprootPubkeyGenError),
+
+    #[cfg(feature = "simplicity")]
     #[error("{0}")]
     SimplicityHlRich(String),
 
@@ -210,6 +218,10 @@ impl Error {
             Error::Generic(_) => "Generic",
             #[cfg(feature = "simplicity")]
             Error::SimplicityProgram(_) => "SimplicityProgram",
+            #[cfg(feature = "simplicity")]
+            Error::WalletAbi(_) => "WalletAbi",
+            #[cfg(feature = "simplicity")]
+            Error::TaprootPubkeyGen(_) => "TaprootPubkeyGen",
             #[cfg(feature = "simplicity")]
             Error::SimplicityHlRich(_) => "SimplicityRich",
             #[cfg(feature = "simplicity")]

@@ -57,6 +57,8 @@ mod xpub;
 
 #[cfg(feature = "simplicity")]
 mod simplicity;
+#[cfg(feature = "simplicity")]
+mod wallet_abi;
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use amp0::{Amp0, Amp0Pset};
@@ -142,6 +144,11 @@ pub use simplicity::{
     SimplicityArguments, SimplicityLogLevel, SimplicityProgram, SimplicityRunResult,
     SimplicityType, SimplicityTypedValue, SimplicityWitnessValues, StateTaprootBuilder,
     StateTaprootSpendInfo,
+};
+#[cfg(feature = "simplicity")]
+pub use wallet_abi::{
+    wallet_abi_create_external_taproot_handle, wallet_abi_create_taproot_handle,
+    wallet_abi_serialize_arguments, wallet_abi_serialize_witness, wallet_abi_verify_taproot_handle,
 };
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]

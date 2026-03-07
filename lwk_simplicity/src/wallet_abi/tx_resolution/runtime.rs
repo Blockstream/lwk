@@ -204,7 +204,15 @@ where
 
         let tx = pst.extract_tx()?;
 
-        tx.verify_tx_amt_proofs(&EC, &utxos)?;
+        // `elements::Transaction::verify_tx_amt_proofs` treats zero-value OP_RETURN outputs
+        // as a hard error even though Elements accepts them as provably unspendable. Lending
+        // contracts use these outputs for metadata and burns, so skip the local proof check
+        // for that specific transaction shape and rely on node validation instead.
+        if !tx.output.iter().any(|tx_out| {
+            tx_out.script_pubkey.is_provably_unspendable() && tx_out.value.explicit() == Some(0)
+        }) {
+            tx.verify_tx_amt_proofs(&EC, &utxos)?;
+        }
 
         Ok(tx)
     }

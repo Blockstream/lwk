@@ -124,6 +124,26 @@ impl TaprootPubkeyGen {
         })
     }
 
+    /// Build from an externally supplied x-only public key and compute the address.
+    ///
+    /// # Errors
+    /// Returns error if address generation fails.
+    pub fn from_external_x_only<A>(
+        xonly_public_key: XOnlyPublicKey,
+        arguments: &A,
+        network: Network,
+        get_address: &impl Fn(&XOnlyPublicKey, &A, Network) -> Result<Address, ProgramError>,
+    ) -> Result<Self, TaprootPubkeyGenError> {
+        let pubkey: PublicKey = xonly_public_key.public_key(Parity::Even).into();
+        let address = get_address(&xonly_public_key, arguments, network)?;
+
+        Ok(Self {
+            identity: TaprootIdentity::ExternalXOnly(xonly_public_key),
+            pubkey,
+            address,
+        })
+    }
+
     /// Parse from string and verify that pubkey and address match the provided arguments.
     ///
     /// # Errors
@@ -344,5 +364,30 @@ mod tests {
         let err = TaprootPubkeyGen::build_from_str(&tampered, &(), Network::Liquid, &fixed_address)
             .expect_err("tampered address must fail");
         assert!(matches!(err, TaprootPubkeyGenError::InvalidAddress { .. }));
+    }
+
+    #[test]
+    fn external_x_only_roundtrip_is_supported() {
+        let xonly = XOnlyPublicKey::from_slice(
+            &<[u8; 32]>::from_hex(
+                "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+            )
+            .expect("xonly hex"),
+        )
+        .expect("valid xonly");
+
+        let generated =
+            TaprootPubkeyGen::from_external_x_only(xonly, &(), Network::Liquid, &fixed_address)
+                .expect("generate taproot handle");
+
+        let rebuilt = TaprootPubkeyGen::build_from_str(
+            &generated.to_string(),
+            &(),
+            Network::Liquid,
+            &fixed_address,
+        )
+        .expect("rebuild and verify");
+
+        assert_eq!(rebuilt, generated);
     }
 }

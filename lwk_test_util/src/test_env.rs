@@ -146,6 +146,7 @@ impl TestEnvBuilder {
             "-chain=liquidregtest",
             "-initialfreecoins=2100000000",
             "-acceptdiscountct=1",
+            "-multi_data_permitted=1",
             "-rest",
             "-txindex=1",
             "-evbparams=simplicity:-1:::", // Enable Simplicity from block 0

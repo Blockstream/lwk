@@ -6,12 +6,21 @@ description = "Liquid Wallet Kit - Utilities to deal with Simplicity transaction
 license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_simplicity"
 
+[features]
+wallet_abi_test_utils = [
+    "dep:lwk_test_util",
+    "lwk_wollet/electrum",
+    "lwk_wollet/esplora",
+]
+
 [dependencies]
 log = "0.4.28"
 
 lwk_common = { version = "0.15.0" }
 lwk_signer = { version = "0.15.0", default-features = false }
 lwk_wollet = { version = "0.15.0", default-features = false }
+lwk_test_util = { path = "../lwk_test_util", optional = true }
+tokio = { version = "1.36.0", default-features = false, features = ["rt", "sync"] }
 
 simplicityhl = { version = "0.4.1" }
 
@@ -26,5 +35,4 @@ uuid = { version = "~1.20", default-features = false, features = ["serde", "v4"]
 uuid = { version = "~1.20", default-features = false, features = ["js"] }
 
 [dev-dependencies]
-lwk_test_util = { version = "0.15.0"}
 lwk_wollet = { version = "0.15.0", default-features = false, features = ["esplora", "electrum"] }

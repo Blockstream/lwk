@@ -10,3 +10,6 @@
 
 pub mod schema;
 pub mod tx_resolution;
+
+#[cfg(feature = "wallet_abi_test_utils")]
+pub mod test_utils;

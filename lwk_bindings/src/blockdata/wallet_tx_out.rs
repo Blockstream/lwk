@@ -16,8 +16,40 @@ impl From<lwk_wollet::WalletTxOut> for WalletTxOut {
     }
 }
 
+impl From<&WalletTxOut> for lwk_wollet::WalletTxOut {
+    fn from(value: &WalletTxOut) -> Self {
+        value.inner.clone()
+    }
+}
+
 #[uniffi::export]
 impl WalletTxOut {
+    /// Build a `WalletTxOut` from primitive fields with deterministic defaults.
+    ///
+    /// `is_spent` is always initialized to `false`.
+    #[uniffi::constructor]
+    pub fn new(
+        outpoint: &OutPoint,
+        height: Option<u32>,
+        unblinded: &TxOutSecrets,
+        wildcard_index: u32,
+        ext_int: Chain,
+        address: &Address,
+    ) -> Arc<Self> {
+        Arc::new(Self {
+            inner: lwk_wollet::WalletTxOut {
+                is_spent: false,
+                outpoint: outpoint.into(),
+                script_pubkey: address.as_ref().script_pubkey(),
+                height,
+                unblinded: unblinded.into(),
+                wildcard_index,
+                ext_int: ext_int.into(),
+                address: address.into(),
+            },
+        })
+    }
+
     /// Return the outpoint (txid and vout) of this `WalletTxOut`.
     pub fn outpoint(&self) -> Arc<OutPoint> {
         Arc::new(self.inner.outpoint.into())

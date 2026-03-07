@@ -46,10 +46,24 @@ pub use lightning::{BoltzSession, LogLevel, Logging, LoggingLink};
 #[cfg(feature = "simplicity")]
 mod simplicity;
 #[cfg(feature = "simplicity")]
+mod wallet_abi;
+#[cfg(feature = "simplicity")]
+mod web_connection;
+#[cfg(feature = "simplicity")]
 pub use simplicity::{
     simplicity_control_block, simplicity_derive_xonly_pubkey, Cmr, SimplicityArguments,
     SimplicityLogLevel, SimplicityProgram, SimplicityRunResult, SimplicityType,
     SimplicityTypedValue, SimplicityWitnessValues, StateTaprootBuilder, StateTaprootSpendInfo,
+};
+#[cfg(feature = "simplicity")]
+pub use wallet_abi::{
+    wallet_abi_extract_request_json, SignerMetaLink, WalletAbiBip, WalletAbiProvider,
+    WalletAbiSignerCallbacks, WalletAbiWalletCallbacks, WalletMetaLink,
+};
+#[cfg(feature = "simplicity")]
+pub use web_connection::{
+    web_connection_extract_relay_pairing_json, web_connection_fetch_tx_out,
+    WalletAbiRelayConnection, WalletAbiRelayConnectionStatus, WalletAbiRelayRequest,
 };
 
 pub use blockdata::address::Address;

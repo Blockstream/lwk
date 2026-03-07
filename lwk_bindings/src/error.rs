@@ -247,6 +247,15 @@ impl From<lwk_simplicity::error::ProgramError> for LwkError {
 }
 
 #[cfg(feature = "simplicity")]
+impl From<lwk_simplicity::error::WalletAbiError> for LwkError {
+    fn from(value: lwk_simplicity::error::WalletAbiError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
+#[cfg(feature = "simplicity")]
 impl From<lwk_simplicity::simplicityhl::error::RichError> for LwkError {
     fn from(value: lwk_simplicity::simplicityhl::error::RichError) -> Self {
         LwkError::Generic {

@@ -15,14 +15,28 @@ lwk_payment_instructions = { version = "0.15.0" }
 lwk_boltz = { version = "0.15.0", optional = true }
 lwk_simplicity = { version = "0.15.0", optional = true }
 tokio = { version = "1.0", features = [
-    "rt",
+    "net",
+    "rt-multi-thread",
+    "sync",
+    "time",
 ], optional = true } # move into lwk_boltz
 log = { version = "0.4", optional = true }
+futures-util = { version = "0.3", optional = true }
+base64 = "0.22"
+zstd = "0.13"
+chacha20poly1305 = "0.10"
+ring = "0.17"
+tokio-tungstenite = { version = "0.26.0", optional = true, features = ["rustls-tls-webpki-roots"] }
+url = "2.5"
+tracing = { version = "0.1", optional = true }
+tracing-log = { version = "0.2", optional = true }
+tracing-subscriber = { version = "0.3", features = ["fmt", "std", "env-filter"], optional = true }
 
 elements.workspace = true
 thiserror = "1.0.50"
 uniffi = { version = "0.28.2", features = ["bindgen-tests"] }
 serde_json = "1"
+serde = { version = "1", features = ["derive"] }
 
 [build-dependencies]
 uniffi = { version = "0.28.2", features = ["build"] }
@@ -38,7 +52,15 @@ name = "lwk"
 default = ["lightning"]
 foreign_bindings = []
 lightning = ["lwk_boltz", "tokio", "log"]
-simplicity = ["lwk_simplicity"]
+simplicity = [
+    "futures-util",
+    "lwk_simplicity",
+    "tokio",
+    "tokio-tungstenite",
+    "tracing",
+    "tracing-log",
+    "tracing-subscriber",
+]
 
 [package.metadata.docs.rs]
 all-features = true

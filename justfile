@@ -79,6 +79,39 @@ x86_64-linux-android:
 android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
     cp -a target/release/android/jniLibs lwk_bindings/android_bindings/lib/src/androidMain
 
+# Local storage-saver android build (single ABI only)
+android-minimal target="aarch64-linux-android" abi="arm64-v8a":
+    cargo ndk -t {{target}} -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
+    rm -rf lwk_bindings/android_bindings/lib/src/main/jniLibs
+    rm -rf lwk_bindings/android_bindings/lib/src/androidMain/jniLibs
+    mkdir -p lwk_bindings/android_bindings/lib/src/androidMain/jniLibs
+    cp -a target/release/android/jniLibs/{{abi}} lwk_bindings/android_bindings/lib/src/androidMain/jniLibs/
+
+# Regenerate Kotlin Multiplatform bindings from a single Android build.
+android-bindings-minimal target="aarch64-linux-android":
+    command -v gobley-uniffi-bindgen >/dev/null 2>&1 || cargo install --bin gobley-uniffi-bindgen gobley-uniffi-bindgen@0.2.0
+    mkdir -p target/release/kotlin-multiplatform
+    gobley-uniffi-bindgen --config ./lwk_bindings/uniffi.kotlin-multiplatform.toml --library target/{{target}}/release/liblwk.a --out-dir target/release/kotlin-multiplatform
+    cp -a target/release/kotlin-multiplatform/* lwk_bindings/android_bindings/lib/src/
+
+# Remove unused local multiplatform artifacts to save disk (Android-only workflow)
+android-prune-artifacts abi="arm64-v8a":
+    mkdir -p lwk_bindings/android_bindings/lib/src/androidMain/jniLibs
+    find lwk_bindings/android_bindings/lib/src/androidMain/jniLibs -mindepth 1 -maxdepth 1 ! -name {{abi}} -exec rm -rf {} +
+    rm -rf lwk_bindings/android_bindings/lib/src/libs/ios-arm64
+    rm -rf lwk_bindings/android_bindings/lib/src/libs/ios-simulator-arm64
+    rm -rf lwk_bindings/android_bindings/lib/src/jvmMain/resources/darwin-aarch64
+
+# Publish Android-first local artifact.
+# Keep the JVM target enabled so the root KMP publication contains valid common metadata
+# for downstream IDE import and commonMain symbol resolution.
+publish-android-local-minimal target="aarch64-linux-android" abi="arm64-v8a" version="0.15.0-local":
+    just android-minimal {{target}} {{abi}}
+    just android-bindings-minimal {{target}}
+    just android-prune-artifacts {{abi}}
+    rm -f lwk_bindings/android_bindings/lib/src/androidMain/kotlin/lwk/lwk.kt
+    cd lwk_bindings/android_bindings && ./gradlew -PlibraryVersion={{version}} -Plwk.kmp.apple.enabled=false -Plwk.kmp.jvm.enabled=true -Plwk.android.abi={{abi}} :lib:publishToMavenLocal
+
 # Build the kotlin multiplatform interface and android, ios and jvm
 kotlin-multiplatform: ios ios-sim android jvm
     cargo install --bin gobley-uniffi-bindgen gobley-uniffi-bindgen@0.2.0

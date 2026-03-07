@@ -11,36 +11,46 @@ plugins {
     signing
 }
 
+val enableAppleTargets =
+    providers.gradleProperty("lwk.kmp.apple.enabled").orNull?.toBooleanStrictOrNull() ?: true
+val enableJvmTarget =
+    providers.gradleProperty("lwk.kmp.jvm.enabled").orNull?.toBooleanStrictOrNull() ?: true
+val androidAbiFilter = providers.gradleProperty("lwk.android.abi").orNull
+
 kotlin {
     androidTarget {
         publishLibraryVariants("release")
         compilerOptions { jvmTarget.set(JvmTarget.JVM_1_8) }
     }
 
-    jvm()
+    if (enableJvmTarget) {
+        jvm()
+    }
 
-    val xcf = XCFramework()
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach {
+    if (enableAppleTargets) {
+        val xcf = XCFramework()
+        listOf(
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach {
 
-        it.binaries.framework {
-            baseName = "lwk"
-            xcf.add(this)
-        }
+            it.binaries.framework {
+                baseName = "lwk"
+                xcf.add(this)
+            }
 
-        val platform = when (it.targetName) {
-            "iosSimulatorArm64" -> "ios_simulator_arm64"
-            "iosArm64" -> "ios_arm64"
-            else -> error("Unsupported target $name")
-        }
+            val platform = when (it.targetName) {
+                "iosSimulatorArm64" -> "ios_simulator_arm64"
+                "iosArm64" -> "ios_arm64"
+                else -> error("Unsupported target $name")
+            }
 
 
-        it.compilations["main"].cinterops {
-            create("lwkCInterop") {
-                defFile(project.file("src/nativeInterop/cinterop/lwk.def"))
-                includeDirs(project.file("src/nativeInterop/cinterop/headers/lwk/"), project.file("src/libs/$platform"))
+            it.compilations["main"].cinterops {
+                create("lwkCInterop") {
+                    defFile(project.file("src/nativeInterop/cinterop/lwk.def"))
+                    includeDirs(project.file("src/nativeInterop/cinterop/headers/lwk/"), project.file("src/libs/$platform"))
+                }
             }
         }
     }
@@ -63,8 +73,10 @@ kotlin {
                 artifact { type = "aar" }
             }
         }
-        jvmMain.dependencies {
-            implementation(libs.jna)
+        if (enableJvmTarget) {
+            jvmMain.dependencies {
+                implementation(libs.jna)
+            }
         }
         androidUnitTest.dependencies {
             implementation(libs.junit)
@@ -83,6 +95,11 @@ android {
 
     defaultConfig {
         minSdk = 24
+        if (!androidAbiFilter.isNullOrBlank()) {
+            ndk {
+                abiFilters += listOf(androidAbiFilter)
+            }
+        }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")

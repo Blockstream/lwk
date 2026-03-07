@@ -57,6 +57,14 @@ impl PsetOutput {
     pub fn blinder_index(&self) -> Option<u32> {
         self.inner.blinder_index
     }
+
+    /// Get the output blinding public key, if set.
+    pub fn blinding_pubkey(&self) -> Option<Arc<PublicKey>> {
+        self.inner
+            .blinding_key
+            .as_ref()
+            .map(|key| Arc::new((*key).into()))
+    }
 }
 
 #[cfg(feature = "simplicity")]

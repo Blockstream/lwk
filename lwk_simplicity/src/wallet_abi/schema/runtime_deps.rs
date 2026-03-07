@@ -1,4 +1,5 @@
 use std::future::Future;
+use std::sync::Arc;
 
 use lwk_common::Bip;
 use lwk_wollet::bitcoin::bip32::{DerivationPath, Fingerprint};
@@ -122,4 +123,85 @@ pub trait WalletMeta {
     fn get_spendable_utxos(
         &self,
     ) -> impl Future<Output = Result<Vec<WalletTxOut>, Self::Error>> + Send + '_;
+}
+
+// The provider stores foreign callback bridges behind `Arc`, so runtime trait
+// calls need to transparently forward through shared ownership.
+impl<T> SignerMeta for Arc<T>
+where
+    T: SignerMeta + ?Sized,
+{
+    type Error = T::Error;
+
+    fn get_network(&self) -> lwk_common::Network {
+        self.as_ref().get_network()
+    }
+
+    fn get_signer_receive_address(&self) -> Result<Address, Self::Error> {
+        self.as_ref().get_signer_receive_address()
+    }
+
+    fn fingerprint(&self) -> Fingerprint {
+        self.as_ref().fingerprint()
+    }
+
+    fn get_derivation_path(&self, bip: Bip) -> DerivationPath {
+        self.as_ref().get_derivation_path(bip)
+    }
+
+    fn get_pubkey_by_derivation_path(
+        &self,
+        derivation_path: &DerivationPath,
+    ) -> Result<PublicKey, Self::Error> {
+        self.as_ref().get_pubkey_by_derivation_path(derivation_path)
+    }
+
+    fn get_raw_signing_x_only_pubkey(&self) -> Result<XOnlyPublicKey, Self::Error> {
+        self.as_ref().get_raw_signing_x_only_pubkey()
+    }
+
+    fn unblind(&self, tx_out: &TxOut) -> Result<TxOutSecrets, Self::Error> {
+        self.as_ref().unblind(tx_out)
+    }
+
+    fn sign_pst(&self, pst: &mut PartiallySignedTransaction) -> Result<(), Self::Error> {
+        self.as_ref().sign_pst(pst)
+    }
+
+    fn sign_schnorr(
+        &self,
+        message: Message,
+        xonly_public_key: XOnlyPublicKey,
+    ) -> Result<Signature, Self::Error> {
+        self.as_ref().sign_schnorr(message, xonly_public_key)
+    }
+}
+
+// Mirror the signer forwarding above so one provider instance can own both
+// callback bridges without rebuilding per request.
+impl<T> WalletMeta for Arc<T>
+where
+    T: WalletMeta + ?Sized,
+{
+    type Error = T::Error;
+
+    fn get_tx_out(
+        &self,
+        outpoint: OutPoint,
+    ) -> impl Future<Output = Result<TxOut, Self::Error>> + Send + '_ {
+        self.as_ref().get_tx_out(outpoint)
+    }
+
+    fn broadcast_transaction(
+        &self,
+        tx: Transaction,
+    ) -> impl Future<Output = Result<Txid, Self::Error>> + Send + '_ {
+        self.as_ref().broadcast_transaction(tx)
+    }
+
+    fn get_spendable_utxos(
+        &self,
+    ) -> impl Future<Output = Result<Vec<WalletTxOut>, Self::Error>> + Send + '_ {
+        self.as_ref().get_spendable_utxos()
+    }
 }

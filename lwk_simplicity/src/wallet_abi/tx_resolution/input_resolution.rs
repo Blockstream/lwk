@@ -343,11 +343,33 @@ where
             }
         };
 
+        let wallet_derivation = self
+            .wallet_snapshot
+            .iter()
+            .find(|candidate| candidate.outpoint == outpoint)
+            .map(|candidate| WalletDerivationIndex {
+                ext_int: candidate.ext_int,
+                wildcard_index: candidate.wildcard_index,
+            })
+            .or_else(|| {
+                self.signer_meta
+                    .get_signer_receive_address()
+                    .ok()
+                    .and_then(|address| {
+                        (address.script_pubkey() == tx_out.script_pubkey).then_some(
+                            WalletDerivationIndex {
+                                ext_int: Chain::External,
+                                wildcard_index: 1,
+                            },
+                        )
+                    })
+            });
+
         Ok(ResolvedInputMaterial {
             outpoint,
             tx_out,
             secrets,
-            wallet_derivation: None,
+            wallet_derivation,
         })
     }
 

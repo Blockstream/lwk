@@ -8,8 +8,11 @@
 //! for `wallet-abi-0.1`, blinded outputs require at least one wallet-finalized
 //! input as `blinder_index` anchor.
 
+pub mod provider;
 pub mod schema;
 pub mod tx_resolution;
+
+pub use provider::WalletAbiProvider;
 
 #[cfg(feature = "wallet_abi_test_utils")]
 pub mod test_utils;

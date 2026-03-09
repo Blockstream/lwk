@@ -316,7 +316,6 @@ boltz_chain:
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
-    - mkdir -p regtest/data/bitcoind && chown -R 1000:1000 regtest/data/bitcoind || true
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-chain
 
@@ -327,7 +326,6 @@ boltz_mrh:
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
-    - mkdir -p regtest/data/bitcoind && chown -R 1000:1000 regtest/data/bitcoind || true
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-mrh
 
@@ -338,7 +336,6 @@ boltz_reverse:
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
-    - mkdir -p regtest/data/bitcoind && chown -R 1000:1000 regtest/data/bitcoind || true
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-reverse
 
@@ -349,7 +346,6 @@ boltz_submarine:
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
-    - mkdir -p regtest/data/bitcoind && chown -R 1000:1000 regtest/data/bitcoind || true
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-submarine
 

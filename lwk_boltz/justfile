@@ -11,6 +11,7 @@ regtest-env-start:
         exit 0
     fi
     
+    mkdir -p regtest/data/bitcoind && chown -R 1000:1000 regtest/data/bitcoind || true
     (cd regtest && ./start.sh)
     (cd proxy && docker compose up -d)
     

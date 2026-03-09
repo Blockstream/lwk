@@ -60,6 +60,18 @@ impl PsetOutput {
 }
 
 #[cfg(feature = "simplicity")]
+#[uniffi::export]
+impl PsetOutput {
+    /// Get the output blinding public key, if set.
+    pub fn blinding_pubkey(&self) -> Option<Arc<PublicKey>> {
+        self.inner
+            .blinding_key
+            .as_ref()
+            .map(|key| Arc::new((*key).into()))
+    }
+}
+
+#[cfg(feature = "simplicity")]
 /// Builder for PSET outputs
 #[derive(uniffi::Object, Debug)]
 pub struct PsetOutputBuilder {

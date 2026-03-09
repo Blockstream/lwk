@@ -397,6 +397,11 @@ impl LockupResponse {
         self.inner.expected_amount()
     }
 
+    /// See [`crate::LockupResponse::uri()`]
+    pub fn uri(&self) -> Option<&str> {
+        self.inner.uri()
+    }
+
     pub fn chain_from(&self) -> Chain {
         self.inner.chain_from()
     }

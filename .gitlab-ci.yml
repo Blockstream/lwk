@@ -16,7 +16,9 @@ include:
 
 stages:
   - security
+  - fmt
   - test
+  - test_long
   - deploy
 
 .base:
@@ -59,7 +61,7 @@ build_bindings:
     expire_in: 1 day
 
 fmt_clippy:
-  stage: test
+  stage: fmt
   needs: []
   extends: .base
   script:
@@ -142,8 +144,8 @@ unit_tests:
     - cargo nextest run --lib --profile unit # ensure unit tests don't take more than a sec each
 
 test_coverage:
-  stage: test
-  needs: []
+  stage: test_long
+  needs: [fmt_clippy]
   extends: .base
   variables:
     RUSTFLAGS: "-C instrument-coverage"
@@ -280,8 +282,8 @@ just:
     - just kotlin # kotlin-android would require cargo-ndk and various targets, tested on github which produce the kotlin package
 
 wasm:
-  stage: test
-  needs: []
+  stage: test_long
+  needs: [fmt_clippy]
   extends: .base
   variables:
     RUSTFLAGS: "--cfg=web_sys_unstable_apis"
@@ -307,8 +309,8 @@ wasm:
       - lwk_wasm/pkg
 
 nix:
-  stage: test
-  needs: []
+  stage: test_long
+  needs: [fmt_clippy]
   image: xenoky/lwk-nix-builder@sha256:c24c03dce4f0f9ea10614844c29e0cdef0b0bcf80ce68e83da57e820a2049da1
   variables:
       EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes
@@ -319,8 +321,8 @@ nix:
     - (! grep ERROR log)
 
 boltz_chain:
-  stage: test
-  needs: []
+  stage: test_long
+  needs: [fmt_clippy]
   extends: .base
   script:
     - cd lwk_boltz
@@ -329,8 +331,8 @@ boltz_chain:
     - just test-chain
 
 boltz_mrh:
-  stage: test
-  needs: []
+  stage: test_long
+  needs: [fmt_clippy]
   extends: .base
   script:
     - cd lwk_boltz
@@ -339,8 +341,8 @@ boltz_mrh:
     - just test-mrh
 
 boltz_reverse:
-  stage: test
-  needs: []
+  stage: test_long
+  needs: [fmt_clippy]
   extends: .base
   script:
     - cd lwk_boltz
@@ -349,8 +351,8 @@ boltz_reverse:
     - just test-reverse
 
 boltz_submarine:
-  stage: test
-  needs: []
+  stage: test_long
+  needs: [fmt_clippy]
   extends: .base
   script:
     - cd lwk_boltz

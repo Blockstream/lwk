@@ -33,6 +33,18 @@ pub enum LwkError {
     BoltzBackendHttpError { status: u16, error: Option<String> },
 }
 
+/// Extract the error message from a LwkError when possible, otherwise return None
+// TODO: once we migrate to uniffi 0.30+ can become a method on the LwkError enum
+#[uniffi::export]
+pub fn extract_error_msg(error: &LwkError) -> Option<String> {
+    match error {
+        LwkError::Generic { msg } => Some(msg.clone()),
+        LwkError::PoisonError { msg } => Some(msg.clone()),
+        LwkError::BoltzBackendHttpError { status: _, error } => error.clone(),
+        _ => None,
+    }
+}
+
 impl From<lwk_wollet::Error> for LwkError {
     fn from(value: lwk_wollet::Error) -> Self {
         LwkError::Generic {

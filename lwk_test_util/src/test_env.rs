@@ -332,6 +332,11 @@ impl TestEnv {
 
     // Elementsd methods
 
+    // Generic Elements RPC
+    pub fn elementsd_call(&self, cmd: &str, args: &[serde_json::Value]) -> serde_json::Value {
+        self.elementsd.client.call(cmd, args).unwrap()
+    }
+
     fn rescanblockchain_(client: &Client) {
         client.call::<Value>("rescanblockchain", &[]).unwrap();
     }

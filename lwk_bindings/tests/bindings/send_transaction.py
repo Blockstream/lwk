@@ -76,3 +76,9 @@ except LwkError as e:
     assert "InsufficientFunds" in str(e), str(e)
 else:
     assert False, "Should have thrown error"
+
+try:
+  x=ElectrumClient.from_url("not a url")
+except LwkError as e:
+  assert str(e) == "msg='relative URL without a base'", str(e)
+  assert extract_error_msg(e) == "relative URL without a base", extract_error_msg(e)

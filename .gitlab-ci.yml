@@ -47,6 +47,17 @@ secret_detection:
   stage: security
   needs: []
 
+build_bindings:
+  stage: build
+  needs: []
+  extends: .base
+  script:
+    - cargo build --release -p lwk_bindings
+  artifacts:
+    paths:
+      - target/release/liblwk.so
+    expire_in: 1 day
+
 fmt_clippy:
   stage: test
   needs: []
@@ -224,10 +235,9 @@ bindings:
 
 csharp:
   stage: test
-  needs: []
+  needs: [build_bindings]
   extends: .base
   script:
-    - cargo build --release -p lwk_bindings
     - mkdir csharp
     - cp target/release/liblwk.so csharp/
     - uniffi-bindgen-cs --library csharp/liblwk.so --out-dir csharp
@@ -242,10 +252,9 @@ csharp:
 
 cpp:
   stage: test
-  needs: []
+  needs: [build_bindings]
   extends: .base
   script:
-    - cargo build --release -p lwk_bindings
     - mkdir cpp
     - cp target/release/liblwk.so cpp/
     - uniffi-bindgen-cpp --library cpp/liblwk.so --out-dir cpp

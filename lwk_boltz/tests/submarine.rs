@@ -8,7 +8,7 @@ mod tests {
 
     use bip39::Mnemonic;
     use boltz_client::{
-        boltz::{BoltzApiClientV2, BoltzWsConfig, CreateSubmarineRequest},
+        boltz::{BoltzApiClientV2, BoltzWsConfig, CreateSubmarineRequest, GetBolt12FetchRequest},
         fees::Fee,
         network::{Chain, LiquidChain},
         swaps::{ChainClient, SwapScript, SwapTransactionParams},
@@ -48,18 +48,32 @@ mod tests {
         // Call the helper that shells into the cln-1 container and runs `lightning-cli offer any`.
         let offer = utils::cln_offer_any().expect("cln_offer_any should succeed");
 
-        // Sanity-check that an offer-like response is returned.
-        assert!(
-            offer.get("bolt12").is_some() || offer.get("offer_id").is_some(),
-            "CLN offer any response should contain an 'offer'-related field"
-        );
+        assert!(offer.starts_with("lno1"));
+    }
 
-        assert!(offer
-            .get("bolt12")
-            .unwrap()
-            .as_str()
-            .unwrap()
-            .starts_with("lno1"));
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_bolt12_offer_to_bolt11_and_pay_with_session() {
+        let _ = env_logger::try_init();
+
+        // Ask CLN for a BOLT12 offer
+        let offer = utils::cln_offer_any().expect("cln_offer_any should succeed");
+
+        // Translate the BOLT12 offer to a BOLT11 invoice using Boltz API v2
+        let boltz_api_v2 = BoltzApiClientV2::new(BOLTZ_REGTEST.to_string(), Some(TIMEOUT));
+        let amount = 50_000;
+        let p = GetBolt12FetchRequest {
+            offer,
+            amount,
+            note: None,
+        };
+        let response = boltz_api_v2
+            .get_bolt12_invoice(p)
+            .await
+            .expect("get_bolt12_invoice should succeed");
+
+        let bolt11 = response.invoice;
+        assert!(bolt11.starts_with("lni"));
     }
 
     #[tokio::test]

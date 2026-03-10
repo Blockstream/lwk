@@ -16,7 +16,10 @@ include:
 
 stages:
   - security
+  - fmt
+  - build
   - test
+  - test_long
   - deploy
 
 .base:
@@ -47,8 +50,19 @@ secret_detection:
   stage: security
   needs: []
 
+build_bindings:
+  stage: build
+  needs: []
+  extends: .base
+  script:
+    - cargo build --release -p lwk_bindings
+  artifacts:
+    paths:
+      - target/release/liblwk.so
+    expire_in: 1 day
+
 fmt_clippy:
-  stage: test
+  stage: fmt
   needs: []
   extends: .base
   script:
@@ -131,8 +145,8 @@ unit_tests:
     - cargo nextest run --lib --profile unit # ensure unit tests don't take more than a sec each
 
 test_coverage:
-  stage: test
-  needs: []
+  stage: test_long
+  needs: [fmt_clippy]
   extends: .base
   variables:
     RUSTFLAGS: "-C instrument-coverage"
@@ -224,10 +238,9 @@ bindings:
 
 csharp:
   stage: test
-  needs: []
+  needs: [build_bindings]
   extends: .base
   script:
-    - cargo build --release -p lwk_bindings
     - mkdir csharp
     - cp target/release/liblwk.so csharp/
     - uniffi-bindgen-cs --library csharp/liblwk.so --out-dir csharp
@@ -242,10 +255,9 @@ csharp:
 
 cpp:
   stage: test
-  needs: []
+  needs: [build_bindings]
   extends: .base
   script:
-    - cargo build --release -p lwk_bindings
     - mkdir cpp
     - cp target/release/liblwk.so cpp/
     - uniffi-bindgen-cpp --library cpp/liblwk.so --out-dir cpp
@@ -271,8 +283,8 @@ just:
     - just kotlin # kotlin-android would require cargo-ndk and various targets, tested on github which produce the kotlin package
 
 wasm:
-  stage: test
-  needs: []
+  stage: test_long
+  needs: [fmt_clippy]
   extends: .base
   variables:
     RUSTFLAGS: "--cfg=web_sys_unstable_apis"
@@ -298,8 +310,8 @@ wasm:
       - lwk_wasm/pkg
 
 nix:
-  stage: test
-  needs: []
+  stage: test_long
+  needs: [fmt_clippy]
   image: xenoky/lwk-nix-builder@sha256:c24c03dce4f0f9ea10614844c29e0cdef0b0bcf80ce68e83da57e820a2049da1
   variables:
       EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes
@@ -310,46 +322,42 @@ nix:
     - (! grep ERROR log)
 
 boltz_chain:
-  stage: test
-  needs: []
+  stage: test_long
+  needs: [fmt_clippy]
   extends: .base
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
-    - mkdir -p regtest/data/bitcoind && chown -R 1000:1000 regtest/data/bitcoind || true
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-chain
 
 boltz_mrh:
-  stage: test
-  needs: []
+  stage: test_long
+  needs: [fmt_clippy]
   extends: .base
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
-    - mkdir -p regtest/data/bitcoind && chown -R 1000:1000 regtest/data/bitcoind || true
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-mrh
 
 boltz_reverse:
-  stage: test
-  needs: []
+  stage: test_long
+  needs: [fmt_clippy]
   extends: .base
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
-    - mkdir -p regtest/data/bitcoind && chown -R 1000:1000 regtest/data/bitcoind || true
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-reverse
 
 boltz_submarine:
-  stage: test
-  needs: []
+  stage: test_long
+  needs: [fmt_clippy]
   extends: .base
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
-    - mkdir -p regtest/data/bitcoind && chown -R 1000:1000 regtest/data/bitcoind || true
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-submarine
 

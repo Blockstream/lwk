@@ -3,6 +3,7 @@ import json
 import os
 import threading
 import time
+from datetime import datetime, timezone
 from lwk import *
 
 
@@ -454,6 +455,12 @@ def list_all_swaps(boltz_session):
             print(f"ID: {swap.get('id', 'N/A')}")
             print(f"Status: {swap.get('status', 'N/A')}")
             print(f"Type: {swap.get('type', 'N/A')}")
+            created_at = swap.get('createdAt')
+            if created_at:
+                dt = datetime.fromtimestamp(created_at, tz=timezone.utc)
+                print(f"Date: {dt.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+            else:
+                print("Date: N/A")
     except Exception as e:
         print(f"Error listing all swaps: {e}")
 

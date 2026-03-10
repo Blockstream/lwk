@@ -11,6 +11,7 @@ regtest-env-start:
         exit 0
     fi
     
+    mkdir -p regtest/data/bitcoind && chown -R 1000:1000 regtest/data/bitcoind || true
     (cd regtest && ./start.sh)
     (cd proxy && docker compose up -d)
     
@@ -58,33 +59,34 @@ test-chain: regtest-env-start
     #!/usr/bin/env bash
     set -ea
     source .env
-    RUST_LOG=info cargo test --test chain_swaps -- --include-ignored --nocapture --test-threads=1
+    RUST_LOG=info cargo nextest run --profile boltz --test chain_swaps --run-ignored all --nocapture
 
 # Run submarine swap test with magic routing hints
 test-mrh: regtest-env-start
     #!/usr/bin/env bash
     set -ea
     source .env
-    RUST_LOG=info cargo test --test mrh -- --include-ignored --nocapture --test-threads=1
+    RUST_LOG=info cargo nextest run --profile boltz --test mrh --run-ignored all --nocapture
 
 # Run reverse swap test
 test-reverse: regtest-env-start
     #!/usr/bin/env bash
     set -ea
     source .env
-    RUST_LOG=info cargo test --test reverse -- --include-ignored --nocapture --test-threads=1
+    RUST_LOG=info cargo nextest run --profile boltz --test reverse --run-ignored all --nocapture
 
 # Run submarine swap test
 test-submarine: regtest-env-start
     #!/usr/bin/env bash
     set -ea
     source .env
-    RUST_LOG=info cargo test --test submarine -- --include-ignored --nocapture --test-threads=1
+    RUST_LOG=info cargo nextest run --profile boltz --test submarine --run-ignored all --nocapture
 
 test-single ARGUMENT: regtest-env-start
     #!/usr/bin/env bash
     set -ea
     source .env
+    # we don't use nextest here because it's used locally
     RUST_LOG=info cargo test -- --include-ignored --nocapture {{ARGUMENT}}
     
 # Run all boltz tests

@@ -42,6 +42,28 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_cln_offer_any_via_docker() {
+        let _ = env_logger::try_init();
+
+        // Call the helper that shells into the cln-1 container and runs `lightning-cli offer any`.
+        let offer = utils::cln_offer_any().expect("cln_offer_any should succeed");
+
+        // Sanity-check that an offer-like response is returned.
+        assert!(
+            offer.get("bolt12").is_some() || offer.get("offer_id").is_some(),
+            "CLN offer any response should contain an 'offer'-related field"
+        );
+
+        assert!(offer
+            .get("bolt12")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .starts_with("lno1"));
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_submarine() {
         let _ = env_logger::try_init();
 

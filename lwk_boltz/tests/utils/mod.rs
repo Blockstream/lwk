@@ -120,6 +120,34 @@ pub fn cln_getinfo() -> Result<Value, Box<dyn Error>> {
     Ok(value)
 }
 
+/// Call `offer any` on the CLN (cln-1) node using `lightning-cli` inside the Docker container.
+pub fn cln_offer_any() -> Result<String, Box<dyn Error>> {
+    use std::process::Command;
+    use std::str;
+
+    let output = Command::new("docker")
+        .args([
+            "exec",
+            "boltz-cln-1",
+            "lightning-cli",
+            "--lightning-dir=/app/lightning",
+            "--network=regtest",
+            "offer",
+            "any",
+        ])
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = str::from_utf8(&output.stderr).unwrap_or("non-utf8 stderr");
+        return Err(format!("cln_offer_any failed: {stderr}").into());
+    }
+
+    let stdout = str::from_utf8(&output.stdout)?;
+    let value: Value = serde_json::from_str(stdout)?;
+    let res = value.get("bolt12").unwrap().as_str().unwrap().to_string();
+    Ok(res.to_string())
+}
+
 pub async fn generate_address(chain: Chain) -> Result<String, Box<dyn Error>> {
     json_rpc_request(chain, "getnewaddress", json!([]))
         .await?

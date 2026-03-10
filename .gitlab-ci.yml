@@ -17,6 +17,7 @@ include:
 stages:
   - security
   - fmt
+  - build
   - test
   - test_long
   - deploy

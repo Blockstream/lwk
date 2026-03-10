@@ -12,7 +12,6 @@ This section showcases a series of projects that are built on LWK or its compone
 |[Bull Bitcoin](https://wallet.bullbitcoin.com/)| Atomic swaps| Wallet| Dart|
 |[Blitz Wallet](https://blitz-wallet.com/)| Atomic swaps| Wallet| Javascript|
 |[Peerswap](https://www.peerswap.dev/)| LN Balancing| Server| Go|
-|[AreaLayer FireBolt wallet](https://www.arealayer.net/projects#h.kk9ofahkprw7)| Wallet| Wallet| TypeScript|
 |[Banco Libre](https://bancolibre.com/)| Browser wallet| Wallet| Wasm|
 |[Misty Breeze](https://breez.technology/)| Lightning wallet| Wallet| Dart|
 |[Onion Mill - StashPay](https://blog.onionmill.com/)| Lightning wallet| Wallet| |
@@ -96,14 +95,6 @@ Blitz Wallet is open source, source available in the [Github repository](https:/
 The app use LWK as internal liquid wallet and signer.
 
 Peerswap is open source, source available in the [Github repository](https://github.com/ElementsProject/peerswap)
-
-
-## AreaLayer FireBolt wallet
-|[AreaLayer FireBolt wallet](https://www.arealayer.net/projects#h.kk9ofahkprw7) is a react native wallet.
-
-The app is based on Breeze SDK Liquid.
-
-AreaLayer FireBolt wallet is open source, source available in the [Github repository](https://github.com/AreaLayer/firebolt-react-native)
 
 
 ## Banco Libre

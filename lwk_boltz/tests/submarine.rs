@@ -23,6 +23,25 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_cln_getinfo_via_docker() {
+        let _ = env_logger::try_init();
+
+        // Call the helper that shells into the cln-1 container and runs `lightning-cli getinfo`.
+        let info = utils::cln_getinfo().expect("cln_getinfo should succeed");
+
+        // Sanity-check a couple of expected fields.
+        assert!(
+            info.get("id").is_some(),
+            "CLN getinfo response should contain an 'id' field"
+        );
+        assert!(
+            info.get("network").is_some(),
+            "CLN getinfo response should contain a 'network' field"
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_submarine() {
         let _ = env_logger::try_init();
 

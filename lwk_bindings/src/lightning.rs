@@ -1013,6 +1013,17 @@ impl LockupResponse {
             .expected_amount())
     }
 
+    /// The BIP21 URI for the lockup address, if provided by Boltz
+    pub fn uri(&self) -> Result<Option<String>, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .uri()
+            .map(|s| s.to_string()))
+    }
+
     pub fn chain_from(&self) -> Result<String, LwkError> {
         Ok(self
             .inner

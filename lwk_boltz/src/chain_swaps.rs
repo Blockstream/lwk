@@ -552,6 +552,15 @@ impl LockupResponse {
         self.data.expected_lockup_amount
     }
 
+    /// The BIP21 URI for the lockup address, if provided by Boltz
+    pub fn uri(&self) -> Option<&str> {
+        self.data
+            .create_chain_response
+            .lockup_details
+            .bip21
+            .as_deref()
+    }
+
     pub fn chain_from(&self) -> Chain {
         self.data.from_chain
     }

@@ -17,9 +17,9 @@ mod tests {
     use boltz_client::swaps::SwapScript;
     use boltz_client::swaps::{SwapTransactionParams, TransactionOptions};
     use boltz_client::util::{secrets::Preimage, sleep};
-    use boltz_client::Keypair;
     use boltz_client::PublicKey;
     use boltz_client::Secp256k1;
+    use boltz_client::{Amount, Keypair};
     use lwk_boltz::SwapPersistence;
     use lwk_boltz::{
         clients::{AnyClient, ElectrumClient},
@@ -896,9 +896,23 @@ mod tests {
             "boltz_fee should be less than 1% of amount"
         );
 
+        // Verify uri is consistent with lockup address and expected amount
+        let convert_sat = |s| Amount::from_sat(s).to_string_in(bitcoin::Denomination::Bitcoin);
+        let uri = response
+            .uri()
+            .expect("bip21 should be set for fresh chain swaps");
+        let expected_uri = format!(
+            "bitcoin:{}?amount={}",
+            response.lockup_address(),
+            convert_sat(response.expected_amount())
+        );
+        // uri contains also label and asset id, that's why it's a starts_with
+        assert!(uri.starts_with(&expected_uri));
+
         log::info!(
-            "BTC to LBTC swap - Lockup address: {}",
-            response.lockup_address()
+            "BTC to LBTC swap - Lockup address: {}, URI: {}",
+            response.lockup_address(),
+            uri,
         );
         crate::utils::send_to_address(
             BTC_CHAIN.into(),
@@ -985,10 +999,22 @@ mod tests {
             "boltz_fee should be less than 1% of amount"
         );
 
-        log::info!(
-            "LBTC to BTC swap - Lockup address: {}",
-            response.lockup_address()
+        // Verify uri is consistent with lockup address and expected amount
+        let uri = response
+            .uri()
+            .expect("bip21 should be set for fresh chain swaps");
+        let expected_uri = format!(
+            "liquidnetwork:{}?amount={}",
+            response.lockup_address(),
+            convert_sat(response.expected_amount()),
         );
+        log::info!(
+            "LBTC to BTC swap - Lockup address: {}, URI: {}",
+            response.lockup_address(),
+            uri,
+        );
+        assert!(uri.starts_with(&expected_uri));
+
         crate::utils::send_to_address(
             LBTC_CHAIN.into(),
             response.lockup_address(),

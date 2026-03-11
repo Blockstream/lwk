@@ -122,7 +122,8 @@ mod tests {
 
     #[test]
     fn test_keypair_constructors_and_accessors() {
-        let bytes = [1u8; 32];
+        let mut bytes = [0x11; 32];
+        bytes[31] = 0x22;
         let kp = Keypair::from_secret_bytes(&bytes).unwrap();
         assert_eq!(kp.secret_bytes(), bytes);
         assert_eq!(kp.secret_key().bytes(), bytes);
@@ -139,8 +140,11 @@ mod tests {
 
     #[test]
     fn test_keypair_sign_schnorr() {
-        let kp = Keypair::from_secret_bytes(&[1u8; 32]).unwrap();
-        let msg_bytes = [2u8; 32];
+        let mut secret_key_bytes = [0x11; 32];
+        secret_key_bytes[31] = 0x22;
+        let kp = Keypair::from_secret_bytes(&secret_key_bytes).unwrap();
+        let mut msg_bytes = [0x33; 32];
+        msg_bytes[31] = 0x44;
         let msg: super::Hex = msg_bytes.as_slice().into();
 
         let sig = kp.sign_schnorr(&msg).unwrap();

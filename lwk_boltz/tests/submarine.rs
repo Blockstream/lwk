@@ -30,14 +30,12 @@ mod tests {
         let info = utils::cln_getinfo().expect("cln_getinfo should succeed");
 
         // Sanity-check a couple of expected fields.
-        assert!(
-            info.get("id").is_some(),
-            "CLN getinfo response should contain an 'id' field"
+        assert_eq!(
+            info.get("id").unwrap().as_str().unwrap(),
+            "027252b09ca91b04f5f42fe4fc647e3be3d06c405bf7a6437f5e429ffb695ba25b"
         );
-        assert!(
-            info.get("network").is_some(),
-            "CLN getinfo response should contain a 'network' field"
-        );
+        assert_eq!(info.get("network").unwrap().as_str().unwrap(), "regtest");
+        assert_eq!(info.get("version").unwrap().as_str().unwrap(), "25.12.1");
     }
 
     #[tokio::test]

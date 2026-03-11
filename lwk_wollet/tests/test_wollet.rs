@@ -174,7 +174,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         satoshi: u64,
         address: Option<Address>,
         asset: Option<AssetId>,
-    ) {
+    ) -> Txid {
         let utxos_before = self.wollet.utxos().unwrap().len();
         let balance_before = self.balance(&asset.unwrap_or(self.policy_asset()));
 
@@ -194,10 +194,11 @@ impl<C: BlockchainBackend> TestWollet<C> {
         let balance_after = self.balance(&asset.unwrap_or(self.policy_asset()));
         assert_eq!(utxos_after, utxos_before + 1);
         assert_eq!(balance_before + satoshi, balance_after);
+        txid
     }
 
-    pub fn fund_btc(&mut self, env: &TestEnv) {
-        self.fund(env, 1_000_000, Some(self.address()), None);
+    pub fn fund_btc(&mut self, env: &TestEnv) -> Txid {
+        self.fund(env, 1_000_000, Some(self.address()), None)
     }
 
     pub fn fund_asset(&mut self, env: &TestEnv) -> AssetId {

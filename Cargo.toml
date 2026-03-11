@@ -36,12 +36,6 @@ lwk_boltz = { path = "lwk_boltz" }
 lwk_payment_instructions = { path = "lwk_payment_instructions" }
 lwk_simplicity = { path = "lwk_simplicity" }
 
-# This patch is related to the PR: https://github.com/BlockstreamResearch/rust-simplicity/pull/347, and is needed to
-# fix simplicity execution on the Android device.
-# TODO: remove after the PR#347 is merged
-simplicity-sys = { git = "https://github.com/BlockstreamResearch/rust-simplicity", rev = "462ee05" }
-
-
 [profile.release-smaller]
 inherits = "release"
 opt-level = 'z'      # Optimize for size.

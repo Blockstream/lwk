@@ -1,10 +1,11 @@
-#[cfg(feature = "simplicity")]
 use crate::blockdata::blinding_factor;
 use crate::AssetId;
+
 use lwk_wollet::elements;
 use lwk_wollet::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use lwk_wollet::elements::secp256k1_zkp::{Generator, PedersenCommitment, Tag};
 use lwk_wollet::EC;
+
 use wasm_bindgen::prelude::*;
 
 /// Contains unblinded information such as the asset and the value of a transaction output
@@ -70,14 +71,10 @@ impl TxOutSecrets {
         self.inner.asset.into()
     }
 
-    /// Return the asset blinding factor as a hex string.
+    /// Return the asset blinding factor as a typed object.
     #[wasm_bindgen(js_name = assetBlindingFactor)]
-    pub fn asset_blinding_factor(&self) -> String {
-        self.inner
-            .asset_bf
-            .to_string()
-            .parse()
-            .expect("asset_bf to_string creates valid hex")
+    pub fn asset_blinding_factor(&self) -> blinding_factor::AssetBlindingFactor {
+        self.inner.asset_bf.into()
     }
 
     /// Return the value of the output.
@@ -85,14 +82,10 @@ impl TxOutSecrets {
         self.inner.value
     }
 
-    /// Return the value blinding factor as a hex string.
+    /// Return the value blinding factor as a typed object.
     #[wasm_bindgen(js_name = valueBlindingFactor)]
-    pub fn value_blinding_factor(&self) -> String {
-        self.inner
-            .value_bf
-            .to_string()
-            .parse()
-            .expect("value_bf to_string creates valid hex")
+    pub fn value_blinding_factor(&self) -> blinding_factor::ValueBlindingFactor {
+        self.inner.value_bf.into()
     }
 
     /// Return true if the output is explicit (no blinding factors).
@@ -136,22 +129,6 @@ impl TxOutSecrets {
     }
 }
 
-#[cfg(feature = "simplicity")]
-#[wasm_bindgen]
-impl TxOutSecrets {
-    /// Return the asset blinding factor as a typed object.
-    #[wasm_bindgen(js_name = assetBlindingFactorTyped)]
-    pub fn asset_blinding_factor_typed(&self) -> blinding_factor::AssetBlindingFactor {
-        self.inner.asset_bf.into()
-    }
-
-    /// Return the value blinding factor as a typed object.
-    #[wasm_bindgen(js_name = valueBlindingFactorTyped)]
-    pub fn value_blinding_factor_typed(&self) -> blinding_factor::ValueBlindingFactor {
-        self.inner.value_bf.into()
-    }
-}
-
 impl TxOutSecrets {
     fn asset_generator(&self) -> Generator {
         let asset = self.inner.asset.into_inner().to_byte_array();
@@ -163,8 +140,6 @@ impl TxOutSecrets {
 
 #[cfg(all(test, target_arch = "wasm32", feature = "simplicity"))]
 mod tests {
-    use crate::blockdata::blinding_factor;
-
     use std::str::FromStr;
 
     use lwk_wollet::elements;
@@ -177,9 +152,8 @@ mod tests {
     #[wasm_bindgen_test]
     fn tx_out_secrets() {
         let zero_hex = "0000000000000000000000000000000000000000000000000000000000000000";
-        let asset_hex = "1111111111111111111111111111111111111111111111111111111111111111";
+        let asset_hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
 
-        // TODO use abf and vbf different from zero
         let txoutsecrets_explicit: crate::TxOutSecrets = elements::TxOutSecrets::new(
             AssetId::from_str(asset_hex).unwrap(),
             AssetBlindingFactor::zero(),
@@ -192,20 +166,20 @@ mod tests {
         assert_eq!(txoutsecrets_explicit.value(), 1000);
         assert_eq!(txoutsecrets_explicit.asset().to_string(), asset_hex);
         assert_eq!(
-            txoutsecrets_explicit.asset_blinding_factor().to_string(),
+            txoutsecrets_explicit.asset_blinding_factor().to_string_js(),
             zero_hex
         );
         assert_eq!(
-            txoutsecrets_explicit.value_blinding_factor().to_string(),
+            txoutsecrets_explicit.value_blinding_factor().to_string_js(),
             zero_hex
         );
         assert_eq!(txoutsecrets_explicit.asset_commitment().to_string(), "");
         assert_eq!(txoutsecrets_explicit.value_commitment().to_string(), "");
 
-        let abf_hex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-        let vbf_hex = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-        let vc_hex = "08b3bfb93e411bf83c5095c44c5f1a8fa9da4bf5978b20dacff7fe594b896d352a";
-        let ac_hex = "0b9bccef298a184a714e09656fe1596ab1a5b7e70b5d7b71ef0cb7d069a755cd3e";
+        let abf_hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
+        let vbf_hex = "0000570186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
+        let vc_hex = "08ce46e7961ad9f5bf44156f80e073ea984dc11178557790dbc2eff9cdafecbe35";
+        let ac_hex = "0ba1bed30ab07f7b215f812df37dde5b0338a48496b60e0584af102c4a7d766837";
         let blinded_secrets: crate::TxOutSecrets = elements::TxOutSecrets::new(
             AssetId::from_str(asset_hex).unwrap(),
             AssetBlindingFactor::from_hex(abf_hex).unwrap(),
@@ -217,26 +191,18 @@ mod tests {
         assert!(!blinded_secrets.is_explicit());
         assert_eq!(blinded_secrets.value(), 1000);
         assert_eq!(blinded_secrets.asset().to_string(), asset_hex);
-        assert_eq!(blinded_secrets.asset_blinding_factor().to_string(), abf_hex,);
-        assert_eq!(blinded_secrets.value_blinding_factor().to_string(), vbf_hex,);
+        assert_eq!(
+            blinded_secrets.asset_blinding_factor().to_string_js(),
+            abf_hex
+        );
+        assert_eq!(
+            blinded_secrets.value_blinding_factor().to_string_js(),
+            vbf_hex
+        );
         assert_eq!(blinded_secrets.asset_commitment().to_string(), ac_hex);
         assert_eq!(blinded_secrets.value_commitment().to_string(), vc_hex);
-        assert_eq!(
-            blinded_secrets.asset_blinding_factor_typed().to_string_js(),
-            blinded_secrets.asset_blinding_factor()
-        );
-        assert_eq!(
-            blinded_secrets.value_blinding_factor_typed().to_string_js(),
-            blinded_secrets.value_blinding_factor()
-        );
 
-        // Test wasm constructors
         let asset_id = crate::AssetId::from_string(asset_hex).unwrap();
-        let asset_bf = blinding_factor::AssetBlindingFactor::from_string(abf_hex).unwrap();
-        let value_bf = blinding_factor::ValueBlindingFactor::from_string(vbf_hex).unwrap();
-        let secrets = crate::TxOutSecrets::new(&asset_id, &asset_bf, 1000, &value_bf);
-        assert!(!secrets.is_explicit());
-
         let explicit = crate::TxOutSecrets::from_explicit(&asset_id, 5000);
         assert!(explicit.is_explicit());
         assert_eq!(explicit.value(), 5000);

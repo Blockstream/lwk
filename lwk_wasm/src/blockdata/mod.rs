@@ -1,6 +1,5 @@
 pub mod address;
 pub mod asset_id;
-#[cfg(feature = "simplicity")]
 pub mod blinding_factor;
 #[cfg(feature = "simplicity")]
 pub mod block_header;

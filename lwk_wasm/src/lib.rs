@@ -1,4 +1,5 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![allow(clippy::wrong_self_convention)]
 #![warn(missing_docs)]
 #![doc = include_str!("../README.md")]
 

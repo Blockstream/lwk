@@ -15,9 +15,11 @@ mod tests {
         util::sleep,
         Keypair, PublicKey, Secp256k1,
     };
+    use lightning::offers::offer::Offer;
     use lwk_boltz::{
         clients::{AnyClient, ElectrumClient},
-        BoltzSession, LightningPayment, PreparePayDataSerializable, SwapPersistence,
+        verify_invoice_from_offer_strings, BoltzSession, LightningPayment,
+        PreparePayDataSerializable, SwapPersistence,
     };
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
 
@@ -29,7 +31,6 @@ mod tests {
         // Call the helper that shells into the cln-1 container and runs `lightning-cli getinfo`.
         let info = utils::cln_getinfo().expect("cln_getinfo should succeed");
 
-        // Sanity-check a couple of expected fields.
         assert_eq!(
             info.get("id").unwrap().as_str().unwrap(),
             "027252b09ca91b04f5f42fe4fc647e3be3d06c405bf7a6437f5e429ffb695ba25b"
@@ -47,6 +48,8 @@ mod tests {
         let offer = utils::cln_offer_any().expect("cln_offer_any should succeed");
 
         assert!(offer.starts_with("lno1"));
+
+        let _ = Offer::from_str(&offer).unwrap();
     }
 
     #[tokio::test]

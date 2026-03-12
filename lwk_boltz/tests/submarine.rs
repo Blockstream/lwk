@@ -92,6 +92,52 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_bolt12_offer_returns_unsupported_error() {
+        let _ = env_logger::try_init();
+
+        // Get a BOLT12 offer from CLN
+        let offer_str = utils::cln_offer_any().expect("cln_offer_any should succeed");
+        let lightning_payment = LightningPayment::from_str(&offer_str).unwrap();
+
+        // Set up BoltzSession
+        let refund_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let refund_address = elements::Address::from_str(&refund_address).unwrap();
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+        );
+
+        let session = BoltzSession::builder(
+            ElementsNetwork::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .create_swap_timeout(TIMEOUT)
+        .build()
+        .await
+        .unwrap();
+
+        // Try to pay the bolt12 offer and expect Bolt12Unsupported error
+        let result = session
+            .prepare_pay(&lightning_payment, &refund_address, None)
+            .await;
+
+        match result {
+            Err(lwk_boltz::Error::Bolt12Unsupported) => {
+                // Expected error
+            }
+            _ => panic!("Expected Bolt12Unsupported error, got: {:?}", result),
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_submarine_base() {
         let _ = env_logger::try_init();
 

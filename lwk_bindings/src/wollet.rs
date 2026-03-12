@@ -17,12 +17,27 @@ use std::{
 pub struct Wollet {
     inner: Mutex<lwk_wollet::Wollet>, // every exposed method must take `&self` (no &mut) so that we need to encapsulate into Mutex
 }
+
+/// A builder for constructing a [`Wollet`].
+#[derive(uniffi::Object)]
+pub struct WolletBuilder {
+    /// Uniffi doesn't allow to accept self and consume the parameter (everything is behind Arc)
+    /// So, inside the Mutex we have an option that allow to consume the inner builder and also
+    /// to emulate the consumption of this builder after the call to finish.
+    inner: Mutex<Option<lwk_wollet::WolletBuilder>>,
+}
 impl Wollet {
     pub(crate) fn inner_wollet(
         &self,
     ) -> Result<MutexGuard<'_, lwk_wollet::Wollet>, PoisonError<MutexGuard<'_, lwk_wollet::Wollet>>>
     {
         self.inner.lock()
+    }
+
+    fn from_inner(inner: lwk_wollet::Wollet) -> Arc<Self> {
+        Arc::new(Self {
+            inner: Mutex::new(inner),
+        })
     }
 }
 
@@ -36,10 +51,7 @@ impl Wollet {
         store: Arc<ForeignStoreLink>,
     ) -> Result<Arc<Self>, LwkError> {
         let inner = lwk_wollet::Wollet::new(network.into(), store, descriptor.into())?;
-
-        Ok(Arc::new(Self {
-            inner: Mutex::new(inner),
-        }))
+        Ok(Self::from_inner(inner))
     }
 
     /// Construct a Watch-Only wallet object
@@ -53,11 +65,7 @@ impl Wollet {
         if let Some(path) = datadir {
             builder = builder.with_legacy_fs_store(&path)?;
         }
-        let inner = builder.build()?;
-
-        Ok(Arc::new(Self {
-            inner: Mutex::new(inner),
-        }))
+        Ok(Self::from_inner(builder.build()?))
     }
 
     /// Get a copy of the wallet descriptor
@@ -283,6 +291,46 @@ impl Wollet {
             .map(Into::into)
             .map(Arc::new)
             .collect())
+    }
+}
+
+#[uniffi::export]
+impl WolletBuilder {
+    /// Create a builder for a watch-only wallet.
+    #[uniffi::constructor]
+    pub fn new(network: &Network, descriptor: &WolletDescriptor) -> Arc<Self> {
+        Arc::new(Self {
+            inner: Mutex::new(Some(lwk_wollet::WolletBuilder::new(
+                network.into(),
+                descriptor.into(),
+            ))),
+        })
+    }
+
+    /// Set the threshold used to merge persisted updates during build.
+    ///
+    /// `None` disables merging (default behavior).
+    pub fn with_merge_threshold(&self, merge_threshold: Option<u32>) -> Result<(), LwkError> {
+        let mut inner = self.inner.lock()?;
+        let builder = inner.take().ok_or(LwkError::ObjectConsumed)?;
+        *inner = Some(builder.with_merge_threshold(merge_threshold.map(|t| t as usize)));
+        Ok(())
+    }
+
+    /// Persist wallet updates in the legacy encrypted filesystem store.
+    pub fn with_legacy_fs_store(&self, datadir: &str) -> Result<(), LwkError> {
+        let mut inner = self.inner.lock()?;
+        let builder = inner.take().ok_or(LwkError::ObjectConsumed)?;
+        *inner = Some(builder.with_legacy_fs_store(datadir)?);
+        Ok(())
+    }
+
+    /// Build the wallet from this builder.
+    pub fn build(&self) -> Result<Arc<Wollet>, LwkError> {
+        let mut inner = self.inner.lock()?;
+        let builder = inner.take().ok_or(LwkError::ObjectConsumed)?;
+        let wollet = builder.build()?;
+        Ok(Wollet::from_inner(wollet))
     }
 }
 

@@ -78,7 +78,7 @@ pub use crate::types::{
     AssetBlindingFactor, ContractHash, ControlBlock, Keypair, LockTime, PublicKey, Tweak,
     TxSequence, ValueBlindingFactor, XOnlyPublicKey,
 };
-pub use crate::wollet::Wollet;
+pub use crate::wollet::{Wollet, WolletBuilder};
 pub use chain::Chain;
 pub use currency_code::CurrencyCode;
 pub use desc::WolletDescriptor;

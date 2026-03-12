@@ -15,6 +15,9 @@ mod store;
 mod submarine;
 mod swap_state;
 
+use bech32::FromBase32;
+use lightning::offers::invoice::Bolt12Invoice;
+use lightning::offers::offer::Offer;
 // Re-export store module contents for public API
 pub use store::cipher_from_xpub;
 pub use store::encrypt_key;
@@ -807,6 +810,29 @@ pub async fn broadcast_tx_with_retry(
         }
     }
     Err(Error::RetryBroadcastFailed)
+}
+
+pub fn verify_invoice_from_offer(invoice: &Bolt12Invoice, offer: &Offer) -> bool {
+    // TODO: is this check enough?
+    if let Some(offer_pubkey) = offer.issuer_signing_pubkey() {
+        return offer_pubkey == invoice.signing_pubkey();
+    }
+    false
+}
+
+const BECH32_BOLT12_INVOICE_HRP: &str = "lni";
+pub fn parse_bolt12_invoice(bolt12_invoice: &str) -> Result<Bolt12Invoice, Error> {
+    // TODO: for some reason, upstream Bolt12Invoice::from_str is not supported, thus we do it manually
+    let (hrp, data) = bech32::decode_without_checksum(bolt12_invoice)?;
+    if hrp.as_str() != BECH32_BOLT12_INVOICE_HRP {
+        return Err(Error::InvalidBolt12InvoiceHrp {
+            expected: BECH32_BOLT12_INVOICE_HRP.to_string(),
+            actual: hrp.to_string(),
+        });
+    }
+
+    let data = Vec::<u8>::from_base32(&data)?;
+    Ok(lightning::offers::invoice::Bolt12Invoice::try_from(data)?)
 }
 
 #[cfg(test)]

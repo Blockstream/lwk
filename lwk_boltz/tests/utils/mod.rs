@@ -9,6 +9,8 @@ use boltz_client::{
 use futures::FutureExt;
 use reqwest::Client;
 use serde_json::{json, Value};
+use std::process::Command;
+use std::str;
 use std::{error::Error, sync::Arc};
 use tokio::sync::broadcast::Receiver;
 use tokio::task::JoinHandle;
@@ -95,9 +97,6 @@ async fn lnd_request(method: &str, params: Value) -> Result<Value, Box<dyn Error
 
 /// Call `getinfo` on the CLN (cln-1) node using `lightning-cli` inside the Docker container.
 pub fn cln_getinfo() -> Result<Value, Box<dyn Error>> {
-    use std::process::Command;
-    use std::str;
-
     // we use docker exec in this case because CLN don't expose HTTP API
     let output = Command::new("docker")
         .args([
@@ -122,9 +121,6 @@ pub fn cln_getinfo() -> Result<Value, Box<dyn Error>> {
 
 /// Call `offer any` on the CLN (cln-1) node using `lightning-cli` inside the Docker container.
 pub fn cln_offer_any() -> Result<String, Box<dyn Error>> {
-    use std::process::Command;
-    use std::str;
-
     let output = Command::new("docker")
         .args([
             "exec",
@@ -146,6 +142,43 @@ pub fn cln_offer_any() -> Result<String, Box<dyn Error>> {
     let value: Value = serde_json::from_str(stdout)?;
     let res = value.get("bolt12").unwrap().as_str().unwrap().to_string();
     Ok(res.to_string())
+}
+
+/// Call `fetchinvoice` on the CLN (cln-1) node using `lightning-cli` inside the Docker container.
+pub fn cln_fetch_invoice(offer: &str, amount_msat: u64) -> Result<String, Box<dyn Error>> {
+    // Format the arguments exactly as lightning-cli expects them
+    let offer_arg = format!("offer={}", offer);
+    let amount_arg = format!("amount_msat={}", amount_msat);
+
+    let output = Command::new("docker")
+        .args([
+            "exec",
+            "boltz-cln-1",
+            "lightning-cli",
+            "--lightning-dir=/app/lightning",
+            "--network=regtest",
+            "fetchinvoice",
+            &offer_arg,
+            &amount_arg,
+        ])
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = str::from_utf8(&output.stderr).unwrap_or("non-utf8 stderr");
+        return Err(format!("cln_fetch_invoice failed: {stderr}").into());
+    }
+
+    let stdout = str::from_utf8(&output.stdout)?;
+    let value: Value = serde_json::from_str(stdout)?;
+
+    // Extract the 'invoice' string (lni...) from the JSON response safely
+    let res = value
+        .get("invoice")
+        .and_then(|v| v.as_str())
+        .ok_or("Failed to parse 'invoice' field from CLN response")?
+        .to_string();
+
+    Ok(res)
 }
 
 pub async fn generate_address(chain: Chain) -> Result<String, Box<dyn Error>> {

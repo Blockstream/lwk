@@ -3,7 +3,9 @@ mod utils;
 #[cfg(test)]
 mod tests {
 
-    use crate::utils::{self, BOLTZ_REGTEST, DEFAULT_REGTEST_NODE, TIMEOUT, WAIT_TIME};
+    use crate::utils::{
+        self, cln_fetch_invoice, BOLTZ_REGTEST, DEFAULT_REGTEST_NODE, TIMEOUT, WAIT_TIME,
+    };
     use std::{str::FromStr, sync::Arc, time::Duration};
 
     use bip39::Mnemonic;
@@ -15,9 +17,11 @@ mod tests {
         util::sleep,
         Keypair, PublicKey, Secp256k1,
     };
+    use lightning::offers::offer::Offer;
     use lwk_boltz::{
         clients::{AnyClient, ElectrumClient},
-        BoltzSession, LightningPayment, PreparePayDataSerializable, SwapPersistence,
+        parse_bolt12_invoice, verify_invoice_from_offer, BoltzSession, LightningPayment,
+        PreparePayDataSerializable, SwapPersistence,
     };
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
 
@@ -29,15 +33,12 @@ mod tests {
         // Call the helper that shells into the cln-1 container and runs `lightning-cli getinfo`.
         let info = utils::cln_getinfo().expect("cln_getinfo should succeed");
 
-        // Sanity-check a couple of expected fields.
-        assert!(
-            info.get("id").is_some(),
-            "CLN getinfo response should contain an 'id' field"
+        assert_eq!(
+            info.get("id").unwrap().as_str().unwrap(),
+            "027252b09ca91b04f5f42fe4fc647e3be3d06c405bf7a6437f5e429ffb695ba25b"
         );
-        assert!(
-            info.get("network").is_some(),
-            "CLN getinfo response should contain a 'network' field"
-        );
+        assert_eq!(info.get("network").unwrap().as_str().unwrap(), "regtest");
+        assert_eq!(info.get("version").unwrap().as_str().unwrap(), "25.12.1");
     }
 
     #[tokio::test]
@@ -49,6 +50,8 @@ mod tests {
         let offer = utils::cln_offer_any().expect("cln_offer_any should succeed");
 
         assert!(offer.starts_with("lno1"));
+
+        let _ = Offer::from_str(&offer).unwrap();
     }
 
     #[tokio::test]
@@ -57,13 +60,19 @@ mod tests {
         let _ = env_logger::try_init();
 
         // Ask CLN for a BOLT12 offer
-        let offer = utils::cln_offer_any().expect("cln_offer_any should succeed");
+        let offer_str = utils::cln_offer_any().expect("cln_offer_any should succeed");
+        let offer = Offer::from_str(&offer_str).unwrap();
+
+        // Fetch invoice from CLN node and verify it
+        let bolt12_invoice_str = cln_fetch_invoice(&offer_str, 22222222).unwrap();
+        let cln_bolt12_invoice = parse_bolt12_invoice(&bolt12_invoice_str).unwrap();
+        assert!(verify_invoice_from_offer(&cln_bolt12_invoice, &offer));
 
         // Translate the BOLT12 offer to a BOLT11 invoice using Boltz API v2
         let boltz_api_v2 = BoltzApiClientV2::new(BOLTZ_REGTEST.to_string(), Some(TIMEOUT));
         let amount = 50_000;
         let p = GetBolt12FetchRequest {
-            offer,
+            offer: offer_str.clone(),
             amount,
             note: None,
         };
@@ -72,8 +81,15 @@ mod tests {
             .await
             .expect("get_bolt12_invoice should succeed");
 
-        let bolt11 = response.invoice;
-        assert!(bolt11.starts_with("lni"));
+        let bolt12_invoice_str = response.invoice;
+        assert!(bolt12_invoice_str.starts_with("lni"));
+        let boltz_bolt12_invoice = parse_bolt12_invoice(&bolt12_invoice_str).unwrap();
+
+        assert!(verify_invoice_from_offer(&boltz_bolt12_invoice, &offer));
+
+        let another_bolt12_invoice = "lni1qqgwwn892vxqk9fsgul2fgzxyj5wk93pqtqft5rf2w8ed0c5chus7mqg2x7lx49qajrq8x3yhuu2w0msttwzc5srqxr2q4qqtqss80rn9yedw8hsef9w2lwa83zsfxglnhaen4kl272wrv4uccukswxm5zvq9sy46p548rukhu2vt7g0dsy9r00n2jswepsrngjt7w988ac94hpvqws6qvd2q863an980srs7dpnt6qpqzlxrdkds6l8zz33enxmr42ujqgzfyq6zkdznkzf5m4u7ran24078mtlcdnaltufm4znls5gkq9lyhvqqvhwq0uy4rzc77s7d8gfx4hxemjql7gfcd7l97c3m76vtqnqmkg3eafm2msn4jj864haz42dc6r8r47gt64zrsqqqqqqqqqqqqqqzgqqqqqqqqqqqqqayjedltzjqqqqqq9yq35mrksp4qst37he8z5zvgq948434andxfzlfru53mfvvaycmed6ynt67qyg3xa2qvqcdg9wqvpqqq9syypvp9wsd9fcl94lznzljrmvppgmmu655rkgvqu6yjln3felwpddct8sgrt30e0uynvhy5ydaktehuwctyzkd05wgw4zqn0ayx4d9yndcfhd4ygpjceygz9629n4qm0zn7xa5k8e8xaphu280n4v2y3dzc2etywv";
+        let another_bolt12_invoice = parse_bolt12_invoice(another_bolt12_invoice).unwrap();
+        assert!(!verify_invoice_from_offer(&another_bolt12_invoice, &offer));
     }
 
     #[tokio::test]

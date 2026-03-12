@@ -4,6 +4,7 @@ use boltz_client::elements::AddressError;
 use boltz_client::error::Error as BoltzError;
 use boltz_client::lightning_invoice::ParseOrSemanticError;
 use lightning::bitcoin::XKeyIdentifier;
+use lightning::offers::parse::Bolt12ParseError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -18,6 +19,15 @@ pub enum Error {
 
     #[error("Invalid bolt11 invoice: {0}")]
     InvalidBolt11Invoice(ParseOrSemanticError),
+
+    #[error("Invalid bolt12 offer {0:?}")]
+    InvalidBolt12Offer(Bolt12ParseError),
+
+    #[error("Invalid bech32: {0}")]
+    InvalidBech32(bech32::Error),
+
+    #[error("Invalid bolt12 invoice HRP: expected '{expected}', got '{actual}'")]
+    InvalidBolt12InvoiceHrp { expected: String, actual: String },
 
     #[error("Boltz API error: {0}")]
     BoltzApi(BoltzError),
@@ -148,5 +158,17 @@ impl From<aes_gcm_siv::Error> for Error {
 impl From<lwk_common::EncryptError> for Error {
     fn from(err: lwk_common::EncryptError) -> Self {
         Error::Encryption(err.to_string())
+    }
+}
+
+impl From<Bolt12ParseError> for Error {
+    fn from(err: Bolt12ParseError) -> Self {
+        Error::InvalidBolt12Offer(err)
+    }
+}
+
+impl From<bech32::Error> for Error {
+    fn from(err: bech32::Error) -> Self {
+        Error::InvalidBech32(err)
     }
 }

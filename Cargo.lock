@@ -2325,6 +2325,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "lightning"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c90397b635e3ece6b9a723fb470a46cb9b3592f217d72e40540a5fada00289d"
+dependencies = [
+ "bech32 0.11.0",
+ "bitcoin",
+ "dnssec-prover",
+ "hashbrown 0.13.2",
+ "libm",
+ "lightning-invoice 0.34.0",
+ "lightning-macros",
+ "lightning-types 0.3.1",
+ "possiblyrandom",
+]
+
+[[package]]
 name = "lightning-invoice"
 version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2347,6 +2364,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "lightning-invoice"
+version = "0.34.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b85e5e14bcdb30d746e9785b04f27938292e8944f78f26517e01e91691f6b3f2"
+dependencies = [
+ "bech32 0.11.0",
+ "bitcoin",
+ "lightning-types 0.3.1",
+]
+
+[[package]]
+name = "lightning-macros"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4c717494cdc2c8bb85bee7113031248f5f6c64f8802b33c1c9e2d98e594aa71"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
+
+[[package]]
 name = "lightning-types"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2362,6 +2401,15 @@ name = "lightning-types"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2cd84d4e71472035903e43caded8ecc123066ce466329ccd5ae537a8d5488c7"
+dependencies = [
+ "bitcoin",
+]
+
+[[package]]
+name = "lightning-types"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb1aac93f22f2c2eac8a0ee83bb1a1ea58673caa2c82847302710b83364d04e6"
 dependencies = [
  "bitcoin",
 ]
@@ -2474,10 +2522,11 @@ dependencies = [
  "aes-gcm-siv",
  "async-trait",
  "base64 0.22.1",
+ "bech32 0.9.1",
  "bip39",
  "boltz-client",
  "env_logger 0.11.8",
- "lightning",
+ "lightning 0.2.2",
  "lnurl-rs",
  "log",
  "lwk_common",
@@ -2590,7 +2639,7 @@ version = "0.15.0"
 dependencies = [
  "bip21",
  "elements 0.25.2",
- "lightning",
+ "lightning 0.1.7",
  "lightning-invoice 0.33.2",
  "lnurl-rs",
  "rand 0.8.5",

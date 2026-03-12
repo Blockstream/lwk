@@ -7,7 +7,7 @@ use lnurl::lnurl::LnUrl;
 #[derive(Debug)]
 pub enum LightningPayment {
     Bolt11(Box<Bolt11Invoice>),
-    Bolt12(Box<Offer>),
+    Bolt12(Box<Offer>, Option<u64>),
     LnUrl(Box<LnUrl>),
 }
 
@@ -18,7 +18,7 @@ impl FromStr for LightningPayment {
         match Bolt11Invoice::from_str(s) {
             Ok(invoice) => Ok(LightningPayment::Bolt11(Box::new(invoice))),
             Err(e1) => match Offer::from_str(s) {
-                Ok(offer) => Ok(LightningPayment::Bolt12(Box::new(offer))),
+                Ok(offer) => Ok(LightningPayment::Bolt12(Box::new(offer), None)),
                 Err(e2) => match LnUrl::from_str(s) {
                     Ok(lnurl) => Ok(LightningPayment::LnUrl(Box::new(lnurl))),
                     Err(e3) => Err((e1, e2, e3)),
@@ -32,7 +32,7 @@ impl Display for LightningPayment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LightningPayment::Bolt11(invoice) => write!(f, "{invoice}"),
-            LightningPayment::Bolt12(offer) => write!(f, "{offer}"),
+            LightningPayment::Bolt12(offer, _) => write!(f, "{offer}"),
             LightningPayment::LnUrl(lnurl) => write!(f, "{lnurl}"),
         }
     }

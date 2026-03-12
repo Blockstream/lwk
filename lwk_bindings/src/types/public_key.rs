@@ -134,7 +134,9 @@ mod tests {
         assert_eq!(from_bytes.to_bytes(), bytes);
         assert_eq!(*from_hex, *from_bytes);
 
-        let sk = SecretKey::from_bytes(&[1u8; 32]).unwrap();
+        let mut secret_key_bytes = [0x11; 32];
+        secret_key_bytes[31] = 0x22;
+        let sk = SecretKey::from_bytes(&secret_key_bytes).unwrap();
         let from_secret_key = PublicKey::from_secret_key(&sk);
         assert_eq!(from_secret_key.to_bytes().len(), 33);
         assert!(from_secret_key.is_compressed());

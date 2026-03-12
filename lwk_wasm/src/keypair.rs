@@ -112,7 +112,8 @@ mod tests {
 
     #[wasm_bindgen_test]
     fn test_keypair() {
-        let bytes = [1u8; 32];
+        let mut bytes = [0x11; 32];
+        bytes[31] = 0x22;
 
         let kp = Keypair::from_secret_bytes(&bytes).unwrap();
         assert_eq!(kp.secret_bytes(), bytes);
@@ -134,7 +135,7 @@ mod tests {
         let sk_extracted = kp.secret_key();
         assert_eq!(sk_extracted.to_bytes(), bytes);
 
-        let msg_hex = "0202020202020202020202020202020202020202020202020202020202020202";
+        let msg_hex = "3333333333333333333333333333333333333333333333333333333333333344";
         let sig_hex = kp.sign_schnorr(msg_hex).unwrap();
         assert_eq!(sig_hex.len(), 128);
 

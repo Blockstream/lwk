@@ -124,7 +124,9 @@ mod tests {
         assert_eq!(from_bytes.to_bytes(), bytes);
         assert_eq!(from_hex, from_bytes);
 
-        let secret_key = SecretKey::from_slice(&[1u8; 32]).unwrap();
+        let mut secret_key_bytes = [0x11; 32];
+        secret_key_bytes[31] = 0x22;
+        let secret_key = SecretKey::from_slice(&secret_key_bytes).unwrap();
         let keypair = Keypair::from_secret_key(&EC, &secret_key);
 
         let xonly = XOnlyPublicKey::from_keypair(&keypair);

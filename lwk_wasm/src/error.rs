@@ -171,7 +171,9 @@ impl Error {
                 lwk_boltz::Error::BoltzBackendHttpError { .. } => "Boltz::BoltzBackendHttpError",
                 lwk_boltz::Error::InvalidBolt12Offer(_) => "Boltz::InvalidBolt12Offer",
                 lwk_boltz::Error::InvalidBech32(_) => "Boltz::InvalidBech32",
-                lwk_boltz::Error::InvalidBolt12InvoiceHrp { .. } => "Boltz::InvalidBolt12InvoiceHrp",
+                lwk_boltz::Error::InvalidBolt12InvoiceHrp { .. } => {
+                    "Boltz::InvalidBolt12InvoiceHrp"
+                }
             },
             Error::HexToArray(_) => "HexToArray",
             Error::Wollet(_) => "Wollet",

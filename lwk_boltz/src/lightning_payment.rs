@@ -4,10 +4,17 @@ use boltz_client::{lightning_invoice::ParseOrSemanticError, Bolt11Invoice};
 use lightning::offers::{offer::Offer, parse::Bolt12ParseError};
 use lnurl::lnurl::LnUrl;
 
+use crate::Error;
+
 #[derive(Debug)]
 pub enum LightningPayment {
     Bolt11(Box<Bolt11Invoice>),
-    Bolt12(Box<Offer>, Option<u64>),
+    Bolt12 {
+        offer: Box<Offer>,
+
+        /// This is the amount of the bolt12 invoice that is going to be created from this offer.
+        amount: Option<u64>,
+    },
     LnUrl(Box<LnUrl>),
 }
 
@@ -18,7 +25,10 @@ impl FromStr for LightningPayment {
         match Bolt11Invoice::from_str(s) {
             Ok(invoice) => Ok(LightningPayment::Bolt11(Box::new(invoice))),
             Err(e1) => match Offer::from_str(s) {
-                Ok(offer) => Ok(LightningPayment::Bolt12(Box::new(offer), None)),
+                Ok(offer) => Ok(LightningPayment::Bolt12 {
+                    offer: Box::new(offer),
+                    amount: None,
+                }),
                 Err(e2) => match LnUrl::from_str(s) {
                     Ok(lnurl) => Ok(LightningPayment::LnUrl(Box::new(lnurl))),
                     Err(e3) => Err((e1, e2, e3)),
@@ -32,7 +42,7 @@ impl Display for LightningPayment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LightningPayment::Bolt11(invoice) => write!(f, "{invoice}"),
-            LightningPayment::Bolt12(offer, _) => write!(f, "{offer}"),
+            LightningPayment::Bolt12 { offer, amount: _ } => write!(f, "{offer}"),
             LightningPayment::LnUrl(lnurl) => write!(f, "{lnurl}"),
         }
     }
@@ -58,7 +68,7 @@ mod tests {
         assert!(matches!(payment, LightningPayment::Bolt11(_)));
         assert_eq!(payment.to_string(), invoice);
         let payment = LightningPayment::from_str(offer).unwrap();
-        assert!(matches!(payment, LightningPayment::Bolt12(_)));
+        assert!(matches!(payment, LightningPayment::Bolt12 { .. }));
         assert_eq!(payment.to_string(), offer);
         let payment = LightningPayment::from_str(lnurl).unwrap();
         assert!(matches!(payment, LightningPayment::LnUrl(_)));

@@ -318,6 +318,50 @@ impl BoltzSession {
         Ok(result)
     }
 
+    /// Fetch a BOLT12 invoice from an offer using the Boltz API
+    ///
+    /// This method takes a BOLT12 offer and an amount, fetches the corresponding
+    /// BOLT12 invoice from the Boltz service, and verifies that it matches the offer.
+    ///
+    /// # Arguments
+    ///
+    /// * `offer` - The BOLT12 offer to fetch an invoice for
+    /// * `amount` - The amount in millisatoshis for the invoice
+    ///
+    /// # Returns
+    ///
+    /// Returns the parsed and verified `Bolt12Invoice`
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The API request fails
+    /// - The returned invoice cannot be parsed
+    /// - The invoice doesn't match the offer (signature verification fails)
+    async fn fetch_bolt12_invoice(
+        &self,
+        offer: &Offer,
+        amount: u64,
+    ) -> Result<Bolt12Invoice, Error> {
+        use boltz_client::boltz::GetBolt12FetchRequest;
+
+        let request = GetBolt12FetchRequest {
+            offer: offer.to_string(),
+            amount,
+            note: None,
+        };
+
+        let response = self.api.get_bolt12_invoice(request).await?;
+        let invoice = parse_bolt12_invoice(&response.invoice)?;
+
+        // Verify that the invoice matches the offer
+        if !verify_invoice_from_offer(&invoice, &offer) {
+            return Err(Error::Bolt12InvoiceVerificationFailed);
+        }
+
+        Ok(invoice)
+    }
+
     /// Get the list of pending swap IDs from the store
     ///
     /// Returns an error if no store is configured, otherwise returns the list of pending swap IDs

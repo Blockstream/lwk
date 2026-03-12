@@ -97,6 +97,9 @@ pub enum Error {
     #[error("Bolt12 (offers) are not yet supported")]
     Bolt12Unsupported,
 
+    #[error("Bolt12 invoice verification failed: invoice does not match offer")]
+    Bolt12InvoiceVerificationFailed,
+
     #[error("LnUrl are not supperted")]
     LnUrlUnsupported,
 

@@ -1004,6 +1004,16 @@ impl LockupResponse {
             .to_string())
     }
 
+    pub fn claim_address(&self) -> Result<String, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .claim_address()
+            .to_string())
+    }
+
     pub fn expected_amount(&self) -> Result<u64, LwkError> {
         Ok(self
             .inner

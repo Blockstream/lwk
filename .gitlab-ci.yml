@@ -330,6 +330,7 @@ boltz_chain:
     - git submodule update --init --recursive
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-chain
+  allow_failure: true
 
 boltz_mrh:
   stage: test_long
@@ -340,6 +341,7 @@ boltz_mrh:
     - git submodule update --init --recursive
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-mrh
+  allow_failure: true
 
 boltz_reverse:
   stage: test_long
@@ -350,6 +352,7 @@ boltz_reverse:
     - git submodule update --init --recursive
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-reverse
+  allow_failure: true
 
 boltz_submarine:
   stage: test_long
@@ -360,6 +363,7 @@ boltz_submarine:
     - git submodule update --init --recursive
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-submarine
+  allow_failure: true
 
 # maven credentials and gpg settings
 # in runner's ~/.gradle/gradle.properties

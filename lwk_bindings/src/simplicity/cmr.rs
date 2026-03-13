@@ -87,7 +87,7 @@ mod tests {
         assert!(Cmr::from_string("0011").is_err());
 
         let args = SimplicityArguments::new().add_value(
-            "PUBLIC_KEY".to_string(),
+            "PUBLIC_KEY",
             &SimplicityTypedValue::u256(&Vec::<u8>::from_hex(TEST_PUBLIC_KEY).unwrap()).unwrap(),
         );
         let program = SimplicityProgram::load(P2PK_SOURCE, &args).unwrap();

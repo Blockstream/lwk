@@ -122,13 +122,13 @@ impl SimplicityProgram {
     pub fn create_p2pk_signature(
         &self,
         signer: &crate::Signer,
-        derivation_path: String,
+        derivation_path: &str,
         tx: &Transaction,
         utxos: &[Arc<TxOut>],
         input_index: u32,
         network: &Network,
     ) -> Result<Vec<u8>, LwkError> {
-        let keypair = derive_keypair(signer, &derivation_path)?;
+        let keypair = derive_keypair(signer, derivation_path)?;
         let x_only_pubkey = keypair.x_only_public_key().0;
         let utxos_inner = convert_utxos(utxos);
 

@@ -89,7 +89,7 @@ impl SimplicityTypedValue {
 
     /// Create a tuple value from elements.
     #[uniffi::constructor]
-    pub fn tuple(elements: Vec<Arc<SimplicityTypedValue>>) -> Arc<Self> {
+    pub fn tuple(elements: &[Arc<SimplicityTypedValue>]) -> Arc<Self> {
         let inner = simplicityhl::Value::tuple(elements.iter().map(|e| e.inner.clone()));
         Arc::new(Self { inner })
     }
@@ -120,8 +120,8 @@ impl SimplicityTypedValue {
 
     /// Parse a value from a string with a given type.
     #[uniffi::constructor]
-    pub fn parse(value_str: String, ty: &SimplicityType) -> Result<Arc<Self>, LwkError> {
-        let inner = simplicityhl::Value::parse_from_str(&value_str, ty.inner())?;
+    pub fn parse(value_str: &str, ty: &SimplicityType) -> Result<Arc<Self>, LwkError> {
+        let inner = simplicityhl::Value::parse_from_str(value_str, ty.inner())?;
         Ok(Arc::new(Self { inner }))
     }
 }

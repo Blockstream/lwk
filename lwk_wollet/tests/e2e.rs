@@ -4314,6 +4314,69 @@ fn test_merge_updates_e2e() {
             assert_eq!(utxos, wollet.utxos().unwrap().len());
         }
     }
+
+    // Test merging updates with a running instance
+    {
+        let dir = tempfile::TempDir::new().unwrap();
+        cp_dir_rec(&path, dir.path());
+        {
+            // Restart with merge threshold
+            let mut wollet = WolletBuilder::new(network, desc.clone())
+                .with_legacy_fs_store(&dir)
+                .unwrap()
+                .with_merge_threshold(Some(2))
+                .build()
+                .unwrap();
+
+            // All previous updates are merged
+            assert_eq!(wollet.updates().unwrap().len(), 1);
+            // Same state as before
+            assert_eq!(balance, wollet.balance().unwrap());
+            assert_eq!(txs, wollet.transactions().unwrap().len());
+            assert_eq!(utxos, wollet.utxos().unwrap().len());
+
+            fn wait_tx_update(wollet: &mut Wollet, client: &mut ElectrumClient) -> Update {
+                for _ in 0..10 {
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    if let Some(update) = client.full_scan(wollet).unwrap() {
+                        if !update.new_txs.txs.is_empty() {
+                            return update;
+                        }
+                    }
+                }
+                panic!("update did not arrive");
+            }
+
+            // Apply one update (2): not merged
+            let address = wollet.address(Some(0)).unwrap().address().clone();
+            env.elementsd_sendtoaddress(&address, 10000, None);
+            let mut client = test_client_electrum(&env.electrum_url());
+            let update = wait_tx_update(&mut wollet, &mut client);
+            wollet.apply_update(update.clone()).unwrap();
+            assert_eq!(wollet.updates().unwrap().len(), 2);
+
+            // Apply another update (3): merged
+            env.elementsd_sendtoaddress(&address, 20000, None);
+            let update = wait_tx_update(&mut wollet, &mut wallet.client);
+            wollet.apply_update(update.clone()).unwrap();
+            assert_eq!(txs + 2, wollet.transactions().unwrap().len());
+            // FIXME: once we will merge updates also on the running session will be 1
+            assert_eq!(wollet.updates().unwrap().len(), 3);
+        }
+
+        {
+            // Restart from merged update
+            let wollet = WolletBuilder::new(network, desc.clone())
+                .with_legacy_fs_store(&dir)
+                .unwrap()
+                .build()
+                .unwrap();
+
+            // FIXME: once we will merge updates also on the running session will be 1
+            assert_eq!(wollet.updates().unwrap().len(), 3);
+            assert_eq!(txs + 2, wollet.transactions().unwrap().len());
+        }
+    }
 }
 
 #[test]

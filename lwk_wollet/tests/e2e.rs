@@ -4183,121 +4183,137 @@ fn cp_dir_rec(src: &std::path::Path, dst: &std::path::Path) {
 #[test]
 fn test_merge_updates_e2e() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let signer = SwSigner::new(TEST_MNEMONIC, false).unwrap();
-    let signers: [&AnySigner; 1] = [&AnySigner::Software(signer)];
-    let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
-    let desc_str = format!(
-        "ct(slip77({}),elwpkh({}/*))",
-        slip77_key,
-        signers[0].xpub().unwrap()
-    );
+    let network = ElementsNetwork::default_regtest();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+
     let client = test_client_electrum(&env.electrum_url());
-    let mut wallet = TestWollet::new(client, &desc_str);
+    let mut wallet = TestWollet::new(client, &desc);
+
+    let desc = wallet.wollet.wollet_descriptor();
+    let path = wallet.path();
 
     wallet.fund_btc(&env);
-    wallet.send_btc(&signers, None, None);
+    wallet.send_btc(&[&AnySigner::Software(signer.clone())], None, None);
 
-    let expected_balance = wallet.wollet.balance().unwrap();
-    let expected_tx_count = wallet.wollet.transactions().unwrap().len();
-    let expected_utxo_count = wallet.wollet.utxos().unwrap().len();
-    let num_updates_before = wallet.wollet.updates().unwrap().len();
-    assert_eq!(num_updates_before, 4);
+    let balance = wallet.wollet.balance().unwrap();
+    let txs = wallet.wollet.transactions().unwrap().len();
+    let utxos = wallet.wollet.utxos().unwrap().len();
+    assert_eq!(wallet.wollet.updates().unwrap().len(), 4);
 
-    let descriptor = wallet.wollet.wollet_descriptor();
-    let network = ElementsNetwork::default_regtest();
-    let db_root_dir = wallet.db_root_dir();
+    {
+        // Simulate a restart from the state produced by wallet.wollet
+        let dir = tempfile::TempDir::new().unwrap();
+        cp_dir_rec(&path, dir.path());
+        {
+            // Restart with merge threshold
+            let wollet = WolletBuilder::new(network, desc.clone())
+                .with_legacy_fs_store(&dir)
+                .unwrap()
+                .with_merge_threshold(Some(2))
+                .build()
+                .unwrap();
 
-    let wollet = WolletBuilder::new(network, descriptor.clone())
-        .with_legacy_fs_store(&db_root_dir)
-        .unwrap()
-        .with_merge_threshold(Some(2))
-        .build()
-        .unwrap();
+            // Updates are merged
+            assert_eq!(wollet.updates().unwrap().len(), 1);
 
-    assert_eq!(expected_balance, wollet.balance().unwrap());
-    assert_eq!(expected_tx_count, wollet.transactions().unwrap().len());
-    assert_eq!(expected_utxo_count, wollet.utxos().unwrap().len());
+            // Internal state is identical to the original wallet
+            assert_eq!(balance, wollet.balance().unwrap());
+            assert_eq!(txs, wollet.transactions().unwrap().len());
+            assert_eq!(utxos, wollet.utxos().unwrap().len());
+        }
 
-    let updates_after = wollet.updates().unwrap();
-    assert_eq!(updates_after.len(), 1);
+        {
+            // Restart from merged update
+            let wollet = WolletBuilder::new(network, desc.clone())
+                .with_legacy_fs_store(&dir)
+                .unwrap()
+                .build()
+                .unwrap();
 
-    // Verify the merged wallet can be reopened and still has correct state
-    drop(wollet);
-    let mut wollet = WolletBuilder::new(network, descriptor.clone())
-        .with_legacy_fs_store(&db_root_dir)
-        .unwrap()
-        .build()
-        .unwrap();
-    assert_eq!(expected_balance, wollet.balance().unwrap());
-    assert_eq!(expected_tx_count, wollet.transactions().unwrap().len());
-    assert_eq!(expected_utxo_count, wollet.utxos().unwrap().len());
-    assert_eq!(wollet.updates().unwrap().len(), 1);
+            // We get the same state
+            assert_eq!(wollet.updates().unwrap().len(), 1);
+            assert_eq!(balance, wollet.balance().unwrap());
+            assert_eq!(txs, wollet.transactions().unwrap().len());
+            assert_eq!(utxos, wollet.utxos().unwrap().len());
+        }
+    }
 
-    // Test merge with txid_height_delete:
-    // Build a tx, apply it without broadcasting, then sync so it gets deleted.
-    let address = wollet.address(None).unwrap().address().clone();
-    let mut pset = wollet
+    // Now we want to simulate the case where a transaction appears
+    // in the tx list and then it disappears. So we can test that we
+    // correctly handle merging updates where we "delete" a transaction.
+    let address = wallet.address();
+    let mut pset = wallet
         .tx_builder()
         .add_lbtc_recipient(&address, 10_000)
         .unwrap()
         .finish()
         .unwrap();
-    let signer = SwSigner::new(TEST_MNEMONIC, false).unwrap();
     signer.sign(&mut pset).unwrap();
-    let tx = wollet.finalize(&mut pset).unwrap();
+    let tx = wallet.wollet.finalize(&mut pset).unwrap();
     let phantom_txid = tx.txid();
-    wollet.apply_transaction(tx).unwrap();
-    assert!(wollet
+    wallet.wollet.apply_transaction(tx).unwrap();
+    assert!(wallet
+        .wollet
         .transactions()
         .unwrap()
         .iter()
         .any(|tx| tx.txid == phantom_txid));
 
     // Sync: electrum doesn't know about the phantom tx, so it will be deleted
-    let mut client = test_client_electrum(&env.electrum_url());
-    let update = client.full_scan(&wollet).unwrap().unwrap();
+    let update = wallet.client.full_scan(&wallet.wollet).unwrap().unwrap();
     assert!(update.txid_height_delete.contains(&phantom_txid));
-    wollet.apply_update(update).unwrap();
-    assert!(wollet
+    wallet.wollet.apply_update(update).unwrap();
+    assert!(wallet
+        .wollet
         .transactions()
         .unwrap()
         .iter()
         .all(|tx| tx.txid != phantom_txid));
 
     // State should be back to what it was before the phantom tx
-    assert_eq!(expected_balance, wollet.balance().unwrap());
-    assert_eq!(expected_tx_count, wollet.transactions().unwrap().len());
-    assert_eq!(expected_utxo_count, wollet.utxos().unwrap().len());
+    assert_eq!(balance, wallet.wollet.balance().unwrap());
+    assert_eq!(txs, wallet.wollet.transactions().unwrap().len());
+    assert_eq!(utxos, wallet.wollet.utxos().unwrap().len());
 
-    let num_updates = wollet.updates().unwrap().len();
-    assert_eq!(num_updates, 3);
+    // With 2 extra updates: one that adds the tx, one that removes it
+    assert_eq!(wallet.wollet.updates().unwrap().len(), 6);
 
-    // Reopen with merge threshold to trigger merge including txid_height_delete
-    drop(wollet);
+    {
+        let dir = tempfile::TempDir::new().unwrap();
+        cp_dir_rec(&path, dir.path());
+        {
+            // Restart with merge threshold
+            // Note: update includes txid_height_delete
+            let wollet = WolletBuilder::new(network, desc.clone())
+                .with_legacy_fs_store(&dir)
+                .unwrap()
+                .with_merge_threshold(Some(2))
+                .build()
+                .unwrap();
 
-    let wollet = WolletBuilder::new(network, descriptor.clone())
-        .with_legacy_fs_store(&db_root_dir)
-        .unwrap()
-        .with_merge_threshold(Some(2))
-        .build()
-        .unwrap();
+            assert_eq!(wollet.updates().unwrap().len(), 1);
+            assert_eq!(balance, wollet.balance().unwrap());
+            assert_eq!(txs, wollet.transactions().unwrap().len());
+            assert_eq!(utxos, wollet.utxos().unwrap().len());
+        }
 
-    assert_eq!(expected_balance, wollet.balance().unwrap());
-    assert_eq!(expected_tx_count, wollet.transactions().unwrap().len());
-    assert_eq!(expected_utxo_count, wollet.utxos().unwrap().len());
-    assert_eq!(wollet.updates().unwrap().len(), 1);
+        {
+            // Restart from merged update
+            let wollet = WolletBuilder::new(network, desc.clone())
+                .with_legacy_fs_store(&dir)
+                .unwrap()
+                .build()
+                .unwrap();
 
-    // Final reopen to verify persistence of the merged-with-deletes state
-    drop(wollet);
-    let wollet = WolletBuilder::new(network, descriptor)
-        .with_legacy_fs_store(&db_root_dir)
-        .unwrap()
-        .build()
-        .unwrap();
-    assert_eq!(expected_balance, wollet.balance().unwrap());
-    assert_eq!(expected_tx_count, wollet.transactions().unwrap().len());
-    assert_eq!(expected_utxo_count, wollet.utxos().unwrap().len());
-    assert_eq!(wollet.updates().unwrap().len(), 1);
+            assert_eq!(wollet.updates().unwrap().len(), 1);
+            assert_eq!(balance, wollet.balance().unwrap());
+            assert_eq!(txs, wollet.transactions().unwrap().len());
+            assert_eq!(utxos, wollet.utxos().unwrap().len());
+        }
+    }
 }
 
 #[test]

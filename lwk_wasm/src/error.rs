@@ -174,6 +174,7 @@ impl Error {
                 lwk_boltz::Error::InvalidBolt12InvoiceHrp { .. } => {
                     "Boltz::InvalidBolt12InvoiceHrp"
                 }
+                lwk_boltz::Error::MissingLiquidClient { .. } => "Boltz::MissingLiquidClient",
             },
             Error::HexToArray(_) => "HexToArray",
             Error::Wollet(_) => "Wollet",

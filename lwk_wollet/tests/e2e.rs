@@ -4193,19 +4193,9 @@ fn test_merge_updates_e2e() {
     let network = ElementsNetwork::default_regtest();
     let db_root_dir = wallet.db_root_dir();
 
-    // Reconstruct the encrypted file store
-    // this is needed to use the same path/encryption created by the TestWollet ( which use with_legacy_fs_store )
-    let mut path = db_root_dir.path().to_path_buf();
-    path.push(network.as_str());
-    path.push("enc_cache");
-    path.push(
-        <DirectoryIdHash as hashes::Hash>::hash(descriptor.to_string().as_bytes()).to_string(),
-    );
-    let file_store = FileStore::new(path.clone()).unwrap();
-    let encrypted_store = EncryptedStore::new(file_store, descriptor.encryption_key_bytes());
-
     let wollet = WolletBuilder::new(network, descriptor.clone())
-        .with_store(std::sync::Arc::new(encrypted_store))
+        .with_legacy_fs_store(&db_root_dir)
+        .unwrap()
         .with_merge_threshold(Some(2))
         .build()
         .unwrap();
@@ -4271,11 +4261,9 @@ fn test_merge_updates_e2e() {
     // Reopen with merge threshold to trigger merge including txid_height_delete
     drop(wollet);
 
-    let file_store = FileStore::new(path).unwrap();
-    let encrypted_store = EncryptedStore::new(file_store, descriptor.encryption_key_bytes());
-
     let wollet = WolletBuilder::new(network, descriptor.clone())
-        .with_store(std::sync::Arc::new(encrypted_store))
+        .with_legacy_fs_store(&db_root_dir)
+        .unwrap()
         .with_merge_threshold(Some(2))
         .build()
         .unwrap();

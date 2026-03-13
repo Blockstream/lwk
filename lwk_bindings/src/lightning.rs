@@ -328,14 +328,14 @@ impl BoltzSession {
         let client = match builder.client.as_ref() {
             AnyClient::Electrum(client) => {
                 let boltz_client = lwk_boltz::clients::ElectrumClient::from_client(
-                    client.clone_client().expect("TODO"),
+                    client.clone_client()?,
                     network_value,
                 );
                 lwk_boltz::clients::AnyClient::Electrum(Arc::new(boltz_client))
             }
             AnyClient::Esplora(client) => {
                 let boltz_client = lwk_boltz::clients::EsploraClient::from_client(
-                    Arc::new(client.clone_async_client().expect("TODO")),
+                    Arc::new(client.clone_async_client()?),
                     network_value,
                 );
                 lwk_boltz::clients::AnyClient::Esplora(Arc::new(boltz_client))

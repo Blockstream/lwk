@@ -74,7 +74,8 @@ t_bool = SimplicityType.boolean()
 t_either = SimplicityType.either(t_u32, t_bool)
 t_option = SimplicityType.option(t_u64)
 t_tuple = SimplicityType.tuple([t_u32, t_u256])
-t_parsed = SimplicityType.parse("Either<u32, bool>")
+t_parsed = SimplicityType.from_string("Either<u32, bool>")
+assert str(SimplicityType.from_string(str(t_tuple))) == str(t_tuple)
 
 # Test SimplicityTypedValue constructors
 v_u32 = SimplicityTypedValue.u32(42)

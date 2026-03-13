@@ -376,9 +376,10 @@ fund_out_output1 = fund_contract_outputs[1][1]
 out_secrets0 = fund_out_output0.unblind(blinding_sk)
 out_secrets1 = fund_out_output1.unblind(blinding_sk)
 
-path_type = SimplicityType.parse(
+path_type = SimplicityType.from_string(
     "Either<Either<(u64,u256,u256,u256,u256,u256,u256,u256,u256), Either<(bool,u64,u64,u64),(bool,u64,u64)>>, Either<(bool,u64,u64),(bool,u64,u64)>>"
 )
+assert str(SimplicityType.from_string(str(path_type))) == str(path_type)
 
 # SimplicityHL requires bindings factors to be in hex reversed order
 in_opt_abf = secrets0.asset_blinding_factor().to_bytes().hex()

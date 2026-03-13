@@ -4166,6 +4166,20 @@ fn test_zmq_endpoint() {
     assert!(!msg[1].is_empty());
 }
 
+fn cp_dir_rec(src: &std::path::Path, dst: &std::path::Path) {
+    std::fs::create_dir_all(dst).unwrap();
+    for entry in std::fs::read_dir(src).unwrap() {
+        let entry = entry.unwrap();
+        let ty = entry.file_type().unwrap();
+        let dst_path = dst.join(entry.file_name());
+        if ty.is_dir() {
+            cp_dir_rec(&entry.path(), &dst_path);
+        } else {
+            std::fs::copy(entry.path(), dst_path).unwrap();
+        }
+    }
+}
+
 #[test]
 fn test_merge_updates_e2e() {
     let env = TestEnvBuilder::from_env().with_electrum().build();

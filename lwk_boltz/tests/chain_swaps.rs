@@ -261,7 +261,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
-    async fn test_session_restore_chain_swaps() {
+    async fn test_session_restore_chain_swaps_base() {
         let _ = env_logger::try_init();
 
         // Start concurrent block mining task
@@ -304,6 +304,7 @@ mod tests {
         let serialized_data = response.serialize().unwrap();
         let lockup_address = response.lockup_address().to_string();
         let expected_amount = response.expected_amount();
+        assert_eq!(response.claim_address(), claim_address_str);
         drop(response);
         drop(session);
 
@@ -609,6 +610,7 @@ mod tests {
         let serialized_data = response.serialize().unwrap();
         let lockup_address = response.lockup_address().to_string();
         let expected_amount = response.expected_amount();
+        assert_eq!(response.claim_address(), claim_address_str);
         drop(response);
         drop(session);
 
@@ -866,6 +868,8 @@ mod tests {
             .btc_to_lbtc(send_amount, &refund_address, &claim_address, None)
             .await
             .unwrap();
+
+        assert_eq!(response.claim_address(), claim_address_str);
 
         // Verify quote matches swap response
         // For chain swaps: user sends lockup_amount, receives claim_details.amount - claim_fee

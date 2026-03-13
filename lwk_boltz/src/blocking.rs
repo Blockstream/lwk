@@ -393,6 +393,10 @@ impl LockupResponse {
         self.inner.lockup_address()
     }
 
+    pub fn claim_address(&self) -> &str {
+        self.inner.claim_address()
+    }
+
     pub fn expected_amount(&self) -> u64 {
         self.inner.expected_amount()
     }

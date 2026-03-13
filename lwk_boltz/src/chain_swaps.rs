@@ -548,6 +548,10 @@ impl LockupResponse {
         &self.data.lockup_address
     }
 
+    pub fn claim_address(&self) -> &str {
+        &self.data.claim_address
+    }
+
     pub fn expected_amount(&self) -> u64 {
         self.data.expected_lockup_amount
     }

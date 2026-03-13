@@ -103,8 +103,8 @@ impl<C: BlockchainBackend> TestWollet<C> {
         self.wollet.tx_builder()
     }
 
-    pub fn db_root_dir(self) -> TempDir {
-        self.db_root_dir
+    pub fn path(&self) -> std::path::PathBuf {
+        self.db_root_dir.path().to_owned()
     }
 
     pub fn policy_asset(&self) -> AssetId {
@@ -646,7 +646,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         let descriptor = wollet.wollet.descriptor().unwrap().to_string();
         let expected_updates = wollet.wollet.updates().unwrap();
         let expected = wollet.wollet.balance().unwrap();
-        let db_root_dir = wollet.db_root_dir();
+        let db_root_dir = wollet.path();
         let network = ElementsNetwork::default_regtest();
 
         for _ in 0..2 {

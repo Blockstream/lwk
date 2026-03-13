@@ -261,7 +261,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
-    async fn test_session_restore_chain_swaps() {
+    async fn test_session_restore_chain_swaps_base() {
         let _ = env_logger::try_init();
 
         // Start concurrent block mining task

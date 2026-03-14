@@ -57,6 +57,7 @@ pub struct Wollet {
     pub(crate) descriptor: WolletDescriptor,
     /// Counter for the next update key
     pub(crate) next_update_index: Mutex<usize>,
+    pub(crate) merge_threshold: Option<usize>,
     /// cached value
     max_weight_to_satisfy: usize,
 }
@@ -81,8 +82,9 @@ impl WolletBuilder {
         }
     }
 
-    /// Set the threshold for merging updates during build.
-    /// When the number of updates exceeds this threshold, they will be merged into one.
+    /// Set a threshold to merge updates
+    ///
+    /// When the number of updates exceeds the threshold, they are merged into one.
     /// Set to None to disable merging (default).
     pub fn with_merge_threshold(mut self, threshold: Option<usize>) -> Self {
         self.merge_threshold = threshold;
@@ -125,24 +127,7 @@ impl WolletBuilder {
             store: self.store,
             next_update_index: Mutex::new(0),
             max_weight_to_satisfy,
-        };
-
-        // Check if merging is enabled and needed
-        let mut merging = if let Some(threshold) = self.merge_threshold {
-            let merge_key = update_key(threshold);
-            match wollet.store.get(&merge_key) {
-                Ok(Some(_)) => {
-                    // There are at least threshold+1 updates, need to merge
-                    let first_key = update_key(0);
-                    match wollet.store.get(&first_key) {
-                        Ok(Some(bytes)) => Some(Update::deserialize(&bytes)?),
-                        _ => None,
-                    }
-                }
-                _ => None,
-            }
-        } else {
-            None
+            merge_threshold: self.merge_threshold,
         };
 
         // Restore updates from the store using indexed keys
@@ -151,49 +136,14 @@ impl WolletBuilder {
             match wollet.store.get(&key) {
                 Ok(Some(bytes)) => {
                     let update = Update::deserialize(&bytes)?;
-                    wollet.apply_update_no_persist(update.clone())?;
-                    if let Some(ref mut m) = merging {
-                        if i > 0 {
-                            m.merge(update);
-                        }
-                    }
+                    wollet.apply_update_no_persist(update)?;
                 }
                 Ok(None) => {
-                    // Update the next index
                     let mut next_update_index = wollet
                         .next_update_index
                         .lock()
                         .map_err(|_| Error::Generic("next_update_index lock poisoned".into()))?;
-                    *next_update_index = i;
-
-                    // If we were merging, persist the merged update and clean up
-                    if let Some(merged) = merging {
-                        // Delete all old updates
-                        // we are starting from the last to avoid having holes in the beginning
-                        for j in (0..i).rev() {
-                            let old_key = update_key(j);
-                            wollet.store.remove(&old_key).map_err(|e| {
-                                Error::Generic(format!("failed to remove update {}: {}", j, e))
-                            })?;
-                        }
-
-                        // A crash here or during the removal loop will leave the cache empty or at
-                        // an old state which is not the end of the world, the following scan will
-                        // bring the cache back to the correct state.
-
-                        // Store the merged update as update 0
-                        let merged_bytes = merged.serialize()?;
-                        wollet
-                            .store
-                            .put(&update_key(0), &merged_bytes)
-                            .map_err(|e| {
-                                Error::Generic(format!("failed to store merged update: {}", e))
-                            })?;
-
-                        // Update next_update_index to 1
-                        *next_update_index = 1;
-                    }
-
+                    *next_update_index = wollet.merge_updates(i)?;
                     break;
                 }
                 Err(e) => return Err(Error::Generic(format!("store error: {e}"))),

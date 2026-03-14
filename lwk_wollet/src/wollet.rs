@@ -82,8 +82,9 @@ impl WolletBuilder {
         }
     }
 
-    /// Set the threshold for merging updates during build.
-    /// When the number of updates exceeds this threshold, they will be merged into one.
+    /// Set a threshold to merge updates
+    ///
+    /// When the number of updates exceeds the threshold, they are merged into one.
     /// Set to None to disable merging (default).
     pub fn with_merge_threshold(mut self, threshold: Option<usize>) -> Self {
         self.merge_threshold = threshold;

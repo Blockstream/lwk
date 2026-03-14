@@ -451,6 +451,48 @@ impl Wollet {
         Ok(())
     }
 
+    pub(crate) fn merge_updates(&self, next_index: usize) -> Result<usize, Error> {
+        match self.merge_threshold {
+            Some(threshold) if threshold < next_index => (),
+            _ => return Ok(next_index), // Not merging
+        };
+
+        // Read and merge all persisted updates
+        let first_bytes = self
+            .store
+            .get(&update_key(0))
+            .map_err(|e| Error::Generic(format!("store error: {e}")))?
+            .ok_or_else(|| Error::Generic("expected update 0 to exist".into()))?;
+        let mut merged = Update::deserialize(&first_bytes)?;
+
+        for i in 1..next_index {
+            let bytes = self
+                .store
+                .get(&update_key(i))
+                .map_err(|e| Error::Generic(format!("store error: {e}")))?
+                .ok_or_else(|| Error::Generic(format!("expected update {i} to exist")))?;
+            merged.merge(Update::deserialize(&bytes)?);
+        }
+
+        // Delete all old updates from last to first to avoid holes on crash
+        for j in (0..next_index).rev() {
+            self.store
+                .remove(&update_key(j))
+                .map_err(|e| Error::Generic(format!("failed to remove update {j}: {e}")))?;
+        }
+        // A crash here or during the removal loop will leave the cache empty or at an old state,
+        // which is not the end of the world, the following scan will bring it back.
+
+        // Store the merged update as update 0
+        let merged_bytes = merged.serialize()?;
+        self.store
+            .put(&update_key(0), &merged_bytes)
+            .map_err(|e| Error::Generic(format!("failed to store merged update: {e}")))?;
+
+        let next_index = 1;
+        Ok(next_index)
+    }
+
     /// Apply a transaction to the wallet state
     ///
     /// Wallet transactions are normally obtained using [`crate::clients::blocking::BlockchainBackend::full_scan()`]

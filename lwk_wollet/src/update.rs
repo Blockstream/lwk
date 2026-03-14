@@ -355,7 +355,16 @@ impl Wollet {
         );
         let mut last_used_internal = None;
         let mut last_used_external = None;
-        for (txid, _) in txid_height_new {
+        // Also include deleted txids: a tx that was seen and then deleted (e.g. a phantom tx
+        // applied locally but not confirmed on-chain) should still count as having used its
+        // addresses so those addresses are not reused. This matters for merged updates where
+        // phantom txids are removed from txid_height_new but still appear in txid_height_delete.
+        let txids_for_last_used: Vec<Txid> = txid_height_new
+            .into_iter()
+            .map(|(t, _)| t)
+            .chain(txid_height_delete.iter().copied())
+            .collect();
+        for txid in txids_for_last_used {
             if let Some(tx) = cache.all_txs.get(&txid) {
                 for (vout, output) in tx.output.iter().enumerate() {
                     if !cache

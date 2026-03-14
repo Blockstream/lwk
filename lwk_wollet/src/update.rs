@@ -448,6 +448,8 @@ impl Wollet {
             .map_err(|e| Error::Generic(format!("store error: {e}")))?;
         *next_index += 1;
 
+        *next_index = self.merge_updates(*next_index)?;
+
         Ok(())
     }
 

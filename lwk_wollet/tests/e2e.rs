@@ -4360,8 +4360,7 @@ fn test_merge_updates_e2e() {
             let update = wait_tx_update(&mut wollet, &mut wallet.client);
             wollet.apply_update(update.clone()).unwrap();
             assert_eq!(txs + 2, wollet.transactions().unwrap().len());
-            // FIXME: once we will merge updates also on the running session will be 1
-            assert_eq!(wollet.updates().unwrap().len(), 3);
+            assert_eq!(wollet.updates().unwrap().len(), 1);
         }
 
         {
@@ -4372,8 +4371,7 @@ fn test_merge_updates_e2e() {
                 .build()
                 .unwrap();
 
-            // FIXME: once we will merge updates also on the running session will be 1
-            assert_eq!(wollet.updates().unwrap().len(), 3);
+            assert_eq!(wollet.updates().unwrap().len(), 1);
             assert_eq!(txs + 2, wollet.transactions().unwrap().len());
         }
     }

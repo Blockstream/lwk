@@ -92,9 +92,41 @@ impl TxDetails {
 impl Wollet {
     /// Get the details of a transaction
     pub fn tx_details(&self, txid: &Txid) -> Result<Option<TxDetails>, Error> {
+        let params = self.network().address_params();
         if let Some(tx) = self.cache.all_txs.get(txid) {
             let height = self.cache.heights.get(txid).unwrap_or(&None);
             let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
+            let mut outputs = vec![];
+            for (vout, txout) in tx.output.iter().enumerate() {
+                let outpoint = OutPoint::new(*txid, vout as u32);
+                let script_pubkey = txout.script_pubkey.clone();
+                let (ext_int, wildcard_index, blinding_pubkey) =
+                    if let Some((chain, idx)) = self.cache.paths.get(&script_pubkey) {
+                        let blinding_pubkey = if let Some((_, blinding_pubkey)) =
+                            self.cache.scripts.get(&(*chain, *idx))
+                        {
+                            *blinding_pubkey
+                        } else {
+                            None
+                        };
+                        (Some(*chain), Some(*idx), blinding_pubkey)
+                    } else {
+                        (None, None, None)
+                    };
+                let address = Address::from_script(&script_pubkey, blinding_pubkey, params);
+                let unblinded = self.cache.unblinded.get(&outpoint).copied();
+                outputs.push(TxOutDetails {
+                    outpoint,
+                    script_pubkey: Some(script_pubkey),
+                    address,
+                    height: *height,
+                    // TODO: set this
+                    is_spent: false,
+                    wildcard_index,
+                    ext_int,
+                    unblinded,
+                })
+            }
             Ok(Some(TxDetails {
                 tx: tx.clone(),
                 txid: *txid,
@@ -103,7 +135,7 @@ impl Wollet {
                 timestamp,
                 // TODO: fill these fields
                 inputs: vec![],
-                outputs: vec![],
+                outputs,
                 type_: "".into(),
                 balance: SignedBalance::default(),
             }))
@@ -129,7 +161,7 @@ pub struct TxOutDetails {
     is_spent: bool,
 
     // Path
-    wildcard_index: Option<u32>,
+    wildcard_index: Option<ChildNumber>,
     ext_int: Option<Chain>,
 
     unblinded: Option<TxOutSecrets>,
@@ -161,7 +193,7 @@ impl TxOutDetails {
             };
             let path = DerivationPath::from(vec![
                 ChildNumber::from_normal_idx(chain).expect("unhardened"),
-                ChildNumber::from_normal_idx(index).expect("unhardened"),
+                index,
             ]);
             Some(path)
         } else {

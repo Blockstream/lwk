@@ -2,6 +2,7 @@ use crate::cache::Timestamp;
 use crate::descriptor::Chain;
 use crate::elements::bitcoin::bip32::{ChildNumber, DerivationPath};
 use crate::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+use crate::elements::secp256k1_zkp::ZERO_TWEAK;
 use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::{Error, Wollet};
 use lwk_common::SignedBalance;
@@ -164,7 +165,7 @@ impl Wollet {
                 outputs.push(self.txout_details(outpoint, *height, Some(txout))?);
             }
 
-            let balance = {
+            let balance: SignedBalance = {
                 let mut b = std::collections::BTreeMap::new();
                 // For net balance computation we ignore explicit inputs and outputs
                 for i in &inputs {
@@ -184,6 +185,40 @@ impl Wollet {
                 b.into()
             };
 
+            let type_ = {
+                let burn_script = lwk_common::burn_script();
+                let fees = tx.all_fees();
+                if tx.input.iter().any(|i| {
+                    !i.asset_issuance.is_null()
+                        && i.asset_issuance.asset_blinding_nonce == ZERO_TWEAK
+                }) {
+                    "issuance".to_string()
+                } else if tx.input.iter().any(|i| {
+                    !i.asset_issuance.is_null()
+                        && i.asset_issuance.asset_blinding_nonce != ZERO_TWEAK
+                }) {
+                    "reissuance".to_string()
+                } else if tx.output.iter().any(|o| o.script_pubkey == burn_script) {
+                    "burn".to_string()
+                } else if !fees.is_empty()
+                    && balance.len() == fees.len()
+                    && fees
+                        .iter()
+                        .all(|(asset, fee)| balance.get(asset) == Some(&-(*fee as i64)))
+                {
+                    "redeposit".to_string()
+                } else if balance.is_empty() {
+                    "unknown".to_string()
+                } else if balance.values().all(|v| *v > 0) {
+                    "incoming".to_string()
+                } else if balance.values().all(|v| *v < 0) {
+                    // redeposit case handled above
+                    "outgoing".to_string()
+                } else {
+                    "unknown".to_string()
+                }
+            };
+
             Ok(Some(TxDetails {
                 tx: tx.clone(),
                 txid: *txid,
@@ -192,7 +227,7 @@ impl Wollet {
                 timestamp,
                 inputs,
                 outputs,
-                type_: "".into(),
+                type_,
                 balance,
             }))
         } else {

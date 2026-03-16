@@ -21,7 +21,7 @@ fn test_tx_details() {
     assert_eq!(tx_det.txid(), txid1);
     assert_eq!(tx_det.height(), None);
     assert_eq!(tx_det.timestamp(), None);
-    assert_eq!(tx_det.tx_type(), "");
+    assert_eq!(tx_det.tx_type(), "incoming");
     let balance = tx_det.balance();
     assert_eq!(balance.len(), 1);
     assert_eq!(*balance.get(&lbtc).unwrap(), 1_000_000i64);
@@ -81,7 +81,7 @@ fn test_tx_details() {
     assert_eq!(tx_det.txid(), txid2);
     assert_eq!(tx_det.height(), None);
     assert_eq!(tx_det.timestamp(), None);
-    assert_eq!(tx_det.tx_type(), "");
+    assert_eq!(tx_det.tx_type(), "redeposit");
     let balance = tx_det.balance();
     assert_eq!(balance.len(), 1);
     assert_eq!(tx_det.fees().len(), 1);

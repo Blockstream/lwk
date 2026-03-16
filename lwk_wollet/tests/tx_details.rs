@@ -56,6 +56,5 @@ fn test_tx_details() {
     assert!(out_fee.height().is_none());
     assert!(out_fee.path().is_none());
     assert!(out_fee.address().is_none());
-    // TODO: fix this
-    assert!(!out_fee.is_explicit());
+    assert!(out_fee.is_explicit());
 }

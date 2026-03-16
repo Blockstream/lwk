@@ -114,7 +114,18 @@ impl Wollet {
                         (None, None, None)
                     };
                 let address = Address::from_script(&script_pubkey, blinding_pubkey, params);
-                let unblinded = self.cache.unblinded.get(&outpoint).copied();
+                let unblinded = if let (Some(value), Some(asset)) =
+                    (txout.value.explicit(), txout.asset.explicit())
+                {
+                    Some(TxOutSecrets::new(
+                        asset,
+                        AssetBlindingFactor::zero(),
+                        value,
+                        ValueBlindingFactor::zero(),
+                    ))
+                } else {
+                    self.cache.unblinded.get(&outpoint).copied()
+                };
                 outputs.push(TxOutDetails {
                     outpoint,
                     script_pubkey: Some(script_pubkey),

@@ -22,7 +22,9 @@ fn test_tx_details() {
     assert_eq!(tx_det.height(), None);
     assert_eq!(tx_det.timestamp(), None);
     assert_eq!(tx_det.tx_type(), "");
-    assert_eq!(tx_det.balance().len(), 0);
+    let balance = tx_det.balance();
+    assert_eq!(balance.len(), 1);
+    assert_eq!(*balance.get(&lbtc).unwrap(), 1_000_000i64);
     assert_eq!(tx_det.fees().len(), 1);
     let fee_sats = tx_det.fees_asset(&lbtc);
     assert!(fee_sats > 0);
@@ -80,9 +82,12 @@ fn test_tx_details() {
     assert_eq!(tx_det.height(), None);
     assert_eq!(tx_det.timestamp(), None);
     assert_eq!(tx_det.tx_type(), "");
-    assert_eq!(tx_det.balance().len(), 0);
+    let balance = tx_det.balance();
+    assert_eq!(balance.len(), 1);
     assert_eq!(tx_det.fees().len(), 1);
-    assert!(tx_det.fees_asset(&lbtc) > 0);
+    let fee_sats = tx_det.fees_asset(&lbtc);
+    assert!(fee_sats > 0);
+    assert_eq!(*balance.get(&lbtc).unwrap(), -(fee_sats as i64));
     let inputs = tx_det.inputs();
     let outputs = tx_det.outputs();
     assert_eq!(inputs.len(), 1);

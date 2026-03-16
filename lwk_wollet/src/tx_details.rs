@@ -163,6 +163,27 @@ impl Wollet {
                 let outpoint = OutPoint::new(*txid, vout as u32);
                 outputs.push(self.txout_details(outpoint, *height, Some(txout))?);
             }
+
+            let balance = {
+                let mut b = std::collections::BTreeMap::new();
+                // For net balance computation we ignore explicit inputs and outputs
+                for i in &inputs {
+                    if i.path().is_some() && !i.is_explicit() {
+                        if let Some(u) = i.unblinded() {
+                            *b.entry(u.asset).or_default() -= u.value as i64;
+                        }
+                    }
+                }
+                for o in &outputs {
+                    if o.path().is_some() && !o.is_explicit() {
+                        if let Some(u) = o.unblinded() {
+                            *b.entry(u.asset).or_default() += u.value as i64;
+                        }
+                    }
+                }
+                b.into()
+            };
+
             Ok(Some(TxDetails {
                 tx: tx.clone(),
                 txid: *txid,
@@ -172,7 +193,7 @@ impl Wollet {
                 inputs,
                 outputs,
                 type_: "".into(),
-                balance: SignedBalance::default(),
+                balance,
             }))
         } else {
             Ok(None)

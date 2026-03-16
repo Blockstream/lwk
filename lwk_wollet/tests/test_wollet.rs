@@ -237,7 +237,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         signers: &[&AnySigner],
         fee_rate: Option<f32>,
         external: Option<(Address, u64)>,
-    ) {
+    ) -> Txid {
         let balance_before = self.balance_btc();
 
         let recipient = external.clone().unwrap_or((self.address(), 10_000));
@@ -292,6 +292,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
                 }
                 true
             });
+        txid
     }
 
     /// Send all L-BTC

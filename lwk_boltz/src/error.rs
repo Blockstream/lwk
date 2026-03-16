@@ -126,6 +126,9 @@ pub enum Error {
 
     #[error("Encryption error: {0}")]
     Encryption(String),
+
+    #[error("Missing liquid client")]
+    MissingLiquidClient,
 }
 
 impl From<BoltzError> for Error {

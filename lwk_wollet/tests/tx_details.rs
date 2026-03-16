@@ -24,8 +24,16 @@ fn test_tx_details() {
     assert!(tx_det.fees_asset(&lbtc) > 0);
     let inputs = tx_det.inputs();
     let outputs = tx_det.outputs();
-    assert_eq!(inputs.len(), 0);
+    assert_eq!(inputs.len(), 1);
     assert_eq!(outputs.len(), 3);
+
+    let input = &inputs[0];
+    assert_ne!(input.outpoint().txid, txid);
+    assert!(input.script_pubkey().is_none());
+    assert!(input.height().is_none());
+    assert!(input.path().is_none());
+    assert!(input.address().is_none());
+    assert!(!input.is_explicit());
 
     let out_recv = outputs.iter().find(|o| o.path().is_some()).unwrap();
     assert_eq!(out_recv.outpoint().txid, txid);

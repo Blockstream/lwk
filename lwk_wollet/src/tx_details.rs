@@ -90,53 +90,78 @@ impl TxDetails {
 }
 
 impl Wollet {
+    fn txout_details(
+        &self,
+        outpoint: OutPoint,
+        height: Option<u32>,
+        txout: Option<&elements::TxOut>,
+    ) -> Result<TxOutDetails, Error> {
+        let mut details = TxOutDetails {
+            outpoint,
+            height,
+            ..Default::default()
+        };
+        if let Some(txout) = txout {
+            let script_pubkey = txout.script_pubkey.clone();
+            let (ext_int, wildcard_index, blinding_pubkey) = if let Some((chain, idx)) =
+                self.cache.paths.get(&script_pubkey)
+            {
+                let blinding_pubkey =
+                    if let Some((_, blinding_pubkey)) = self.cache.scripts.get(&(*chain, *idx)) {
+                        *blinding_pubkey
+                    } else {
+                        None
+                    };
+                (Some(*chain), Some(*idx), blinding_pubkey)
+            } else {
+                (None, None, None)
+            };
+            details.ext_int = ext_int;
+            details.wildcard_index = wildcard_index;
+            let params = self.network().address_params();
+            details.address = Address::from_script(&script_pubkey, blinding_pubkey, params);
+            details.script_pubkey = Some(script_pubkey);
+            details.unblinded = if let (Some(value), Some(asset)) =
+                (txout.value.explicit(), txout.asset.explicit())
+            {
+                Some(TxOutSecrets::new(
+                    asset,
+                    AssetBlindingFactor::zero(),
+                    value,
+                    ValueBlindingFactor::zero(),
+                ))
+            } else {
+                self.cache.unblinded.get(&outpoint).copied()
+            };
+            // TODO: set this correctly
+            details.is_spent = false;
+        } else {
+            // If there is no txout, then it's an input, then it's spent
+            details.is_spent = true;
+        }
+        Ok(details)
+    }
+
     /// Get the details of a transaction
     pub fn tx_details(&self, txid: &Txid) -> Result<Option<TxDetails>, Error> {
-        let params = self.network().address_params();
         if let Some(tx) = self.cache.all_txs.get(txid) {
             let height = self.cache.heights.get(txid).unwrap_or(&None);
             let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
+            let mut inputs = vec![];
+            for txin in &tx.input {
+                let outpoint = txin.previous_output;
+                let height = self.cache.heights.get(&outpoint.txid).unwrap_or(&None);
+                let txout = self
+                    .cache
+                    .all_txs
+                    .get(&outpoint.txid)
+                    .and_then(|tx| tx.output.get(outpoint.vout as usize));
+                inputs.push(self.txout_details(outpoint, *height, txout)?);
+            }
             let mut outputs = vec![];
             for (vout, txout) in tx.output.iter().enumerate() {
                 let outpoint = OutPoint::new(*txid, vout as u32);
-                let script_pubkey = txout.script_pubkey.clone();
-                let (ext_int, wildcard_index, blinding_pubkey) =
-                    if let Some((chain, idx)) = self.cache.paths.get(&script_pubkey) {
-                        let blinding_pubkey = if let Some((_, blinding_pubkey)) =
-                            self.cache.scripts.get(&(*chain, *idx))
-                        {
-                            *blinding_pubkey
-                        } else {
-                            None
-                        };
-                        (Some(*chain), Some(*idx), blinding_pubkey)
-                    } else {
-                        (None, None, None)
-                    };
-                let address = Address::from_script(&script_pubkey, blinding_pubkey, params);
-                let unblinded = if let (Some(value), Some(asset)) =
-                    (txout.value.explicit(), txout.asset.explicit())
-                {
-                    Some(TxOutSecrets::new(
-                        asset,
-                        AssetBlindingFactor::zero(),
-                        value,
-                        ValueBlindingFactor::zero(),
-                    ))
-                } else {
-                    self.cache.unblinded.get(&outpoint).copied()
-                };
-                outputs.push(TxOutDetails {
-                    outpoint,
-                    script_pubkey: Some(script_pubkey),
-                    address,
-                    height: *height,
-                    // TODO: set this
-                    is_spent: false,
-                    wildcard_index,
-                    ext_int,
-                    unblinded,
-                })
+                outputs.push(self.txout_details(outpoint, *height, Some(txout))?);
             }
             Ok(Some(TxDetails {
                 tx: tx.clone(),
@@ -144,8 +169,7 @@ impl Wollet {
                 fees: tx.all_fees(),
                 height: *height,
                 timestamp,
-                // TODO: fill these fields
-                inputs: vec![],
+                inputs,
                 outputs,
                 type_: "".into(),
                 balance: SignedBalance::default(),
@@ -159,6 +183,7 @@ impl Wollet {
 // TODO: consider having different types for input and outputs
 
 /// Transaction output details
+#[derive(Default)]
 pub struct TxOutDetails {
     outpoint: OutPoint,
     script_pubkey: Option<Script>,
@@ -178,7 +203,6 @@ pub struct TxOutDetails {
     unblinded: Option<TxOutSecrets>,
 }
 
-#[allow(unused)]
 impl TxOutDetails {
     /// Outpoint
     pub fn outpoint(&self) -> OutPoint {

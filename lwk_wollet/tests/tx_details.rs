@@ -24,7 +24,8 @@ fn test_tx_details() {
     assert_eq!(tx_det.tx_type(), "");
     assert_eq!(tx_det.balance().len(), 0);
     assert_eq!(tx_det.fees().len(), 1);
-    assert!(tx_det.fees_asset(&lbtc) > 0);
+    let fee_sats = tx_det.fees_asset(&lbtc);
+    assert!(fee_sats > 0);
     let inputs = tx_det.inputs();
     let outputs = tx_det.outputs();
     assert_eq!(inputs.len(), 1);
@@ -46,6 +47,8 @@ fn test_tx_details() {
     assert_eq!(&address.script_pubkey(), out_recv.script_pubkey().unwrap());
     assert!(address.blinding_pubkey.is_some());
     assert!(!out_recv.is_explicit());
+    assert_eq!(out_recv.unblinded().unwrap().asset, lbtc);
+    assert_eq!(out_recv.unblinded().unwrap().value, 1_000_000);
 
     let out_change = outputs.iter().find(|o| o.path().is_none()).unwrap();
     assert_eq!(out_change.outpoint().txid, txid1);
@@ -59,6 +62,7 @@ fn test_tx_details() {
     );
     assert!(address.blinding_pubkey.is_none());
     assert!(!out_change.is_explicit());
+    assert!(out_change.unblinded().is_none());
 
     let out_fee = &outputs[2];
     assert_eq!(out_fee.outpoint().txid, txid1);
@@ -68,6 +72,8 @@ fn test_tx_details() {
     assert!(out_fee.path().is_none());
     assert!(out_fee.address().is_none());
     assert!(out_fee.is_explicit());
+    assert_eq!(out_fee.unblinded().unwrap().asset, lbtc);
+    assert_eq!(out_fee.unblinded().unwrap().value, fee_sats);
 
     let tx_det = w.wollet.tx_details(&txid2).unwrap().unwrap();
     assert_eq!(tx_det.txid(), txid2);
@@ -93,4 +99,5 @@ fn test_tx_details() {
     assert_eq!(input.path().unwrap(), out_recv.path().unwrap());
     assert_eq!(input.address().unwrap(), out_recv.address().unwrap());
     assert!(!input.is_explicit());
+    assert_eq!(input.unblinded().unwrap(), out_recv.unblinded().unwrap());
 }

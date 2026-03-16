@@ -241,6 +241,11 @@ impl TxOutDetails {
         self.address.as_ref()
     }
 
+    /// Unblinded values (asset, amount, blinders)
+    pub fn unblinded(&self) -> Option<TxOutSecrets> {
+        self.unblinded
+    }
+
     /// Whether the transaction output is explicit
     pub fn is_explicit(&self) -> bool {
         self.unblinded

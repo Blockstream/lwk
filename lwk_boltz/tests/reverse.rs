@@ -385,6 +385,13 @@ mod tests {
             .expect("claim_txid should be set");
         assert_eq!(claim_txid, claim_txid_restored);
 
+        let tx = session
+            .api
+            .get_reverse_tx(invoice_response.swap_id())
+            .await
+            .unwrap();
+        log::info!("{:?}", tx);
+
         // Stop the mining task
         mining_handle.abort();
     }

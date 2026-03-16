@@ -101,7 +101,7 @@ pub struct SwapInfo {
 
 pub struct BoltzSession {
     ws: Arc<BoltzWsApi>,
-    api: Arc<BoltzApiClientV2>,
+    pub api: Arc<BoltzApiClientV2>,
     chain_client: Arc<ChainClient>,
     liquid_chain: LiquidChain,
     timeout: Duration,

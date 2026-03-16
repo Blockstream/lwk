@@ -18,11 +18,11 @@ macro_rules! impl_value_builder {
             /// Add a typed Simplicity value.
             pub fn add_value(
                 &self,
-                name: String,
+                name: &str,
                 value: &super::typed_value::SimplicityTypedValue,
             ) -> Arc<Self> {
                 let mut new = self.clone();
-                new.inner.insert(name, value.inner().clone());
+                new.inner.insert(name.to_string(), value.inner().clone());
                 Arc::new(new)
             }
         }

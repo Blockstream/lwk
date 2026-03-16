@@ -22,6 +22,40 @@ fn test_tx_details() {
     assert_eq!(tx_det.balance().len(), 0);
     assert_eq!(tx_det.fees().len(), 1);
     assert!(tx_det.fees_asset(&lbtc) > 0);
-    assert_eq!(tx_det.inputs().len(), 0);
-    assert_eq!(tx_det.outputs().len(), 0);
+    let inputs = tx_det.inputs();
+    let outputs = tx_det.outputs();
+    assert_eq!(inputs.len(), 0);
+    assert_eq!(outputs.len(), 3);
+
+    let out_recv = outputs.iter().find(|o| o.path().is_some()).unwrap();
+    assert_eq!(out_recv.outpoint().txid, txid);
+    assert!(out_recv.height().is_none());
+    assert_eq!(out_recv.path().unwrap().len(), 2);
+    let address = out_recv.address().unwrap();
+    assert_eq!(&address.script_pubkey(), out_recv.script_pubkey().unwrap());
+    assert!(address.blinding_pubkey.is_some());
+    assert!(!out_recv.is_explicit());
+
+    let out_change = outputs.iter().find(|o| o.path().is_none()).unwrap();
+    assert_eq!(out_change.outpoint().txid, txid);
+    assert_ne!(out_change.outpoint().vout, out_recv.outpoint().vout);
+    assert!(out_change.height().is_none());
+    assert!(out_change.path().is_none());
+    let address = out_change.address().unwrap();
+    assert_eq!(
+        &address.script_pubkey(),
+        out_change.script_pubkey().unwrap()
+    );
+    assert!(address.blinding_pubkey.is_none());
+    assert!(!out_change.is_explicit());
+
+    let out_fee = &outputs[2];
+    assert_eq!(out_fee.outpoint().txid, txid);
+    assert_eq!(out_fee.outpoint().vout, 2);
+    assert!(out_fee.script_pubkey().unwrap().is_empty());
+    assert!(out_fee.height().is_none());
+    assert!(out_fee.path().is_none());
+    assert!(out_fee.address().is_none());
+    // TODO: fix this
+    assert!(!out_fee.is_explicit());
 }

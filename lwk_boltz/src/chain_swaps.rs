@@ -220,6 +220,7 @@ impl BoltzSession {
                 random_preimage: self.random_preimages,
                 claim_txid: None,
                 lockup_txid: None,
+                refund_txid: None,
             },
             lockup_script,
             claim_script,
@@ -515,6 +516,7 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
         random_preimage: false, // when trying to restore from boltz only deterministic preimage are supported
         claim_txid: None, // claim_details.transaction is the lockup tx, boltz don't track claim tx
         lockup_txid: claim_details.transaction.as_ref().map(|e| e.id.clone()),
+        refund_txid: None, // boltz don't track refund tx
     })
 }
 
@@ -526,6 +528,11 @@ impl LockupResponse {
     /// The txid of the user lockup transaction of the swap
     pub fn lockup_txid(&self) -> Option<&str> {
         self.data.lockup_txid.as_deref()
+    }
+
+    /// The txid of the refund transaction of the swap
+    pub fn refund_txid(&self) -> Option<&str> {
+        self.data.refund_txid.as_deref()
     }
 
     /// Optionally set the lockup transaction txid.
@@ -587,7 +594,7 @@ impl LockupResponse {
         self.data.boltz_fee
     }
 
-    async fn build_and_broadcast_refund(&self) -> Result<(), Error> {
+    async fn build_and_broadcast_refund(&mut self) -> Result<(), Error> {
         sleep(WAIT_TIME).await;
         let tx = self
             .lockup_script
@@ -602,6 +609,7 @@ impl LockupResponse {
             })
             .await?;
         let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
+        self.data.refund_txid = Some(txid.clone());
         log::info!("Refund transaction broadcasted: {txid}");
         Ok(())
     }

@@ -40,6 +40,7 @@ pub struct ChainSwapData {
 
     pub claim_txid: Option<String>,
     pub lockup_txid: Option<String>,
+    pub refund_txid: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -65,6 +66,7 @@ pub struct ChainSwapDataSerializable {
 
     pub claim_txid: Option<String>,
     pub lockup_txid: Option<String>,
+    pub refund_txid: Option<String>,
 }
 
 impl From<ChainSwapData> for ChainSwapDataSerializable {
@@ -90,6 +92,7 @@ impl From<ChainSwapData> for ChainSwapDataSerializable {
                 .then_some(data.preimage.to_string().expect("preimage has 32 bytes")),
             claim_txid: data.claim_txid,
             lockup_txid: data.lockup_txid,
+            refund_txid: data.refund_txid,
         }
     }
 }
@@ -145,6 +148,7 @@ pub fn to_chain_data(
         random_preimage: data.preimage.is_some(),
         claim_txid: data.claim_txid,
         lockup_txid: data.lockup_txid,
+        refund_txid: data.refund_txid,
     })
 }
 

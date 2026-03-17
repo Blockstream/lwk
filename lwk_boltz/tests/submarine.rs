@@ -94,7 +94,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
-    async fn test_session_submarine() {
+    async fn test_session_submarine_base() {
         let _ = env_logger::try_init();
 
         // Start concurrent block mining task
@@ -174,6 +174,7 @@ mod tests {
             prepare_pay_response.lockup_txid().is_some(),
             "lockup txid should be available when submarine swap is claimed"
         );
+        assert!(prepare_pay_response.refund_txid().is_none());
         // repeatly calling advance on a terminated swap don't timeout
         for _ in 0..10 {
             match prepare_pay_response.advance().await {
@@ -188,7 +189,7 @@ mod tests {
         // Test underpay which triggers a refund to the refund address
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
-        let prepare_pay_response = session
+        let mut prepare_pay_response = session
             .prepare_pay(&lightning_payment, &refund_address, None)
             .await
             .unwrap();
@@ -203,7 +204,24 @@ mod tests {
         )
         .await
         .unwrap();
-        prepare_pay_response.complete_pay().await.unwrap();
+
+        // Use advance() instead of complete_pay() so we can check refund_txid afterwards
+        loop {
+            match prepare_pay_response.advance().await {
+                Ok(std::ops::ControlFlow::Continue(_)) => {}
+                Ok(std::ops::ControlFlow::Break(success)) => {
+                    assert!(success, "Refund should complete successfully");
+                    break;
+                }
+                Err(e) => panic!("Unexpected error: {e}"),
+            }
+        }
+
+        // Verify refund txid was stored when refund transaction was broadcasted
+        assert!(
+            prepare_pay_response.refund_txid().is_some(),
+            "refund_txid should be set after refund transaction is broadcasted"
+        );
 
         // test polling
         let session_polling = BoltzSession::builder(

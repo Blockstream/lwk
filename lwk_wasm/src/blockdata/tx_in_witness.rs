@@ -66,7 +66,7 @@ impl TxInWitness {
     /// Get the script witness elements.
     ///
     /// Returns an array of hex strings.
-    #[wasm_bindgen(js_name = scriptWitness)]
+    #[wasm_bindgen(getter = scriptWitness)]
     pub fn script_witness(&self) -> Vec<String> {
         self.inner
             .script_witness
@@ -78,7 +78,7 @@ impl TxInWitness {
     /// Get the peg-in witness elements.
     ///
     /// Returns an array of hex strings.
-    #[wasm_bindgen(js_name = peginWitness)]
+    #[wasm_bindgen(getter = peginWitness)]
     pub fn pegin_witness(&self) -> Vec<String> {
         self.inner
             .pegin_witness

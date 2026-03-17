@@ -369,7 +369,6 @@ mod tests {
 
         assert!(invoice_response.claim_txid().is_some());
         assert!(invoice_response.lockup_txid().is_some());
-        std::thread::sleep(Duration::from_secs(10));
 
         drop(session);
 
@@ -391,7 +390,6 @@ mod tests {
             .unwrap();
 
         let data = l.pop().unwrap();
-        log::info!("{data:?}");
         let data: InvoiceDataSerializable = data.into();
         assert!(data.preimage.is_none());
         let invoice_response_restored = session.restore_invoice(data).await.unwrap();

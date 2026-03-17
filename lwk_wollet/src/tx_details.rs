@@ -144,6 +144,9 @@ impl Wollet {
     }
 
     /// Get the details of a transaction
+    ///
+    /// **Unstable**: This API may change without notice.
+    #[doc(hidden)]
     pub fn tx_details(&self, txid: &Txid) -> Result<Option<TxDetails>, Error> {
         if let Some(tx) = self.cache.all_txs.get(txid) {
             let height = self.cache.heights.get(txid).unwrap_or(&None);

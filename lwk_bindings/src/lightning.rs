@@ -939,6 +939,17 @@ impl InvoiceResponse {
             .map(|txid| txid.to_string()))
     }
 
+    /// The txid of the lockup transaction of the swap (made by Boltz)
+    pub fn lockup_txid(&self) -> Result<Option<String>, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .lockup_txid()
+            .map(|txid| txid.to_string()))
+    }
+
     /// Serialize the prepare pay response data to a json string
     ///
     /// This can be used to restore the prepare pay response after a crash

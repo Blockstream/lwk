@@ -87,25 +87,25 @@ pub struct StateTaprootSpendInfo {
 #[wasm_bindgen]
 impl StateTaprootSpendInfo {
     /// Get the tweaked Taproot output key.
-    #[wasm_bindgen(js_name = outputKey)]
+    #[wasm_bindgen(getter = outputKey)]
     pub fn output_key(&self) -> XOnlyPublicKey {
         XOnlyPublicKey::from(self.inner.output_key().into_inner())
     }
 
     /// Get output key parity (0 for even, 1 for odd).
-    #[wasm_bindgen(js_name = outputKeyParity)]
+    #[wasm_bindgen(getter = outputKeyParity)]
     pub fn output_key_parity(&self) -> u8 {
         self.inner.output_key_parity().to_u8()
     }
 
     /// Get the internal key.
-    #[wasm_bindgen(js_name = internalKey)]
+    #[wasm_bindgen(getter = internalKey)]
     pub fn internal_key(&self) -> XOnlyPublicKey {
         XOnlyPublicKey::from(self.inner.internal_key().to_x_only_pubkey())
     }
 
     /// Get the Taproot script tree merkle root bytes, if present.
-    #[wasm_bindgen(js_name = merkleRoot)]
+    #[wasm_bindgen(getter = merkleRoot)]
     pub fn merkle_root(&self) -> Option<Vec<u8>> {
         self.inner
             .merkle_root()
@@ -123,7 +123,7 @@ impl StateTaprootSpendInfo {
     }
 
     /// Get script pubkey as v1 P2TR output script for the tweaked output key.
-    #[wasm_bindgen(js_name = scriptPubkey)]
+    #[wasm_bindgen(getter = scriptPubkey)]
     pub fn script_pubkey(&self) -> Script {
         elements::Script::new_v1_p2tr_tweaked(self.inner.output_key()).into()
     }

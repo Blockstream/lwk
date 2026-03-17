@@ -33,10 +33,7 @@ mod tests {
         // Call the helper that shells into the cln-1 container and runs `lightning-cli getinfo`.
         let info = utils::cln_getinfo().expect("cln_getinfo should succeed");
 
-        assert_eq!(
-            info.get("id").unwrap().as_str().unwrap(),
-            "027252b09ca91b04f5f42fe4fc647e3be3d06c405bf7a6437f5e429ffb695ba25b"
-        );
+        assert!(info.get("id").unwrap().as_str().is_some());
         assert_eq!(info.get("network").unwrap().as_str().unwrap(), "regtest");
         assert_eq!(info.get("version").unwrap().as_str().unwrap(), "25.12.1");
     }

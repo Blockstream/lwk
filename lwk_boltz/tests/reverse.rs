@@ -258,7 +258,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
-    async fn test_session_restore_reverse() {
+    async fn test_session_restore_reverse_from_data() {
         let _ = env_logger::try_init();
 
         // Start concurrent block mining task
@@ -316,6 +316,86 @@ mod tests {
         utils::start_pay_invoice_lnd(invoice_response.bolt11_invoice().to_string());
         invoice_response.complete_pay().await.unwrap();
 
+        // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_session_restore_reverse_from_boltz() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = utils::start_block_mining();
+
+        let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let claim_address = elements::Address::from_str(&claim_address).unwrap();
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+        );
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+
+        let session = BoltzSession::builder(
+            ElementsNetwork::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .create_swap_timeout(TIMEOUT)
+        .mnemonic(mnemonic.clone())
+        .build()
+        .await
+        .unwrap();
+
+        // test restore swap after loosing data
+        let mut invoice_response = session
+            .invoice(100000, None, &claim_address, None)
+            .await
+            .unwrap();
+        let swap_id = invoice_response.swap_id().to_string();
+        utils::start_pay_invoice_lnd(invoice_response.bolt11_invoice().to_string());
+
+        invoice_response.advance().await.unwrap();
+        invoice_response.advance().await.unwrap();
+
+        assert!(invoice_response.claim_txid().is_some());
+        assert!(invoice_response.lockup_txid().is_some());
+
+        drop(session);
+
+        let session = BoltzSession::builder(
+            ElementsNetwork::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .create_swap_timeout(TIMEOUT)
+        .mnemonic(mnemonic)
+        .build()
+        .await
+        .unwrap();
+
+        let l = session.swap_restore().await.unwrap();
+
+        let mut l = session
+            .restorable_reverse_swaps(&l, &claim_address)
+            .await
+            .unwrap();
+
+        let data = l.pop().unwrap();
+        let data: InvoiceDataSerializable = data.into();
+        assert!(data.preimage.is_none());
+        let invoice_response_restored = session.restore_invoice(data).await.unwrap();
+        assert_eq!(swap_id, invoice_response_restored.swap_id());
+        assert!(invoice_response_restored.claim_txid().is_none()); // boltz doesn't store claim informations, thus we don't have this on restore
+        assert!(invoice_response_restored.lockup_txid().is_some());
         // Stop the mining task
         mining_handle.abort();
     }

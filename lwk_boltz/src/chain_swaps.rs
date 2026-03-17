@@ -514,7 +514,7 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
         to_chain,
         random_preimage: false, // when trying to restore from boltz only deterministic preimage are supported
         claim_txid: None, // claim_details.transaction is the lockup tx, boltz don't track claim tx
-        lockup_txid: None, // populated if available in restore_lockup
+        lockup_txid: claim_details.transaction.as_ref().map(|e| e.id.clone()),
     })
 }
 
@@ -613,13 +613,17 @@ impl LockupResponse {
         let flow = match update_status {
             SwapState::SwapCreated => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionMempool => {
-                self.data.lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
-                log::info!("User lockup in mempool");
+                let lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
+                log::info!("User lockup in mempool {lockup_txid:?}");
+                self.data.lockup_txid = lockup_txid;
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::TransactionConfirmed => {
-                self.data.lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
-                log::info!("User lockup confirmed, waiting for server lockup");
+                let lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
+                log::info!("User lockup confirmed {lockup_txid:?}, waiting for server lockup");
+                if self.data.lockup_txid.is_none() {
+                    self.data.lockup_txid = lockup_txid;
+                }
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::ServerTransactionMempool => {

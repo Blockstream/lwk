@@ -169,6 +169,7 @@ impl BoltzSession {
                 boltz_fee,
                 claim_fee,
                 claim_txid: None,
+                lockup_txid: None,
                 create_reverse_response: reverse_resp.clone(),
                 our_keys,
                 preimage,
@@ -321,6 +322,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
         boltz_fee: None,
         claim_fee: None, // Not available in restore response, will use fallback fee rate
         claim_txid: None, // claim_details.transaction is the lockup tx, boltz don't track claim tx
+        lockup_txid: claim_details.transaction.as_ref().map(|e| e.id.clone()),
         create_reverse_response,
         our_keys,
         preimage,
@@ -435,6 +437,11 @@ impl InvoiceResponse {
         self.data.claim_txid.as_deref()
     }
 
+    /// The txid of the lockup transaction of the swap (made by Boltz)
+    pub fn lockup_txid(&self) -> Option<&str> {
+        self.data.lockup_txid.as_deref()
+    }
+
     /// The claim transaction fee estimate from Boltz API (in satoshis)
     pub fn claim_fee(&self) -> Option<u64> {
         self.data.claim_fee
@@ -456,11 +463,17 @@ impl InvoiceResponse {
                 Ok(ControlFlow::Break(true))
             }
             SwapState::TransactionMempool => {
-                log::info!("transaction.mempool Boltz funding tx");
+                let lockup_txid = update.transaction.as_ref().map(|e| e.id.clone());
+                log::info!("transaction.mempool Boltz funding tx {lockup_txid:?}");
+                self.data.lockup_txid = lockup_txid;
                 self.handle_claim_transaction_if_necessary(update).await
             }
             SwapState::TransactionConfirmed => {
-                log::info!("transaction.confirmed Boltz funding tx");
+                let lockup_txid = update.transaction.as_ref().map(|e| e.id.clone());
+                log::info!("transaction.confirmed Boltz funding tx {lockup_txid:?}");
+                if self.data.lockup_txid.is_none() {
+                    self.data.lockup_txid = lockup_txid;
+                }
                 self.handle_claim_transaction_if_necessary(update).await
             }
             SwapState::InvoiceSettled => {

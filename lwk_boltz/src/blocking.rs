@@ -374,6 +374,11 @@ impl InvoiceResponse {
         self.inner.claim_txid()
     }
 
+    /// See [`crate::InvoiceResponse::lockup_txid()`]
+    pub fn lockup_txid(&self) -> Option<&str> {
+        self.inner.lockup_txid()
+    }
+
     pub fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
         let inner = self.runtime.block_on(self.inner.advance())?;
         Ok(inner)

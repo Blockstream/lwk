@@ -417,8 +417,9 @@ impl PreparePayResponse {
         let flow = match update_status {
             SwapState::InvoiceSet => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionMempool => {
-                self.data.lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
-                log::info!("transaction.mempool Boltz broadcasted funding tx");
+                let lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
+                log::info!("transaction.mempool Boltz broadcasted funding tx {lockup_txid:?}");
+                self.data.lockup_txid = lockup_txid;
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::InvoiceFailedToPay => {

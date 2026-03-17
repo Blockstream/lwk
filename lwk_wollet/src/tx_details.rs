@@ -301,8 +301,6 @@ pub struct TxOutDetails {
     // The height of the tx this output belong to (if available)
     height: Option<u32>,
 
-    // TODO: this is the most expensive/annoying to compute
-    #[allow(unused)]
     is_spent: bool,
 
     // Path

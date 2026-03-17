@@ -280,6 +280,7 @@ impl Wollet {
 #[derive(Default, PartialEq, Eq, Debug, Clone)]
 pub struct TxOpt {}
 
+// TODO: consider removing options and set deafult values here
 /// Options for transaction details
 #[derive(Default, PartialEq, Eq, Debug, Clone)]
 pub struct TxsOpt {

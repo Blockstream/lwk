@@ -110,4 +110,10 @@ fn test_tx_details() {
     assert!(!input.is_explicit());
     assert_eq!(input.unblinded().unwrap(), out_recv.unblinded().unwrap());
     assert!(input.is_spent());
+
+    let txs = w.wollet.txs().unwrap();
+    assert_eq!(txs.len(), 2);
+    // Both are unconfirmed, so order depends on txid, which is random
+    assert!(txs.iter().any(|tx| tx.txid() == txid1));
+    assert!(txs.iter().any(|tx| tx.txid() == txid2));
 }

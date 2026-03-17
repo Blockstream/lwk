@@ -6,7 +6,7 @@ use crate::elements::secp256k1_zkp::ZERO_TWEAK;
 use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::{Error, Wollet};
 use lwk_common::SignedBalance;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 /// Transaction details
 pub struct TxDetails {
@@ -144,7 +144,7 @@ impl Wollet {
         &self,
         txid: &Txid,
         height: Option<u32>,
-        spent: &std::collections::HashSet<OutPoint>,
+        spent: &HashSet<OutPoint>,
     ) -> Result<Option<TxDetails>, Error> {
         if let Some(tx) = self.cache.all_txs.get(txid) {
             let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
@@ -168,7 +168,7 @@ impl Wollet {
             }
 
             let balance: SignedBalance = {
-                let mut b = std::collections::BTreeMap::new();
+                let mut b = BTreeMap::new();
                 // For net balance computation we ignore explicit inputs and outputs
                 for i in &inputs {
                     if i.path().is_some() && !i.is_explicit() {

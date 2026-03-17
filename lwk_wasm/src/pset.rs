@@ -464,13 +464,21 @@ impl PsetBuilder {
             )));
         }
 
-        let converted: HashMap<usize, lwk_wollet::elements::TxOutSecrets> = input_indices
-            .iter()
-            .zip(secrets.iter())
-            .map(|(&idx, sec)| (idx as usize, sec.into()))
-            .collect();
+        let mut inp_txout_sec: HashMap<usize, lwk_wollet::elements::TxOutSecrets> =
+            HashMap::with_capacity(input_indices.len());
+        for (&index, secret) in input_indices.iter().zip(secrets.iter()) {
+            if inp_txout_sec
+                .insert(index as usize, secret.into())
+                .is_some()
+            {
+                return Err(Error::Generic(format!(
+                    "input_indices must be unique, duplicate index {index}"
+                )));
+            }
+        }
 
-        self.inner.blind_last(&mut thread_rng(), &EC, &converted)?;
+        self.inner
+            .blind_last(&mut thread_rng(), &EC, &inp_txout_sec)?;
         Ok(self)
     }
 

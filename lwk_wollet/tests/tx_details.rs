@@ -40,6 +40,7 @@ fn test_tx_details() {
     assert!(input.path().is_none());
     assert!(input.address().is_none());
     assert!(!input.is_explicit());
+    assert!(input.is_spent());
 
     let out_recv = outputs.iter().find(|o| o.path().is_some()).unwrap();
     assert_eq!(out_recv.outpoint().txid, txid1);
@@ -51,6 +52,7 @@ fn test_tx_details() {
     assert!(!out_recv.is_explicit());
     assert_eq!(out_recv.unblinded().unwrap().asset, lbtc);
     assert_eq!(out_recv.unblinded().unwrap().value, 1_000_000);
+    assert!(out_recv.is_spent());
 
     let out_change = outputs.iter().find(|o| o.path().is_none()).unwrap();
     assert_eq!(out_change.outpoint().txid, txid1);
@@ -65,6 +67,7 @@ fn test_tx_details() {
     assert!(address.blinding_pubkey.is_none());
     assert!(!out_change.is_explicit());
     assert!(out_change.unblinded().is_none());
+    assert!(!out_change.is_spent());
 
     let out_fee = &outputs[2];
     assert_eq!(out_fee.outpoint().txid, txid1);
@@ -76,6 +79,7 @@ fn test_tx_details() {
     assert!(out_fee.is_explicit());
     assert_eq!(out_fee.unblinded().unwrap().asset, lbtc);
     assert_eq!(out_fee.unblinded().unwrap().value, fee_sats);
+    assert!(!out_fee.is_spent());
 
     let tx_det = w.wollet.tx_details(&txid2).unwrap().unwrap();
     assert_eq!(tx_det.txid(), txid2);
@@ -105,4 +109,5 @@ fn test_tx_details() {
     assert_eq!(input.address().unwrap(), out_recv.address().unwrap());
     assert!(!input.is_explicit());
     assert_eq!(input.unblinded().unwrap(), out_recv.unblinded().unwrap());
+    assert!(input.is_spent());
 }

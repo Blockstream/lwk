@@ -96,10 +96,12 @@ impl Wollet {
         outpoint: OutPoint,
         height: Option<u32>,
         txout: Option<&elements::TxOut>,
+        is_spent: bool,
     ) -> Result<TxOutDetails, Error> {
         let mut details = TxOutDetails {
             outpoint,
             height,
+            is_spent,
             ..Default::default()
         };
         if let Some(txout) = txout {
@@ -134,11 +136,6 @@ impl Wollet {
             } else {
                 self.cache.unblinded.get(&outpoint).copied()
             };
-            // TODO: set this correctly
-            details.is_spent = false;
-        } else {
-            // If there is no txout, then it's an input, then it's spent
-            details.is_spent = true;
         }
         Ok(details)
     }
@@ -148,6 +145,7 @@ impl Wollet {
     /// **Unstable**: This API may change without notice.
     #[doc(hidden)]
     pub fn tx_details(&self, txid: &Txid) -> Result<Option<TxDetails>, Error> {
+        let spent = self.cache.spent()?;
         if let Some(tx) = self.cache.all_txs.get(txid) {
             let height = self.cache.heights.get(txid).unwrap_or(&None);
             let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
@@ -160,12 +158,14 @@ impl Wollet {
                     .all_txs
                     .get(&outpoint.txid)
                     .and_then(|tx| tx.output.get(outpoint.vout as usize));
-                inputs.push(self.txout_details(outpoint, *height, txout)?);
+                let is_spent = true; // inputs are always spent
+                inputs.push(self.txout_details(outpoint, *height, txout, is_spent)?);
             }
             let mut outputs = vec![];
             for (vout, txout) in tx.output.iter().enumerate() {
                 let outpoint = OutPoint::new(*txid, vout as u32);
-                outputs.push(self.txout_details(outpoint, *height, Some(txout))?);
+                let is_spent = spent.contains(&outpoint);
+                outputs.push(self.txout_details(outpoint, *height, Some(txout), is_spent)?);
             }
 
             let balance: SignedBalance = {
@@ -313,5 +313,16 @@ impl TxOutDetails {
                     && u.value_bf == ValueBlindingFactor::zero()
             })
             .unwrap_or(false)
+    }
+
+    /// Whether the output is spent by a previously downloaded transaction
+    ///
+    /// Note: this value might be inaccurate. We compute this from downloaded
+    /// transactions, however we only download transactions relevant for the
+    /// wallet (i.e. if they include inputs or outputs that belong to the
+    /// wallet), thus for non-wallet outputs we might set this value
+    /// incorrectly. For wallet outputs, it can be outdated.
+    pub fn is_spent(&self) -> bool {
+        self.is_spent
     }
 }

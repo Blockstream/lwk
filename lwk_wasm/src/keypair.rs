@@ -60,26 +60,26 @@ impl Keypair {
     }
 
     /// Returns the secret key bytes (32 bytes)
-    #[wasm_bindgen(js_name = secretBytes)]
+    #[wasm_bindgen(getter = secretBytes)]
     pub fn secret_bytes(&self) -> Vec<u8> {
         self.inner.secret_bytes().to_vec()
     }
 
     /// Returns the `SecretKey`
-    #[wasm_bindgen(js_name = secretKey)]
+    #[wasm_bindgen(getter = secretKey)]
     pub fn secret_key(&self) -> SecretKey {
         self.inner.secret_key().into()
     }
 
     /// Returns the `PublicKey`
-    #[wasm_bindgen(js_name = publicKey)]
+    #[wasm_bindgen(getter = publicKey)]
     pub fn public_key(&self) -> PublicKey {
         let pk = lwk_wollet::elements::bitcoin::PublicKey::new(self.inner.public_key());
         pk.into()
     }
 
     /// Returns the x-only public key
-    #[wasm_bindgen(js_name = xOnlyPublicKey)]
+    #[wasm_bindgen(getter = xOnlyPublicKey)]
     pub fn x_only_public_key(&self) -> XOnlyPublicKey {
         let (xonly, _parity) = self.inner.x_only_public_key();
         xonly.into()

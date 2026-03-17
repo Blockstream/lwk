@@ -73,7 +73,7 @@ async function runSimplicityP2pkTest() {
     const _vTuple = lwk.SimplicityTypedValue.fromElements([lwk.SimplicityTypedValue.fromU32(42), lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY)]);
     const _vNone = lwk.SimplicityTypedValue.none(lwk.SimplicityType.u64());
     const _vSome = lwk.SimplicityTypedValue.some(lwk.SimplicityTypedValue.fromU64(BigInt(1000)));
-    const _vParsed = new lwk.SimplicityTypedValue("Left(42)", tEither);
+    const _vParsed = lwk.SimplicityTypedValue.parse("Left(42)", tEither);
 
     // Test add_value on builders
     let args2 = new lwk.SimplicityArguments();

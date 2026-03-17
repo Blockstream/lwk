@@ -125,8 +125,8 @@ impl SimplicityTypedValue {
     }
 
     /// Parse a value from a string with a given type.
-    #[wasm_bindgen(constructor)]
-    pub fn new(value_str: &str, ty: &SimplicityType) -> Result<SimplicityTypedValue, Error> {
+    #[wasm_bindgen(js_name = parse)]
+    pub fn parse(value_str: &str, ty: &SimplicityType) -> Result<SimplicityTypedValue, Error> {
         let inner = Value::parse_from_str(value_str, ty.inner())?;
         Ok(Self { inner })
     }
@@ -178,6 +178,6 @@ mod tests {
         let _ = SimplicityTypedValue::from_byte_array_hex("deadbeef").unwrap();
 
         let ty = SimplicityType::u32();
-        let _ = SimplicityTypedValue::new("42", &ty).unwrap();
+        let _ = SimplicityTypedValue::parse("42", &ty).unwrap();
     }
 }

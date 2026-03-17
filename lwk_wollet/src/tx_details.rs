@@ -31,8 +31,8 @@ pub struct TxDetails {
 
 impl TxDetails {
     /// Transaction
-    pub fn tx(&self) -> &Transaction {
-        &self.tx
+    pub fn tx(&self) -> Option<&Transaction> {
+        Some(&self.tx)
     }
 
     /// Txid

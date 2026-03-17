@@ -621,7 +621,9 @@ impl LockupResponse {
             SwapState::TransactionConfirmed => {
                 let lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
                 log::info!("User lockup confirmed {lockup_txid:?}, waiting for server lockup");
-                self.data.lockup_txid = lockup_txid;
+                if self.data.lockup_txid.is_none() {
+                    self.data.lockup_txid = lockup_txid;
+                }
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::ServerTransactionMempool => {

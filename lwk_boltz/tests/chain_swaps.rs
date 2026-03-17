@@ -1220,6 +1220,7 @@ mod tests {
 
         assert!(response.claim_txid().is_some());
         assert!(response.lockup_txid().is_some());
+        assert!(response.refund_txid().is_none()); // no refund in successful swap
 
         drop(session);
 
@@ -1244,6 +1245,7 @@ mod tests {
         assert_eq!(swap_id, response_restored.swap_id());
         assert!(response_restored.claim_txid().is_none()); // boltz doesn't store claim informations, thus we don't have this on restore
         assert!(response_restored.lockup_txid().is_some());
+        assert!(response_restored.refund_txid().is_none()); // boltz doesn't store refund informations, thus we don't have this on restore
 
         // Stop the mining task
         mining_handle.abort();
@@ -1327,8 +1329,25 @@ mod tests {
             .await
             .unwrap();
         let data = lwk_boltz::ChainSwapDataSerializable::deserialize(&serialized_data).unwrap();
-        response = session.restore_lockup(data).await.unwrap();
-        assert!(response.complete().await.unwrap());
+        let mut response = session.restore_lockup(data).await.unwrap();
+
+        // Use advance() instead of complete() so we can check refund_txid afterwards
+        loop {
+            match response.advance().await {
+                Ok(std::ops::ControlFlow::Continue(_)) => {}
+                Ok(std::ops::ControlFlow::Break(success)) => {
+                    assert!(success, "Refund should complete successfully");
+                    break;
+                }
+                Err(e) => panic!("Unexpected error: {e}"),
+            }
+        }
+
+        // Verify refund txid was stored when refund transaction was broadcasted
+        assert!(
+            response.refund_txid().is_some(),
+            "refund_txid should be set after refund transaction is broadcasted"
+        );
 
         let refund_balance =
             crate::utils::get_address_balance(LBTC_CHAIN.into(), &refund_address_str)

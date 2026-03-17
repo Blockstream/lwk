@@ -469,7 +469,11 @@ impl InvoiceResponse {
                 self.handle_claim_transaction_if_necessary(update).await
             }
             SwapState::TransactionConfirmed => {
-                log::info!("transaction.confirmed Boltz funding tx");
+                let lockup_txid = update.transaction.as_ref().map(|e| e.id.clone());
+                log::info!("transaction.confirmed Boltz funding tx {lockup_txid:?}");
+                if self.data.lockup_txid.is_none() {
+                    self.data.lockup_txid = lockup_txid;
+                }
                 self.handle_claim_transaction_if_necessary(update).await
             }
             SwapState::InvoiceSettled => {

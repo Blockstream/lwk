@@ -181,6 +181,7 @@ impl BoltzSession {
                 last_state: SwapState::InvoiceSet,
                 swap_type: SwapType::Submarine,
                 lockup_txid: None,
+                refund_txid: None,
                 fee: Some(fee),
                 boltz_fee,
                 bolt11_invoice: Some((**bolt11_invoice).clone()),
@@ -353,6 +354,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
         last_state,
         swap_type: SwapType::Submarine,
         lockup_txid: None,
+        refund_txid: None,
         fee: None,            // Fee information not available in restore response
         bolt11_invoice: None, // Invoice information not available in restore response
         our_keys,
@@ -437,6 +439,7 @@ impl PreparePayResponse {
                         // UTXO exists, make refund transaction
                         let tx = self.make_refund_tx_with_retry().await?;
                         let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
+                        self.data.refund_txid = Some(txid.clone());
                         log::info!("Cooperative Refund Successfully broadcasted: {txid}");
                         Ok(ControlFlow::Break(true))
                     }
@@ -452,6 +455,7 @@ impl PreparePayResponse {
                 let tx = self.make_refund_tx_with_retry().await?;
 
                 let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
+                self.data.refund_txid = Some(txid.clone());
                 log::info!("Cooperative Refund Successfully broadcasted: {txid}");
 
                 Ok(ControlFlow::Break(true))
@@ -584,6 +588,11 @@ impl PreparePayResponse {
     /// The txid of the lockup transaction
     pub fn lockup_txid(&self) -> Option<&str> {
         self.data.lockup_txid.as_deref()
+    }
+
+    /// The txid of the refund transaction
+    pub fn refund_txid(&self) -> Option<&str> {
+        self.data.refund_txid.as_deref()
     }
 
     /// Optionally set the lockup transaction txid.

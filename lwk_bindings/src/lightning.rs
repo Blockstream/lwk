@@ -842,6 +842,17 @@ impl PreparePayResponse {
             .map(|txid| txid.to_string()))
     }
 
+    /// The txid of the refund transaction of the swap
+    pub fn refund_txid(&self) -> Result<Option<String>, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .refund_txid()
+            .map(|txid| txid.to_string()))
+    }
+
     /// Optionally set the lockup transaction txid.
     ///
     /// This can be useful when the app creates and broadcasts the lockup transaction and wants to

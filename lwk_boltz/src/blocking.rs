@@ -330,6 +330,11 @@ impl PreparePayResponse {
         self.inner.lockup_txid()
     }
 
+    /// See [`crate::PreparePayResponse::refund_txid()`]
+    pub fn refund_txid(&self) -> Option<&str> {
+        self.inner.refund_txid()
+    }
+
     /// See [`crate::PreparePayResponse::set_lockup_txid()`]
     pub fn set_lockup_txid(&mut self, txid: String) -> Result<(), Error> {
         self.inner.set_lockup_txid(txid)

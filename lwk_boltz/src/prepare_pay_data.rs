@@ -16,6 +16,7 @@ pub struct PreparePayData {
     pub last_state: SwapState,
     pub swap_type: SwapType,
     pub lockup_txid: Option<String>,
+    pub refund_txid: Option<String>,
 
     /// Fee in satoshi, it's equal to the `amount` less the bolt11 amount
     pub fee: Option<u64>,
@@ -33,6 +34,7 @@ pub struct PreparePayDataSerializable {
     pub last_state: SwapState,
     pub swap_type: SwapType,
     pub lockup_txid: Option<String>,
+    pub refund_txid: Option<String>,
     pub fee: Option<u64>,
     pub boltz_fee: Option<u64>,
     pub bolt11_invoice: Option<String>,
@@ -50,6 +52,7 @@ impl From<PreparePayData> for PreparePayDataSerializable {
             last_state: data.last_state,
             swap_type: data.swap_type,
             lockup_txid: data.lockup_txid,
+            refund_txid: data.refund_txid,
             fee: data.fee,
             bolt11_invoice: data.bolt11_invoice.map(|i| i.to_string()),
             create_swap_response: data.create_swap_response,
@@ -82,6 +85,7 @@ pub fn to_prepare_pay_data(
         last_state: data.last_state,
         swap_type: data.swap_type,
         lockup_txid: data.lockup_txid,
+        refund_txid: data.refund_txid,
         fee: data.fee,
         bolt11_invoice,
         create_swap_response: data.create_swap_response,

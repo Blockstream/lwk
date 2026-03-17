@@ -252,7 +252,7 @@ impl Wollet {
     ///
     /// **Unstable**: This API may change without notice.
     #[doc(hidden)]
-    pub fn txs(&self, _opt: &TxsOpt) -> Result<Vec<TxDetails>, Error> {
+    pub fn txs(&self, opt: &TxsOpt) -> Result<Vec<TxDetails>, Error> {
         let spent = self.cache.spent()?;
         // Sort transactions to ensure we return them in the same order
         let mut txids_heights: Vec<(&Txid, &Option<u32>)> = self.cache.heights.iter().collect();
@@ -263,9 +263,12 @@ impl Wollet {
                 h => h,
             }
         });
+
         let mut txs = vec![];
-        for (txid, height) in txids_heights {
-            if let Some(tx) = self.tx_details_inner(txid, *height, &spent)? {
+        let offset = opt.offset.unwrap_or(0);
+        let limit = opt.limit.unwrap_or(usize::MAX);
+        for (txid, height) in txids_heights.iter().skip(offset).take(limit) {
+            if let Some(tx) = self.tx_details_inner(txid, **height, &spent)? {
                 txs.push(tx);
             }
         }
@@ -278,8 +281,13 @@ impl Wollet {
 pub struct TxOpt {}
 
 /// Options for transaction details
-#[derive(Default)]
-pub struct TxsOpt {}
+#[derive(Default, PartialEq, Eq, Debug, Clone)]
+pub struct TxsOpt {
+    /// Do not return the first `offset` transactions
+    pub offset: Option<usize>,
+    /// Return at most `limit` transactions
+    pub limit: Option<usize>,
+}
 
 // TODO: consider having different types for input and outputs
 

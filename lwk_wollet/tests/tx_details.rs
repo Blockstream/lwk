@@ -113,10 +113,21 @@ fn test_tx_details() {
     assert_eq!(input.unblinded().unwrap(), out_recv.unblinded().unwrap());
     assert!(input.is_spent());
 
-    let txsopt = TxsOpt::default();
+    let mut txsopt = TxsOpt::default();
     let txs = w.wollet.txs(&txsopt).unwrap();
     assert_eq!(txs.len(), 2);
     // Both are unconfirmed, so order depends on txid, which is random
     assert!(txs.iter().any(|tx| tx.txid() == txid1));
     assert!(txs.iter().any(|tx| tx.txid() == txid2));
+
+    txsopt.limit = Some(1);
+    let txs1 = w.wollet.txs(&txsopt).unwrap();
+    assert_eq!(txs1.len(), 1);
+    assert_eq!(txs[0], txs1[0]);
+
+    txsopt.offset = Some(1);
+    txsopt.limit = None;
+    let txs2 = w.wollet.txs(&txsopt).unwrap();
+    assert_eq!(txs2.len(), 1);
+    assert_eq!(txs[1], txs2[0]);
 }

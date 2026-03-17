@@ -140,14 +140,13 @@ impl Wollet {
         Ok(details)
     }
 
-    /// Get the details of a transaction
-    ///
-    /// **Unstable**: This API may change without notice.
-    #[doc(hidden)]
-    pub fn tx_details(&self, txid: &Txid) -> Result<Option<TxDetails>, Error> {
-        let spent = self.cache.spent()?;
+    fn tx_details_inner(
+        &self,
+        txid: &Txid,
+        height: Option<u32>,
+        spent: &std::collections::HashSet<OutPoint>,
+    ) -> Result<Option<TxDetails>, Error> {
         if let Some(tx) = self.cache.all_txs.get(txid) {
-            let height = self.cache.heights.get(txid).unwrap_or(&None);
             let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
             let mut inputs = vec![];
             for txin in &tx.input {
@@ -165,7 +164,7 @@ impl Wollet {
             for (vout, txout) in tx.output.iter().enumerate() {
                 let outpoint = OutPoint::new(*txid, vout as u32);
                 let is_spent = spent.contains(&outpoint);
-                outputs.push(self.txout_details(outpoint, *height, Some(txout), is_spent)?);
+                outputs.push(self.txout_details(outpoint, height, Some(txout), is_spent)?);
             }
 
             let balance: SignedBalance = {
@@ -188,9 +187,9 @@ impl Wollet {
                 b.into()
             };
 
+            let fees = tx.all_fees();
             let type_ = {
                 let burn_script = lwk_common::burn_script();
-                let fees = tx.all_fees();
                 if tx.input.iter().any(|i| {
                     !i.asset_issuance.is_null()
                         && i.asset_issuance.asset_blinding_nonce == ZERO_TWEAK
@@ -225,8 +224,8 @@ impl Wollet {
             Ok(Some(TxDetails {
                 tx: tx.clone(),
                 txid: *txid,
-                fees: tx.all_fees(),
-                height: *height,
+                fees,
+                height,
                 timestamp,
                 inputs,
                 outputs,
@@ -236,6 +235,15 @@ impl Wollet {
         } else {
             Ok(None)
         }
+    }
+    /// Get the details of a transaction
+    ///
+    /// **Unstable**: This API may change without notice.
+    #[doc(hidden)]
+    pub fn tx_details(&self, txid: &Txid) -> Result<Option<TxDetails>, Error> {
+        let spent = self.cache.spent()?;
+        let height = *self.cache.heights.get(txid).unwrap_or(&None);
+        self.tx_details_inner(txid, height, &spent)
     }
 }
 

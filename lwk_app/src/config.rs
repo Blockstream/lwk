@@ -1,7 +1,9 @@
+use crate::{blockchain_client::BlockchainClient, consts, Error};
 use lwk_common::electrum_ssl::LIQUID_SOCKET;
 use lwk_common::electrum_ssl::LIQUID_TESTNET_SOCKET;
 use lwk_common::Network as JadeNetwork;
 use lwk_jade::TIMEOUT;
+use lwk_wollet::amp2::Amp2;
 use lwk_wollet::clients::blocking::EsploraClient;
 use lwk_wollet::elements::AssetId;
 use lwk_wollet::ElectrumClient;
@@ -11,8 +13,6 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
-
-use crate::{blockchain_client::BlockchainClient, consts, Error};
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -28,6 +28,9 @@ pub struct Config {
     pub registry_url: String,
     pub timeout: Duration,
     pub scanning_interval: Duration,
+
+    pub amp2_url: Option<String>,
+    pub amp2_keyorigin_xpub: Option<String>,
 }
 
 impl Config {
@@ -42,6 +45,8 @@ impl Config {
             registry_url: "https://assets-testnet.blockstream.info/".into(),
             timeout: TIMEOUT,
             scanning_interval: consts::SCANNING_INTERVAL,
+            amp2_url: Some(consts::AMP_URL_TESTNET.into()),
+            amp2_keyorigin_xpub: Some(consts::AMP_KEYORIGIN_XPUB_TESTNET.into()),
         }
     }
 
@@ -56,6 +61,8 @@ impl Config {
             registry_url: "https://assets.blockstream.info/".into(),
             timeout: TIMEOUT,
             scanning_interval: consts::SCANNING_INTERVAL,
+            amp2_url: None,
+            amp2_keyorigin_xpub: None,
         }
     }
 
@@ -75,6 +82,8 @@ impl Config {
             timeout: TIMEOUT,
             // Scan more frequently while testing
             scanning_interval: Duration::from_secs(1),
+            amp2_url: None,
+            amp2_keyorigin_xpub: None,
         }
     }
 
@@ -135,5 +144,27 @@ impl Config {
                 self.server_type
             ))),
         }
+    }
+
+    pub fn amp2_client(&self) -> Result<Amp2, Error> {
+        if self.is_mainnet() {
+            return Err(Error::Generic(
+                "AMP2 methods are not available for mainnet".into(),
+            ));
+        }
+
+        let amp_keyorigin_xpub = self.amp2_keyorigin_xpub
+            .clone()
+            .ok_or_else(|| Error::Generic(
+                "AMP2 methods are not available. AMP2 connection is not configured properly: missing amp_keyorigin_xpub".into()
+            ))?;
+
+        let amp_url = self.amp2_url
+            .clone()
+            .ok_or_else(|| Error::Generic(
+                "AMP2 methods are not available. AMP2 connection is not configured properly: missing amp_url".into()
+            ))?;
+
+        Ok(Amp2::new(amp_keyorigin_xpub, amp_url))
     }
 }

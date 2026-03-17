@@ -80,6 +80,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     datadir,
                     timeout,
                     scanning_interval,
+                    amp2_url,
+                    amp2_keyorigin_xpub,
                 } => {
                     let (tx, rx) = std::sync::mpsc::channel();
                     let _ = ctrlc::try_set_handler(move || {
@@ -104,13 +106,25 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     if let Some(url) = server_url {
                         config.server_url = url;
                     } else if let Network::Regtest = args.network {
-                        anyhow::bail!("on regtest you have to specify --electrum-url");
+                        anyhow::bail!("on regtest you have to specify --server-url");
                     };
                     config.server_type = server_type.to_string();
 
                     if let Some(url) = registry_url {
                         config.registry_url = url;
                     };
+
+                    if let Some(amp2_url) = amp2_url {
+                        config.amp2_url = Some(amp2_url);
+                    } else if let Network::Regtest = args.network {
+                        anyhow::bail!("on regtest you have to specify --amp2-url");
+                    }
+
+                    if let Some(amp2_keyorigin_xpub) = amp2_keyorigin_xpub {
+                        config.amp2_keyorigin_xpub = Some(amp2_keyorigin_xpub);
+                    } else if let Network::Regtest = args.network {
+                        anyhow::bail!("on regtest you have to specify --amp2-keyorigin-xpub");
+                    }
 
                     config.addr = addr;
                     let mut app = lwk_app::App::new(config)?;

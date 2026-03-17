@@ -95,6 +95,11 @@ impl TryFrom<CosignResponseInner> for CosignResponse {
 }
 
 impl Amp2 {
+    /// Create a new AMP2 client
+    pub fn new(server_key: String, url: String) -> Self {
+        Self { server_key, url }
+    }
+
     /// Create a new AMP2 client with the default url and server key for the testnet network.
     pub fn new_testnet() -> Self {
         Self {

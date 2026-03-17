@@ -32,6 +32,7 @@ impl SimplicityProgram {
     }
 
     /// Get the Commitment Merkle Root of the program.
+    #[wasm_bindgen(getter = cmr)]
     pub fn cmr(&self) -> Cmr {
         self.inner.commit().cmr().into()
     }
@@ -65,6 +66,10 @@ impl SimplicityProgram {
     }
 
     /// Get the sighash_all message for signing a Simplicity program input.
+    ///
+    /// NOTE: The utxos object is destroyed during the execution of the function, so the argument that was
+    /// passed in the JS code cannot be reused.
+    // TODO: address the limitation
     #[wasm_bindgen(js_name = getSighashAll)]
     pub fn get_sighash_all(
         &self,
@@ -91,6 +96,10 @@ impl SimplicityProgram {
     }
 
     /// Finalize a transaction with a Simplicity witness for the specified input.
+    ///
+    /// NOTE: The utxos object is destroyed during the execution of the function, so the argument that was
+    /// passed in the JS code cannot be reused.
+    // TODO: address the limitation
     #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen(js_name = finalizeTransaction)]
     pub fn finalize_transaction(
@@ -151,6 +160,10 @@ impl SimplicityProgram {
     }
 
     /// Satisfy and execute this program in a transaction environment.
+    ///
+    /// NOTE: The utxos object is destroyed during the execution of the function, so the argument that was
+    /// passed in the JS code cannot be reused.
+    // TODO: address the limitation
     #[allow(clippy::too_many_arguments)]
     pub fn run(
         &self,

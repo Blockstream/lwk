@@ -92,6 +92,10 @@ impl SimplicityTypedValue {
     }
 
     /// Create a tuple value from elements.
+    ///
+    /// NOTE: The elements object is destroyed during the execution of the function, so the argument that was
+    /// passed in the JS code cannot be reused.
+    // TODO: address the limitation
     #[wasm_bindgen(js_name = fromElements)]
     pub fn from_elements(elements: Vec<SimplicityTypedValue>) -> SimplicityTypedValue {
         let inner = Value::tuple(elements.iter().map(|e| e.inner.clone()));
@@ -137,8 +141,6 @@ impl SimplicityTypedValue {
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::*;
-
-    use crate::{SimplicityArguments, SimplicityProgram};
 
     use wasm_bindgen_test::*;
 

@@ -1,5 +1,7 @@
 use crate::Error;
 
+use std::fmt::Display;
+
 use lwk_simplicity::simplicityhl::parse::ParseFromStr;
 use lwk_simplicity::simplicityhl::types::TypeConstructible;
 use lwk_simplicity::simplicityhl::ResolvedType;
@@ -11,6 +13,12 @@ use wasm_bindgen::prelude::*;
 #[derive(Clone, Debug)]
 pub struct SimplicityType {
     inner: ResolvedType,
+}
+
+impl Display for SimplicityType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
+    }
 }
 
 #[wasm_bindgen]
@@ -86,6 +94,10 @@ impl SimplicityType {
     }
 
     /// Create a tuple type from elements.
+    ///
+    /// NOTE: The elements object is destroyed during the execution of the function, so the argument that was
+    /// passed in the JS code cannot be reused.
+    // TODO: address the limitation
     #[wasm_bindgen(js_name = fromElements)]
     pub fn from_elements(elements: Vec<SimplicityType>) -> SimplicityType {
         let inner = ResolvedType::tuple(elements.iter().map(|e| e.inner.clone()));
@@ -93,10 +105,16 @@ impl SimplicityType {
     }
 
     /// Parse a type from a string.
-    #[wasm_bindgen(constructor)]
-    pub fn new(type_str: &str) -> Result<SimplicityType, Error> {
+    #[wasm_bindgen(js_name = fromString)]
+    pub fn from_string(type_str: &str) -> Result<SimplicityType, Error> {
         let inner = ResolvedType::parse_from_str(type_str)?;
         Ok(Self { inner })
+    }
+
+    /// Return the canonical string representation of the type.
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        self.to_string()
     }
 }
 
@@ -132,9 +150,9 @@ mod tests {
         let _ = SimplicityType::option(&u32_type);
         let _ = SimplicityType::from_elements(vec![u32_type, u64_type]);
 
-        let _ty = SimplicityType::new("u32").unwrap();
-        let _either_ty = SimplicityType::new("Either<u32, u64>").unwrap();
+        let ty = SimplicityType::from_string("u32").unwrap();
+        let either_ty = SimplicityType::from_string("Either<u32, u64>").unwrap();
 
-        assert!(SimplicityType::new("invalid_type").is_err());
+        assert!(SimplicityType::from_string("invalid_type").is_err());
     }
 }

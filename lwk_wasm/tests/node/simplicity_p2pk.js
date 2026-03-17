@@ -36,7 +36,7 @@ async function runSimplicityP2pkTest() {
     args = args.addValue("PUBLIC_KEY", lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY));
 
     const program = lwk.SimplicityProgram.load(P2PK_SOURCE, args);
-    const cmr = program.cmr().toString();
+    const cmr = program.cmr.toString();
     assertEqual(cmr, TEST_CMR, "CMR mismatch");
 
     // Test creating P2TR address for p2pk program
@@ -65,7 +65,7 @@ async function runSimplicityP2pkTest() {
     const tEither = lwk.SimplicityType.either(lwk.SimplicityType.u32(), lwk.SimplicityType.boolean());
     const _tOption = lwk.SimplicityType.option(lwk.SimplicityType.u64());
     const _tTuple = lwk.SimplicityType.fromElements([lwk.SimplicityType.u32(), lwk.SimplicityType.u256()]);
-    const _tParsed = new lwk.SimplicityType("Either<u32, bool>");
+    const _tParsed = lwk.SimplicityType.fromString("Either<u32, bool>");
 
     // Test SimplicityTypedValue constructors
     const _vLeft = lwk.SimplicityTypedValue.left(lwk.SimplicityTypedValue.fromU32(42), lwk.SimplicityType.boolean());
@@ -87,7 +87,7 @@ async function runSimplicityP2pkTest() {
     let args3 = new lwk.SimplicityArguments();
     args3 = args3.addValue("PUBLIC_KEY", lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY));
     const program2 = lwk.SimplicityProgram.load(P2PK_SOURCE, args3);
-    assertEqual(program2.cmr().toString(), TEST_CMR, "Program2 CMR mismatch");
+    assertEqual(program2.cmr.toString(), TEST_CMR, "Program2 CMR mismatch");
 
     // Round-trips
     assertStringAndBytesRoundtrip(lwk.Transaction, TEST_UNSIGNED_TX);
@@ -99,7 +99,7 @@ async function runSimplicityP2pkTest() {
     assertStringAndBytesRoundtrip(lwk.ValueBlindingFactor, "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
     assertStringAndBytesRoundtrip(lwk.AssetId, "ccafe2eceac041673d79234ef74b31dca811555284a84f526042dfe8114483b6");
 
-    let control_block = lwk.simplicityControlBlock(program.cmr(), lwk.XOnlyPublicKey.fromString(TEST_PUBLIC_KEY))
+    let control_block = lwk.simplicityControlBlock(program.cmr, lwk.XOnlyPublicKey.fromString(TEST_PUBLIC_KEY))
     assertBytesEqual(lwk.ControlBlock.fromBytes(control_block.toBytes()).toBytes(), control_block.toBytes(), `ControlBlock toBytes roundtrip mismatch`);
   } catch (error) {
     console.error("simplicity_p2pk test failed:", error);

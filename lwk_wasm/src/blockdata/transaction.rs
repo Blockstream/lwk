@@ -110,11 +110,13 @@ impl Transaction {
 #[wasm_bindgen]
 impl Transaction {
     /// Return a clone of the inputs of this transaction
+    #[wasm_bindgen(getter = inputs)]
     pub fn inputs(&self) -> Vec<TxIn> {
         self.inner.input.iter().map(|i| i.clone().into()).collect()
     }
 
     /// Return a clone of the outputs of this transaction
+    #[wasm_bindgen(getter = outputs)]
     pub fn outputs(&self) -> Vec<TxOut> {
         self.inner.output.iter().map(|o| o.clone().into()).collect()
     }

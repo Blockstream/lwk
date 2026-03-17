@@ -446,6 +446,10 @@ impl PsetBuilder {
     ///
     /// `inp_txout_sec` is a map from input index to TxOutSecrets, represented as
     /// parallel arrays where `input_indices[i]` corresponds to `secrets[i]`.
+    ///
+    /// NOTE: The secrets object is destroyed during the execution of the function, so the argument that was
+    /// passed in the JS code cannot be reused.
+    // TODO: address the limitation
     #[wasm_bindgen(js_name = blindLast)]
     pub fn blind_last(
         mut self,

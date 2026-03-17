@@ -69,16 +69,19 @@ impl LockTime {
     }
 
     /// Return the consensus u32 value.
+    #[wasm_bindgen(js_name = toConsensusU32)]
     pub fn to_consensus_u32(&self) -> u32 {
         self.inner.to_consensus_u32()
     }
 
     /// Return true if this lock time represents a block height.
+    #[wasm_bindgen(js_name = isBlockHeight)]
     pub fn is_block_height(&self) -> bool {
         self.inner.is_block_height()
     }
 
     /// Return true if this lock time represents a Unix timestamp.
+    #[wasm_bindgen(js_name = isBlockTime)]
     pub fn is_block_time(&self) -> bool {
         self.inner.is_block_time()
     }

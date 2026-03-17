@@ -39,24 +39,25 @@ impl ControlBlock {
     }
 
     /// Get the leaf version of the control block.
-    #[wasm_bindgen(js_name = leafVersion)]
+    #[wasm_bindgen(getter = leafVersion)]
     pub fn leaf_version(&self) -> u8 {
         self.inner.leaf_version.as_u8()
     }
 
     /// Get the internal key of the control block.
-    #[wasm_bindgen(js_name = internalKey)]
+    #[wasm_bindgen(getter = internalKey)]
     pub fn internal_key(&self) -> XOnlyPublicKey {
         self.inner.internal_key.into()
     }
 
     /// Get the output key parity (0 for even, 1 for odd).
-    #[wasm_bindgen(js_name = outputKeyParity)]
+    #[wasm_bindgen(getter = outputKeyParity)]
     pub fn output_key_parity(&self) -> u8 {
         self.inner.output_key_parity.to_u8()
     }
 
     /// Get the size of the control block in bytes.
+    #[wasm_bindgen(getter = size)]
     pub fn size(&self) -> u32 {
         self.inner.size() as u32
     }

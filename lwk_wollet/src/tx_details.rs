@@ -9,6 +9,7 @@ use lwk_common::SignedBalance;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 /// Transaction details
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct TxDetails {
     tx: Transaction,
 
@@ -273,7 +274,7 @@ impl Wollet {
 }
 
 /// Options for transaction details
-#[derive(Default)]
+#[derive(Default, PartialEq, Eq, Debug, Clone)]
 pub struct TxOpt {}
 
 /// Options for transaction details
@@ -283,7 +284,7 @@ pub struct TxsOpt {}
 // TODO: consider having different types for input and outputs
 
 /// Transaction output details
-#[derive(Default)]
+#[derive(Default, PartialEq, Eq, Debug, Clone)]
 pub struct TxOutDetails {
     outpoint: OutPoint,
     script_pubkey: Option<Script>,

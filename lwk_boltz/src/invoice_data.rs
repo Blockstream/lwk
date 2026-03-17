@@ -33,6 +33,9 @@ pub struct InvoiceData {
 
     pub claim_txid: Option<String>,
 
+    /// Lockup transaction sent from boltz
+    pub lockup_txid: Option<String>,
+
     pub(crate) create_reverse_response: CreateReverseResponse,
     pub(crate) key_index: u32,
     pub(crate) mnemonic_identifier: XKeyIdentifier,
@@ -50,6 +53,7 @@ pub struct InvoiceDataSerializable {
     pub boltz_fee: Option<u64>,
     pub claim_fee: Option<u64>,
     pub claim_txid: Option<String>,
+    pub lockup_txid: Option<String>,
     pub create_reverse_response: CreateReverseResponse,
     pub key_index: u32,
     pub claim_address: elements::Address,
@@ -87,6 +91,7 @@ pub fn to_invoice_data(
         boltz_fee: i.boltz_fee,
         claim_fee: i.claim_fee,
         claim_txid: i.claim_txid,
+        lockup_txid: i.lockup_txid,
         create_reverse_response: i.create_reverse_response,
         our_keys,
         preimage,
@@ -107,6 +112,7 @@ impl From<InvoiceData> for InvoiceDataSerializable {
             boltz_fee: i.boltz_fee,
             claim_fee: i.claim_fee,
             claim_txid: i.claim_txid,
+            lockup_txid: i.lockup_txid,
             create_reverse_response: i.create_reverse_response,
             key_index: i.key_index,
             mnemonic_identifier: i.mnemonic_identifier,

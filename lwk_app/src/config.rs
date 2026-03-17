@@ -6,8 +6,8 @@ use lwk_jade::TIMEOUT;
 use lwk_wollet::amp2::Amp2;
 use lwk_wollet::clients::blocking::EsploraClient;
 use lwk_wollet::elements::AssetId;
-use lwk_wollet::ElectrumClient;
 use lwk_wollet::ElementsNetwork;
+use lwk_wollet::{amp2, ElectrumClient};
 use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -45,8 +45,8 @@ impl Config {
             registry_url: "https://assets-testnet.blockstream.info/".into(),
             timeout: TIMEOUT,
             scanning_interval: consts::SCANNING_INTERVAL,
-            amp2_url: Some(consts::AMP_URL_TESTNET.into()),
-            amp2_keyorigin_xpub: Some(consts::AMP_KEYORIGIN_XPUB_TESTNET.into()),
+            amp2_url: Some(amp2::URL_TESTNET.into()),
+            amp2_keyorigin_xpub: Some(amp2::KEYORIGIN_XPUB_TESTNET.into()),
         }
     }
 

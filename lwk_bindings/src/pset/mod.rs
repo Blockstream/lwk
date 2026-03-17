@@ -163,13 +163,13 @@ impl PsetBuilder {
     /// Blind the last output using the provided input secrets map
     pub fn blind_last(
         &self,
-        inp_txout_sec: HashMap<u32, Arc<TxOutSecrets>>,
+        inp_txout_sec: &HashMap<u32, Arc<TxOutSecrets>>,
     ) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let pset = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
         let converted: HashMap<usize, elements::TxOutSecrets> = inp_txout_sec
-            .into_iter()
-            .map(|(k, v)| (k as usize, *v.inner()))
+            .iter()
+            .map(|(k, v)| (*k as usize, *v.inner()))
             .collect();
         pset.blind_last(&mut thread_rng(), &EC, &converted)?;
         Ok(())

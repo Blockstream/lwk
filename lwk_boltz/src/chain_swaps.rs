@@ -613,13 +613,15 @@ impl LockupResponse {
         let flow = match update_status {
             SwapState::SwapCreated => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionMempool => {
-                self.data.lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
-                log::info!("User lockup in mempool");
+                let lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
+                log::info!("User lockup in mempool {lockup_txid:?}");
+                self.data.lockup_txid = lockup_txid;
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::TransactionConfirmed => {
-                self.data.lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
-                log::info!("User lockup confirmed, waiting for server lockup");
+                let lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
+                log::info!("User lockup confirmed {lockup_txid:?}, waiting for server lockup");
+                self.data.lockup_txid = lockup_txid;
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::ServerTransactionMempool => {

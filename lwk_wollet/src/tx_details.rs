@@ -241,7 +241,7 @@ impl Wollet {
     ///
     /// **Unstable**: This API may change without notice.
     #[doc(hidden)]
-    pub fn tx_details(&self, txid: &Txid) -> Result<Option<TxDetails>, Error> {
+    pub fn tx_details(&self, txid: &Txid, _opt: &TxOpt) -> Result<Option<TxDetails>, Error> {
         let spent = self.cache.spent()?;
         let height = *self.cache.heights.get(txid).unwrap_or(&None);
         self.tx_details_inner(txid, height, &spent)
@@ -251,7 +251,7 @@ impl Wollet {
     ///
     /// **Unstable**: This API may change without notice.
     #[doc(hidden)]
-    pub fn txs(&self) -> Result<Vec<TxDetails>, Error> {
+    pub fn txs(&self, _opt: &TxsOpt) -> Result<Vec<TxDetails>, Error> {
         let spent = self.cache.spent()?;
         // Sort transactions to ensure we return them in the same order
         let mut txids_heights: Vec<(&Txid, &Option<u32>)> = self.cache.heights.iter().collect();
@@ -271,6 +271,14 @@ impl Wollet {
         Ok(txs)
     }
 }
+
+/// Options for transaction details
+#[derive(Default)]
+pub struct TxOpt {}
+
+/// Options for transaction details
+#[derive(Default)]
+pub struct TxsOpt {}
 
 // TODO: consider having different types for input and outputs
 

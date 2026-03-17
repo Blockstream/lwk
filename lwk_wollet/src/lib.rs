@@ -136,7 +136,7 @@ pub use crate::network::ElementsNetwork;
 pub use crate::pegin::fed_peg_script;
 #[cfg(feature = "registry")]
 pub use crate::registry::RegistryAssetData;
-pub use crate::tx_details::{TxDetails, TxOutDetails};
+pub use crate::tx_details::{TxDetails, TxOpt, TxOutDetails, TxsOpt};
 pub use crate::wollet::DirectoryIdHash;
 
 // Re-export store types from lwk_common

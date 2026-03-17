@@ -1,6 +1,7 @@
 use crate::test_wollet::*;
 use lwk_signer::*;
 use lwk_test_util::*;
+use lwk_wollet::*;
 
 #[test]
 fn test_tx_details() {
@@ -17,7 +18,8 @@ fn test_tx_details() {
     let txid2 = w.send_btc(&signers, None, None);
     let lbtc = w.policy_asset();
 
-    let tx_det = w.wollet.tx_details(&txid1).unwrap().unwrap();
+    let txopt = TxOpt::default();
+    let tx_det = w.wollet.tx_details(&txid1, &txopt).unwrap().unwrap();
     assert_eq!(tx_det.txid(), txid1);
     assert_eq!(tx_det.height(), None);
     assert_eq!(tx_det.timestamp(), None);
@@ -81,7 +83,7 @@ fn test_tx_details() {
     assert_eq!(out_fee.unblinded().unwrap().value, fee_sats);
     assert!(!out_fee.is_spent());
 
-    let tx_det = w.wollet.tx_details(&txid2).unwrap().unwrap();
+    let tx_det = w.wollet.tx_details(&txid2, &txopt).unwrap().unwrap();
     assert_eq!(tx_det.txid(), txid2);
     assert_eq!(tx_det.height(), None);
     assert_eq!(tx_det.timestamp(), None);
@@ -111,7 +113,8 @@ fn test_tx_details() {
     assert_eq!(input.unblinded().unwrap(), out_recv.unblinded().unwrap());
     assert!(input.is_spent());
 
-    let txs = w.wollet.txs().unwrap();
+    let txsopt = TxsOpt::default();
+    let txs = w.wollet.txs(&txsopt).unwrap();
     assert_eq!(txs.len(), 2);
     // Both are unconfirmed, so order depends on txid, which is random
     assert!(txs.iter().any(|tx| tx.txid() == txid1));

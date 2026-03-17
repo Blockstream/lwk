@@ -1,3 +1,4 @@
+#[macro_use]
 mod utils;
 
 #[cfg(test)]
@@ -154,19 +155,7 @@ mod tests {
         )
         .await
         .unwrap();
-        loop {
-            match prepare_pay_response.advance().await {
-                Ok(std::ops::ControlFlow::Continue(_)) => {}
-                Ok(std::ops::ControlFlow::Break(result)) => {
-                    log::info!("Payment completed with result: {result}");
-                    assert!(result, "Payment should succeed");
-                    break;
-                }
-                Err(e) => {
-                    panic!("Unexpected error: {e}");
-                }
-            }
-        }
+        advance_until_complete!(prepare_pay_response, true);
         assert!(
             prepare_pay_response.lockup_txid().is_some(),
             "lockup txid should be available when submarine swap is claimed"
@@ -203,16 +192,7 @@ mod tests {
         .unwrap();
 
         // Use advance() instead of complete_pay() so we can check refund_txid afterwards
-        loop {
-            match prepare_pay_response.advance().await {
-                Ok(std::ops::ControlFlow::Continue(_)) => {}
-                Ok(std::ops::ControlFlow::Break(success)) => {
-                    assert!(success, "Refund should complete successfully");
-                    break;
-                }
-                Err(e) => panic!("Unexpected error: {e}"),
-            }
-        }
+        advance_until_complete!(prepare_pay_response, true);
 
         // Verify refund txid was stored when refund transaction was broadcasted
         assert!(
@@ -248,25 +228,7 @@ mod tests {
         .unwrap();
 
         // Poll for updates until payment is complete
-        loop {
-            match prepare_pay_response.advance().await {
-                Ok(std::ops::ControlFlow::Continue(update)) => {
-                    log::info!("Polling: Received update. status:{}", update.status);
-                }
-                Ok(std::ops::ControlFlow::Break(result)) => {
-                    log::info!("Polling: Payment completed with result: {result}");
-                    assert!(result, "Payment should succeed");
-                    break;
-                }
-                Err(lwk_boltz::Error::NoBoltzUpdate) => {
-                    log::info!("Polling: No update available, sleeping and retrying...");
-                    sleep(Duration::from_secs(1)).await;
-                }
-                Err(e) => {
-                    panic!("Polling: Unexpected error: {e}");
-                }
-            }
-        }
+        advance_until_complete_polling!(prepare_pay_response, true);
 
         // Stop the mining task
         mining_handle.abort();

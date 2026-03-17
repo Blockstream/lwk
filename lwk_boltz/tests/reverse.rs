@@ -1,10 +1,11 @@
+#[macro_use]
 mod utils;
 
 #[cfg(test)]
 mod tests {
 
     use crate::utils::{self, DEFAULT_REGTEST_NODE, TIMEOUT, WAIT_TIME};
-    use std::{str::FromStr, sync::Arc, time::Duration};
+    use std::{str::FromStr, sync::Arc};
 
     use bip39::Mnemonic;
     use boltz_client::{
@@ -136,19 +137,7 @@ mod tests {
             .unwrap();
         log::info!("Invoice: {}", invoice.bolt11_invoice());
         utils::start_pay_invoice_lnd(invoice.bolt11_invoice().to_string());
-        loop {
-            match invoice.advance().await {
-                Ok(std::ops::ControlFlow::Continue(_)) => {}
-                Ok(std::ops::ControlFlow::Break(result)) => {
-                    log::info!("Payment completed with result: {result}");
-                    assert!(result, "Payment should succeed");
-                    break;
-                }
-                Err(e) => {
-                    panic!("Unexpected error: {e}");
-                }
-            }
-        }
+        advance_until_complete!(invoice, true);
         // repeatly calling advance on a terminated swap don't timeout
         for _ in 0..10 {
             match invoice.advance().await {
@@ -180,25 +169,7 @@ mod tests {
         utils::start_pay_invoice_lnd(invoice_polling.bolt11_invoice().to_string());
 
         // Poll for updates until payment is complete
-        loop {
-            match invoice_polling.advance().await {
-                Ok(std::ops::ControlFlow::Continue(update)) => {
-                    log::info!("Polling: Received update. status:{}", update.status);
-                }
-                Ok(std::ops::ControlFlow::Break(result)) => {
-                    log::info!("Polling: Payment completed with result: {result}");
-                    assert!(result, "Payment should succeed");
-                    break;
-                }
-                Err(lwk_boltz::Error::NoBoltzUpdate) => {
-                    log::info!("Polling: No update available, sleeping and retrying...");
-                    sleep(Duration::from_secs(1)).await;
-                }
-                Err(e) => {
-                    panic!("Polling: Unexpected error: {e}");
-                }
-            }
-        }
+        advance_until_complete_polling!(invoice_polling, true);
     }
 
     #[tokio::test]

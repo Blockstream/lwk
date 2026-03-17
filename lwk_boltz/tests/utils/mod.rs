@@ -28,6 +28,55 @@ const LND_MACAROON_HEX: Option<&str> = option_env!("LND_MACAROON_HEX");
 pub(crate) const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs(10);
 pub(crate) const TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 pub(crate) const DEFAULT_REGTEST_NODE: &str = "localhost:19002";
+
+/// Macro to advance a swap response until completion
+///
+/// Usage: `advance_until_complete!(response, true);`
+#[macro_export]
+macro_rules! advance_until_complete {
+    ($response:expr, $expected:expr) => {
+        loop {
+            match $response.advance().await {
+                Ok(std::ops::ControlFlow::Continue(_)) => {}
+                Ok(std::ops::ControlFlow::Break(result)) => {
+                    assert_eq!(result, $expected);
+                    break;
+                }
+                Err(e) => {
+                    panic!("Unexpected error: {e}");
+                }
+            }
+        }
+    };
+}
+
+/// Macro to advance a swap response until completion with polling support
+///
+/// Usage: `advance_until_complete_polling!(response, true);`
+#[macro_export]
+macro_rules! advance_until_complete_polling {
+    ($response:expr, $expected:expr) => {
+        loop {
+            match $response.advance().await {
+                Ok(std::ops::ControlFlow::Continue(update)) => {
+                    log::info!("Polling: Received update. status:{}", update.status);
+                }
+                Ok(std::ops::ControlFlow::Break(result)) => {
+                    log::info!("Polling: Payment completed with result: {result}");
+                    assert_eq!(result, $expected);
+                    break;
+                }
+                Err(lwk_boltz::Error::NoBoltzUpdate) => {
+                    log::info!("Polling: No update available, sleeping and retrying...");
+                    sleep(std::time::Duration::from_secs(1)).await;
+                }
+                Err(e) => {
+                    panic!("Polling: Unexpected error: {e}");
+                }
+            }
+        }
+    };
+}
 pub(crate) const BOLTZ_REGTEST: &str = "http://localhost:9001/v2";
 
 async fn json_rpc_request(

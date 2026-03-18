@@ -2,8 +2,10 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use lwk_common::Signer;
-use lwk_test_util::*;
+
 use lwk_wollet::blocking::BlockchainBackend;
+use lwk_wollet::secp256k1::rand::thread_rng;
+use lwk_wollet::secp256k1::SecretKey;
 use lwk_wollet::*;
 
 use lwk_simplicity::simplicityhl::{
@@ -14,6 +16,8 @@ use lwk_simplicity::{
     scripts::{create_p2tr_address, load_program},
     signer::{finalize_transaction, get_sighash_all},
 };
+
+use lwk_test_util::*;
 
 use elements::bitcoin::secp256k1::Keypair;
 use elements::hex::ToHex;
@@ -51,24 +55,27 @@ fn test_simplicity_p2pk() {
     let address = create_p2tr_address(cmr, &xonly, params);
     let spk = address.script_pubkey();
 
-    // Create Wollet with the spk (no private blinding key)
-    let desc_str = format!(":{}", spk.to_hex());
+    // Create Wollet with the spk
+    let blinder_sk = SecretKey::new(&mut thread_rng());
+    let desc_str = format!("{}:{}", blinder_sk.secret_bytes().to_hex(), spk.to_hex());
     let wd = WolletDescriptor::from_str(&desc_str).unwrap();
     let mut wollet = WolletBuilder::new(network, wd).build().unwrap();
-    assert_eq!(wollet.address(Some(0)).unwrap().address(), &address);
+
+    let wollet_address = wollet.address(Some(0)).unwrap();
+    let conf_address = wollet_address.address();
+    assert_eq!(&conf_address.to_unconfidential(), &address);
 
     // Fund the p2tr address
     let sats_fund = 100_000;
-    let txid = env.elementsd_sendtoaddress(&address, sats_fund, None);
+    let txid = env.elementsd_sendtoaddress(conf_address, sats_fund, None);
     env.elementsd_generate(1);
     wait_for_tx(&mut wollet, &mut client, &txid);
 
     // Check that the Wollet has an explicit_utxo
-    let explicit_utxos = wollet.explicit_utxos().unwrap();
-    assert_eq!(explicit_utxos.len(), 1);
-    let utxo = &explicit_utxos[0];
+    let wallet_utxos = wollet.utxos().unwrap();
+    assert_eq!(wallet_utxos.len(), 1);
+    let utxo = &wallet_utxos[0];
     assert_eq!(utxo.unblinded.value, sats_fund);
-    let txouts = vec![utxo.txout.clone()];
 
     // Construct a PSET that spends such UTXO
     let node_address = env.elementsd_getnewaddress();
@@ -76,12 +83,11 @@ fn test_simplicity_p2pk() {
 
     let pset = wollet
         .tx_builder()
-        .add_external_utxos(explicit_utxos)
-        .unwrap()
         .add_lbtc_recipient(&node_address, sats_send)
         .unwrap()
         .finish()
         .unwrap();
+    let txouts = vec![pset.inputs()[0].witness_utxo.clone().unwrap()];
     let tx = pset.extract_tx().unwrap();
     let fee = tx.output.last().unwrap().value.explicit().unwrap();
 
@@ -118,7 +124,7 @@ fn test_simplicity_p2pk() {
     env.elementsd_generate(1);
     wait_for_tx(&mut wollet, &mut client, &txid);
 
-    let explicit_utxos = wollet.explicit_utxos().unwrap();
+    let explicit_utxos = wollet.utxos().unwrap();
     let balance: u64 = explicit_utxos.iter().map(|u| u.unblinded.value).sum();
     assert_eq!(sats_fund - sats_send - fee, balance);
 }

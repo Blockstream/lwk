@@ -49,6 +49,10 @@ impl TxInWitness {
     /// Create a witness from script witness elements.
     ///
     /// Takes an array of hex strings representing the witness stack.
+    ///
+    /// NOTE: The script_witness object is destroyed during the execution of the function,
+    /// so the argument that was passed in the JS code cannot be reused.
+    // TODO: address the limitation
     #[wasm_bindgen(js_name = fromScriptWitness)]
     pub fn from_script_witness(script_witness: Vec<String>) -> Result<TxInWitness, Error> {
         let witness: Vec<Vec<u8>> = script_witness

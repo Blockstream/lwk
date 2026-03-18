@@ -13,7 +13,7 @@ pub enum LightningPayment {
         offer: Box<Offer>,
 
         /// This is the amount of the bolt12 invoice that is going to be created from this offer.
-        amount: Option<u64>,
+        invoice_amount: Option<u64>,
     },
     LnUrl(Box<LnUrl>),
 }
@@ -27,7 +27,7 @@ impl FromStr for LightningPayment {
             Err(e1) => match Offer::from_str(s) {
                 Ok(offer) => Ok(LightningPayment::Bolt12 {
                     offer: Box::new(offer),
-                    amount: None,
+                    invoice_amount: None,
                 }),
                 Err(e2) => match LnUrl::from_str(s) {
                     Ok(lnurl) => Ok(LightningPayment::LnUrl(Box::new(lnurl))),
@@ -42,7 +42,10 @@ impl Display for LightningPayment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LightningPayment::Bolt11(invoice) => write!(f, "{invoice}"),
-            LightningPayment::Bolt12 { offer, amount: _ } => write!(f, "{offer}"),
+            LightningPayment::Bolt12 {
+                offer,
+                invoice_amount: _,
+            } => write!(f, "{offer}"),
             LightningPayment::LnUrl(lnurl) => write!(f, "{lnurl}"),
         }
     }
@@ -51,6 +54,101 @@ impl Display for LightningPayment {
 impl From<Bolt11Invoice> for LightningPayment {
     fn from(invoice: Bolt11Invoice) -> Self {
         LightningPayment::Bolt11(Box::new(invoice))
+    }
+}
+
+impl LightningPayment {
+    /// Returns the offer if this is a BOLT12 payment, None otherwise
+    pub fn bolt12(&self) -> Option<&Offer> {
+        match self {
+            LightningPayment::Bolt12 { offer, .. } => Some(offer),
+            _ => None,
+        }
+    }
+
+    /// Returns the invoice amonunt if this is a BOLT12 payment, None otherwise
+    pub fn bolt12_invoice_amount(&self) -> Result<Option<u64>, Error> {
+        match self {
+            LightningPayment::Bolt12 {
+                offer: _,
+                invoice_amount,
+            } => Ok(invoice_amount.clone()),
+            _ => Err(Error::ExpectedBolt12Variant),
+        }
+    }
+
+    /// Sets the amount for a BOLT12 offer
+    ///
+    /// # Arguments
+    ///
+    /// * `amount` - The amount in millisatoshis for the BOLT12 invoice
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if this is not a BOLT12 offer or if the Offer contains an amount
+    pub fn set_bolt12_invoice_amount(&mut self, amount: u64) -> Result<(), Error> {
+        match self {
+            LightningPayment::Bolt12 {
+                invoice_amount,
+                offer,
+                ..
+            } => {
+                if offer.amount().is_some() {
+                    return Err(Error::Generic(
+                        "Offer contains amount, specify number of items".to_string(),
+                    ));
+                }
+
+                *invoice_amount = Some(amount);
+                Ok(())
+            }
+            _ => Err(Error::ExpectedBolt12Variant),
+        }
+    }
+
+    /// Sets the amount for a BOLT12 offer based on the number of items
+    ///
+    /// This calculates the final amount as `items * offer_amount` where
+    /// `offer_amount` is the amount specified in the offer (if any).
+    ///
+    /// # Arguments
+    ///
+    /// * `items` - The number of items to purchase
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - This is not a BOLT12 offer
+    /// - The offer does not have an amount set
+    pub fn set_bolt12_invoice_amount_via_items(&mut self, items: u64) -> Result<(), Error> {
+        use lightning::offers::offer::Amount;
+
+        match self {
+            LightningPayment::Bolt12 {
+                offer,
+                invoice_amount,
+            } => {
+                // Get the per-item amount from the offer
+                let offer_amount = match offer.amount() {
+                    Some(Amount::Bitcoin { amount_msats }) => amount_msats,
+                    Some(Amount::Currency { .. }) => {
+                        return Err(Error::Generic("Currency amounts not supported".to_string()))
+                    }
+                    None => {
+                        return Err(Error::InvoiceWithoutAmount(offer.to_string()));
+                    }
+                };
+
+                // Calculate total amount
+                let total_amount = items
+                    .checked_mul(offer_amount)
+                    .ok_or_else(|| Error::Generic("Amount overflow".to_string()))?;
+
+                *invoice_amount = Some(total_amount);
+                Ok(())
+            }
+            _ => Err(Error::ExpectedBolt12Variant),
+        }
     }
 }
 

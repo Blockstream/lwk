@@ -77,9 +77,11 @@ impl BoltzSession {
 
         let (bolt11_invoice_str, bolt11_invoice) = match lightning_payment {
             LightningPayment::Bolt11(invoice) => (invoice.to_string(), invoice),
-            LightningPayment::Bolt12 { offer, amount } => {
+            LightningPayment::Bolt12 {
+                offer: _,
+                invoice_amount: _,
+            } => {
                 // TODO check if the amount is in the offer or in the amount, if there is in both or in neither error (add an error variant)
-                // TODO
                 return Err(Error::Bolt12Unsupported);
             }
             LightningPayment::LnUrl(_) => {

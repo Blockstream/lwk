@@ -338,6 +338,7 @@ impl BoltzSession {
     /// - The API request fails
     /// - The returned invoice cannot be parsed
     /// - The invoice doesn't match the offer (signature verification fails)
+    #[allow(dead_code)]
     async fn fetch_bolt12_invoice(
         &self,
         offer: &Offer,

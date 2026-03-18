@@ -175,4 +175,70 @@ mod tests {
         let err = LightningPayment::from_str(err).unwrap_err();
         assert!(matches!(err, (_, _, _)));
     }
+
+    #[test]
+    fn test_bolt12_methods_offer_without_amount() {
+        let offer_without_amount = "lno1zcss9sy46p548rukhu2vt7g0dsy9r00n2jswepsrngjt7w988ac94hpv";
+
+        // Test bolt12() method with offer without amount
+        let mut payment_without_amount = LightningPayment::from_str(offer_without_amount).unwrap();
+        assert!(payment_without_amount.bolt12().is_some());
+        assert!(matches!(
+            payment_without_amount,
+            LightningPayment::Bolt12 { .. }
+        ));
+
+        assert_eq!(
+            payment_without_amount.bolt12_invoice_amount().unwrap(),
+            None
+        );
+
+        // Test set_bolt12_invoice_amount()
+        payment_without_amount
+            .set_bolt12_invoice_amount(5000)
+            .unwrap();
+        assert_eq!(
+            payment_without_amount.bolt12_invoice_amount().unwrap(),
+            Some(5000)
+        );
+
+        let invoice = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl";
+        let mut payment_bolt11 = LightningPayment::from_str(invoice).unwrap();
+        assert!(payment_bolt11.bolt12().is_none());
+        assert!(payment_bolt11.set_bolt12_invoice_amount(5000).is_err());
+        let offer_no_amount = payment_without_amount.bolt12().unwrap();
+        assert!(offer_no_amount.amount().is_none());
+    }
+
+    #[test]
+    fn test_bolt12_methods_offer_with_amount() {
+        let offer_with_amount =
+            "lno1pqpq86q2qahkuefqwdshg93pqtqft5rf2w8ed0c5chus7mqg2x7lx49qajrq8x3yhuu2w0msttwzc";
+
+        // Test bolt12() method with offer with amount
+        let payment_with_amount = LightningPayment::from_str(offer_with_amount).unwrap();
+        assert!(payment_with_amount.bolt12().is_some());
+        assert!(matches!(
+            payment_with_amount,
+            LightningPayment::Bolt12 { .. }
+        ));
+        assert_eq!(payment_with_amount.bolt12_invoice_amount().unwrap(), None);
+
+        // Test set_bolt12_invoice_amount_via_items() with offer that has an amount
+        let mut payment_items = LightningPayment::from_str(offer_with_amount).unwrap();
+        payment_items
+            .set_bolt12_invoice_amount_via_items(10)
+            .unwrap();
+        let amount = payment_items.bolt12_invoice_amount().unwrap();
+        assert!(amount.is_some());
+
+        // Test that bolt12() returns None for non-Bolt12 variants
+        let invoice = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl";
+        let payment_bolt11 = LightningPayment::from_str(invoice).unwrap();
+        assert!(payment_bolt11.bolt12().is_none());
+
+        // Test that set_bolt12_invoice_amount() fails on non-Bolt12 variants
+        let mut payment_bolt11 = LightningPayment::from_str(invoice).unwrap();
+        assert!(payment_bolt11.set_bolt12_invoice_amount(5000).is_err());
+    }
 }

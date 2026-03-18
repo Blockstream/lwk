@@ -1193,6 +1193,9 @@ mod tests {
         assert!(response.lockup_txid().is_some());
         assert!(response.refund_txid().is_none()); // no refund in successful swap
 
+        // Save the lockup_txid before dropping to compare with restored version
+        let original_lockup_txid = response.lockup_txid().map(|s| s.to_string());
+
         drop(session);
 
         let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
@@ -1217,6 +1220,13 @@ mod tests {
         assert!(response_restored.claim_txid().is_none()); // boltz doesn't store claim informations, thus we don't have this on restore
         assert!(response_restored.lockup_txid().is_some());
         assert!(response_restored.refund_txid().is_none()); // boltz doesn't store refund informations, thus we don't have this on restore
+
+        // Verify lockup_txid is preserved correctly after restore from Boltz
+        let restored_lockup_txid = response_restored.lockup_txid().map(|s| s.to_string());
+        assert_eq!(
+            original_lockup_txid, restored_lockup_txid,
+            "lockup_txid should match before and after restore from Boltz"
+        );
 
         // Stop the mining task
         mining_handle.abort();

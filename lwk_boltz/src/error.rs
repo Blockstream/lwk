@@ -132,6 +132,12 @@ pub enum Error {
 
     #[error("Missing liquid client")]
     MissingLiquidClient,
+
+    #[error("Expected Bolt12 variant for this operation")]
+    ExpectedBolt12Variant,
+
+    #[error("{0}")]
+    Generic(String),
 }
 
 impl From<BoltzError> for Error {

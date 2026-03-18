@@ -178,6 +178,8 @@ impl Error {
                 lwk_boltz::Error::Bolt12InvoiceVerificationFailed => {
                     "Boltz::Bolt12InvoiceVerificationFailed"
                 }
+                lwk_boltz::Error::ExpectedBolt12Variant => "Boltz::ExpectedBolt12Variant",
+                lwk_boltz::Error::Generic(_) => "Generic",
             },
             Error::HexToArray(_) => "HexToArray",
             Error::Wollet(_) => "Wollet",

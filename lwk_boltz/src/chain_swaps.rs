@@ -710,6 +710,23 @@ impl LockupResponse {
                         },
                     )
                     .await?;
+
+                #[cfg(debug_assertions)]
+                {
+                    // Simulate app crash AFTER construct_claim (preimage revealed to Boltz)
+                    // but BEFORE broadcast_tx (user never gets funds)
+                    // Only compiled in debug builds, excluded from release builds
+                    if std::env::var("LWKBOLTZ_TEST_CRASH_AFTER_CONSTRUCT").is_ok() {
+                        log::warn!(
+                            "TEST: Simulating crash AFTER construct_claim, BEFORE broadcast"
+                        );
+
+                        return Err(Error::Generic(
+                            "Simulated crash after construct_claim for testing".to_string(),
+                        ));
+                    }
+                }
+
                 let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
                 self.data.claim_txid = Some(txid);
                 log::info!("Claim transaction broadcasted successfully");

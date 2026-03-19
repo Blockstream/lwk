@@ -268,4 +268,24 @@ mod tests {
             .to_string();
         assert_eq!(err, "Don't specify the scheme in the url");
     }
+
+    #[test]
+    fn test_client_connection_is_established_on_build() {
+        use electrum_client::{Client, ConfigBuilder};
+
+        // Use a hostname that definitely does not exist to avoid any chance of connection
+        let url = "tcp://this-host-definitely-does-not-exist.example.com:50001";
+        let config = ConfigBuilder::new()
+            .timeout(Some(1)) // Short timeout to make the test faster
+            .build();
+
+        // Building the client should return an error because we cannot resolve the host.
+        // This shows that the connection attempt (to resolve the host and establish TCP connection)
+        // happens during `Client::from_config`, i.e., when building the client.
+        let result = Client::from_config(url, config);
+        assert!(
+            result.is_err(),
+            "Expected an error when trying to build a client with a non-existent host, indicating that the connection is established on build"
+        );
+    }
 }

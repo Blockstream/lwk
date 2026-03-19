@@ -144,7 +144,7 @@ impl LightningPayment {
             lwk_boltz::LightningPayment::Bolt11(invoice) => {
                 Some(Arc::new(Bolt11Invoice::from((**invoice).clone())))
             }
-            lwk_boltz::LightningPayment::Bolt12(_) => None,
+            lwk_boltz::LightningPayment::Bolt12 { .. } => None,
             lwk_boltz::LightningPayment::LnUrl(_) => None,
         }
     }

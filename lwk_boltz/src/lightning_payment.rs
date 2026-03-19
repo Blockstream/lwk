@@ -66,7 +66,8 @@ impl LightningPayment {
         }
     }
 
-    /// Returns the invoice amonunt if this is a BOLT12 payment, None otherwise
+    /// Returns the invoice amount if this is a BOLT12 payment and it's present.
+    /// Error if this isn't a Bolt12.
     pub fn bolt12_invoice_amount(&self) -> Result<Option<u64>, Error> {
         match self {
             LightningPayment::Bolt12 {

@@ -272,7 +272,6 @@ mod tests {
     #[test]
     fn test_client_connection_is_established_on_build() {
         use electrum_client::{Client, ConfigBuilder};
-        use std::time::Duration;
 
         // Use a hostname that definitely does not exist to avoid any chance of connection
         let url = "tcp://this-host-definitely-does-not-exist.example.com:50001";

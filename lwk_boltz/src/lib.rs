@@ -356,7 +356,7 @@ impl BoltzSession {
         let invoice = parse_bolt12_invoice(&response.invoice)?;
 
         // Verify that the invoice matches the offer
-        if !verify_invoice_from_offer(&invoice, &offer) {
+        if !verify_invoice_from_offer(&invoice, offer) {
             return Err(Error::Bolt12InvoiceVerificationFailed);
         }
 

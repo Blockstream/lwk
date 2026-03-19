@@ -72,7 +72,7 @@ impl LightningPayment {
             LightningPayment::Bolt12 {
                 offer: _,
                 invoice_amount,
-            } => Ok(invoice_amount.clone()),
+            } => Ok(*invoice_amount),
             _ => Err(Error::ExpectedBolt12Variant),
         }
     }

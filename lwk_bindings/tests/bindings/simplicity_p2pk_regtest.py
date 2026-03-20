@@ -46,7 +46,12 @@ vout, funding_output = next(
 # 7. Create ExternalUtxo for TxBuilder
 SIMPLICITY_WITNESS_WEIGHT = 700  # FIXME(KyrylR): Conservative estimate for Simplicity witness
 unblinded = TxOutSecrets.from_explicit(policy_asset, funded_satoshi)
-external_utxo = ExternalUtxo(vout, funding_tx, unblinded, SIMPLICITY_WITNESS_WEIGHT, True)
+external_utxo = ExternalUtxo.from_unchecked_data(
+    OutPoint.from_parts(funding_txid, vout),
+    funding_output,
+    unblinded,
+    SIMPLICITY_WITNESS_WEIGHT
+)
 
 # 8. Build transaction using TxBuilder
 recipient_address = node.get_new_address()

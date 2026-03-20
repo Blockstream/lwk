@@ -25,6 +25,9 @@ pub struct Cache {
     /// contains only my wallet txs with the relative heights (None if unconfirmed)
     pub heights: HashMap<Txid, Option<Height>>,
 
+    /// txids sorted by height descending, then txid descending (unconfirmed first)
+    pub sorted_txids: Vec<Txid>,
+
     /// unblinded values
     pub unblinded: HashMap<OutPoint, TxOutSecrets>,
 
@@ -48,6 +51,7 @@ impl Default for Cache {
             paths: HashMap::default(),
             scripts: HashMap::default(),
             heights: HashMap::default(),
+            sorted_txids: vec![],
             unblinded: HashMap::default(),
             tip: (0, BlockHash::all_zeros()),
             last_unused_internal: 0.into(),
@@ -163,6 +167,17 @@ impl Cache {
             }
         };
         Ok((script, blinding_pubkey, cached))
+    }
+
+    pub(crate) fn rebuild_sorted_txids(&mut self) {
+        let mut sorted: Vec<Txid> = self.heights.keys().cloned().collect();
+        sorted.sort_by(|a, b| {
+            // cannot panic here, sorted is heights keys
+            let ha = self.heights[a].unwrap_or(u32::MAX);
+            let hb = self.heights[b].unwrap_or(u32::MAX);
+            hb.cmp(&ha).then(b.cmp(a))
+        });
+        self.sorted_txids = sorted;
     }
 
     pub fn spent(&self) -> Result<HashSet<OutPoint>, Error> {

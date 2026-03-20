@@ -1180,14 +1180,14 @@ mod tests {
             .await
             .unwrap();
 
-        response.advance().await.unwrap();
-        response.advance().await.unwrap();
+        let _ = response.advance().await.unwrap();
+        let _ = response.advance().await.unwrap();
 
         assert!(response.claim_txid().is_none());
         assert!(response.lockup_txid().is_some());
 
-        response.advance().await.unwrap();
-        response.advance().await.unwrap();
+        let _ = response.advance().await.unwrap();
+        let _ = response.advance().await.unwrap();
 
         assert!(response.claim_txid().is_some());
         assert!(response.lockup_txid().is_some());

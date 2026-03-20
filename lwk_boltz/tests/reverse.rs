@@ -335,8 +335,8 @@ mod tests {
         let swap_id = invoice_response.swap_id().to_string();
         utils::start_pay_invoice_lnd(invoice_response.bolt11_invoice().to_string());
 
-        invoice_response.advance().await.unwrap();
-        invoice_response.advance().await.unwrap();
+        let _ = invoice_response.advance().await.unwrap();
+        let _ = invoice_response.advance().await.unwrap();
 
         assert!(invoice_response.claim_txid().is_some());
         assert!(invoice_response.lockup_txid().is_some());

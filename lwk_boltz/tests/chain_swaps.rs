@@ -1468,10 +1468,8 @@ mod tests {
 
         log::info!("Claim address balance: {} sats", claim_balance);
 
-        // FIXME: This currently fails, but it's a bug
         assert!(claim_balance > 0);
 
-        // FIXME: This currently fails, but it's a bug
         assert!(response.claim_txid().is_some(),);
     }
 }

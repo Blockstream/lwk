@@ -641,11 +641,6 @@ impl LockupResponse {
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::ServerTransactionConfirmed => {
-                log::info!(
-                    "Server lockup confirmed, claiming on {} chain",
-                    self.chain_to()
-                );
-
                 // Parse the server's lockup transaction from the status update if available.
                 // This avoids waiting for the transaction to propagate to the chain client's mempool,
                 // significantly improving claim speed.
@@ -677,13 +672,29 @@ impl LockupResponse {
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::TransactionClaimed => {
+                // Boltz has claimed the user's lockup, but we still need to claim from Boltz's lockup
                 if self.data.lockup_txid.is_none() {
                     log::warn!("transaction.claimed but lockup_txid is not set, fetching it");
                     self.data.lockup_txid =
                         fetch_lockup_txid(self.api.as_ref(), self.swap_id()).await;
                 }
-                log::info!("Swap claimed successfully");
-                Ok(ControlFlow::Break(true))
+
+                // Check if we've already claimed our funds
+                if self.data.claim_txid.is_some() {
+                    log::info!("User already claimed their funds, swap completed successfully");
+                    Ok(ControlFlow::Break(true))
+                } else {
+                    // Boltz has already claimed, so we can't use cooperative claiming
+                    // We need to claim via script path instead
+                    log::warn!(
+                        "Boltz has already claimed (transaction.claimed), attempting non-cooperative claim via script path"
+                    );
+
+                    // Attempt non-cooperative (script path) claim
+                    self.build_and_broadcast_claim(false, None).await?;
+
+                    Ok(ControlFlow::Break(true))
+                }
             }
             SwapState::TransactionLockupFailed => {
                 log::warn!("User lockup failed, performing refund");

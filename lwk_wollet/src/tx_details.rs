@@ -254,21 +254,12 @@ impl Wollet {
     #[doc(hidden)]
     pub fn txs(&self, opt: &TxsOpt) -> Result<Vec<TxDetails>, Error> {
         let spent = self.cache.spent()?;
-        // Sort transactions to ensure we return them in the same order
-        let mut txids_heights: Vec<(&Txid, &Option<u32>)> = self.cache.heights.iter().collect();
-        txids_heights.sort_by(|a, b| {
-            let height_cmp = b.1.unwrap_or(u32::MAX).cmp(&a.1.unwrap_or(u32::MAX));
-            match height_cmp {
-                std::cmp::Ordering::Equal => b.0.cmp(a.0),
-                h => h,
-            }
-        });
-
         let mut txs = vec![];
         let offset = opt.offset.unwrap_or(0);
         let limit = opt.limit.unwrap_or(usize::MAX);
-        for (txid, height) in txids_heights.iter().skip(offset).take(limit) {
-            if let Some(tx) = self.tx_details_inner(txid, **height, &spent)? {
+        for txid in self.cache.sorted_txids.iter().skip(offset).take(limit) {
+            let height = *self.cache.heights.get(txid).unwrap_or(&None);
+            if let Some(tx) = self.tx_details_inner(txid, height, &spent)? {
                 txs.push(tx);
             }
         }

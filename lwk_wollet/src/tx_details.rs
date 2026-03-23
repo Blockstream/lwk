@@ -257,7 +257,7 @@ impl Wollet {
         let mut txs = vec![];
         let offset = opt.offset.unwrap_or(0);
         let limit = opt.limit.unwrap_or(usize::MAX);
-        for txid in self.cache.sorted_txids.iter().skip(offset).take(limit) {
+        for txid in self.cache.sorted_txids().skip(offset).take(limit) {
             let height = *self.cache.heights.get(txid).unwrap_or(&None);
             if let Some(tx) = self.tx_details_inner(txid, height, &spent)? {
                 txs.push(tx);

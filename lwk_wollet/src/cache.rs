@@ -26,7 +26,7 @@ pub struct Cache {
     pub heights: HashMap<Txid, Option<Height>>,
 
     /// txids sorted by height descending, then txid descending (unconfirmed first)
-    pub sorted_txids: Vec<Txid>,
+    sorted_txids: Vec<Txid>,
 
     /// unblinded values
     pub unblinded: HashMap<OutPoint, TxOutSecrets>,
@@ -167,6 +167,10 @@ impl Cache {
             }
         };
         Ok((script, blinding_pubkey, cached))
+    }
+
+    pub(crate) fn sorted_txids(&self) -> impl Iterator<Item = &Txid> {
+        self.sorted_txids.iter()
     }
 
     pub(crate) fn rebuild_sorted_txids(&mut self) {

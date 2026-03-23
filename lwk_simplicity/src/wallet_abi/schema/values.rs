@@ -160,7 +160,7 @@ pub enum RuntimeSimfWitness {
     /// Semantics:
     /// - `name` must be a valid Simplicity witness identifier.
     /// - `public_key` must equal the runtime signer x-only public key.
-    /// - signature bytes are produced with the runtime signer keypair over
+    /// - signature bytes should be produced with the runtime signer keypair over
     ///   `ElementsEnv::c_tx_env().sighash_all()`.
     SigHashAll {
         name: String,
@@ -172,7 +172,7 @@ pub enum RuntimeSimfWitness {
 pub struct SimfWitness {
     /// Statically resolved witness values serialized into the payload.
     pub resolved: WitnessValues,
-    /// Runtime witness directives that are resolved during finalization.
+    /// Runtime witness directives that should be resolved during finalization.
     ///
     /// Resolution flow in [`resolve_witness`]:
     /// 1. Decode `SimfWitness`.

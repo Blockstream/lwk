@@ -29,7 +29,8 @@ pub enum WalletOutputRole {
 
 /// Request-scoped wallet session snapshot.
 ///
-/// Runtime opens this once per request and reuses it across fee estimation and final build.
+/// Runtime should open this once per request and should reuse it across fee estimation and final
+/// build.
 #[derive(Debug, Clone)]
 pub struct WalletRequestSession {
     /// Opaque wallet-owned request/session correlation identifier.
@@ -42,8 +43,8 @@ pub struct WalletRequestSession {
 
 /// Deterministic wallet output selection request.
 ///
-/// `ordinal` is zero-based per role within one build pass. Requested wallet receive outputs use
-/// `asset_id = None`; runtime-added change outputs use `asset_id = Some(asset_id)`.
+/// `index` is zero-based per role within one build pass. Requested wallet receive outputs should
+/// use `asset_id = None`; runtime-added change outputs should use `asset_id = Some(asset_id)`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WalletOutputRequest {
     /// Requested wallet output role.
@@ -81,13 +82,13 @@ impl<SessionFactory, WalletProvider> WalletRuntimeDeps<SessionFactory, WalletPro
 pub trait KeyStoreMeta {
     type Error: std::error::Error + Send + Sync + 'static;
 
-    /// Return signer x-only public key used by runtime witness directives.
+    /// Return signer x-only public key to be used by runtime witness directives.
     fn get_raw_signing_x_only_pubkey(&self) -> Result<XOnlyPublicKey, Self::Error>;
 
     /// Sign wallet-finalized PSET inputs.
     ///
-    /// Runtime currently finalizes non-taproot wallet paths using the miniscript stack and
-    /// passes `BlockHash::all_zeros()` in finalization checks as expected by current signer flow.
+    /// For the current signer flow, runtime should finalize non-taproot wallet paths using the
+    /// miniscript stack and should pass `BlockHash::all_zeros()` in finalization checks.
     ///
     /// Mutation contract:
     /// - SHOULD add/update only signing/finalization material required for wallet-finalized inputs

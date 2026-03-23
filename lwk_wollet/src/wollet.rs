@@ -27,7 +27,6 @@ use lwk_common::{
     burn_script, pset_balance, pset_issuances, pset_signatures, Balance, DynStore, EncryptedStore,
     FakeStore, FileStore, PsetDetails,
 };
-use std::cmp;
 use std::collections::{hash_map::Entry, BTreeMap, HashMap, HashSet};
 use std::hash::Hasher;
 use std::path::Path;
@@ -790,26 +789,18 @@ impl Wollet {
         limit: usize,
     ) -> Result<Vec<WalletTx>, Error> {
         let mut txs = vec![];
-        let mut my_txids: Vec<(&Txid, &Option<u32>)> = self.cache.heights.iter().collect();
-        my_txids.sort_by(|a, b| {
-            let height_cmp = b.1.unwrap_or(u32::MAX).cmp(&a.1.unwrap_or(u32::MAX));
-            match height_cmp {
-                cmp::Ordering::Equal => b.0.cmp(a.0),
-                h => h,
-            }
-        });
 
         let txos = self.txos_map()?;
-        for (txid, height) in my_txids.iter().skip(offset).take(limit) {
+        for (txid, height) in self.cache.sorted_txids().skip(offset).take(limit) {
             let tx = self
                 .cache
                 .all_txs
-                .get(*txid)
+                .get(txid)
                 .ok_or_else(|| Error::Generic(format!("list_tx no tx {txid}")))?;
 
-            let balance = tx_balance(**txid, tx, &txos);
+            let balance = tx_balance(*txid, tx, &txos);
             let inputs = tx_inputs(tx, &txos);
-            let outputs = tx_outputs(**txid, tx, &txos);
+            let outputs = tx_outputs(*txid, tx, &txos);
             if balance.is_empty()
                 && inputs.iter().all(|i| i.is_none())
                 && outputs.iter().all(|o| o.is_none())
@@ -824,8 +815,8 @@ impl Wollet {
             let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
             txs.push(WalletTx {
                 tx: tx.clone(),
-                txid: **txid,
-                height: **height,
+                txid: *txid,
+                height: *height,
                 balance: balance.into(),
                 fee,
                 type_,

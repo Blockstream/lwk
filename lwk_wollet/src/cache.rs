@@ -151,7 +151,7 @@ impl Cache {
         Ok(result)
     }
 
-    pub(crate) fn get_or_derive(
+    pub fn get_or_derive(
         &self,
         ext_int: Chain,
         child: ChildNumber,
@@ -169,14 +169,14 @@ impl Cache {
         Ok((script, blinding_pubkey, cached))
     }
 
-    pub(crate) fn sorted_txids(&self) -> impl Iterator<Item = (&Txid, &Option<Height>)> {
+    pub fn sorted_txids(&self) -> impl Iterator<Item = (&Txid, &Option<Height>)> {
         self.sorted_txids.iter().map(|txid| {
             let height = self.heights.get(txid).unwrap_or(&None);
             (txid, height)
         })
     }
 
-    pub(crate) fn rebuild_sorted_txids(&mut self) {
+    pub fn rebuild_sorted_txids(&mut self) {
         let mut sorted: Vec<Txid> = self.heights.keys().cloned().collect();
         sorted.sort_by(|a, b| {
             // cannot panic here, sorted is heights keys
@@ -207,32 +207,32 @@ impl Cache {
             .collect())
     }
 
-    pub(crate) fn tx_height(&self, txid: &Txid) -> Option<&Option<Height>> {
+    pub fn tx_height(&self, txid: &Txid) -> Option<&Option<Height>> {
         self.heights.get(txid)
     }
 
-    pub(crate) fn heights(&self) -> &HashMap<Txid, Option<Height>> {
+    pub fn heights(&self) -> &HashMap<Txid, Option<Height>> {
         &self.heights
     }
 
-    pub(crate) fn update_heights(&mut self, new: &[(Txid, Option<u32>)], to_delete: &[Txid]) {
+    pub fn update_heights(&mut self, new: &[(Txid, Option<u32>)], to_delete: &[Txid]) {
         self.heights.retain(|k, _| !to_delete.contains(k));
         self.heights.extend(new.to_vec());
     }
 
-    pub(crate) fn all_txs(&self) -> impl Iterator<Item = (&Txid, &Transaction)> {
+    pub fn all_txs(&self) -> impl Iterator<Item = (&Txid, &Transaction)> {
         self.all_txs.iter()
     }
 
-    pub(crate) fn tx(&self, txid: &Txid) -> Option<&Transaction> {
+    pub fn tx(&self, txid: &Txid) -> Option<&Transaction> {
         self.all_txs.get(txid)
     }
 
-    pub(crate) fn all_txids(&self) -> HashSet<Txid> {
+    pub fn all_txids(&self) -> HashSet<Txid> {
         self.all_txs.keys().cloned().collect()
     }
 
-    pub(crate) fn extend_all_txs(&mut self, txs: Vec<(Txid, Transaction)>) {
+    pub fn extend_all_txs(&mut self, txs: Vec<(Txid, Transaction)>) {
         self.all_txs.extend(txs);
     }
 }

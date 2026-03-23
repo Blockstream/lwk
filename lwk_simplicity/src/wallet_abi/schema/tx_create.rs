@@ -2,7 +2,7 @@ use crate::error::WalletAbiError;
 use crate::wallet_abi::schema::runtime_params::RuntimeParams;
 use crate::wallet_abi::schema::types::ErrorInfo;
 
-use lwk_wollet::elements::Txid;
+use elements::Txid;
 
 use serde::{Deserialize, Serialize};
 

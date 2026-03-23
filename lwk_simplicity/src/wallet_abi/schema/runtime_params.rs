@@ -9,11 +9,10 @@ use crate::wallet_abi::schema::values::resolve_arguments;
 
 use crate::scripts::{create_p2tr_address, load_program};
 
-use lwk_wollet::bitcoin::XOnlyPublicKey;
-use lwk_wollet::elements::pset::PartiallySignedTransaction;
-use lwk_wollet::elements::secp256k1_zkp::{PublicKey, SecretKey};
-use lwk_wollet::elements::LockTime;
-use lwk_wollet::elements::{AssetId, OutPoint, Script, Sequence};
+use elements::bitcoin::XOnlyPublicKey;
+use elements::pset::PartiallySignedTransaction;
+use elements::secp256k1_zkp::{PublicKey, SecretKey};
+use elements::{AssetId, LockTime, OutPoint, Script, Sequence};
 
 use serde::{Deserialize, Serialize};
 

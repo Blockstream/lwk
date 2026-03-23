@@ -2673,6 +2673,7 @@ dependencies = [
 name = "lwk_simplicity"
 version = "0.16.0"
 dependencies = [
+ "elements 0.25.2",
  "lwk_common",
  "lwk_signer",
  "lwk_test_util",

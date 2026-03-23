@@ -5,11 +5,13 @@ edition = "2021"
 description = "Liquid Wallet Kit - Utilities to deal with Simplicity transactions"
 license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_simplicity"
+exclude = ["tests/**", "data/**"]
 
 [dependencies]
+elements = { workspace = true }
+
 lwk_common = { version = "0.16.0" }
 lwk_signer = { version = "0.16.0", default-features = false }
-lwk_wollet = { version = "0.16.0", default-features = false }
 
 simplicityhl = { version = "0.4.1" }
 

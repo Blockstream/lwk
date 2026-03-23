@@ -24,9 +24,9 @@ use serde_json::Value;
 use lwk_common::Network;
 use lwk_signer::bip39::rand::{thread_rng, RngCore};
 
-use lwk_wollet::elements::hex::ToHex;
-use lwk_wollet::hashes::hex::FromHex;
-use lwk_wollet::hashes::{sha256, Hash, HashEngine};
+use elements::hashes::hex::FromHex;
+use elements::hashes::{sha256, Hash, HashEngine};
+use elements::hex::ToHex;
 
 /// Errors from taproot pubkey generation and verification.
 #[derive(Debug, thiserror::Error)]
@@ -61,7 +61,7 @@ pub enum TaprootPubkeyGenError {
     AddressGeneration(#[from] ProgramError),
 
     #[error("hex error: {0}")]
-    Hex(#[from] lwk_wollet::hashes::hex::HexToBytesError),
+    Hex(#[from] elements::hashes::hex::HexToBytesError),
 }
 
 /// Generate a valid ephemeral public key and its seed; repeats until valid.

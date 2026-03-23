@@ -299,7 +299,7 @@ impl WolletState for Wollet {
     }
 
     fn txs(&self) -> HashSet<Txid> {
-        self.cache.all_txs.keys().cloned().collect()
+        self.cache.all_txids()
     }
 
     fn tip(&self) -> (Height, BlockHash) {
@@ -366,7 +366,7 @@ impl Wollet {
         WolletConciseState {
             wollet_status: self.status(),
             descriptor: self.wollet_descriptor(),
-            txs: cache.all_txs.keys().cloned().collect(),
+            txs: cache.all_txids(),
             paths: cache.paths.clone(),
             scripts: cache.scripts.clone(),
             heights: cache.heights().clone(),

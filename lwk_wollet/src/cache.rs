@@ -227,6 +227,10 @@ impl Cache {
     pub(crate) fn tx(&self, txid: &Txid) -> Option<&Transaction> {
         self.all_txs.get(txid)
     }
+
+    pub(crate) fn all_txids(&self) -> HashSet<Txid> {
+        self.all_txs.keys().cloned().collect()
+    }
 }
 
 #[cfg(test)]

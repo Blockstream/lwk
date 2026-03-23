@@ -711,7 +711,7 @@ impl EsploraClient {
         let mut txs = vec![];
         let mut unblinds = vec![];
 
-        let mut txs_in_db = cache.all_txs.keys().cloned().collect();
+        let mut txs_in_db = cache.all_txids();
         let txs_to_download: Vec<Txid> = history_txs_id.difference(&txs_in_db).cloned().collect();
 
         let mut stream = iter(txs_to_download.iter().cloned())

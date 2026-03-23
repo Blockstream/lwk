@@ -529,7 +529,7 @@ impl Wollet {
     fn txos_inner(&self) -> Result<Vec<WalletTxOut>, Error> {
         let mut txos = vec![];
         let spent = self.cache.spent()?;
-        for (tx_id, height) in self.cache.heights.iter() {
+        for (tx_id, height) in self.cache.sorted_txids() {
             let tx = self
                 .cache
                 .all_txs

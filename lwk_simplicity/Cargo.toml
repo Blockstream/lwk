@@ -1,15 +1,15 @@
 [package]
 name = "lwk_simplicity"
-version = "0.15.0"
+version = "0.16.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Utilities to deal with Simplicity transactions"
 license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_simplicity"
 
 [dependencies]
-lwk_common = { version = "0.15.0" }
-lwk_signer = { version = "0.15.0", default-features = false }
-lwk_wollet = { version = "0.15.0", default-features = false }
+lwk_common = { version = "0.16.0" }
+lwk_signer = { version = "0.16.0", default-features = false }
+lwk_wollet = { version = "0.16.0", default-features = false }
 
 simplicityhl = { version = "0.4.1" }
 
@@ -18,11 +18,17 @@ thiserror = "2"
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
 
-uuid = { version = "~1.20", default-features = false, features = ["serde", "v4"] }
+uuid = { version = "~1.20", default-features = false, features = [
+    "serde",
+    "v4",
+] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 uuid = { version = "~1.20", default-features = false, features = ["js"] }
 
 [dev-dependencies]
-lwk_test_util = { version = "0.15.0"}
-lwk_wollet = { version = "0.15.0", default-features = false, features = ["esplora", "electrum"] }
+lwk_test_util = { version = "0.16.0" }
+lwk_wollet = { version = "0.16.0", default-features = false, features = [
+    "esplora",
+    "electrum",
+] }

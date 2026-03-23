@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.16.0
+
 * uniffi upgrade 0.28.2 -> 0.29.4
 
 ## 0.15.0

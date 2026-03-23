@@ -219,6 +219,10 @@ impl Cache {
         self.heights.retain(|k, _| !to_delete.contains(k));
         self.heights.extend(new.to_vec());
     }
+
+    pub(crate) fn all_txs(&self) -> impl Iterator<Item = (&Txid, &Transaction)> {
+        self.all_txs.iter()
+    }
 }
 
 #[cfg(test)]

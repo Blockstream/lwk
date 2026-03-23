@@ -612,7 +612,7 @@ impl Wollet {
     pub fn explicit_utxos(&self) -> Result<Vec<ExternalUtxo>, Error> {
         let spent = self.cache.spent()?;
         let mut utxos = vec![];
-        for (txid, tx) in self.cache.all_txs.iter() {
+        for (txid, tx) in self.cache.all_txs() {
             for (vout, o) in tx.output.iter().enumerate() {
                 let outpoint = OutPoint::new(*txid, vout as u32);
                 if !o.script_pubkey.is_empty()
@@ -685,7 +685,7 @@ impl Wollet {
     /// In some particular situation they can be unblinded with [`crate::Wollet::reunblind()`].
     pub fn txos_cannot_unblind(&self) -> Result<Vec<OutPoint>, Error> {
         let mut txos = vec![];
-        for (txid, tx) in self.cache.all_txs.iter() {
+        for (txid, tx) in self.cache.all_txs() {
             for (vout, o) in tx.output.iter().enumerate() {
                 let outpoint = OutPoint::new(*txid, vout as u32);
                 if !o.script_pubkey.is_empty()
@@ -712,7 +712,7 @@ impl Wollet {
         let mut utxos = vec![];
         let spent = self.cache.spent()?;
         let cache_unblinded = &self.cache.unblinded;
-        for (txid, tx) in self.cache.all_txs.iter() {
+        for (txid, tx) in self.cache.all_txs() {
             for (i, txout) in tx.output.iter().enumerate() {
                 if self.cache.paths.contains_key(&txout.script_pubkey) {
                     let outpoint = OutPoint::new(*txid, i as u32);
@@ -746,7 +746,7 @@ impl Wollet {
     pub fn reunblind(&mut self) -> Result<Vec<OutPoint>, Error> {
         let mut new = HashMap::new();
         let mut txos = vec![];
-        for (txid, tx) in self.cache.all_txs.iter() {
+        for (txid, tx) in self.cache.all_txs() {
             for (vout, txout) in tx.output.iter().enumerate() {
                 if self.cache.paths.contains_key(&txout.script_pubkey) {
                     let outpoint = OutPoint::new(*txid, vout as u32);

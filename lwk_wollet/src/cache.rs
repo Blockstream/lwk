@@ -23,7 +23,7 @@ pub struct Cache {
     pub scripts: HashMap<(Chain, ChildNumber), (Script, Option<BlindingPublicKey>)>,
 
     /// contains only my wallet txs with the relative heights (None if unconfirmed)
-    pub heights: HashMap<Txid, Option<Height>>,
+    heights: HashMap<Txid, Option<Height>>,
 
     /// txids sorted by height descending, then txid descending (unconfirmed first)
     sorted_txids: Vec<Txid>,
@@ -205,6 +205,19 @@ impl Cache {
             .map(|i| i.previous_output)
             .chain(dummy_spent)
             .collect())
+    }
+
+    pub(crate) fn tx_height(&self, txid: &Txid) -> Option<&Option<Height>> {
+        self.heights.get(txid)
+    }
+
+    pub(crate) fn heights(&self) -> &HashMap<Txid, Option<Height>> {
+        &self.heights
+    }
+
+    pub(crate) fn update_heights(&mut self, new: &[(Txid, Option<u32>)], to_delete: &[Txid]) {
+        self.heights.retain(|k, _| !to_delete.contains(k));
+        self.heights.extend(new.to_vec());
     }
 }
 

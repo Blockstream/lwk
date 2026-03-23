@@ -371,14 +371,14 @@ impl EsploraClient {
 
             let txid_height_new: Vec<_> = txid_height
                 .iter()
-                .filter(|(k, v)| match cache.heights.get(*k) {
+                .filter(|(k, v)| match cache.tx_height(*k) {
                     Some(e) => e != *v,
                     None => true,
                 })
                 .map(|(k, v)| (*k, *v))
                 .collect();
             let txid_height_delete: Vec<_> = cache
-                .heights
+                .heights()
                 .keys()
                 .filter(|k| !txid_height.contains_key(*k))
                 .cloned()

@@ -152,7 +152,7 @@ impl Wollet {
             let mut inputs = vec![];
             for txin in &tx.input {
                 let outpoint = txin.previous_output;
-                let height = self.cache.heights.get(&outpoint.txid).unwrap_or(&None);
+                let height = self.cache.tx_height(&outpoint.txid).unwrap_or(&None);
                 let txout = self
                     .cache
                     .all_txs
@@ -244,7 +244,7 @@ impl Wollet {
     #[doc(hidden)]
     pub fn tx_details(&self, txid: &Txid, _opt: &TxOpt) -> Result<Option<TxDetails>, Error> {
         let spent = self.cache.spent()?;
-        let height = *self.cache.heights.get(txid).unwrap_or(&None);
+        let height = *self.cache.tx_height(txid).unwrap_or(&None);
         self.tx_details_inner(txid, height, &spent)
     }
 

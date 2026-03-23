@@ -291,7 +291,7 @@ impl WolletState for Wollet {
     }
 
     fn heights(&self) -> &HashMap<Txid, Option<Height>> {
-        &self.cache.heights
+        &self.cache.heights()
     }
 
     fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)> {
@@ -369,7 +369,7 @@ impl Wollet {
             txs: cache.all_txs.keys().cloned().collect(),
             paths: cache.paths.clone(),
             scripts: cache.scripts.clone(),
-            heights: cache.heights.clone(),
+            heights: cache.heights().clone(),
             tip: cache.tip,
             last_unused: LastUnused {
                 internal: cache.last_unused_internal.load(atomic::Ordering::Relaxed),
@@ -839,7 +839,7 @@ impl Wollet {
     /// Note: this returns any transaction that the wallet has in its storage,
     /// which in some circumstances might include non-wallet txs.
     pub fn transaction(&self, txid: &Txid) -> Result<Option<WalletTx>, Error> {
-        let height = self.cache.heights.get(txid).unwrap_or(&None);
+        let height = self.cache.tx_height(txid).unwrap_or(&None);
         let tx = self.cache.all_txs.get(txid);
         if let Some(tx) = tx {
             let txos = self.txos_map()?;

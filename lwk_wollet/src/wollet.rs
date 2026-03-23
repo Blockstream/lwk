@@ -532,8 +532,7 @@ impl Wollet {
         for (tx_id, height) in self.cache.sorted_txids() {
             let tx = self
                 .cache
-                .all_txs
-                .get(tx_id)
+                .tx(tx_id)
                 .ok_or_else(|| Error::Generic(format!("txos no tx {tx_id}")))?;
             let tx_txos = tx
                 .output
@@ -796,8 +795,7 @@ impl Wollet {
         for (txid, height) in self.cache.sorted_txids().skip(offset).take(limit) {
             let tx = self
                 .cache
-                .all_txs
-                .get(txid)
+                .tx(txid)
                 .ok_or_else(|| Error::Generic(format!("list_tx no tx {txid}")))?;
 
             let balance = tx_balance(*txid, tx, &txos);
@@ -842,8 +840,7 @@ impl Wollet {
     /// which in some circumstances might include non-wallet txs.
     pub fn transaction(&self, txid: &Txid) -> Result<Option<WalletTx>, Error> {
         let height = self.cache.tx_height(txid).unwrap_or(&None);
-        let tx = self.cache.all_txs.get(txid);
-        if let Some(tx) = tx {
+        if let Some(tx) = self.cache.tx(txid) {
             let txos = self.txos_map()?;
 
             let balance = tx_balance(*txid, tx, &txos);

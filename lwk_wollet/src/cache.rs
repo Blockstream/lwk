@@ -200,7 +200,7 @@ impl Cache {
         Ok(self
             .heights
             .keys()
-            .filter_map(|txid| self.all_txs.get(txid))
+            .filter_map(|txid| self.tx(txid))
             .flat_map(|tx| tx.input.iter())
             .map(|i| i.previous_output)
             .chain(dummy_spent)
@@ -222,6 +222,10 @@ impl Cache {
 
     pub(crate) fn all_txs(&self) -> impl Iterator<Item = (&Txid, &Transaction)> {
         self.all_txs.iter()
+    }
+
+    pub(crate) fn tx(&self, txid: &Txid) -> Option<&Transaction> {
+        self.all_txs.get(txid)
     }
 }
 

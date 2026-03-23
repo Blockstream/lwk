@@ -27,8 +27,7 @@ impl Wollet {
     fn get_tx(&self, txid: &Txid) -> Result<Transaction, Error> {
         Ok(self
             .cache
-            .all_txs
-            .get(txid)
+            .tx(txid)
             .ok_or_else(|| Error::MissingTransaction)?
             .clone())
     }

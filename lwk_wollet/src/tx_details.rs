@@ -147,7 +147,7 @@ impl Wollet {
         height: Option<u32>,
         spent: &HashSet<OutPoint>,
     ) -> Result<Option<TxDetails>, Error> {
-        if let Some(tx) = self.cache.all_txs.get(txid) {
+        if let Some(tx) = self.cache.tx(txid) {
             let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
             let mut inputs = vec![];
             for txin in &tx.input {
@@ -155,8 +155,7 @@ impl Wollet {
                 let height = self.cache.tx_height(&outpoint.txid).unwrap_or(&None);
                 let txout = self
                     .cache
-                    .all_txs
-                    .get(&outpoint.txid)
+                    .tx(&outpoint.txid)
                     .and_then(|tx| tx.output.get(outpoint.vout as usize));
                 let is_spent = true; // inputs are always spent
                 inputs.push(self.txout_details(outpoint, *height, txout, is_spent)?);

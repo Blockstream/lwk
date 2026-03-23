@@ -365,7 +365,7 @@ impl Wollet {
             .chain(txid_height_delete.iter().copied())
             .collect();
         for txid in txids_for_last_used {
-            if let Some(tx) = cache.all_txs.get(&txid) {
+            if let Some(tx) = cache.tx(&txid) {
                 for (vout, output) in tx.output.iter().enumerate() {
                     if !cache
                         .unblinded

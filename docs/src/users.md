@@ -18,6 +18,7 @@ This section showcases a series of projects that are built on LWK or its compone
 |[PSET GUI](https://github.com/dev4bitcoin/psetgui/)| PSET Analyzer| Tool| JavaScript|
 |[Satsails](https://www.satsails.com/)| Wallet| Wallet| Dart|
 |[Shopstr](https://shopstr.store/)| Nostr Marketplace| Server| TypeScript|
+|[Ibis Wallet](https://github.com/aeonBTC/IbisWallet)| Atomic swaps| Wallet| Kotlin|
 
 
 Feel free to open a PR to add or remove your product.
@@ -143,6 +144,14 @@ Satsails is open source, source available in the [Github repository](https://git
 WIP for [Liquid integration](https://github.com/shopstr-eng/shopstr/issues/74)
 
 Shopstr is open source, source available in the [Github repository](https://github.com/shopstr-eng/)
+
+
+## Ibis Wallet
+A self-custody Bitcoin wallet for Android, inspired by Sparrow Wallet but built for mobile.
+
+Ibis has support fo BTC (via BDK), LBTC and LN (via LWK and Boltz).
+
+Ibis is open source, source available in the [Github repository](https://github.com/aeonBTC/IbisWallet)
 
 
 # Unknown users

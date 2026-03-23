@@ -965,4 +965,19 @@ mod tests {
         let data: Vec<SwapRestoreResponse> = serde_json::from_str(data).unwrap();
         assert_eq!(data.len(), 32);
     }
+
+    #[test]
+    fn test_bolt12_invoice_roundtrip() {
+        // Test data - a real BOLT12 invoice string from submarine.rs tests
+        let invoice_str = "lni1qqgwwn892vxqk9fsgul2fgzxyj5wk93pqtqft5rf2w8ed0c5chus7mqg2x7lx49qajrq8x3yhuu2w0msttwzc5srqxr2q4qqtqss80rn9yedw8hsef9w2lwa83zsfxglnhaen4kl272wrv4uccukswxm5zvq9sy46p548rukhu2vt7g0dsy9r00n2jswepsrngjt7w988ac94hpvqws6qvd2q863an980srs7dpnt6qpqzlxrdkds6l8zz33enxmr42ujqgzfyq6zkdznkzf5m4u7ran24078mtlcdnaltufm4znls5gkq9lyhvqqvhwq0uy4rzc77s7d8gfx4hxemjql7gfcd7l97c3m76vtqnqmkg3eafm2msn4jj864haz42dc6r8r47gt64zrsqqqqqqqqqqqqqqzgqqqqqqqqqqqqqayjedltzjqqqqqq9yq35mrksp4qst37he8z5zvgq948434andxfzlfru53mfvvaycmed6ynt67qyg3xa2qvqcdg9wqvpqqq9syypvp9wsd9fcl94lznzljrmvppgmmu655rkgvqu6yjln3felwpddct8sgrt30e0uynvhy5ydaktehuwctyzkd05wgw4zqn0ayx4d9yndcfhd4ygpjceygz9629n4qm0zn7xa5k8e8xaphu280n4v2y3dzc2etywv";
+
+        // Parse the invoice string
+        let parsed = crate::parse_bolt12_invoice(invoice_str).unwrap();
+
+        // Convert back to string
+        let displayed = crate::display_bolt12_invoice(&parsed);
+
+        // Verify roundtrip - should get back the same string
+        assert_eq!(invoice_str, displayed);
+    }
 }

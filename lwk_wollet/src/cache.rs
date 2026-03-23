@@ -169,8 +169,11 @@ impl Cache {
         Ok((script, blinding_pubkey, cached))
     }
 
-    pub(crate) fn sorted_txids(&self) -> impl Iterator<Item = &Txid> {
-        self.sorted_txids.iter()
+    pub(crate) fn sorted_txids(&self) -> impl Iterator<Item = (&Txid, &Option<Height>)> {
+        self.sorted_txids.iter().map(|txid| {
+            let height = self.heights.get(txid).unwrap_or(&None);
+            (txid, height)
+        })
     }
 
     pub(crate) fn rebuild_sorted_txids(&mut self) {

@@ -337,7 +337,7 @@ impl Wollet {
         }
 
         cache.unblinded.extend(new_txs.unblinds);
-        cache.all_txs.extend(new_txs.txs);
+        cache.extend_all_txs(new_txs.txs);
         cache.update_heights(&txid_height_new, &txid_height_delete);
         cache.rebuild_sorted_txids();
         cache.timestamps.extend(timestamps);

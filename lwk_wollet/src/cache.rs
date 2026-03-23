@@ -231,6 +231,10 @@ impl Cache {
     pub(crate) fn all_txids(&self) -> HashSet<Txid> {
         self.all_txs.keys().cloned().collect()
     }
+
+    pub(crate) fn extend_all_txs(&mut self, txs: Vec<(Txid, Transaction)>) {
+        self.all_txs.extend(txs);
+    }
 }
 
 #[cfg(test)]

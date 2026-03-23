@@ -14,7 +14,7 @@ pub type Timestamp = u32;
 /// It is fully reconstructable from the CT Descriptor and the blockchain.
 pub struct Cache {
     /// contains all my tx and all prevouts
-    pub all_txs: HashMap<Txid, Transaction>,
+    all_txs: HashMap<Txid, Transaction>,
 
     /// contains all my script up to an empty batch of BATCHSIZE
     pub paths: HashMap<Script, (Chain, ChildNumber)>,

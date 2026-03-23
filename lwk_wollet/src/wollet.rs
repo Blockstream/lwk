@@ -27,7 +27,7 @@ use lwk_common::{
     burn_script, pset_balance, pset_issuances, pset_signatures, Balance, DynStore, EncryptedStore,
     FakeStore, FileStore, PsetDetails,
 };
-use std::collections::{hash_map::Entry, BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hasher;
 use std::path::Path;
 use std::sync::{atomic, Arc, Mutex};
@@ -744,20 +744,22 @@ impl Wollet {
     /// In some quite particular situations, the wollet might have not unblinded some of
     /// its transaction outputs. This function allows to attempt to unblind them again.
     pub fn reunblind(&mut self) -> Result<Vec<OutPoint>, Error> {
+        let mut new = HashMap::new();
         let mut txos = vec![];
         for (txid, tx) in self.cache.all_txs.iter() {
             for (vout, txout) in tx.output.iter().enumerate() {
                 if self.cache.paths.contains_key(&txout.script_pubkey) {
                     let outpoint = OutPoint::new(*txid, vout as u32);
-                    if let Entry::Vacant(e) = self.cache.unblinded.entry(outpoint) {
+                    if !self.cache.unblinded.contains_key(&outpoint) {
                         if let Ok(unblinded) = try_unblind(txout, &self.descriptor) {
-                            e.insert(unblinded);
+                            new.insert(outpoint, unblinded);
                             txos.push(outpoint);
                         }
                     }
                 }
             }
         }
+        self.cache.unblinded.extend(new);
         Ok(txos)
     }
 

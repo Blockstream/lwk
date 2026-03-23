@@ -371,7 +371,7 @@ impl EsploraClient {
 
             let txid_height_new: Vec<_> = txid_height
                 .iter()
-                .filter(|(k, v)| match cache.tx_height(*k) {
+                .filter(|(k, v)| match cache.tx_height(k) {
                     Some(e) => e != *v,
                     None => true,
                 })

@@ -291,7 +291,7 @@ impl WolletState for Wollet {
     }
 
     fn heights(&self) -> &HashMap<Txid, Option<Height>> {
-        &self.cache.heights()
+        self.cache.heights()
     }
 
     fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)> {

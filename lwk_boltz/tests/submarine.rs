@@ -54,7 +54,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
-    async fn test_bolt12_offer_to_bolt11_and_pay_with_session() {
+    async fn test_bolt12_offer_to_invoice_and_pay_with_session() {
         let _ = env_logger::try_init();
 
         // Ask CLN for a BOLT12 offer

@@ -880,6 +880,24 @@ pub fn parse_bolt12_invoice(bolt12_invoice: &str) -> Result<Bolt12Invoice, Error
     Ok(lightning::offers::invoice::Bolt12Invoice::try_from(data)?)
 }
 
+pub fn display_bolt12_invoice(bolt12_invoice: &Bolt12Invoice) -> String {
+    use bech32::ToBase32;
+    use lightning::util::ser::Writeable;
+
+    // Serialize the invoice to bytes using the Writeable trait
+    let mut bytes = Vec::new();
+    bolt12_invoice
+        .write(&mut bytes)
+        .expect("writing to vec should not fail");
+
+    // Convert bytes to base32
+    let data = bytes.to_base32();
+
+    // Encode with bech32 using the invoice HRP without checksum (matching decode_without_checksum)
+    bech32::encode_without_checksum(BECH32_BOLT12_INVOICE_HRP, data)
+        .expect("encoding valid invoice should succeed")
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;

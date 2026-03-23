@@ -1556,22 +1556,86 @@ fn test_ct_discount() {
 #[test]
 fn test_amp2() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, _env) = setup_cli(env);
+    let server_url = format!("--server-url {}", env.electrum_url());
+    let addr = get_available_addr().unwrap();
+
+    let tmp = tempfile::tempdir().unwrap();
+    let datadir = tmp.path().display().to_string();
+    let params = format!("--datadir {datadir} {server_url}");
+
+    // regtest: AMP2 requires --amp2-url for all methods
+    let cli = format!("cli --addr {addr} -n regtest");
+    let t = {
+        let cli = cli.clone();
+        let params = params.clone();
+        std::thread::spawn(move || {
+            sh(&format!("{cli} server start {params}"));
+        })
+    };
+    std::thread::sleep(std::time::Duration::from_millis(500));
 
     sw_signer(&cli, "sw");
-    let err = sh_err(&format!("{cli} amp2 descriptor -s sw"));
-    assert!(err.contains("AMP2 methods are not available for this network"));
 
-    let err = sh_err(&format!("{cli} amp2 register -s sw"));
-    assert!(err.contains("AMP2 methods are not available for this network"));
-
-    let err = sh_err(&format!("{cli} amp2 cosign -p fake_pset"));
-    assert!(err.contains("AMP2 methods are not available for this network"));
-
-    // TODO: proper e2e tests with regtest AMP2
+    for cmd in [
+        format!("{cli} amp2 descriptor -s sw"),
+        format!("{cli} amp2 register -s sw"),
+        format!("{cli} amp2 cosign -p fake_pset"),
+    ] {
+        let err = sh_err(&cmd);
+        assert!(err.contains("on regtest you have to specify --amp2-url"));
+    }
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
+
+    // regtest: AMP2 requires --amp2-keyorigin-xpub once --amp2-url is set
+    let t = {
+        let cli = cli.clone();
+        let params = params.clone();
+        std::thread::spawn(move || {
+            sh(&format!("{cli} server start {params} --amp2-url fake_url"));
+        })
+    };
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    for cmd in [
+        format!("{cli} amp2 descriptor -s sw"),
+        format!("{cli} amp2 register -s sw"),
+        format!("{cli} amp2 cosign -p fake_pset"),
+    ] {
+        let err = sh_err(&cmd);
+        assert!(err.contains("on regtest you have to specify --amp2-keyorigin-xpub"));
+    }
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+
+    // mainnet: AMP2 is not available
+    let cli = format!("cli --addr {addr} -n mainnet");
+    let t = {
+        let cli = cli.clone();
+        let params = params.clone();
+        std::thread::spawn(move || {
+            sh(&format!("{cli} server start {params} --amp2-url fake_url"));
+        })
+    };
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    sw_signer(&cli, "sw");
+
+    for cmd in [
+        format!("{cli} amp2 descriptor -s sw"),
+        format!("{cli} amp2 register -s sw"),
+        format!("{cli} amp2 cosign -p fake_pset"),
+    ] {
+        let err = sh_err(&cmd);
+        assert!(err.contains("AMP2 methods are not available for mainnet"));
+    }
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+
+    // TODO: proper e2e tests with regtest AMP2
 }
 
 #[test]

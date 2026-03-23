@@ -31,7 +31,6 @@ use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use lwk_jade::Jade;
 use lwk_signer::{AnySigner, SwSigner};
 use lwk_tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
-use lwk_wollet::amp2::Amp2;
 use lwk_wollet::bitcoin::bip32::Fingerprint;
 use lwk_wollet::bitcoin::XKeyIdentifier;
 use lwk_wollet::clients::blocking::BlockchainBackend;
@@ -1258,13 +1257,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Amp2Descriptor => {
             let r: request::Amp2Descriptor = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            if !matches!(s.config.network, lwk_wollet::ElementsNetwork::LiquidTestnet) {
-                return Err(Error::Generic(
-                    "AMP2 methods are not available for this network".into(),
-                ));
-            }
+
+            let amp2 = s.config.amp2_client()?;
             let signer = s.get_available_signer(&r.name)?;
-            let amp2 = Amp2::new_testnet();
             let desc = amp2.descriptor_from_str(&amp2userkey(signer)?)?;
             let descriptor = desc.descriptor().to_string();
             Response::result(
@@ -1275,13 +1270,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Amp2Register => {
             let r: request::Amp2Register = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            if !matches!(s.config.network, lwk_wollet::ElementsNetwork::LiquidTestnet) {
-                return Err(Error::Generic(
-                    "AMP2 methods are not available for this network".into(),
-                ));
-            }
+
+            let amp2 = s.config.amp2_client()?;
             let signer = s.get_available_signer(&r.name)?;
-            let amp2 = Amp2::new_testnet();
             let desc = amp2.descriptor_from_str(&amp2userkey(signer)?)?;
             let wid = amp2.blocking_register(desc)?.wid;
             Response::result(
@@ -1292,12 +1283,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Amp2Cosign => {
             let r: request::Amp2Cosign = serde_json::from_value(params)?;
             let s = state.lock()?;
-            if !matches!(s.config.network, lwk_wollet::ElementsNetwork::LiquidTestnet) {
-                return Err(Error::Generic(
-                    "AMP2 methods are not available for this network".into(),
-                ));
-            }
-            let amp2 = Amp2::new_testnet();
+
+            let amp2 = s.config.amp2_client()?;
             let pset = PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
             let pset = amp2.blocking_cosign(&pset)?.pset.to_string();
             Response::result(

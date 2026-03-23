@@ -1,18 +1,18 @@
+use crate::{blockchain_client::BlockchainClient, consts, Error};
 use lwk_common::electrum_ssl::LIQUID_SOCKET;
 use lwk_common::electrum_ssl::LIQUID_TESTNET_SOCKET;
 use lwk_common::Network as JadeNetwork;
 use lwk_jade::TIMEOUT;
+use lwk_wollet::amp2::Amp2;
 use lwk_wollet::clients::blocking::EsploraClient;
 use lwk_wollet::elements::AssetId;
-use lwk_wollet::ElectrumClient;
 use lwk_wollet::ElementsNetwork;
+use lwk_wollet::{amp2, ElectrumClient};
 use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
-
-use crate::{blockchain_client::BlockchainClient, consts, Error};
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -28,6 +28,9 @@ pub struct Config {
     pub registry_url: String,
     pub timeout: Duration,
     pub scanning_interval: Duration,
+
+    pub amp2_url: String,
+    pub amp2_keyorigin_xpub: String,
 }
 
 impl Config {
@@ -42,6 +45,8 @@ impl Config {
             registry_url: "https://assets-testnet.blockstream.info/".into(),
             timeout: TIMEOUT,
             scanning_interval: consts::SCANNING_INTERVAL,
+            amp2_url: amp2::URL_TESTNET.into(),
+            amp2_keyorigin_xpub: amp2::KEYORIGIN_XPUB_TESTNET.into(),
         }
     }
 
@@ -56,10 +61,12 @@ impl Config {
             registry_url: "https://assets.blockstream.info/".into(),
             timeout: TIMEOUT,
             scanning_interval: consts::SCANNING_INTERVAL,
+            amp2_url: "".into(),
+            amp2_keyorigin_xpub: "".into(),
         }
     }
 
-    /// For regtest there are no reasonable default for `electrum_url`, `explorer_url`, and `registry_url`
+    /// For regtest there are no reasonable default for `electrum_url`, `explorer_url`, `registry_url`, `amp2_url` and `amp2_keyorigin_xpub`
     /// It will be caller responsability to mutate them according to regtest env
     pub fn default_regtest(datadir: PathBuf) -> Self {
         let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
@@ -75,6 +82,8 @@ impl Config {
             timeout: TIMEOUT,
             // Scan more frequently while testing
             scanning_interval: Duration::from_secs(1),
+            amp2_url: "".into(),
+            amp2_keyorigin_xpub: "".into(),
         }
     }
 
@@ -135,5 +144,32 @@ impl Config {
                 self.server_type
             ))),
         }
+    }
+
+    pub fn amp2_client(&self) -> Result<Amp2, Error> {
+        if self.is_mainnet() {
+            return Err(Error::Generic(
+                "AMP2 methods are not available for mainnet".into(),
+            ));
+        }
+
+        if self.amp2_url.is_empty() {
+            return Err(Error::Generic(
+                "on regtest you have to specify --amp2-url".into(),
+            ));
+        }
+
+        if self.amp2_keyorigin_xpub.is_empty() {
+            return Err(Error::Generic(
+                "on regtest you have to specify --amp2-keyorigin-xpub".into(),
+            ));
+        }
+
+        let amp2_keyorigin_xpub = self.amp2_keyorigin_xpub.clone();
+        let amp2_url = self.amp2_url.clone();
+
+        let amp_client = Amp2::new(amp2_keyorigin_xpub, amp2_url)?;
+
+        Ok(amp_client)
     }
 }

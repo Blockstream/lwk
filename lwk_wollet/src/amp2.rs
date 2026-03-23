@@ -15,6 +15,8 @@ use elements::bitcoin::bip32::{KeySource, Xpub};
 use elements::pset::PartiallySignedTransaction;
 use lwk_common::keyorigin_xpub_from_str;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
+use url::Url;
 
 /// The fingerprint of the AMP2 server key for the testnet network.
 pub const FINGERPRINT_TESTNET: &str = "3d970d04";
@@ -28,6 +30,7 @@ pub const KEYORIGIN_XPUB_TESTNET: &str = "[3d970d04/87h/1h/0h]tpubDC347GyKEGtyd4
 pub const URL_TESTNET: &str = "https://amp2.testnet.blockstream.com/";
 
 /// Context for actions interacting with AMP2
+#[derive(Debug)]
 pub struct Amp2 {
     server_key: String,
     url: String,
@@ -95,6 +98,19 @@ impl TryFrom<CosignResponseInner> for CosignResponse {
 }
 
 impl Amp2 {
+    /// Create a new AMP2 client
+    ///
+    ///  * `server_key` - The keyorigin xpub of the AMP2 server key
+    ///  * `url` - The URL of the AMP2 server
+    pub fn new(server_key: String, url: String) -> Result<Self, crate::Error> {
+        Url::from_str(&url).map_err(crate::UrlError::Url)?;
+
+        let (keysource, _) = keyorigin_xpub_from_str(&server_key)?;
+        keysource.ok_or(crate::Error::MissingKeyorigin)?;
+
+        Ok(Self { server_key, url })
+    }
+
     /// Create a new AMP2 client with the default url and server key for the testnet network.
     pub fn new_testnet() -> Self {
         Self {
@@ -240,5 +256,25 @@ mod test {
         assert!(!r.wid.is_empty());
 
         // TODO: test sign
+    }
+
+    #[test]
+    fn amp2_new() {
+        // Success case
+        let amp2 = Amp2::new(KEYORIGIN_XPUB_TESTNET.to_string(), URL_TESTNET.to_string()).unwrap();
+
+        assert_eq!(amp2.server_key, KEYORIGIN_XPUB_TESTNET);
+        assert_eq!(amp2.url, URL_TESTNET);
+
+        // Invalid URL
+        let err =
+            Amp2::new(KEYORIGIN_XPUB_TESTNET.to_string(), "fake_url".to_string()).unwrap_err();
+
+        assert!(matches!(err, crate::Error::Url(_)));
+
+        // Invalid keyorigin xpub
+        let err = Amp2::new("fake_xpub".to_string(), URL_TESTNET.to_string()).unwrap_err();
+
+        assert!(matches!(err, crate::Error::InvalidKeyOriginXpubError(_)));
     }
 }

@@ -216,7 +216,7 @@ pub enum Error {
     #[error("Cannot parse server recipient key")]
     CannotParseRecipientKey,
 
-    #[cfg(feature = "electrum")]
+    #[cfg(any(feature = "electrum", feature = "amp2"))]
     #[error(transparent)]
     Url(#[from] crate::UrlError),
 

@@ -78,6 +78,20 @@ test_clean:
   script:
     - cargo build
 
+test_no_default_features:
+  stage: test
+  needs: []
+  extends: .base
+  # We need to polish how we feature gate our code
+  # However let's do things iteratively rather than all at once
+  # TODO: add RUSTFLAGS="-D warnings" to address warnings too
+  # TODO: test other crates too
+  # TODO: replace cargo build with cargo check --tests
+  script:
+    - cargo build -p lwk_wollet --no-default-features
+  allow_failure: true # TODO: remove once fixed
+
+
 test_wollet:
   stage: test
   needs: []

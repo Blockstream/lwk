@@ -107,6 +107,7 @@ impl RegistryCache {
     }
 
     /// Fetch the contract and the issuance transaction of the given asset id from the registry
+    #[cfg(feature = "esplora")]
     pub async fn fetch_with_tx(
         &self,
         asset_id: AssetId,
@@ -214,6 +215,7 @@ impl Registry {
     }
 
     /// Fetch the contract and the issuance transaction of the given asset id from the registry
+    #[cfg(feature = "esplora")]
     pub async fn fetch_with_tx(
         &self,
         asset_id: AssetId,

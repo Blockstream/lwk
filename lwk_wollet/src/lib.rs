@@ -93,6 +93,7 @@ pub mod amp0;
 #[cfg(feature = "amp2")]
 pub mod amp2;
 
+mod async_util;
 mod cache;
 pub mod clients;
 mod contract;

@@ -218,7 +218,7 @@ pub enum Error {
 
     #[cfg(any(feature = "electrum", feature = "amp2"))]
     #[error(transparent)]
-    Url(#[from] crate::UrlError),
+    Url(#[from] UrlError),
 
     #[error("Manual coin selection is not allowed when assets are involved (this limitation will be removed in the future)")]
     ManualCoinSelectionOnlyLbtc,
@@ -307,4 +307,30 @@ impl From<elements::hex::Error> for Error {
     fn from(err: elements::hex::Error) -> Self {
         Self::ElementsHex(err)
     }
+}
+
+/// Error type when parsing a string to the [`url::Url`] type.
+#[derive(thiserror::Error, Debug)]
+#[allow(missing_docs)]
+pub enum UrlError {
+    #[error(transparent)]
+    Url(#[from] url::ParseError),
+
+    #[error("Invalid schema `{0}` supported ones are `ssl` or `tcp`")]
+    Schema(String),
+
+    #[error("Port is missing")]
+    MissingPort,
+
+    #[error("Domain is missing")]
+    MissingDomain,
+
+    #[error("Cannot specify `ssl` scheme without a domain")]
+    SslWithoutDomain,
+
+    #[error("Cannot validate the domain without tls")]
+    ValidateWithoutTls,
+
+    #[error("Don't specify the scheme in the url")]
+    NoScheme,
 }

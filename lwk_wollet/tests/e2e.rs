@@ -4421,3 +4421,71 @@ fn test_removed_tx() {
     assert!(w.wollet.transaction(&txid).unwrap().is_some());
     // Note: some fields (eg inputs and outputs) might not be accurate
 }
+
+#[test]
+fn test_faucet() {
+    // Simulate a couple of errors that we see with the testnet faucet
+    let env = TestEnvBuilder::from_env().with_waterfalls().build();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
+    let client = clients::EsploraClientBuilder::new(&env.waterfalls_url(), ElementsNetwork::Liquid)
+        .utxo_only(true)
+        .waterfalls(true)
+        .build_blocking()
+        .unwrap();
+    let mut w = TestWollet::new(client, &desc);
+
+    let lbtc = w.policy_asset();
+    let txid0 = w.fund_btc(&env);
+
+    let utxos = w.wollet.utxos().unwrap();
+    assert_eq!(utxos.len(), 1);
+    assert_eq!(utxos[0].outpoint.txid, txid0);
+
+    let node_address = env.elementsd_getnewaddress();
+    let mut pset = w
+        .tx_builder()
+        .add_recipient(&node_address, 1000, lbtc)
+        .unwrap()
+        .finish()
+        .unwrap();
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+
+    let txid1 = tx.txid();
+    w.wollet.apply_transaction(tx.clone()).unwrap();
+
+    let utxos = w.wollet.utxos().unwrap();
+    assert_eq!(utxos.len(), 1);
+    assert_eq!(utxos[0].outpoint.txid, txid1);
+
+    // Simulate a situation where the tx is seen by the node *after* the next sync
+    w.sync();
+    w.client.broadcast(&tx).unwrap();
+
+    // We see the old state
+    let utxos = w.wollet.utxos().unwrap();
+    assert_eq!(utxos.len(), 1);
+    assert_eq!(utxos[0].outpoint.txid, txid0);
+
+    // Sending a new tx will trigger an error
+    let mut pset = w
+        .tx_builder()
+        .add_recipient(&node_address, 1000, lbtc)
+        .unwrap()
+        .finish()
+        .unwrap();
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let err = w.client.broadcast(&tx).unwrap_err();
+    assert!(err.to_string().contains("txn-mempool-conflict"));
+
+    // If the tx is included in a block, the error is different
+    env.elementsd_generate(1);
+    let err = w.client.broadcast(&tx).unwrap_err();
+    assert!(err.to_string().contains("bad-txns-inputs-missingorspent"));
+}

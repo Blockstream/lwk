@@ -1,4 +1,4 @@
-use crate::asyncr::async_now;
+use crate::async_util::async_now;
 
 use super::{Error, ExchangeRate};
 use crate::prices::currency_code::CurrencyCode;

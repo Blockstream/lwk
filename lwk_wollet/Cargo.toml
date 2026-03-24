@@ -123,6 +123,7 @@ test_wallet = ["lwk_signer"]
 amp2 = ["reqwest"]
 amp0 = [
     "tokio-tungstenite",
+    "reqwest",
     "scrypt",
     "pbkdf2",
     "sha2",

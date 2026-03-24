@@ -4,6 +4,7 @@ version = "0.13.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Tiny JSON RPC Server"
 license = "MIT OR BSD-2-Clause"
+exclude = ["test/"]
 documentation = "https://docs.rs/lwk_tiny_jrpc"
 
 [dependencies]

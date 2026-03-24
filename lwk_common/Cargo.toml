@@ -4,6 +4,7 @@ version = "0.16.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Common utilities"
 license = "MIT OR BSD-2-Clause"
+exclude = ["test_data/"]
 documentation = "https://docs.rs/lwk_common"
 
 [dependencies]

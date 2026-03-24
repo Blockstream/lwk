@@ -4,6 +4,7 @@ version = "0.16.0"
 edition = "2021"
 autotests = false
 description = "Liquid Wallet Kit - Command line interface to interact with the RPC server"
+exclude = ["tests/"]
 license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_cli"
 

@@ -4,6 +4,7 @@ version = "0.16.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Bindings for other languages"
 license = "MIT OR BSD-2-Clause"
+exclude = ["tests/", "test_data/", "android_bindings/", "csharp/", "examples/"]
 documentation = "https://docs.rs/lwk_bindings"
 
 [dependencies]

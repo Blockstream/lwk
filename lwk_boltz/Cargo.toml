@@ -4,6 +4,7 @@ version = "0.16.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Boltz integration"
 license = "MIT OR BSD-2-Clause"
+exclude = ["tests/", "proxy/", "regtest", "justfile"]
 documentation = "https://docs.rs/lwk_boltz"
 
 [features]

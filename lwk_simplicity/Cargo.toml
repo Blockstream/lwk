@@ -4,6 +4,7 @@ version = "0.16.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Utilities to deal with Simplicity transactions"
 license = "MIT OR BSD-2-Clause"
+exclude = ["tests/", "data/"]
 documentation = "https://docs.rs/lwk_simplicity"
 
 [dependencies]

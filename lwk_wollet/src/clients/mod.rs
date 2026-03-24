@@ -1,8 +1,11 @@
 //! Clients to fetch data from the Blockchain.
 
+#[cfg(feature = "esplora")]
+use crate::ElementsNetwork;
+
 use crate::{
     cache::{Height, Timestamp},
-    BlindingPublicKey, Chain, DownloadTxResult, ElementsNetwork, Error, WolletDescriptor, EC,
+    BlindingPublicKey, Chain, DownloadTxResult, Error, WolletDescriptor, EC,
 };
 use elements::{
     bitcoin::bip32::ChildNumber,
@@ -24,6 +27,7 @@ pub mod asyncr;
 pub(crate) mod electrum_url;
 
 /// A builder for the [`crate::clients::asyncr::EsploraClient`] or [`crate::clients::blocking::EsploraClient`]
+#[cfg(feature = "esplora")]
 #[derive(Debug, Clone)]
 pub struct EsploraClientBuilder {
     base_url: String,
@@ -37,6 +41,7 @@ pub struct EsploraClientBuilder {
 }
 
 /// Provider of a token for authenticated services backend of Esplora and Waterfalls
+#[cfg(feature = "esplora")]
 #[derive(Debug, Clone)]
 pub enum TokenProvider {
     /// No token is needed
@@ -54,6 +59,7 @@ pub enum TokenProvider {
     },
 }
 
+#[cfg(feature = "esplora")]
 impl EsploraClientBuilder {
     /// Create a new [`EsploraClientBuilder`]
     pub fn new(base_url: &str, network: ElementsNetwork) -> Self {

@@ -80,6 +80,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     datadir,
                     timeout,
                     scanning_interval,
+                    amp2_url,
+                    amp2_keyorigin_xpub,
                 } => {
                     let (tx, rx) = std::sync::mpsc::channel();
                     let _ = ctrlc::try_set_handler(move || {
@@ -111,6 +113,14 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     if let Some(url) = registry_url {
                         config.registry_url = url;
                     };
+
+                    if let Some(amp2_url) = amp2_url {
+                        config.amp2_url = amp2_url;
+                    }
+
+                    if let Some(amp2_keyorigin_xpub) = amp2_keyorigin_xpub {
+                        config.amp2_keyorigin_xpub = amp2_keyorigin_xpub;
+                    }
 
                     config.addr = addr;
                     let mut app = lwk_app::App::new(config)?;

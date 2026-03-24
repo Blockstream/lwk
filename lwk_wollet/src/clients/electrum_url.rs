@@ -12,29 +12,29 @@ pub enum ElectrumUrl {
 }
 
 impl FromStr for ElectrumUrl {
-    type Err = UrlError;
+    type Err = crate::UrlError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let url: url::Url = s.parse()?;
         let ssl = url.scheme() == "ssl";
         if !(ssl || url.scheme() == "tcp") {
-            return Err(UrlError::Schema(url.scheme().to_string()));
+            return Err(crate::UrlError::Schema(url.scheme().to_string()));
         }
         if url.port().is_none() {
-            return Err(UrlError::MissingPort);
+            return Err(crate::UrlError::MissingPort);
         }
         match url.domain() {
             Some(domain) => match domain.parse::<IpAddr>() {
                 Ok(_) => {
                     if ssl {
-                        Err(UrlError::SslWithoutDomain)
+                        Err(crate::UrlError::SslWithoutDomain)
                     } else {
                         ElectrumUrl::new(&s[6..], false, false)
                     }
                 }
                 Err(_) => ElectrumUrl::new(&s[6..], ssl, ssl),
             },
-            None => Err(UrlError::MissingDomain),
+            None => Err(crate::UrlError::MissingDomain),
         }
     }
 }
@@ -55,45 +55,19 @@ impl ElectrumUrl {
     /// eg. `example.com:50001` or `127.0.0.1:50001`
     ///
     /// Note: you cannot validate domain without TLS, an error is thrown in this case.
-    pub fn new(host_port: &str, tls: bool, validate_domain: bool) -> Result<Self, UrlError> {
+    pub fn new(host_port: &str, tls: bool, validate_domain: bool) -> Result<Self, crate::UrlError> {
         // We are not checking all possible scheme, however, these two seems to be the most common
         // since they are used in the electrum protocol
         if host_port.starts_with("tcp://") || host_port.starts_with("ssl://") {
-            return Err(UrlError::NoScheme);
+            return Err(crate::UrlError::NoScheme);
         }
 
         if tls {
             Ok(ElectrumUrl::Tls(host_port.into(), validate_domain))
         } else if validate_domain {
-            Err(UrlError::ValidateWithoutTls)
+            Err(crate::UrlError::ValidateWithoutTls)
         } else {
             Ok(ElectrumUrl::Plaintext(host_port.into()))
         }
     }
-}
-
-/// Error type when parsing a string to the [`ElectrumUrl`] type.
-#[derive(thiserror::Error, Debug)]
-#[allow(missing_docs)]
-pub enum UrlError {
-    #[error(transparent)]
-    Url(#[from] url::ParseError),
-
-    #[error("Invalid schema `{0}` supported ones are `ssl` or `tcp`")]
-    Schema(String),
-
-    #[error("Port is missing")]
-    MissingPort,
-
-    #[error("Domain is missing")]
-    MissingDomain,
-
-    #[error("Cannot specify `ssl` scheme without a domain")]
-    SslWithoutDomain,
-
-    #[error("Cannot validate the domain without tls")]
-    ValidateWithoutTls,
-
-    #[error("Don't specify the scheme in the url")]
-    NoScheme,
 }

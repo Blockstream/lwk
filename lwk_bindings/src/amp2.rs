@@ -48,6 +48,16 @@ impl From<&Amp2Descriptor> for lwk_wollet::amp2::Amp2Descriptor {
 
 #[uniffi::export]
 impl Amp2 {
+    /// Create a new AMP2 client
+    ///
+    ///  * `server_key` - The keyorigin xpub of the AMP2 server key
+    ///  * `url` - The URL of the AMP2 server
+    #[uniffi::constructor]
+    pub fn new(server_key: &str, url: &str) -> Result<Self, LwkError> {
+        let inner = lwk_wollet::amp2::Amp2::new(server_key.into(), url.into())?;
+        Ok(Self { inner })
+    }
+
     /// Construct an AMP2 context for Liquid Testnet
     #[uniffi::constructor]
     pub fn new_testnet() -> Self {
@@ -85,5 +95,11 @@ mod tests {
         let d = amp2.descriptor_from_str(k).unwrap();
         assert_eq!(d.descriptor().to_string(), expected);
         // let _wid = amp2.register(&d).unwrap();
+
+        let server_key = "[3d970d04/87h/1h/0h]tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
+        let url = "http://127.0.0.1:5000";
+        let amp2 = Amp2::new(server_key, url).unwrap();
+        let d = amp2.descriptor_from_str(k).unwrap();
+        assert_eq!(d.descriptor().to_string(), expected);
     }
 }

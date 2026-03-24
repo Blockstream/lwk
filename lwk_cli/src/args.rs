@@ -973,6 +973,14 @@ pub enum ServerCommand {
         /// Interval between blockchain scans (seconds)
         #[arg(long)]
         scanning_interval: Option<u64>,
+
+        /// AMP2 server URL, if not specified a reasonable default is used according to the network
+        #[arg(long, env)]
+        amp2_url: Option<String>,
+
+        /// AMP2 key origin xpub, if not specified a reasonable default is used according to the network
+        #[arg(long, env)]
+        amp2_keyorigin_xpub: Option<String>,
     },
 
     /// Wait until an entire blockchain scan has been completed

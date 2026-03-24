@@ -122,11 +122,11 @@ mod wollet;
 #[cfg(feature = "prices")]
 pub mod prices;
 
-pub use crate::clients::electrum_url::{ElectrumUrl, UrlError};
+pub use crate::clients::electrum_url::ElectrumUrl;
 pub use crate::clients::{Capability, History};
 pub use crate::contract::{asset_ids, issuance_ids, Contract, Entity};
 pub use crate::descriptor::{Chain, WolletDescriptor};
-pub use crate::error::Error;
+pub use crate::error::{Error, UrlError};
 pub use crate::liquidex::{AssetAmount, LiquidexProposal, Unvalidated, Validated};
 pub use crate::model::{
     AddressResult, ExternalUtxo, IssuanceDetails, Recipient, UnvalidatedRecipient, WalletTx,

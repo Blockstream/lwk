@@ -1,3 +1,11 @@
+extern crate alloc;
+extern crate core;
+
+use alloc::{
+    format,
+    string::{String, ToString},
+};
+use alloc::{vec, vec::Vec};
 use bip39::Mnemonic;
 use elements_miniscript::{
     bitcoin::{
@@ -87,7 +95,7 @@ pub struct SwSigner {
 }
 
 impl core::fmt::Debug for SwSigner {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "Signer({})", self.fingerprint())
     }
 }
@@ -450,6 +458,8 @@ pub fn sign_with_seckey(
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
+    use core::str::FromStr;
     use elements_miniscript::elements::hex::ToHex;
 
     use super::*;
@@ -483,7 +493,7 @@ mod tests {
 
     #[test]
     fn from_xprv() {
-        use std::str::FromStr;
+        use core::str::FromStr;
         let xprv = Xpriv::from_str("tprv8bxtvyWEZW9M4n8ByZVSG2NNP4aeiRdhDZXNEv1eVNtrhLLnc6vJ1nf9DN5cHAoxMwqRR1CD6YXBvw2GncSojF8DknPnQVMgbpkjnKHkrGY").unwrap();
         let xpub = Xpub::from_str("tpubD8ew5PYUhsq1xF9ysDA2fS2Ux66askpbns89XS3wuehFXpbZEVjtCHH1PUhj6KAfCs4iCx5wKgswv1n3we2ZHEs2sP5pw9PnLsCFwiVgdjw").unwrap();
         let signer = SwSigner::from_xprv(xprv);
@@ -633,7 +643,7 @@ mod tests {
     #[test]
     fn test_bip85_mnemonic_derivation_without_mnemonic() {
         // Test that BIP85 derivation fails when signer was created from xprv
-        use std::str::FromStr;
+        use core::str::FromStr;
         let xprv = Xpriv::from_str("tprv8bxtvyWEZW9M4n8ByZVSG2NNP4aeiRdhDZXNEv1eVNtrhLLnc6vJ1nf9DN5cHAoxMwqRR1CD6YXBvw2GncSojF8DknPnQVMgbpkjnKHkrGY").unwrap();
         let signer = SwSigner::from_xprv(xprv);
 
@@ -648,7 +658,7 @@ mod tests {
 
     #[test]
     #[allow(unused)]
-    fn test_snippet() -> Result<(), Box<dyn std::error::Error>> {
+    fn test_snippet() -> Result<(), Box<dyn core::error::Error>> {
         // ANCHOR: test_bip85_derivation
         // Load mnemonic
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";

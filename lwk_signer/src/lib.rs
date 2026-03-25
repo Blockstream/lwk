@@ -5,6 +5,7 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(missing_docs)]
+#![no_std]
 
 mod software;
 pub use crate::software::{sign_with_seckey, NewError, SignError, SwSigner};

@@ -4390,7 +4390,7 @@ fn test_removed_tx() {
     let mut w = TestWollet::new(client, &desc);
 
     let lbtc = w.policy_asset();
-    w.fund_btc(&env);
+    let txid0 = w.fund_btc(&env);
 
     let node_address = env.elementsd_getnewaddress();
     let mut pset = w
@@ -4403,23 +4403,71 @@ fn test_removed_tx() {
     let sigs = signer.sign(&mut pset).unwrap();
     assert!(sigs > 0);
 
-    let tx = w.wollet.finalize(&mut pset).unwrap();
-    let txid = tx.txid();
-    w.wollet.apply_transaction(tx).unwrap();
+    let tx1 = w.wollet.finalize(&mut pset).unwrap();
+    let txid1 = tx1.txid();
+    w.wollet.apply_transaction(tx1).unwrap();
 
     // Tx is both in list and can be obtained with the txid
     let txs = w.wollet.transactions().unwrap();
-    assert!(txs.iter().any(|tx| tx.txid == txid));
-    assert!(w.wollet.transaction(&txid).unwrap().is_some());
+    assert!(txs.iter().any(|tx| tx.txid == txid1));
+    assert!(w.wollet.transaction(&txid1).unwrap().is_some());
 
     // Sync: tx was never broadcast so it disappears from the list
     w.sync();
     let txs = w.wollet.transactions().unwrap();
-    assert!(txs.iter().all(|tx| tx.txid != txid));
+    assert!(txs.iter().all(|tx| tx.txid != txid1));
 
     // Tx should be reachable if you know the txid
-    assert!(w.wollet.transaction(&txid).unwrap().is_some());
+    assert!(w.wollet.transaction(&txid1).unwrap().is_some());
     // Note: some fields (eg inputs and outputs) might not be accurate
+
+    // Create 2 tx remove both of them
+    let utxos = w.wollet.utxos().unwrap();
+    assert_eq!(utxos.len(), 1);
+    assert_eq!(utxos[0].outpoint.txid, txid0);
+
+    let mut pset = w
+        .tx_builder()
+        .add_recipient(&node_address, 1000, lbtc)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    let tx2 = w.wollet.finalize(&mut pset).unwrap();
+    let txid2 = tx2.txid();
+    w.wollet.apply_transaction(tx2).unwrap();
+
+    let utxos = w.wollet.utxos().unwrap();
+    assert_eq!(utxos.len(), 1);
+    assert_eq!(utxos[0].outpoint.txid, txid2);
+
+    let mut pset = w
+        .tx_builder()
+        .add_recipient(&node_address, 1000, lbtc)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    let tx3 = w.wollet.finalize(&mut pset).unwrap();
+    let txid3 = tx3.txid();
+    w.wollet.apply_transaction(tx3).unwrap();
+
+    let utxos = w.wollet.utxos().unwrap();
+    assert_eq!(utxos.len(), 1);
+    assert_eq!(utxos[0].outpoint.txid, txid3);
+
+    // Sync, txid2, txid3 disappear
+    w.sync();
+
+    let utxos = w.wollet.utxos().unwrap();
+    assert_eq!(utxos.len(), 1);
+    assert_eq!(utxos[0].outpoint.txid, txid0);
 }
 
 #[test]

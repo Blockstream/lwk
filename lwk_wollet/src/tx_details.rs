@@ -242,9 +242,9 @@ impl Wollet {
     /// **Unstable**: This API may change without notice.
     #[doc(hidden)]
     pub fn tx_details(&self, txid: &Txid, _opt: &TxOpt) -> Result<Option<TxDetails>, Error> {
-        let spent = self.cache.spent()?;
+        let spent = self.cache.spent();
         let height = *self.cache.tx_height(txid).unwrap_or(&None);
-        self.tx_details_inner(txid, height, &spent)
+        self.tx_details_inner(txid, height, spent)
     }
 
     /// Get the transaction list
@@ -252,12 +252,12 @@ impl Wollet {
     /// **Unstable**: This API may change without notice.
     #[doc(hidden)]
     pub fn txs(&self, opt: &TxsOpt) -> Result<Vec<TxDetails>, Error> {
-        let spent = self.cache.spent()?;
+        let spent = self.cache.spent();
         let mut txs = vec![];
         let offset = opt.offset.unwrap_or(0);
         let limit = opt.limit.unwrap_or(usize::MAX);
         for (txid, height) in self.cache.sorted_txids().skip(offset).take(limit) {
-            if let Some(tx) = self.tx_details_inner(txid, *height, &spent)? {
+            if let Some(tx) = self.tx_details_inner(txid, *height, spent)? {
                 txs.push(tx);
             }
         }

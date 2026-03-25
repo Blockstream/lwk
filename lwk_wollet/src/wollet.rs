@@ -528,7 +528,7 @@ impl Wollet {
 
     fn txos_inner(&self) -> Result<Vec<WalletTxOut>, Error> {
         let mut txos = vec![];
-        let spent = self.cache.spent()?;
+        let spent = self.cache.spent();
         for (tx_id, height) in self.cache.sorted_txids() {
             let tx = self
                 .cache
@@ -609,7 +609,7 @@ impl Wollet {
     ///
     /// They can be spent as external utxos using [`crate::TxBuilder::add_external_utxos()`].
     pub fn explicit_utxos(&self) -> Result<Vec<ExternalUtxo>, Error> {
-        let spent = self.cache.spent()?;
+        let spent = self.cache.spent();
         let mut utxos = vec![];
         for (txid, tx) in self.cache.all_txs() {
             for (vout, o) in tx.output.iter().enumerate() {
@@ -709,7 +709,7 @@ impl Wollet {
         blinding_key: bitcoin::secp256k1::SecretKey,
     ) -> Result<Vec<ExternalUtxo>, Error> {
         let mut utxos = vec![];
-        let spent = self.cache.spent()?;
+        let spent = self.cache.spent();
         let cache_unblinded = &self.cache.unblinded;
         for (txid, tx) in self.cache.all_txs() {
             for (i, txout) in tx.output.iter().enumerate() {

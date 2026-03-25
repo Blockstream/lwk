@@ -25,13 +25,13 @@ pub enum WalletAbiError {
     InvalidResponse(String),
 
     #[error("PSET error: {0}")]
-    Pset(#[from] simplicityhl::elements::pset::Error),
+    Pset(#[from] lwk_wollet::elements::pset::Error),
 
     #[error("PSET blinding error: {0}")]
-    PsetBlind(#[from] simplicityhl::elements::pset::PsetBlindError),
+    PsetBlind(#[from] lwk_wollet::elements::pset::PsetBlindError),
 
     #[error("Transaction amount proof verification failed: {0}")]
-    AmountProofVerification(#[from] simplicityhl::elements::VerificationError),
+    AmountProofVerification(#[from] lwk_wollet::elements::VerificationError),
 
     #[error("Invalid finalization steps: {0}")]
     InvalidFinalizationSteps(String),

@@ -18,15 +18,6 @@ pub struct WalletOutputTemplate {
     pub blinding_pubkey: Option<BlindingPublicKey>,
 }
 
-/// Wallet-owned output role requested by runtime.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum WalletOutputRole {
-    /// Wallet-owned receive output destination.
-    Receive,
-    /// Wallet-owned change output destination.
-    Change,
-}
-
 /// Request-scoped wallet session snapshot.
 ///
 /// Runtime should open this once per request and should reuse it across fee estimation and final
@@ -38,21 +29,30 @@ pub struct WalletRequestSession {
     /// Network for request validation and script derivation.
     pub network: lwk_common::Network,
     /// Deterministic wallet UTXO snapshot used for all input-selection work in this request.
-    pub spendable_utxos: Vec<ExternalUtxo>,
+    ///
+    /// For a fixed request/session, this snapshot must stay stable across fee
+    /// estimation and the final build.
+    pub spendable_utxos: Arc<[ExternalUtxo]>,
 }
 
 /// Deterministic wallet output selection request.
 ///
-/// `index` is zero-based per role within one build pass. Requested wallet receive outputs should
-/// use `asset_id = None`; runtime-added change outputs should use `asset_id = Some(asset_id)`.
+/// For the same `(session, request)` pair, `get_wallet_output_template()` must return the same
+/// template across fee estimation and final build.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WalletOutputRequest {
-    /// Requested wallet output role.
-    pub role: WalletOutputRole,
-    /// Deterministic zero-based address index within this role/build pass.
-    pub index: u32,
-    /// Optional residual asset id for runtime-added change outputs.
-    pub asset_id: Option<AssetId>,
+pub enum WalletOutputRequest {
+    /// Wallet-owned receive output destination.
+    Receive {
+        /// Deterministic zero-based address index within this build pass.
+        index: u32,
+    },
+    /// Runtime-added change output destination for one concrete asset.
+    Change {
+        /// Deterministic zero-based change index within this build pass.
+        index: u32,
+        /// Residual asset id being returned to the wallet.
+        asset_id: AssetId,
+    },
 }
 
 /// Runtime dependency bundle for wallet-owned behavior.
@@ -120,6 +120,10 @@ pub trait WalletSessionFactory {
 }
 
 /// Resolve prevouts, output requests, wallet-owned unblinding, BIP32 metadata, and tx broadcast.
+///
+/// These traits use generic/static dispatch via `impl Future`; the `Arc<T>` forwarding impls
+/// preserve shared ownership of concrete callback implementations, but they do not make the traits
+/// object-safe.
 pub trait WalletProviderMeta {
     type Error: std::error::Error + Send + Sync + 'static;
 
@@ -139,6 +143,11 @@ pub trait WalletProviderMeta {
     ) -> impl Future<Output = Result<TxOut, Self::Error>> + Send + '_;
 
     /// Return the wallet-owned output template for a deterministic request selector.
+    ///
+    /// Stability contract:
+    /// - for the same `(session, request)`, this must return the same template across fee
+    ///   estimation and final build
+    /// - change templates must include a blinding pubkey when runtime will blind them
     fn get_wallet_output_template(
         &self,
         session: &WalletRequestSession,
@@ -148,7 +157,7 @@ pub trait WalletProviderMeta {
     /// Broadcast a finalized transaction and return the backend-reported txid.
     fn broadcast_transaction(
         &self,
-        tx: Transaction,
+        tx: &Transaction,
     ) -> impl Future<Output = Result<Txid, Self::Error>> + Send + '_;
 }
 
@@ -224,7 +233,7 @@ where
 
     fn broadcast_transaction(
         &self,
-        tx: Transaction,
+        tx: &Transaction,
     ) -> impl Future<Output = Result<Txid, Self::Error>> + Send + '_ {
         self.as_ref().broadcast_transaction(tx)
     }

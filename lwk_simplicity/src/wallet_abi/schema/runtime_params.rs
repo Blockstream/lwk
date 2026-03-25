@@ -63,8 +63,8 @@ pub struct RuntimeParams {
     /// When omitted, runtime should use its built-in default fee-rate policy.
     ///
     /// Runtime should require a finite non-negative value and should reject `NaN`, infinities,
-    /// and negative values. Fee calculation should be performed in a bounded fixed-point loop, so
-    /// this field can influence both fee target and input-selection outcomes.
+    /// and negative values. The default runtime uses one fee-estimation pass followed by one final
+    /// build, so this field can influence both fee target and input-selection outcomes.
     ///
     /// UX note:
     /// zero is accepted but can lead to unexpected relay/broadcast outcomes depending on policy.
@@ -90,7 +90,7 @@ impl RuntimeParams {
     /// Contract guarantees:
     /// - rejects unknown top-level fields (`deny_unknown_fields`)
     /// - requires both `inputs` and `outputs` to be present
-    /// - treats missing `fee_rate_sat_vb` / `lock_time` as `None`
+    /// - treats missing `fee_rate_sat_kvb` / `lock_time` as `None`
     ///
     /// # Errors
     ///
@@ -104,7 +104,7 @@ impl RuntimeParams {
     ///
     /// Serialization behavior:
     /// - always emits `inputs` and `outputs`
-    /// - omits `fee_rate_sat_vb` and `lock_time` when they are `None`
+    /// - omits `fee_rate_sat_kvb` and `lock_time` when they are `None`
     ///
     /// # Errors
     ///
@@ -504,7 +504,7 @@ impl FinalizerSpec {
 /// - Use [`Self::Explicit`] only when the referenced prevout is known explicit.
 /// - Mismatched assumptions produce deterministic request errors, for example:
 ///   `"unable to unblind input ... with provided unblinding key"` or
-///   `"marked input ... as explicit when the confidential was provided"`.
+///   `"input ... is marked explicit but the provided prevout is confidential"`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum InputUnblinding {

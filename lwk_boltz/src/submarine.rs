@@ -143,15 +143,20 @@ impl BoltzSession {
             "accept zero conf: {}",
             create_swap_response.accept_zero_conf
         );
-        let bolt11_amount = match (bolt11_invoice.as_ref(), bolt12_invoice.as_ref()) {
-            (Some(bolt11_invoice), None) => {
-                bolt11_invoice
-                    .amount_milli_satoshis()
-                    .ok_or(Error::InvoiceWithoutAmount(invoice_str.clone()))?
-                    / 1000
-            }
-            (None, Some(bolt12_invoice)) => bolt12_invoice.amount_msats() / 1000,
+        let bolt11_milli_amount = match (bolt11_invoice.as_ref(), bolt12_invoice.as_ref()) {
+            (Some(bolt11_invoice), None) => bolt11_invoice
+                .amount_milli_satoshis()
+                .ok_or(Error::InvoiceWithoutAmount(invoice_str.clone()))?,
+            (None, Some(bolt12_invoice)) => bolt12_invoice.amount_msats(),
             _ => unreachable!(),
+        };
+        let bolt11_amount = if bolt11_milli_amount % 1000 == 0 {
+            bolt11_milli_amount / 1000
+        } else {
+            // TODO: make specific variant
+            return Err(Error::Generic(
+                "Invoice amount is not a whole sat".to_string(),
+            ));
         };
         let fee = create_swap_response
             .expected_amount

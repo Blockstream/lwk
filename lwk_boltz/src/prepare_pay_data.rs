@@ -4,6 +4,7 @@ use bip39::Mnemonic;
 use boltz_client::boltz::CreateSubmarineResponse;
 use boltz_client::{Bolt11Invoice, Keypair};
 use lightning::bitcoin::XKeyIdentifier;
+use lightning::offers::invoice::Bolt12Invoice;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
@@ -22,6 +23,8 @@ pub struct PreparePayData {
     pub fee: Option<u64>,
     pub boltz_fee: Option<u64>,
     pub bolt11_invoice: Option<Bolt11Invoice>,
+    pub bolt12_invoice: Option<Bolt12Invoice>,
+
     pub create_swap_response: CreateSubmarineResponse,
     pub our_keys: Keypair,
     pub refund_address: String,
@@ -38,6 +41,7 @@ pub struct PreparePayDataSerializable {
     pub fee: Option<u64>,
     pub boltz_fee: Option<u64>,
     pub bolt11_invoice: Option<String>,
+    pub bolt12_invoice: Option<String>,
     pub create_swap_response: CreateSubmarineResponse,
     pub key_index: u32,
     pub refund_address: String,
@@ -55,6 +59,9 @@ impl From<PreparePayData> for PreparePayDataSerializable {
             refund_txid: data.refund_txid,
             fee: data.fee,
             bolt11_invoice: data.bolt11_invoice.map(|i| i.to_string()),
+            bolt12_invoice: data
+                .bolt12_invoice
+                .map(|i| crate::display_bolt12_invoice(&i)),
             create_swap_response: data.create_swap_response,
             key_index: data.key_index,
             refund_address: data.refund_address,
@@ -81,6 +88,11 @@ pub fn to_prepare_pay_data(
         .as_ref()
         .map(|i| Bolt11Invoice::from_str(i))
         .transpose()?;
+    let bolt12_invoice = data
+        .bolt12_invoice
+        .as_ref()
+        .map(|i| crate::parse_bolt12_invoice(i))
+        .transpose()?;
     Ok(PreparePayData {
         last_state: data.last_state,
         swap_type: data.swap_type,
@@ -88,6 +100,7 @@ pub fn to_prepare_pay_data(
         refund_txid: data.refund_txid,
         fee: data.fee,
         bolt11_invoice,
+        bolt12_invoice,
         create_swap_response: data.create_swap_response,
         our_keys,
         refund_address: data.refund_address,

@@ -54,7 +54,80 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
-    async fn test_bolt12_offer_to_bolt11_and_pay_with_session() {
+    async fn test_bolt12_pay_with_session() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = utils::start_block_mining();
+
+        // Ask CLN for a BOLT12 offer
+        let offer_str = utils::cln_offer_any().expect("cln_offer_any should succeed");
+
+        let mut payment: LightningPayment = offer_str.parse().unwrap();
+        assert!(payment.bolt12().is_some());
+        assert!(payment.bolt12_invoice_amount().unwrap().is_none());
+
+        // create a BoltzSession
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+        );
+        let session = BoltzSession::builder(
+            ElementsNetwork::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .build()
+        .await
+        .unwrap();
+
+        // Try to pay the bolt12
+        let refund_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let refund_address = elements::Address::from_str(&refund_address).unwrap();
+        let prepare_pay_err = session
+            .prepare_pay(&payment, &refund_address, None)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(prepare_pay_err.contains("Amount is required"));
+
+        let millisat_amount = 10_000_000;
+        payment.set_bolt12_invoice_amount(millisat_amount).unwrap();
+        assert_eq!(
+            payment.bolt12_invoice_amount().unwrap().unwrap(),
+            millisat_amount
+        );
+
+        let prepare_pay = session
+            .prepare_pay(&payment, &refund_address, None)
+            .await
+            .unwrap();
+
+        // Send funds to the swap address
+        utils::send_to_address(
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+            &prepare_pay.data.create_swap_response.address,
+            prepare_pay.data.create_swap_response.expected_amount,
+        )
+        .await
+        .unwrap();
+
+        // Complete the payment
+        prepare_pay.complete_pay().await.unwrap();
+
+        // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_bolt12_offer_to_invoice_and_pay_with_session() {
         let _ = env_logger::try_init();
 
         // Ask CLN for a BOLT12 offer
@@ -88,52 +161,6 @@ mod tests {
         let another_bolt12_invoice = "lni1qqgwwn892vxqk9fsgul2fgzxyj5wk93pqtqft5rf2w8ed0c5chus7mqg2x7lx49qajrq8x3yhuu2w0msttwzc5srqxr2q4qqtqss80rn9yedw8hsef9w2lwa83zsfxglnhaen4kl272wrv4uccukswxm5zvq9sy46p548rukhu2vt7g0dsy9r00n2jswepsrngjt7w988ac94hpvqws6qvd2q863an980srs7dpnt6qpqzlxrdkds6l8zz33enxmr42ujqgzfyq6zkdznkzf5m4u7ran24078mtlcdnaltufm4znls5gkq9lyhvqqvhwq0uy4rzc77s7d8gfx4hxemjql7gfcd7l97c3m76vtqnqmkg3eafm2msn4jj864haz42dc6r8r47gt64zrsqqqqqqqqqqqqqqzgqqqqqqqqqqqqqayjedltzjqqqqqq9yq35mrksp4qst37he8z5zvgq948434andxfzlfru53mfvvaycmed6ynt67qyg3xa2qvqcdg9wqvpqqq9syypvp9wsd9fcl94lznzljrmvppgmmu655rkgvqu6yjln3felwpddct8sgrt30e0uynvhy5ydaktehuwctyzkd05wgw4zqn0ayx4d9yndcfhd4ygpjceygz9629n4qm0zn7xa5k8e8xaphu280n4v2y3dzc2etywv";
         let another_bolt12_invoice = parse_bolt12_invoice(another_bolt12_invoice).unwrap();
         assert!(!verify_invoice_from_offer(&another_bolt12_invoice, &offer));
-    }
-
-    #[tokio::test]
-    #[ignore = "requires regtest environment"]
-    async fn test_bolt12_offer_returns_unsupported_error() {
-        let _ = env_logger::try_init();
-
-        // Get a BOLT12 offer from CLN
-        let offer_str = utils::cln_offer_any().expect("cln_offer_any should succeed");
-        let lightning_payment = LightningPayment::from_str(&offer_str).unwrap();
-
-        // Set up BoltzSession
-        let refund_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
-            .await
-            .unwrap();
-        let refund_address = elements::Address::from_str(&refund_address).unwrap();
-        let client = Arc::new(
-            ElectrumClient::new(
-                DEFAULT_REGTEST_NODE,
-                false,
-                false,
-                ElementsNetwork::default_regtest(),
-            )
-            .unwrap(),
-        );
-
-        let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
-            AnyClient::Electrum(client.clone()),
-        )
-        .create_swap_timeout(TIMEOUT)
-        .build()
-        .await
-        .unwrap();
-
-        // Try to pay the bolt12 offer and expect Bolt12Unsupported error
-        let result = session
-            .prepare_pay(&lightning_payment, &refund_address, None)
-            .await;
-
-        match result {
-            Err(lwk_boltz::Error::Bolt12Unsupported) => {
-                // Expected error
-            }
-            _ => panic!("Expected Bolt12Unsupported error, got: {:?}", result),
-        }
     }
 
     #[tokio::test]

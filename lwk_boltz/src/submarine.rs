@@ -23,10 +23,9 @@ use crate::prepare_pay_data::{to_prepare_pay_data, PreparePayData, PreparePayDat
 use crate::swap_state::SwapStateTrait;
 use crate::SwapPersistence;
 use crate::{
-    broadcast_tx_with_retry, mnemonic_identifier, next_status, BoltzSession, LightningPayment,
-    SwapState, SwapType,
+    broadcast_tx_with_retry, mnemonic_identifier, next_status, BoltzSession, DynStore, Invoice,
+    LightningPayment, SwapState, SwapType,
 };
-use crate::{display_bolt12_invoice, DynStore};
 
 pub struct PreparePayResponse {
     pub data: PreparePayData,
@@ -75,9 +74,9 @@ impl BoltzSession {
     ) -> Result<PreparePayResponse, Error> {
         let chain = self.chain();
 
-        let (invoice_str, bolt11_invoice, bolt12_invoice) = match lightning_payment {
+        let invoice = match lightning_payment {
             LightningPayment::Bolt11(invoice) => {
-                (invoice.to_string(), Some(invoice.as_ref().clone()), None)
+                Invoice::Bolt11(Box::new(invoice.as_ref().clone()))
             }
             LightningPayment::Bolt12 {
                 offer,
@@ -88,11 +87,7 @@ impl BoltzSession {
                         log::info!("Preparing to pay {invoice_amount}");
                         let bolt12_invoice =
                             self.fetch_bolt12_invoice(offer, *invoice_amount).await?;
-                        (
-                            display_bolt12_invoice(&bolt12_invoice),
-                            None,
-                            Some(bolt12_invoice),
-                        )
+                        Invoice::Bolt12(Box::new(bolt12_invoice))
                     }
                     None => return Err(Error::Generic("Amount is required".to_string())), // TODO use appropriate variant
                 }
@@ -101,6 +96,7 @@ impl BoltzSession {
                 return Err(Error::LnUrlUnsupported);
             }
         };
+        let invoice_str = invoice.to_string();
         let webhook_str = format!("{webhook:?}");
 
         let (key_index, our_keys) = self.derive_next_keypair()?;
@@ -109,7 +105,7 @@ impl BoltzSession {
             compressed: true,
         };
 
-        if bolt11_invoice.is_some() {
+        if invoice.is_bolt11() {
             // mrh works only with bolt11
 
             if let Some((address, amount)) = check_for_mrh(&self.api, &invoice_str, chain).await? {
@@ -143,25 +139,7 @@ impl BoltzSession {
             "accept zero conf: {}",
             create_swap_response.accept_zero_conf
         );
-        let bolt11_milli_amount = match (bolt11_invoice.as_ref(), bolt12_invoice.as_ref()) {
-            (Some(bolt11_invoice), None) => bolt11_invoice
-                .amount_milli_satoshis()
-                .ok_or(Error::InvoiceWithoutAmount(invoice_str.clone()))?,
-            (None, Some(bolt12_invoice)) => bolt12_invoice.amount_msats(),
-            _ => {
-                // TODO: the previous code guarantee we don't enter here, however it's not robust to
-                // refactor. we should have an enum containing a Bolt11Invoice or Bolt12Invoice
-                unreachable!()
-            }
-        };
-        let bolt11_amount = if bolt11_milli_amount % 1000 == 0 {
-            bolt11_milli_amount / 1000
-        } else {
-            // TODO: make specific variant
-            return Err(Error::Generic(
-                "Invoice amount is not a whole sat".to_string(),
-            ));
-        };
+        let bolt11_amount = invoice.amount_sats()?;
         let fee = create_swap_response
             .expected_amount
             .checked_sub(bolt11_amount)
@@ -180,7 +158,7 @@ impl BoltzSession {
 
         log::info!("Got Swap Response from Boltz server {create_swap_response:?}");
 
-        if bolt11_invoice.is_some() {
+        if invoice.is_bolt11() {
             // TODO: boltz-rust dep doesn't support bolt12 yet
             create_swap_response.validate(&invoice_str, &refund_public_key, chain)?;
             log::info!("VALIDATED RESPONSE!");
@@ -222,8 +200,8 @@ impl BoltzSession {
                 refund_txid: None,
                 fee: Some(fee),
                 boltz_fee,
-                bolt11_invoice,
-                bolt12_invoice,
+                bolt11_invoice: invoice.bolt11().cloned(),
+                bolt12_invoice: invoice.bolt12().cloned(),
                 our_keys,
                 refund_address: refund_address.to_string(),
                 create_swap_response: create_swap_response.clone(),

@@ -11,6 +11,7 @@ use boltz_client::boltz::{
     SubSwapStates, SwapRestoreResponse, SwapRestoreType, SwapStatus, Webhook,
 };
 use boltz_client::fees::Fee;
+use boltz_client::network::Chain;
 use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams};
 use boltz_client::util::sleep;
@@ -122,7 +123,6 @@ impl BoltzSession {
                 });
             }
         }
-        log::error!("no mrh");
 
         let create_swap_req = CreateSubmarineRequest {
             from: chain.to_string(),
@@ -158,11 +158,9 @@ impl BoltzSession {
 
         log::info!("Got Swap Response from Boltz server {create_swap_response:?}");
 
-        if invoice.is_bolt11() {
-            // TODO: boltz-rust dep doesn't support bolt12 yet
-            create_swap_response.validate(&invoice_str, &refund_public_key, chain)?;
-            log::info!("VALIDATED RESPONSE!");
-        }
+        // Validate for both BOLT11 and BOLT12 (BOLT12 only supported for Liquid)
+        validate_submarine_swap(&invoice, &create_swap_response, &refund_public_key, chain)?;
+        log::info!("VALIDATED RESPONSE!");
 
         let swap_script =
             SwapScript::submarine_from_swap_resp(chain, &create_swap_response, refund_public_key)?;
@@ -306,6 +304,61 @@ async fn fetch_lockup_txid(api: &BoltzApiClientV2, swap_id: &str) -> Option<Stri
                 err
             );
             None
+        }
+    }
+}
+
+/// Validate submarine swap for both BOLT11 and BOLT12 invoices
+///
+/// This is similar to the external crate's validate() but with BOLT12 support for Liquid chain.
+fn validate_submarine_swap(
+    invoice: &Invoice,
+    create_swap_response: &CreateSubmarineResponse,
+    refund_public_key: &PublicKey,
+    chain: Chain,
+) -> Result<(), Error> {
+    match (invoice, chain) {
+        (Invoice::Bolt11(bolt11), _) => {
+            // Use the external crate's validation for BOLT11
+            create_swap_response.validate(&bolt11.to_string(), refund_public_key, chain)?;
+            Ok(())
+        }
+        (Invoice::Bolt12(_), Chain::Bitcoin(_)) => {
+            // BOLT12 validation not supported for Bitcoin chain yet
+            Err(Error::Generic(
+                "BOLT12 validation not supported for Bitcoin chain".to_string(),
+            ))
+        }
+        (Invoice::Bolt12(bolt12), Chain::Liquid(liquid_chain)) => {
+            // BOLT12 validation for Liquid chain
+            use boltz_client::swaps::liquid::LBtcSwapScript;
+            use lwk_wollet::hashes::{ripemd160, Hash};
+
+            let payment_hash = bolt12.payment_hash();
+
+            // Compute hashlock from payment hash
+            // The relationship is: hash160(preimage) = RIPEMD160(SHA256(preimage))
+            // Since payment_hash = SHA256(preimage), we have:
+            // hashlock = RIPEMD160(payment_hash)
+            let hashlock_computed = ripemd160::Hash::hash(&payment_hash.0);
+
+            // Create swap script to get the hashlock
+            let swap_script =
+                LBtcSwapScript::submarine_from_swap_resp(create_swap_response, *refund_public_key)?;
+
+            // This ensures Boltz can only claim the funds if they successfully pay the invoice
+            if swap_script.hashlock.to_string() != hashlock_computed.to_string() {
+                return Err(Error::Generic(format!(
+                    "Hash160 mismatch for BOLT12: expected {}, got {}",
+                    swap_script.hashlock, hashlock_computed
+                )));
+            }
+
+            // Validate address
+            swap_script.validate_address(liquid_chain, create_swap_response.address.clone())?;
+
+            log::info!("BOLT12 invoice validated successfully for Liquid chain");
+            Ok(())
         }
     }
 }

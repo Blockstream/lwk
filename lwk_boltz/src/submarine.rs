@@ -148,7 +148,11 @@ impl BoltzSession {
                 .amount_milli_satoshis()
                 .ok_or(Error::InvoiceWithoutAmount(invoice_str.clone()))?,
             (None, Some(bolt12_invoice)) => bolt12_invoice.amount_msats(),
-            _ => unreachable!(),
+            _ => {
+                // TODO: the previous code guarantee we don't enter here, however it's not robust to
+                // refactor. we should have an enum containing a Bolt11Invoice or Bolt12Invoice
+                unreachable!()
+            }
         };
         let bolt11_amount = if bolt11_milli_amount % 1000 == 0 {
             bolt11_milli_amount / 1000

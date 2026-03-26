@@ -87,7 +87,7 @@ impl BoltzSession {
                     Some(invoice_amount) => {
                         log::info!("Preparing to pay {invoice_amount}");
                         let bolt12_invoice =
-                            self.fetch_bolt12_invoice(&offer, *invoice_amount).await?;
+                            self.fetch_bolt12_invoice(offer, *invoice_amount).await?;
                         (
                             display_bolt12_invoice(&bolt12_invoice),
                             None,

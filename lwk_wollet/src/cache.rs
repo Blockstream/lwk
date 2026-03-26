@@ -28,6 +28,9 @@ pub struct Cache {
     /// txids sorted by height descending, then txid descending (unconfirmed first)
     sorted_txids: Vec<Txid>,
 
+    /// Outpoints that we know are spent
+    spent: HashSet<OutPoint>,
+
     /// unblinded values
     pub unblinded: HashMap<OutPoint, TxOutSecrets>,
 
@@ -52,6 +55,7 @@ impl Default for Cache {
             scripts: HashMap::default(),
             heights: HashMap::default(),
             sorted_txids: vec![],
+            spent: HashSet::new(),
             unblinded: HashMap::default(),
             tip: (0, BlockHash::all_zeros()),
             last_unused_internal: 0.into(),
@@ -187,7 +191,7 @@ impl Cache {
         self.sorted_txids = sorted;
     }
 
-    pub fn spent(&self) -> Result<HashSet<OutPoint>, Error> {
+    pub fn update_spent(&mut self) {
         // Dummy spent outputs are outputs that are not in height map, but we have to consider them
         // for the utxo mode.
         let dummy_spent: Vec<OutPoint> = self
@@ -197,14 +201,18 @@ impl Cache {
             .flat_map(|(_, tx)| tx.input.iter().map(|i| i.previous_output))
             .collect();
 
-        Ok(self
+        self.spent = self
             .heights
             .keys()
             .filter_map(|txid| self.tx(txid))
             .flat_map(|tx| tx.input.iter())
             .map(|i| i.previous_output)
             .chain(dummy_spent)
-            .collect())
+            .collect();
+    }
+
+    pub fn spent(&self) -> &HashSet<OutPoint> {
+        &self.spent
     }
 
     pub fn tx_height(&self, txid: &Txid) -> Option<&Option<Height>> {

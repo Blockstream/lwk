@@ -704,18 +704,19 @@ impl Wollet {
     ///
     /// Note: if the blinding key is the one derived from the wallet descriptor,
     /// this function will NOT return that UTXO. That UTXO is available with the normal flow.
+    ///
+    /// Note: this function might return spent transaction outputs too
     pub fn unblind_utxos_with(
         &self,
         blinding_key: bitcoin::secp256k1::SecretKey,
     ) -> Result<Vec<ExternalUtxo>, Error> {
         let mut utxos = vec![];
-        let spent = self.cache.spent();
         let cache_unblinded = &self.cache.unblinded;
         for (txid, tx) in self.cache.all_txs() {
             for (i, txout) in tx.output.iter().enumerate() {
                 if self.cache.paths.contains_key(&txout.script_pubkey) {
                     let outpoint = OutPoint::new(*txid, i as u32);
-                    if !spent.contains(&outpoint) && !cache_unblinded.contains_key(&outpoint) {
+                    if !cache_unblinded.contains_key(&outpoint) {
                         if let Ok(unblinded) = txout.unblind(&EC, blinding_key) {
                             let tx_ = if self.is_segwit() {
                                 None

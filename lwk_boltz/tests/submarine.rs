@@ -54,6 +54,79 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_bolt12_pay_with_session() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = utils::start_block_mining();
+
+        // Ask CLN for a BOLT12 offer
+        let offer_str = utils::cln_offer_any().expect("cln_offer_any should succeed");
+
+        let mut payment: LightningPayment = offer_str.parse().unwrap();
+        assert!(payment.bolt12().is_some());
+        assert!(payment.bolt12_invoice_amount().unwrap().is_none());
+
+        // create a BoltzSession
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+        );
+        let session = BoltzSession::builder(
+            ElementsNetwork::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .build()
+        .await
+        .unwrap();
+
+        // Try to pay the bolt12
+        let refund_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let refund_address = elements::Address::from_str(&refund_address).unwrap();
+        let prepare_pay_err = session
+            .prepare_pay(&payment, &refund_address, None)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(prepare_pay_err.contains("Amount is required"));
+
+        let millisat_amount = 10_000_000;
+        payment.set_bolt12_invoice_amount(millisat_amount).unwrap();
+        assert_eq!(
+            payment.bolt12_invoice_amount().unwrap().unwrap(),
+            millisat_amount
+        );
+
+        let prepare_pay = session
+            .prepare_pay(&payment, &refund_address, None)
+            .await
+            .unwrap();
+
+        // Send funds to the swap address
+        utils::send_to_address(
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+            &prepare_pay.data.create_swap_response.address,
+            prepare_pay.data.create_swap_response.expected_amount,
+        )
+        .await
+        .unwrap();
+
+        // Complete the payment
+        prepare_pay.complete_pay().await.unwrap();
+
+        // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_bolt12_offer_to_invoice_and_pay_with_session() {
         let _ = env_logger::try_init();
 

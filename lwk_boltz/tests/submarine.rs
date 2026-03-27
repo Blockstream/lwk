@@ -97,11 +97,11 @@ mod tests {
             .to_string();
         assert!(prepare_pay_err.contains("Amount is required"));
 
-        let millisat_amount = 10_000_000;
-        payment.set_bolt12_invoice_amount(millisat_amount).unwrap();
+        let sat_amount = 10_000;
+        payment.set_bolt12_invoice_amount(sat_amount).unwrap();
         assert_eq!(
             payment.bolt12_invoice_amount().unwrap().unwrap(),
-            millisat_amount
+            sat_amount
         );
 
         let prepare_pay = session

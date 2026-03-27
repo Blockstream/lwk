@@ -84,10 +84,11 @@ impl BoltzSession {
                 invoice_amount,
             } => {
                 match invoice_amount {
-                    Some(invoice_amount) => {
-                        log::info!("Preparing to pay {invoice_amount}");
+                    Some(invoice_amount_msats) => {
+                        let amount_sats = invoice_amount_msats / 1000;
+                        log::info!("Preparing to pay {} sats", amount_sats);
                         let bolt12_invoice =
-                            self.fetch_bolt12_invoice(offer, *invoice_amount).await?;
+                            self.fetch_bolt12_invoice(offer, amount_sats).await?;
                         Invoice::Bolt12(Box::new(bolt12_invoice))
                     }
                     None => return Err(Error::Generic("Amount is required".to_string())), // TODO use appropriate variant

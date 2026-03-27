@@ -66,14 +66,14 @@ impl LightningPayment {
         }
     }
 
-    /// Returns the invoice amount if this is a BOLT12 payment and it's present.
+    /// Returns the invoice amount in satoshis if this is a BOLT12 payment and it's present.
     /// Error if this isn't a Bolt12.
     pub fn bolt12_invoice_amount(&self) -> Result<Option<u64>, Error> {
         match self {
             LightningPayment::Bolt12 {
                 offer: _,
                 invoice_amount,
-            } => Ok(*invoice_amount),
+            } => Ok(invoice_amount.map(|msats| msats / 1000)),
             _ => Err(Error::ExpectedBolt12Variant),
         }
     }
@@ -82,7 +82,7 @@ impl LightningPayment {
     ///
     /// # Arguments
     ///
-    /// * `amount` - The amount in millisatoshis for the BOLT12 invoice
+    /// * `amount` - The amount in satoshis for the BOLT12 invoice
     ///
     /// # Errors
     ///
@@ -100,7 +100,12 @@ impl LightningPayment {
                     ));
                 }
 
-                *invoice_amount = Some(amount);
+                // Convert satoshis to millisatoshis for internal storage
+                let amount_msats = amount
+                    .checked_mul(1000)
+                    .ok_or_else(|| Error::Generic("Amount overflow".to_string()))?;
+
+                *invoice_amount = Some(amount_msats);
                 Ok(())
             }
             _ => Err(Error::ExpectedBolt12Variant),

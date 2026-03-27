@@ -328,7 +328,7 @@ impl BoltzSession {
     /// # Arguments
     ///
     /// * `offer` - The BOLT12 offer to fetch an invoice for
-    /// * `amount` - The amount in millisatoshis for the invoice
+    /// * `amount` - The amount in satoshis for the invoice
     ///
     /// # Returns
     ///

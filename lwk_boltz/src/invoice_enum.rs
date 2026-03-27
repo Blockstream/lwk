@@ -18,7 +18,9 @@ impl Invoice {
     /// Get the amount in millisatoshis from the invoice
     ///
     /// Returns an error if the invoice is BOLT11 and has no amount
-    pub fn amount_msats(&self) -> Result<u64, Error> {
+    ///
+    /// This is for internal use only. External consumers should use `amount_sats()`.
+    pub(crate) fn amount_msats(&self) -> Result<u64, Error> {
         match self {
             Invoice::Bolt11(invoice) => invoice
                 .amount_milli_satoshis()

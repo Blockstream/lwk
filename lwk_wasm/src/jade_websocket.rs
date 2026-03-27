@@ -29,7 +29,20 @@ impl JadeWebSocket {
     /// Creates a Jade from WebSocket for the given network
     ///
     /// The url should point to your WebSocket bridge that connects to the Docker Jade emulator
-    #[wasm_bindgen(constructor)]
+    ///
+    /// Deprecated: use `fromWebSocket()` instead.
+    ///
+    /// `wasm-bindgen` deprecated async constructors because they generate
+    /// invalid TypeScript declarations. See https://github.com/wasm-bindgen/wasm-bindgen/pull/4402.
+    #[wasm_bindgen(constructor, skip_typescript)]
+    pub async fn new(network: &Network, url: &str) -> Result<JadeWebSocket, Error> {
+        Self::from_websocket(network, url).await
+    }
+
+    /// Creates a Jade from WebSocket for the given network
+    ///
+    /// The url should point to your WebSocket bridge that connects to the Docker Jade emulator
+    #[wasm_bindgen(js_name = fromWebSocket)]
     pub async fn from_websocket(network: &Network, url: &str) -> Result<JadeWebSocket, Error> {
         let websocket_serial = WebSocketSerial::new(url).await?;
         let websocket = websocket_serial.websocket().clone();

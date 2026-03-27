@@ -32,7 +32,21 @@ impl Jade {
     ///
     /// When filter is true, it will filter available serial with Blockstream released chips, use
     /// false if you don't see your DYI jade
-    #[wasm_bindgen(constructor)]
+    ///
+    /// Deprecated: use `fromSerial()` instead.
+    ///
+    /// `wasm-bindgen` deprecated async constructors because they generate
+    /// invalid TypeScript declarations. See https://github.com/wasm-bindgen/wasm-bindgen/pull/4402.
+    #[wasm_bindgen(constructor, skip_typescript)]
+    pub async fn new(network: &Network, filter: bool) -> Result<Jade, Error> {
+        Self::from_serial(network, filter).await
+    }
+
+    /// Creates a Jade from Web Serial for the given network.
+    ///
+    /// When filter is true, it will filter available serial with Blockstream released chips, use
+    /// false if you don't see your DYI jade
+    #[wasm_bindgen(js_name = fromSerial)]
     pub async fn from_serial(network: &Network, filter: bool) -> Result<Jade, Error> {
         let port = get_jade_serial(filter).await?;
         let web_serial = WebSerial::new(&port)?;

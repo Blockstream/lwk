@@ -205,9 +205,20 @@ pub struct Amp0Connected {
 
 #[wasm_bindgen]
 impl Amp0Connected {
-    /// Connect and register to AMP0
-    #[wasm_bindgen(constructor)]
+    /// Connect and register to AMP0.
+    ///
+    /// Deprecated: use `connect()` instead.
+    ///
+    /// `wasm-bindgen` deprecated async constructors because they generate
+    /// invalid TypeScript declarations. See https://github.com/wasm-bindgen/wasm-bindgen/pull/4402.
+    #[wasm_bindgen(constructor, skip_typescript)]
     pub async fn new(network: &Network, signer_data: &Amp0SignerData) -> Result<Self, Error> {
+        Self::connect(network, signer_data).await
+    }
+
+    /// Connect and register to AMP0.
+    #[wasm_bindgen(js_name = connect)]
+    pub async fn connect(network: &Network, signer_data: &Amp0SignerData) -> Result<Self, Error> {
         let url = lwk_wollet::amp0::default_url((*network).into())?;
         let websocket_serial = WebSocketSerial::new_wamp(url).await?;
         let inner = lwk_wollet::amp0::Amp0Connected::new(
@@ -400,7 +411,7 @@ mod tests {
 
         // Login to AMP0
         let sd = signer.amp0_signer_data().unwrap();
-        let amp0 = Amp0Connected::new(&network, &sd).await.unwrap();
+        let amp0 = Amp0Connected::connect(&network, &sd).await.unwrap();
         let challenge = amp0.get_challenge().await.unwrap();
         let sig = signer.amp0_sign_challenge(&challenge).unwrap();
         let mut amp0 = amp0.login(&sig).await.unwrap();

@@ -23,7 +23,7 @@ async function runAmp0Setup() {
         // Collect signer data
         const signer_data = signer.amp0SignerData();
         // Connect to AMP0
-        const amp0connected = await new lwk.Amp0Connected(network, signer_data);
+        const amp0connected = await lwk.Amp0Connected.connect(network, signer_data);
         // Obtain and sign the authentication challenge
         const challenge = await amp0connected.getChallenge();
         const sig = signer.amp0SignChallenge(challenge);

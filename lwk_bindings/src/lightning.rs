@@ -405,7 +405,7 @@ impl BoltzSession {
             });
         let response =
             self.inner
-                .prepare_pay(lightning_payment.as_ref(), refund_address.as_ref(), webhook)?;
+                .prepare_pay(&lightning_payment.clone(), refund_address.as_ref(), webhook)?;
 
         Ok(PreparePayResponse {
             inner: Mutex::new(Some(response)),

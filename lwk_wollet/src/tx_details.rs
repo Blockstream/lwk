@@ -118,6 +118,8 @@ impl Wollet {
                     };
                 (Some(*chain), Some(*idx), blinding_pubkey)
             } else {
+                // Output does not belong to the wallet, we can't say if it's spent, default to false
+                details.is_spent = false;
                 (None, None, None)
             };
             details.ext_int = ext_int;
@@ -145,7 +147,7 @@ impl Wollet {
         &self,
         txid: &Txid,
         height: Option<u32>,
-        spent: &HashSet<OutPoint>,
+        unspent: &HashSet<OutPoint>,
     ) -> Result<Option<TxDetails>, Error> {
         if let Some(tx) = self.cache.tx(txid) {
             let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
@@ -163,7 +165,7 @@ impl Wollet {
             let mut outputs = vec![];
             for (vout, txout) in tx.output.iter().enumerate() {
                 let outpoint = OutPoint::new(*txid, vout as u32);
-                let is_spent = spent.contains(&outpoint);
+                let is_spent = !unspent.contains(&outpoint);
                 outputs.push(self.txout_details(outpoint, height, Some(txout), is_spent)?);
             }
 
@@ -242,9 +244,9 @@ impl Wollet {
     /// **Unstable**: This API may change without notice.
     #[doc(hidden)]
     pub fn tx_details(&self, txid: &Txid, _opt: &TxOpt) -> Result<Option<TxDetails>, Error> {
-        let spent = self.cache.spent();
+        let unspent = self.cache.unspent();
         let height = *self.cache.tx_height(txid).unwrap_or(&None);
-        self.tx_details_inner(txid, height, spent)
+        self.tx_details_inner(txid, height, unspent)
     }
 
     /// Get the transaction list
@@ -252,12 +254,12 @@ impl Wollet {
     /// **Unstable**: This API may change without notice.
     #[doc(hidden)]
     pub fn txs(&self, opt: &TxsOpt) -> Result<Vec<TxDetails>, Error> {
-        let spent = self.cache.spent();
+        let unspent = self.cache.unspent();
         let mut txs = vec![];
         let offset = opt.offset.unwrap_or(0);
         let limit = opt.limit.unwrap_or(usize::MAX);
         for (txid, height) in self.cache.sorted_txids().skip(offset).take(limit) {
-            if let Some(tx) = self.tx_details_inner(txid, *height, spent)? {
+            if let Some(tx) = self.tx_details_inner(txid, *height, unspent)? {
                 txs.push(tx);
             }
         }

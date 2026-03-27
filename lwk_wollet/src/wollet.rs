@@ -528,7 +528,7 @@ impl Wollet {
 
     fn txos_inner(&self) -> Result<Vec<WalletTxOut>, Error> {
         let mut txos = vec![];
-        let spent = self.cache.spent();
+        let unspent = self.cache.unspent();
         for (tx_id, height) in self.cache.sorted_txids() {
             let tx = self
                 .cache
@@ -543,7 +543,7 @@ impl Wollet {
                         txid: *tx_id,
                         vout: vout as u32,
                     };
-                    (out_point, output, spent.contains(&out_point))
+                    (out_point, output, !unspent.contains(&out_point))
                 })
                 .filter_map(|(outpoint, output, is_spent)| {
                     let unblinded = *self.cache.unblinded.get(&outpoint)?;
@@ -609,7 +609,7 @@ impl Wollet {
     ///
     /// They can be spent as external utxos using [`crate::TxBuilder::add_external_utxos()`].
     pub fn explicit_utxos(&self) -> Result<Vec<ExternalUtxo>, Error> {
-        let spent = self.cache.spent();
+        let unspent = self.cache.unspent();
         let mut utxos = vec![];
         for (txid, tx) in self.cache.all_txs() {
             for (vout, o) in tx.output.iter().enumerate() {
@@ -618,7 +618,7 @@ impl Wollet {
                     && o.asset.is_explicit()
                     && o.value.is_explicit()
                     && self.cache.paths.contains_key(&o.script_pubkey)
-                    && !spent.contains(&outpoint)
+                    && unspent.contains(&outpoint)
                 {
                     let unblinded = TxOutSecrets::new(
                         o.asset.explicit().expect("explicit"),

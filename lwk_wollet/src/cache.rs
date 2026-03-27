@@ -31,8 +31,8 @@ pub struct Cache {
     /// txids sorted by height descending, then txid descending (unconfirmed first)
     sorted_txids: Vec<Txid>,
 
-    /// Outpoints that we know are spent
-    spent: HashSet<OutPoint>,
+    /// Wallet unspent outpoints
+    unspent: HashSet<OutPoint>,
 
     /// unblinded values
     pub unblinded: HashMap<OutPoint, TxOutSecrets>,
@@ -59,7 +59,7 @@ impl Default for Cache {
             scripts: HashMap::default(),
             heights: HashMap::default(),
             sorted_txids: vec![],
-            spent: HashSet::new(),
+            unspent: HashSet::new(),
             unblinded: HashMap::default(),
             tip: (0, BlockHash::all_zeros()),
             last_unused_internal: 0.into(),
@@ -195,28 +195,59 @@ impl Cache {
         self.sorted_txids = sorted;
     }
 
-    pub fn update_spent(&mut self) {
-        // Dummy spent outputs are outputs that are not in height map, but we have to consider them
-        // for the utxo mode.
-        let dummy_spent: Vec<OutPoint> = self
-            .all_txs
-            .iter()
-            .filter(|(_, tx)| tx.output.is_empty()) // Only dummy tx have no outputs
-            .flat_map(|(_, tx)| tx.input.iter().map(|i| i.previous_output))
+    pub fn update_unspent(
+        &mut self,
+        txid_height_new: &[(Txid, Option<u32>)],
+        deleted_txids: &[Txid],
+    ) {
+        let txids_new: HashSet<&Txid> = txid_height_new.iter().map(|(txid, _)| txid).collect();
+
+        let outputs_new: Vec<OutPoint> = self
+            // we're assuming: in unblinded => belongs to wollet
+            .unblinded
+            .keys()
+            .filter(|op| txids_new.contains(&op.txid))
+            .cloned()
             .collect();
 
-        self.spent = self
-            .heights
-            .keys()
+        let mut inputs_new: HashSet<OutPoint> = txids_new
+            .iter()
             .filter_map(|txid| self.tx(txid))
-            .flat_map(|tx| tx.input.iter())
-            .map(|i| i.previous_output)
-            .chain(dummy_spent)
+            .flat_map(|tx| tx.input.iter().map(|i| i.previous_output))
             .collect();
+
+        // In utxo_only mode the client creates a dummy tx whose inputs are outputs known to be
+        // spent by transactions that were not fetched. Remove those from unspent.
+        let inputs_from_dummmy_txs: HashSet<OutPoint> = self
+            .dummy_txids
+            .iter()
+            .filter_map(|txid| self.tx(txid))
+            .flat_map(|tx| tx.input.iter().map(|i| i.previous_output))
+            .collect();
+        inputs_new.extend(inputs_from_dummmy_txs);
+
+        let inputs_to_restore: Vec<OutPoint> = deleted_txids
+            .iter()
+            .filter_map(|txid| self.tx(txid))
+            .flat_map(|tx| tx.input.iter().map(|i| i.previous_output))
+            // we're assuming: in unblinded => belongs to wollet
+            .filter(|op| self.unblinded.contains_key(op))
+            .collect();
+
+        // Add outputs of new txs
+        self.unspent.extend(outputs_new);
+        // Add inputs of deleted txs (they are utxos now)
+        self.unspent.extend(inputs_to_restore);
+        // Remove inputs of new txs (they are spent now)
+        self.unspent.retain(|o| !inputs_new.contains(o));
+        // Remove outputs of deleted txs (after adding inputs, so that an output spent
+        // by another deleted tx does not remain in unspent)
+        self.unspent
+            .retain(|o| deleted_txids.iter().all(|txid| txid != &o.txid));
     }
 
-    pub fn spent(&self) -> &HashSet<OutPoint> {
-        &self.spent
+    pub fn unspent(&self) -> &HashSet<OutPoint> {
+        &self.unspent
     }
 
     pub fn tx_height(&self, txid: &Txid) -> Option<&Option<Height>> {

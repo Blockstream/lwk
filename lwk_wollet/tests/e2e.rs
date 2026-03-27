@@ -26,7 +26,7 @@ use lwk_test_util::*;
 use lwk_wollet::pegin::fetch_last_full_header;
 use lwk_wollet::*;
 use std::{collections::HashSet, str::FromStr};
-use test_wollet::{generate_signer, test_client_electrum, wait_for_tx, TestWollet};
+use test_wollet::*;
 
 #[test]
 fn liquid_send_jade_signer() {
@@ -1252,6 +1252,72 @@ fn test_esplora_waterfalls_utxo_only() {
         .unwrap()
         .iter()
         .all(|tx| !tx.outputs.is_empty()));
+}
+
+#[test]
+fn test_waterfalls_utxo_only_with_dummy() {
+    let env = TestEnvBuilder::from_env().with_waterfalls().build();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer.xpub());
+    let signers = [&AnySigner::Software(signer)];
+    let network = ElementsNetwork::default_regtest();
+    let lbtc = network.policy_asset();
+
+    let client = asyncr::EsploraClientBuilder::new(&env.waterfalls_url(), network)
+        .waterfalls(true)
+        .build_blocking()
+        .unwrap();
+    let mut w = TestWollet::new(client, &desc);
+
+    let wd = WolletDescriptor::from_str(&desc).unwrap();
+    let mut client_utxo_only = asyncr::EsploraClientBuilder::new(&env.waterfalls_url(), network)
+        .waterfalls(true)
+        .utxo_only(true)
+        .build_blocking()
+        .unwrap();
+    let mut wollet_utxo_only = WolletBuilder::new(network, wd).build().unwrap();
+
+    let node_address = env.elementsd_getnewaddress();
+    let txid0 = w.fund_btc(&env);
+    let txid1 = w.send_btc(&signers, None, Some((node_address.clone(), 1)));
+    env.elementsd_generate(1);
+
+    // Utxo only intermediate sync
+    let update = client_utxo_only
+        .full_scan(&wollet_utxo_only)
+        .unwrap()
+        .unwrap();
+    assert!(update.new_txs.txs.iter().any(|(_, tx)| tx.output.len() == 0));
+    wollet_utxo_only.apply_update(update).unwrap();
+
+    let txid2 = w.send_btc(&signers, None, Some((node_address.clone(), 1)));
+    let txid3 = w.send_btc(&signers, None, Some((node_address.clone(), 1)));
+    env.elementsd_generate(1);
+    wait_for_tx_confirmation(&mut w.wollet, &mut w.client, &txid3);
+
+    let balance = w.wollet.balance().unwrap();
+    assert!(*balance.get(&lbtc).unwrap_or(&0) > 0);
+    let txs = w.wollet.transactions().unwrap();
+    assert_eq!(txs.len(), 4);
+    assert!(txs.iter().any(|tx| tx.txid == txid0));
+    assert!(txs.iter().any(|tx| tx.txid == txid1));
+    assert!(txs.iter().any(|tx| tx.txid == txid2));
+    assert!(txs.iter().any(|tx| tx.txid == txid3));
+
+    // Utxo only final sync
+    let update = client_utxo_only
+        .full_scan(&wollet_utxo_only)
+        .unwrap()
+        .unwrap();
+    assert!(update.new_txs.txs.iter().any(|(_, tx)| tx.output.len() == 0));
+    wollet_utxo_only.apply_update(update).unwrap();
+
+    assert_eq!(wollet_utxo_only.balance().unwrap(), balance);
+    let txs = wollet_utxo_only.transactions().unwrap();
+    assert_eq!(txs.len(), 1);
+    assert!(txs.iter().any(|tx| tx.txid == txid3));
 }
 
 #[cfg(feature = "esplora")]

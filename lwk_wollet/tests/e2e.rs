@@ -1099,6 +1099,38 @@ async fn test_esplora_wasm_waterfalls_missing_txs() {
     assert_eq!(wollet.transactions().unwrap().len(), txs);
 }
 
+#[ignore = "require network calls"]
+#[tokio::test]
+async fn test_with_fallback_client() -> Result<(), Box<dyn std::error::Error>> {
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let desc = WolletDescriptor::from_str(&desc)?;
+    let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc).build()?;
+
+    let primary_url = ElectrumUrl::new(LIQUID_TESTNET_SOCKET, true, true)?;
+    // Assumed ot be another fallback electrum url
+    let fallback_url = ElectrumUrl::new(LIQUID_TESTNET_SOCKET, true, true)?;
+
+    // ANCHOR: fallback_client
+    let mut client = ElectrumClient::new(&primary_url)?;
+
+    let update = match client.full_scan(&wollet) {
+        Ok(x) => Ok(x),
+        Err(_e) => {
+            // Falling into a retryable error, making a request with the fallback client
+            let mut fallback_client = ElectrumClient::new(&fallback_url)?;
+            fallback_client.full_scan(&wollet)
+        }
+    }?;
+
+    if let Some(update) = update {
+        wollet.apply_update(update)?;
+    }
+    // ANCHOR_END: fallback_client
+    Ok(())
+}
+
 async fn test_esplora_wasm_waterfalls_desc(desc: &str, url: &str) -> usize {
     let network = if desc.contains("xpub") {
         ElementsNetwork::Liquid

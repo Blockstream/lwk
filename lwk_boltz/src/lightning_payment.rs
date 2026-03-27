@@ -6,7 +6,7 @@ use lnurl::lnurl::LnUrl;
 
 use crate::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LightningPayment {
     Bolt11(Box<Bolt11Invoice>),
     Bolt12 {

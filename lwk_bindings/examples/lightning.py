@@ -82,7 +82,10 @@ def invoice_thread(invoice_response, claim_address):
             if state == PaymentState.SUCCESS:
                 claim_txid = invoice_response.claim_txid()
                 print(f"Invoice payment completed successfully, received from txid: {claim_txid}!")    
-            break
+                break
+            elif state == PaymentState.FAILED:
+                print(f"Invoice payment failed for swap {swap_id}")
+                break
         except LwkError.NoBoltzUpdate as e:
             print("No update available, continuing polling...")
             time.sleep(1)
@@ -101,7 +104,12 @@ def pay_invoice_thread(prepare_pay_response):
         try:
             state = prepare_pay_response.advance()
             print(f"Payment state for swap {swap_id}: {state}")
-            break
+            if state == PaymentState.SUCCESS:
+                print(f"Payment completed successfully for swap {swap_id}")
+                break
+            elif state == PaymentState.FAILED:
+                print(f"Payment failed for swap {swap_id}")
+                break
         except LwkError.NoBoltzUpdate as e:
             print("No update available, continuing polling...")
             time.sleep(1)
@@ -121,7 +129,12 @@ def lockup_thread(lockup_response):
         try:
             state = lockup_response.advance()
             print(f"Chain swap state for swap {swap_id}: {state}")
-            break
+            if state == PaymentState.SUCCESS:
+                print(f"Chain swap completed successfully for swap {swap_id}")
+                break
+            elif state == PaymentState.FAILED:
+                print(f"Chain swap failed for swap {swap_id}")
+                break
         except LwkError.NoBoltzUpdate as e:
             print("No update available, continuing polling...")
             time.sleep(1)

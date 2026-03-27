@@ -16,6 +16,9 @@ pub struct Cache {
     /// contains all my tx and all prevouts
     all_txs: HashMap<Txid, Transaction>,
 
+    /// Dummy txs for utxo only mode
+    dummy_txids: HashSet<Txid>,
+
     /// contains all my script up to an empty batch of BATCHSIZE
     pub paths: HashMap<Script, (Chain, ChildNumber)>,
 
@@ -51,6 +54,7 @@ impl Default for Cache {
     fn default() -> Self {
         Self {
             all_txs: HashMap::default(),
+            dummy_txids: HashSet::default(),
             paths: HashMap::default(),
             scripts: HashMap::default(),
             heights: HashMap::default(),
@@ -242,6 +246,11 @@ impl Cache {
     }
 
     pub fn extend_all_txs(&mut self, txs: Vec<(Txid, Transaction)>) {
+        for (txid, tx) in &txs {
+            if tx.output.is_empty() {
+                self.dummy_txids.insert(*txid);
+            }
+        }
         self.all_txs.extend(txs);
     }
 }

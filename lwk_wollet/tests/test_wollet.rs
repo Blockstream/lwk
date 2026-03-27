@@ -57,6 +57,19 @@ pub fn wait_for_tx<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S, tx
     panic!("Wallet does not have {txid} in its list");
 }
 
+pub fn wait_for_tx_confirmation<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S, txid: &Txid) {
+    for _ in 0..10 {
+        sync(wollet, client);
+        if let Some(tx) = wollet.transaction(txid).unwrap() {
+            if tx.height.is_some() {
+                return;
+            }
+        }
+        thread::sleep(Duration::from_millis(500));
+    }
+    panic!("Tx is not confirmed");
+}
+
 impl<C: BlockchainBackend> TestWollet<C> {
     pub fn new(mut client: C, desc: &str) -> Self {
         let db_root_dir = TempDir::new().unwrap();

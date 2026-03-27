@@ -184,6 +184,108 @@ def show_invoice(boltz_session, wollet):
     thread.start()
     print("Started thread to monitor invoice payment.")
 
+def pay_bolt12_offer(boltz_session, wollet, esplora_client, signer, skip_completion_thread=False):
+    """Pay a bolt12 offer"""
+    # Read bolt12 offer from user
+    offer_str = input("Enter BOLT12 offer: ").strip()
+
+    try:
+        # Parse the offer
+        lightning_payment = LightningPayment(offer_str)
+
+        # Check if it's actually a BOLT12 offer
+        if not lightning_payment.is_bolt12():
+            print("Error: Not a valid BOLT12 offer")
+            return
+
+        # Check if the offer has an amount (per-item pricing)
+        has_amount = lightning_payment.bolt12_offer_has_amount()
+
+        if has_amount:
+            # Ask for number of items
+            while True:
+                try:
+                    items_str = input("Enter number of items: ").strip()
+                    items = int(items_str)
+                    if items <= 0:
+                        print("Number of items must be positive. Please try again.")
+                        continue
+                    break
+                except ValueError:
+                    print("Invalid number. Please enter a valid integer.")
+
+            # Set the amount based on items
+            lightning_payment.set_bolt12_invoice_amount_via_items(items)
+        else:
+            # Ask for amount in satoshis
+            while True:
+                try:
+                    amount_str = input("Enter amount in satoshis: ").strip()
+                    amount = int(amount_str)
+                    if amount <= 0:
+                        print("Amount must be positive. Please try again.")
+                        continue
+                    break
+                except ValueError:
+                    print("Invalid amount. Please enter a valid number.")
+
+            # Set the amount
+            lightning_payment.set_bolt12_invoice_amount(amount)
+
+        # Get refund address
+        refund_address = wollet.address(None).address()
+        print(f"Refund address: {refund_address}")
+
+        # Prepare payment
+        webhook_url = os.getenv('WEBHOOK')
+        webhook = WebHook(webhook_url, status=[]) if webhook_url else None
+        prepare_pay_response = boltz_session.prepare_pay(lightning_payment, refund_address, webhook)
+
+        fee = prepare_pay_response.fee()
+        print(f"Fee: {fee}")
+        boltz_fee = prepare_pay_response.boltz_fee()
+        print(f"Boltz fee: {boltz_fee}")
+
+        # Get the URI for payment
+        uri = prepare_pay_response.uri()
+        uri_address = prepare_pay_response.uri_address()
+        uri_amount = prepare_pay_response.uri_amount()
+        print(f"Pay to URI: {uri} {uri_amount} {uri_address}")
+
+        # Build and send transaction to the URI
+        print(f"Sending {uri_amount} sats to {uri_address}...")
+        builder = network.tx_builder()
+        lbtc_asset = network.policy_asset()
+        builder.add_recipient(uri_address, uri_amount, lbtc_asset)
+
+        # Create the PSET
+        pset = builder.finish(wollet)
+
+        # Sign the PSET
+        signed_pset = signer.sign(pset)
+
+        # Finalize and extract transaction
+        finalized_pset = wollet.finalize(signed_pset)
+        tx = finalized_pset.extract_tx()
+
+        # Broadcast the transaction
+        txid = esplora_client.broadcast(tx)
+        print(f"Transaction broadcasted! TXID: {txid}")
+
+        # Return early if skip_completion_thread is True
+        if skip_completion_thread:
+            print("Skipping to start the completing thread as requested.")
+            return
+
+        # Start thread to wait for completion
+        thread = threading.Thread(target=pay_invoice_thread, args=(prepare_pay_response,))
+        thread.daemon = True
+        thread.start()
+        print("Started thread to monitor payment completion.")
+
+    except Exception as e:
+        print(f"Error preparing payment: {e}")
+
 def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_thread=False):
     """Pay a bolt11 invoice"""
     # Read bolt11 invoice from user
@@ -864,6 +966,7 @@ def main():
         print("15) List pending swaps (from local store)")
         print("16) List completed swaps (from local store)")
         print("17) Remove swap from store")
+        print("18) Pay BOLT12 offer")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -968,6 +1071,9 @@ def main():
                     print("No store configured or swap not found")
             else:
                 print("No swap ID provided")
+        elif choice == '18':
+            print("\n=== Paying BOLT12 Offer ===")
+            pay_bolt12_offer(boltz_session, wollet, esplora_client, signer)
         elif choice == 'q':
             print("Goodbye!")
             break

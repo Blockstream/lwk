@@ -545,9 +545,10 @@ dependencies = [
 [[package]]
 name = "boltz-client"
 version = "0.3.1"
-source = "git+https://github.com/SatoshiPortal/boltz-rust/?rev=299a824d7d4ab47b23fb7eb3f9a17d7a2077cded#299a824d7d4ab47b23fb7eb3f9a17d7a2077cded"
+source = "git+https://github.com/RCasatta/boltz-rust/?rev=ba07abbc7fd3b0150cb690410b7e0cd0dd261e35#ba07abbc7fd3b0150cb690410b7e0cd0dd261e35"
 dependencies = [
  "async-trait",
+ "bech32 0.9.1",
  "bip39",
  "bip85_extended",
  "bitcoin",
@@ -560,6 +561,7 @@ dependencies = [
  "gloo-timers",
  "hex",
  "js-sys",
+ "lightning 0.2.2",
  "lightning-invoice 0.32.0",
  "log",
  "reqwest",

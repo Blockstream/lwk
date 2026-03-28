@@ -2,7 +2,7 @@
 package_name = "lwk"
 kotlin_multiplatform = true
 kotlin_targets = ["jvm", "android", "native"]
-kotlin_target_version = "2.2.20"
+kotlin_target_version = "2.2.21"
 disable_java_cleaner = true
 generate_serializable_types = true
 cdylib_name="lwk"

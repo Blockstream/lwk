@@ -449,14 +449,23 @@ impl PreparePayResponse {
         update: SwapStatus,
     ) -> Result<ControlFlow<bool, SwapStatus>, Error> {
         log::info!("submarine_cooperative_claim");
-        if let Some(bolt_11_invoice) = &self.data.bolt11_invoice {
+
+        let invoice_str = if let Some(bolt11) = &self.data.bolt11_invoice {
+            Some(bolt11.to_string())
+        } else if let Some(bolt12) = &self.data.bolt12_invoice {
+            Some(crate::display_bolt12_invoice(bolt12))
+        } else {
+            None
+        };
+
+        if let Some(invoice_str) = invoice_str {
             let swap_id = self.swap_id().to_string();
             let response = self
                 .swap_script
                 .submarine_cooperative_claim(
                     &swap_id,
                     &self.data.our_keys,
-                    &bolt_11_invoice.to_string(),
+                    &invoice_str,
                     &self.api,
                 )
                 .await;

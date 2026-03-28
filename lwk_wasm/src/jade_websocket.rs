@@ -212,7 +212,7 @@ impl JadeWebSocket {
         let network = self.inner.network();
         let mut paths = HashMap::new();
 
-        for purpose in [49, 84, 87] {
+        for purpose in [49, 84, 86, 87] {
             for coin_type in [1, 1776] {
                 let derivation_path_str = format!("m/{purpose}h/{coin_type}h/0h");
                 let derivation_path = DerivationPath::from_str(&derivation_path_str)?;

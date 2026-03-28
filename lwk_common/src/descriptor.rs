@@ -20,6 +20,7 @@ pub fn singlesig_desc<S: Signer + ?Sized>(
     let (prefix, path, suffix) = match script_variant {
         Singlesig::Wpkh => ("elwpkh", format!("84h/{coin_type}h/0h"), ""),
         Singlesig::ShWpkh => ("elsh(wpkh", format!("49h/{coin_type}h/0h"), ")"),
+        Singlesig::Taproot => ("eltr", format!("86h/{coin_type}h/0h"), ""),
     };
 
     let fingerprint = signer.fingerprint().map_err(|e| format!("{e:?}"))?;
@@ -108,11 +109,14 @@ pub enum Singlesig {
 
     /// Witness public key hash wrapped in script hash as defined by bip49
     ShWpkh,
+
+    /// Taproot as defined by bip86
+    Taproot,
 }
 
 /// The error type returned by Singlesig::from_str
 #[derive(Error, Debug)]
-#[error("Invalid singlesig variant '{0}' supported variant are: 'wpkh', 'shwpkh'")]
+#[error("Invalid singlesig variant '{0}', supported variants are: 'wpkh', 'shwpkh', 'taproot'")]
 pub struct InvalidSinglesigVariant(String);
 
 impl FromStr for Singlesig {
@@ -122,6 +126,7 @@ impl FromStr for Singlesig {
         Ok(match s {
             "wpkh" => Singlesig::Wpkh,
             "shwpkh" => Singlesig::ShWpkh,
+            "taproot" => Singlesig::Taproot,
             v => return Err(InvalidSinglesigVariant(v.to_string())),
         })
     }
@@ -247,5 +252,20 @@ mod test {
             assert_eq!(el, bip_str);
         }
         Bip::from_str("vattelapesca").unwrap_err();
+    }
+
+    #[test]
+    fn singlesig_from_str() {
+        use super::Singlesig;
+        assert!(matches!(Singlesig::from_str("wpkh"), Ok(Singlesig::Wpkh)));
+        assert!(matches!(
+            Singlesig::from_str("shwpkh"),
+            Ok(Singlesig::ShWpkh)
+        ));
+        assert!(matches!(
+            Singlesig::from_str("taproot"),
+            Ok(Singlesig::Taproot)
+        ));
+        Singlesig::from_str("invalid").unwrap_err();
     }
 }

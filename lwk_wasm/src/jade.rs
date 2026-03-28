@@ -215,7 +215,7 @@ impl Jade {
         let network = self.inner.network();
         let mut paths = HashMap::new();
 
-        for purpose in [49, 84, 87] {
+        for purpose in [49, 84, 86, 87] {
             for coin_type in [1, 1776] {
                 let derivation_path_str = format!("m/{purpose}h/{coin_type}h/0h");
                 let derivation_path = DerivationPath::from_str(&derivation_path_str)?;
@@ -245,6 +245,7 @@ impl From<Singlesig> for Variant {
         match v.inner {
             lwk_common::Singlesig::Wpkh => Variant::Wpkh,
             lwk_common::Singlesig::ShWpkh => Variant::ShWpkh,
+            lwk_common::Singlesig::Taproot => Variant::Taproot,
         }
     }
 }
@@ -259,8 +260,11 @@ impl Singlesig {
             "ShWpkh" => Ok(Singlesig {
                 inner: lwk_common::Singlesig::ShWpkh,
             }),
+            "Taproot" => Ok(Singlesig {
+                inner: lwk_common::Singlesig::Taproot,
+            }),
             _ => Err(Error::Generic(
-                "Unsupported variant, possible values are: Wpkh and ShWpkh".to_string(),
+                "Unsupported variant, possible values are: Wpkh, ShWpkh and Taproot".to_string(),
             )),
         }
     }

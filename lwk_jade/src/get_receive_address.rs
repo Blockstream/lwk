@@ -20,6 +20,10 @@ pub enum Variant {
     /// Script hash, Witness public key hash AKA nested segwit, BIP49
     #[serde(rename = "sh(wpkh(k))")]
     ShWpkh,
+
+    /// Taproot, BIP86
+    #[serde(rename = "tr(k)")]
+    Taproot,
 }
 
 #[derive(Debug, PartialEq, Eq)]

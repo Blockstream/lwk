@@ -312,17 +312,17 @@ wasm:
     - cargo check --target wasm32-unknown-unknown -p lwk_ledger --no-default-features
     - cargo check --target wasm32-unknown-unknown -p lwk_boltz --no-default-features
     # - cd lwk_wasm && WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --chrome --headless --features serial && cd - # TODO: restore browser tests, at the moment fail with "Cannot assign requested address"
-    - cd lwk_wasm && RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --features serial && cd -
-    # testing nodejs package
-    - cd lwk_wasm
-    - RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --target nodejs --out-dir pkg_node -- --features serial,simplicity
-    - sed -i 's/"lwk_wasm"/"lwk_node"/g' pkg_node/package.json
-    - cd tests/node
-    - npm install
+    - cd lwk_wasm/npm
+    - npm ci
+    - npm run lint
+    - npm run format:check
+    - npm run typecheck
     - npm run test
+    - npm run pack:check
   artifacts:
     paths:
-      - lwk_wasm/pkg
+      - lwk_wasm/npm/packages/web/dist
+      - lwk_wasm/npm/packages/node/dist
 
 nix:
   stage: test_long
@@ -439,4 +439,3 @@ publish_snapshot_to_maven:
     when: always
     expire_in: 7 days
   allow_failure: true
-

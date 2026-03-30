@@ -46,7 +46,9 @@
   "scripts": {
     "build": "npm --prefix ../.. run stage:node && tsc -p tsconfig.build.json",
     "typecheck": "npm run build && tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && tsc -p tsconfig.json --noEmit && tsx tests/scripts/run-tests.ts"
+    "test": "npm run build && tsc -p tsconfig.json --noEmit && tsx tests/scripts/run-tests.ts",
+    "pack:check": "npm run build && publint && npm pack --dry-run",
+    "prepack": "npm run build"
   },
   "imports": {
     "#generated/*": "./dist/generated/*"

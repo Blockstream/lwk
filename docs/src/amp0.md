@@ -52,7 +52,7 @@ To use AMP0 with LWK you need to:
 Create a `Signer` and backup its mnemonic/seed.
 From the signer get its `signer_data` using `Signer::amp0_signer_data()`.
 
-Create a `Amp0Connected::new()` passing the `signer_data`.
+Create a `Amp0Connected::connect()` passing the `signer_data`.
 You now need to authenticate with AMP0 server.
 First get the server challenge with `Amp0Connected::get_challenge()`.
 Sign the challenge with `Signer::amp0_sign_challenge()`.
@@ -70,11 +70,11 @@ Choose your AMP0 Watch-Only credentials `username` and `password` and call `Amp0
 
 Now that you have mnemonic/seed (or Jade), AMP ID and Watch-Only credentials (username and password), you're ready to use AMP0 with LWK.
 
-> If you're using `lwk_node`, polyfill the websocket
+> If you're using `@blockstream/lwk-node`, polyfill the websocket
 > ```typescript
 > const WebSocket = require('ws');
 > global.WebSocket = WebSocket;
-> const lwk = require('lwk_node');
+> const lwk = require('@blockstream/lwk-node');
 > ```
 
 <custom-tabs category="lang">
@@ -98,7 +98,7 @@ Now that you have mnemonic/seed (or Jade), AMP ID and Watch-Only credentials (us
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/amp0-setup.js:amp0-setup:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/amp0-setup.ts:amp0-setup:ignore}}
 ```
 </section>
 </custom-tabs>
@@ -182,7 +182,7 @@ If all the AMP0 rules are respected, the transaction is cosigned by AMP0 and can
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/amp0-daily-ops.js:amp0-daily-ops:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/amp0-daily-ops.ts:amp0-daily-ops:ignore}}
 ```
 </section>
 </custom-tabs>

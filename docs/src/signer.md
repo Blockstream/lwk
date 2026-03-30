@@ -40,7 +40,7 @@ Then you can create a software signer with `SwSigner::new()`.
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/basics.js:generate-signer:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/basics.ts:generate-signer:ignore}}
 ```
 </section>
 </custom-tabs>
@@ -72,7 +72,7 @@ The xpub is obtained with `Signer::keyorigin_xpub()`, which also includes the ke
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/basics.js:get-xpub:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/basics.ts:get-xpub:ignore}}
 ```
 </section>
 </custom-tabs>

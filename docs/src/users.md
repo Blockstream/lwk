@@ -36,7 +36,7 @@ Liquidtestnet.com is open source, source available in the [Github repository](ht
 [Liquidwebwallet.org](https://liquidwebwallet.org) is a companion app for Liquid running in the browser. 
 The website allows the use of read-only wallets or hardware wallets such as Jade or Ledger to access one's wallet, view the balance, create transactions, create issuance, reissuance, and burn transactions.
 
-The wallet is built using [LWK_wasm](https://www.npmjs.com/package/lwk_wasm).
+The wallet is built using the LWK web package ([`@blockstream/lwk-web`](https://www.npmjs.com/package/@blockstream/lwk-web)).
 
 Liquidwebwallet.org is open source, source available in the [Github repository](https://github.com/RCasatta/liquid-web-wallet)
 
@@ -99,9 +99,9 @@ Peerswap is open source, source available in the [Github repository](https://git
 
 
 ## Banco Libre
-[Banco Libre](https://bancolibre.com/) is a web wallet using LWK_wasm.
+[Banco Libre](https://bancolibre.com/) is a web wallet using LWK wasm.
 
-The app use LWK_wasm as internal liquid wallet and signer.
+The app uses LWK wasm as internal liquid wallet and signer.
 
 Banco Libre is open source, source available in the [Github repository](https://github.com/kipu-org/banco-client)
 

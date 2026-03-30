@@ -27,7 +27,7 @@ To derive a BIP85 mnemonic, you need a software signer initialized with a mnemon
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/bip85.js:bip85}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/bip85.ts:bip85}}
 ```
 </section>
 </custom-tabs>
@@ -35,4 +35,3 @@ To derive a BIP85 mnemonic, you need a software signer initialized with a mnemon
 ----
 
 Next: [CLI](cli.md)
-

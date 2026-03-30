@@ -88,7 +88,7 @@ This client is ideal for web applications and scenarios where HTTP-based communi
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/basics.js:esplora_client}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/basics.ts:esplora_client}}
 ```
 </section>
 </custom-tabs>
@@ -146,7 +146,7 @@ Use authenticated clients when:
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/basics.js:waterfalls_client}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/basics.ts:waterfalls_client}}
 ```
 </section>
 </custom-tabs>
@@ -164,6 +164,4 @@ Waterfalls clients also support OAuth2-based authentication for enterprise deplo
 ```
 </section>
 </custom-tabs>
-
-
 

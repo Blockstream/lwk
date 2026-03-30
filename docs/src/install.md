@@ -19,31 +19,26 @@ You can use the official python package: [lwk](https://pypi.org/project/lwk/)
 pip install lwk
 ```
 
-
 ## Javascript/Typescript (Wasm)
 
-### Wasm module
+### Browser / bundler
 
-Install LWK
 ```shell,ignore
-npm install lwk_wasm
+npm install @blockstream/lwk-web
 ```
 
-Import LWK
 ```typescript,ignore
-const lwk = require('lwk_wasm');
+import * as lwk from "@blockstream/lwk-web";
 ```
 
-### Node module
+### Node.js
 
-Install LWK
 ```shell,ignore
-npm install lwk_node
+npm install @blockstream/lwk-node
 ```
 
-Import LWK
 ```typescript,ignore
-const lwk = require('lwk_node');
+import * as lwk from "@blockstream/lwk-node";
 ```
 
 ## iOS/Swift

@@ -4,10 +4,12 @@
 This is only a proof of concept at the moment but we want to show our commitment to have the 
 Liquid Wallet Kit working in the WASM environment.
 
-[Available](https://www.npmjs.com/package/lwk_wasm) as npm package.
+[Available](https://www.npmjs.com/search?q=%40blockstream%2Flwk) as two npm packages:
+
+- `@blockstream/lwk-web` for browser and bundler builds
+- `@blockstream/lwk-node` for Node.js
 
 For an example usage see the [Liquid Web Wallet](https://liquidwebwallet.org/) ([source](https://github.com/RCasatta/liquid-web-wallet)). Works as CT descriptor watch-only wallet or connected to a Jade.
-
 
 ## For LWK Library developers
 
@@ -26,7 +28,29 @@ $ RUSTFLAGS="--cfg=web_sys_unstable_apis" wasm-pack build --dev --features seria
 
 ## For LWK library consumers (front-end developers)
 
-Download the Liquid Web Wallet source
+Install the package you need.
+
+Browser / bundler entrypoint:
+
+```shell
+$ npm install @blockstream/lwk-web
+```
+
+```typescript
+import * as lwk from "@blockstream/lwk-web";
+```
+
+Node.js entrypoint:
+
+```shell
+$ npm install @blockstream/lwk-node
+```
+
+```typescript
+import * as lwk from "@blockstream/lwk-node";
+```
+
+Or try it through the Liquid Web Wallet source:
 
 ```shell
 $ git clone https://github.com/RCasatta/liquid-web-wallet
@@ -61,18 +85,16 @@ run specific test (note the double `--`)
 $ wasm-pack test --firefox --headless -- -- balance_test_testnet
 ```
 
-### Build NPM Package for release
+### Build npm packages for release
 
-Build rust crates in release mode, optimizing for space.
-
-```shell
-$ cd lwk_wasm/
-$ RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --features serial
-```
+Build the generated wasm bindings and both published npm package layouts.
 
 ```shell
-$ cd pkg
-$ npm publish
+$ cd lwk_wasm/npm
+$ npm ci
+$ npm run build
+$ npm pack --dry-run --workspace @blockstream/lwk-web
+$ npm pack --dry-run --workspace @blockstream/lwk-node
 ```
 
 ### Build wasm lib for profiling
@@ -91,30 +113,16 @@ With [twiggy](https://github.com/rustwasm/twiggy) is then possible to analyze th
 twiggy top -n 10 pkg/lwk_wasm_bg.wasm
 ```
 
-### Build for nodejs
-
-```shell
-$ cd lwk_wasm
-$ RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --target nodejs --out-dir pkg_node -- --features serial
-```
-
-Rename the package to `lwk_node` so that we can publish it to npm.
-
-```shell
-sed -i 's/"lwk_wasm"/"lwk_node"/g' pkg_node/package.json
-```
-
-### Test node js examples
+### Test Node.js examples
 
 Requirement:
 
-* having built node pkg like shown in previous paragraph
+* having installed the npm dependencies inside `lwk_wasm/npm`
 * having node and npm installed
 
 ```shell
-cd lwk_wasm/tests/node
-npm install
-node network.js
+cd lwk_wasm/npm
+npm run test:node
 ```
 
 ## Javascript code conventions

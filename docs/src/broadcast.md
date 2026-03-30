@@ -28,7 +28,7 @@ you can call `Wollet::apply_tx()`.
 <section>
 
 ```python
-{{#include ../../lwk_wasm/tests/node/basics.js:broadcast:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/basics.ts:broadcast:ignore}}
 ```
 </section>
 
@@ -36,7 +36,7 @@ you can call `Wollet::apply_tx()`.
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/basics.js:broadcast:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/basics.ts:broadcast:ignore}}
 ```
 </section>
 </custom-tabs>

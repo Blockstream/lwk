@@ -4,7 +4,7 @@ version = "0.16.0"
 edition = "2021"
 description = "Liquid Wallet Kit - WASM"
 license = "MIT OR BSD-2-Clause"
-exclude = ["tests/", "test_data/", "flake.lock", "flake.nix"]
+exclude = ["tests/", "test_data/", "flake.lock", "flake.nix", "npm/"]
 documentation = "https://docs.rs/lwk_wasm"
 
 [lib]

@@ -862,9 +862,17 @@ pub async fn broadcast_tx_with_retry(
 }
 
 pub fn verify_invoice_from_offer(invoice: &Bolt12Invoice, offer: &Offer) -> bool {
-    // TODO: is this check enough?
     if let Some(offer_pubkey) = offer.issuer_signing_pubkey() {
-        return offer_pubkey == invoice.signing_pubkey();
+        if offer_pubkey == invoice.signing_pubkey() {
+            return true;
+        }
+    }
+    for path in offer.paths() {
+        if let Some(last_hop) = path.blinded_hops().last() {
+            if last_hop.blinded_node_id == invoice.signing_pubkey() {
+                return true;
+            }
+        }
     }
     false
 }

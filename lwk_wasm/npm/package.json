@@ -1,0 +1,16 @@
+{
+  "name": "lwk-js-workspace",
+  "private": true,
+  "version": "0.16.0",
+  "description": "Workspace for LWK JavaScript and WebAssembly packages",
+  "license": "MIT OR BSD-2-Clause",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {},
+  "devDependencies": {}
+}

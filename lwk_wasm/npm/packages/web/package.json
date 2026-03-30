@@ -1,0 +1,54 @@
+{
+  "name": "@blockstream/lwk-web",
+  "version": "0.16.0",
+  "description": "Liquid Wallet Kit for browser and bundler environments via WebAssembly",
+  "license": "MIT OR BSD-2-Clause",
+  "homepage": "https://github.com/Blockstream/lwk/tree/master/lwk_wasm",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Blockstream/lwk.git",
+    "directory": "lwk_wasm/npm/packages/web"
+  },
+  "bugs": {
+    "url": "https://github.com/Blockstream/lwk/issues"
+  },
+  "keywords": [
+    "blockstream",
+    "liquid",
+    "wallet",
+    "wasm",
+    "webassembly",
+    "browser",
+    "typescript"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "sideEffects": [
+    "./dist/index.js",
+    "./dist/generated/lwk_wasm.js",
+    "./dist/generated/lwk_wasm_bg.js",
+    "./dist/generated/snippets/*"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {},
+  "imports": {
+    "#generated/*": "./dist/generated/*"
+  }
+}

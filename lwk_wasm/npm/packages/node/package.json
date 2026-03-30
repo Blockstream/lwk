@@ -1,0 +1,50 @@
+{
+  "name": "@blockstream/lwk-node",
+  "version": "0.16.0",
+  "description": "Liquid Wallet Kit for Node.js via WebAssembly",
+  "license": "MIT OR BSD-2-Clause",
+  "homepage": "https://github.com/Blockstream/lwk/tree/master/lwk_wasm",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Blockstream/lwk.git",
+    "directory": "lwk_wasm/npm/packages/node"
+  },
+  "bugs": {
+    "url": "https://github.com/Blockstream/lwk/issues"
+  },
+  "keywords": [
+    "blockstream",
+    "liquid",
+    "wallet",
+    "wasm",
+    "webassembly",
+    "node",
+    "typescript"
+  ],
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.cjs",
+  "types": "./dist/generated/lwk_wasm.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/generated/lwk_wasm.d.ts",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {},
+  "imports": {
+    "#generated/*": "./dist/generated/*"
+  }
+}

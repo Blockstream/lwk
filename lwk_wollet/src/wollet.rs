@@ -654,37 +654,38 @@ impl Wollet {
     ///
     /// They can be spent as external utxos using [`crate::TxBuilder::add_external_utxos()`].
     pub fn explicit_utxos(&self) -> Result<Vec<ExternalUtxo>, Error> {
-        let unspent = self.cache.unspent();
         let mut utxos = vec![];
-        for (txid, tx) in self.cache.all_txs() {
-            for (vout, o) in tx.output.iter().enumerate() {
-                let outpoint = OutPoint::new(*txid, vout as u32);
-                if !o.script_pubkey.is_empty()
-                    && o.asset.is_explicit()
-                    && o.value.is_explicit()
-                    && self.cache.paths.contains_key(&o.script_pubkey)
-                    && unspent.contains(&outpoint)
-                {
-                    let unblinded = TxOutSecrets::new(
-                        o.asset.explicit().expect("explicit"),
-                        AssetBlindingFactor::zero(),
-                        o.value.explicit().expect("explicit"),
-                        ValueBlindingFactor::zero(),
-                    );
-                    let tx_ = if self.is_segwit() {
-                        None
-                    } else {
-                        Some(tx.clone())
-                    };
-                    utxos.push(ExternalUtxo {
-                        outpoint,
-                        txout: o.clone(),
-                        tx: tx_,
-                        unblinded,
-                        max_weight_to_satisfy: self.max_weight_to_satisfy,
-                    });
-                }
+        for outpoint in self.cache.unspent() {
+            // Technically all these unwrap and error mapping should not be necessary
+            // as all these values should be in the cache, but better be safer here and don't panic
+            let unblinded = *self
+                .cache
+                .unblinded
+                .get(outpoint)
+                .ok_or_else(|| Error::Generic("missing unblinded".into()))?;
+            if !is_explicit(&unblinded) {
+                continue;
             }
+            let tx = self
+                .cache
+                .tx(&outpoint.txid)
+                .ok_or_else(|| Error::Generic("missing tx".into()))?;
+            let txout = tx
+                .output
+                .get(outpoint.vout as usize)
+                .ok_or_else(|| Error::Generic("missing output".into()))?;
+            let tx_ = if self.is_segwit() {
+                None
+            } else {
+                Some(tx.clone())
+            };
+            utxos.push(ExternalUtxo {
+                outpoint: *outpoint,
+                txout: txout.clone(),
+                tx: tx_,
+                unblinded,
+                max_weight_to_satisfy: self.max_weight_to_satisfy,
+            });
         }
         Ok(utxos)
     }

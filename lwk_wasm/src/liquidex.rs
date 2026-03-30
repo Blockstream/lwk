@@ -64,7 +64,7 @@ impl UnvalidatedLiquidexProposal {
     }
 
     #[wasm_bindgen(js_name = fromPset)]
-    pub fn from_pset(pset: Pset) -> Result<Self, crate::Error> {
+    pub fn from_pset(pset: &Pset) -> Result<Self, crate::Error> {
         let pset = pset.into();
         let proposal = lwk_wollet::LiquidexProposal::from_pset(&pset)?;
         Ok(Self { inner: proposal })
@@ -76,7 +76,7 @@ impl UnvalidatedLiquidexProposal {
         Ok(ValidatedLiquidexProposal { inner })
     }
 
-    pub fn validate(self, tx: Transaction) -> Result<ValidatedLiquidexProposal, crate::Error> {
+    pub fn validate(self, tx: &Transaction) -> Result<ValidatedLiquidexProposal, crate::Error> {
         let inner = self.inner.validate(tx.into())?;
         Ok(ValidatedLiquidexProposal { inner })
     }

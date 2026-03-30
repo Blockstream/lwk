@@ -39,6 +39,12 @@ impl From<Pset> for PartiallySignedTransaction {
     }
 }
 
+impl From<&Pset> for PartiallySignedTransaction {
+    fn from(pset: &Pset) -> Self {
+        pset.inner.clone()
+    }
+}
+
 impl Display for Pset {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner)

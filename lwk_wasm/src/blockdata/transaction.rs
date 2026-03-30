@@ -43,6 +43,12 @@ impl From<Transaction> for elements::Transaction {
     }
 }
 
+impl From<&Transaction> for elements::Transaction {
+    fn from(value: &Transaction) -> Self {
+        value.inner.clone()
+    }
+}
+
 impl AsRef<elements::Transaction> for Transaction {
     fn as_ref(&self) -> &elements::Transaction {
         &self.inner

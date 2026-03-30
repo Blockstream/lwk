@@ -105,8 +105,8 @@ pub struct LightningPayment {
 }
 
 impl LightningPayment {
-    pub(crate) fn clone(&self) -> lwk_boltz::LightningPayment {
-        (*self.inner.lock().unwrap()).clone()
+    pub(crate) fn clone(&self) -> Result<lwk_boltz::LightningPayment, LwkError> {
+        Ok((*self.inner.lock()?).clone())
     }
 }
 
@@ -120,7 +120,7 @@ impl From<lwk_boltz::LightningPayment> for LightningPayment {
 
 impl Display for LightningPayment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let inner = self.inner.lock().unwrap();
+        let inner = self.inner.lock().map_err(|_| std::fmt::Error)?;
         write!(f, "{}", *inner)
     }
 }
@@ -150,28 +150,28 @@ impl LightningPayment {
     }
 
     /// Returns the bolt11 invoice if the lightning payment is a bolt11 invoice
-    pub fn bolt11_invoice(&self) -> Option<Arc<Bolt11Invoice>> {
-        let inner = self.inner.lock().unwrap();
-        match &*inner {
+    pub fn bolt11_invoice(&self) -> Result<Option<Arc<Bolt11Invoice>>, LwkError> {
+        let inner = self.inner.lock()?;
+        Ok(match &*inner {
             lwk_boltz::LightningPayment::Bolt11(invoice) => {
                 Some(Arc::new(Bolt11Invoice::from((**invoice).clone())))
             }
             lwk_boltz::LightningPayment::Bolt12 { .. } => None,
             lwk_boltz::LightningPayment::LnUrl(_) => None,
-        }
+        })
     }
 
     /// Returns true if this is a BOLT12 offer
-    pub fn is_bolt12(&self) -> bool {
-        let inner = self.inner.lock().unwrap();
-        inner.bolt12().is_some()
+    pub fn is_bolt12(&self) -> Result<bool, LwkError> {
+        let inner = self.inner.lock()?;
+        Ok(inner.bolt12().is_some())
     }
 
     /// Returns the invoice amount in satoshis for a BOLT12 offer if set
     ///
     /// Returns an error if this is not a BOLT12 offer
     pub fn bolt12_invoice_amount(&self) -> Result<Option<u64>, LwkError> {
-        let inner = self.inner.lock().unwrap();
+        let inner = self.inner.lock()?;
         inner.bolt12_invoice_amount().map_err(Into::into)
     }
 
@@ -185,7 +185,7 @@ impl LightningPayment {
     /// - This is not a BOLT12 offer
     /// - The offer already has an amount (use set_bolt12_invoice_amount_via_items instead)
     pub fn set_bolt12_invoice_amount(&self, amount_sats: u64) -> Result<(), LwkError> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock()?;
         inner.set_bolt12_invoice_amount(amount_sats)?;
         Ok(())
     }
@@ -201,7 +201,7 @@ impl LightningPayment {
     /// - This is not a BOLT12 offer
     /// - The offer does not have an amount set
     pub fn set_bolt12_invoice_amount_via_items(&self, items: u64) -> Result<(), LwkError> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock()?;
         inner.set_bolt12_invoice_amount_via_items(items)?;
         Ok(())
     }
@@ -213,7 +213,7 @@ impl LightningPayment {
     ///
     /// Returns an error if this is not a BOLT12 offer.
     pub fn bolt12_offer_has_amount(&self) -> Result<bool, LwkError> {
-        let inner = self.inner.lock().unwrap();
+        let inner = self.inner.lock()?;
         match &*inner {
             lwk_boltz::LightningPayment::Bolt12 { offer, .. } => Ok(offer.amount().is_some()),
             _ => Err(LwkError::Generic {

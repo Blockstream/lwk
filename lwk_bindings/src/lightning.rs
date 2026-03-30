@@ -403,9 +403,11 @@ impl BoltzSession {
                 hash_swap_id: None,
                 status,
             });
-        let response =
-            self.inner
-                .prepare_pay(&lightning_payment.clone(), refund_address.as_ref(), webhook)?;
+        let response = self.inner.prepare_pay(
+            &lightning_payment.clone()?,
+            refund_address.as_ref(),
+            webhook,
+        )?;
 
         Ok(PreparePayResponse {
             inner: Mutex::new(Some(response)),

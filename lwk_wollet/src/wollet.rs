@@ -519,11 +519,56 @@ impl Wollet {
     }
 
     fn utxos_inner(&self) -> Result<Vec<WalletTxOut>, Error> {
-        Ok(self
-            .txos_inner()?
-            .into_iter()
-            .filter(|txo| !txo.is_spent && !is_explicit(&txo.unblinded))
-            .collect())
+        let mut utxos = vec![];
+        for outpoint in self.cache.unspent() {
+            // Technically all these unwrap and error mapping should not be necessary
+            // as all these values should be in the cache, but better be safer here and don't panic
+            let unblinded = *self
+                .cache
+                .unblinded
+                .get(outpoint)
+                .ok_or_else(|| Error::Generic("missing unblinded".into()))?;
+            if is_explicit(&unblinded) {
+                continue;
+            }
+            let height = self.cache.tx_height(&outpoint.txid).unwrap_or(&None);
+            let txout = self
+                .cache
+                .tx(&outpoint.txid)
+                .ok_or_else(|| Error::Generic("missing tx".into()))?
+                .output
+                .get(outpoint.vout as usize)
+                .ok_or_else(|| Error::Generic("missing output".into()))?;
+            let index = self
+                .index(&txout.script_pubkey)
+                .ok()
+                .ok_or_else(|| Error::Generic("missing index".into()))?;
+            let blinding_pubkey = (!is_explicit(&unblinded))
+                .then(|| {
+                    self.cache
+                        .scripts
+                        .get(&(index.0, index.1.into()))
+                        .and_then(|(_, blinding_pubkey)| *blinding_pubkey)
+                })
+                .flatten();
+            let address = Address::from_script(
+                &txout.script_pubkey,
+                blinding_pubkey,
+                self.network().address_params(),
+            )
+            .ok_or_else(|| Error::Generic("invalid scriptpubkey".into()))?;
+            utxos.push(WalletTxOut {
+                outpoint: *outpoint,
+                script_pubkey: txout.script_pubkey.clone(),
+                height: *height,
+                unblinded,
+                wildcard_index: index.1,
+                ext_int: index.0,
+                is_spent: false,
+                address,
+            })
+        }
+        Ok(utxos)
     }
 
     fn txos_inner(&self) -> Result<Vec<WalletTxOut>, Error> {

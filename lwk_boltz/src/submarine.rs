@@ -451,10 +451,11 @@ impl PreparePayResponse {
 
         let invoice_str = if let Some(bolt11) = &self.data.bolt11_invoice {
             Some(bolt11.to_string())
-        } else if let Some(bolt12) = &self.data.bolt12_invoice {
-            Some(crate::display_bolt12_invoice(bolt12))
         } else {
-            None
+            self.data
+                .bolt12_invoice
+                .as_ref()
+                .map(crate::display_bolt12_invoice)
         };
 
         if let Some(invoice_str) = invoice_str {

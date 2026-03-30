@@ -87,8 +87,7 @@ impl BoltzSession {
                     Some(invoice_amount_msats) => {
                         let amount_sats = invoice_amount_msats / 1000;
                         log::info!("Preparing to pay {} sats", amount_sats);
-                        let bolt12_invoice =
-                            self.fetch_bolt12_invoice(offer, amount_sats).await?;
+                        let bolt12_invoice = self.fetch_bolt12_invoice(offer, amount_sats).await?;
                         Invoice::Bolt12(Box::new(bolt12_invoice))
                     }
                     None => return Err(Error::Generic("Amount is required".to_string())), // TODO use appropriate variant
@@ -462,12 +461,7 @@ impl PreparePayResponse {
             let swap_id = self.swap_id().to_string();
             let response = self
                 .swap_script
-                .submarine_cooperative_claim(
-                    &swap_id,
-                    &self.data.our_keys,
-                    &invoice_str,
-                    &self.api,
-                )
+                .submarine_cooperative_claim(&swap_id, &self.data.our_keys, &invoice_str, &self.api)
                 .await;
 
             match response {

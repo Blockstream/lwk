@@ -72,7 +72,7 @@ impl JadeWebSocket {
     #[wasm_bindgen(js_name = getReceiveAddressSingle)]
     pub async fn get_receive_address_single(
         &self,
-        variant: Singlesig,
+        variant: &Singlesig,
         path: Vec<u32>,
     ) -> Result<String, Error> {
         self.inner.unlock().await?;

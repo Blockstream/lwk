@@ -263,6 +263,15 @@ impl From<Singlesig> for Variant {
     }
 }
 
+impl From<&Singlesig> for Variant {
+    fn from(v: &Singlesig) -> Self {
+        match v.inner {
+            lwk_common::Singlesig::Wpkh => Variant::Wpkh,
+            lwk_common::Singlesig::ShWpkh => Variant::ShWpkh,
+        }
+    }
+}
+
 #[wasm_bindgen]
 impl Singlesig {
     pub fn from(variant: &str) -> Result<Singlesig, Error> {

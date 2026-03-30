@@ -15,6 +15,12 @@ impl From<Contract> for lwk_wollet::Contract {
     }
 }
 
+impl From<&Contract> for lwk_wollet::Contract {
+    fn from(value: &Contract) -> Self {
+        value.inner.clone()
+    }
+}
+
 impl From<lwk_wollet::Contract> for Contract {
     fn from(inner: lwk_wollet::Contract) -> Self {
         Self { inner }

@@ -50,7 +50,7 @@ impl AssetMeta {
 impl RegistryPost {
     /// Create a new registry post object to be used to publish a contract for an asset id in the registry.
     #[wasm_bindgen(constructor)]
-    pub fn new(contract: Contract, asset_id: AssetId) -> Self {
+    pub fn new(contract: &Contract, asset_id: &AssetId) -> Self {
         lwk_wollet::registry::RegistryPost::new(contract.into(), asset_id.into()).into()
     }
 
@@ -174,7 +174,7 @@ impl Registry {
     /// Without the contract information, the partially signed transaction
     /// is valid but will not show asset information when signed with an hardware wallet.
     #[wasm_bindgen(js_name = addContracts)]
-    pub fn add_contracts(&self, pset: Pset) -> Result<Pset, Error> {
+    pub fn add_contracts(&self, pset: &Pset) -> Result<Pset, Error> {
         let mut pset: elements::pset::PartiallySignedTransaction = pset.into();
         lwk_wollet::registry::add_contracts(&mut pset, self.inner.registry_asset_data().iter());
         Ok(pset.into())

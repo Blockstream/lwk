@@ -11,6 +11,23 @@
   "engines": {
     "node": ">=18"
   },
-  "scripts": {},
-  "devDependencies": {}
+  "scripts": {
+    "check:version": "tsx scripts/check-version.ts",
+    "clean": "tsx scripts/build.ts clean",
+    "prepare:generated": "tsx scripts/build.ts generate",
+    "stage:web": "tsx scripts/build.ts stage-web",
+    "stage:node": "tsx scripts/build.ts stage-node",
+    "build:packages": "npm run build -w @blockstream/lwk-web -w @blockstream/lwk-node",
+    "build": "npm run clean && npm run prepare:generated && npm run build:packages",
+    "typecheck:scripts": "tsc -p scripts/tsconfig.json --noEmit",
+    "typecheck": "npm run typecheck:scripts && npm run typecheck -w @blockstream/lwk-web -w @blockstream/lwk-node",
+    "test": "npm run test -w @blockstream/lwk-node"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.8.3",
+    "ws": "^8.18.3"
+  }
 }

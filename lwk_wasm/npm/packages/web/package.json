@@ -47,7 +47,10 @@
   "publishConfig": {
     "access": "public"
   },
-  "scripts": {},
+  "scripts": {
+    "build": "npm --prefix ../.. run stage:web && tsc -p tsconfig.build.json",
+    "typecheck": "npm run build && tsc -p tsconfig.json --noEmit"
+  },
   "imports": {
     "#generated/*": "./dist/generated/*"
   }

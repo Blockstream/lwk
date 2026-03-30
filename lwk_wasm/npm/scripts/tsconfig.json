@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "tsBuildInfoFile": "../.tmp/scripts.tsbuildinfo"
+  },
+  "include": ["./**/*.ts"],
+  "exclude": ["../generated", "../packages/*/dist", "../node_modules"]
+}

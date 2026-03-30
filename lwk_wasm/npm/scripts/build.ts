@@ -1,0 +1,130 @@
+/**
+ * Workspace build entrypoint.
+ *
+ * The npm workspace publishes two runtime-specific packages from one Rust crate:
+ * - `@blockstream/lwk-web`
+ * - `@blockstream/lwk-node`
+ *
+ * The build pipeline has two phases:
+ * - `generated/`: raw `wasm-pack` output for browser and Node targets
+ * - `packages/<name>/dist/generated`: staged runtime artifacts consumed by the
+ *   package-local TypeScript builds
+ */
+
+import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { resolve } from "node:path";
+
+import { ensureVersionsMatch } from "./lib/version.js";
+import {
+  generatedRoot,
+  Mode,
+  nodeDistGeneratedRoot,
+  nodeDistRoot,
+  nodeGeneratedRoot,
+  webDistGeneratedRoot,
+  webDistRoot,
+  webGeneratedRoot,
+} from "./lib/paths.js";
+import { runWasmPack } from "./lib/wasm-pack.js";
+
+const mode = (process.argv[2] ?? "stage") as Mode;
+const webGeneratedFiles = [
+  "lwk_wasm.js",
+  "lwk_wasm.d.ts",
+  "lwk_wasm_bg.js",
+  "lwk_wasm_bg.wasm",
+  "lwk_wasm_bg.wasm.d.ts",
+] as const;
+const nodeGeneratedFiles = [
+  "lwk_wasm.js",
+  "lwk_wasm.d.ts",
+  "lwk_wasm_bg.wasm",
+  "lwk_wasm_bg.wasm.d.ts",
+] as const;
+
+function clean(): void {
+  rmSync(generatedRoot, { force: true, recursive: true });
+  rmSync(webDistRoot, { force: true, recursive: true });
+  rmSync(nodeDistRoot, { force: true, recursive: true });
+  rmSync(resolve(".tmp"), { force: true, recursive: true });
+}
+
+function generate(): void {
+  ensureVersionsMatch();
+
+  rmSync(generatedRoot, { force: true, recursive: true });
+  mkdirSync(generatedRoot, { recursive: true });
+
+  runWasmPack("bundler", webGeneratedRoot);
+  runWasmPack("nodejs", nodeGeneratedRoot);
+}
+
+function ensureGenerated(): void {
+  if (!existsSync(webGeneratedRoot) || !existsSync(nodeGeneratedRoot)) {
+    generate();
+  }
+}
+
+function copyGeneratedFiles(
+  sourceRoot: string,
+  destinationRoot: string,
+  files: readonly string[]
+): void {
+  mkdirSync(destinationRoot, { recursive: true });
+
+  for (const file of files) {
+    cpSync(resolve(sourceRoot, file), resolve(destinationRoot, file));
+  }
+}
+
+function stageWeb(): void {
+  ensureGenerated();
+
+  rmSync(webDistRoot, { force: true, recursive: true });
+  mkdirSync(webDistRoot, { recursive: true });
+  copyGeneratedFiles(webGeneratedRoot, webDistGeneratedRoot, webGeneratedFiles);
+
+  const snippetsRoot = resolve(webGeneratedRoot, "snippets");
+  if (existsSync(snippetsRoot)) {
+    cpSync(snippetsRoot, resolve(webDistGeneratedRoot, "snippets"), {
+      recursive: true,
+    });
+  }
+}
+
+function stageNode(): void {
+  ensureGenerated();
+
+  rmSync(nodeDistRoot, { force: true, recursive: true });
+  mkdirSync(nodeDistRoot, { recursive: true });
+  copyGeneratedFiles(
+    nodeGeneratedRoot,
+    nodeDistGeneratedRoot,
+    nodeGeneratedFiles
+  );
+}
+
+function stage(): void {
+  stageWeb();
+  stageNode();
+}
+
+switch (mode) {
+  case "clean":
+    clean();
+    break;
+  case "generate":
+    generate();
+    break;
+  case "stage-web":
+    stageWeb();
+    break;
+  case "stage-node":
+    stageNode();
+    break;
+  case "stage":
+    stage();
+    break;
+  default:
+    throw new Error(`Unknown build mode: ${mode}`);
+}

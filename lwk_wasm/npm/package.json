@@ -21,13 +21,16 @@
     "build": "npm run clean && npm run prepare:generated && npm run build:packages",
     "typecheck:scripts": "tsc -p scripts/tsconfig.json --noEmit",
     "typecheck": "npm run typecheck:scripts && npm run typecheck -w @blockstream/lwk-web -w @blockstream/lwk-node",
-    "test": "npm run test -w @blockstream/lwk-node"
+    "test": "npm run test -w @blockstream/lwk-web -w @blockstream/lwk-node"
   },
   "devDependencies": {
     "@types/node": "^22.14.1",
     "@types/ws": "^8.18.1",
     "tsx": "^4.20.6",
     "typescript": "^5.8.3",
+    "vite": "^5.4.19",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.6.0",
     "ws": "^8.18.3"
   }
 }

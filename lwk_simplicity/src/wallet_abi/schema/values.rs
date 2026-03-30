@@ -1,6 +1,9 @@
 //! SIMF argument and witness payload codecs used by `wallet-abi-0.1`.
 
 use crate::error::WalletAbiError;
+
+use crate::wallet_abi::schema::KeyStoreMeta;
+
 use crate::simplicityhl::num::U256;
 use crate::simplicityhl::parse::ParseFromStr;
 use crate::simplicityhl::simplicity::jet::elements::ElementsEnv;
@@ -17,7 +20,7 @@ use lwk_wollet::elements::pset::{Input, PartiallySignedTransaction};
 use lwk_wollet::elements::secp256k1_zkp::ZERO_TWEAK;
 use lwk_wollet::elements::Transaction;
 use lwk_wollet::hashes::Hash;
-use lwk_wollet::secp256k1::{Keypair, Message, XOnlyPublicKey};
+use lwk_wollet::secp256k1::{Message, XOnlyPublicKey};
 
 /// Runtime-resolved Simplicity argument sources.
 ///
@@ -157,7 +160,7 @@ pub enum RuntimeSimfWitness {
     /// Semantics:
     /// - `name` must be a valid Simplicity witness identifier.
     /// - `public_key` must equal the runtime signer x-only public key.
-    /// - signature bytes are produced with the runtime signer keypair over
+    /// - signature bytes should be produced with the runtime signer keypair over
     ///   `ElementsEnv::c_tx_env().sighash_all()`.
     SigHashAll {
         name: String,
@@ -169,7 +172,7 @@ pub enum RuntimeSimfWitness {
 pub struct SimfWitness {
     /// Statically resolved witness values serialized into the payload.
     pub resolved: WitnessValues,
-    /// Runtime witness directives that are resolved during finalization.
+    /// Runtime witness directives that should be resolved during finalization.
     ///
     /// Resolution flow in [`resolve_witness`]:
     /// 1. Decode `SimfWitness`.
@@ -210,11 +213,21 @@ pub fn serialize_witness(witness: &SimfWitness) -> Result<Vec<u8>, WalletAbiErro
 /// - invalid witness names return `InvalidRequest`.
 /// - `sig_hash_all` signer key mismatch returns `InvalidRequest`.
 /// - runtime/static witness-name collisions returns `InvalidRequest`.
-pub fn resolve_witness(
+/// - signer-implementation failures are mapped from `Signer::Error`.
+///
+/// # Signer contract
+///
+/// `Signer` must provide:
+/// - stable x-only key via `get_raw_signing_x_only_pubkey` for directive validation
+/// - Schnorr signatures via `sign_schnorr` over the provided `sighash_all` message
+pub fn resolve_witness<Signer: KeyStoreMeta>(
     bytes: &[u8],
-    contract_signer: &Keypair,
+    signer_meta: &Signer,
     env: &ElementsEnv<Arc<Transaction>>,
-) -> Result<WitnessValues, WalletAbiError> {
+) -> Result<WitnessValues, WalletAbiError>
+where
+    WalletAbiError: From<Signer::Error>,
+{
     let simf_arguments: SimfWitness = serde_json::from_slice(bytes)?;
 
     let mut final_witness: HashMap<WitnessName, Value> = HashMap::<WitnessName, Value>::new();
@@ -228,7 +241,7 @@ pub fn resolve_witness(
     for value in simf_arguments.runtime_arguments {
         match value {
             RuntimeSimfWitness::SigHashAll { name, public_key } => {
-                let signer_public_key = contract_signer.x_only_public_key().0;
+                let signer_public_key = signer_meta.get_raw_signing_x_only_pubkey()?;
                 if signer_public_key != public_key {
                     return Err(WalletAbiError::InvalidRequest(format!(
                         "sighash_all witness '{name}' public key mismatch: expected {public_key}, runtime signer is {signer_public_key}"
@@ -244,7 +257,11 @@ pub fn resolve_witness(
 
                 final_witness.insert(
                     witness_name,
-                    Value::byte_array(contract_signer.sign_schnorr(sighash_all).serialize()),
+                    Value::byte_array(
+                        signer_meta
+                            .sign_schnorr(sighash_all, public_key)?
+                            .serialize(),
+                    ),
                 );
             }
         }

@@ -24,7 +24,7 @@ pub fn generate_request_id() -> Uuid {
 ///   before wallet/network side effects.
 /// - `request_id` is for correlation and tracing, not replay protection.
 /// - `broadcast = false` means "do not publish transaction", not "do not touch network":
-///   runtime can still perform wallet sync and UTXO fetches.
+///   runtime may still perform wallet sync and UTXO fetches.
 ///
 /// UX guidance:
 /// - generate a fresh `request_id` per user action,
@@ -40,7 +40,7 @@ pub struct TxCreateRequest {
     pub request_id: Uuid,
     /// Target Elements network for this request.
     pub network: Network,
-    /// Transaction construction parameters consumed by runtime.
+    /// Transaction construction parameters to be consumed by runtime.
     pub params: RuntimeParams,
     /// Broadcast policy for runtime.
     ///

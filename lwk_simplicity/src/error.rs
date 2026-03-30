@@ -8,6 +8,33 @@ pub enum WalletAbiError {
 
     #[error("Program error: {0}")]
     Program(#[from] ProgramError),
+
+    #[error("Bitcoin derivation: {0}")]
+    Derivation(#[from] lwk_wollet::bitcoin::bip32::Error),
+
+    #[error("Int conversion: {0}")]
+    TryFromInt(#[from] std::num::TryFromIntError),
+
+    #[error("Failed to fund the request: {0}")]
+    Funding(String),
+
+    #[error("Runtime signer configuration: {0}")]
+    InvalidSignerConfig(String),
+
+    #[error("Runtime response construction: {0}")]
+    InvalidResponse(String),
+
+    #[error("PSET error: {0}")]
+    Pset(#[from] lwk_wollet::elements::pset::Error),
+
+    #[error("PSET blinding error: {0}")]
+    PsetBlind(#[from] lwk_wollet::elements::pset::PsetBlindError),
+
+    #[error("Transaction amount proof verification failed: {0}")]
+    AmountProofVerification(#[from] lwk_wollet::elements::VerificationError),
+
+    #[error("Invalid finalization steps: {0}")]
+    InvalidFinalizationSteps(String),
 }
 
 /// Errors that occur during Simplicity program compilation, execution, or environment setup.

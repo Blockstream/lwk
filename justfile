@@ -149,3 +149,15 @@ mdbook:
 # Serve the mdbook documentation locally for development
 mdbook-serve: mdbook
     cd docs && mdbook serve
+
+# Build the npm workspace packages for lwk_wasm
+wasm-npm-build:
+    cd lwk_wasm/npm && npm ci && npm run build
+
+# Run the npm workspace checks and integration tests
+wasm-npm-test:
+    cd lwk_wasm/npm && npm ci && npm run lint && npm run format:check && npm run typecheck && npm run test
+
+# Verify the npm workspace tarball contents and exports
+wasm-npm-pack:
+    cd lwk_wasm/npm && npm ci && npm run pack:check

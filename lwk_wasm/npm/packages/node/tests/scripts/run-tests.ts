@@ -5,7 +5,9 @@ import { pathToFileURL } from "node:url";
 
 type Runnable = () => Promise<void> | void;
 
-function collectExports(module: Record<string, unknown>): Record<string, unknown> {
+function collectExports(
+  module: Record<string, unknown>
+): Record<string, unknown> {
   if (module.default && typeof module.default === "object") {
     return { ...module.default, ...module };
   }

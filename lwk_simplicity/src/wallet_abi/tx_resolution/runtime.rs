@@ -149,9 +149,7 @@ where
             fee_target_sat,
         );
 
-        pst = resolver.resolve_request(&self.request.params, pst).await?;
-
-        let artifacts = resolver.get_resolution_artifact();
+        let (mut pst, artifacts) = resolver.resolve_request(&self.request.params, pst).await?;
 
         pst.blind_last(
             &mut lwk_wollet::secp256k1::rand::thread_rng(),

@@ -25,6 +25,24 @@ pub(crate) struct ResolvedInputMaterial {
     wallet_finalization_weight: Option<usize>,
 }
 
+impl ResolvedInputMaterial {
+    pub(crate) fn outpoint(&self) -> &OutPoint {
+        &self.outpoint
+    }
+
+    pub(crate) fn tx_out(&self) -> &TxOut {
+        &self.tx_out
+    }
+
+    pub(crate) fn secrets(&self) -> &TxOutSecrets {
+        &self.secrets
+    }
+
+    pub(crate) fn wallet_finalization_weight(&self) -> &Option<usize> {
+        &self.wallet_finalization_weight
+    }
+}
+
 impl<'a, WalletProvider: WalletProviderMeta> InputMaterialResolver<'a, WalletProvider>
 where
     WalletAbiError: From<WalletProvider::Error>,

@@ -297,6 +297,9 @@ impl EsploraClient {
         wollet: &Wollet,
         index: u32,
     ) -> Result<Option<Update>, Error> {
+        if wollet.utxo_only() != self.utxo_only {
+            return Err(Error::UtxoOnlyIncompatible);
+        }
         let descriptor = wollet.wollet_descriptor();
         let cache = &wollet.cache;
 

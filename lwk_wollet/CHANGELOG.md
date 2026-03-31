@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+* Add `WolletBuilder::utxo_only()`
+* `full_scan` now fails if the `Client` is "utxo only" and the `Wollet` is not "utxo only" (or viceversa)
+
 ## 0.16.0
 
 There have been changes in how the wollet handle persistence.

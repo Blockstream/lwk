@@ -317,6 +317,14 @@ impl WolletBuilder {
         Ok(())
     }
 
+    /// Set the wallet as "utxo only"
+    pub fn utxo_only(&self, utxo_only: bool) -> Result<(), LwkError> {
+        let mut inner = self.inner.lock()?;
+        let builder = inner.take().ok_or(LwkError::ObjectConsumed)?;
+        *inner = Some(builder.utxo_only(utxo_only));
+        Ok(())
+    }
+
     /// Persist wallet updates in the legacy encrypted filesystem store.
     pub fn with_legacy_fs_store(&self, datadir: &str) -> Result<(), LwkError> {
         let mut inner = self.inner.lock()?;

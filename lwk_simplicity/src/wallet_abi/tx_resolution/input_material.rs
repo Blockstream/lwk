@@ -90,6 +90,10 @@ where
         )))
     }
 
+    pub(crate) fn used_outpoints(&self) -> &HashSet<OutPoint> {
+        &self.used_outpoints
+    }
+
     /// Resolve input material from wallet snapshot using deficit-aware selection.
     async fn resolve_wallet_input_material(
         &mut self,

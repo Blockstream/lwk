@@ -9,10 +9,11 @@ use crate::wallet_abi::tx_resolution::output_allocator::OutputAllocator;
 use crate::wallet_abi::tx_resolution::resolution_artifact::ResolutionArtifacts;
 use crate::wallet_abi::tx_resolution::supply_and_demand::SupplyAndDemand;
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use lwk_wollet::elements::pset::{Input, PartiallySignedTransaction};
-use lwk_wollet::elements::{secp256k1_zkp, AssetId};
+use lwk_wollet::elements::{secp256k1_zkp, AssetId, OutPoint};
 use lwk_wollet::secp256k1::constants::ONE;
 use lwk_wollet::ExternalUtxo;
 
@@ -81,8 +82,11 @@ where
         while let Some((target_asset, target_missing)) =
             supply_and_demand.pick_largest_deficit_asset()
         {
-            let selected_indexes =
-                self.select_auxiliary_inputs_for_asset(target_asset, target_missing)?;
+            let selected_indexes = self.select_auxiliary_inputs_for_asset(
+                target_asset,
+                target_missing,
+                input_material_resolver.used_outpoints(),
+            )?;
 
             for selected_index in selected_indexes {
                 let selected: &ExternalUtxo = self.wallet_request_session.spendable_utxos.get(selected_index).ok_or_else(|| {
@@ -206,9 +210,82 @@ where
 
     fn select_auxiliary_inputs_for_asset(
         &self,
-        _target_asset: AssetId,
-        _target_missing: u64,
+        target_asset: AssetId,
+        target_missing: u64,
+        reserved_outpoints: &HashSet<OutPoint>,
     ) -> Result<Vec<usize>, WalletAbiError> {
-        todo!()
+        if target_missing == 0 {
+            return Ok(Vec::new());
+        }
+
+        let mut candidate_indexes = self
+            .wallet_snapshot()
+            .iter()
+            .enumerate()
+            .filter_map(|(index, candidate)| {
+                (!reserved_outpoints.contains(&candidate.outpoint)
+                    && candidate.unblinded.asset == target_asset)
+                    .then_some(index)
+            })
+            .collect::<Vec<_>>();
+        candidate_indexes.sort_by(|left, right| {
+            let left = &self.wallet_snapshot()[*left];
+            let right = &self.wallet_snapshot()[*right];
+            right
+                .unblinded
+                .value
+                .cmp(&left.unblinded.value)
+                .then_with(|| {
+                    left.outpoint
+                        .txid
+                        .to_string()
+                        .cmp(&right.outpoint.txid.to_string())
+                })
+                .then_with(|| left.outpoint.vout.cmp(&right.outpoint.vout))
+        });
+
+        let available_candidates = candidate_indexes.len();
+        let available_total_sat = candidate_indexes.iter().try_fold(0u64, |sum, index| {
+            sum.checked_add(self.wallet_snapshot()[*index].unblinded.value)
+                .ok_or_else(|| {
+                    WalletAbiError::InvalidRequest(format!(
+                        "asset amount overflow while aggregating candidate pool for {}",
+                        target_asset
+                    ))
+                })
+        })?;
+
+        if candidate_indexes.is_empty() || available_total_sat < target_missing {
+            return Err(
+                WalletAbiError::Funding(format!(
+                    "insufficient wallet funds for asset {target_asset}: missing {target_missing} sat, available {available_total_sat} sat across {available_candidates} candidate UTXOs"
+                ))
+            );
+        }
+
+        let mut selected_indexes = Vec::new();
+        let mut selected_total_sat = 0u64;
+
+        for index in candidate_indexes {
+            selected_indexes.push(index);
+            selected_total_sat = selected_total_sat
+                .checked_add(self.wallet_snapshot()[index].unblinded.value)
+                .ok_or_else(|| {
+                    WalletAbiError::InvalidRequest(format!(
+                        "asset amount overflow while selecting auxiliary inputs for {}",
+                        target_asset
+                    ))
+                })?;
+
+            if selected_total_sat >= target_missing {
+                return Ok(selected_indexes);
+            }
+        }
+
+        Err(
+            WalletAbiError::Funding(format!(
+                "insufficient wallet funds for asset {target_asset}: missing {target_missing} sat, available {available_total_sat} sat across {available_candidates} candidate UTXOs"
+            ))
+        )
     }
 }

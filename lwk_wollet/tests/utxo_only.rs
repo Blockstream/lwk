@@ -24,7 +24,10 @@ fn test_esplora_waterfalls_utxo_only() {
         .build_blocking()
         .unwrap();
 
-    let mut wollet_utxo_only = WolletBuilder::new(network, desc.clone()).build().unwrap();
+    let mut wollet_utxo_only = WolletBuilder::new(network, desc.clone())
+        .utxo_only(true)
+        .build()
+        .unwrap();
     let mut client_utxo_only = EsploraClientBuilder::new(&env.waterfalls_url(), network)
         .waterfalls(true)
         .utxo_only(true)
@@ -133,7 +136,10 @@ fn test_waterfalls_utxo_only_with_dummy() {
         .utxo_only(true)
         .build_blocking()
         .unwrap();
-    let mut wollet_utxo_only = WolletBuilder::new(network, wd).build().unwrap();
+    let mut wollet_utxo_only = WolletBuilder::new(network, wd)
+        .utxo_only(true)
+        .build()
+        .unwrap();
 
     let node_address = env.elementsd_getnewaddress();
     let txid0 = w.fund_btc(&env);
@@ -199,7 +205,9 @@ async fn test_esplora_waterfalls_balance_comparison(
         .concurrency(4)
         .build()?;
 
-    let mut wollet_utxo_only = WolletBuilder::new(network, desc.clone()).build()?;
+    let mut wollet_utxo_only = WolletBuilder::new(network, desc.clone())
+        .utxo_only(true)
+        .build()?;
     let mut client_utxo_only = EsploraClientBuilder::new(esplora_url, network)
         .utxo_only(true)
         .waterfalls(true)
@@ -265,7 +273,8 @@ fn test_faucet() {
         .waterfalls(true)
         .build_blocking()
         .unwrap();
-    let mut w = TestWollet::new(client, &desc);
+    let opt = TestWolletOpt { utxo_only: true };
+    let mut w = TestWollet::with_opt(client, &desc, &opt);
 
     let lbtc = w.policy_asset();
     let txid0 = w.fund_btc(&env);

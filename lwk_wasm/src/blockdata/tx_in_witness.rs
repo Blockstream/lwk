@@ -37,6 +37,80 @@ impl AsRef<elements::TxInWitness> for TxInWitness {
     }
 }
 
+// wasm_bindgen does not support Vec<T> as a wrapper of Vec<T>
+/// Simplicity type collection.
+#[wasm_bindgen]
+#[derive(Clone, Debug, Default)]
+pub struct Witnesses {
+    inner: Vec<String>,
+}
+
+impl From<&Witnesses> for Vec<String> {
+    fn from(value: &Witnesses) -> Self {
+        value.inner.clone().into_iter().collect()
+    }
+}
+
+impl From<Witnesses> for Vec<String> {
+    fn from(value: Witnesses) -> Self {
+        value.inner.into_iter().collect()
+    }
+}
+
+impl From<Vec<String>> for Witnesses {
+    fn from(value: Vec<String>) -> Self {
+        Witnesses { inner: value }
+    }
+}
+
+impl AsRef<[String]> for Witnesses {
+    fn as_ref(&self) -> &[String] {
+        self.inner.as_ref()
+    }
+}
+
+impl std::fmt::Display for Witnesses {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.inner)
+    }
+}
+
+#[wasm_bindgen]
+impl Witnesses {
+    /// Create an object with an empty list of witnesses.
+    pub fn empty() -> Self {
+        Witnesses::default()
+    }
+
+    /// Create an object from a list of witnesses.
+    pub fn new(data: Vec<String>) -> Self {
+        Witnesses { inner: data }
+    }
+
+    /// Set to an object a list of witnesses.
+    pub fn set(&mut self, data: Vec<String>) {
+        self.inner = data;
+    }
+
+    /// Set to an object a list of witnesses.
+    pub fn get(&self) -> Vec<String> {
+        self.inner.clone()
+    }
+
+    /// Consumes the Witnesses and returns the inner vector without cloning.
+    /// The original object is deallocated and can no longer be used.
+    #[wasm_bindgen(js_name = intoInner)]
+    pub fn into_inner(self) -> Vec<String> {
+        self.inner
+    }
+
+    /// Return the string representation of this list of witnesses.
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{self}")
+    }
+}
+
 #[wasm_bindgen]
 impl TxInWitness {
     /// Create an empty witness.
@@ -54,8 +128,9 @@ impl TxInWitness {
     /// so the argument that was passed in the JS code cannot be reused.
     // TODO: address the limitation
     #[wasm_bindgen(js_name = fromScriptWitness)]
-    pub fn from_script_witness(script_witness: Vec<String>) -> Result<TxInWitness, Error> {
+    pub fn from_script_witness(script_witness: &Witnesses) -> Result<TxInWitness, Error> {
         let witness: Vec<Vec<u8>> = script_witness
+            .as_ref()
             .iter()
             .map(|s| Vec::<u8>::from_hex(s))
             .collect::<Result<Vec<_>, _>>()?;
@@ -71,24 +146,26 @@ impl TxInWitness {
     ///
     /// Returns an array of hex strings.
     #[wasm_bindgen(getter = scriptWitness)]
-    pub fn script_witness(&self) -> Vec<String> {
+    pub fn script_witness(&self) -> Witnesses {
         self.inner
             .script_witness
             .iter()
             .map(|elem| elem.to_hex())
-            .collect()
+            .collect::<Vec<_>>()
+            .into()
     }
 
     /// Get the peg-in witness elements.
     ///
     /// Returns an array of hex strings.
     #[wasm_bindgen(getter = peginWitness)]
-    pub fn pegin_witness(&self) -> Vec<String> {
+    pub fn pegin_witness(&self) -> Witnesses {
         self.inner
             .pegin_witness
             .iter()
             .map(|elem| elem.to_hex())
-            .collect()
+            .collect::<Vec<_>>()
+            .into()
     }
 
     /// Check if the witness is empty.
@@ -118,8 +195,9 @@ impl TxInWitnessBuilder {
     ///
     /// Takes an array of hex strings representing the witness stack.
     #[wasm_bindgen(js_name = scriptWitness)]
-    pub fn script_witness(mut self, witness: Vec<String>) -> Result<TxInWitnessBuilder, Error> {
+    pub fn script_witness(mut self, witness: &Witnesses) -> Result<TxInWitnessBuilder, Error> {
         self.inner.script_witness = witness
+            .as_ref()
             .iter()
             .map(|s| Vec::<u8>::from_hex(s))
             .collect::<Result<Vec<_>, _>>()?;
@@ -130,8 +208,9 @@ impl TxInWitnessBuilder {
     ///
     /// Takes an array of hex strings representing the peg-in witness stack.
     #[wasm_bindgen(js_name = peginWitness)]
-    pub fn pegin_witness(mut self, witness: Vec<String>) -> Result<TxInWitnessBuilder, Error> {
+    pub fn pegin_witness(mut self, witness: &Witnesses) -> Result<TxInWitnessBuilder, Error> {
         self.inner.pegin_witness = witness
+            .as_ref()
             .iter()
             .map(|s| Vec::<u8>::from_hex(s))
             .collect::<Result<Vec<_>, _>>()?;
@@ -177,13 +256,13 @@ mod tests {
     fn test_tx_in_witness() {
         let empty = TxInWitness::empty();
         assert!(empty.is_empty());
-        assert_eq!(empty.script_witness().len(), 0);
+        assert_eq!(empty.script_witness().as_ref().len(), 0);
 
         let witness_stack = vec!["010203".to_string(), "040506".to_string()];
 
-        let witness = TxInWitness::from_script_witness(witness_stack).unwrap();
+        let witness = TxInWitness::from_script_witness(witness_stack.into()).unwrap();
         assert!(!witness.is_empty());
-        assert_eq!(witness.script_witness().len(), 2);
+        assert_eq!(witness.script_witness().as_ref().len(), 2);
         assert_eq!(witness.script_witness()[0], "010203");
         assert_eq!(witness.script_witness()[1], "040506");
     }
@@ -193,11 +272,11 @@ mod tests {
         let witness_stack = vec!["010203".to_string()];
 
         let witness = TxInWitnessBuilder::new()
-            .script_witness(witness_stack)
+            .script_witness(witness_stack.into())
             .unwrap()
             .build();
 
         assert!(!witness.is_empty());
-        assert_eq!(witness.script_witness().len(), 1);
+        assert_eq!(witness.script_witness().as_ref().len(), 1);
     }
 }

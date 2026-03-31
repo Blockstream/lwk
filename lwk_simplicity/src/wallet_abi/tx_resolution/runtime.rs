@@ -5,13 +5,18 @@ use crate::wallet_abi::schema::{
     KeyStoreMeta, TransactionInfo, TxCreateRequest, TxCreateResponse, WalletProviderMeta,
     WalletRequestSession, WalletRuntimeDeps, WalletSessionFactory,
 };
+use crate::wallet_abi::tx_resolution::input_finalizer::{
+    extract_env_utxos, finalize_simf_inputs, finalize_wallet_inputs,
+};
+use crate::wallet_abi::tx_resolution::resolution_artifact::ResolutionArtifacts;
 
-use log::error;
+use log::{error, warn};
 
-use lwk_common::DEFAULT_FEE_RATE;
+use lwk_common::{calculate_fee, DEFAULT_FEE_RATE};
 
 use lwk_wollet::elements::hex::ToHex;
 use lwk_wollet::elements::pset::serialize::Serialize;
+use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use lwk_wollet::elements::Transaction;
 
 pub struct Runtime<'a, Signer, SessionFactory, WalletProvider>
@@ -57,9 +62,83 @@ where
 
     async fn resolve_transaction(
         &self,
-        _wallet_session: &WalletRequestSession,
-        _fee_rate_sat_kvb: f32,
+        wallet_session: &WalletRequestSession,
+        fee_rate_sat_kvb: f32,
     ) -> Result<Transaction, WalletAbiError> {
+        let estimated_fee = self
+            .estimate_fee_target(fee_rate_sat_kvb, wallet_session)
+            .await?;
+
+        let (pst, artifacts) = self
+            .build_transaction(estimated_fee, wallet_session)
+            .await?;
+
+        let pst = finalize_simf_inputs(
+            self.signer_meta,
+            pst,
+            artifacts.finalizers(),
+            wallet_session.network,
+        )?;
+        let pst = finalize_wallet_inputs(self.signer_meta, pst, artifacts.finalizers())?;
+
+        let final_fee = calculate_fee(pst.extract_tx()?.discount_weight(), fee_rate_sat_kvb);
+        if estimated_fee < final_fee {
+            error!(
+                "fee estimation under-shot; target={estimated_fee} sat, realized={final_fee} sat"
+            );
+
+            return Err(WalletAbiError::Funding("fee estimation failed".to_string()));
+        }
+
+        if estimated_fee != final_fee {
+            warn!(
+                "fee estimate exceeded realized fee; target={estimated_fee} sat, realized={final_fee} sat"
+            );
+        }
+
+        let utxos = extract_env_utxos(&pst)?;
+
+        let tx = pst.extract_tx()?;
+
+        // `elements::Transaction::verify_tx_amt_proofs` treats zero-value OP_RETURN outputs
+        // as a hard error even though Elements accepts them as provably unspendable. Lending
+        // contracts use these outputs for metadata and burns, so skip the local proof check
+        // for that specific transaction shape and rely on node validation instead.
+        if !tx.output.iter().any(|tx_out| {
+            tx_out.script_pubkey.is_provably_unspendable() && tx_out.value.explicit() == Some(0)
+        }) {
+            tx.verify_tx_amt_proofs(&lwk_wollet::EC, &utxos)?;
+        }
+
+        Ok(tx)
+    }
+
+    async fn estimate_fee_target(
+        &self,
+        fee_rate_sat_kvb: f32,
+        wallet_session: &WalletRequestSession,
+    ) -> Result<u64, WalletAbiError> {
+        let (fee_estimation_build, artifacts) = self.build_transaction(1, wallet_session).await?;
+
+        let fee_estimation_build = finalize_simf_inputs(
+            self.signer_meta,
+            fee_estimation_build,
+            artifacts.finalizers(),
+            wallet_session.network,
+        )?;
+
+        Ok(calculate_fee(
+            fee_estimation_build.extract_tx()?.discount_weight()
+                + artifacts.wallet_input_finalization_weight(),
+            fee_rate_sat_kvb,
+        ))
+    }
+
+    async fn build_transaction(
+        &self,
+        _fee_target_sat: u64,
+        _wallet_session: &WalletRequestSession,
+    ) -> Result<(PartiallySignedTransaction, ResolutionArtifacts), WalletAbiError> {
         todo!()
     }
 

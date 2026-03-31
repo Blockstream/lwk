@@ -59,6 +59,7 @@ pub struct Wollet {
     pub(crate) merge_threshold: Option<usize>,
     /// cached value
     max_weight_to_satisfy: usize,
+    utxo_only: bool,
 }
 
 /// A builder for constructing [`Wollet`] instances
@@ -68,6 +69,7 @@ pub struct WolletBuilder {
     store: Arc<dyn DynStore>,
     /// Number of updates to trigger merge. None disables merging.
     merge_threshold: Option<usize>,
+    utxo_only: bool,
 }
 
 impl WolletBuilder {
@@ -78,6 +80,7 @@ impl WolletBuilder {
             descriptor,
             store: Arc::new(FakeStore::new()),
             merge_threshold: None,
+            utxo_only: false,
         }
     }
 
@@ -87,6 +90,18 @@ impl WolletBuilder {
     /// Set to None to disable merging (default).
     pub fn with_merge_threshold(mut self, threshold: Option<usize>) -> Self {
         self.merge_threshold = threshold;
+        self
+    }
+
+    /// Experimental: allow the `Wollet` to work with `utxo_only` clients
+    ///
+    /// [`EsploraClientBuilder`] allows to create clients will only fetch transactions with
+    /// unspent outputs to minimize the network and memory usage.
+    ///
+    /// If `utxo_only` is `true`, the `Wollet` will only work with `utxo_only` clients.
+    /// If `utxo_only` is `false` (default), the `Wollet` will only work with non-`utxo_only` clients.
+    pub fn utxo_only(mut self, utxo_only: bool) -> Self {
+        self.utxo_only = utxo_only;
         self
     }
 
@@ -127,6 +142,7 @@ impl WolletBuilder {
             next_update_index: Mutex::new(0),
             max_weight_to_satisfy,
             merge_threshold: self.merge_threshold,
+            utxo_only: self.utxo_only,
         };
 
         // Restore updates from the store using indexed keys
@@ -165,6 +181,7 @@ pub struct WolletConciseState {
     heights: HashMap<Txid, Option<Height>>,
     tip: (Height, BlockHash),
     last_unused: LastUnused,
+    utxo_only: bool,
 }
 
 pub trait WolletState {
@@ -181,6 +198,7 @@ pub trait WolletState {
     fn last_unused(&self) -> LastUnused; // TODO change to &LastUnused when possible
     fn descriptor(&self) -> WolletDescriptor;
     fn wollet_status(&self) -> u64;
+    fn utxo_only(&self) -> bool;
 }
 
 impl WolletState for WolletConciseState {
@@ -268,6 +286,10 @@ impl WolletState for WolletConciseState {
     fn wollet_status(&self) -> u64 {
         self.wollet_status
     }
+
+    fn utxo_only(&self) -> bool {
+        self.utxo_only
+    }
 }
 
 impl std::fmt::Debug for Wollet {
@@ -321,6 +343,10 @@ impl WolletState for Wollet {
     fn wollet_status(&self) -> u64 {
         self.status()
     }
+
+    fn utxo_only(&self) -> bool {
+        self.utxo_only
+    }
 }
 
 impl std::hash::Hash for Wollet {
@@ -355,6 +381,11 @@ impl Wollet {
         self.descriptor.is_amp0()
     }
 
+    /// Whether the wallet is `utxo_only`
+    pub fn utxo_only(&self) -> bool {
+        self.utxo_only
+    }
+
     /// Max weight to satisfy for inputs belonging to this wallet
     pub fn max_weight_to_satisfy(&self) -> usize {
         self.max_weight_to_satisfy
@@ -375,6 +406,7 @@ impl Wollet {
                 internal: cache.last_unused_internal.load(atomic::Ordering::Relaxed),
                 external: cache.last_unused_external.load(atomic::Ordering::Relaxed),
             },
+            utxo_only: self.utxo_only,
         }
     }
 

@@ -15,6 +15,80 @@ pub struct SimplicityType {
     inner: ResolvedType,
 }
 
+// wasm_bindgen does not support Vec<T> as a wrapper of Vec<T>
+/// Simplicity type collection.
+#[wasm_bindgen]
+#[derive(Clone, Debug, Default)]
+pub struct SimplicityTypes {
+    inner: Vec<SimplicityType>,
+}
+
+impl From<&SimplicityTypes> for Vec<SimplicityType> {
+    fn from(value: &SimplicityTypes) -> Self {
+        value.inner.clone().into_iter().collect()
+    }
+}
+
+impl From<SimplicityTypes> for Vec<SimplicityType> {
+    fn from(value: SimplicityTypes) -> Self {
+        value.inner.into_iter().collect()
+    }
+}
+
+impl From<Vec<SimplicityType>> for SimplicityTypes {
+    fn from(value: Vec<SimplicityType>) -> Self {
+        SimplicityTypes { inner: value }
+    }
+}
+
+impl AsRef<[SimplicityType]> for SimplicityTypes {
+    fn as_ref(&self) -> &[SimplicityType] {
+        self.inner.as_ref()
+    }
+}
+
+impl std::fmt::Display for SimplicityTypes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.inner)
+    }
+}
+
+#[wasm_bindgen]
+impl SimplicityTypes {
+    /// Create an object with an empty list of simplicity types.
+    pub fn empty() -> Self {
+        SimplicityTypes::default()
+    }
+
+    /// Create an object from a list of simplicity types.
+    pub fn new(data: Vec<SimplicityType>) -> Self {
+        SimplicityTypes { inner: data }
+    }
+
+    /// Set to an object a list of simplicity types.
+    pub fn set(&mut self, data: Vec<SimplicityType>) {
+        self.inner = data;
+    }
+
+    /// Set to an object a list of simplicity types.
+    pub fn get(&self) -> Vec<SimplicityType> {
+        self.inner.clone()
+    }
+
+    /// Consumes the SimplicityTypes and returns the inner vector without cloning.
+    /// The original object is deallocated and can no longer be used.
+    #[wasm_bindgen(js_name = intoInner)]
+    pub fn into_inner(self) -> Vec<SimplicityType> {
+        self.inner
+    }
+
+    /// Return the string representation of this list of simplicity types.
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{self}")
+    }
+}
+
 impl Display for SimplicityType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner)
@@ -94,13 +168,9 @@ impl SimplicityType {
     }
 
     /// Create a tuple type from elements.
-    ///
-    /// NOTE: The elements object is destroyed during the execution of the function, so the argument that was
-    /// passed in the JS code cannot be reused.
-    // TODO: address the limitation
     #[wasm_bindgen(js_name = fromElements)]
-    pub fn from_elements(elements: Vec<SimplicityType>) -> SimplicityType {
-        let inner = ResolvedType::tuple(elements.iter().map(|e| e.inner.clone()));
+    pub fn from_elements(elements: &SimplicityTypes) -> SimplicityType {
+        let inner = ResolvedType::tuple(elements.as_ref().iter().map(|e| e.inner.clone()));
         Self { inner }
     }
 
@@ -148,7 +218,7 @@ mod tests {
 
         let _ = SimplicityType::either(&u32_type, &u64_type);
         let _ = SimplicityType::option(&u32_type);
-        let _ = SimplicityType::from_elements(vec![u32_type, u64_type]);
+        let _ = SimplicityType::from_elements(vec![u32_type, u64_type].into());
 
         let ty = SimplicityType::from_string("u32").unwrap();
         let either_ty = SimplicityType::from_string("Either<u32, u64>").unwrap();

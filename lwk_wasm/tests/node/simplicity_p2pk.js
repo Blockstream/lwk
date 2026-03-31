@@ -64,7 +64,8 @@ async function runSimplicityP2pkTest() {
     // Test SimplicityType constructors
     const tEither = lwk.SimplicityType.either(lwk.SimplicityType.u32(), lwk.SimplicityType.boolean());
     const _tOption = lwk.SimplicityType.option(lwk.SimplicityType.u64());
-    const _tTuple = lwk.SimplicityType.fromElements([lwk.SimplicityType.u32(), lwk.SimplicityType.u256()]);
+    const _sTypes = lwk.SimplicityTypes.new([lwk.SimplicityType.u32(), lwk.SimplicityType.u256()])
+    const _tTuple = lwk.SimplicityType.fromElements(_sTypes);
     const _tParsed = lwk.SimplicityType.fromString("Either<u32, bool>");
 
     // Test SimplicityTypedValue constructors

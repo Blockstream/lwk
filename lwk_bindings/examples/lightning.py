@@ -867,7 +867,9 @@ def main():
     btcpos_link = f"https://btcpos.cash/#{pos_encoded}"
     print("POS terminal:", btcpos_link)
 
-    wollet = Wollet(network, desc, datadir=None)
+    b = WolletBuilder(network, desc)
+    b.utxo_only(True)
+    wollet = b.build()
 
     mnemonic_derivation_index = os.getenv('MNEMONIC_DERIVATION_INDEX')
     if mnemonic_derivation_index:

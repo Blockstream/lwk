@@ -28,7 +28,9 @@ b = EsploraClientBuilder(
     utxo_only=True,
 )
 client_utxo_only = EsploraClient.from_builder(b)
-wollet_utxo_only = Wollet(network, desc, datadir=None)
+b = WolletBuilder(network, desc)
+b.utxo_only(True)
+wollet_utxo_only = b.build()
 update = client_utxo_only.full_scan(wollet_utxo_only)
 wollet_utxo_only.apply_update(update)
 

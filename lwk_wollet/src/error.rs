@@ -283,6 +283,11 @@ pub enum Error {
 
     #[error("Index out of range")]
     IndexOutOfRange,
+
+    #[error(
+        "Wollet and client are incompatible: they must be both 'utxo_only' or both non-'utxo_only'"
+    )]
+    UtxoOnlyIncompatible,
 }
 
 // cannot derive automatically with this error because of trait bound

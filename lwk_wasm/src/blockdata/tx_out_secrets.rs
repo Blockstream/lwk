@@ -9,7 +9,7 @@ use lwk_wollet::EC;
 use wasm_bindgen::prelude::*;
 
 /// Contains unblinded information such as the asset and the value of a transaction output
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 #[wasm_bindgen]
 pub struct TxOutSecrets {
     inner: elements::TxOutSecrets,
@@ -135,6 +135,80 @@ impl TxOutSecrets {
         let abf = self.inner.asset_bf.into_inner();
         let asset_tag = Tag::from(asset);
         Generator::new_blinded(&EC, asset_tag, abf)
+    }
+}
+
+// wasm_bindgen does not support Vec<T> as a wrapper of Vec<T>
+/// Simplicity type collection.
+#[wasm_bindgen]
+#[derive(Clone, Debug, Default)]
+pub struct TxOutSecretsList {
+    inner: Vec<TxOutSecrets>,
+}
+
+impl From<&TxOutSecretsList> for Vec<TxOutSecrets> {
+    fn from(value: &TxOutSecretsList) -> Self {
+        value.inner.clone().into_iter().collect()
+    }
+}
+
+impl From<TxOutSecretsList> for Vec<TxOutSecrets> {
+    fn from(value: TxOutSecretsList) -> Self {
+        value.inner.into_iter().collect()
+    }
+}
+
+impl From<Vec<TxOutSecrets>> for TxOutSecretsList {
+    fn from(value: Vec<TxOutSecrets>) -> Self {
+        TxOutSecretsList { inner: value }
+    }
+}
+
+impl AsRef<[TxOutSecrets]> for TxOutSecretsList {
+    fn as_ref(&self) -> &[TxOutSecrets] {
+        self.inner.as_ref()
+    }
+}
+
+impl std::fmt::Display for TxOutSecretsList {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.inner)
+    }
+}
+
+#[wasm_bindgen]
+impl TxOutSecretsList {
+    /// Create an object with an empty list of simplicity types.
+    pub fn empty() -> Self {
+        TxOutSecretsList::default()
+    }
+
+    /// Create an object from a list of simplicity types.
+    pub fn new(data: Vec<TxOutSecrets>) -> Self {
+        TxOutSecretsList { inner: data }
+    }
+
+    /// Set to an object a list of simplicity types.
+    pub fn set(&mut self, data: Vec<TxOutSecrets>) {
+        self.inner = data;
+    }
+
+    /// Set to an object a list of simplicity types.
+    pub fn get(&self) -> Vec<TxOutSecrets> {
+        self.inner.clone()
+    }
+
+    /// Consumes the TxOutSecretsList and returns the inner vector without cloning.
+    /// The original object is deallocated and can no longer be used.
+    #[wasm_bindgen(js_name = intoInner)]
+    pub fn into_inner(self) -> Vec<TxOutSecrets> {
+        self.inner
+    }
+
+    /// Return the string representation of this list of simplicity types.
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{self}")
     }
 }
 

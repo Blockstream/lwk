@@ -88,7 +88,7 @@ pub use blockdata::tx_in::TxIn;
 pub use blockdata::tx_in_witness::{TxInWitness, TxInWitnessBuilder};
 #[cfg(feature = "simplicity")]
 pub use blockdata::tx_out::TxOut;
-pub use blockdata::tx_out_secrets::TxOutSecrets;
+pub use blockdata::tx_out_secrets::{TxOutSecrets, TxOutSecretsList};
 #[cfg(feature = "simplicity")]
 pub use blockdata::tx_sequence::TxSequence;
 pub use blockdata::wallet_tx::WalletTx;
@@ -98,7 +98,7 @@ pub use boltz::{BoltzSession, BoltzSessionBuilder};
 pub use contract::Contract;
 #[cfg(feature = "simplicity")]
 pub use control_block::ControlBlock;
-pub use descriptor::WolletDescriptor;
+pub use descriptor::{AddrPath, WolletDescriptor};
 pub(crate) use error::Error;
 pub use error::MagicRoutingHint;
 pub use esplora::EsploraClient;

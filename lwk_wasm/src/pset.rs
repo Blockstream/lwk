@@ -1,6 +1,8 @@
 use crate::{AssetId, Error, Issuance, Script, Transaction, Txid};
 #[cfg(feature = "simplicity")]
-use crate::{ContractHash, LockTime, OutPoint, PublicKey, Tweak, TxOut, TxOutSecrets, TxSequence};
+use crate::{
+    ContractHash, LockTime, OutPoint, PublicKey, Tweak, TxOut, TxOutSecretsList, TxSequence,
+};
 
 #[cfg(feature = "simplicity")]
 use std::collections::HashMap;
@@ -446,27 +448,23 @@ impl PsetBuilder {
     ///
     /// `inp_txout_sec` is a map from input index to TxOutSecrets, represented as
     /// parallel arrays where `input_indices[i]` corresponds to `secrets[i]`.
-    ///
-    /// NOTE: The secrets object is destroyed during the execution of the function, so the argument that was
-    /// passed in the JS code cannot be reused.
-    // TODO: address the limitation
     #[wasm_bindgen(js_name = blindLast)]
     pub fn blind_last(
         mut self,
         input_indices: &[u32],
-        secrets: Vec<TxOutSecrets>,
+        secrets: &TxOutSecretsList,
     ) -> Result<PsetBuilder, Error> {
-        if input_indices.len() != secrets.len() {
+        if input_indices.len() != secrets.as_ref().len() {
             return Err(Error::Generic(format!(
                 "input_indices length ({}) must match secrets length ({})",
                 input_indices.len(),
-                secrets.len()
+                secrets.as_ref().len()
             )));
         }
 
         let mut inp_txout_sec: HashMap<usize, lwk_wollet::elements::TxOutSecrets> =
             HashMap::with_capacity(input_indices.len());
-        for (&index, secret) in input_indices.iter().zip(secrets.iter()) {
+        for (&index, secret) in input_indices.iter().zip(secrets.as_ref().iter()) {
             if inp_txout_sec
                 .insert(index as usize, secret.into())
                 .is_some()

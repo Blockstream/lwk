@@ -1,5 +1,6 @@
 use crate::error::WalletAbiError;
 use crate::wallet_abi::schema::{AssetVariant, InputSchema, RuntimeParams};
+use crate::wallet_abi::tx_resolution::input_material::ResolvedInputMaterial;
 use crate::wallet_abi::tx_resolution::utils::{
     add_balance, calculate_issuance_entropy, issuance_reference_asset_id,
     issuance_token_from_entropy_for_unblinded_issuance, validate_output_input_index,
@@ -7,8 +8,8 @@ use crate::wallet_abi::tx_resolution::utils::{
 
 use std::collections::{BTreeMap, HashMap};
 
-use crate::wallet_abi::tx_resolution::input_material::ResolvedInputMaterial;
 use lwk_wollet::elements::AssetId;
+use lwk_wollet::ExternalUtxo;
 
 #[derive(Clone, Copy)]
 enum DeferredDemandKind {
@@ -91,6 +92,44 @@ impl SupplyAndDemand {
     ) -> Result<(), WalletAbiError> {
         self.apply_input_supply(input, material)?;
         self.activate_deferred_demands_for_input(input, input_index, material)
+    }
+
+    /// Pick the currently largest positive deficit asset (tie-break by asset id ordering).
+    pub(crate) fn pick_largest_deficit_asset(&self) -> Option<(AssetId, u64)> {
+        self.demand_by_asset.iter().fold(
+            None,
+            |best: Option<(AssetId, u64)>, (asset, demand_sat)| {
+                let supplied = self.supply_by_asset.get(asset).copied().unwrap_or(0);
+                let missing = demand_sat.saturating_sub(supplied);
+                if missing == 0 {
+                    return best;
+                }
+
+                match best {
+                    None => Some((*asset, missing)),
+                    Some((best_asset, best_missing)) => {
+                        if missing > best_missing
+                            || (missing == best_missing && *asset < best_asset)
+                        {
+                            Some((*asset, missing))
+                        } else {
+                            Some((best_asset, best_missing))
+                        }
+                    }
+                }
+            },
+        )
+    }
+
+    pub(crate) fn add_selected_wallet_to_supply(
+        &mut self,
+        selected_wallet_utxo: &ExternalUtxo,
+    ) -> Result<(), WalletAbiError> {
+        add_balance(
+            &mut self.supply_by_asset,
+            selected_wallet_utxo.unblinded.asset,
+            selected_wallet_utxo.unblinded.value,
+        )
     }
 
     /// Apply the resolved input contribution to equation supply (base + issuance minting).

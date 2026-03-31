@@ -11,7 +11,7 @@ use crate::wallet_abi::tx_resolution::supply_and_demand::SupplyAndDemand;
 use std::sync::Arc;
 
 use lwk_wollet::elements::pset::{Input, PartiallySignedTransaction};
-use lwk_wollet::elements::secp256k1_zkp;
+use lwk_wollet::elements::{secp256k1_zkp, AssetId};
 use lwk_wollet::secp256k1::constants::ONE;
 use lwk_wollet::ExternalUtxo;
 
@@ -77,7 +77,29 @@ where
 
         supply_and_demand.validate_demand_after_resolution()?;
 
-        todo!()
+        while let Some((target_asset, target_missing)) =
+            supply_and_demand.pick_largest_deficit_asset()
+        {
+            let selected_indexes =
+                self.select_auxiliary_inputs_for_asset(target_asset, target_missing)?;
+
+            for selected_index in selected_indexes {
+                let selected: &ExternalUtxo = self.wallet_request_session.spendable_utxos.get(selected_index).ok_or_else(|| {
+                    WalletAbiError::InvalidResponse(format!(
+                        "wallet snapshot index {selected_index} missing while adding auxiliary input"
+                    ))
+                })?;
+
+                input_material_resolver.reserve_outpoint("auxiliary", selected.outpoint)?;
+
+                self.add_auxiliary_wallet_input(&mut pst, &mut artifacts, selected)
+                    .await?;
+
+                supply_and_demand.add_selected_wallet_to_supply(selected)?;
+            }
+        }
+
+        Ok((pst, artifacts))
     }
 
     /// Append a resolved input to the PSET and attach sequence, prevout and witness UTXO.
@@ -138,5 +160,44 @@ where
         pst.add_input(pset_input);
 
         Ok(())
+    }
+
+    async fn add_auxiliary_wallet_input(
+        &self,
+        pst: &mut PartiallySignedTransaction,
+        artifacts: &mut ResolutionArtifacts,
+        selected: &ExternalUtxo,
+    ) -> Result<(), WalletAbiError> {
+        let input_index = pst.n_inputs();
+        let mut pset_input = Input::from_prevout(selected.outpoint);
+        pset_input.witness_utxo = Some(selected.txout.clone());
+        pset_input.amount = Some(selected.unblinded.value);
+        pset_input.asset = Some(selected.unblinded.asset);
+
+        if let Some((pubkey, key_source)) = self
+            .wallet_provider
+            .get_bip32_derivation_pair(&selected.outpoint)?
+        {
+            pset_input.bip32_derivation.insert(pubkey, key_source);
+        } else {
+            return Err(WalletAbiError::InvalidResponse(format!(
+                "missing wallet bip32 derivation pair for wallet-owned UTXO {}",
+                selected.outpoint
+            )));
+        }
+
+        artifacts.collect_wallet_input(selected, input_index)?;
+
+        pst.add_input(pset_input);
+
+        Ok(())
+    }
+
+    fn select_auxiliary_inputs_for_asset(
+        &self,
+        _target_asset: AssetId,
+        _target_missing: u64,
+    ) -> Result<Vec<usize>, WalletAbiError> {
+        todo!()
     }
 }

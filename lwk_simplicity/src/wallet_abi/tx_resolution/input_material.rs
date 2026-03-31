@@ -70,6 +70,21 @@ where
         }
     }
 
+    pub(crate) fn reserve_outpoint(
+        &mut self,
+        item_id: &str,
+        outpoint: OutPoint,
+    ) -> Result<(), WalletAbiError> {
+        if self.used_outpoints.insert(outpoint) {
+            return Ok(());
+        }
+
+        Err(WalletAbiError::InvalidRequest(format!(
+            "duplicate outpoint resolved for '{}': {}:{}",
+            item_id, outpoint.txid, outpoint.vout
+        )))
+    }
+
     /// Resolve input material from wallet snapshot using deficit-aware selection.
     async fn resolve_wallet_input_material(
         &mut self,
@@ -166,20 +181,5 @@ where
         _filter: &WalletSourceFilter,
     ) -> Result<Option<usize>, WalletAbiError> {
         todo!()
-    }
-
-    fn reserve_outpoint(
-        &mut self,
-        input_id: &str,
-        outpoint: OutPoint,
-    ) -> Result<(), WalletAbiError> {
-        if self.used_outpoints.insert(outpoint) {
-            return Ok(());
-        }
-
-        Err(WalletAbiError::InvalidRequest(format!(
-            "duplicate input outpoint resolved for '{}': {}:{}",
-            input_id, outpoint.txid, outpoint.vout
-        )))
     }
 }

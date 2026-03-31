@@ -1,10 +1,11 @@
+use crate::error::WalletAbiError;
 use crate::wallet_abi::schema::{FinalizerSpec, InputSchema};
+use crate::wallet_abi::tx_resolution::input_material::ResolvedInputMaterial;
 
 use std::collections::HashMap;
 
-use crate::error::WalletAbiError;
-use crate::wallet_abi::tx_resolution::input_material::ResolvedInputMaterial;
 use lwk_wollet::elements::{Script, TxOutSecrets};
+use lwk_wollet::ExternalUtxo;
 
 #[derive(Debug, Default)]
 pub(crate) struct ResolutionArtifacts {
@@ -33,6 +34,27 @@ impl ResolutionArtifacts {
 
     pub(crate) fn wallet_input_finalization_weight(&self) -> usize {
         self.wallet_input_finalization_weight
+    }
+
+    pub(crate) fn collect_wallet_input(
+        &mut self,
+        selected_wallet_utxo: &ExternalUtxo,
+        input_index: usize,
+    ) -> Result<(), WalletAbiError> {
+        self.secrets
+            .insert(input_index, selected_wallet_utxo.unblinded);
+        self.finalizers.push(FinalizerSpec::Wallet);
+        self.wallet_input_indices.push(u32::try_from(input_index)?);
+        self.wallet_input_finalization_weight = self
+            .wallet_input_finalization_weight
+            .checked_add(selected_wallet_utxo.max_weight_to_satisfy)
+            .ok_or_else(|| {
+                WalletAbiError::InvalidRequest(
+                    "wallet input finalization weight overflow".to_string(),
+                )
+            })?;
+
+        Ok(())
     }
 
     pub(crate) fn collect_input(

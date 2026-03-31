@@ -1994,7 +1994,9 @@ fn test_unblinded_utxo() {
     assert_eq!(w.wollet.utxos().unwrap().len(), 0);
     assert_eq!(w.wollet.txos().unwrap().len(), 1);
 
-    let external_utxo = w.wollet.explicit_utxos().unwrap()[0].clone();
+    let explicit_utxos = w.wollet.explicit_utxos().unwrap();
+    assert_eq!(explicit_utxos.len(), 1);
+    let external_utxo = explicit_utxos[0].clone();
 
     // Create tx sending the unblinded utxo
     let node_address = env.elementsd_getnewaddress();
@@ -2053,6 +2055,7 @@ fn test_unblinded_utxo() {
     w.fund_explicit(&env, satoshi, None, None);
 
     let explicit_utxos = w.wollet.explicit_utxos().unwrap();
+    assert_eq!(explicit_utxos.len(), 1);
     let external_utxo = explicit_utxos.last().unwrap().clone();
 
     // Send all funds
@@ -2074,6 +2077,8 @@ fn test_unblinded_utxo() {
     w.send_outside_list(&mut pset);
 
     assert_eq!(w.balance(&policy_asset), 0);
+    let explicit_utxos = w.wollet.explicit_utxos().unwrap();
+    assert_eq!(explicit_utxos.len(), 0);
 }
 
 #[test]

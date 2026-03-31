@@ -98,7 +98,7 @@ pub use boltz::{BoltzSession, BoltzSessionBuilder};
 pub use contract::Contract;
 #[cfg(feature = "simplicity")]
 pub use control_block::ControlBlock;
-pub use descriptor::WolletDescriptor;
+pub use descriptor::{AddrPath, WolletDescriptor};
 pub(crate) use error::Error;
 pub use error::MagicRoutingHint;
 pub use esplora::EsploraClient;

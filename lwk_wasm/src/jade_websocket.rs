@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr, sync::OnceLock};
 
 use crate::jade::Singlesig;
 use crate::websocket::WebSocketSerial;
-use crate::{signer::FakeSigner, Bip, Error, Network, Pset, WolletDescriptor, Xpub};
+use crate::{signer::FakeSigner, AddrPath, Bip, Error, Network, Pset, WolletDescriptor, Xpub};
 use lwk_common::{DescriptorBlindingKey, Signer};
 use lwk_jade::{asyncr, protocol::GetXpubParams};
 use lwk_jade::{
@@ -73,7 +73,7 @@ impl JadeWebSocket {
     pub async fn get_receive_address_single(
         &self,
         variant: Singlesig,
-        path: Vec<u32>,
+        path: &AddrPath,
     ) -> Result<String, Error> {
         self.inner.unlock().await?;
         let network = self.inner.network();
@@ -83,7 +83,7 @@ impl JadeWebSocket {
                 network,
                 address: SingleOrMulti::Single {
                     variant: variant.into(),
-                    path,
+                    path: path.get(),
                 },
             })
             .await?;
@@ -100,7 +100,7 @@ impl JadeWebSocket {
     pub async fn get_receive_address_multi(
         &self,
         multisig_name: &str,
-        path: Vec<u32>,
+        path: &AddrPath,
     ) -> Result<String, Error> {
         self.inner.unlock().await?;
         let network = self.inner.network();
@@ -108,7 +108,7 @@ impl JadeWebSocket {
         let path_n = multi_details.descriptor.signers.len();
         let mut paths = vec![];
         for _ in 0..path_n {
-            paths.push(path.clone());
+            paths.push(path.get());
         }
         let xpub = self
             .inner

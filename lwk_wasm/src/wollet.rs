@@ -1,7 +1,7 @@
 use crate::blockdata::asset_id::AssetIds;
 use crate::{
-    AddressResult, Balance, Error, Network, Pset, PsetDetails, Transaction, Update, WalletTx,
-    WalletTxOut, WolletDescriptor,
+    AddrPath, AddressResult, Balance, Error, Network, Pset, PsetDetails, Transaction, Update,
+    WalletTx, WalletTxOut, WolletDescriptor,
 };
 use lwk_jade::derivation_path_to_vec;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
@@ -56,7 +56,7 @@ impl Wollet {
     ///
     /// Note: will be removed once we add the full path to lwk_wollet::AddressResult
     #[wasm_bindgen(js_name = addressFullPath)]
-    pub fn address_full_path(&self, index: u32) -> Result<Vec<u32>, Error> {
+    pub fn address_full_path(&self, index: u32) -> Result<AddrPath, Error> {
         // TODO we should add the full path to lwk_wollet::AddressResult
 
         let definite_desc = self
@@ -72,7 +72,7 @@ impl Wollet {
             true
         });
 
-        Ok(full_path)
+        Ok(full_path.into())
     }
 
     /// Apply an update containing blockchain data

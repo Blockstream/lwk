@@ -3,6 +3,80 @@ use lwk_common::{multisig_desc, DescriptorBlindingKey, Multisig};
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 
+// wasm_bindgen does not support Vec<T> as a wrapper of Vec<T>
+/// Simplicity type collection.
+#[wasm_bindgen]
+#[derive(Clone, Debug, Default)]
+pub struct AddrPath {
+    inner: Vec<u32>,
+}
+
+impl From<&AddrPath> for Vec<u32> {
+    fn from(value: &AddrPath) -> Self {
+        value.inner.clone().into_iter().collect()
+    }
+}
+
+impl From<AddrPath> for Vec<u32> {
+    fn from(value: AddrPath) -> Self {
+        value.inner.into_iter().collect()
+    }
+}
+
+impl From<Vec<u32>> for AddrPath {
+    fn from(value: Vec<u32>) -> Self {
+        AddrPath { inner: value }
+    }
+}
+
+impl AsRef<[u32]> for AddrPath {
+    fn as_ref(&self) -> &[u32] {
+        self.inner.as_ref()
+    }
+}
+
+impl std::fmt::Display for AddrPath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.inner)
+    }
+}
+
+#[wasm_bindgen]
+impl AddrPath {
+    /// Create an object with an empty list of an address path.
+    pub fn empty() -> Self {
+        AddrPath::default()
+    }
+
+    /// Create an object from a list of an address path.
+    pub fn new(data: Vec<u32>) -> Self {
+        AddrPath { inner: data }
+    }
+
+    /// Set to an object a list of an address path.
+    pub fn set(&mut self, data: Vec<u32>) {
+        self.inner = data;
+    }
+
+    /// Set to an object a list of an address path.
+    pub fn get(&self) -> Vec<u32> {
+        self.inner.clone()
+    }
+
+    /// Consumes the AddrPath and returns the inner vector without cloning.
+    /// The original object is deallocated and can no longer be used.
+    #[wasm_bindgen(js_name = intoInner)]
+    pub fn into_inner(self) -> Vec<u32> {
+        self.inner
+    }
+
+    /// Return the string representation of this list of an address path.
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{self}")
+    }
+}
+
 /// A wrapper that contains only the subset of CT descriptors handled by wollet
 #[wasm_bindgen]
 pub struct WolletDescriptor {

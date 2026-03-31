@@ -5,6 +5,7 @@ use crate::wallet_abi::schema::{
 use crate::wallet_abi::tx_resolution::input_material::{
     InputMaterialResolver, ResolvedInputMaterial,
 };
+use crate::wallet_abi::tx_resolution::output_allocator::OutputAllocator;
 use crate::wallet_abi::tx_resolution::resolution_artifact::ResolutionArtifacts;
 use crate::wallet_abi::tx_resolution::supply_and_demand::SupplyAndDemand;
 
@@ -98,6 +99,16 @@ where
                 supply_and_demand.add_selected_wallet_to_supply(selected)?;
             }
         }
+
+        let mut output_allocator =
+            OutputAllocator::new(self.wallet_provider, self.wallet_request_session);
+
+        let pst = output_allocator.materialize_requested_outputs(
+            pst,
+            &artifacts,
+            runtime_params,
+            self.fee_target_sat,
+        )?;
 
         Ok((pst, artifacts))
     }

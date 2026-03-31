@@ -11,7 +11,6 @@ use lwk_wollet::ExternalUtxo;
 pub(crate) struct ResolutionArtifacts {
     secrets: HashMap<usize, TxOutSecrets>,
     finalizers: Vec<FinalizerSpec>,
-    wallet_input_indices: Vec<u32>,
     wallet_input_finalization_weight: usize,
 }
 
@@ -28,10 +27,6 @@ impl ResolutionArtifacts {
         &self.finalizers
     }
 
-    pub(crate) fn wallet_input_indices(&self) -> &[u32] {
-        &self.wallet_input_indices
-    }
-
     pub(crate) fn wallet_input_finalization_weight(&self) -> usize {
         self.wallet_input_finalization_weight
     }
@@ -44,7 +39,6 @@ impl ResolutionArtifacts {
         self.secrets
             .insert(input_index, selected_wallet_utxo.unblinded);
         self.finalizers.push(FinalizerSpec::Wallet);
-        self.wallet_input_indices.push(u32::try_from(input_index)?);
         self.wallet_input_finalization_weight = self
             .wallet_input_finalization_weight
             .checked_add(selected_wallet_utxo.max_weight_to_satisfy)
@@ -67,7 +61,6 @@ impl ResolutionArtifacts {
         self.finalizers.push(input.finalizer.clone());
 
         if matches!(input.finalizer, FinalizerSpec::Wallet) {
-            self.wallet_input_indices.push(u32::try_from(input_index)?);
             let modeled_weight = match *material.wallet_finalization_weight() {
                 Some(weight) => weight,
                 None => modeled_wallet_input_finalization_weight(

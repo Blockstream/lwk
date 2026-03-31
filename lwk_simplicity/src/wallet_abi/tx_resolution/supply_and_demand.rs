@@ -6,10 +6,16 @@ use crate::wallet_abi::tx_resolution::utils::{
     issuance_token_from_entropy_for_unblinded_issuance, validate_output_input_index,
 };
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use lwk_wollet::elements::AssetId;
+use log::error;
+
+use lwk_wollet::elements::pset::PartiallySignedTransaction;
+use lwk_wollet::elements::{AssetId, OutPoint};
 use lwk_wollet::ExternalUtxo;
+
+/// Aggregated amounts keyed by asset id.
+pub(crate) type AssetBalances = BTreeMap<AssetId, u64>;
 
 #[derive(Clone, Copy)]
 enum DeferredDemandKind {
@@ -294,5 +300,186 @@ impl SupplyAndDemand {
                         )
                     })
             })
+    }
+
+    /// Aggregate total per-asset input supply.
+    ///
+    /// Supply is the sum of:
+    /// - Base amounts from all PSET inputs.
+    /// - Minted issuance/reissuance amounts derived from declared input metadata.
+    ///
+    /// Overflow is rejected via checked arithmetic.
+    pub(crate) fn aggregate_input_supply(
+        pst: &PartiallySignedTransaction,
+        params: &RuntimeParams,
+    ) -> Result<AssetBalances, WalletAbiError> {
+        let mut balances = AssetBalances::new();
+
+        for (input_index, input) in pst.inputs().iter().enumerate() {
+            let asset = input.asset.ok_or_else(|| {
+                WalletAbiError::InvalidRequest(format!(
+                    "input index {input_index} missing explicit asset while aggregating supply"
+                ))
+            })?;
+            let amount_sat = input.amount.ok_or_else(|| {
+                WalletAbiError::InvalidRequest(format!(
+                    "input index {input_index} missing explicit amount while aggregating supply"
+                ))
+            })?;
+            add_balance(&mut balances, asset, amount_sat)?;
+        }
+
+        let issuance_supply = Self::aggregate_issuance_supply(pst, params)?;
+        for (asset_id, amount_sat) in issuance_supply {
+            add_balance(&mut balances, asset_id, amount_sat)?;
+        }
+
+        Ok(balances)
+    }
+
+    /// Aggregate total per-asset output demand from current PSET outputs.
+    ///
+    /// Fee output (policy asset, empty script) is treated as ordinary demand and is not
+    /// special-cased in this aggregation.
+    pub(crate) fn aggregate_output_demand(
+        pst: &PartiallySignedTransaction,
+    ) -> Result<AssetBalances, WalletAbiError> {
+        let mut balances = AssetBalances::new();
+
+        for (output_index, output) in pst.outputs().iter().enumerate() {
+            let asset = output.asset.ok_or_else(|| {
+                WalletAbiError::InvalidRequest(format!(
+                    "output index {output_index} missing explicit asset while aggregating demand"
+                ))
+            })?;
+            let amount_sat = output.amount.ok_or_else(|| {
+                WalletAbiError::InvalidRequest(format!(
+                    "output index {output_index} missing explicit amount while aggregating demand"
+                ))
+            })?;
+            add_balance(&mut balances, asset, amount_sat)?;
+        }
+
+        Ok(balances)
+    }
+
+    pub(crate) fn residuals_or_funding_error(
+        supply_by_asset: &AssetBalances,
+        demand_by_asset: &AssetBalances,
+        fee_target_sat: u64,
+    ) -> Result<AssetBalances, WalletAbiError> {
+        let mut residual_by_asset = AssetBalances::new();
+        let mut deficit_by_asset = AssetBalances::new();
+        let mut all_assets = BTreeSet::new();
+
+        all_assets.extend(supply_by_asset.keys().copied());
+        all_assets.extend(demand_by_asset.keys().copied());
+
+        for asset_id in all_assets {
+            let supply_sat = supply_by_asset.get(&asset_id).copied().unwrap_or(0);
+            let demand_sat = demand_by_asset.get(&asset_id).copied().unwrap_or(0);
+
+            if demand_sat > supply_sat {
+                deficit_by_asset.insert(asset_id, demand_sat - supply_sat);
+                continue;
+            }
+
+            if supply_sat > demand_sat {
+                residual_by_asset.insert(asset_id, supply_sat - demand_sat);
+            }
+        }
+
+        if !deficit_by_asset.is_empty() {
+            let details = deficit_by_asset
+                .iter()
+                .map(|(asset_id, missing_sat)| format!("{asset_id}:{missing_sat}"))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            error!("asset deficits after applying fee target {fee_target_sat}: {details}");
+
+            return Err(WalletAbiError::Funding(
+                "asset deficits after applying fee target".to_string(),
+            ));
+        }
+
+        Ok(residual_by_asset)
+    }
+
+    /// Final safety check asserting exact per-asset conservation after change materialization.
+    ///
+    /// This enforces `supply[a] == demand[a]` for every asset `a`.
+    pub(crate) fn assert_exact_asset_conservation(
+        pst: &PartiallySignedTransaction,
+        params: &RuntimeParams,
+    ) -> Result<(), WalletAbiError> {
+        let supply_by_asset = Self::aggregate_input_supply(pst, params)?;
+        let demand_by_asset = Self::aggregate_output_demand(pst)?;
+        let mut all_assets = BTreeSet::new();
+        let mut mismatches = Vec::new();
+
+        all_assets.extend(supply_by_asset.keys().copied());
+        all_assets.extend(demand_by_asset.keys().copied());
+
+        for asset_id in all_assets {
+            let supply_sat = supply_by_asset.get(&asset_id).copied().unwrap_or(0);
+            let demand_sat = demand_by_asset.get(&asset_id).copied().unwrap_or(0);
+            if supply_sat != demand_sat {
+                mismatches.push(format!(
+                    "{asset_id}:supply={supply_sat},demand={demand_sat}"
+                ));
+            }
+        }
+
+        if mismatches.is_empty() {
+            return Ok(());
+        }
+
+        error!(
+            "Asset conservation violated after balancing: {:#?}",
+            mismatches
+        );
+
+        Err(WalletAbiError::InvalidRequest(
+            "asset conservation violated after balancing".to_string(),
+        ))
+    }
+
+    /// Aggregate issuance/reissuance minting supply from declared inputs.
+    ///
+    /// For each declared input with issuance metadata:
+    /// - Add `asset_amount_sat` to the derived issuance asset id.
+    /// - Add `token_amount_sat` to the derived reissuance token id (if non-zero).
+    fn aggregate_issuance_supply(
+        pst: &PartiallySignedTransaction,
+        params: &RuntimeParams,
+    ) -> Result<AssetBalances, WalletAbiError> {
+        let mut balances = AssetBalances::new();
+
+        for (input_index, input) in params.inputs.iter().enumerate() {
+            let Some(issuance) = input.issuance.as_ref() else {
+                continue;
+            };
+
+            let pset_input = pst.inputs().get(input_index).ok_or_else(|| {
+                WalletAbiError::InvalidRequest(format!(
+                    "input '{}' at index {input_index} missing from PSET while aggregating issuance supply",
+                    input.id
+                ))
+            })?;
+
+            let outpoint =
+                OutPoint::new(pset_input.previous_txid, pset_input.previous_output_index);
+            let entropy = calculate_issuance_entropy(outpoint, issuance);
+            let issuance_asset = AssetId::from_entropy(entropy);
+            add_balance(&mut balances, issuance_asset, issuance.asset_amount_sat)?;
+
+            if issuance.token_amount_sat > 0 {
+                let token_asset = issuance_token_from_entropy_for_unblinded_issuance(entropy);
+                add_balance(&mut balances, token_asset, issuance.token_amount_sat)?;
+            }
+        }
+
+        Ok(balances)
     }
 }

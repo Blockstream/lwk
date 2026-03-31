@@ -3,6 +3,7 @@ use clients::blocking::BlockchainBackend;
 use lwk_common::Signer;
 use lwk_signer::*;
 use lwk_test_util::*;
+use lwk_wollet::clients::EsploraClientBuilder;
 use lwk_wollet::*;
 use std::str::FromStr;
 
@@ -18,13 +19,13 @@ fn test_esplora_waterfalls_utxo_only() {
 
     let network = ElementsNetwork::default_regtest();
     let mut wollet = WolletBuilder::new(network, desc.clone()).build().unwrap();
-    let mut client = asyncr::EsploraClientBuilder::new(&env.waterfalls_url(), network)
+    let mut client = EsploraClientBuilder::new(&env.waterfalls_url(), network)
         .waterfalls(true)
         .build_blocking()
         .unwrap();
 
     let mut wollet_utxo_only = WolletBuilder::new(network, desc.clone()).build().unwrap();
-    let mut client_utxo_only = asyncr::EsploraClientBuilder::new(&env.waterfalls_url(), network)
+    let mut client_utxo_only = EsploraClientBuilder::new(&env.waterfalls_url(), network)
         .waterfalls(true)
         .utxo_only(true)
         .build_blocking()
@@ -120,14 +121,14 @@ fn test_waterfalls_utxo_only_with_dummy() {
     let network = ElementsNetwork::default_regtest();
     let lbtc = network.policy_asset();
 
-    let client = asyncr::EsploraClientBuilder::new(&env.waterfalls_url(), network)
+    let client = EsploraClientBuilder::new(&env.waterfalls_url(), network)
         .waterfalls(true)
         .build_blocking()
         .unwrap();
     let mut w = TestWollet::new(client, &desc);
 
     let wd = WolletDescriptor::from_str(&desc).unwrap();
-    let mut client_utxo_only = asyncr::EsploraClientBuilder::new(&env.waterfalls_url(), network)
+    let mut client_utxo_only = EsploraClientBuilder::new(&env.waterfalls_url(), network)
         .waterfalls(true)
         .utxo_only(true)
         .build_blocking()
@@ -187,21 +188,19 @@ async fn test_esplora_waterfalls_balance_comparison(
     descriptor: &str,
     esplora_url: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use clients::asyncr;
-
     init_logging();
 
     let desc = WolletDescriptor::from_str(descriptor)?;
     let network = ElementsNetwork::LiquidTestnet;
 
     let mut wollet = WolletBuilder::new(network, desc.clone()).build()?;
-    let mut client = asyncr::EsploraClientBuilder::new(esplora_url, network)
+    let mut client = EsploraClientBuilder::new(esplora_url, network)
         .waterfalls(true)
         .concurrency(4)
         .build()?;
 
     let mut wollet_utxo_only = WolletBuilder::new(network, desc.clone()).build()?;
-    let mut client_utxo_only = asyncr::EsploraClientBuilder::new(esplora_url, network)
+    let mut client_utxo_only = EsploraClientBuilder::new(esplora_url, network)
         .utxo_only(true)
         .waterfalls(true)
         .concurrency(4)
@@ -261,7 +260,7 @@ fn test_faucet() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
-    let client = clients::EsploraClientBuilder::new(&env.waterfalls_url(), ElementsNetwork::Liquid)
+    let client = EsploraClientBuilder::new(&env.waterfalls_url(), ElementsNetwork::Liquid)
         .utxo_only(true)
         .waterfalls(true)
         .build_blocking()

@@ -382,3 +382,42 @@ fn test_incompatible_utxo_only() {
     // TODO: consider making apply_update fail too
     // (requires Update to store whether it was utxo_only)
 }
+
+#[tokio::test]
+async fn test_incompatible_utxo_only_async() {
+    // Note: this test does 0 requests, so any value works here
+    let waterfalls_url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+    let esplora_url = "https://blockstream.info/liquidtestnet/api";
+
+    let network = ElementsNetwork::LiquidTestnet;
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let wd = WolletDescriptor::from_str(&desc).unwrap();
+
+    let wollet = WolletBuilder::new(network, wd.clone()).build().unwrap();
+    let wollet_uo = WolletBuilder::new(network, wd.clone())
+        .utxo_only(true)
+        .build()
+        .unwrap();
+
+    let mut client_esplora = EsploraClientBuilder::new(esplora_url, network)
+        .build()
+        .unwrap();
+    let mut client_waterfalls = EsploraClientBuilder::new(waterfalls_url, network)
+        .waterfalls(true)
+        .build()
+        .unwrap();
+    let mut client_waterfalls_uo = EsploraClientBuilder::new(waterfalls_url, network)
+        .waterfalls(true)
+        .utxo_only(true)
+        .build()
+        .unwrap();
+
+    let err = client_esplora.full_scan(&wollet_uo).await.unwrap_err();
+    assert!(matches!(err, Error::UtxoOnlyIncompatible));
+    let err = client_waterfalls.full_scan(&wollet_uo).await.unwrap_err();
+    assert!(matches!(err, Error::UtxoOnlyIncompatible));
+    let err = client_waterfalls_uo.full_scan(&wollet).await.unwrap_err();
+    assert!(matches!(err, Error::UtxoOnlyIncompatible));
+}

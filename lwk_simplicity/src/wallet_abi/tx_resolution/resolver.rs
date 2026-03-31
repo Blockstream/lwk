@@ -6,6 +6,7 @@ use crate::wallet_abi::tx_resolution::input_material::{
     InputMaterialResolver, ResolvedInputMaterial,
 };
 use crate::wallet_abi::tx_resolution::resolution_artifact::ResolutionArtifacts;
+use crate::wallet_abi::tx_resolution::supply_and_demand::SupplyAndDemand;
 
 use std::sync::Arc;
 
@@ -50,6 +51,11 @@ where
         mut pst: PartiallySignedTransaction,
     ) -> Result<(PartiallySignedTransaction, ResolutionArtifacts), WalletAbiError> {
         let mut artifacts: ResolutionArtifacts = ResolutionArtifacts::new();
+        let mut supply_and_demand: SupplyAndDemand = SupplyAndDemand::try_from_runtime_params(
+            runtime_params,
+            *self.wallet_request_session.network.policy_asset(),
+            self.fee_target_sat,
+        )?;
 
         let mut input_material_resolver = InputMaterialResolver::new(self);
 
@@ -66,8 +72,10 @@ where
                 &material,
             )?;
 
-            todo!()
+            supply_and_demand.apply_resolved_input_contribution(input, input_index, &material)?;
         }
+
+        supply_and_demand.validate_demand_after_resolution()?;
 
         todo!()
     }

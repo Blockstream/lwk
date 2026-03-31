@@ -1,6 +1,6 @@
 use crate::{AssetId, Error};
 #[cfg(feature = "simplicity")]
-use crate::{TxIn, TxInWitness, TxOut};
+use crate::{TxIn, TxInWitness, TxOuts};
 
 use std::str::FromStr;
 
@@ -117,8 +117,13 @@ impl Transaction {
 
     /// Return a clone of the outputs of this transaction
     #[wasm_bindgen(getter = outputs)]
-    pub fn outputs(&self) -> Vec<TxOut> {
-        self.inner.output.iter().map(|o| o.clone().into()).collect()
+    pub fn outputs(&self) -> TxOuts {
+        self.inner
+            .output
+            .iter()
+            .map(|o| o.clone().into())
+            .collect::<Vec<_>>()
+            .into()
     }
 }
 

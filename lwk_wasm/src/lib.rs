@@ -87,7 +87,7 @@ pub use blockdata::tx_in::TxIn;
 #[cfg(feature = "simplicity")]
 pub use blockdata::tx_in_witness::{TxInWitness, TxInWitnessBuilder};
 #[cfg(feature = "simplicity")]
-pub use blockdata::tx_out::TxOut;
+pub use blockdata::tx_out::{TxOut, TxOuts};
 pub use blockdata::tx_out_secrets::TxOutSecrets;
 #[cfg(feature = "simplicity")]
 pub use blockdata::tx_sequence::TxSequence;

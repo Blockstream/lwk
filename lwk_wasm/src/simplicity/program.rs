@@ -1,6 +1,6 @@
 //! Simplicity program compilation and execution.
 
-use crate::{Address, ControlBlock, Error, Network, Signer, Transaction, TxOut, XOnlyPublicKey};
+use crate::{Address, ControlBlock, Error, Network, Signer, Transaction, TxOuts, XOnlyPublicKey};
 
 use super::arguments::{SimplicityArguments, SimplicityWitnessValues};
 use super::cmr::Cmr;
@@ -75,12 +75,12 @@ impl SimplicityProgram {
         &self,
         tx: &Transaction,
         program_public_key: &XOnlyPublicKey,
-        utxos: Vec<TxOut>,
+        utxos: &TxOuts,
         input_index: u32,
         network: &Network,
     ) -> Result<String, Error> {
         let x_only_key = program_public_key.to_simplicityhl()?;
-        let utxos_inner = convert_utxos(&utxos);
+        let utxos_inner = convert_utxos(utxos.as_ref());
 
         let message = signer::get_sighash_all(
             tx.as_ref(),
@@ -106,14 +106,14 @@ impl SimplicityProgram {
         &self,
         tx: &Transaction,
         program_public_key: &XOnlyPublicKey,
-        utxos: Vec<TxOut>,
+        utxos: &TxOuts,
         input_index: u32,
         witness_values: &SimplicityWitnessValues,
         network: &Network,
         log_level: SimplicityLogLevel,
     ) -> Result<Transaction, Error> {
         let x_only_key = program_public_key.to_simplicityhl()?;
-        let utxos_inner = convert_utxos(&utxos);
+        let utxos_inner = convert_utxos(utxos.as_ref());
 
         let finalized = signer::finalize_transaction(
             tx.as_ref().clone(),
@@ -137,13 +137,13 @@ impl SimplicityProgram {
         signer: &Signer,
         derivation_path: &str,
         tx: &Transaction,
-        utxos: Vec<TxOut>,
+        utxos: &TxOuts,
         input_index: u32,
         network: &Network,
     ) -> Result<String, Error> {
         let keypair_inner: Keypair = derive_keypair(signer, derivation_path)?.into();
         let x_only_pubkey = keypair_inner.x_only_public_key().0;
-        let utxos_inner = convert_utxos(&utxos);
+        let utxos_inner = convert_utxos(utxos.as_ref());
 
         let sighash = signer::get_sighash_all(
             tx.as_ref(),
@@ -169,14 +169,14 @@ impl SimplicityProgram {
         &self,
         tx: &Transaction,
         program_public_key: &XOnlyPublicKey,
-        utxos: Vec<TxOut>,
+        utxos: &TxOuts,
         input_index: u32,
         witness_values: &SimplicityWitnessValues,
         network: &Network,
         log_level: SimplicityLogLevel,
     ) -> Result<SimplicityRunResult, Error> {
         let x_only_key = program_public_key.to_simplicityhl()?;
-        let utxos_inner = convert_utxos(&utxos);
+        let utxos_inner = convert_utxos(utxos.as_ref());
 
         let env = signer::get_and_verify_env(
             tx.as_ref(),

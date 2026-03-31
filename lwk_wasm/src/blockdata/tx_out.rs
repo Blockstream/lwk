@@ -13,6 +13,80 @@ pub struct TxOut {
     inner: elements::TxOut,
 }
 
+// wasm_bindgen does not support Vec<T> as a wrapper of Vec<T>
+/// Transaction outputs collection.
+#[wasm_bindgen]
+#[derive(Clone, Debug, Default)]
+pub struct TxOuts {
+    inner: Vec<TxOut>,
+}
+
+impl From<&TxOuts> for Vec<TxOut> {
+    fn from(value: &TxOuts) -> Self {
+        value.inner.clone()
+    }
+}
+
+impl From<TxOuts> for Vec<TxOut> {
+    fn from(value: TxOuts) -> Self {
+        value.inner
+    }
+}
+
+impl From<Vec<TxOut>> for TxOuts {
+    fn from(value: Vec<TxOut>) -> Self {
+        TxOuts { inner: value }
+    }
+}
+
+impl AsRef<[TxOut]> for TxOuts {
+    fn as_ref(&self) -> &[TxOut] {
+        self.inner.as_ref()
+    }
+}
+
+impl std::fmt::Display for TxOuts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.inner)
+    }
+}
+
+#[wasm_bindgen]
+impl TxOuts {
+    /// Create an empty object with a list of transaction outputs.
+    pub fn empty() -> Self {
+        TxOuts::default()
+    }
+
+    /// Create an object from a list of transaction outputs.
+    pub fn new(data: Vec<TxOut>) -> Self {
+        TxOuts { inner: data }
+    }
+
+    /// Set to an object a list of transaction outputs.
+    pub fn set(&mut self, data: Vec<TxOut>) {
+        self.inner = data;
+    }
+
+    /// Get an inner list of transaction outputs.
+    pub fn get(&self) -> Vec<TxOut> {
+        self.inner.clone()
+    }
+
+    /// Consumes the TxOuts and returns the inner vector without cloning.
+    /// The original object is deallocated and can no longer be used.
+    #[wasm_bindgen(js_name = intoInner)]
+    pub fn into_inner(self) -> Vec<TxOut> {
+        self.inner
+    }
+
+    /// Return the string representation of this list of transaction outputs.
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{self}")
+    }
+}
+
 impl From<elements::TxOut> for TxOut {
     fn from(inner: elements::TxOut) -> Self {
         Self { inner }

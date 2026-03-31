@@ -55,7 +55,8 @@ async function runSimplicityP2pkTest() {
     // Test full transaction finalization with real test vectors
     const tx = lwk.Transaction.fromString(TEST_UNSIGNED_TX);
 
-    const finalizedTx = program.finalizeTransaction(tx, lwk.XOnlyPublicKey.fromString(TEST_PUBLIC_KEY), [utxo], 0, witness, network, lwk.SimplicityLogLevel.None);
+    const utxos = lwk.TxOuts.new([utxo]);
+    const finalizedTx = program.finalizeTransaction(tx, lwk.XOnlyPublicKey.fromString(TEST_PUBLIC_KEY), utxos, 0, witness, network, lwk.SimplicityLogLevel.None);
 
     assertNotNull(finalizedTx, "Finalized transaction should not be null");
     const finalizedHex = finalizedTx.toString();

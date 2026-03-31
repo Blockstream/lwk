@@ -9,6 +9,7 @@ use crate::wallet_abi::tx_resolution::input_finalizer::{
     extract_env_utxos, finalize_simf_inputs, finalize_wallet_inputs,
 };
 use crate::wallet_abi::tx_resolution::resolution_artifact::ResolutionArtifacts;
+use crate::wallet_abi::tx_resolution::resolver::ResolutionState;
 
 use log::{error, warn};
 
@@ -136,10 +137,29 @@ where
 
     async fn build_transaction(
         &self,
-        _fee_target_sat: u64,
-        _wallet_session: &WalletRequestSession,
+        fee_target_sat: u64,
+        wallet_session: &WalletRequestSession,
     ) -> Result<(PartiallySignedTransaction, ResolutionArtifacts), WalletAbiError> {
-        todo!()
+        let mut pst = PartiallySignedTransaction::new_v2();
+        pst.global.tx_data.fallback_locktime = self.request.params.lock_time;
+
+        let resolver = ResolutionState::new(
+            wallet_session,
+            &self.wallet_deps.wallet_provider,
+            fee_target_sat,
+        );
+
+        pst = resolver.resolve_request(&self.request.params);
+
+        let artifacts = resolver.get_resolution_artifact();
+
+        pst.blind_last(
+            &mut lwk_wollet::secp256k1::rand::thread_rng(),
+            &lwk_wollet::EC,
+            artifacts.secrets(),
+        )?;
+
+        Ok((pst, artifacts))
     }
 
     async fn process_response(

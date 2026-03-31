@@ -1,14 +1,17 @@
 use crate::error::WalletAbiError;
 use crate::wallet_abi::schema::{
-    InputSchema, InputUnblinding, UTXOSource, WalletProviderMeta, WalletSourceFilter,
+    AmountFilter, AssetFilter, InputSchema, InputUnblinding, LockFilter, UTXOSource,
+    WalletProviderMeta, WalletSourceFilter,
 };
 use crate::wallet_abi::tx_resolution::resolver::Resolver;
+use crate::wallet_abi::tx_resolution::supply_and_demand::{CandidateScore, SupplyAndDemand};
 
 use std::collections::HashSet;
 use std::marker::PhantomData;
 
 use lwk_wollet::elements::confidential::{Asset, AssetBlindingFactor, Value, ValueBlindingFactor};
 use lwk_wollet::elements::{OutPoint, TxOut};
+use lwk_wollet::ExternalUtxo;
 
 use simplicityhl::elements::TxOutSecrets;
 
@@ -59,10 +62,12 @@ where
     pub(crate) async fn resolve_declared_input_material(
         &mut self,
         input: &InputSchema,
+        supply_and_demand: &SupplyAndDemand,
     ) -> Result<ResolvedInputMaterial, WalletAbiError> {
         match &input.utxo_source {
             UTXOSource::Wallet { filter } => {
-                self.resolve_wallet_input_material(input, filter).await
+                self.resolve_wallet_input_material(input, filter, supply_and_demand)
+                    .await
             }
             UTXOSource::Provided { outpoint } => {
                 self.resolve_provided_input_material(input, *outpoint).await
@@ -90,6 +95,7 @@ where
         &mut self,
         input: &InputSchema,
         filter: &WalletSourceFilter,
+        supply_and_demand: &SupplyAndDemand,
     ) -> Result<ResolvedInputMaterial, WalletAbiError> {
         if !matches!(input.unblinding, InputUnblinding::Wallet) {
             return Err(WalletAbiError::InvalidRequest(format!(
@@ -98,12 +104,14 @@ where
             )));
         }
 
-        let selected_index = self.filter_tx_out_index(filter)?.ok_or_else(|| {
-            WalletAbiError::Funding(format!(
-                "no wallet UTXO matched contract input '{}' filter",
-                input.id
-            ))
-        })?;
+        let selected_index = self
+            .filter_tx_out_index(filter, supply_and_demand)?
+            .ok_or_else(|| {
+                WalletAbiError::Funding(format!(
+                    "no wallet UTXO matched contract input '{}' filter",
+                    input.id
+                ))
+            })?;
 
         let selected = self
             .resolver
@@ -178,8 +186,53 @@ where
 
     fn filter_tx_out_index(
         &self,
-        _filter: &WalletSourceFilter,
+        filter: &WalletSourceFilter,
+        supply_and_demand: &SupplyAndDemand,
     ) -> Result<Option<usize>, WalletAbiError> {
-        todo!()
+        let mut best: Option<(usize, CandidateScore)> = None;
+        let current_total_deficit = supply_and_demand.total_remaining_deficit()?;
+
+        for (index, candidate) in self.resolver.wallet_snapshot().iter().enumerate() {
+            if !self.matches_wallet_filter(candidate, filter) {
+                continue;
+            }
+
+            let score = supply_and_demand.score_candidate(candidate, current_total_deficit)?;
+
+            match &best {
+                Some((_, best_score)) if score >= *best_score => {}
+                _ => best = Some((index, score)),
+            }
+        }
+
+        Ok(best.map(|(index, _)| index))
+    }
+
+    fn matches_wallet_filter(&self, candidate: &ExternalUtxo, filter: &WalletSourceFilter) -> bool {
+        if self.used_outpoints.contains(&candidate.outpoint) {
+            return false;
+        }
+
+        let asset_ok = match filter.asset {
+            AssetFilter::None => true,
+            AssetFilter::Exact { asset_id } => candidate.unblinded.asset == asset_id,
+        };
+        if !asset_ok {
+            return false;
+        }
+
+        let amount_ok = match filter.amount {
+            AmountFilter::None => true,
+            AmountFilter::Exact { amount_sat } => candidate.unblinded.value == amount_sat,
+            AmountFilter::Min { amount_sat } => candidate.unblinded.value >= amount_sat,
+        };
+        if !amount_ok {
+            return false;
+        }
+
+        match &filter.lock {
+            LockFilter::None => true,
+            LockFilter::Script { script } => candidate.txout.script_pubkey == *script,
+        }
     }
 }

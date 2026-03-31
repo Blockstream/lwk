@@ -31,6 +31,15 @@ pub(crate) struct SupplyAndDemand {
     deferred_demands: HashMap<u32, Vec<(DeferredDemandKind, u64)>>,
 }
 
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub(crate) struct CandidateScore {
+    total_remaining_deficit: u64,
+    remaining_candidate_deficit: u64,
+    overshoot_or_undershoot: u64,
+    txid_lex: String,
+    vout: u32,
+}
+
 impl SupplyAndDemand {
     /// Build demand from output specs and store issuance-linked entries as deferred.
     ///
@@ -227,5 +236,63 @@ impl SupplyAndDemand {
         }
 
         Ok(())
+    }
+
+    pub(crate) fn score_candidate(
+        &self,
+        candidate: &ExternalUtxo,
+        current_total_deficit: u64,
+    ) -> Result<CandidateScore, WalletAbiError> {
+        let candidate_asset = candidate.unblinded.asset;
+        let candidate_demand = self
+            .demand_by_asset
+            .get(&candidate_asset)
+            .copied()
+            .unwrap_or(0);
+        let candidate_before_supply = self
+            .supply_by_asset
+            .get(&candidate_asset)
+            .copied()
+            .unwrap_or(0);
+        let candidate_after_supply = candidate_before_supply
+            .checked_add(candidate.unblinded.value)
+            .ok_or_else(|| {
+                WalletAbiError::InvalidRequest(format!(
+                    "asset amount overflow while scoring candidate {}:{}",
+                    candidate.outpoint.txid, candidate.outpoint.vout
+                ))
+            })?;
+
+        let remaining_candidate_deficit = candidate_demand.saturating_sub(candidate_after_supply);
+        let needed_before = candidate_demand.saturating_sub(candidate_before_supply);
+        let total_remaining_deficit = current_total_deficit
+            .checked_sub(needed_before - remaining_candidate_deficit)
+            .ok_or_else(|| {
+                WalletAbiError::InvalidRequest(
+                    "deficit underflow while scoring wallet candidates".to_string(),
+                )
+            })?;
+
+        Ok(CandidateScore {
+            total_remaining_deficit,
+            remaining_candidate_deficit,
+            overshoot_or_undershoot: candidate.unblinded.value.abs_diff(needed_before),
+            txid_lex: candidate.outpoint.txid.to_string(),
+            vout: candidate.outpoint.vout,
+        })
+    }
+
+    pub(crate) fn total_remaining_deficit(&self) -> Result<u64, WalletAbiError> {
+        self.demand_by_asset
+            .iter()
+            .try_fold(0u64, |sum, (asset_id, demand_sat)| {
+                let supplied = self.supply_by_asset.get(asset_id).copied().unwrap_or(0);
+                sum.checked_add(demand_sat.saturating_sub(supplied))
+                    .ok_or_else(|| {
+                        WalletAbiError::InvalidRequest(
+                            "deficit overflow while scoring wallet candidates".to_string(),
+                        )
+                    })
+            })
     }
 }

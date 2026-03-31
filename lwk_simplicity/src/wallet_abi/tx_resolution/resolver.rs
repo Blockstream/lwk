@@ -50,18 +50,18 @@ where
         runtime_params: &RuntimeParams,
         mut pst: PartiallySignedTransaction,
     ) -> Result<(PartiallySignedTransaction, ResolutionArtifacts), WalletAbiError> {
-        let mut artifacts: ResolutionArtifacts = ResolutionArtifacts::new();
         let mut supply_and_demand: SupplyAndDemand = SupplyAndDemand::try_from_runtime_params(
             runtime_params,
             *self.wallet_request_session.network.policy_asset(),
             self.fee_target_sat,
         )?;
+        let mut artifacts: ResolutionArtifacts = ResolutionArtifacts::new();
 
         let mut input_material_resolver = InputMaterialResolver::new(self);
 
         for (input_index, input) in runtime_params.inputs.iter().enumerate() {
             let material = input_material_resolver
-                .resolve_declared_input_material(input)
+                .resolve_declared_input_material(input, &supply_and_demand)
                 .await?;
 
             self.add_resolved_input_to_pset(

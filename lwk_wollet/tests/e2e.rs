@@ -1994,9 +1994,7 @@ fn test_unblinded_utxo() {
     assert_eq!(w.wollet.utxos().unwrap().len(), 0);
     assert_eq!(w.wollet.txos().unwrap().len(), 1);
 
-    // ANCHOR: external_utxo_unblinded
     let external_utxo = w.wollet.explicit_utxos().unwrap()[0].clone();
-    // ANCHOR_END: external_utxo_unblinded
 
     // Create tx sending the unblinded utxo
     let node_address = env.elementsd_getnewaddress();

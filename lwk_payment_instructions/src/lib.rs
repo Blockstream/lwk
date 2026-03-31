@@ -397,12 +397,12 @@ mod tests {
             Box::pin(async { Err("LNURL resolution not supported") })
         }
 
-        fn resolve_lnurl_to_invoice<'a>(
-            &'a self,
+        fn resolve_lnurl_to_invoice(
+            &self,
             _: String,
             _: Amount,
             _: [u8; 32],
-        ) -> LNURLResolutionFuture<'a> {
+        ) -> LNURLResolutionFuture<'_> {
             Box::pin(async { Err("LNURL resolution not supported") })
         }
     }

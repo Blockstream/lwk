@@ -299,6 +299,25 @@ def pay_bolt12_offer(boltz_session, wollet, esplora_client, signer, skip_complet
     except Exception as e:
         print(f"Error preparing payment: {e}")
 
+def resolve_bip353_offer():
+    """Resolve a BIP353 address to a BOLT12 offer"""
+    bip353_str = input('Enter BIP353 string (for example "₿matt@mattcorallo.com"): ').strip()
+
+    try:
+        payment = Payment(bip353_str)
+        resolved = payment.resolve_bip353()
+        offer = resolved.lightning_offer()
+
+        if offer is None:
+            print("Error: BIP353 did not resolve to a BOLT12 offer")
+            return
+
+        print("Resolved BOLT12 offer:")
+        print(offer)
+        print("Use menu item 18 to pay this offer.")
+    except Exception as e:
+        print(f"Error resolving BIP353 payment instruction: {e}")
+
 def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_thread=False):
     """Pay a bolt11 invoice"""
     # Read bolt11 invoice from user
@@ -980,6 +999,7 @@ def main():
         print("16) List completed swaps (from local store)")
         print("17) Remove swap from store")
         print("18) Pay BOLT12 offer")
+        print("19) Resolve BIP353 to BOLT12 offer")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -1087,6 +1107,9 @@ def main():
         elif choice == '18':
             print("\n=== Paying BOLT12 Offer ===")
             pay_bolt12_offer(boltz_session, wollet, esplora_client, signer)
+        elif choice == '19':
+            print("\n=== Resolving BIP353 to BOLT12 Offer ===")
+            resolve_bip353_offer()
         elif choice == 'q':
             print("Goodbye!")
             break

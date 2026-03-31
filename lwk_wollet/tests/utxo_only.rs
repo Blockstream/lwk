@@ -6,7 +6,6 @@ use lwk_test_util::*;
 use lwk_wollet::*;
 use std::str::FromStr;
 
-#[cfg(feature = "esplora")]
 #[test]
 fn test_esplora_waterfalls_utxo_only() {
     let env = TestEnvBuilder::from_env().with_waterfalls().build();
@@ -184,7 +183,6 @@ fn test_waterfalls_utxo_only_with_dummy() {
     assert!(txs.iter().any(|tx| tx.txid == txid3));
 }
 
-#[cfg(feature = "esplora")]
 async fn test_esplora_waterfalls_balance_comparison(
     descriptor: &str,
     esplora_url: &str,
@@ -233,7 +231,6 @@ async fn test_esplora_waterfalls_balance_comparison(
     Ok(())
 }
 
-#[cfg(feature = "esplora")]
 #[tokio::test]
 #[ignore]
 async fn test_esplora_waterfalls_testnet_utxo_only_1() {
@@ -245,7 +242,6 @@ async fn test_esplora_waterfalls_testnet_utxo_only_1() {
         .unwrap();
 }
 
-#[cfg(feature = "esplora")]
 #[tokio::test]
 #[ignore]
 async fn test_esplora_waterfalls_testnet_utxo_only_2() {

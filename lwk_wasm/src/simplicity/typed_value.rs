@@ -19,6 +19,80 @@ pub struct SimplicityTypedValue {
     inner: Value,
 }
 
+// wasm_bindgen does not support Vec<T> as a wrapper of Vec<T>
+/// Simplicity type collection.
+#[wasm_bindgen]
+#[derive(Clone, Debug, Default)]
+pub struct SimplicityTypedValues {
+    inner: Vec<SimplicityTypedValue>,
+}
+
+impl From<&SimplicityTypedValues> for Vec<SimplicityTypedValue> {
+    fn from(value: &SimplicityTypedValues) -> Self {
+        value.inner.clone().into_iter().collect()
+    }
+}
+
+impl From<SimplicityTypedValues> for Vec<SimplicityTypedValue> {
+    fn from(value: SimplicityTypedValues) -> Self {
+        value.inner.into_iter().collect()
+    }
+}
+
+impl From<Vec<SimplicityTypedValue>> for SimplicityTypedValues {
+    fn from(value: Vec<SimplicityTypedValue>) -> Self {
+        SimplicityTypedValues { inner: value }
+    }
+}
+
+impl AsRef<[SimplicityTypedValue]> for SimplicityTypedValues {
+    fn as_ref(&self) -> &[SimplicityTypedValue] {
+        self.inner.as_ref()
+    }
+}
+
+impl std::fmt::Display for SimplicityTypedValues {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.inner)
+    }
+}
+
+#[wasm_bindgen]
+impl SimplicityTypedValues {
+    /// Create an object with an empty list of simplicity typed values.
+    pub fn empty() -> Self {
+        SimplicityTypedValues::default()
+    }
+
+    /// Create an object from a list of simplicity typed values.
+    pub fn new(data: Vec<SimplicityTypedValue>) -> Self {
+        SimplicityTypedValues { inner: data }
+    }
+
+    /// Set to an object a list of simplicity typed values.
+    pub fn set(&mut self, data: Vec<SimplicityTypedValue>) {
+        self.inner = data;
+    }
+
+    /// Set to an object a list of simplicity typed values.
+    pub fn get(&self) -> Vec<SimplicityTypedValue> {
+        self.inner.clone()
+    }
+
+    /// Consumes the SimplicityTypedValues and returns the inner vector without cloning.
+    /// The original object is deallocated and can no longer be used.
+    #[wasm_bindgen(js_name = intoInner)]
+    pub fn into_inner(self) -> Vec<SimplicityTypedValue> {
+        self.inner
+    }
+
+    /// Return the string representation of this list of simplicity typed values.
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{self}")
+    }
+}
+
 #[wasm_bindgen]
 impl SimplicityTypedValue {
     /// Create a `u8` value.
@@ -92,13 +166,9 @@ impl SimplicityTypedValue {
     }
 
     /// Create a tuple value from elements.
-    ///
-    /// NOTE: The elements object is destroyed during the execution of the function, so the argument that was
-    /// passed in the JS code cannot be reused.
-    // TODO: address the limitation
     #[wasm_bindgen(js_name = fromElements)]
-    pub fn from_elements(elements: Vec<SimplicityTypedValue>) -> SimplicityTypedValue {
-        let inner = Value::tuple(elements.iter().map(|e| e.inner.clone()));
+    pub fn from_elements(elements: &SimplicityTypedValues) -> SimplicityTypedValue {
+        let inner = Value::tuple(elements.as_ref().iter().map(|e| e.inner.clone()));
         Self { inner }
     }
 

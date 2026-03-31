@@ -31,26 +31,26 @@ async function runSimplicityP2pkTest() {
     assertEqual(genesisHash, "a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1", "Genesis hash mismatch");
     assertEqual(genesisHash.length, 64, "Genesis hash length should be 64");
 
-    // Test loading p2pk program with public key argument
-    let args = new lwk.SimplicityArguments();
-    args = args.addValue("PUBLIC_KEY", lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY));
+        // Test loading p2pk program with public key argument
+        let args = new lwk.SimplicityArguments();
+        args = args.addValue("PUBLIC_KEY", lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY));
 
-    const program = lwk.SimplicityProgram.load(P2PK_SOURCE, args);
-    const cmr = program.cmr.toString();
-    assertEqual(cmr, TEST_CMR, "CMR mismatch");
+        const program = lwk.SimplicityProgram.load(P2PK_SOURCE, args);
+        const cmr = program.cmr.toString();
+        assertEqual(cmr, TEST_CMR, "CMR mismatch");
 
-    // Test creating P2TR address for p2pk program
-    const address = program.createP2trAddress(lwk.XOnlyPublicKey.fromString(TEST_PUBLIC_KEY), network);
-    assertEqual(address.toString(), TEST_ADDRESS, "Address mismatch");
+        // Test creating P2TR address for p2pk program
+        const address = program.createP2trAddress(lwk.XOnlyPublicKey.fromString(TEST_PUBLIC_KEY), network);
+        assertEqual(address.toString(), TEST_ADDRESS, "Address mismatch");
 
-    // Test building witness values with signature (64 bytes)
-    let witness = new lwk.SimplicityWitnessValues();
-    witness = witness.addValue("SIGNATURE", lwk.SimplicityTypedValue.fromByteArrayHex(TEST_SIGNATURE));
+        // Test building witness values with signature (64 bytes)
+        let witness = new lwk.SimplicityWitnessValues();
+        witness = witness.addValue("SIGNATURE", lwk.SimplicityTypedValue.fromByteArrayHex(TEST_SIGNATURE));
 
-    // Test creating TxOut from explicit values
-    const utxoScript = new lwk.Script(TEST_UTXO_SCRIPT_PUBKEY);
-    const utxo = lwk.TxOut.fromExplicit(utxoScript, network.policyAsset(), TEST_UTXO_VALUE);
-    assertEqual(utxo.value(), TEST_UTXO_VALUE, "UTXO value mismatch");
+        // Test creating TxOut from explicit values
+        const utxoScript = new lwk.Script(TEST_UTXO_SCRIPT_PUBKEY);
+        const utxo = lwk.TxOut.fromExplicit(utxoScript, network.policyAsset(), TEST_UTXO_VALUE);
+        assertEqual(utxo.value(), TEST_UTXO_VALUE, "UTXO value mismatch");
 
     // Test full transaction finalization with real test vectors
     const tx = lwk.Transaction.fromString(TEST_UNSIGNED_TX);
@@ -70,7 +70,8 @@ async function runSimplicityP2pkTest() {
     // Test SimplicityTypedValue constructors
     const _vLeft = lwk.SimplicityTypedValue.left(lwk.SimplicityTypedValue.fromU32(42), lwk.SimplicityType.boolean());
     const _vRight = lwk.SimplicityTypedValue.right(lwk.SimplicityType.u32(), lwk.SimplicityTypedValue.fromBoolean(true));
-    const _vTuple = lwk.SimplicityTypedValue.fromElements([lwk.SimplicityTypedValue.fromU32(42), lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY)]);
+    const _tTypesValued = lwk.SimplicityTypedValues.new([lwk.SimplicityTypedValue.fromU32(42), lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY)]);
+    const _vTuple = lwk.SimplicityTypedValue.fromElements(_tTypesValued);
     const _vNone = lwk.SimplicityTypedValue.none(lwk.SimplicityType.u64());
     const _vSome = lwk.SimplicityTypedValue.some(lwk.SimplicityTypedValue.fromU64(BigInt(1000)));
     const _vParsed = lwk.SimplicityTypedValue.parse("Left(42)", tEither);

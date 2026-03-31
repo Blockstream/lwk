@@ -28,6 +28,8 @@ where
     WalletProvider: WalletProviderMeta,
     WalletAbiError: From<WalletProvider::Error>,
 {
+    /// Create an allocator that owns receive/change ordinals so wallet-derived
+    /// output templates are consumed deterministically during one build.
     pub(crate) fn new(
         wallet_provider: &'a WalletProvider,
         wallet_request_session: &'a WalletRequestSession,
@@ -40,6 +42,12 @@ where
         }
     }
 
+    /// Turn abstract output requests into concrete PSET outputs once input
+    /// resolution has fixed the transaction context.
+    ///
+    /// This is where requested locks, issuance-derived asset ids, fee output,
+    /// change outputs, and blinder indexes are all materialized against one
+    /// consistent resolved transaction state.
     pub(crate) fn materialize_requested_outputs(
         &mut self,
         mut pst: PartiallySignedTransaction,
@@ -172,6 +180,8 @@ where
         Ok(pst)
     }
 
+    /// Fetch the next wallet receive template and advance the ordinal so each
+    /// wallet-locked output gets its own deterministic receive destination.
     fn next_receive_template(&mut self) -> Result<WalletOutputTemplate, WalletAbiError> {
         let request = WalletOutputRequest::Receive {
             index: self.next_receive_index,
@@ -185,6 +195,8 @@ where
         Ok(template)
     }
 
+    /// Fetch the next wallet change template and advance the ordinal so each
+    /// residual asset is routed to a distinct wallet-managed change output.
     fn next_change_template(
         &mut self,
         asset_id: AssetId,

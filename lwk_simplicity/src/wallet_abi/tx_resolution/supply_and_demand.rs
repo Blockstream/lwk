@@ -99,6 +99,9 @@ impl SupplyAndDemand {
         })
     }
 
+    /// Apply both the input's spendable value and any issuance side effects
+    /// together so supply and deferred demand stay synchronized with the
+    /// resolved prevout.
     pub(crate) fn apply_resolved_input_contribution(
         &mut self,
         input: &InputSchema,
@@ -136,6 +139,8 @@ impl SupplyAndDemand {
         )
     }
 
+    /// Update tracked supply when an auxiliary wallet UTXO is selected so later
+    /// deficit decisions see the newly committed funding immediately.
     pub(crate) fn add_selected_wallet_to_supply(
         &mut self,
         selected_wallet_utxo: &ExternalUtxo,
@@ -234,6 +239,9 @@ impl SupplyAndDemand {
         Ok(())
     }
 
+    /// Fail before output materialization if any issuance-linked demand remains
+    /// abstract, because balancing against unresolved asset ids would be
+    /// meaningless.
     pub(crate) fn validate_demand_after_resolution(&self) -> Result<(), WalletAbiError> {
         if !self.deferred_demands.is_empty() {
             return Err(WalletAbiError::InvalidRequest(
@@ -244,6 +252,9 @@ impl SupplyAndDemand {
         Ok(())
     }
 
+    /// Score a wallet candidate by how much it reduces both the asset-local and
+    /// global remaining deficit, with deterministic tie-breakers for otherwise
+    /// equivalent UTXOs.
     pub(crate) fn score_candidate(
         &self,
         candidate: &ExternalUtxo,
@@ -288,6 +299,8 @@ impl SupplyAndDemand {
         })
     }
 
+    /// Collapse the current per-asset shortages into one scalar so candidate
+    /// selection can compare how much a pick improves overall funding state.
     pub(crate) fn total_remaining_deficit(&self) -> Result<u64, WalletAbiError> {
         self.demand_by_asset
             .iter()
@@ -363,6 +376,8 @@ impl SupplyAndDemand {
         Ok(balances)
     }
 
+    /// Convert per-asset surplus into change candidates and stop early with a
+    /// funding error if any asset is still short after fee demand is applied.
     pub(crate) fn residuals_or_funding_error(
         supply_by_asset: &AssetBalances,
         demand_by_asset: &AssetBalances,

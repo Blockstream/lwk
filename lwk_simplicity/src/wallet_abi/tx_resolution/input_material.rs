@@ -29,18 +29,26 @@ pub(crate) struct ResolvedInputMaterial {
 }
 
 impl ResolvedInputMaterial {
+    /// Expose the resolved prevout because later stages need one canonical
+    /// outpoint for PSET wiring and issuance-id derivation.
     pub(crate) fn outpoint(&self) -> &OutPoint {
         &self.outpoint
     }
 
+    /// Expose the resolved prevout output so the PSET carries the exact witness
+    /// UTXO being spent.
     pub(crate) fn tx_out(&self) -> &TxOut {
         &self.tx_out
     }
 
+    /// Expose unblinded secrets so balancing, blinding, and issuance logic all
+    /// consume the same resolved source of truth.
     pub(crate) fn secrets(&self) -> &TxOutSecrets {
         &self.secrets
     }
 
+    /// Expose modeled wallet finalization weight so fee estimation can account
+    /// for wallet-owned inputs before signatures exist.
     pub(crate) fn wallet_finalization_weight(&self) -> &Option<usize> {
         &self.wallet_finalization_weight
     }
@@ -50,6 +58,8 @@ impl<'a, WalletProvider: WalletProviderMeta> InputMaterialResolver<'a, WalletPro
 where
     WalletAbiError: From<WalletProvider::Error>,
 {
+    /// Create a resolver that tracks consumed outpoints so declared and
+    /// auxiliary inputs cannot accidentally reuse the same UTXO.
     pub(crate) fn new(resolver: &'a Resolver<'a, WalletProvider>) -> Self {
         Self {
             used_outpoints: HashSet::new(),
@@ -75,6 +85,8 @@ where
         }
     }
 
+    /// Reserve an outpoint as soon as it is chosen so duplicate spending is
+    /// rejected at resolution time instead of later in PSET construction.
     pub(crate) fn reserve_outpoint(
         &mut self,
         item_id: &str,
@@ -90,6 +102,8 @@ where
         )))
     }
 
+    /// Expose already-consumed outpoints so auxiliary funding selection can
+    /// skip inputs the resolver has already committed to use.
     pub(crate) fn used_outpoints(&self) -> &HashSet<OutPoint> {
         &self.used_outpoints
     }
@@ -188,6 +202,8 @@ where
         })
     }
 
+    /// Choose the best wallet UTXO index that satisfies the caller filter while
+    /// minimizing the remaining supply deficit tracked by the balancer.
     fn filter_tx_out_index(
         &self,
         filter: &WalletSourceFilter,
@@ -212,6 +228,8 @@ where
         Ok(best.map(|(index, _)| index))
     }
 
+    /// Centralize wallet filter matching so every wallet-sourced input is
+    /// interpreted with the same asset, amount, and lock semantics.
     fn matches_wallet_filter(&self, candidate: &ExternalUtxo, filter: &WalletSourceFilter) -> bool {
         if self.used_outpoints.contains(&candidate.outpoint) {
             return false;

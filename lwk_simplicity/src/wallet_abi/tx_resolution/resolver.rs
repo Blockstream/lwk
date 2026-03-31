@@ -27,6 +27,8 @@ impl<'a, WalletProvider: WalletProviderMeta> Resolver<'a, WalletProvider>
 where
     WalletAbiError: From<WalletProvider::Error>,
 {
+    /// Create a resolver bound to one validated wallet session and fee target
+    /// so every resolution step sees the same wallet snapshot.
     pub(crate) fn new(
         wallet_request_session: &'a WalletRequestSession,
         wallet_provider: &'a WalletProvider,
@@ -39,14 +41,24 @@ where
         }
     }
 
+    /// Expose the wallet provider so helper resolvers can fetch prevouts,
+    /// unblindings, and wallet metadata through the same runtime backend.
     pub(crate) fn wallet_provider(&self) -> &WalletProvider {
         self.wallet_provider
     }
 
+    /// Expose the frozen wallet snapshot so input selection remains stable for
+    /// the lifetime of this transaction build.
     pub(crate) fn wallet_snapshot(&self) -> &Arc<[ExternalUtxo]> {
         &self.wallet_request_session.spendable_utxos
     }
 
+    /// Resolve the request into a blinded PSET plus artifacts needed for later
+    /// finalization and fee modeling.
+    ///
+    /// The flow first resolves declared inputs, then fills remaining asset
+    /// deficits with auxiliary wallet inputs, and only then materializes
+    /// requested outputs and change against the resulting supply state.
     pub(crate) async fn resolve_request(
         &self,
         runtime_params: &RuntimeParams,
@@ -177,6 +189,8 @@ where
         Ok(())
     }
 
+    /// Append a wallet-owned funding input when declared inputs leave an asset
+    /// deficit, keeping the extra funding explicit in the resulting PSET order.
     async fn add_auxiliary_wallet_input(
         &self,
         pst: &mut PartiallySignedTransaction,
@@ -208,6 +222,10 @@ where
         Ok(())
     }
 
+    // TODO: later on the algorith can be replaced with bounded BnB, it is like that for simplicity reasons
+    /// Choose the smallest prefix of largest same-asset wallet UTXOs that can
+    /// close the current deficit, which keeps auxiliary funding deterministic
+    /// and avoids pulling in unrelated assets.
     fn select_auxiliary_inputs_for_asset(
         &self,
         target_asset: AssetId,

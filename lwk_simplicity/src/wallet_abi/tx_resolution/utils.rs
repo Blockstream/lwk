@@ -32,6 +32,8 @@ pub(crate) fn add_balance(
     Ok(())
 }
 
+/// Validate issuance-linked output references in one place so every caller
+/// rejects the same out-of-bounds `input_index` before dereferencing inputs.
 pub(crate) fn validate_output_input_index(
     output_id: &str,
     input_index: u32,
@@ -73,6 +75,8 @@ pub(crate) fn issuance_token_from_entropy_for_unblinded_issuance(
     AssetId::reissuance_token_from_entropy(issuance_entropy, issuance_value_commitment_present)
 }
 
+/// Resolve the concrete asset id behind an issuance-linked reference while
+/// enforcing that the requested reference kind matches the input issuance kind.
 pub(super) fn issuance_reference_asset_id(
     kind: IssuanceReferenceKind,
     issuance: &InputIssuance,

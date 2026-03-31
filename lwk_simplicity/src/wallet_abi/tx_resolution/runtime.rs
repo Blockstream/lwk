@@ -38,6 +38,8 @@ where
     WalletProvider: WalletProviderMeta,
     WalletAbiError: From<Signer::Error> + From<SessionFactory::Error> + From<WalletProvider::Error>,
 {
+    /// Capture the request and runtime dependencies so the build can reuse one
+    /// signer/session context without cloning mutable state.
     pub fn new(
         request: TxCreateRequest,
         signer_meta: &'a Signer,
@@ -50,6 +52,9 @@ where
         }
     }
 
+    /// Drive the full runtime flow so request validation, building,
+    /// finalization, and optional broadcast all happen under one consistent
+    /// wallet session and fee policy.
     pub async fn process_request(&self) -> Result<TxCreateResponse, WalletAbiError> {
         let wallet_session = self.open_session().await?;
         let fee_rate_sat_kvb = self.get_fee_rate()?;
@@ -61,6 +66,8 @@ where
         self.process_response(resolved_tx).await
     }
 
+    /// Build and finalize the transaction, then verify the realized fee and
+    /// local amount proofs before handing the transaction back to the API layer.
     async fn resolve_transaction(
         &self,
         wallet_session: &WalletRequestSession,
@@ -114,6 +121,9 @@ where
         Ok(tx)
     }
 
+    /// Estimate the fee target from a provisional build so the final
+    /// transaction can be constructed against measured weight instead of a
+    /// static guess.
     async fn estimate_fee_target(
         &self,
         fee_rate_sat_kvb: f32,
@@ -135,6 +145,9 @@ where
         ))
     }
 
+    /// Build and blind a provisional transaction for one fee target so later
+    /// finalization passes operate on the exact output set the runtime intends
+    /// to publish.
     async fn build_transaction(
         &self,
         fee_target_sat: u64,
@@ -160,6 +173,9 @@ where
         Ok((pst, artifacts))
     }
 
+    /// Convert the resolved transaction into API response form and, when
+    /// broadcasting, verify the provider echoed the same txid to catch backend
+    /// mismatches before reporting success.
     async fn process_response(
         &self,
         resolved_tx: Transaction,
@@ -191,6 +207,8 @@ where
         ))
     }
 
+    /// Open and validate the wallet session up front so all later resolution
+    /// logic runs against a network-compatible snapshot.
     async fn open_session(&self) -> Result<WalletRequestSession, WalletAbiError> {
         let wallet_session = self
             .wallet_deps
@@ -203,6 +221,8 @@ where
         Ok(wallet_session)
     }
 
+    /// Normalize the request fee rate once so every build phase shares the same
+    /// finite, non-negative sat/kvB target.
     fn get_fee_rate(&self) -> Result<f32, WalletAbiError> {
         let fee_rate_sat_kvb = self
             .request

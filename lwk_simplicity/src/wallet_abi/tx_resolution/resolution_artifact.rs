@@ -15,22 +15,33 @@ pub(crate) struct ResolutionArtifacts {
 }
 
 impl ResolutionArtifacts {
+    /// Create empty artifacts so resolution can accumulate secrets, finalizers,
+    /// and fee-model inputs in PSET order.
     pub(crate) fn new() -> Self {
         Self::default()
     }
 
+    /// Expose collected secrets because blinding must reference the same
+    /// per-input unblinding data captured during resolution.
     pub(crate) fn secrets(&self) -> &HashMap<usize, TxOutSecrets> {
         &self.secrets
     }
 
+    /// Expose finalizer metadata so later finalization passes can mirror the
+    /// resolved input ordering without re-reading request state.
     pub(crate) fn finalizers(&self) -> &[FinalizerSpec] {
         &self.finalizers
     }
 
+    /// Expose accumulated wallet finalization weight so fee estimation can
+    /// account for wallet witnesses before they are materialized.
     pub(crate) fn wallet_input_finalization_weight(&self) -> usize {
         self.wallet_input_finalization_weight
     }
 
+    /// Record one auxiliary wallet input in artifact state so blinding,
+    /// finalization, and fee modeling all stay aligned with the concrete PSET
+    /// input index that was added.
     pub(crate) fn collect_wallet_input(
         &mut self,
         selected_wallet_utxo: &ExternalUtxo,
@@ -51,6 +62,8 @@ impl ResolutionArtifacts {
         Ok(())
     }
 
+    /// Capture artifacts for one resolved declared input so later stages do not
+    /// need to re-resolve secrets, finalizer choice, or fee-model metadata.
     pub(crate) fn collect_input(
         &mut self,
         input: &InputSchema,
@@ -82,6 +95,8 @@ impl ResolutionArtifacts {
     }
 }
 
+/// Model wallet witness weight only when the wallet snapshot did not provide
+/// one, allowing fee estimation to succeed for simple wallet inputs.
 fn modeled_wallet_input_finalization_weight(
     input_index: usize,
     script_pubkey: &Script,
@@ -100,6 +115,8 @@ fn modeled_wallet_input_finalization_weight(
     )))
 }
 
+/// Convert script templates into stable labels so unsupported wallet input kinds
+/// produce clearer fee-estimation errors.
 fn wallet_input_script_kind(script_pubkey: &Script) -> &'static str {
     if script_pubkey.is_v0_p2wpkh() {
         "p2wpkh"

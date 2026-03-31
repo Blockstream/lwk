@@ -12,6 +12,9 @@ use lwk_wollet::EC;
 
 use simplicityhl::tracker::TrackerLogLevel;
 
+/// Finalize wallet-owned inputs after signing so standard wallet witnesses are
+/// materialized without touching Simplicity inputs, which need a separate
+/// environment-driven witness construction pass.
 pub(crate) fn finalize_wallet_inputs<Signer>(
     signer_meta: &Signer,
     mut pst: PartiallySignedTransaction,
@@ -49,6 +52,9 @@ where
 }
 
 // FIXME: currently we are explicitly relying on the fact that only 2 possible finalizers exist to avoid overcomplicating fee estimation.
+/// Finalize Simplicity inputs in their own pass because their witness is
+/// derived from the blinded transaction, resolved environment UTXOs, and
+/// executed program rather than the wallet miniscript finalizer.
 pub(crate) fn finalize_simf_inputs<Signer>(
     signer_meta: &Signer,
     mut pst: PartiallySignedTransaction,

@@ -4,7 +4,7 @@ use lwk_wollet::{elements, UnvalidatedRecipient, Validated};
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    liquidex::ValidatedLiquidexProposal, Address, AssetId, Contract, Error, Network, OutPoint,
+    liquidex::ValidatedLiquidexProposals, Address, AssetId, Contract, Error, Network, OutPoint,
     Pset, Transaction, Wollet,
 };
 
@@ -229,9 +229,9 @@ impl TxBuilder {
 
     /// Set data to take LiquiDEX proposals
     #[wasm_bindgen(js_name = liquidexTake)]
-    pub fn liquidex_take(self, proposals: Vec<ValidatedLiquidexProposal>) -> Result<Self, Error> {
+    pub fn liquidex_take(self, proposals: &ValidatedLiquidexProposals) -> Result<Self, Error> {
         let proposals: Vec<lwk_wollet::LiquidexProposal<Validated>> =
-            proposals.into_iter().map(Into::into).collect();
+            proposals.as_ref().iter().cloned().map(Into::into).collect();
         Ok(self.inner.liquidex_take(proposals)?.into())
     }
 

@@ -28,6 +28,80 @@ pub struct ValidatedLiquidexProposal {
     inner: lwk_wollet::LiquidexProposal<Validated>,
 }
 
+// wasm_bindgen does not support Vec<T> as a wrapper of Vec<T>
+/// Simplicity type collection.
+#[wasm_bindgen]
+#[derive(Clone, Debug, Default)]
+pub struct ValidatedLiquidexProposals {
+    inner: Vec<ValidatedLiquidexProposal>,
+}
+
+impl From<&ValidatedLiquidexProposals> for Vec<ValidatedLiquidexProposal> {
+    fn from(value: &ValidatedLiquidexProposals) -> Self {
+        value.inner.clone().into_iter().collect()
+    }
+}
+
+impl From<ValidatedLiquidexProposals> for Vec<ValidatedLiquidexProposal> {
+    fn from(value: ValidatedLiquidexProposals) -> Self {
+        value.inner.into_iter().collect()
+    }
+}
+
+impl From<Vec<ValidatedLiquidexProposal>> for ValidatedLiquidexProposals {
+    fn from(value: Vec<ValidatedLiquidexProposal>) -> Self {
+        ValidatedLiquidexProposals { inner: value }
+    }
+}
+
+impl AsRef<[ValidatedLiquidexProposal]> for ValidatedLiquidexProposals {
+    fn as_ref(&self) -> &[ValidatedLiquidexProposal] {
+        self.inner.as_ref()
+    }
+}
+
+impl std::fmt::Display for ValidatedLiquidexProposals {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.inner)
+    }
+}
+
+#[wasm_bindgen]
+impl ValidatedLiquidexProposals {
+    /// Create an object with an empty list of liquidex proposals.
+    pub fn empty() -> Self {
+        ValidatedLiquidexProposals::default()
+    }
+
+    /// Create an object from a list of liquidex proposals.
+    pub fn new(data: Vec<ValidatedLiquidexProposal>) -> Self {
+        ValidatedLiquidexProposals { inner: data }
+    }
+
+    /// Set to an object a list of liquidex proposals.
+    pub fn set(&mut self, data: Vec<ValidatedLiquidexProposal>) {
+        self.inner = data;
+    }
+
+    /// Set to an object a list of liquidex proposals.
+    pub fn get(&self) -> Vec<ValidatedLiquidexProposal> {
+        self.inner.clone()
+    }
+
+    /// Consumes the ValidatedLiquidexProposals and returns the inner vector without cloning.
+    /// The original object is deallocated and can no longer be used.
+    #[wasm_bindgen(js_name = intoInner)]
+    pub fn into_inner(self) -> Vec<ValidatedLiquidexProposal> {
+        self.inner
+    }
+
+    /// Return the string representation of this list of liquidex proposals.
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{self}")
+    }
+}
+
 /// An asset identifier and an amount in satoshi units
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
@@ -226,7 +300,7 @@ mod tests {
 
         let builder = TxBuilder::new(&network);
         let pset_taker = builder
-            .liquidex_take([proposal].to_vec())
+            .liquidex_take(&[proposal].to_vec().into())
             .unwrap()
             .finish(&wollet)
             .unwrap();

@@ -8,6 +8,8 @@ exclude = ["tests/", "data/"]
 documentation = "https://docs.rs/lwk_simplicity"
 
 [dependencies]
+log = "0.4.28"
+
 lwk_common = { version = "0.16.0" }
 lwk_signer = { version = "0.16.0", default-features = false }
 lwk_wollet = { version = "0.16.0", default-features = false }

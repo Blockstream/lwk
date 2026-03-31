@@ -176,6 +176,9 @@ pub trait BlockchainBackend {
         state: &S,
         index: u32,
     ) -> Result<Option<Update>, Error> {
+        if state.utxo_only() != self.utxo_only() {
+            return Err(Error::UtxoOnlyIncompatible);
+        }
         let descriptor = state.descriptor();
 
         let Data {

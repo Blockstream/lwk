@@ -328,3 +328,57 @@ fn test_faucet() {
     let err = w.client.broadcast(&tx).unwrap_err();
     assert!(err.to_string().contains("bad-txns-inputs-missingorspent"));
 }
+
+#[test]
+fn test_incompatible_utxo_only() {
+    let env = TestEnvBuilder::from_env()
+        .with_electrum()
+        .with_esplora()
+        .with_waterfalls()
+        .build();
+
+    let network = ElementsNetwork::default_regtest();
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let wd = WolletDescriptor::from_str(&desc).unwrap();
+
+    let wollet = WolletBuilder::new(network, wd.clone()).build().unwrap();
+    assert!(!wollet.utxo_only());
+    let wollet = WolletBuilder::new(network, wd.clone())
+        .utxo_only(false)
+        .build()
+        .unwrap();
+    assert!(!wollet.utxo_only());
+    let wollet_uo = WolletBuilder::new(network, wd.clone())
+        .utxo_only(true)
+        .build()
+        .unwrap();
+    assert!(wollet_uo.utxo_only());
+
+    let mut client_electrum = test_client_electrum(&env.electrum_url());
+    let mut client_esplora = EsploraClientBuilder::new(&env.esplora_url(), network)
+        .build_blocking()
+        .unwrap();
+    let mut client_waterfalls = EsploraClientBuilder::new(&env.waterfalls_url(), network)
+        .waterfalls(true)
+        .build_blocking()
+        .unwrap();
+    let mut client_waterfalls_uo = EsploraClientBuilder::new(&env.waterfalls_url(), network)
+        .waterfalls(true)
+        .utxo_only(true)
+        .build_blocking()
+        .unwrap();
+
+    let err = client_electrum.full_scan(&wollet_uo).unwrap_err();
+    assert!(matches!(err, Error::UtxoOnlyIncompatible));
+    let err = client_esplora.full_scan(&wollet_uo).unwrap_err();
+    assert!(matches!(err, Error::UtxoOnlyIncompatible));
+    let err = client_waterfalls.full_scan(&wollet_uo).unwrap_err();
+    assert!(matches!(err, Error::UtxoOnlyIncompatible));
+    let err = client_waterfalls_uo.full_scan(&wollet).unwrap_err();
+    assert!(matches!(err, Error::UtxoOnlyIncompatible));
+
+    // TODO: consider making apply_update fail too
+    // (requires Update to store whether it was utxo_only)
+}

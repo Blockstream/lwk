@@ -74,8 +74,17 @@ pub fn wait_for_tx_confirmation<S: BlockchainBackend>(
     panic!("Tx is not confirmed");
 }
 
+#[derive(Default)]
+pub struct TestWolletOpt {
+    pub utxo_only: bool,
+}
+
 impl<C: BlockchainBackend> TestWollet<C> {
-    pub fn new(mut client: C, desc: &str) -> Self {
+    pub fn new(client: C, desc: &str) -> Self {
+        Self::with_opt(client, desc, &TestWolletOpt::default())
+    }
+
+    pub fn with_opt(mut client: C, desc: &str, opt: &TestWolletOpt) -> Self {
         let db_root_dir = TempDir::new().unwrap();
 
         let network = ElementsNetwork::default_regtest();
@@ -89,6 +98,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         let mut wollet = WolletBuilder::new(network, desc)
             .with_legacy_fs_store(&db_root_dir)
             .unwrap()
+            .utxo_only(opt.utxo_only)
             .build()
             .unwrap();
 

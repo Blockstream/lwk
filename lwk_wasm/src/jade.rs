@@ -76,7 +76,7 @@ impl Jade {
     #[wasm_bindgen(js_name = getReceiveAddressSingle)]
     pub async fn get_receive_address_single(
         &self,
-        variant: Singlesig,
+        variant: &Singlesig,
         path: Vec<u32>,
     ) -> Result<String, Error> {
         self.inner.unlock().await?;
@@ -256,6 +256,15 @@ pub struct Singlesig {
 
 impl From<Singlesig> for Variant {
     fn from(v: Singlesig) -> Self {
+        match v.inner {
+            lwk_common::Singlesig::Wpkh => Variant::Wpkh,
+            lwk_common::Singlesig::ShWpkh => Variant::ShWpkh,
+        }
+    }
+}
+
+impl From<&Singlesig> for Variant {
+    fn from(v: &Singlesig) -> Self {
         match v.inner {
             lwk_common::Singlesig::Wpkh => Variant::Wpkh,
             lwk_common::Singlesig::ShWpkh => Variant::ShWpkh,

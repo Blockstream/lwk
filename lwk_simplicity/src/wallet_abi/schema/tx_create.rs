@@ -50,6 +50,22 @@ pub struct TxCreateRequest {
 }
 
 impl TxCreateRequest {
+    /// Build a request envelope from primitive parts.
+    pub fn from_parts(
+        request_id: &str,
+        network: ElementsNetwork,
+        params: RuntimeParams,
+        broadcast: bool,
+    ) -> Result<Self, WalletAbiError> {
+        Ok(Self {
+            abi_version: TX_CREATE_ABI_VERSION.to_string(),
+            request_id: request_id.parse().map_err(WalletAbiError::from)?,
+            network,
+            params,
+            broadcast,
+        })
+    }
+
     /// Validate request-level contract fields against the active runtime context.
     ///
     /// # Errors
@@ -147,6 +163,61 @@ pub struct TxCreateResponse {
 }
 
 impl TxCreateResponse {
+    /// Build a successful ABI response envelope from primitive parts.
+    pub fn ok_from_parts(
+        request_id: &str,
+        network: ElementsNetwork,
+        transaction: TransactionInfo,
+        artifacts_json: Option<&str>,
+    ) -> Result<Self, WalletAbiError> {
+        let artifacts = artifacts_json
+            .map(
+                |json| match serde_json::from_str::<serde_json::Value>(json)? {
+                    serde_json::Value::Object(map) => Ok(map),
+                    _ => Err(WalletAbiError::InvalidRequest(
+                        "Wallet ABI artifacts JSON must be an object".into(),
+                    )),
+                },
+            )
+            .transpose()?;
+
+        Ok(Self {
+            abi_version: TX_CREATE_ABI_VERSION.to_string(),
+            request_id: request_id.parse().map_err(WalletAbiError::from)?,
+            network,
+            status: Status::Ok,
+            transaction: Some(transaction),
+            artifacts,
+            error: None,
+        })
+    }
+
+    /// Build an error ABI response envelope from primitive parts.
+    pub fn error_from_parts(
+        request_id: &str,
+        network: ElementsNetwork,
+        error: ErrorInfo,
+    ) -> Result<Self, WalletAbiError> {
+        Ok(Self {
+            abi_version: TX_CREATE_ABI_VERSION.to_string(),
+            request_id: request_id.parse().map_err(WalletAbiError::from)?,
+            network,
+            status: Status::Error,
+            transaction: None,
+            artifacts: None,
+            error: Some(error),
+        })
+    }
+
+    /// Serialize the optional `artifacts` payload as canonical JSON.
+    pub fn artifacts_json(&self) -> Result<Option<String>, WalletAbiError> {
+        self.artifacts
+            .as_ref()
+            .map(serde_json::to_string)
+            .transpose()
+            .map_err(WalletAbiError::from)
+    }
+
     /// Build a successful ABI response envelope.
     pub fn ok(
         request: &TxCreateRequest,

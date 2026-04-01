@@ -6,7 +6,7 @@ use lwk_wollet::elements::Txid;
 
 use serde::{Deserialize, Serialize};
 
-use lwk_common::Network;
+use lwk_wollet::ElementsNetwork;
 
 use uuid::Uuid;
 
@@ -39,7 +39,7 @@ pub struct TxCreateRequest {
     /// Correlation identifier for the request.
     pub request_id: Uuid,
     /// Target Elements network for this request.
-    pub network: Network,
+    pub network: ElementsNetwork,
     /// Transaction construction parameters to be consumed by runtime.
     pub params: RuntimeParams,
     /// Broadcast policy for runtime.
@@ -56,7 +56,10 @@ impl TxCreateRequest {
     ///
     /// Returns [`WalletAbiError::InvalidRequest`] when `abi_version` or `network`
     /// does not match runtime expectations.
-    pub fn validate_for_runtime(&self, runtime_network: Network) -> Result<(), WalletAbiError> {
+    pub fn validate_for_runtime(
+        &self,
+        runtime_network: ElementsNetwork,
+    ) -> Result<(), WalletAbiError> {
         if self.abi_version != TX_CREATE_ABI_VERSION {
             return Err(WalletAbiError::InvalidRequest(format!(
                 "request abi_version mismatch: expected '{TX_CREATE_ABI_VERSION}', got '{}'",
@@ -129,7 +132,7 @@ pub struct TxCreateResponse {
     /// Correlation identifier copied from the originating request.
     pub request_id: Uuid,
     /// Network context for this response.
-    pub network: Network,
+    pub network: ElementsNetwork,
     /// Outcome status for the request.
     pub status: Status,
     /// Successful transaction payload (`Some` on `status = ok`).

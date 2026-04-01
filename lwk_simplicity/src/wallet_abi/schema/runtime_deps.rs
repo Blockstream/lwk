@@ -27,7 +27,7 @@ pub struct WalletRequestSession {
     /// Opaque wallet-owned request/session correlation identifier.
     pub session_id: String,
     /// Network for request validation and script derivation.
-    pub network: lwk_common::Network,
+    pub network: lwk_wollet::ElementsNetwork,
     /// Deterministic wallet UTXO snapshot used for all input-selection work in this request.
     ///
     /// For a fixed request/session, this snapshot must stay stable across fee

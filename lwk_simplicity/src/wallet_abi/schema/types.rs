@@ -1,5 +1,7 @@
 use crate::error::WalletAbiError;
 
+use std::str::FromStr;
+
 /// Canonical machine-readable and human-readable error payload for `wallet-abi-0.1`.
 ///
 /// `ErrorInfo` appears in [`TxCreateResponse`](crate::wallet_abi::schema::tx_create::TxCreateResponse)
@@ -74,6 +76,28 @@ impl WalletAbiErrorCode {
     }
 }
 
+impl FromStr for WalletAbiErrorCode {
+    type Err = core::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "invalid_request" => Self::InvalidRequest,
+            "serde" => Self::Serde,
+            "program_error" => Self::ProgramError,
+            "derivation" => Self::Derivation,
+            "try_from_int" => Self::TryFromInt,
+            "funding" => Self::Funding,
+            "invalid_signer_config" => Self::InvalidSignerConfig,
+            "invalid_response" => Self::InvalidResponse,
+            "pset" => Self::Pset,
+            "pset_blind" => Self::PsetBlind,
+            "amount_proof_verification" => Self::AmountProofVerification,
+            "invalid_finalization_steps" => Self::InvalidFinalizationSteps,
+            _ => Self::Unknown(s.to_owned()),
+        })
+    }
+}
+
 impl From<&WalletAbiError> for WalletAbiErrorCode {
     fn from(e: &WalletAbiError) -> Self {
         match e {
@@ -109,9 +133,39 @@ impl From<WalletAbiError> for ErrorInfo {
     }
 }
 
+impl ErrorInfo {
+    /// Build an error payload from a canonical error code string and optional JSON details.
+    pub fn from_code_and_json(
+        code: &str,
+        message: impl Into<String>,
+        details_json: Option<&str>,
+    ) -> Result<Self, WalletAbiError> {
+        Ok(Self {
+            code: WalletAbiErrorCode::from_str(code).expect("infallible"),
+            message: message.into(),
+            details: details_json
+                .map(serde_json::from_str)
+                .transpose()
+                .map_err(WalletAbiError::from)?,
+        })
+    }
+
+    /// Serialize the optional `details` payload as canonical JSON.
+    pub fn details_json(&self) -> Result<Option<String>, WalletAbiError> {
+        self.details
+            .as_ref()
+            .map(serde_json::to_string)
+            .transpose()
+            .map_err(WalletAbiError::from)
+    }
+}
+
 mod error_code_as_str {
     use super::WalletAbiErrorCode;
+
     use serde::{Deserialize, Deserializer, Serializer};
+
+    use std::str::FromStr;
 
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn serialize<S>(code: &WalletAbiErrorCode, s: S) -> Result<S::Ok, S::Error>
@@ -126,21 +180,6 @@ mod error_code_as_str {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(d)?;
-        let code = match s.as_str() {
-            "invalid_request" => WalletAbiErrorCode::InvalidRequest,
-            "serde" => WalletAbiErrorCode::Serde,
-            "program_error" => WalletAbiErrorCode::ProgramError,
-            "derivation" => WalletAbiErrorCode::Derivation,
-            "try_from_int" => WalletAbiErrorCode::TryFromInt,
-            "funding" => WalletAbiErrorCode::Funding,
-            "invalid_signer_config" => WalletAbiErrorCode::InvalidSignerConfig,
-            "invalid_response" => WalletAbiErrorCode::InvalidResponse,
-            "pset" => WalletAbiErrorCode::Pset,
-            "pset_blind" => WalletAbiErrorCode::PsetBlind,
-            "amount_proof_verification" => WalletAbiErrorCode::AmountProofVerification,
-            "invalid_finalization_steps" => WalletAbiErrorCode::InvalidFinalizationSteps,
-            _ => WalletAbiErrorCode::Unknown(s),
-        };
-        Ok(code)
+        Ok(WalletAbiErrorCode::from_str(&s).expect("infallible"))
     }
 }

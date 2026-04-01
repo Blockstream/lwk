@@ -252,6 +252,14 @@ impl Display for TaprootPubkeyGen {
     }
 }
 
+impl FromStr for TaprootPubkeyGen {
+    type Err = TaprootPubkeyGenError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse_from_str(s)
+    }
+}
+
 /// Try to deterministically map a random seed into a valid X-only pubkey.
 ///
 /// Compatibility note:

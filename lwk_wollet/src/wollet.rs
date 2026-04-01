@@ -25,7 +25,7 @@ use elements_miniscript::{
 use fxhash::FxHasher;
 use lwk_common::{
     burn_script, pset_balance, pset_issuances, pset_signatures, Balance, DynStore, EncryptedStore,
-    FakeStore, FileStore, PsetDetails,
+    FakeStore, FileStore, MemoryStore, PsetDetails,
 };
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hasher;
@@ -67,6 +67,7 @@ pub struct WolletBuilder {
     network: ElementsNetwork,
     descriptor: WolletDescriptor,
     store: Arc<dyn DynStore>,
+    txs_store: Arc<dyn DynStore>,
     /// Number of updates to trigger merge. None disables merging.
     merge_threshold: Option<usize>,
     utxo_only: bool,
@@ -79,6 +80,7 @@ impl WolletBuilder {
             network,
             descriptor,
             store: Arc::new(FakeStore::new()),
+            txs_store: Arc::new(MemoryStore::new()),
             merge_threshold: None,
             utxo_only: false,
         }
@@ -111,6 +113,12 @@ impl WolletBuilder {
         self
     }
 
+    /// Specify the store used to persist wallet transactions
+    pub fn with_txs_store(mut self, store: Arc<dyn DynStore>) -> Self {
+        self.txs_store = store;
+        self
+    }
+
     /// Use the legacy `Wollet` store
     pub fn with_legacy_fs_store<P: AsRef<Path>>(mut self, datadir: P) -> Result<Self, Error> {
         // Build path: datadir/network/enc_cache/hash(descriptor)
@@ -129,7 +137,7 @@ impl WolletBuilder {
 
     /// Build the `Wollet`
     pub fn build(self) -> Result<Wollet, Error> {
-        let cache = Cache::default();
+        let cache = Cache::new(self.txs_store);
         let max_weight_to_satisfy = match self.descriptor.definite_descriptor(Chain::External, 0) {
             Ok(d) => d.max_weight_to_satisfy()?,
             Err(_) => 0, // If we don't have the descriptor we don't know this value

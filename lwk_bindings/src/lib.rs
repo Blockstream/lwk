@@ -51,6 +51,20 @@ pub use simplicity::{
     SimplicityLogLevel, SimplicityProgram, SimplicityRunResult, SimplicityType,
     SimplicityTypedValue, SimplicityWitnessValues, StateTaprootBuilder, StateTaprootSpendInfo,
 };
+#[cfg(feature = "simplicity")]
+mod wallet_abi;
+#[cfg(feature = "simplicity")]
+pub use wallet_abi::{
+    wallet_abi_generate_request_id, WalletAbiAmountFilter, WalletAbiAssetFilter,
+    WalletAbiAssetVariant, WalletAbiBlinderVariant, WalletAbiErrorCode, WalletAbiErrorInfo,
+    WalletAbiFinalizerSpec, WalletAbiInputIssuance, WalletAbiInputIssuanceKind,
+    WalletAbiInputSchema, WalletAbiInputUnblinding, WalletAbiInternalKeySource,
+    WalletAbiLockFilter, WalletAbiLockVariant, WalletAbiOutputSchema, WalletAbiRuntimeParams,
+    WalletAbiRuntimeSimfValue, WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments,
+    WalletAbiSimfWitness, WalletAbiStatus, WalletAbiTaprootHandle, WalletAbiTransactionInfo,
+    WalletAbiTxCreateRequest, WalletAbiTxCreateResponse, WalletAbiUtxoSource,
+    WalletAbiWalletSourceFilter,
+};
 
 pub use blockdata::address::Address;
 pub use blockdata::address_result::AddressResult;

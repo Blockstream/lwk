@@ -37,6 +37,12 @@ pub enum WalletAbiError {
     InvalidFinalizationSteps(String),
 }
 
+impl From<uuid::Error> for WalletAbiError {
+    fn from(value: uuid::Error) -> Self {
+        Self::InvalidRequest(value.to_string())
+    }
+}
+
 /// Errors that occur during Simplicity program compilation, execution, or environment setup.
 ///
 /// These errors cover the full lifecycle of working with Simplicity programs:

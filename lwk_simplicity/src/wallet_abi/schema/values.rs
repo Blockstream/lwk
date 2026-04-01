@@ -186,6 +186,16 @@ pub struct SimfWitness {
     pub runtime_arguments: Vec<RuntimeSimfWitness>,
 }
 
+impl SimfWitness {
+    /// Build a witness payload with only statically resolved witness values.
+    pub fn new(static_witness: WitnessValues) -> Self {
+        Self {
+            resolved: static_witness,
+            runtime_arguments: Vec::new(),
+        }
+    }
+}
+
 /// Serialize a [`SimfWitness`] into UTF-8 JSON bytes.
 ///
 /// The resulting bytes are carried by `FinalizerSpec::Simf.witness` and later

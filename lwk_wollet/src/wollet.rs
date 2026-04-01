@@ -773,7 +773,7 @@ impl Wollet {
         let mut txos = vec![];
         for (txid, tx) in self.cache.all_txs() {
             for (vout, o) in tx.output.iter().enumerate() {
-                let outpoint = OutPoint::new(*txid, vout as u32);
+                let outpoint = OutPoint::new(txid, vout as u32);
                 if !o.script_pubkey.is_empty()
                     && self.cache.paths.contains_key(&o.script_pubkey)
                     && !self.cache.unblinded.contains_key(&outpoint)
@@ -802,7 +802,7 @@ impl Wollet {
         for (txid, tx) in self.cache.all_txs() {
             for (i, txout) in tx.output.iter().enumerate() {
                 if self.cache.paths.contains_key(&txout.script_pubkey) {
-                    let outpoint = OutPoint::new(*txid, i as u32);
+                    let outpoint = OutPoint::new(txid, i as u32);
                     if !cache_unblinded.contains_key(&outpoint) {
                         if let Ok(unblinded) = txout.unblind(&EC, blinding_key) {
                             let tx_ = if self.is_segwit() {
@@ -836,7 +836,7 @@ impl Wollet {
         for (txid, tx) in self.cache.all_txs() {
             for (vout, txout) in tx.output.iter().enumerate() {
                 if self.cache.paths.contains_key(&txout.script_pubkey) {
-                    let outpoint = OutPoint::new(*txid, vout as u32);
+                    let outpoint = OutPoint::new(txid, vout as u32);
                     if !self.cache.unblinded.contains_key(&outpoint) {
                         if let Ok(unblinded) = try_unblind(txout, &self.descriptor) {
                             new.insert(outpoint, unblinded);

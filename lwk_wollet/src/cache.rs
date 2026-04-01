@@ -12,14 +12,17 @@ pub const BATCH_SIZE: u32 = 20;
 pub type Height = u32;
 pub type Timestamp = u32;
 
+const TXIDS_KEY: &str = "wollet:txids";
+
+fn tx_key(txid: &Txid) -> String {
+    txid.to_string()
+}
+
 /// `Cache` is a cache of wallet data, like wallet transactions.
 /// It is fully reconstructable from the CT Descriptor and the blockchain.
 pub struct Cache {
     /// Store for all wallet transactions
     txs_store: Arc<dyn DynStore>,
-
-    /// contains all my tx and all prevouts
-    all_txs: HashMap<Txid, Transaction>,
 
     /// Dummy txs for utxo only mode
     dummy_txids: HashSet<Txid>,
@@ -59,7 +62,6 @@ impl Default for Cache {
     fn default() -> Self {
         Self {
             txs_store: Arc::new(MemoryStore::default()),
-            all_txs: HashMap::default(),
             dummy_txids: HashSet::default(),
             paths: HashMap::default(),
             scripts: HashMap::default(),
@@ -77,7 +79,7 @@ impl Default for Cache {
 
 impl std::hash::Hash for Cache {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        let mut vec: Vec<_> = self.all_txs.keys().collect();
+        let mut vec: Vec<_> = self.all_txids().into_iter().collect();
         vec.sort();
         vec.hash(state);
 
@@ -277,25 +279,47 @@ impl Cache {
         self.heights.extend(new.to_vec());
     }
 
-    pub fn all_txs(&self) -> impl Iterator<Item = (&Txid, &Transaction)> {
-        self.all_txs.iter()
+    pub fn all_txs(&self) -> impl Iterator<Item = (Txid, Transaction)> + '_ {
+        self.all_txids()
+            .into_iter()
+            .filter_map(|txid| self.tx(&txid).map(|tx| (txid, tx)))
     }
 
     pub fn tx(&self, txid: &Txid) -> Option<Transaction> {
-        self.all_txs.get(txid).cloned()
+        let bytes = self.txs_store.get(&tx_key(txid)).ok()??;
+        elements::encode::deserialize(&bytes).ok()
     }
 
     pub fn all_txids(&self) -> HashSet<Txid> {
-        self.all_txs.keys().cloned().collect()
+        // TODO: consider reading them from the store only when the store is loaded
+        self.txs_store
+            .get(TXIDS_KEY)
+            .ok()
+            .flatten()
+            .and_then(|b| serde_json::from_slice::<Vec<String>>(&b).ok())
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|s| s.parse().ok())
+            .collect()
     }
 
-    pub fn extend_all_txs(&mut self, txs: Vec<(Txid, Transaction)>) {
+    pub fn extend_all_txs(&mut self, txs: Vec<(Txid, Transaction)>) -> Result<(), Error> {
+        let mut txids = self.all_txids();
         for (txid, tx) in &txs {
             if tx.output.is_empty() {
                 self.dummy_txids.insert(*txid);
             }
+            self.txs_store
+                .put(&tx_key(txid), &elements::encode::serialize(tx))
+                .map_err(Error::StoreError)?;
+            txids.insert(*txid);
         }
-        self.all_txs.extend(txs);
+        let txids = serde_json::to_vec(&txids.iter().map(|t| t.to_string()).collect::<Vec<_>>())
+            .map_err(Error::from)?;
+        self.txs_store
+            .put(TXIDS_KEY, &txids)
+            .map_err(Error::StoreError)?;
+        Ok(())
     }
 }
 

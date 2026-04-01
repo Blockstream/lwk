@@ -11,11 +11,12 @@
  *   package-local TypeScript builds
  */
 
-import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { ensureVersionsMatch } from "./lib/version.js";
 import {
+  generatedFeaturesPath,
   generatedRoot,
   Mode,
   nodeDistGeneratedRoot,
@@ -25,7 +26,11 @@ import {
   webDistRoot,
   webGeneratedRoot,
 } from "./lib/paths.js";
-import { runWasmPack } from "./lib/wasm-pack.js";
+import {
+  getWasmFeatures,
+  hasCurrentGeneratedFeatures,
+  runWasmPack,
+} from "./lib/wasm-pack.js";
 
 const mode = (process.argv[2] ?? "stage") as Mode;
 const webGeneratedFiles = [
@@ -57,10 +62,16 @@ function generate(): void {
 
   runWasmPack("bundler", webGeneratedRoot);
   runWasmPack("nodejs", nodeGeneratedRoot);
+
+  writeFileSync(generatedFeaturesPath, `${getWasmFeatures()}\n`);
 }
 
 function ensureGenerated(): void {
-  if (!existsSync(webGeneratedRoot) || !existsSync(nodeGeneratedRoot)) {
+  if (
+    !existsSync(webGeneratedRoot) ||
+    !existsSync(nodeGeneratedRoot) ||
+    !hasCurrentGeneratedFeatures()
+  ) {
     generate();
   }
 }

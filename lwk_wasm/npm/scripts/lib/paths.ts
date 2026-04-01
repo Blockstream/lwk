@@ -22,3 +22,4 @@ export const webDistRoot = resolve(webPackageRoot, "dist");
 export const nodeDistRoot = resolve(nodePackageRoot, "dist");
 export const webDistGeneratedRoot = resolve(webDistRoot, "generated");
 export const nodeDistGeneratedRoot = resolve(nodeDistRoot, "generated");
+export const generatedFeaturesPath = resolve(generatedRoot, ".features");

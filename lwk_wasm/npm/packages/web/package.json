@@ -49,8 +49,9 @@
   },
   "scripts": {
     "build": "npm --prefix ../.. run stage:web && tsc -p tsconfig.build.json",
-    "typecheck": "npm run build && tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && tsc -p tsconfig.json --noEmit && vite build --config vite.config.ts",
+    "build:features": "LWK_WASM_FEATURES=\"serial,simplicity\" npm run build",
+    "typecheck": "npm run build:features && tsc -p tsconfig.json --noEmit",
+    "test": "npm run build:features && tsc -p tsconfig.json --noEmit && vite build --config vite.config.ts",
     "pack:check": "npm run build && publint && npm pack --dry-run",
     "prepack": "npm run build"
   },

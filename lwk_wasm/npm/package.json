@@ -25,7 +25,9 @@
     "typecheck:scripts": "tsc -p scripts/tsconfig.json --noEmit",
     "typecheck": "npm run typecheck:scripts && npm run typecheck -w @blockstream/lwk-web -w @blockstream/lwk-node",
     "test": "npm run test -w @blockstream/lwk-web -w @blockstream/lwk-node",
-    "pack:check": "npm run pack:check -w @blockstream/lwk-web -w @blockstream/lwk-node"
+    "pack:check": "npm run pack:check -w @blockstream/lwk-web -w @blockstream/lwk-node",
+    "check": "LWK_WASM_FEATURES=\"serial,simplicity\" npm run check:version && npm run format:check && npm run lint && npm run typecheck && npm run test && npm run pack:check",
+    "fix": "LWK_WASM_FEATURES=\"serial,simplicity\" npm run check:version && npm run format && npm run lint -- --fix && npm run typecheck && npm run pack:check"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

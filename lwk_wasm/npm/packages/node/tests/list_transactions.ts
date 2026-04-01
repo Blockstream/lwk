@@ -45,7 +45,7 @@ export async function runListTransactionsTest(): Promise<void> {
       4,
       true
     );
-    const wolletUtxoOnly = new lwk.Wollet(network, desc);
+    const wolletUtxoOnly = lwk.Wollet.newUtxoOnly(network, desc);
     console.log("Starting UTXO-only full scan...");
     const updateUtxoOnly = await clientUtxoOnly.fullScan(wolletUtxoOnly);
     if (updateUtxoOnly) {

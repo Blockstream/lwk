@@ -232,6 +232,9 @@ pub enum Error {
     #[error(transparent)]
     LiquidexError(#[from] crate::liquidex::LiquidexError),
 
+    #[error("Store error: {0}")]
+    StoreError(lwk_common::BoxError),
+
     #[error("Issuance amount greater than 21M*10^8 are not allowed")]
     IssuanceAmountGreaterThanBtcMax,
 

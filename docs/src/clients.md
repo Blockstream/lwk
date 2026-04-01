@@ -165,5 +165,37 @@ Waterfalls clients also support OAuth2-based authentication for enterprise deplo
 </section>
 </custom-tabs>
 
+### Fallback Client
+
+For improved resilience, implement a fallback strategy to handle transient errors.
+This pattern is useful when dealing with unreliable network conditions or temporary server issues.
+
+When a primary request fails, manually evaluate the error to determine if a retry is appropriate with a different client.
+
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:fallback_client}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+{{#include ../../lwk_bindings/tests/bindings/fallback_client.py:fallback_client}}
+```
+</section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/fallback_client.js:fallback_client}}
+```
+</section>
+</custom-tabs>
 
 

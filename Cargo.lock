@@ -545,7 +545,7 @@ dependencies = [
 [[package]]
 name = "boltz-client"
 version = "0.3.1"
-source = "git+https://github.com/RCasatta/boltz-rust/?rev=ba07abbc7fd3b0150cb690410b7e0cd0dd261e35#ba07abbc7fd3b0150cb690410b7e0cd0dd261e35"
+source = "git+https://github.com/RCasatta/boltz-rust/?rev=cf3fbec21697ba913751cbfc32f2b525806a386b#cf3fbec21697ba913751cbfc32f2b525806a386b"
 dependencies = [
  "async-trait",
  "bech32 0.9.1",

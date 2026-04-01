@@ -129,6 +129,7 @@ where
         fee_rate_sat_kvb: f32,
         wallet_session: &WalletRequestSession,
     ) -> Result<u64, WalletAbiError> {
+        // TODO: figure out the better way to build estimation transaction
         let (fee_estimation_build, artifacts) = self.build_transaction(1, wallet_session).await?;
 
         let fee_estimation_build = finalize_simf_inputs(

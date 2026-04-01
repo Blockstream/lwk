@@ -27,6 +27,7 @@ pub use tx_create::{
 };
 pub use types::{ErrorInfo, WalletAbiErrorCode};
 pub use values::{
-    resolve_arguments, resolve_witness, serialize_arguments, serialize_witness, RuntimeSimfValue,
-    RuntimeSimfWitness, SimfArguments, SimfWitness,
+    deserialize_arguments, deserialize_witness, resolve_arguments, resolve_witness,
+    serialize_arguments, serialize_witness, RuntimeSimfValue, RuntimeSimfWitness, SimfArguments,
+    SimfWitness,
 };

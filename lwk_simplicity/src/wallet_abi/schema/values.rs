@@ -88,6 +88,15 @@ pub fn serialize_arguments(arguments: &SimfArguments) -> Result<Vec<u8>, WalletA
     Ok(serde_json::to_vec(arguments)?)
 }
 
+/// Deserialize `SimfArguments` from Wallet ABI bytes.
+///
+/// # Errors
+///
+/// Returns an error when arguments deserialization failed.
+pub fn deserialize_arguments(bytes: &[u8]) -> Result<SimfArguments, WalletAbiError> {
+    Ok(serde_json::from_slice(bytes)?)
+}
+
 /// Deserialize and resolve final Simplicity arguments from JSON bytes.
 ///
 /// Resolution flow:
@@ -206,6 +215,15 @@ impl SimfWitness {
 /// Returns an error when arguments serialization failed
 pub fn serialize_witness(witness: &SimfWitness) -> Result<Vec<u8>, WalletAbiError> {
     Ok(serde_json::to_vec(witness)?)
+}
+
+/// Deserialize a [`SimfWitness`] from Wallet ABI bytes.
+///
+/// # Errors
+///
+/// Returns an error when witness deserialization failed.
+pub fn deserialize_witness(bytes: &[u8]) -> Result<SimfWitness, WalletAbiError> {
+    Ok(serde_json::from_slice(bytes)?)
 }
 
 /// Deserialize and resolve Simplicity witness values from payload bytes.

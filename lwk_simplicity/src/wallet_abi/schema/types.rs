@@ -141,7 +141,10 @@ impl ErrorInfo {
         details_json: Option<&str>,
     ) -> Result<Self, WalletAbiError> {
         Ok(Self {
-            code: WalletAbiErrorCode::from_str(code).expect("infallible"),
+            code: match WalletAbiErrorCode::from_str(code) {
+                Ok(code) => code,
+                Err(err) => match err {},
+            },
             message: message.into(),
             details: details_json
                 .map(serde_json::from_str)
@@ -179,7 +182,11 @@ mod error_code_as_str {
     where
         D: Deserializer<'de>,
     {
-        let s = String::deserialize(d)?;
-        Ok(WalletAbiErrorCode::from_str(&s).expect("infallible"))
+        Ok(
+            match WalletAbiErrorCode::from_str(&String::deserialize(d)?) {
+                Ok(code) => code,
+                Err(err) => match err {},
+            },
+        )
     }
 }

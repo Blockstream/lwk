@@ -52,9 +52,17 @@ pub struct WalletAbiSimfArguments {
 impl WalletAbiSimfArguments {
     /// Build an arguments payload from static Simplicity arguments only.
     #[uniffi::constructor]
-    pub fn new(resolved: &SimplicityArguments) -> Result<Arc<Self>, LwkError> {
+    pub fn from_resolved(resolved: &SimplicityArguments) -> Result<Arc<Self>, LwkError> {
         Ok(Arc::new(Self {
             inner: abi::SimfArguments::new(resolved.to_inner()?),
+        }))
+    }
+
+    /// Parse an arguments payload from Wallet ABI bytes.
+    #[uniffi::constructor]
+    pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
+        Ok(Arc::new(Self {
+            inner: abi::deserialize_arguments(bytes)?,
         }))
     }
 
@@ -145,9 +153,17 @@ pub struct WalletAbiSimfWitness {
 impl WalletAbiSimfWitness {
     /// Build a witness payload from static Simplicity witness values only.
     #[uniffi::constructor]
-    pub fn new(resolved: &SimplicityWitnessValues) -> Result<Arc<Self>, LwkError> {
+    pub fn from_resolved(resolved: &SimplicityWitnessValues) -> Result<Arc<Self>, LwkError> {
         Ok(Arc::new(Self {
             inner: abi::SimfWitness::new(resolved.to_inner()?),
+        }))
+    }
+
+    /// Parse a witness payload from Wallet ABI bytes.
+    #[uniffi::constructor]
+    pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
+        Ok(Arc::new(Self {
+            inner: abi::deserialize_witness(bytes)?,
         }))
     }
 

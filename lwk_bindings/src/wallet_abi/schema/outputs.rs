@@ -188,8 +188,7 @@ impl WalletAbiBlinderVariant {
     pub fn provided_pubkey(&self) -> Option<Arc<PublicKey>> {
         match &self.inner {
             abi::BlinderVariant::Provided { pubkey } => {
-                let bytes = pubkey.serialize();
-                Some(PublicKey::from_bytes(&bytes).expect("zkp pubkey is a valid secp public key"))
+                PublicKey::from_bytes(&pubkey.serialize()).ok()
             }
             abi::BlinderVariant::Wallet | abi::BlinderVariant::Explicit => None,
         }

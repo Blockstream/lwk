@@ -106,8 +106,8 @@ impl WalletAbiErrorInfo {
     }
 
     /// Returns canonical JSON for the open-ended `details` payload.
-    pub fn details_json(&self) -> Option<String> {
-        self.inner.details_json().ok().flatten()
+    pub fn details_json(&self) -> Result<Option<String>, LwkError> {
+        self.inner.details_json().map_err(Into::into)
     }
 }
 
@@ -123,7 +123,7 @@ impl WalletAbiTxCreateRequest {
     ///
     /// `request_id` must be a valid UUID string.
     #[uniffi::constructor]
-    pub fn new(
+    pub fn from_parts(
         request_id: &str,
         network: &Network,
         params: &WalletAbiRuntimeParams,
@@ -269,8 +269,8 @@ impl WalletAbiTxCreateResponse {
     }
 
     /// Returns canonical JSON for the open-ended `artifacts` payload.
-    pub fn artifacts_json(&self) -> Option<String> {
-        self.inner.artifacts_json().ok().flatten()
+    pub fn artifacts_json(&self) -> Result<Option<String>, LwkError> {
+        self.inner.artifacts_json().map_err(Into::into)
     }
 
     /// Return the error payload when this response has `error` status.

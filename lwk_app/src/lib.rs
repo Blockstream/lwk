@@ -484,9 +484,6 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                                 DescriptorType::ShWpkh => {
                                     jade.get_receive_address_single(Variant::ShWpkh, full_path)?
                                 }
-                                DescriptorType::Tr => {
-                                    jade.get_receive_address_single(Variant::Taproot, full_path)?
-                                }
                                 _ => {
                                     return Err(Error::Generic(
                                         "Unsupported signer or descriptor".into(),
@@ -756,7 +753,6 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let type_ = match wollet.descriptor()?.descriptor.desc_type() {
                 DescriptorType::Wpkh => response::WalletType::Wpkh,
                 DescriptorType::ShWpkh => response::WalletType::ShWpkh,
-                DescriptorType::Tr => response::WalletType::Taproot,
                 _ => match &wollet.descriptor()?.descriptor {
                     Descriptor::Wsh(wsh) => match wsh.as_inner() {
                         WshInner::Ms(ms) => match &ms.node {

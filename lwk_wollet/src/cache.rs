@@ -3,8 +3,10 @@ use crate::elements::{BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Tx
 use crate::hashes::Hash;
 use crate::{BlindingPublicKey, Error};
 use elements::bitcoin::bip32::ChildNumber;
+use lwk_common::{DynStore, MemoryStore};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Arc;
 
 pub const BATCH_SIZE: u32 = 20;
 pub type Height = u32;
@@ -13,6 +15,9 @@ pub type Timestamp = u32;
 /// `Cache` is a cache of wallet data, like wallet transactions.
 /// It is fully reconstructable from the CT Descriptor and the blockchain.
 pub struct Cache {
+    /// Store for all wallet transactions
+    txs_store: Arc<dyn DynStore>,
+
     /// contains all my tx and all prevouts
     all_txs: HashMap<Txid, Transaction>,
 
@@ -53,6 +58,7 @@ pub struct Cache {
 impl Default for Cache {
     fn default() -> Self {
         Self {
+            txs_store: Arc::new(MemoryStore::default()),
             all_txs: HashMap::default(),
             dummy_txids: HashSet::default(),
             paths: HashMap::default(),
@@ -116,6 +122,13 @@ pub struct ScriptBatch {
 }
 
 impl Cache {
+    pub fn new(txs_store: Arc<dyn DynStore>) -> Self {
+        Self {
+            txs_store,
+            ..Self::default()
+        }
+    }
+
     pub fn get_script_batch(
         &self,
         batch: u32,

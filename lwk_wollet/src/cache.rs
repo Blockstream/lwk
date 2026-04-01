@@ -213,7 +213,7 @@ impl Cache {
         let mut inputs_new: HashSet<OutPoint> = txids_new
             .iter()
             .filter_map(|txid| self.tx(txid))
-            .flat_map(|tx| tx.input.iter().map(|i| i.previous_output))
+            .flat_map(|tx| tx.input.into_iter().map(|i| i.previous_output))
             .collect();
 
         // In utxo_only mode the client creates a dummy tx whose inputs are outputs known to be
@@ -222,14 +222,14 @@ impl Cache {
             .dummy_txids
             .iter()
             .filter_map(|txid| self.tx(txid))
-            .flat_map(|tx| tx.input.iter().map(|i| i.previous_output))
+            .flat_map(|tx| tx.input.into_iter().map(|i| i.previous_output))
             .collect();
         inputs_new.extend(inputs_from_dummmy_txs);
 
         let inputs_to_restore: Vec<OutPoint> = deleted_txids
             .iter()
             .filter_map(|txid| self.tx(txid))
-            .flat_map(|tx| tx.input.iter().map(|i| i.previous_output))
+            .flat_map(|tx| tx.input.into_iter().map(|i| i.previous_output))
             // we're assuming: in unblinded => belongs to wollet
             .filter(|op| self.unblinded.contains_key(op))
             .collect();
@@ -268,8 +268,8 @@ impl Cache {
         self.all_txs.iter()
     }
 
-    pub fn tx(&self, txid: &Txid) -> Option<&Transaction> {
-        self.all_txs.get(txid)
+    pub fn tx(&self, txid: &Txid) -> Option<Transaction> {
+        self.all_txs.get(txid).cloned()
     }
 
     pub fn all_txids(&self) -> HashSet<Txid> {

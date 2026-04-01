@@ -25,11 +25,7 @@ pub enum IssuanceRequest {
 
 impl Wollet {
     fn get_tx(&self, txid: &Txid) -> Result<Transaction, Error> {
-        Ok(self
-            .cache
-            .tx(txid)
-            .ok_or_else(|| Error::MissingTransaction)?
-            .clone())
+        self.cache.tx(txid).ok_or(Error::MissingTransaction)
     }
 
     fn get_txout(&self, outpoint: &OutPoint) -> Result<TxOut, Error> {

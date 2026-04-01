@@ -155,12 +155,10 @@ impl Wollet {
             for txin in &tx.input {
                 let outpoint = txin.previous_output;
                 let height = self.cache.tx_height(&outpoint.txid).unwrap_or(&None);
-                let txout = self
-                    .cache
-                    .tx(&outpoint.txid)
-                    .and_then(|tx| tx.output.get(outpoint.vout as usize));
+                let tx = self.cache.tx(&outpoint.txid);
+                let txout = tx.and_then(|tx| tx.output.get(outpoint.vout as usize).cloned());
                 let is_spent = true; // inputs are always spent
-                inputs.push(self.txout_details(outpoint, *height, txout, is_spent)?);
+                inputs.push(self.txout_details(outpoint, *height, txout.as_ref(), is_spent)?);
             }
             let mut outputs = vec![];
             for (vout, txout) in tx.output.iter().enumerate() {

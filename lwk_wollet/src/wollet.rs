@@ -564,10 +564,11 @@ impl Wollet {
                 continue;
             }
             let height = self.cache.tx_height(&outpoint.txid).unwrap_or(&None);
-            let txout = self
+            let tx = self
                 .cache
                 .tx(&outpoint.txid)
-                .ok_or_else(|| Error::Generic("missing tx".into()))?
+                .ok_or_else(|| Error::Generic("missing tx".into()))?;
+            let txout = tx
                 .output
                 .get(outpoint.vout as usize)
                 .ok_or_else(|| Error::Generic("missing output".into()))?;
@@ -877,9 +878,9 @@ impl Wollet {
                 .tx(txid)
                 .ok_or_else(|| Error::Generic(format!("list_tx no tx {txid}")))?;
 
-            let balance = tx_balance(*txid, tx, &txos);
-            let inputs = tx_inputs(tx, &txos);
-            let outputs = tx_outputs(*txid, tx, &txos);
+            let balance = tx_balance(*txid, &tx, &txos);
+            let inputs = tx_inputs(&tx, &txos);
+            let outputs = tx_outputs(*txid, &tx, &txos);
             if balance.is_empty()
                 && inputs.iter().all(|i| i.is_none())
                 && outputs.iter().all(|o| o.is_none())
@@ -888,12 +889,12 @@ impl Wollet {
                 // match as explicit, ignore this transaction
                 continue;
             }
-            let fee = tx_fee(tx);
+            let fee = tx_fee(&tx);
             let policy_asset = self.policy_asset();
-            let type_ = tx_type(tx, &policy_asset, &balance, fee);
+            let type_ = tx_type(&tx, &policy_asset, &balance, fee);
             let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
             txs.push(WalletTx {
-                tx: tx.clone(),
+                tx,
                 txid: *txid,
                 height: *height,
                 balance: balance.into(),
@@ -922,16 +923,16 @@ impl Wollet {
         if let Some(tx) = self.cache.tx(txid) {
             let txos = self.txos_map()?;
 
-            let balance = tx_balance(*txid, tx, &txos);
-            let fee = tx_fee(tx);
+            let balance = tx_balance(*txid, &tx, &txos);
+            let fee = tx_fee(&tx);
             let policy_asset = self.policy_asset();
-            let type_ = tx_type(tx, &policy_asset, &balance, fee);
+            let type_ = tx_type(&tx, &policy_asset, &balance, fee);
             let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
-            let inputs = tx_inputs(tx, &txos);
-            let outputs = tx_outputs(*txid, tx, &txos);
+            let inputs = tx_inputs(&tx, &txos);
+            let outputs = tx_outputs(*txid, &tx, &txos);
 
             Ok(Some(WalletTx {
-                tx: tx.clone(),
+                tx,
                 txid: *txid,
                 height: *height,
                 balance: balance.into(),

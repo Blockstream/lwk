@@ -184,7 +184,7 @@ pub struct WalletAbiWalletSourceFilter {
 impl WalletAbiWalletSourceFilter {
     /// Build a wallet source filter from asset, amount, and lock filters.
     #[uniffi::constructor]
-    pub fn new(
+    pub fn with_filters(
         asset: &WalletAbiAssetFilter,
         amount: &WalletAbiAmountFilter,
         lock: &WalletAbiLockFilter,
@@ -524,7 +524,7 @@ pub struct WalletAbiInputSchema {
 impl WalletAbiInputSchema {
     /// Build an input schema from a typed sequence wrapper.
     #[uniffi::constructor]
-    pub fn new(
+    pub fn from_sequence(
         id: &str,
         utxo_source: &WalletAbiUtxoSource,
         unblinding: &WalletAbiInputUnblinding,

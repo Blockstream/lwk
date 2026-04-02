@@ -9,7 +9,7 @@
     "packages/*"
   ],
   "engines": {
-    "node": ">=18"
+    "node": "^20.19.0 || >=22.12.0"
   },
   "scripts": {
     "check:version": "tsx scripts/check-version.ts",
@@ -30,19 +30,20 @@
     "fix": "LWK_WASM_FEATURES=\"serial,simplicity\" npm run check:version && npm run format && npm run lint -- --fix && npm run typecheck && npm run pack:check"
   },
   "devDependencies": {
-    "@eslint/js": "^9.36.0",
-    "@types/node": "^22.14.1",
-    "@types/ws": "^8.18.1",
-    "eslint": "^9.36.0",
-    "globals": "^16.4.0",
-    "prettier": "^3.6.2",
-    "publint": "^0.3.18",
-    "tsx": "^4.20.6",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.57.2",
-    "vite": "^5.4.19",
-    "vite-plugin-top-level-await": "^1.6.0",
-    "vite-plugin-wasm": "^3.6.0",
-    "ws": "^8.18.3"
+    "@eslint/js": "9.39.4",
+    "@types/node": "22.19.15",
+    "@types/ws": "8.18.1",
+    "eslint": "9.39.4",
+    "globals": "16.5.0",
+    "prettier": "3.8.1",
+    "publint": "0.3.18",
+    "rollup": "4.60.1",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.57.2",
+    "vite": "8.0.3",
+    "vite-plugin-top-level-await": "1.6.0",
+    "vite-plugin-wasm": "3.6.0",
+    "ws": "8.20.0"
   }
 }

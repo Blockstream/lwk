@@ -1,5 +1,12 @@
-use std::str::FromStr;
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    str::FromStr,
+};
 
+use bitcoin_payment_instructions::{
+    dns_resolver::DNSHrnResolver, hrn_resolution::HrnResolver, PaymentInstructions, PaymentMethod,
+    PossiblyResolvedPaymentMethod,
+};
 use elements::{
     bitcoin::{self, address::NetworkUnchecked},
     AddressParams, AssetId,
@@ -131,6 +138,53 @@ impl Payment {
             Payment::LiquidBip21(bip21) => Some(bip21),
             _ => None,
         }
+    }
+
+    /// Resolves a BIP353 payment instruction into a lightning offer.
+    pub async fn resolve_bip353(&self) -> Result<Self, String> {
+        let bip353 = self
+            .bip353()
+            .ok_or_else(|| "Payment is not a BIP353 payment instruction".to_string())?;
+
+        // we use google dns server to resolve
+        let resolver = DNSHrnResolver(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)), 53));
+        // we may want to try HTTPHrnResolver when DNSHrnResolver fails
+        let offer = resolve_bip353_with_resolver(bip353, &resolver).await?;
+        Ok(Payment::LightningOffer(Box::new(offer)))
+    }
+}
+
+async fn resolve_bip353_with_resolver<R: HrnResolver>(
+    bip353: &str,
+    resolver: &R,
+) -> Result<Offer, String> {
+    let instructions =
+        PaymentInstructions::parse(bip353, bitcoin::Network::Bitcoin, resolver, true)
+            .await
+            .map_err(|e| format!("{e:?}"))?;
+
+    match instructions {
+        PaymentInstructions::FixedAmount(fixed) => fixed
+            .methods()
+            .iter()
+            .find_map(|method| match method {
+                PaymentMethod::LightningBolt12(offer) => {
+                    Some(Offer::from_str(&offer.to_string()).map_err(|e| format!("{e:?}")))
+                }
+                _ => None,
+            })
+            .transpose()?
+            .ok_or_else(|| "BIP353 did not resolve to a lightning offer".to_string()),
+        PaymentInstructions::ConfigurableAmount(configurable) => configurable
+            .methods()
+            .find_map(|method| match method {
+                PossiblyResolvedPaymentMethod::Resolved(PaymentMethod::LightningBolt12(offer)) => {
+                    Some(Offer::from_str(&offer.to_string()).map_err(|e| format!("{e:?}")))
+                }
+                _ => None,
+            })
+            .transpose()?
+            .ok_or_else(|| "BIP353 did not resolve to a lightning offer".to_string()),
     }
 }
 
@@ -316,8 +370,42 @@ fn is_email(s: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use bitcoin_payment_instructions::{
+        amount::Amount,
+        hrn_resolution::{
+            HrnResolution, HrnResolutionFuture, HumanReadableName, LNURLResolutionFuture,
+        },
+    };
 
     use super::*;
+
+    struct TestHrnResolver {
+        result: &'static str,
+    }
+
+    impl HrnResolver for TestHrnResolver {
+        fn resolve_hrn<'a>(&'a self, _hrn: &'a HumanReadableName) -> HrnResolutionFuture<'a> {
+            Box::pin(async move {
+                Ok(HrnResolution::DNSSEC {
+                    proof: None,
+                    result: self.result.to_string(),
+                })
+            })
+        }
+
+        fn resolve_lnurl<'a>(&'a self, _lnurl: &'a str) -> HrnResolutionFuture<'a> {
+            Box::pin(async { Err("LNURL resolution not supported") })
+        }
+
+        fn resolve_lnurl_to_invoice(
+            &self,
+            _: String,
+            _: Amount,
+            _: [u8; 32],
+        ) -> LNURLResolutionFuture<'_> {
+            Box::pin(async { Err("LNURL resolution not supported") })
+        }
+    }
 
     #[test]
     fn test_parse_with_schema_fails() {
@@ -667,5 +755,37 @@ mod tests {
             result,
             Payment::Bip353(bip353) if bip353 == expected
         ));
+    }
+
+    #[tokio::test]
+    async fn test_resolve_bip353_to_offer() {
+        let offer = "lno1zcss9sy46p548rukhu2vt7g0dsy9r00n2jswepsrngjt7w988ac94hpv";
+        let resolver = TestHrnResolver {
+            result: "bitcoin:?lno=lno1zcss9sy46p548rukhu2vt7g0dsy9r00n2jswepsrngjt7w988ac94hpv",
+        };
+
+        let resolved = resolve_bip353_with_resolver("matt@example.com", &resolver)
+            .await
+            .unwrap();
+
+        assert_eq!(resolved, Offer::from_str(offer).unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_resolve_non_bip353_fails() {
+        let payment = Payment::from_str("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa").unwrap();
+        let err = payment.resolve_bip353().await.unwrap_err();
+
+        assert_eq!(err, "Payment is not a BIP353 payment instruction");
+    }
+
+    #[tokio::test]
+    #[ignore = "requires live DNS access"]
+    async fn test_resolve_bip353_matt() {
+        let payment = Payment::from_str("₿matt@mattcorallo.com").unwrap();
+        let result = payment.resolve_bip353().await.unwrap();
+        assert!(matches!(result, Payment::LightningOffer(_)));
+        let offer = result.lightning_offer().unwrap();
+        assert_eq!(offer.to_string(), "lno1zr5qyugqgskrk70kqmuq7v3dnr2fnmhukps9n8hut48vkqpqnskt2svsqwjakp7k6pyhtkuxw7y2kqmsxlwruhzqv0zsnhh9q3t9xhx39suc6qsr07ekm5esdyum0w66mnx8vdquwvp7dp5jp7j3v5cp6aj0w329fnkqqv60q96sz5nkrc5r95qffx002q53tqdk8x9m2tmt85jtpmcycvfnrpx3lr45h2g7na3sec7xguctfzzcm8jjqtj5ya27te60j03vpt0vq9tm2n9yxl2hngfnmygesa25s4u4zlxewqpvp94xt7rur4rhxunwkthk9vly3lm5hh0pqv4aymcqejlgssnlpzwlggykkajp7yjs5jvr2agkyypcdlj280cy46jpynsezrcj2kwa2lyr8xvd6lfkph4xrxtk2xc3lpq");
     }
 }

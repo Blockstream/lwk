@@ -422,6 +422,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b47c4ab7a93edb0c7198c5535ed9b52b63095f4e9b45279c6736cec4b856baf"
 
 [[package]]
+name = "bitcoin-payment-instructions"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c300c948b2ff78c965ea3a613372352125448a22f1acf49e95e3878149824091"
+dependencies = [
+ "bitcoin",
+ "dnssec-prover",
+ "getrandom 0.3.3",
+ "lightning 0.2.2",
+ "lightning-invoice 0.34.0",
+]
+
+[[package]]
 name = "bitcoin-private"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1125,6 +1138,10 @@ name = "dnssec-prover"
 version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec4f825369fc7134da70ca4040fddc8e03b80a46d249ae38d9c1c39b7b4476bf"
+dependencies = [
+ "bitcoin_hashes 0.14.0",
+ "tokio",
+]
 
 [[package]]
 name = "dyn-clone"
@@ -2640,11 +2657,13 @@ name = "lwk_payment_instructions"
 version = "0.16.0"
 dependencies = [
  "bip21",
+ "bitcoin-payment-instructions",
  "elements 0.25.2",
  "lightning 0.1.7",
  "lightning-invoice 0.33.2",
  "lnurl-rs",
  "rand 0.8.5",
+ "tokio",
  "url",
 ]
 
@@ -5154,7 +5173,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

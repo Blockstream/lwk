@@ -128,6 +128,19 @@ impl Payment {
         self.inner.lightning_offer().map(|offer| offer.to_string())
     }
 
+    /// Resolves a BIP353 payment instruction into a LightningOffer payment.
+    #[cfg(feature = "lightning")]
+    pub fn resolve_bip353(&self) -> Result<Arc<Self>, LwkError> {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+        let inner = runtime
+            .block_on(self.inner.resolve_bip353())
+            .map_err(|e| LwkError::Generic { msg: e })?;
+        Ok(Arc::new(Self { inner }))
+    }
+
     /// Returns the LNURL as a string if this is an LnUrl category, None otherwise
     pub fn lnurl(&self) -> Option<String> {
         self.inner.lnurl().map(|lnurl| lnurl.to_string())

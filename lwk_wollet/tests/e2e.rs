@@ -10,6 +10,7 @@ mod test_ledger;
 mod test_wollet;
 mod tr;
 mod tx_details;
+mod txs_store;
 #[cfg(feature = "esplora")]
 mod utxo_only;
 

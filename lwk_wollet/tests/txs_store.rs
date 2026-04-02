@@ -1,0 +1,60 @@
+use crate::test_wollet::*;
+use elements::Txid;
+use lwk_common::*;
+use lwk_test_util::*;
+use lwk_wollet::blocking::BlockchainBackend;
+use lwk_wollet::*;
+use std::collections::HashSet;
+use std::sync::Arc;
+use tempfile::TempDir;
+
+#[test]
+fn test_txs_store() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let network = ElementsNetwork::default_regtest();
+    let lbtc = network.policy_asset();
+
+    let dir = TempDir::new().unwrap();
+    let store = Arc::new(FileStore::new(dir.path().to_path_buf()).unwrap());
+
+    let s = generate_signer();
+    let view_key = generate_view_key();
+    let d = format!("ct({view_key},elwpkh({}/*))", s.xpub());
+    let wd = d.parse().unwrap();
+    let mut wollet = WolletBuilder::new(network, wd)
+        .with_txs_store(store.clone())
+        .build()
+        .unwrap();
+    let mut client = test_client_electrum(&env.electrum_url());
+
+    let address = wollet.address(None).unwrap();
+    let satoshi = 10_000;
+    let txid1 = env.elementsd_sendtoaddress(address.address(), satoshi, Some(lbtc));
+    wait_for_tx(&mut wollet, &mut client, &txid1);
+
+    let address = env.elementsd_getnewaddress();
+    let mut pset = wollet
+        .tx_builder()
+        .add_lbtc_recipient(&address, 1_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+    let sigs = s.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+    let tx = wollet.finalize(&mut pset).unwrap();
+    let txid2 = client.broadcast(&tx).unwrap();
+    wait_for_tx(&mut wollet, &mut client, &txid2);
+
+    let all_txids: HashSet<Txid> = lwk_common::Store::get(&*store, "wollet-txids")
+        .ok()
+        .flatten()
+        .and_then(|b| serde_json::from_slice::<Vec<String>>(&b).ok())
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|s| s.parse().ok())
+        .collect();
+    assert_eq!(all_txids.len(), 2);
+    assert!(all_txids.contains(&txid1));
+    assert!(all_txids.contains(&txid2));
+}

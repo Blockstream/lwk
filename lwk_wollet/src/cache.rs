@@ -12,10 +12,11 @@ pub const BATCH_SIZE: u32 = 20;
 pub type Height = u32;
 pub type Timestamp = u32;
 
-const TXIDS_KEY: &str = "wollet:txids";
+// TODO: replace "-" with ":" and encrypt keys as done by Boltz session
+const TXIDS_KEY: &str = "wollet-txids";
 
 fn tx_key(txid: &Txid) -> String {
-    txid.to_string()
+    format!("wollet-tx-{}", txid)
 }
 
 /// `Cache` is a cache of wallet data, like wallet transactions.

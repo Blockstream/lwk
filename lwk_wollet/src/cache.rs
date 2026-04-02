@@ -287,6 +287,7 @@ impl Cache {
     }
 
     pub fn tx(&self, txid: &Txid) -> Option<Transaction> {
+        // TODO: return result to handle the case where the store errors
         let bytes = self.txs_store.get(&tx_key(txid)).ok()??;
         elements::encode::deserialize(&bytes).ok()
     }
@@ -315,6 +316,7 @@ impl Cache {
                 .map_err(Error::StoreError)?;
             txids.insert(*txid);
         }
+        // TODO: order keys
         let txids = serde_json::to_vec(&txids.iter().map(|t| t.to_string()).collect::<Vec<_>>())
             .map_err(Error::from)?;
         self.txs_store

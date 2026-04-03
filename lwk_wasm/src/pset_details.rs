@@ -152,26 +152,26 @@ fn convert(data: &[(elements::bitcoin::PublicKey, KeySource)]) -> JsValue {
 
 #[wasm_bindgen]
 impl Issuance {
-    /// Return the asset id or None if it's a null issuance
-    pub fn asset(&self) -> Option<AssetId> {
-        self.inner.asset().map(Into::into)
+    /// Return the asset id
+    pub fn asset(&self) -> AssetId {
+        self.inner.asset().into()
     }
 
-    /// Return the token id or None if it's a null issuance
-    pub fn token(&self) -> Option<AssetId> {
-        self.inner.token().map(Into::into)
+    /// Return the token id
+    pub fn token(&self) -> AssetId {
+        self.inner.token().into()
     }
 
     /// Return the previous output index or None if it's a null issuance
     #[wasm_bindgen(js_name = prevVout)]
-    pub fn prev_vout(&self) -> Option<u32> {
+    pub fn prev_vout(&self) -> u32 {
         self.inner.prev_vout()
     }
 
     /// Return the previous transaction id or None if it's a null issuance
     #[wasm_bindgen(js_name = prevTxid)]
-    pub fn prev_txid(&self) -> Option<Txid> {
-        self.inner.prev_txid().map(Into::into)
+    pub fn prev_txid(&self) -> Txid {
+        self.inner.prev_txid().into()
     }
 
     /// Return true if this is effectively an issuance

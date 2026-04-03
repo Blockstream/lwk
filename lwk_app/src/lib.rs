@@ -855,14 +855,14 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     let e = e.as_ref().filter(|iss| iss.is_issuance())?;
 
                     Some(response::Issuance {
-                        asset: e.asset().expect("issuance").to_string(),
-                        token: e.token().expect("issuance").to_string(),
+                        asset: e.asset().to_string(),
+                        token: e.token().to_string(),
                         is_confidential: e.is_confidential(),
                         vin: vin as u32,
                         asset_satoshi: e.asset_satoshi().unwrap_or(0),
                         token_satoshi: e.token_satoshi().unwrap_or(0),
-                        prev_txid: e.prev_txid().expect("issuance").to_string(),
-                        prev_vout: e.prev_vout().expect("issuance"),
+                        prev_txid: e.prev_txid().to_string(),
+                        prev_vout: e.prev_vout(),
                     })
                 })
                 .collect();
@@ -874,8 +874,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     let e = e.as_ref().filter(|iss| iss.is_reissuance())?;
 
                     Some(response::Reissuance {
-                        asset: e.asset().expect("reissuance").to_string(),
-                        token: e.token().expect("reissuance").to_string(),
+                        asset: e.asset().to_string(),
+                        token: e.token().to_string(),
                         is_confidential: e.is_confidential(),
                         vin: vin as u32,
                         asset_satoshi: e.asset_satoshi().unwrap_or(0),

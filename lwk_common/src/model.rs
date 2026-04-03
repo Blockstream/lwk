@@ -79,19 +79,14 @@ impl Issuance {
         })
     }
 
-    /// Return true if the issuance or reissuance is null
-    pub fn is_null(&self) -> bool {
-        self.inner.is_null()
-    }
-
     /// Return true if this is effectively an issuance
     pub fn is_issuance(&self) -> bool {
-        !self.is_null() && self.inner.asset_blinding_nonce == ZERO_TWEAK
+        self.inner.asset_blinding_nonce == ZERO_TWEAK
     }
 
     /// Return true if this is effectively a reissuance
     pub fn is_reissuance(&self) -> bool {
-        !self.is_null() && self.inner.asset_blinding_nonce != ZERO_TWEAK
+        self.inner.asset_blinding_nonce != ZERO_TWEAK
     }
 
     /// Return true if the issuance or reissuance is confidential
@@ -109,24 +104,24 @@ impl Issuance {
         self.inner.inflation_keys.explicit()
     }
 
-    /// Return the asset id or None if it's a null issuance
-    pub fn asset(&self) -> Option<AssetId> {
-        (!self.is_null()).then_some(self.asset)
+    /// Return the asset id
+    pub fn asset(&self) -> AssetId {
+        self.asset
     }
 
-    /// Return the token id or None if it's a null issuance
-    pub fn token(&self) -> Option<AssetId> {
-        (!self.is_null()).then_some(self.token)
+    /// Return the token id
+    pub fn token(&self) -> AssetId {
+        self.token
     }
 
-    /// Return the previous transaction id or None if it's a null issuance
-    pub fn prev_txid(&self) -> Option<Txid> {
-        (!self.is_null()).then_some(self.prev_output.txid)
+    /// Return the previous transaction id
+    pub fn prev_txid(&self) -> Txid {
+        self.prev_output.txid
     }
 
-    /// Return the previous output index or None if it's a null issuance
-    pub fn prev_vout(&self) -> Option<u32> {
-        (!self.is_null()).then_some(self.prev_output.vout)
+    /// Return the previous output index
+    pub fn prev_vout(&self) -> u32 {
+        self.prev_output.vout
     }
 }
 

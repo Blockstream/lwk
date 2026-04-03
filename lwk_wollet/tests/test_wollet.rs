@@ -486,8 +486,8 @@ impl<C: BlockchainBackend> TestWollet<C> {
         assert_eq!(n_issuances(&details), 1);
         assert_eq!(n_reissuances(&details), 0);
         let issuance = &details.issuances[0].as_ref().unwrap();
-        assert_eq!(asset, issuance.asset().unwrap());
-        assert_eq!(token, issuance.token().unwrap());
+        assert_eq!(asset, issuance.asset());
+        assert_eq!(token, issuance.token());
         assert_eq!(satoshi_asset, issuance.asset_satoshi().unwrap_or(0));
         assert_eq!(satoshi_token, issuance.token_satoshi().unwrap());
         let fee = details.balance.fee as i64;
@@ -562,8 +562,8 @@ impl<C: BlockchainBackend> TestWollet<C> {
             .flatten()
             .find(|e| e.is_reissuance())
             .unwrap();
-        assert_eq!(asset, &reissuance.asset().unwrap());
-        assert_eq!(issuance.token, reissuance.token().unwrap());
+        assert_eq!(asset, &reissuance.asset());
+        assert_eq!(issuance.token, reissuance.token());
         assert_eq!(satoshi_asset, reissuance.asset_satoshi().unwrap());
         assert!(reissuance.token_satoshi().is_none());
         let fee = details.balance.fee as i64;

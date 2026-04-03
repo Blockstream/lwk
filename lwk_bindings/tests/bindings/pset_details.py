@@ -26,8 +26,7 @@ assert(signatures[0].missing_signature()["03c1d0c7ddab5bd5bffbe0bf04a8a570eeabd9
 
 issuances = details.inputs_issuances()
 assert(len(issuances) == 1)
-assert(issuances[0].is_issuance() == False)
-assert(issuances[0].is_reissuance() == False)
+assert(not issuances[0])
 
 recipients = details.balance().recipients()
 assert(len(recipients) == 1)

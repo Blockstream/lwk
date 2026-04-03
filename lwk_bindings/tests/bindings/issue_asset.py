@@ -67,7 +67,7 @@ issuance = unsigned_pset.inputs()[0].issuance()
 assert issuance.asset() == asset_id
 assert issuance.token() == token_id
 assert not issuance.is_confidential()
-assert not issuance.is_null()
+assert issuance
 assert issuance.is_issuance()
 assert not issuance.is_reissuance()
 assert issuance.asset_satoshi() == issued_asset
@@ -95,7 +95,7 @@ reissuance = next(e.issuance() for e in unsigned_pset.inputs() if e.issuance())
 assert reissuance.asset() == asset_id
 assert reissuance.token() == token_id
 assert not reissuance.is_confidential()
-assert not reissuance.is_null()
+assert reissuance
 assert not reissuance.is_issuance()
 assert reissuance.is_reissuance()
 assert reissuance.asset_satoshi() == reissue_asset

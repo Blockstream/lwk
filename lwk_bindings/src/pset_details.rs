@@ -156,29 +156,24 @@ pub struct Issuance {
 
 #[uniffi::export]
 impl Issuance {
-    /// Return the asset id or None if it's a null issuance
-    pub fn asset(&self) -> Option<AssetId> {
-        self.inner.asset().map(Into::into)
+    /// Return the asset id
+    pub fn asset(&self) -> AssetId {
+        self.inner.asset().into()
     }
 
-    /// Return the token id or None if it's a null issuance
-    pub fn token(&self) -> Option<AssetId> {
-        self.inner.token().map(Into::into)
+    /// Return the token id
+    pub fn token(&self) -> AssetId {
+        self.inner.token().into()
     }
 
-    /// Return the previous output index or None if it's a null issuance
-    pub fn prev_vout(&self) -> Option<u32> {
+    /// Return the previous output index
+    pub fn prev_vout(&self) -> u32 {
         self.inner.prev_vout()
     }
 
-    /// Return the previous transaction id or None if it's a null issuance
-    pub fn prev_txid(&self) -> Option<Arc<Txid>> {
-        self.inner.prev_txid().map(|e| Arc::new(e.into()))
-    }
-
-    /// Return true if the issuance or reissuance is null
-    pub fn is_null(&self) -> bool {
-        self.inner.is_null()
+    /// Return the previous transaction id
+    pub fn prev_txid(&self) -> Arc<Txid> {
+        Arc::new(self.inner.prev_txid().into())
     }
 
     /// Return true if this is effectively an issuance

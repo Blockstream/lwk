@@ -133,10 +133,11 @@ impl Amp2 {
     pub fn descriptor(&self, user_keysource: KeySource, user_xpub: Xpub) -> Amp2Descriptor {
         // TODO; check Xpub network is consistent
         // TODO: allow to set custom blinding key
-        let k = "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)";
+        let blinding_key = "elip151";
         let amp2_xpub = &self.server_key;
         let user_xpub = format!("[{}/{}]{}", user_keysource.0, user_keysource.1, user_xpub);
-        let s = format!("ct({k},elwsh(multi(2,{amp2_xpub}/<0;1>/*,{user_xpub}/<0;1>/*)))");
+        let s =
+            format!("ct({blinding_key},elwsh(multi(2,{amp2_xpub}/<0;1>/*,{user_xpub}/<0;1>/*)))");
         let descriptor: WolletDescriptor = s.parse().expect("fixed descriptor structure");
         Amp2Descriptor::new(descriptor)
     }
@@ -237,7 +238,7 @@ mod test {
     fn amp2_desc() {
         let (keysource, xpub) = user_key();
         let keyorigin_xpub = "[c67f5991/87'/1'/0']tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj";
-        let expected = "ct(slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67),elwsh(multi(2,[3d970d04/87'/1'/0']tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd/<0;1>/*,[c67f5991/87'/1'/0']tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj/<0;1>/*)))#6j2fne4s";
+        let expected = "ct(5ce5b4dc9ce911af6868056d07bf57c213431f69854914c90c907d5db06a84bd,elwsh(multi(2,[3d970d04/87'/1'/0']tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd/<0;1>/*,[c67f5991/87'/1'/0']tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj/<0;1>/*)))#t5vy3thp";
 
         let amp2 = Amp2::new_testnet();
         let desc = amp2.descriptor(keysource, xpub);

@@ -485,7 +485,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         let details = self.wollet.get_details(&pset).unwrap();
         assert_eq!(n_issuances(&details), 1);
         assert_eq!(n_reissuances(&details), 0);
-        let issuance = &details.issuances[0];
+        let issuance = &details.issuances[0].as_ref().unwrap();
         assert_eq!(asset, issuance.asset().unwrap());
         assert_eq!(token, issuance.token().unwrap());
         assert_eq!(satoshi_asset, issuance.asset_satoshi().unwrap_or(0));
@@ -559,6 +559,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         let reissuance = details
             .issuances
             .iter()
+            .flatten()
             .find(|e| e.is_reissuance())
             .unwrap();
         assert_eq!(asset, &reissuance.asset().unwrap());

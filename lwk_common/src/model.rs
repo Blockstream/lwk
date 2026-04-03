@@ -62,19 +62,21 @@ pub struct Issuance {
 }
 
 impl Issuance {
-    /// Create a new issuance or reissuance information from a input of a PSET
-    pub fn new(input: &Input) -> Self {
-        // TODO: return Result<Self, Error> and error if input.asset_issuance() is null, adjust documentation/function also in pset_issuances()
-
-        // These are meaningless if inner is null
+    /// Create a new issuance or reissuance information from a input of a PSET.
+    ///
+    /// Returns `None` if asset issuance of input is `null`.
+    pub fn new(input: &Input) -> Option<Self> {
+        if !input.has_issuance() {
+            return None;
+        }
         let (asset, token) = input.issuance_ids();
         let prev_output = OutPoint::new(input.previous_txid, input.previous_output_index);
-        Self {
+        Some(Self {
             asset,
             token,
             prev_output,
             inner: input.asset_issuance(),
-        }
+        })
     }
 
     /// Return true if the issuance or reissuance is null
@@ -132,7 +134,7 @@ impl Issuance {
 ///
 /// - the net balance from the point of view of the wallet
 /// - the available and missing signatures for each input
-/// - for issuances and reissuances transactions contains the issuance or reissuance details
+/// - the optional issuance or reissuance details for each input
 #[derive(Debug, Clone)]
 pub struct PsetDetails {
     /// The net balance of the PSET from the point of view of the wallet
@@ -141,8 +143,8 @@ pub struct PsetDetails {
     /// For each input, existing or missing signatures
     pub sig_details: Vec<PsetSignatures>,
 
-    /// For each input, the corresponding issuance
-    pub issuances: Vec<Issuance>,
+    /// For each input, the optional corresponding issuance or reissuance details
+    pub issuances: Vec<Option<Issuance>>,
 }
 
 impl PsetDetails {

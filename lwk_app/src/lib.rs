@@ -851,29 +851,35 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .issuances
                 .iter()
                 .enumerate()
-                .filter(|(_, e)| e.is_issuance())
-                .map(|(vin, e)| response::Issuance {
-                    asset: e.asset().expect("issuance").to_string(),
-                    token: e.token().expect("issuance").to_string(),
-                    is_confidential: e.is_confidential(),
-                    vin: vin as u32,
-                    asset_satoshi: e.asset_satoshi().unwrap_or(0),
-                    token_satoshi: e.token_satoshi().unwrap_or(0),
-                    prev_txid: e.prev_txid().expect("issuance").to_string(),
-                    prev_vout: e.prev_vout().expect("issuance"),
+                .filter_map(|(vin, e)| {
+                    let e = e.as_ref().filter(|iss| iss.is_issuance())?;
+
+                    Some(response::Issuance {
+                        asset: e.asset().expect("issuance").to_string(),
+                        token: e.token().expect("issuance").to_string(),
+                        is_confidential: e.is_confidential(),
+                        vin: vin as u32,
+                        asset_satoshi: e.asset_satoshi().unwrap_or(0),
+                        token_satoshi: e.token_satoshi().unwrap_or(0),
+                        prev_txid: e.prev_txid().expect("issuance").to_string(),
+                        prev_vout: e.prev_vout().expect("issuance"),
+                    })
                 })
                 .collect();
             let reissuances = details
                 .issuances
                 .iter()
                 .enumerate()
-                .filter(|(_, e)| e.is_reissuance())
-                .map(|(vin, e)| response::Reissuance {
-                    asset: e.asset().expect("reissuance").to_string(),
-                    token: e.token().expect("reissuance").to_string(),
-                    is_confidential: e.is_confidential(),
-                    vin: vin as u32,
-                    asset_satoshi: e.asset_satoshi().unwrap_or(0),
+                .filter_map(|(vin, e)| {
+                    let e = e.as_ref().filter(|iss| iss.is_reissuance())?;
+
+                    Some(response::Reissuance {
+                        asset: e.asset().expect("reissuance").to_string(),
+                        token: e.token().expect("reissuance").to_string(),
+                        is_confidential: e.is_confidential(),
+                        vin: vin as u32,
+                        asset_satoshi: e.asset_satoshi().unwrap_or(0),
+                    })
                 })
                 .collect();
 

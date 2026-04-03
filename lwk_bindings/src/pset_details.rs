@@ -6,7 +6,7 @@ use crate::{types::AssetId, Address, Txid};
 ///
 /// - the net balance from the point of view of the wallet
 /// - the available and missing signatures for each input
-/// - for issuances and reissuances transactions contains the issuance or reissuance details
+/// - the optional issuance or reissuance details for each input
 #[derive(uniffi::Object, Debug)]
 pub struct PsetDetails {
     inner: lwk_common::PsetDetails,
@@ -37,7 +37,7 @@ impl PsetDetails {
     }
 
     /// Return an element for every input that could possibly be a issuance or a reissuance
-    pub fn inputs_issuances(&self) -> Vec<Arc<Issuance>> {
+    pub fn inputs_issuances(&self) -> Vec<Option<Arc<Issuance>>> {
         // this is not aligned with what we are doing in app, where we offer a vec of only issuance and another with only reissuance
         // with a reference to the relative input. We should problaby move that logic upper so we can reuse?
         // in the meantime, this less ergonomic method should suffice.
@@ -45,7 +45,7 @@ impl PsetDetails {
             .issuances
             .clone()
             .into_iter()
-            .map(|e| Arc::new(e.into()))
+            .map(|e| e.map(|inner| Arc::new(inner.into())))
             .collect()
     }
 
@@ -290,10 +290,7 @@ mod tests {
 
         let issuances = details.inputs_issuances();
         assert_eq!(issuances.len(), 1);
-        assert!(!issuances[0].is_issuance());
-        assert!(!issuances[0].is_reissuance());
-        assert!(issuances[0].is_null());
-        assert!(!issuances[0].is_confidential());
+        assert!(issuances[0].is_none());
 
         let recipients = details.balance().recipients();
         assert_eq!(recipients.len(), 1);

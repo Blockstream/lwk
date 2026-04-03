@@ -185,9 +185,7 @@ impl PsetInput {
 
     /// If the input has a (re)issuance, the issuance object
     pub fn issuance(&self) -> Option<Issuance> {
-        self.inner
-            .has_issuance()
-            .then(|| lwk_common::Issuance::new(&self.inner).into())
+        lwk_common::Issuance::new(&self.inner).map(|issuance| issuance.into())
     }
 
     /// Input sighash

@@ -7,7 +7,7 @@ use crate::{Address, AssetId, Balance, Txid};
 ///
 /// - the net balance from the point of view of the wallet
 /// - the available and missing signatures for each input
-/// - for issuances and reissuances transactions contains the issuance or reissuance details
+/// - the optional issuance or reissuance details for each input
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct PsetDetails {
@@ -37,6 +37,13 @@ pub struct PsetSignatures {
 #[derive(Debug, Clone)]
 pub struct Issuance {
     inner: lwk_common::Issuance,
+}
+
+/// An optional details of an issuance or reissuance. Could be None when input issuance is null.
+/// It seems required by wasm_bindgen because we can't return `Vec<Option<Issuance>>`
+#[wasm_bindgen]
+pub struct OptionIssuance {
+    inner: Option<Issuance>,
 }
 
 /// Recipient of a PSET, in other words outputs that doesn't belong to the wallet
@@ -84,17 +91,17 @@ impl PsetDetails {
             .collect()
     }
 
-    /// Return an element for every input that could possibly be a issuance or a reissuance
+    /// Return a list of optional details for every input that could possibly be a issuance or a reissuance
     #[wasm_bindgen(js_name = inputsIssuances)]
-    pub fn inputs_issuances(&self) -> Vec<Issuance> {
+    pub fn inputs_issuances(&self) -> Vec<OptionIssuance> {
         // this is not aligned with what we are doing in app, where we offer a vec of only issuance and another with only reissuance
         // with a reference to the relative input. We should problaby move that logic upper so we can reuse?
         // in the meantime, this less ergonomic method should suffice.
         self.inner
             .issuances
-            .clone()
-            .into_iter()
-            .map(Into::into)
+            .iter()
+            .cloned()
+            .map(OptionIssuance::from)
             .collect()
     }
 }
@@ -181,6 +188,14 @@ impl Issuance {
 }
 
 #[wasm_bindgen]
+impl OptionIssuance {
+    /// Return a copy of the Issaunce if it exists, otherwise None
+    pub fn get(&self) -> Option<Issuance> {
+        self.inner.clone()
+    }
+}
+
+#[wasm_bindgen]
 impl Recipient {
     pub fn asset(&self) -> Option<AssetId> {
         self.inner.asset.map(Into::into)
@@ -250,6 +265,14 @@ impl From<lwk_common::Issuance> for Issuance {
     }
 }
 
+impl From<Option<lwk_common::Issuance>> for OptionIssuance {
+    fn from(inner: Option<lwk_common::Issuance>) -> Self {
+        Self {
+            inner: inner.map(Into::into),
+        }
+    }
+}
+
 impl From<Recipient> for lwk_common::Recipient {
     fn from(pset_rec: Recipient) -> Self {
         pset_rec.inner
@@ -300,8 +323,7 @@ mod tests {
 
         let issuances = details.inputs_issuances();
         assert_eq!(issuances.len(), 1);
-        assert!(!issuances[0].is_issuance());
-        assert!(!issuances[0].is_reissuance());
+        assert!(issuances[0].inner.is_none());
 
         let recipients = details.balance().recipients();
         assert_eq!(recipients.len(), 1);

@@ -189,13 +189,19 @@ pub fn generate_xprv() -> Xpriv {
 }
 
 pub fn n_issuances(details: &lwk_common::PsetDetails) -> usize {
-    details.issuances.iter().filter(|e| e.is_issuance()).count()
+    details
+        .issuances
+        .iter()
+        .flatten()
+        .filter(|e| e.is_issuance())
+        .count()
 }
 
 pub fn n_reissuances(details: &lwk_common::PsetDetails) -> usize {
     details
         .issuances
         .iter()
+        .flatten()
         .filter(|e| e.is_reissuance())
         .count()
 }

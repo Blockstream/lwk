@@ -1812,6 +1812,31 @@ mod tests {
     }
 
     #[test]
+    fn taproot_singlesig_desc_format() {
+        let mnemonic = lwk_test_util::TEST_MNEMONIC;
+
+        for is_mainnet in [false, true] {
+            let signer = SwSigner::new(mnemonic, is_mainnet).unwrap();
+            for blinding_variant in [
+                DescriptorBlindingKey::Slip77,
+                DescriptorBlindingKey::Elip151,
+            ] {
+                let desc_str =
+                    singlesig_desc(&signer, Singlesig::Taproot, blinding_variant).unwrap();
+                assert!(desc_str.contains("eltr("), "desc: {desc_str}");
+                assert!(desc_str.contains("86h/"), "desc: {desc_str}");
+                assert!(desc_str.contains("/<0;1>/*)"), "desc: {desc_str}");
+
+                let expected_coin = if is_mainnet { "1776h" } else { "1h" };
+                assert!(desc_str.contains(expected_coin), "desc: {desc_str}");
+
+                // Verify the descriptor parses into a valid WolletDescriptor
+                let _: WolletDescriptor = desc_str.parse().unwrap();
+            }
+        }
+    }
+
+    #[test]
     fn test_wollet_status() {
         let bytes = lwk_test_util::update_test_vector_bytes();
 

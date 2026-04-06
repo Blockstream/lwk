@@ -1,6 +1,10 @@
 use crate::error::WalletAbiError;
-use crate::wallet_abi::schema::{AssetVariant, RuntimeParams};
-use crate::wallet_abi::tx_resolution::utils::{add_balance, validate_output_input_index};
+use crate::wallet_abi::schema::{AssetVariant, InputSchema, RuntimeParams};
+use crate::wallet_abi::tx_resolution::resolved_input::ResolvedInputMaterial;
+use crate::wallet_abi::tx_resolution::utils::{
+    add_balance, calculate_issuance_entropy, issuance_token_from_entropy_for_unblinded_issuance,
+    validate_output_input_index,
+};
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -172,13 +176,49 @@ impl SupplyAndDemand {
             vout: candidate.outpoint.vout,
         })
     }
+
+    pub(crate) fn apply_input_supply(
+        &mut self,
+        input: &InputSchema,
+        material: &ResolvedInputMaterial,
+    ) -> Result<(), WalletAbiError> {
+        add_balance(
+            &mut self.supply_by_asset,
+            material.secrets.asset,
+            material.secrets.value,
+        )?;
+
+        if let Some(issuance) = input.issuance.as_ref() {
+            let issuance_entropy = calculate_issuance_entropy(material.outpoint, issuance);
+            add_balance(
+                &mut self.supply_by_asset,
+                AssetId::from_entropy(issuance_entropy),
+                issuance.asset_amount_sat,
+            )?;
+
+            if issuance.token_amount_sat > 0 {
+                add_balance(
+                    &mut self.supply_by_asset,
+                    issuance_token_from_entropy_for_unblinded_issuance(issuance_entropy),
+                    issuance.token_amount_sat,
+                )?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{DeferredDemandKind, SupplyAndDemand};
     use crate::wallet_abi::schema::{
-        AssetVariant, BlinderVariant, InputSchema, LockVariant, OutputSchema, RuntimeParams,
+        AssetVariant, BlinderVariant, InputIssuance, InputIssuanceKind, InputSchema, LockVariant,
+        OutputSchema, RuntimeParams,
+    };
+    use crate::wallet_abi::tx_resolution::resolved_input::ResolvedInputMaterial;
+    use crate::wallet_abi::tx_resolution::utils::{
+        calculate_issuance_entropy, issuance_token_from_entropy_for_unblinded_issuance,
     };
 
     use lwk_wollet::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
@@ -502,6 +542,105 @@ mod tests {
                 < supply_and_demand
                     .score_candidate(&higher_txid, total_deficit)
                     .unwrap()
+        );
+    }
+
+    #[test]
+    fn input_supply_adds_prevout_value() {
+        let prevout_asset = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+            .parse::<AssetId>()
+            .unwrap();
+        let mut supply_and_demand = SupplyAndDemand::try_from_runtime_params(
+            &RuntimeParams {
+                inputs: vec![],
+                outputs: vec![],
+                fee_rate_sat_kvb: None,
+                lock_time: None,
+            },
+            AssetId::LIQUID_BTC,
+            0,
+        )
+        .unwrap();
+
+        supply_and_demand
+            .apply_input_supply(
+                &InputSchema::new("plain"),
+                &ResolvedInputMaterial {
+                    outpoint: OutPoint::new(
+                        "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+                            .parse::<Txid>()
+                            .unwrap(),
+                        0,
+                    ),
+                    secrets: TxOutSecrets::new(
+                        prevout_asset,
+                        AssetBlindingFactor::zero(),
+                        9,
+                        ValueBlindingFactor::zero(),
+                    ),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(
+            supply_and_demand.supply_by_asset.get(&prevout_asset),
+            Some(&9)
+        );
+    }
+
+    #[test]
+    fn input_supply_adds_issuance_amounts() {
+        let issuance_input = InputSchema::new("issuer").with_issuance(InputIssuance {
+            kind: InputIssuanceKind::New,
+            asset_amount_sat: 3,
+            token_amount_sat: 2,
+            entropy: [7; 32],
+        });
+        let resolved = ResolvedInputMaterial {
+            outpoint: OutPoint::new(
+                "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+                    .parse::<Txid>()
+                    .unwrap(),
+                1,
+            ),
+            secrets: TxOutSecrets::new(
+                AssetId::LIQUID_BTC,
+                AssetBlindingFactor::zero(),
+                0,
+                ValueBlindingFactor::zero(),
+            ),
+        };
+        let mut supply_and_demand = SupplyAndDemand::try_from_runtime_params(
+            &RuntimeParams {
+                inputs: vec![],
+                outputs: vec![],
+                fee_rate_sat_kvb: None,
+                lock_time: None,
+            },
+            AssetId::LIQUID_BTC,
+            0,
+        )
+        .unwrap();
+
+        supply_and_demand
+            .apply_input_supply(&issuance_input, &resolved)
+            .unwrap();
+
+        let entropy = calculate_issuance_entropy(
+            resolved.outpoint,
+            issuance_input.issuance.as_ref().unwrap(),
+        );
+        assert_eq!(
+            supply_and_demand
+                .supply_by_asset
+                .get(&AssetId::from_entropy(entropy)),
+            Some(&3)
+        );
+        assert_eq!(
+            supply_and_demand
+                .supply_by_asset
+                .get(&issuance_token_from_entropy_for_unblinded_issuance(entropy)),
+            Some(&2)
         );
     }
 }

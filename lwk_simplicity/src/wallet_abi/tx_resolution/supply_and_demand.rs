@@ -67,6 +67,32 @@ impl SupplyAndDemand {
             deferred_demands,
         })
     }
+
+    pub(crate) fn pick_largest_deficit_asset(&self) -> Option<(AssetId, u64)> {
+        self.demand_by_asset.iter().fold(
+            None,
+            |best: Option<(AssetId, u64)>, (asset_id, demand_sat)| {
+                let supplied = self.supply_by_asset.get(asset_id).copied().unwrap_or(0);
+                let missing = demand_sat.saturating_sub(supplied);
+                if missing == 0 {
+                    return best;
+                }
+
+                match best {
+                    None => Some((*asset_id, missing)),
+                    Some((best_asset_id, best_missing)) => {
+                        if missing > best_missing
+                            || (missing == best_missing && *asset_id < best_asset_id)
+                        {
+                            Some((*asset_id, missing))
+                        } else {
+                            Some((best_asset_id, best_missing))
+                        }
+                    }
+                }
+            },
+        )
+    }
 }
 
 #[cfg(test)]
@@ -181,5 +207,48 @@ mod tests {
             0
         )
         .is_err());
+    }
+
+    #[test]
+    fn largest_deficit_asset_selection_is_deterministic() {
+        let lower_asset = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+            .parse::<AssetId>()
+            .unwrap();
+        let higher_asset = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a471"
+            .parse::<AssetId>()
+            .unwrap();
+        let params = RuntimeParams {
+            inputs: vec![],
+            outputs: vec![
+                OutputSchema {
+                    id: "higher-first".to_owned(),
+                    amount_sat: 7,
+                    lock: LockVariant::Wallet,
+                    asset: AssetVariant::AssetId {
+                        asset_id: higher_asset,
+                    },
+                    blinder: BlinderVariant::Wallet,
+                },
+                OutputSchema {
+                    id: "lower-second".to_owned(),
+                    amount_sat: 7,
+                    lock: LockVariant::Wallet,
+                    asset: AssetVariant::AssetId {
+                        asset_id: lower_asset,
+                    },
+                    blinder: BlinderVariant::Wallet,
+                },
+            ],
+            fee_rate_sat_kvb: None,
+            lock_time: None,
+        };
+
+        let supply_and_demand =
+            SupplyAndDemand::try_from_runtime_params(&params, lower_asset, 0).unwrap();
+
+        assert_eq!(
+            supply_and_demand.pick_largest_deficit_asset(),
+            Some((lower_asset, 7))
+        );
     }
 }

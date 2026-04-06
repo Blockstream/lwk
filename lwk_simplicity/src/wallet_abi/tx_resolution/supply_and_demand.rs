@@ -105,6 +105,20 @@ impl SupplyAndDemand {
             selected_wallet_utxo.unblinded.value,
         )
     }
+
+    pub(crate) fn total_remaining_deficit(&self) -> Result<u64, WalletAbiError> {
+        self.demand_by_asset
+            .iter()
+            .try_fold(0u64, |sum, (asset_id, demand_sat)| {
+                let supplied = self.supply_by_asset.get(asset_id).copied().unwrap_or(0);
+                sum.checked_add(demand_sat.saturating_sub(supplied))
+                    .ok_or_else(|| {
+                        WalletAbiError::InvalidRequest(
+                            "deficit overflow while scoring wallet candidates".to_owned(),
+                        )
+                    })
+            })
+    }
 }
 
 #[cfg(test)]
@@ -316,5 +330,60 @@ mod tests {
             supply_and_demand.pick_largest_deficit_asset(),
             Some((asset_id, 4))
         );
+    }
+
+    #[test]
+    fn total_remaining_deficit_sums_shortfalls() {
+        let asset_a = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+            .parse::<AssetId>()
+            .unwrap();
+        let asset_b = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a471"
+            .parse::<AssetId>()
+            .unwrap();
+        let params = RuntimeParams {
+            inputs: vec![],
+            outputs: vec![
+                OutputSchema {
+                    id: "need-a".to_owned(),
+                    amount_sat: 10,
+                    lock: LockVariant::Wallet,
+                    asset: AssetVariant::AssetId { asset_id: asset_a },
+                    blinder: BlinderVariant::Wallet,
+                },
+                OutputSchema {
+                    id: "need-b".to_owned(),
+                    amount_sat: 6,
+                    lock: LockVariant::Wallet,
+                    asset: AssetVariant::AssetId { asset_id: asset_b },
+                    blinder: BlinderVariant::Wallet,
+                },
+            ],
+            fee_rate_sat_kvb: None,
+            lock_time: None,
+        };
+        let mut supply_and_demand =
+            SupplyAndDemand::try_from_runtime_params(&params, asset_a, 0).unwrap();
+
+        supply_and_demand
+            .add_selected_wallet_to_supply(&ExternalUtxo {
+                outpoint: OutPoint::new(
+                    "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+                        .parse::<Txid>()
+                        .unwrap(),
+                    1,
+                ),
+                txout: TxOut::default(),
+                tx: None::<Transaction>,
+                unblinded: TxOutSecrets::new(
+                    asset_a,
+                    AssetBlindingFactor::zero(),
+                    4,
+                    ValueBlindingFactor::zero(),
+                ),
+                max_weight_to_satisfy: 0,
+            })
+            .unwrap();
+
+        assert_eq!(supply_and_demand.total_remaining_deficit().unwrap(), 12);
     }
 }

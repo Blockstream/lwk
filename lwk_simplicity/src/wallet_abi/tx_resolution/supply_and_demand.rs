@@ -16,6 +16,15 @@ enum DeferredDemandKind {
     ReissueAsset,
 }
 
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub(crate) struct CandidateScore {
+    total_remaining_deficit: u64,
+    remaining_candidate_deficit: u64,
+    overshoot_or_undershoot: u64,
+    txid_lex: String,
+    vout: u32,
+}
+
 pub(crate) struct SupplyAndDemand {
     demand_by_asset: AssetBalances,
     supply_by_asset: AssetBalances,
@@ -118,6 +127,50 @@ impl SupplyAndDemand {
                         )
                     })
             })
+    }
+
+    pub(crate) fn score_candidate(
+        &self,
+        candidate: &ExternalUtxo,
+        current_total_deficit: u64,
+    ) -> Result<CandidateScore, WalletAbiError> {
+        let candidate_asset = candidate.unblinded.asset;
+        let candidate_demand = self
+            .demand_by_asset
+            .get(&candidate_asset)
+            .copied()
+            .unwrap_or(0);
+        let candidate_before_supply = self
+            .supply_by_asset
+            .get(&candidate_asset)
+            .copied()
+            .unwrap_or(0);
+        let candidate_after_supply = candidate_before_supply
+            .checked_add(candidate.unblinded.value)
+            .ok_or_else(|| {
+                WalletAbiError::InvalidRequest(format!(
+                    "asset amount overflow while scoring candidate {}:{}",
+                    candidate.outpoint.txid, candidate.outpoint.vout
+                ))
+            })?;
+
+        let remaining_candidate_deficit = candidate_demand.saturating_sub(candidate_after_supply);
+        let needed_before = candidate_demand.saturating_sub(candidate_before_supply);
+        let total_remaining_deficit = current_total_deficit
+            .checked_sub(needed_before - remaining_candidate_deficit)
+            .ok_or_else(|| {
+                WalletAbiError::InvalidRequest(
+                    "deficit underflow while scoring wallet candidates".to_owned(),
+                )
+            })?;
+
+        Ok(CandidateScore {
+            total_remaining_deficit,
+            remaining_candidate_deficit,
+            overshoot_or_undershoot: candidate.unblinded.value.abs_diff(needed_before),
+            txid_lex: candidate.outpoint.txid.to_string(),
+            vout: candidate.outpoint.vout,
+        })
     }
 }
 
@@ -385,5 +438,70 @@ mod tests {
             .unwrap();
 
         assert_eq!(supply_and_demand.total_remaining_deficit().unwrap(), 12);
+    }
+
+    #[test]
+    fn candidate_scoring_tie_breaks_deterministically() {
+        let asset_id = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+            .parse::<AssetId>()
+            .unwrap();
+        let params = RuntimeParams {
+            inputs: vec![],
+            outputs: vec![OutputSchema {
+                id: "need".to_owned(),
+                amount_sat: 100,
+                lock: LockVariant::Wallet,
+                asset: AssetVariant::AssetId { asset_id },
+                blinder: BlinderVariant::Wallet,
+            }],
+            fee_rate_sat_kvb: None,
+            lock_time: None,
+        };
+        let supply_and_demand =
+            SupplyAndDemand::try_from_runtime_params(&params, asset_id, 0).unwrap();
+        let total_deficit = supply_and_demand.total_remaining_deficit().unwrap();
+        let lower_txid = ExternalUtxo {
+            outpoint: OutPoint::new(
+                "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+                    .parse::<Txid>()
+                    .unwrap(),
+                0,
+            ),
+            txout: TxOut::default(),
+            tx: None::<Transaction>,
+            unblinded: TxOutSecrets::new(
+                asset_id,
+                AssetBlindingFactor::zero(),
+                60,
+                ValueBlindingFactor::zero(),
+            ),
+            max_weight_to_satisfy: 0,
+        };
+        let higher_txid = ExternalUtxo {
+            outpoint: OutPoint::new(
+                "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a471"
+                    .parse::<Txid>()
+                    .unwrap(),
+                0,
+            ),
+            txout: TxOut::default(),
+            tx: None::<Transaction>,
+            unblinded: TxOutSecrets::new(
+                asset_id,
+                AssetBlindingFactor::zero(),
+                60,
+                ValueBlindingFactor::zero(),
+            ),
+            max_weight_to_satisfy: 0,
+        };
+
+        assert!(
+            supply_and_demand
+                .score_candidate(&lower_txid, total_deficit)
+                .unwrap()
+                < supply_and_demand
+                    .score_candidate(&higher_txid, total_deficit)
+                    .unwrap()
+        );
     }
 }

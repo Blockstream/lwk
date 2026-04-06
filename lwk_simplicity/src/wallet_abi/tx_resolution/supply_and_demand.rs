@@ -5,6 +5,7 @@ use crate::wallet_abi::tx_resolution::utils::{add_balance, validate_output_input
 use std::collections::{BTreeMap, HashMap};
 
 use lwk_wollet::elements::AssetId;
+use lwk_wollet::ExternalUtxo;
 
 pub(crate) type AssetBalances = BTreeMap<AssetId, u64>;
 
@@ -93,6 +94,17 @@ impl SupplyAndDemand {
             },
         )
     }
+
+    pub(crate) fn add_selected_wallet_to_supply(
+        &mut self,
+        selected_wallet_utxo: &ExternalUtxo,
+    ) -> Result<(), WalletAbiError> {
+        add_balance(
+            &mut self.supply_by_asset,
+            selected_wallet_utxo.unblinded.asset,
+            selected_wallet_utxo.unblinded.value,
+        )
+    }
 }
 
 #[cfg(test)]
@@ -102,7 +114,9 @@ mod tests {
         AssetVariant, BlinderVariant, InputSchema, LockVariant, OutputSchema, RuntimeParams,
     };
 
-    use lwk_wollet::elements::AssetId;
+    use lwk_wollet::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+    use lwk_wollet::elements::{AssetId, OutPoint, Transaction, TxOut, TxOutSecrets, Txid};
+    use lwk_wollet::ExternalUtxo;
 
     #[test]
     fn runtime_params_add_policy_and_explicit_asset_demand() {
@@ -249,6 +263,58 @@ mod tests {
         assert_eq!(
             supply_and_demand.pick_largest_deficit_asset(),
             Some((lower_asset, 7))
+        );
+    }
+
+    #[test]
+    fn wallet_supply_updates_reduce_remaining_deficit() {
+        let asset_id = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+            .parse::<AssetId>()
+            .unwrap();
+        let params = RuntimeParams {
+            inputs: vec![],
+            outputs: vec![OutputSchema {
+                id: "need".to_owned(),
+                amount_sat: 11,
+                lock: LockVariant::Wallet,
+                asset: AssetVariant::AssetId { asset_id },
+                blinder: BlinderVariant::Wallet,
+            }],
+            fee_rate_sat_kvb: None,
+            lock_time: None,
+        };
+        let mut supply_and_demand =
+            SupplyAndDemand::try_from_runtime_params(&params, asset_id, 0).unwrap();
+        let selected_wallet_utxo = ExternalUtxo {
+            outpoint: OutPoint::new(
+                "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+                    .parse::<Txid>()
+                    .unwrap(),
+                0,
+            ),
+            txout: TxOut::default(),
+            tx: None::<Transaction>,
+            unblinded: TxOutSecrets::new(
+                asset_id,
+                AssetBlindingFactor::zero(),
+                7,
+                ValueBlindingFactor::zero(),
+            ),
+            max_weight_to_satisfy: 0,
+        };
+
+        assert_eq!(
+            supply_and_demand.pick_largest_deficit_asset(),
+            Some((asset_id, 11))
+        );
+
+        supply_and_demand
+            .add_selected_wallet_to_supply(&selected_wallet_utxo)
+            .unwrap();
+
+        assert_eq!(
+            supply_and_demand.pick_largest_deficit_asset(),
+            Some((asset_id, 4))
         );
     }
 }

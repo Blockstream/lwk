@@ -2,8 +2,9 @@ use crate::error::WalletAbiError;
 use crate::wallet_abi::schema::{AssetVariant, InputSchema, RuntimeParams};
 use crate::wallet_abi::tx_resolution::resolved_input::ResolvedInputMaterial;
 use crate::wallet_abi::tx_resolution::utils::{
-    add_balance, calculate_issuance_entropy, issuance_token_from_entropy_for_unblinded_issuance,
-    validate_output_input_index,
+    add_balance, calculate_issuance_entropy, issuance_reference_asset_id,
+    issuance_token_from_entropy_for_unblinded_issuance, validate_output_input_index,
+    IssuanceReferenceKind,
 };
 
 use std::collections::{BTreeMap, HashMap};
@@ -203,6 +204,55 @@ impl SupplyAndDemand {
                     issuance.token_amount_sat,
                 )?;
             }
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn activate_deferred_demands_for_input(
+        &mut self,
+        input: &InputSchema,
+        input_index: usize,
+        material: &ResolvedInputMaterial,
+    ) -> Result<(), WalletAbiError> {
+        let input_index = u32::try_from(input_index)?;
+        let Some(entries) = self.deferred_demands.remove(&input_index) else {
+            return Ok(());
+        };
+
+        let issuance = input.issuance.as_ref().ok_or_else(|| {
+            WalletAbiError::InvalidRequest(format!(
+                "output asset references input {input_index} but input '{}' has no issuance metadata",
+                input.id
+            ))
+        })?;
+
+        for (kind, amount_sat) in entries {
+            let reference_kind = match kind {
+                DeferredDemandKind::NewIssuanceAsset => IssuanceReferenceKind::NewAsset,
+                DeferredDemandKind::NewIssuanceToken => IssuanceReferenceKind::NewToken,
+                DeferredDemandKind::ReissueAsset => IssuanceReferenceKind::ReissueAsset,
+            };
+            let demand_asset =
+                issuance_reference_asset_id(reference_kind, issuance, material.outpoint, || {
+                    match reference_kind {
+                        IssuanceReferenceKind::NewAsset => WalletAbiError::InvalidRequest(format!(
+                            "output asset variant new_issuance_asset references reissue input '{}'",
+                            input.id
+                        )),
+                        IssuanceReferenceKind::NewToken => WalletAbiError::InvalidRequest(format!(
+                            "output asset variant new_issuance_token references reissue input '{}'",
+                            input.id
+                        )),
+                        IssuanceReferenceKind::ReissueAsset => {
+                            WalletAbiError::InvalidRequest(format!(
+                        "output asset variant re_issuance_asset references new issuance input '{}'",
+                        input.id
+                    ))
+                        }
+                    }
+                })?;
+            add_balance(&mut self.demand_by_asset, demand_asset, amount_sat)?;
         }
 
         Ok(())
@@ -642,5 +692,96 @@ mod tests {
                 .get(&issuance_token_from_entropy_for_unblinded_issuance(entropy)),
             Some(&2)
         );
+    }
+
+    #[test]
+    fn deferred_issuance_demand_activates_after_input_resolution() {
+        let params = RuntimeParams {
+            inputs: vec![InputSchema::new("issuer").with_issuance(InputIssuance {
+                kind: InputIssuanceKind::New,
+                asset_amount_sat: 0,
+                token_amount_sat: 0,
+                entropy: [7; 32],
+            })],
+            outputs: vec![OutputSchema {
+                id: "issued-output".to_owned(),
+                amount_sat: 5,
+                lock: LockVariant::Wallet,
+                asset: AssetVariant::NewIssuanceAsset { input_index: 0 },
+                blinder: BlinderVariant::Wallet,
+            }],
+            fee_rate_sat_kvb: None,
+            lock_time: None,
+        };
+        let resolved = ResolvedInputMaterial {
+            outpoint: OutPoint::new(
+                "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+                    .parse::<Txid>()
+                    .unwrap(),
+                0,
+            ),
+            secrets: TxOutSecrets::new(
+                AssetId::LIQUID_BTC,
+                AssetBlindingFactor::zero(),
+                9,
+                ValueBlindingFactor::zero(),
+            ),
+        };
+        let mut supply_and_demand =
+            SupplyAndDemand::try_from_runtime_params(&params, AssetId::LIQUID_BTC, 0).unwrap();
+
+        assert_eq!(supply_and_demand.pick_largest_deficit_asset(), None);
+
+        supply_and_demand
+            .activate_deferred_demands_for_input(&params.inputs[0], 0, &resolved)
+            .unwrap();
+
+        let entropy = calculate_issuance_entropy(
+            resolved.outpoint,
+            params.inputs[0].issuance.as_ref().unwrap(),
+        );
+        assert_eq!(
+            supply_and_demand.pick_largest_deficit_asset(),
+            Some((AssetId::from_entropy(entropy), 5))
+        );
+    }
+
+    #[test]
+    fn activation_rejects_missing_issuance_metadata() {
+        let params = RuntimeParams {
+            inputs: vec![InputSchema::new("plain-input")],
+            outputs: vec![OutputSchema {
+                id: "bad-ref".to_owned(),
+                amount_sat: 1,
+                lock: LockVariant::Wallet,
+                asset: AssetVariant::NewIssuanceAsset { input_index: 0 },
+                blinder: BlinderVariant::Wallet,
+            }],
+            fee_rate_sat_kvb: None,
+            lock_time: None,
+        };
+        let mut supply_and_demand =
+            SupplyAndDemand::try_from_runtime_params(&params, AssetId::LIQUID_BTC, 0).unwrap();
+
+        assert!(supply_and_demand
+            .activate_deferred_demands_for_input(
+                &params.inputs[0],
+                0,
+                &ResolvedInputMaterial {
+                    outpoint: OutPoint::new(
+                        "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+                            .parse::<Txid>()
+                            .unwrap(),
+                        1,
+                    ),
+                    secrets: TxOutSecrets::new(
+                        AssetId::LIQUID_BTC,
+                        AssetBlindingFactor::zero(),
+                        1,
+                        ValueBlindingFactor::zero(),
+                    ),
+                },
+            )
+            .is_err());
     }
 }

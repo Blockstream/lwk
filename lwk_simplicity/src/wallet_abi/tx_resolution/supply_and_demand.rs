@@ -10,7 +10,8 @@ use crate::wallet_abi::tx_resolution::utils::{
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use log::error;
-use lwk_wollet::elements::AssetId;
+use lwk_wollet::elements::pset::PartiallySignedTransaction;
+use lwk_wollet::elements::{AssetId, OutPoint};
 use lwk_wollet::ExternalUtxo;
 
 pub(crate) type AssetBalances = BTreeMap<AssetId, u64>;
@@ -321,6 +322,45 @@ impl SupplyAndDemand {
 
         Ok(residual_by_asset)
     }
+
+    fn aggregate_issuance_supply(
+        pst: &PartiallySignedTransaction,
+        params: &RuntimeParams,
+    ) -> Result<AssetBalances, WalletAbiError> {
+        let mut balances = AssetBalances::new();
+
+        for (input_index, input) in params.inputs.iter().enumerate() {
+            let Some(issuance) = input.issuance.as_ref() else {
+                continue;
+            };
+
+            let pset_input = pst.inputs().get(input_index).ok_or_else(|| {
+                WalletAbiError::InvalidRequest(format!(
+                    "input '{}' at index {input_index} missing from PSET while aggregating issuance supply",
+                    input.id
+                ))
+            })?;
+
+            let outpoint =
+                OutPoint::new(pset_input.previous_txid, pset_input.previous_output_index);
+            let entropy = calculate_issuance_entropy(outpoint, issuance);
+            add_balance(
+                &mut balances,
+                AssetId::from_entropy(entropy),
+                issuance.asset_amount_sat,
+            )?;
+
+            if issuance.token_amount_sat > 0 {
+                add_balance(
+                    &mut balances,
+                    issuance_token_from_entropy_for_unblinded_issuance(entropy),
+                    issuance.token_amount_sat,
+                )?;
+            }
+        }
+
+        Ok(balances)
+    }
 }
 
 #[cfg(test)]
@@ -336,6 +376,7 @@ mod tests {
     };
 
     use lwk_wollet::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+    use lwk_wollet::elements::pset::{Input, PartiallySignedTransaction};
     use lwk_wollet::elements::{AssetId, OutPoint, Transaction, TxOut, TxOutSecrets, Txid};
     use lwk_wollet::ExternalUtxo;
 
@@ -967,5 +1008,41 @@ mod tests {
 
         demand.insert(asset_b, 5);
         assert!(SupplyAndDemand::residuals_or_funding_error(&supply, &demand, 0).is_err());
+    }
+
+    #[test]
+    fn aggregate_issuance_supply_counts_issued_assets() {
+        let params = RuntimeParams {
+            inputs: vec![InputSchema::new("issuer").with_issuance(InputIssuance {
+                kind: InputIssuanceKind::New,
+                asset_amount_sat: 3,
+                token_amount_sat: 2,
+                entropy: [7; 32],
+            })],
+            outputs: vec![],
+            fee_rate_sat_kvb: None,
+            lock_time: None,
+        };
+        let input_outpoint = OutPoint::new(
+            "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+                .parse::<Txid>()
+                .unwrap(),
+            0,
+        );
+        let mut pst = PartiallySignedTransaction::new_v2();
+        pst.add_input(Input::from_prevout(input_outpoint));
+
+        let issuance_supply = SupplyAndDemand::aggregate_issuance_supply(&pst, &params).unwrap();
+        let entropy =
+            calculate_issuance_entropy(input_outpoint, params.inputs[0].issuance.as_ref().unwrap());
+
+        assert_eq!(
+            issuance_supply.get(&AssetId::from_entropy(entropy)),
+            Some(&3)
+        );
+        assert_eq!(
+            issuance_supply.get(&issuance_token_from_entropy_for_unblinded_issuance(entropy)),
+            Some(&2)
+        );
     }
 }

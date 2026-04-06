@@ -7,8 +7,9 @@ use crate::wallet_abi::tx_resolution::utils::{
     IssuanceReferenceKind,
 };
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
+use log::error;
 use lwk_wollet::elements::AssetId;
 use lwk_wollet::ExternalUtxo;
 
@@ -277,11 +278,54 @@ impl SupplyAndDemand {
 
         Ok(())
     }
+
+    pub(crate) fn residuals_or_funding_error(
+        supply_by_asset: &AssetBalances,
+        demand_by_asset: &AssetBalances,
+        fee_target_sat: u64,
+    ) -> Result<AssetBalances, WalletAbiError> {
+        let mut residual_by_asset = AssetBalances::new();
+        let mut deficit_by_asset = AssetBalances::new();
+        let mut all_assets = BTreeSet::new();
+
+        all_assets.extend(supply_by_asset.keys().copied());
+        all_assets.extend(demand_by_asset.keys().copied());
+
+        for asset_id in all_assets {
+            let supply_sat = supply_by_asset.get(&asset_id).copied().unwrap_or(0);
+            let demand_sat = demand_by_asset.get(&asset_id).copied().unwrap_or(0);
+
+            if demand_sat > supply_sat {
+                deficit_by_asset.insert(asset_id, demand_sat - supply_sat);
+                continue;
+            }
+
+            if supply_sat > demand_sat {
+                residual_by_asset.insert(asset_id, supply_sat - demand_sat);
+            }
+        }
+
+        if !deficit_by_asset.is_empty() {
+            let details = deficit_by_asset
+                .iter()
+                .map(|(asset_id, missing_sat)| format!("{asset_id}:{missing_sat}"))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            error!("asset deficits after applying fee target {fee_target_sat}: {details}");
+
+            return Err(WalletAbiError::Funding(
+                "asset deficits after applying fee target".to_owned(),
+            ));
+        }
+
+        Ok(residual_by_asset)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{DeferredDemandKind, SupplyAndDemand};
+    use super::{AssetBalances, DeferredDemandKind, SupplyAndDemand};
     use crate::wallet_abi::schema::{
         AssetVariant, BlinderVariant, InputIssuance, InputIssuanceKind, InputSchema, LockVariant,
         OutputSchema, RuntimeParams,
@@ -899,5 +943,29 @@ mod tests {
             .unwrap();
 
         assert!(supply_and_demand.validate_demand_after_resolution().is_ok());
+    }
+
+    #[test]
+    fn residuals_return_change_and_funding_errors() {
+        let asset_a = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+            .parse::<AssetId>()
+            .unwrap();
+        let asset_b = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a471"
+            .parse::<AssetId>()
+            .unwrap();
+        let mut supply = AssetBalances::new();
+        let mut demand = AssetBalances::new();
+
+        supply.insert(asset_a, 15);
+        supply.insert(asset_b, 4);
+        demand.insert(asset_a, 10);
+        demand.insert(asset_b, 4);
+
+        let residuals = SupplyAndDemand::residuals_or_funding_error(&supply, &demand, 0).unwrap();
+        assert_eq!(residuals.get(&asset_a), Some(&5));
+        assert_eq!(residuals.get(&asset_b), None);
+
+        demand.insert(asset_b, 5);
+        assert!(SupplyAndDemand::residuals_or_funding_error(&supply, &demand, 0).is_err());
     }
 }

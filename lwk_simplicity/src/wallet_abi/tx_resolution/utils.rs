@@ -73,6 +73,39 @@ pub(crate) fn validate_output_input_index(
     Ok(index)
 }
 
+#[derive(Clone, Copy)]
+pub(super) enum IssuanceReferenceKind {
+    NewAsset,
+    NewToken,
+    ReissueAsset,
+}
+
+/// Resolve the concrete asset id behind an issuance-linked reference while
+/// enforcing that the requested reference kind matches the input issuance kind.
+pub(super) fn issuance_reference_asset_id(
+    kind: IssuanceReferenceKind,
+    issuance: &InputIssuance,
+    outpoint: OutPoint,
+    invalid_kind_error: impl FnOnce() -> WalletAbiError,
+) -> Result<AssetId, WalletAbiError> {
+    let issuance_entropy = calculate_issuance_entropy(outpoint, issuance);
+
+    match (kind, &issuance.kind) {
+        (IssuanceReferenceKind::NewAsset, InputIssuanceKind::New)
+        | (IssuanceReferenceKind::ReissueAsset, InputIssuanceKind::Reissue) => {
+            Ok(AssetId::from_entropy(issuance_entropy))
+        }
+        (IssuanceReferenceKind::NewToken, InputIssuanceKind::New) => Ok(
+            issuance_token_from_entropy_for_unblinded_issuance(issuance_entropy),
+        ),
+        (IssuanceReferenceKind::NewAsset, InputIssuanceKind::Reissue)
+        | (IssuanceReferenceKind::NewToken, InputIssuanceKind::Reissue)
+        | (IssuanceReferenceKind::ReissueAsset, InputIssuanceKind::New) => {
+            Err(invalid_kind_error())
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,5 +161,70 @@ mod tests {
             calculate_issuance_entropy(outpoint, &issuance),
             Midstate::from_byte_array([9; 32])
         );
+    }
+
+    #[test]
+    fn issuance_reference_asset_id_derives_new_asset() {
+        let outpoint = OutPoint::new(
+            "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+                .parse::<Txid>()
+                .unwrap(),
+            0,
+        );
+        let issuance = InputIssuance {
+            kind: InputIssuanceKind::New,
+            asset_amount_sat: 7,
+            token_amount_sat: 2,
+            entropy: [5; 32],
+        };
+
+        assert_eq!(
+            issuance_reference_asset_id(
+                IssuanceReferenceKind::NewAsset,
+                &issuance,
+                outpoint,
+                || WalletAbiError::InvalidRequest("mismatch".to_owned()),
+            )
+            .unwrap(),
+            AssetId::from_entropy(calculate_issuance_entropy(outpoint, &issuance))
+        );
+
+        let issuance = InputIssuance {
+            kind: InputIssuanceKind::New,
+            asset_amount_sat: 7,
+            token_amount_sat: 2,
+            entropy: [6; 32],
+        };
+        assert_eq!(
+            issuance_reference_asset_id(
+                IssuanceReferenceKind::NewToken,
+                &issuance,
+                outpoint,
+                || WalletAbiError::InvalidRequest("mismatch".to_owned()),
+            )
+            .unwrap(),
+            issuance_token_from_entropy_for_unblinded_issuance(calculate_issuance_entropy(
+                outpoint, &issuance,
+            ))
+        );
+
+        let issuance = InputIssuance {
+            kind: InputIssuanceKind::New,
+            asset_amount_sat: 1,
+            token_amount_sat: 1,
+            entropy: [7; 32],
+        };
+        let error = issuance_reference_asset_id(
+            IssuanceReferenceKind::ReissueAsset,
+            &issuance,
+            outpoint,
+            || WalletAbiError::InvalidRequest("mismatch".to_owned()),
+        )
+        .unwrap_err();
+
+        assert!(matches!(
+            error,
+            WalletAbiError::InvalidRequest(message) if message == "mismatch"
+        ));
     }
 }

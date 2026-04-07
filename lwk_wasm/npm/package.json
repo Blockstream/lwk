@@ -1,0 +1,31 @@
+{
+  "name": "lwk-js-workspace",
+  "private": true,
+  "version": "0.16.0",
+  "description": "Workspace for LWK JavaScript and WebAssembly packages",
+  "license": "MIT OR BSD-2-Clause",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "clean": "tsx scripts/build.ts clean",
+    "prepare:generated": "tsx scripts/build.ts generate",
+    "stage:node": "tsx scripts/build.ts stage-node",
+    "build:packages": "npm run build -w lwk_node",
+    "build": "npm run clean && npm run prepare:generated && npm run build:packages",
+    "typecheck:scripts": "tsc -p scripts/tsconfig.json --noEmit",
+    "typecheck": "npm run typecheck:scripts && npm run typecheck -w lwk_node",
+    "test": "npm run test -w lwk_node",
+    "pack:check": "npm run pack:check -w lwk_node",
+    "check": "LWK_WASM_FEATURES=\"serial,simplicity\" npm run typecheck && npm run test && npm run pack:check"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.8.3"
+  }
+}

@@ -257,6 +257,26 @@ impl SupplyAndDemand {
 
         Ok(())
     }
+
+    pub(crate) fn apply_resolved_input_contribution(
+        &mut self,
+        input: &InputSchema,
+        input_index: usize,
+        material: &ResolvedInputMaterial,
+    ) -> Result<(), WalletAbiError> {
+        self.apply_input_supply(input, material)?;
+        self.activate_deferred_demands_for_input(input, input_index, material)
+    }
+
+    pub(crate) fn validate_demand_after_resolution(&self) -> Result<(), WalletAbiError> {
+        if !self.deferred_demands.is_empty() {
+            return Err(WalletAbiError::InvalidRequest(
+                "unresolved deferred output demands remain after input resolution".to_owned(),
+            ));
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -783,5 +803,101 @@ mod tests {
                 },
             )
             .is_err());
+    }
+
+    #[test]
+    fn issuance_supply_satisfies_activated_deferred_demand() {
+        let params = RuntimeParams {
+            inputs: vec![InputSchema::new("issuer").with_issuance(InputIssuance {
+                kind: InputIssuanceKind::New,
+                asset_amount_sat: 5,
+                token_amount_sat: 0,
+                entropy: [7; 32],
+            })],
+            outputs: vec![OutputSchema {
+                id: "issued-output".to_owned(),
+                amount_sat: 5,
+                lock: LockVariant::Wallet,
+                asset: AssetVariant::NewIssuanceAsset { input_index: 0 },
+                blinder: BlinderVariant::Wallet,
+            }],
+            fee_rate_sat_kvb: None,
+            lock_time: None,
+        };
+        let mut supply_and_demand =
+            SupplyAndDemand::try_from_runtime_params(&params, AssetId::LIQUID_BTC, 0).unwrap();
+
+        supply_and_demand
+            .apply_resolved_input_contribution(
+                &params.inputs[0],
+                0,
+                &ResolvedInputMaterial {
+                    outpoint: OutPoint::new(
+                        "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+                            .parse::<Txid>()
+                            .unwrap(),
+                        0,
+                    ),
+                    secrets: TxOutSecrets::new(
+                        AssetId::LIQUID_BTC,
+                        AssetBlindingFactor::zero(),
+                        1,
+                        ValueBlindingFactor::zero(),
+                    ),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(supply_and_demand.pick_largest_deficit_asset(), None);
+    }
+
+    #[test]
+    fn validate_demand_after_resolution_run() {
+        let params = RuntimeParams {
+            inputs: vec![InputSchema::new("issuer").with_issuance(InputIssuance {
+                kind: InputIssuanceKind::New,
+                asset_amount_sat: 0,
+                token_amount_sat: 0,
+                entropy: [7; 32],
+            })],
+            outputs: vec![OutputSchema {
+                id: "issued-output".to_owned(),
+                amount_sat: 5,
+                lock: LockVariant::Wallet,
+                asset: AssetVariant::NewIssuanceAsset { input_index: 0 },
+                blinder: BlinderVariant::Wallet,
+            }],
+            fee_rate_sat_kvb: None,
+            lock_time: None,
+        };
+        let mut supply_and_demand =
+            SupplyAndDemand::try_from_runtime_params(&params, AssetId::LIQUID_BTC, 0).unwrap();
+
+        assert!(supply_and_demand
+            .validate_demand_after_resolution()
+            .is_err());
+
+        supply_and_demand
+            .apply_resolved_input_contribution(
+                &params.inputs[0],
+                0,
+                &ResolvedInputMaterial {
+                    outpoint: OutPoint::new(
+                        "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+                            .parse::<Txid>()
+                            .unwrap(),
+                        0,
+                    ),
+                    secrets: TxOutSecrets::new(
+                        AssetId::LIQUID_BTC,
+                        AssetBlindingFactor::zero(),
+                        1,
+                        ValueBlindingFactor::zero(),
+                    ),
+                },
+            )
+            .unwrap();
+
+        assert!(supply_and_demand.validate_demand_after_resolution().is_ok());
     }
 }

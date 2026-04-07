@@ -3,7 +3,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use aes_gcm_siv::Aes256GcmSiv;
 use bip39::Mnemonic;
 use boltz_client::boltz::{
     BoltzApiClientV2, ChainSwapDetails, ChainSwapStates, CreateChainRequest, CreateChainResponse,
@@ -44,7 +43,6 @@ pub struct LockupResponse {
     polling: bool,
     timeout_advance: Duration,
     store: Option<Arc<dyn DynStore>>,
-    cipher: Option<Aes256GcmSiv>,
 }
 
 impl SwapPersistence for LockupResponse {
@@ -57,11 +55,8 @@ impl SwapPersistence for LockupResponse {
         &self.data.create_chain_response.id
     }
 
-    fn store_and_cipher(&self) -> Option<(Arc<dyn DynStore>, Aes256GcmSiv)> {
-        match (self.store.as_ref(), self.cipher.as_ref()) {
-            (Some(store), Some(cipher)) => Some((Arc::clone(store), cipher.clone())),
-            _ => None,
-        }
+    fn store(&self) -> Option<Arc<dyn DynStore>> {
+        self.store.as_ref().map(Arc::clone)
     }
 }
 
@@ -194,11 +189,6 @@ impl BoltzSession {
         };
 
         let store = self.clone_store();
-        let cipher = if store.is_some() {
-            Some(self.clone_cipher())
-        } else {
-            None
-        };
         let response = LockupResponse {
             data: ChainSwapData {
                 last_state,
@@ -232,7 +222,6 @@ impl BoltzSession {
             polling: self.polling,
             timeout_advance: self.timeout_advance,
             store,
-            cipher,
         };
 
         // Persist swap data and add to pending list
@@ -277,11 +266,6 @@ impl BoltzSession {
         self.ws.subscribe_swap(&swap_id).await?;
 
         let store = self.clone_store();
-        let cipher = if store.is_some() {
-            Some(self.clone_cipher())
-        } else {
-            None
-        };
         let response = LockupResponse {
             data,
             lockup_script,
@@ -292,7 +276,6 @@ impl BoltzSession {
             polling: self.polling,
             timeout_advance: self.timeout_advance,
             store,
-            cipher,
         };
 
         // If the swap was already in a terminal state, move it to completed

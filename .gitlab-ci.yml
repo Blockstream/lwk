@@ -320,9 +320,13 @@ wasm:
     - cd tests/node
     - npm install
     - npm run test
+    - cd ../../npm
+    - npm ci
+    - npm run check
   artifacts:
     paths:
       - lwk_wasm/pkg
+      - lwk_wasm/npm/packages/node/dist
 
 nix:
   stage: test_long

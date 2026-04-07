@@ -21,9 +21,11 @@ fn test_txs_store() {
     let s = generate_signer();
     let view_key = generate_view_key();
     let d = format!("ct({view_key},elwpkh({}/*))", s.xpub());
-    let wd = d.parse().unwrap();
-    let mut wollet = WolletBuilder::new(network, wd)
-        .with_txs_store(store.clone())
+    let wd: WolletDescriptor = d.parse().unwrap();
+    // We use an unencrypted file store, let's follow the the doc suggestion and make the wollet encrypting it
+    let encrypt_txs_store = true;
+    let mut wollet = WolletBuilder::new(network, wd.clone())
+        .with_txs_store(store.clone(), encrypt_txs_store)
         .build()
         .unwrap();
     let mut client = test_client_electrum(&env.electrum_url());
@@ -46,9 +48,12 @@ fn test_txs_store() {
     let txid2 = client.broadcast(&tx).unwrap();
     wait_for_tx(&mut wollet, &mut client, &txid2);
 
-    let all_txids: HashSet<Txid> = lwk_common::Store::get(&*store, "wollet-txids")
-        .ok()
-        .flatten()
+    // they are reachable with the encrypted wrapper
+    let key_bytes = wd.encryption_key_bytes();
+    let enc_store =
+        EncryptedStore::new_with_key_encryption(store.clone() as Arc<dyn DynStore>, key_bytes);
+    let all_txids: HashSet<Txid> = lwk_common::Store::get(&enc_store, "wollet:txids")
+        .unwrap()
         .and_then(|b| serde_json::from_slice::<Vec<String>>(&b).ok())
         .unwrap_or_default()
         .into_iter()

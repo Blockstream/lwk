@@ -16,6 +16,7 @@ use std::sync::Mutex;
 
 use tempfile::NamedTempFile;
 
+use aes_gcm_siv::Aes256GcmSiv;
 use elements::hashes::hex::DisplayHex;
 
 use crate::encrypt::{
@@ -378,6 +379,11 @@ impl<S> EncryptedStore<S> {
     /// Consume this wrapper and return the inner store.
     pub fn into_inner(self) -> S {
         self.inner
+    }
+
+    /// Return a cipher initialised from the store's key bytes.
+    pub fn cipher(&self) -> Aes256GcmSiv {
+        cipher_from_key_bytes(self.key_bytes)
     }
 }
 

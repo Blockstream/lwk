@@ -243,6 +243,8 @@ mod test {
         let amp2 = Amp2::new_testnet();
         let desc = amp2.descriptor(keysource, xpub);
         let desc1 = amp2.descriptor_from_str(keyorigin_xpub).unwrap();
+        assert!(desc.descriptor().is_elip151());
+        assert!(desc1.descriptor().is_elip151());
         assert_eq!(desc.descriptor().to_string(), expected);
         assert_eq!(desc1.descriptor().to_string(), expected);
     }

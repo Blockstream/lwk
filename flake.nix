@@ -44,14 +44,19 @@
         flake-utils.follows = "flake-utils";
       };
     };
+    # TODO: Remove nixpkgs-mdbook once MSRV reach 1.88+ and we can upgrade mdbook dependency in docs/snippets/processor
+    nixpkgs-mdbook.url = "github:NixOS/nixpkgs/566e53c2ad750c84f6d31f9ccb9d00f823165550";
   };
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, crane, electrs-flake, waterfalls-flake, registry-flake, nexus_relay }:
+  outputs = { self, nixpkgs, flake-utils, rust-overlay, crane, electrs-flake, waterfalls-flake, registry-flake, nexus_relay, nixpkgs-mdbook }:
     flake-utils.lib.eachDefaultSystem
       (system:
         let
           overlays = [ (import rust-overlay) ];
           pkgs = import nixpkgs {
             inherit system overlays;
+          };
+          pkgs-mdbook = import nixpkgs-mdbook {
+            inherit system;
           };
           inherit (pkgs) lib;
 
@@ -129,7 +134,7 @@
           devShells.default = pkgs.mkShell {
             inputsFrom = [ bin ];
 
-            buildInputs = [ registry.bin rustToolchain pkgs.websocat pkgs.heaptrack pkgs.mdbook pkgs.mdbook-mermaid mdbook-snippets pkgs.cargo-depgraph pkgs.cargo-bloat ];
+            buildInputs = [ registry.bin rustToolchain pkgs.websocat pkgs.heaptrack pkgs-mdbook.mdbook pkgs-mdbook.mdbook-mermaid mdbook-snippets pkgs.cargo-depgraph pkgs.cargo-bloat ];
 
             ELEMENTSD_EXEC = "${pkgs.elementsd}/bin/elementsd";
             BITCOIND_EXEC = "${pkgs.bitcoind}/bin/bitcoind";

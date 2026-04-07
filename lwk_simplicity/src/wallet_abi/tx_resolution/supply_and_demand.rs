@@ -361,6 +361,92 @@ impl SupplyAndDemand {
 
         Ok(balances)
     }
+
+    pub(crate) fn aggregate_input_supply(
+        pst: &PartiallySignedTransaction,
+        params: &RuntimeParams,
+    ) -> Result<AssetBalances, WalletAbiError> {
+        let mut balances = AssetBalances::new();
+
+        for (input_index, input) in pst.inputs().iter().enumerate() {
+            let asset = input.asset.ok_or_else(|| {
+                WalletAbiError::InvalidRequest(format!(
+                    "input index {input_index} missing explicit asset while aggregating supply"
+                ))
+            })?;
+            let amount_sat = input.amount.ok_or_else(|| {
+                WalletAbiError::InvalidRequest(format!(
+                    "input index {input_index} missing explicit amount while aggregating supply"
+                ))
+            })?;
+            add_balance(&mut balances, asset, amount_sat)?;
+        }
+
+        let issuance_supply = Self::aggregate_issuance_supply(pst, params)?;
+        for (asset_id, amount_sat) in issuance_supply {
+            add_balance(&mut balances, asset_id, amount_sat)?;
+        }
+
+        Ok(balances)
+    }
+
+    pub(crate) fn aggregate_output_demand(
+        pst: &PartiallySignedTransaction,
+    ) -> Result<AssetBalances, WalletAbiError> {
+        let mut balances = AssetBalances::new();
+
+        for (output_index, output) in pst.outputs().iter().enumerate() {
+            let asset = output.asset.ok_or_else(|| {
+                WalletAbiError::InvalidRequest(format!(
+                    "output index {output_index} missing explicit asset while aggregating demand"
+                ))
+            })?;
+            let amount_sat = output.amount.ok_or_else(|| {
+                WalletAbiError::InvalidRequest(format!(
+                    "output index {output_index} missing explicit amount while aggregating demand"
+                ))
+            })?;
+            add_balance(&mut balances, asset, amount_sat)?;
+        }
+
+        Ok(balances)
+    }
+
+    pub(crate) fn assert_exact_asset_conservation(
+        pst: &PartiallySignedTransaction,
+        params: &RuntimeParams,
+    ) -> Result<(), WalletAbiError> {
+        let supply_by_asset = Self::aggregate_input_supply(pst, params)?;
+        let demand_by_asset = Self::aggregate_output_demand(pst)?;
+        let mut all_assets = BTreeSet::new();
+        let mut mismatches = Vec::new();
+
+        all_assets.extend(supply_by_asset.keys().copied());
+        all_assets.extend(demand_by_asset.keys().copied());
+
+        for asset_id in all_assets {
+            let supply_sat = supply_by_asset.get(&asset_id).copied().unwrap_or(0);
+            let demand_sat = demand_by_asset.get(&asset_id).copied().unwrap_or(0);
+            if supply_sat != demand_sat {
+                mismatches.push(format!(
+                    "{asset_id}:supply={supply_sat},demand={demand_sat}"
+                ));
+            }
+        }
+
+        if mismatches.is_empty() {
+            return Ok(());
+        }
+
+        error!(
+            "Asset conservation violated after balancing: {:#?}",
+            mismatches
+        );
+
+        Err(WalletAbiError::InvalidRequest(
+            "asset conservation violated after balancing".to_string(),
+        ))
+    }
 }
 
 #[cfg(test)]
@@ -376,8 +462,8 @@ mod tests {
     };
 
     use lwk_wollet::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
-    use lwk_wollet::elements::pset::{Input, PartiallySignedTransaction};
-    use lwk_wollet::elements::{AssetId, OutPoint, Transaction, TxOut, TxOutSecrets, Txid};
+    use lwk_wollet::elements::pset::{Input, Output, PartiallySignedTransaction};
+    use lwk_wollet::elements::{AssetId, OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
     use lwk_wollet::ExternalUtxo;
 
     #[test]
@@ -1044,5 +1130,93 @@ mod tests {
             issuance_supply.get(&issuance_token_from_entropy_for_unblinded_issuance(entropy)),
             Some(&2)
         );
+    }
+
+    #[test]
+    fn aggregate_input_supply_combines_prevouts_and_issuance() {
+        let base_asset = "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+            .parse::<AssetId>()
+            .unwrap();
+        let params = RuntimeParams {
+            inputs: vec![InputSchema::new("issuer").with_issuance(InputIssuance {
+                kind: InputIssuanceKind::New,
+                asset_amount_sat: 3,
+                token_amount_sat: 0,
+                entropy: [7; 32],
+            })],
+            outputs: vec![],
+            fee_rate_sat_kvb: None,
+            lock_time: None,
+        };
+        let input_outpoint = OutPoint::new(
+            "0000660186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+                .parse::<Txid>()
+                .unwrap(),
+            0,
+        );
+        let mut pst = PartiallySignedTransaction::new_v2();
+        let mut input = Input::from_prevout(input_outpoint);
+        input.asset = Some(base_asset);
+        input.amount = Some(7);
+        pst.add_input(input);
+
+        let supply = SupplyAndDemand::aggregate_input_supply(&pst, &params).unwrap();
+
+        assert_eq!(supply.get(&base_asset), Some(&7));
+        assert_eq!(supply.values().copied().sum::<u64>(), 10);
+    }
+
+    #[test]
+    fn aggregate_output_demand_sums_outputs_by_asset() {
+        let asset_a = "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+            .parse::<AssetId>()
+            .unwrap();
+        let asset_b = "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a471"
+            .parse::<AssetId>()
+            .unwrap();
+        let mut pst = PartiallySignedTransaction::new_v2();
+        pst.add_output(Output::new_explicit(Script::new(), 2, asset_a, None));
+        pst.add_output(Output::new_explicit(Script::new(), 3, asset_a, None));
+        pst.add_output(Output::new_explicit(Script::new(), 5, asset_b, None));
+
+        let demand = SupplyAndDemand::aggregate_output_demand(&pst).unwrap();
+
+        assert_eq!(demand.get(&asset_a), Some(&5));
+        assert_eq!(demand.get(&asset_b), Some(&5));
+    }
+
+    #[test]
+    fn exact_asset_conservation_detects_match_and_mismatch() {
+        let asset_id = "0000560186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+            .parse::<AssetId>()
+            .unwrap();
+        let input_outpoint = OutPoint::new(
+            "0000660186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+                .parse::<Txid>()
+                .unwrap(),
+            0,
+        );
+        let params = RuntimeParams {
+            inputs: vec![InputSchema::new("declared")],
+            outputs: vec![],
+            fee_rate_sat_kvb: None,
+            lock_time: None,
+        };
+
+        let mut balanced = PartiallySignedTransaction::new_v2();
+        let mut balanced_input = Input::from_prevout(input_outpoint);
+        balanced_input.asset = Some(asset_id);
+        balanced_input.amount = Some(12);
+        balanced.add_input(balanced_input);
+        balanced.add_output(Output::new_explicit(Script::new(), 12, asset_id, None));
+        assert!(SupplyAndDemand::assert_exact_asset_conservation(&balanced, &params).is_ok());
+
+        let mut imbalanced = PartiallySignedTransaction::new_v2();
+        let mut imbalanced_input = Input::from_prevout(input_outpoint);
+        imbalanced_input.asset = Some(asset_id);
+        imbalanced_input.amount = Some(12);
+        imbalanced.add_input(imbalanced_input);
+        imbalanced.add_output(Output::new_explicit(Script::new(), 11, asset_id, None));
+        assert!(SupplyAndDemand::assert_exact_asset_conservation(&imbalanced, &params).is_err());
     }
 }

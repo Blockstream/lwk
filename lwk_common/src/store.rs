@@ -12,7 +12,7 @@ use std::fmt::Debug;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use tempfile::NamedTempFile;
 
@@ -71,6 +71,49 @@ pub trait DynStore: Send + Sync + Debug {
     fn put(&self, key: &str, value: &[u8]) -> Result<(), BoxError>;
     /// Remove a value by key.
     fn remove(&self, key: &str) -> Result<(), BoxError>;
+}
+
+/// Error type for the [`Store`] impl on `Arc<dyn DynStore>`.
+// We can't use BoxError directly
+#[derive(Debug)]
+pub struct ArcDynStoreError(BoxError);
+
+impl std::fmt::Display for ArcDynStoreError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl std::error::Error for ArcDynStoreError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.0.source()
+    }
+}
+
+/// [`Store`] implementation for `Arc<dyn DynStore>`.
+///
+/// Allows wrapping an `Arc<dyn DynStore>` inside [`EncryptedStore`].
+impl Store for Arc<dyn DynStore> {
+    type Error = ArcDynStoreError;
+
+    fn get<K: AsRef<[u8]>>(&self, key: K) -> Result<Option<Vec<u8>>, ArcDynStoreError> {
+        let key = std::str::from_utf8(key.as_ref()).map_err(|e| ArcDynStoreError(Box::new(e)))?;
+        DynStore::get(self.as_ref(), key).map_err(ArcDynStoreError)
+    }
+
+    fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(
+        &self,
+        key: K,
+        value: V,
+    ) -> Result<(), ArcDynStoreError> {
+        let key = std::str::from_utf8(key.as_ref()).map_err(|e| ArcDynStoreError(Box::new(e)))?;
+        DynStore::put(self.as_ref(), key, value.as_ref()).map_err(ArcDynStoreError)
+    }
+
+    fn remove<K: AsRef<[u8]>>(&self, key: K) -> Result<(), ArcDynStoreError> {
+        let key = std::str::from_utf8(key.as_ref()).map_err(|e| ArcDynStoreError(Box::new(e)))?;
+        DynStore::remove(self.as_ref(), key).map_err(ArcDynStoreError)
+    }
 }
 
 /// Blanket implementation of [`DynStore`] for any type implementing [`Store`].

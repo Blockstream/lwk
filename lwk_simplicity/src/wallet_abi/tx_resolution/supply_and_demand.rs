@@ -192,6 +192,16 @@ impl SupplyAndDemand {
         )?;
 
         if let Some(issuance) = input.issuance.as_ref() {
+            if matches!(
+                issuance.kind,
+                crate::wallet_abi::schema::InputIssuanceKind::Reissue
+            ) && issuance.token_amount_sat > 0
+            {
+                return Err(WalletAbiError::InvalidRequest(
+                    "reissuance cannot create new reissuance tokens".to_owned(),
+                ));
+            }
+
             let issuance_entropy = calculate_issuance_entropy(material.outpoint, issuance);
             add_balance(
                 &mut self.supply_by_asset,

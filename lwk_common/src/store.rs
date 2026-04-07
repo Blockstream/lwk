@@ -16,8 +16,11 @@ use std::sync::Mutex;
 
 use tempfile::NamedTempFile;
 
+use elements::hashes::hex::DisplayHex;
+
 use crate::encrypt::{
-    cipher_from_key_bytes, decrypt_with_nonce_prefix, encrypt_with_random_nonce, EncryptError,
+    cipher_from_key_bytes, decrypt_with_nonce_prefix, encrypt_with_deterministic_nonce,
+    encrypt_with_random_nonce, EncryptError,
 };
 
 /// A boxed error type for use with [`DynStore`].
@@ -332,10 +335,9 @@ impl<E: std::error::Error + Send + Sync + 'static> std::error::Error for Encrypt
     }
 }
 
-/// A [`Store`] wrapper that encrypts values using AES-256-GCM-SIV.
+/// A [`Store`] wrapper that encrypts values and (optionally) keys using AES-256-GCM-SIV.
 ///
 /// All values are encrypted before being stored and decrypted when retrieved.
-/// Keys are not encrypted and are passed through to the inner store unchanged.
 ///
 /// This wrapper can be used with any [`Store`] implementation, for example wrapping
 /// a [`FileStore`] to create encrypted persistent storage.
@@ -343,15 +345,29 @@ impl<E: std::error::Error + Send + Sync + 'static> std::error::Error for Encrypt
 pub struct EncryptedStore<S> {
     inner: S,
     key_bytes: [u8; 32],
+    encrypt_keys: bool,
 }
 
 impl<S> EncryptedStore<S> {
-    /// Create a new `EncryptedStore` wrapping the given store with the provided key.
+    /// Create a new `EncryptedStore` that encrypts values only.
     ///
     /// The `key_bytes` should be a 32-byte encryption key. It is typically derived
     /// from a wallet descriptor or other secret material.
     pub fn new(inner: S, key_bytes: [u8; 32]) -> Self {
-        Self { inner, key_bytes }
+        Self {
+            inner,
+            key_bytes,
+            encrypt_keys: false,
+        }
+    }
+
+    /// Create a new `EncryptedStore` that encrypts both keys and values.
+    pub fn new_with_key_encryption(inner: S, key_bytes: [u8; 32]) -> Self {
+        Self {
+            inner,
+            key_bytes,
+            encrypt_keys: true,
+        }
     }
 
     /// Get a reference to the inner store.
@@ -365,11 +381,28 @@ impl<S> EncryptedStore<S> {
     }
 }
 
+impl<S: Store> EncryptedStore<S> {
+    fn effective_key<K: AsRef<[u8]>>(
+        &self,
+        key: K,
+    ) -> Result<Vec<u8>, EncryptedStoreError<S::Error>> {
+        if self.encrypt_keys {
+            let mut cipher = cipher_from_key_bytes(self.key_bytes);
+            let encrypted = encrypt_with_deterministic_nonce(&mut cipher, key.as_ref())
+                .map_err(EncryptedStoreError::Encrypt)?;
+            Ok(encrypted.to_lower_hex_string().into_bytes())
+        } else {
+            Ok(key.as_ref().to_vec())
+        }
+    }
+}
+
 impl<S: Store> Store for EncryptedStore<S> {
     type Error = EncryptedStoreError<S::Error>;
 
     fn get<K: AsRef<[u8]>>(&self, key: K) -> Result<Option<Vec<u8>>, Self::Error> {
-        match self.inner.get(key).map_err(EncryptedStoreError::Store)? {
+        let key = self.effective_key(key)?;
+        match self.inner.get(&key).map_err(EncryptedStoreError::Store)? {
             Some(ciphertext) => {
                 let mut cipher = cipher_from_key_bytes(self.key_bytes);
                 let plaintext = decrypt_with_nonce_prefix(&mut cipher, &ciphertext)
@@ -381,17 +414,21 @@ impl<S: Store> Store for EncryptedStore<S> {
     }
 
     fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V) -> Result<(), Self::Error> {
+        let key = self.effective_key(key)?;
         let mut cipher = cipher_from_key_bytes(self.key_bytes);
         let ciphertext = encrypt_with_random_nonce(&mut cipher, value.as_ref())
             .map_err(EncryptedStoreError::Encrypt)?;
         self.inner
-            .put(key, ciphertext)
+            .put(&key, ciphertext)
             .map_err(EncryptedStoreError::Store)?;
         Ok(())
     }
 
     fn remove<K: AsRef<[u8]>>(&self, key: K) -> Result<(), Self::Error> {
-        self.inner.remove(key).map_err(EncryptedStoreError::Store)?;
+        let key = self.effective_key(key)?;
+        self.inner
+            .remove(&key)
+            .map_err(EncryptedStoreError::Store)?;
         Ok(())
     }
 }

@@ -681,8 +681,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             let signer = s.get_available_signer(&r.name)?;
 
-            let mut pset =
-                PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
+            let mut pset = PartiallySignedTransaction::from_str(&r.pset)?;
 
             signer.sign(&mut pset)?;
 
@@ -727,8 +726,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
 
             let wollet = s.wollets.get_mut(&r.name)?;
-            let mut pset =
-                PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
+            let mut pset = PartiallySignedTransaction::from_str(&r.pset)?;
             let tx = wollet.finalize(&mut pset)?;
             let blockchain_client = s.config.blockchain_client()?;
 
@@ -805,7 +803,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             let mut psets = vec![];
             for pset in r.pset {
-                psets.push(PartiallySignedTransaction::from_str(&pset).map_err(|e| e.to_string())?);
+                psets.push(PartiallySignedTransaction::from_str(&pset)?);
             }
             let pset = wollet.combine(&psets)?;
             Response::result(
@@ -820,7 +818,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             let wollet = s.wollets.get_mut(&r.name)?;
 
-            let pset = PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
+            let pset = PartiallySignedTransaction::from_str(&r.pset)?;
             let details = wollet.get_details(&pset)?;
             let mut warnings = vec![];
             let has_signatures_from = details
@@ -1019,7 +1017,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         }
         Method::LiquidexToProposal => {
             let r: request::LiquidexToProposal = serde_json::from_value(params)?;
-            let pset = PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
+            let pset = PartiallySignedTransaction::from_str(&r.pset)?;
             let proposal = LiquidexProposal::from_pset(&pset)?;
 
             let proposal = serde_json::to_value(&proposal)?;
@@ -1277,7 +1275,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let s = state.lock()?;
 
             let amp2 = s.config.amp2_client()?;
-            let pset = PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
+            let pset = PartiallySignedTransaction::from_str(&r.pset)?;
             let pset = amp2.blocking_cosign(&pset)?.pset.to_string();
             Response::result(
                 request.id,

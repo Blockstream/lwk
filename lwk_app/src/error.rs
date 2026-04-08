@@ -29,6 +29,9 @@ pub enum Error {
     #[error("HexArray Error: {0}")]
     HexArray(#[from] lwk_wollet::hashes::hex::HexToArrayError),
 
+    #[error("PSET Parse Error: {0}")]
+    ParseError(#[from] lwk_wollet::elements::pset::ParseError),
+
     #[error("Reqwest Error: {0}")]
     Reqwest(#[from] reqwest::Error),
 

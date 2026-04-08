@@ -10,6 +10,8 @@ documentation = "https://docs.rs/lwk_payment_instructions"
 # rand std/std_rng features needed by lnurl-rs for bitcoin::secp256k1::rand::random
 rand = { version = "0.8", features = ["std", "std_rng"] }
 
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1.0", features = ["derive"] }
 bitcoin-payment-instructions = { version = "0.7.0", default-features = false, features = ["std"] }
 elements.workspace = true
 lightning = { version = "0.1.7", default-features = false }
@@ -20,3 +22,4 @@ url = { version = "2.5.2", default-features = false }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }
+mockito = "1"

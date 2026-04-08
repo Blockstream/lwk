@@ -143,7 +143,7 @@ impl App {
                 log::info!("There is no previous state at {path:?}");
             }
         }
-        state.lock().map_err(|e| e.to_string())?.do_persist = true;
+        state.lock()?.do_persist = true;
 
         self.rpc = Some(rpc);
 
@@ -379,7 +379,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::SignerLoadJade => {
             let r: request::SignerLoadJade = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let id = XKeyIdentifier::from_str(&r.id).map_err(|e| e.to_string())?; // TODO remove map_err
+            let id = XKeyIdentifier::from_str(&r.id)?;
             let signer = AppSigner::new_jade(id, r.emulator, s.config.jade_network())?;
             let resp: response::Signer = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
@@ -389,8 +389,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::SignerLoadExternal => {
             let r: request::SignerLoadExternal = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let fingerprint =
-                Fingerprint::from_str(&r.fingerprint).map_err(|e| Error::Generic(e.to_string()))?;
+            let fingerprint = Fingerprint::from_str(&r.fingerprint)?;
             let signer = AppSigner::new_external(fingerprint);
             let resp: response::Signer = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
@@ -946,7 +945,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             // Make sure the wallet exists
             let _wollet = s.wollets.get(&r.name)?;
-            let txid = Txid::from_str(&r.txid).map_err(|e| Error::Generic(e.to_string()))?;
+            let txid = Txid::from_str(&r.txid)?;
             s.tx_memos.set(&r.name, &txid, &r.memo)?;
             s.persist(&request)?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
@@ -956,8 +955,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             // Make sure the wallet exists
             let _wollet = s.wollets.get(&r.name)?;
-            let address =
-                Address::from_str(&r.address).map_err(|e| Error::Generic(e.to_string()))?;
+            let address = Address::from_str(&r.address)?;
             // TODO: check address belongs to the wallet
             s.addr_memos.set(&r.name, &address, &r.memo)?;
             s.persist(&request)?;
@@ -1117,8 +1115,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::AssetDetails => {
             let r: request::AssetDetails = serde_json::from_value(params)?;
             let s = state.lock()?;
-            let asset_id = lwk_wollet::elements::AssetId::from_str(&r.asset_id)
-                .map_err(|e| Error::Generic(e.to_string()))?;
+            let asset_id = lwk_wollet::elements::AssetId::from_str(&r.asset_id)?;
             let asset = s.get_asset(&asset_id)?;
             Response::result(
                 request.id,
@@ -1145,12 +1142,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::AssetInsert => {
             let r: request::AssetInsert = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let asset_id = lwk_wollet::elements::AssetId::from_str(&r.asset_id)
-                .map_err(|e| Error::Generic(e.to_string()))?;
-            let issuance_tx =
-                Vec::<u8>::from_hex(&r.issuance_tx).map_err(|e| Error::Generic(e.to_string()))?;
-            let issuance_tx = lwk_wollet::elements::encode::deserialize(&issuance_tx)
-                .map_err(|e| Error::Generic(e.to_string()))?;
+            let asset_id = lwk_wollet::elements::AssetId::from_str(&r.asset_id)?;
+            let issuance_tx = Vec::<u8>::from_hex(&r.issuance_tx)?;
+            let issuance_tx = lwk_wollet::elements::encode::deserialize(&issuance_tx)?;
             let contract = serde_json::Value::from_str(&r.contract)?;
             let contract = lwk_wollet::Contract::from_value(&contract)?;
             s.insert_asset(asset_id, issuance_tx, contract)?;
@@ -1160,8 +1154,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::AssetRemove => {
             let r: request::AssetRemove = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let asset_id = lwk_wollet::elements::AssetId::from_str(&r.asset_id)
-                .map_err(|e| Error::Generic(e.to_string()))?;
+            let asset_id = lwk_wollet::elements::AssetId::from_str(&r.asset_id)?;
             s.remove_asset(&asset_id)?;
             s.persist_all()?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
@@ -1225,8 +1218,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         }
         Method::AssetPublish => {
             let r: request::AssetPublish = serde_json::from_value(params)?;
-            let asset_id =
-                AssetId::from_str(&r.asset_id).map_err(|e| Error::Generic(e.to_string()))?;
+            let asset_id = AssetId::from_str(&r.asset_id)?;
             let s = state.lock()?;
             let asset = s.get_asset(&asset_id)?;
             if let AppAsset::RegistryAsset(asset) = asset {

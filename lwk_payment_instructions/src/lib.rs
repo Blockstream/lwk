@@ -13,12 +13,16 @@ use elements::{
 };
 use lightning::offers::offer::Offer;
 use lightning_invoice::Bolt11Invoice;
-use lnurl::lnurl::LnUrl;
 
 mod bip21;
 mod bip321;
+mod lnurl;
+use ::lnurl::lnurl::LnUrl;
 pub use bip21::Bip21;
 pub use bip321::Bip321;
+pub use lnurl::{LnUrlIdentifier, LnUrlPayResponse};
+
+use crate::lnurl::LnUrlInvoiceResponse;
 
 #[allow(dead_code)]
 #[non_exhaustive]
@@ -55,11 +59,11 @@ pub enum Payment {
     LiquidAddress(elements::Address), // just the address, or liquidnetwork:<address> or liquidtestnet:<address>
     LightningInvoice(Bolt11Invoice),  // just the invoice or lightning:<invoice>
     LightningOffer(Box<Offer>),       // just the bolt12 or lightning:<bolt12>
-    LnUrlCat(LnUrl),                  // just lnurl or lightning:<lnurl> or lnurlp://<url>
-    Bip353(String),                   // ₿matt@mattcorallo.com
-    Bip21(Bip21),                     // bitcoin:
-    Bip321(Bip321),                   // bitcoin: uri without an address but with a payment method
-    LiquidBip21(LiquidBip21),         // liquidnetwork: liquidtestnet:
+    LnUrlCat(LnUrlIdentifier), // just lnurl or lightning:<lnurl> or lightning:<lud16> or lnurlp://<url>
+    Bip353(String),            // ₿matt@mattcorallo.com
+    Bip21(Bip21),              // bitcoin:
+    Bip321(Bip321),            // bitcoin: uri without an address but with a payment method
+    LiquidBip21(LiquidBip21),  // liquidnetwork: liquidtestnet:
 }
 
 impl Payment {
@@ -105,7 +109,7 @@ impl Payment {
         }
     }
 
-    pub fn lnurl(&self) -> Option<&LnUrl> {
+    pub fn lnurl(&self) -> Option<&LnUrlIdentifier> {
         match self {
             Payment::LnUrlCat(lnurl) => Some(lnurl),
             _ => None,
@@ -273,8 +277,7 @@ fn parse_with_schema(
             // lightning:<email> can be an lnurl
             let rest = &s[10..];
             if is_email(rest) {
-                let lnurl = LnUrl::from_url(rest.to_string());
-                Ok(LnUrlCat(lnurl))
+                Ok(LnUrlCat(LnUrlIdentifier::Lud16(rest.to_string())))
             } else {
                 Err(format!("Invalid lightning schema: {s}"))
             }
@@ -283,7 +286,7 @@ fn parse_with_schema(
             // lnurlp://<url> can be an lnurl
             url::Url::from_str(s).map_err(|e| e.to_string())?;
             let lnurl = LnUrl::from_url(s.to_string());
-            Ok(LnUrlCat(lnurl))
+            Ok(LnUrlCat(LnUrlIdentifier::LnUrl(lnurl)))
         }
         _ => Err(format!("Invalid schema: {s}")),
     }
@@ -345,13 +348,16 @@ fn parse_no_schema(s: &str) -> Result<Payment, String> {
         return Ok(Payment::LightningOffer(Box::new(lightning_offer)));
     }
     if let Ok(lnurl) = LnUrl::from_str(s) {
-        return Ok(Payment::LnUrlCat(lnurl));
+        return Ok(Payment::LnUrlCat(LnUrlIdentifier::LnUrl(lnurl)));
     }
     if s.starts_with("₿") {
         let rest = s.chars().skip(1).collect::<String>();
         if is_email(&rest) {
             return Ok(Payment::Bip353(rest));
         }
+    }
+    if is_email(s) {
+        return Ok(Payment::LnUrlCat(LnUrlIdentifier::Lud16(s.to_string())));
     }
     Err(format!("Invalid payment category: {s}"))
 }
@@ -536,32 +542,34 @@ mod tests {
         let payment_category = Payment::from_str(&format!("lightning:{lnurl}")).unwrap();
         let expected = LnUrl::from_str(lnurl).unwrap();
         assert_eq!(payment_category.kind(), PaymentKind::LnUrl);
-        assert_eq!(payment_category.lnurl(), Some(&expected));
+        assert_eq!(payment_category.lnurl().unwrap().lnurl(), Some(&expected));
+        assert!(payment_category.lnurl().unwrap().lud16().is_none());
         assert!(payment_category.lightning_invoice().is_none());
         assert!(matches!(
             payment_category,
-            Payment::LnUrlCat(lnurl) if lnurl == expected
+            Payment::LnUrlCat(LnUrlIdentifier::LnUrl(lnurl)) if lnurl == expected
         ));
 
         let lnurlp = "lnurlp://geyser.fund/.well-known/lnurlp/citadel";
         let payment_category = Payment::from_str(lnurlp).unwrap();
         let expected = LnUrl::from_url(lnurlp.to_string());
         assert_eq!(payment_category.kind(), PaymentKind::LnUrl);
-        assert_eq!(payment_category.lnurl(), Some(&expected));
+        assert_eq!(payment_category.lnurl().unwrap().lnurl(), Some(&expected));
+        assert!(payment_category.lnurl().unwrap().lud16().is_none());
         assert!(matches!(
             payment_category,
-            Payment::LnUrlCat(lnurl) if lnurl == expected
+            Payment::LnUrlCat(LnUrlIdentifier::LnUrl(lnurl)) if lnurl == expected
         ));
 
         let lnurl_email = "citadel@geyser.fund";
         let payment_category =
             Payment::from_str(format!("lightning:{lnurl_email}").as_str()).unwrap();
-        let expected = LnUrl::from_url(lnurl_email.to_string());
         assert_eq!(payment_category.kind(), PaymentKind::LnUrl);
-        assert_eq!(payment_category.lnurl(), Some(&expected));
+        assert!(payment_category.lnurl().unwrap().lnurl().is_none());
+        assert_eq!(payment_category.lnurl().unwrap().lud16(), Some(lnurl_email));
         assert!(matches!(
             payment_category,
-            Payment::LnUrlCat(lnurl) if lnurl == expected
+            Payment::LnUrlCat(LnUrlIdentifier::Lud16(lud16)) if lud16 == lnurl_email
         ));
 
         let address =
@@ -728,21 +736,33 @@ mod tests {
         let result = parse_no_schema(lnurl).unwrap();
         let expected = LnUrl::from_str(lnurl).unwrap();
         assert_eq!(result.kind(), PaymentKind::LnUrl);
-        assert_eq!(result.lnurl(), Some(&expected));
+        assert_eq!(result.lnurl().unwrap().lnurl(), Some(&expected));
+        assert!(result.lnurl().unwrap().lud16().is_none());
         assert!(result.lightning_invoice().is_none());
         assert!(matches!(
             result,
-            Payment::LnUrlCat(lnurl) if lnurl == expected
+            Payment::LnUrlCat(LnUrlIdentifier::LnUrl(lnurl)) if lnurl == expected
         ));
 
         let lnurl_upper = lnurl.to_uppercase();
         let result = parse_no_schema(&lnurl_upper).unwrap();
         let expected = LnUrl::from_str(&lnurl_upper).unwrap();
         assert_eq!(result.kind(), PaymentKind::LnUrl);
-        assert_eq!(result.lnurl(), Some(&expected));
+        assert_eq!(result.lnurl().unwrap().lnurl(), Some(&expected));
+        assert!(result.lnurl().unwrap().lud16().is_none());
         assert!(matches!(
             result,
-            Payment::LnUrlCat(lnurl) if lnurl == expected
+            Payment::LnUrlCat(LnUrlIdentifier::LnUrl(lnurl)) if lnurl == expected
+        ));
+
+        let lud16 = "citadel@geyser.fund";
+        let result = parse_no_schema(lud16).unwrap();
+        assert_eq!(result.kind(), PaymentKind::LnUrl);
+        assert!(result.lnurl().unwrap().lnurl().is_none());
+        assert_eq!(result.lnurl().unwrap().lud16(), Some(lud16));
+        assert!(matches!(
+            result,
+            Payment::LnUrlCat(LnUrlIdentifier::Lud16(identifier)) if identifier == lud16
         ));
 
         let bip353 = "₿matt@mattcorallo.com";

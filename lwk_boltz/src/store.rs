@@ -395,4 +395,51 @@ mod tests {
         let exp = "107900f3750784c733ae53cd00433ec0c10c36517a2a68a904b749d7f98d06e0";
         assert_eq!(got, exp);
     }
+
+    #[test]
+    #[ignore = "requires internet connection"]
+    fn test_boltz_store_fs() {
+        use crate::{clients::EsploraClient, AnyClient, BoltzSessionBuilder};
+        use lwk_common::FileStore;
+        use lwk_signer::SwSigner;
+        use lwk_wollet::clients::asyncr::EsploraClientBuilder;
+        use lwk_wollet::ElementsNetwork;
+        use std::path::PathBuf;
+
+        let network = ElementsNetwork::Liquid;
+
+        let url = "https://waterfalls.liquidwebwallet.org/liquid/api";
+        let client = EsploraClientBuilder::new(url, network)
+            .waterfalls(true)
+            .build()
+            .unwrap();
+        let client = EsploraClient::from_client(Arc::new(client), network);
+        let client = AnyClient::Esplora(Arc::new(client));
+
+        let mnemonic =
+            "craft travel attitude order useful orient venue true double motor enable already";
+        let is_mainnet = true;
+        let signer = SwSigner::new(mnemonic, is_mainnet).unwrap();
+        let index = 26589;
+        let word_count = 12;
+        let mnemonic_ln = signer.derive_bip85_mnemonic(index, word_count).unwrap();
+
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("tests")
+            .join("data")
+            .join("store-swaps");
+        let store = FileStore::new(path).unwrap();
+        let store = Arc::new(store);
+
+        let session = BoltzSessionBuilder::new(network, client)
+            .mnemonic(mnemonic_ln)
+            .store(store)
+            .build_blocking()
+            .unwrap();
+        let pending_swaps = session.pending_swap_ids().unwrap();
+        assert_eq!(pending_swaps.len(), 1);
+        assert_eq!(pending_swaps[0], "xVqfzgPQ7NWt");
+        let completed_swaps = session.completed_swap_ids().unwrap();
+        assert_eq!(completed_swaps.len(), 0);
+    }
 }

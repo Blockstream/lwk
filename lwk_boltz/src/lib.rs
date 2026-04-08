@@ -20,13 +20,9 @@ use bech32::FromBase32;
 use lightning::offers::invoice::Bolt12Invoice;
 use lightning::offers::offer::Offer;
 // Re-export store module contents for public API
-pub use store::cipher_from_xpub;
-pub use store::encrypt_key;
 pub use store::store_keys;
 pub use store::DynStore;
 pub use store::SwapPersistence;
-
-use aes_gcm_siv::Aes256GcmSiv;
 
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
@@ -226,6 +222,9 @@ impl BoltzSession {
             None => 0,
         };
 
+        // Wrap the user provided store in EncryptedStore to encrypt values and keys
+        let store = store.map(|s| store::encrypted_store_from_xpub(s, &xpub));
+
         Ok(Self {
             next_index_to_use: AtomicU32::new(next_index_to_use),
             mnemonic,
@@ -284,21 +283,9 @@ impl BoltzSession {
         self.store.as_ref()
     }
 
-    /// Get a cipher for encrypting/decrypting store data
-    ///
-    /// The cipher is derived from the xpub using a tagged hash.
-    pub fn cipher(&self) -> Aes256GcmSiv {
-        cipher_from_xpub(&self.xpub)
-    }
-
     /// Clone the store Arc for use in swap responses
     pub(crate) fn clone_store(&self) -> Option<Arc<dyn DynStore>> {
         self.store.clone()
-    }
-
-    /// Clone the cipher for use in swap responses
-    pub(crate) fn clone_cipher(&self) -> Aes256GcmSiv {
-        self.cipher()
     }
 
     /// Generate a rescue file with the lightning session mnemonic.
@@ -373,8 +360,7 @@ impl BoltzSession {
     /// (which may be empty).
     pub fn pending_swap_ids(&self) -> Result<Vec<String>, Error> {
         let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
-        let mut cipher = self.cipher();
-        store_keys::get_pending_swaps(store.as_ref(), &mut cipher)
+        store_keys::get_pending_swaps(store.as_ref())
     }
 
     /// Get the list of completed swap IDs from the store
@@ -383,8 +369,7 @@ impl BoltzSession {
     /// (which may be empty).
     pub fn completed_swap_ids(&self) -> Result<Vec<String>, Error> {
         let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
-        let mut cipher = self.cipher();
-        store_keys::get_completed_swaps(store.as_ref(), &mut cipher)
+        store_keys::get_completed_swaps(store.as_ref())
     }
 
     /// Get the raw swap data for a specific swap ID from the store
@@ -395,8 +380,7 @@ impl BoltzSession {
         let Some(store) = &self.store else {
             return Ok(None);
         };
-        let mut cipher = self.cipher();
-        let data = store_keys::get_swap_data(store.as_ref(), &mut cipher, swap_id)?
+        let data = store_keys::get_swap_data(store.as_ref(), swap_id)?
             .map(|data| String::from_utf8_lossy(&data).to_string());
         Ok(data)
     }
@@ -407,29 +391,23 @@ impl BoltzSession {
     /// Returns an error if no store is configured.
     pub fn remove_swap(&self, swap_id: &str) -> Result<(), Error> {
         let store = self.store.as_ref().ok_or(Error::StoreNotConfigured)?;
-        let mut cipher = self.cipher();
 
-        let encrypted_key = store::encrypt_key(&mut cipher, &format!("boltz:swap:{swap_id}"))?;
-        store.remove(&encrypted_key).map_err(Error::Store)?;
+        store_keys::remove_swap_data(store.as_ref(), swap_id)?;
 
         // Remove from pending list
-        let mut cipher = self.cipher();
-        let mut pending = store_keys::get_pending_swaps(store.as_ref(), &mut cipher)?;
+        let mut pending = store_keys::get_pending_swaps(store.as_ref())?;
         let was_pending = pending.contains(&swap_id.to_string());
         pending.retain(|id| id != swap_id);
         if was_pending {
-            let mut cipher = self.cipher();
-            store_keys::set_pending_swaps(store.as_ref(), &mut cipher, &pending)?;
+            store_keys::set_pending_swaps(store.as_ref(), &pending)?;
         }
 
         // Remove from completed list
-        let mut cipher = self.cipher();
-        let mut completed = store_keys::get_completed_swaps(store.as_ref(), &mut cipher)?;
+        let mut completed = store_keys::get_completed_swaps(store.as_ref())?;
         let was_completed = completed.contains(&swap_id.to_string());
         completed.retain(|id| id != swap_id);
         if was_completed {
-            let mut cipher = self.cipher();
-            store_keys::set_completed_swaps(store.as_ref(), &mut cipher, &completed)?;
+            store_keys::set_completed_swaps(store.as_ref(), &completed)?;
         }
 
         log::debug!("Removed swap {swap_id} from store");

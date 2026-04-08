@@ -47,8 +47,8 @@ pub use crate::segwit::is_provably_segwit;
 pub use crate::signer::amp0::{Amp0Signer, Amp0SignerData};
 pub use crate::signer::Signer;
 pub use crate::store::{
-    BoxError, DynStore, EncryptedStore, EncryptedStoreError, FakeStore, FileStore, MemoryStore,
-    Store,
+    ArcDynStoreError, BoxError, DynStore, EncryptedStore, EncryptedStoreError, FakeStore,
+    FileStore, MemoryStore, Store,
 };
 pub use fee::*;
 

@@ -3,6 +3,7 @@
  *
  * The npm workspace publishes runtime-specific packages from one Rust crate:
  * - `lwk_node`
+ * - `lwk_web`
  *
  * The build pipeline has two phases:
  * - `generated/`: raw `wasm-pack` output for browser and Node targets
@@ -21,6 +22,7 @@ import {
   nodeDistGeneratedRoot,
   nodeDistRoot,
   nodeGeneratedRoot,
+  webGeneratedRoot,
 } from "./lib/paths.js";
 import {
   getWasmFeatures,
@@ -49,6 +51,7 @@ function generate(): void {
   mkdirSync(generatedRoot, { recursive: true });
 
   runWasmPack("nodejs", nodeGeneratedRoot);
+  runWasmPack("bundler", webGeneratedRoot);
 
   writeFileSync(generatedFeaturesPath, `${getWasmFeatures()}\n`);
 }

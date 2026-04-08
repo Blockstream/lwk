@@ -8,13 +8,14 @@
 
 import { resolve } from "node:path";
 
-export type Mode = "clean" | "generate" |  "stage-node" | "stage";
+export type Mode = "clean" | "generate" | "stage-node" | "stage";
 
 export const packageRoot = resolve(".");
 export const crateRoot = resolve("..");
 export const packagesRoot = resolve("packages");
 export const generatedRoot = resolve("generated");
 export const nodeGeneratedRoot = resolve(generatedRoot, "node");
+export const webGeneratedRoot = resolve(generatedRoot, "web");
 export const nodePackageRoot = resolve(packagesRoot, "node");
 export const nodeDistRoot = resolve(nodePackageRoot, "dist");
 export const nodeDistGeneratedRoot = resolve(nodeDistRoot, "generated");

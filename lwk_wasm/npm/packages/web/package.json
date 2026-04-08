@@ -45,6 +45,9 @@
   },
   "scripts": {
     "build": "npm --prefix ../.. run stage:web",
+    "build:features": "LWK_WASM_FEATURES=\"serial,simplicity\" npm run build",
+    "typecheck": "npm run build:features && tsc -p tsconfig.json --noEmit",
+    "test": "npm run build:features && tsc -p tsconfig.json --noEmit",
     "pack:check": "npm run build && npm pack --dry-run",
     "prepack": "npm run build"
   }

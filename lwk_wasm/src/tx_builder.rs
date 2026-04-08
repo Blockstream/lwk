@@ -115,7 +115,7 @@ impl TxBuilder {
     #[wasm_bindgen(js_name = addExplicitRecipient)]
     pub fn add_explicit_recipient(
         self,
-        address: Address,
+        address: &Address,
         satoshi: u64,
         asset: &AssetId,
     ) -> Result<TxBuilder, Error> {
@@ -172,7 +172,7 @@ impl TxBuilder {
     #[wasm_bindgen(js_name = reissueAsset)]
     pub fn reissue_asset(
         self,
-        asset_to_reissue: AssetId,
+        asset_to_reissue: &AssetId,
         satoshi_to_reissue: u64,
         asset_receiver: Option<Address>,
         issuance_tx: Option<Transaction>,
@@ -216,10 +216,10 @@ impl TxBuilder {
     #[wasm_bindgen(js_name = liquidexMake)]
     pub fn liquidex_make(
         self,
-        utxo: OutPoint,
-        address: Address,
+        utxo: &OutPoint,
+        address: &Address,
         satoshi: u64,
-        asset_id: AssetId,
+        asset_id: &AssetId,
     ) -> Result<TxBuilder, Error> {
         Ok(self
             .inner

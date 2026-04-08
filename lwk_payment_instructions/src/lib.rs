@@ -460,6 +460,7 @@ fn is_email(s: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use ::lnurl::lnurl::LnUrl;
     use bitcoin_payment_instructions::{
         amount::Amount,
         hrn_resolution::{
@@ -883,6 +884,82 @@ mod tests {
         assert_eq!(err, "Payment is not a BIP353 payment instruction");
     }
 
+    #[test]
+    fn test_plain_email_parsed_as_lud16() {
+        let email = "user@example.com";
+        let res = parse_no_schema(email).unwrap();
+        assert_eq!(res.kind(), PaymentKind::LnUrl);
+        assert!(res.lnurl().unwrap().lnurl().is_none());
+        assert_eq!(res.lnurl().unwrap().lud16(), Some(email));
+
+        let res_with_prefix = Payment::from_str(&format!("lightning:{email}")).unwrap();
+        assert_eq!(res_with_prefix.kind(), PaymentKind::LnUrl);
+        assert!(res_with_prefix.lnurl().unwrap().lnurl().is_none());
+        assert_eq!(res_with_prefix.lnurl().unwrap().lud16(), Some(email));
+    }
+
+    #[tokio::test]
+    async fn test_lnurl_resolution_with_mock() {
+        let mut server = mockito::Server::new_async().await;
+
+        let lnurl_path = "/.well-known/lnurlp/user";
+        let callback_path = "/callback";
+        let metadata = "[[\"text/plain\",\"test metadata\"]]";
+
+        let _m1 = server
+            .mock("GET", lnurl_path)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(format!(
+                r#"{{"tag":"payRequest","callback":"{}{}","minSendable":1000,"maxSendable":1000000,"metadata":"{}"}}"#,
+                server.url(),
+                callback_path,
+                metadata.replace("\"", "\\\"")
+            ))
+            .create_async()
+            .await;
+
+        let invoice = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl";
+        let _m2 = server
+            .mock("GET", callback_path)
+            .match_query(mockito::Matcher::UrlEncoded(
+                "amount".into(),
+                "10000".into(),
+            ))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(format!(r#"{{"pr":"{}"}}"#, invoice))
+            .create_async()
+            .await;
+
+        // 1. Test resolve_lnurl_info with a Lightning Address (requires prefix)
+        let addr = format!("lightning:user@{}", server.host_with_port());
+        let payment = Payment::from_str(&addr).unwrap();
+        let info = payment.resolve_lnurl_info().await.unwrap();
+
+        assert_eq!(info.tag, "payRequest");
+        assert_eq!(info.min_sendable, 1000);
+        assert_eq!(info.max_sendable, 1000000);
+        assert_eq!(info.metadata, metadata);
+        assert!(info.callback.contains(callback_path));
+
+        // 2. Test fetch_lnurl_invoice
+        let amount_sats = 10; // 10000 msat
+        let invoice_payment = Payment::fetch_lnurl_invoice(&info, amount_sats)
+            .await
+            .unwrap();
+        assert_eq!(
+            invoice_payment.lightning_invoice().unwrap().to_string(),
+            invoice
+        );
+
+        // 3. Test out of range amount
+        let err = Payment::fetch_lnurl_invoice(&info, 1001) // 1001000 msat > 1000000
+            .await
+            .unwrap_err();
+        assert!(err.contains("out of range"));
+    }
+
     #[tokio::test]
     #[ignore = "requires live DNS access"]
     async fn test_resolve_bip353_matt() {
@@ -891,5 +968,20 @@ mod tests {
         assert!(matches!(result, Payment::LightningOffer(_)));
         let offer = result.lightning_offer().unwrap();
         assert_eq!(offer.to_string(), "lno1zr5qyugqgskrk70kqmuq7v3dnr2fnmhukps9n8hut48vkqpqnskt2svsqwjakp7k6pyhtkuxw7y2kqmsxlwruhzqv0zsnhh9q3t9xhx39suc6qsr07ekm5esdyum0w66mnx8vdquwvp7dp5jp7j3v5cp6aj0w329fnkqqv60q96sz5nkrc5r95qffx002q53tqdk8x9m2tmt85jtpmcycvfnrpx3lr45h2g7na3sec7xguctfzzcm8jjqtj5ya27te60j03vpt0vq9tm2n9yxl2hngfnmygesa25s4u4zlxewqpvp94xt7rur4rhxunwkthk9vly3lm5hh0pqv4aymcqejlgssnlpzwlggykkajp7yjs5jvr2agkyypcdlj280cy46jpynsezrcj2kwa2lyr8xvd6lfkph4xrxtk2xc3lpq");
+    }
+
+    #[tokio::test]
+    #[ignore = "requires live network access"]
+    async fn test_resolve_lnurl_info() {
+        let payment = Payment::from_str("citadel@geyser.fund").unwrap();
+        let info = payment.resolve_lnurl_info().await.unwrap();
+        assert_eq!(info.tag, "payRequest");
+        assert!(info.callback.contains("geyser.fund"));
+        assert!(info.min_sendable > 0);
+        assert!(info.max_sendable >= info.min_sendable);
+
+        let amount = info.min_sendable;
+        let invoice_payment = Payment::fetch_lnurl_invoice(&info, amount).await.unwrap();
+        assert!(matches!(invoice_payment, Payment::LightningInvoice(_)));
     }
 }

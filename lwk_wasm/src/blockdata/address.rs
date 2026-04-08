@@ -23,6 +23,12 @@ impl From<&elements::Address> for Address {
     }
 }
 
+impl From<&Address> for elements::Address {
+    fn from(addr: &Address) -> Self {
+        addr.inner.clone()
+    }
+}
+
 impl From<Address> for elements::Address {
     fn from(addr: Address) -> Self {
         addr.inner

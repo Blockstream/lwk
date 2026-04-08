@@ -144,6 +144,83 @@ impl Payment {
         }
     }
 
+    /// Resolves a LNURL into its metadata (first step of LNURL-pay).
+    pub async fn resolve_lnurl_info(&self) -> Result<LnUrlPayResponse, String> {
+        let lnurl = self
+            .lnurl()
+            .ok_or_else(|| "Payment is not a LNURL or LUD16".to_string())?;
+
+        let url_str = lnurl.resolve_url()?;
+
+        let client = reqwest::Client::new();
+        let resp = client
+            .get(url_str)
+            .send()
+            .await
+            .map_err(|e| format!("Failed to fetch LNURL info: {e}"))?;
+
+        if !resp.status().is_success() {
+            return Err(format!("LNURL server returned error: {}", resp.status()));
+        }
+
+        let info: LnUrlPayResponse = resp
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse LNURL info: {e}"))?;
+
+        if info.tag != "payRequest" {
+            return Err(format!("Unsupported LNURL tag: {}", info.tag));
+        }
+
+        Ok(info)
+    }
+
+    /// Fetches a Bolt11 invoice from a LNURL callback (second step of LNURL-pay).
+    pub async fn fetch_lnurl_invoice(
+        info: &LnUrlPayResponse,
+        amount_sats: u64,
+    ) -> Result<Self, String> {
+        let amount_msat = amount_sats * 1000;
+        if amount_msat < info.min_sendable || amount_msat > info.max_sendable {
+            return Err(format!(
+                "Amount {} sats ({} msat) is out of range [{} msat, {} msat]",
+                amount_sats, amount_msat, info.min_sendable, info.max_sendable
+            ));
+        }
+
+        let mut url = url::Url::parse(&info.callback).map_err(|e| e.to_string())?;
+        url.query_pairs_mut()
+            .append_pair("amount", &amount_msat.to_string());
+
+        let client = reqwest::Client::new();
+        let resp = client
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| format!("Failed to fetch LNURL invoice: {e}"))?;
+
+        if !resp.status().is_success() {
+            return Err(format!("LNURL callback returned error: {}", resp.status()));
+        }
+
+        let res: LnUrlInvoiceResponse = resp
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse LNURL invoice response: {e}"))?;
+
+        if let Some(status) = res.status {
+            if status == "ERROR" {
+                return Err(format!(
+                    "LNURL error: {}",
+                    res.reason.unwrap_or_else(|| "Unknown error".to_string())
+                ));
+            }
+        }
+
+        let invoice = Bolt11Invoice::from_str(&res.pr).map_err(|e| e.to_string())?;
+        Ok(Payment::LightningInvoice(invoice))
+    }
+
     /// Resolves a BIP353 payment instruction into a lightning offer.
     pub async fn resolve_bip353(&self) -> Result<Self, String> {
         let bip353 = self
@@ -366,10 +443,17 @@ fn is_email(s: &str) -> bool {
     let Some((local, domain)) = s.split_once('@') else {
         return false;
     };
-    // Basic checks: non-empty local part, domain has at least one dot with content after it
-    !local.is_empty()
-        && !domain.is_empty()
-        && domain.contains('.')
+    if local.is_empty() || domain.is_empty() {
+        return false;
+    }
+
+    if IpAddr::from_str(domain).is_ok() || SocketAddr::from_str(domain).is_ok() {
+        return true;
+    }
+
+    // Basic checks: non-empty local part, non-empty domain
+    // Most domains have a dot, but for local testing we allow localhost.
+    (domain.contains('.') || domain == "localhost")
         && !domain.starts_with('.')
         && !domain.ends_with('.')
 }

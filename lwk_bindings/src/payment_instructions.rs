@@ -57,6 +57,51 @@ pub struct LiquidBip21 {
     pub satoshi: Option<u64>,
 }
 
+/// LNURL-pay metadata response
+#[derive(uniffi::Record, Clone)]
+pub struct LnUrlPayResponse {
+    /// The callback URL to fetch the invoice
+    pub callback: String,
+    /// Maximum amount (in millisatoshis) the service is willing to receive
+    pub max_sendable: u64,
+    /// Minimum amount (in millisatoshis) the service is willing to receive
+    pub min_sendable: u64,
+    /// Metadata describing the payment
+    pub metadata: String,
+    /// The type of LNURL request (should be "payRequest")
+    pub tag: String,
+}
+
+impl From<lwk_payment_instructions::LnUrlPayResponse> for LnUrlPayResponse {
+    fn from(inner: lwk_payment_instructions::LnUrlPayResponse) -> Self {
+        Self {
+            callback: inner.callback,
+            max_sendable: inner.max_sendable,
+            min_sendable: inner.min_sendable,
+            metadata: inner.metadata,
+            tag: inner.tag,
+        }
+    }
+}
+
+impl From<&LnUrlPayResponse> for lwk_payment_instructions::LnUrlPayResponse {
+    fn from(record: &LnUrlPayResponse) -> Self {
+        Self {
+            callback: record.callback.clone(),
+            max_sendable: record.max_sendable,
+            min_sendable: record.min_sendable,
+            metadata: record.metadata.clone(),
+            tag: record.tag.clone(),
+        }
+    }
+}
+
+impl From<LnUrlPayResponse> for lwk_payment_instructions::LnUrlPayResponse {
+    fn from(record: LnUrlPayResponse) -> Self {
+        (&record).into()
+    }
+}
+
 /// A parsed payment category from a payment instruction string.
 ///
 /// This can be a Bitcoin address, Liquid address, Lightning invoice,
@@ -137,6 +182,39 @@ impl Payment {
             .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
         let inner = runtime
             .block_on(self.inner.resolve_bip353())
+            .map_err(|e| LwkError::Generic { msg: e })?;
+        Ok(Arc::new(Self { inner }))
+    }
+
+    /// Resolves a LNURL into its metadata (first step of LNURL-pay).
+    #[cfg(feature = "lightning")]
+    pub fn resolve_lnurl_info(&self) -> Result<LnUrlPayResponse, LwkError> {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+        let inner = runtime
+            .block_on(self.inner.resolve_lnurl_info())
+            .map_err(|e| LwkError::Generic { msg: e })?;
+        Ok(inner.into())
+    }
+
+    /// Fetches a Bolt11 invoice from a LNURL callback (second step of LNURL-pay).
+    #[cfg(feature = "lightning")]
+    pub fn fetch_lnurl_invoice(
+        &self,
+        info: &LnUrlPayResponse,
+        amount_sats: u64,
+    ) -> Result<Arc<Self>, LwkError> {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+        let inner = runtime
+            .block_on(lwk_payment_instructions::Payment::fetch_lnurl_invoice(
+                &info.into(),
+                amount_sats,
+            ))
             .map_err(|e| LwkError::Generic { msg: e })?;
         Ok(Arc::new(Self { inner }))
     }

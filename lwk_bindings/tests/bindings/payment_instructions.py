@@ -266,5 +266,15 @@ assert bip21_data is not None
 assert str(bip21_data.address) == address_testnet
 assert bip21_data.address.network() == Network.testnet()
 
+# Test LNURL
+lnurl_str = "citadel@geyser.fund"
+pay = Payment(lnurl_str)
+assert pay.kind() == PaymentKind.LN_URL
+assert pay.lnurl() == lnurl_str
+
+# Since we cannot easily mock network in these simple scripts, 
+# we at least check that the methods exist and take correct types.
+# Note: we don't call resolve_lnurl_info() here to avoid network dependency in tests.
+
 print("All payment instructions tests passed!")
 

@@ -2,13 +2,15 @@ import * as lwk from "lwk_node";
 
 // TODO: use regtest instead of testnet:
 // however keep displaying testnet in the generated docs using // ANCHOR: ignore
+// TODO: address below
+// NOTE: Docs snippets are extracted from this file. Some placeholder lines intentionally use non-standard indentation, so do not run formatting tools here without verifying the mdBook output.
 
 export default async function runBasicsTest() {
   try {
 
     // ANCHOR: generate-signer
     if (false) { // ANCHOR: ignore
-      const mnemonic = lwk.Mnemonic.fromRandom(12);
+    const mnemonic = lwk.Mnemonic.fromRandom(12);
     } // ANCHOR: ignore
     // Fixed mnemonic with some funds // ANCHOR: ignore
     const mnemonic = new lwk.Mnemonic("other august catalog large suit off fan hammer ritual sword evil scrub"); // ANCHOR: ignore
@@ -59,8 +61,8 @@ export default async function runBasicsTest() {
     // ANCHOR: tx
     const sats = BigInt(1000);
     if (false) { // ANCHOR: ignore
-      const address = new lwk.Address("<address>");
-      const asset = lwk.AssetId.fromString("<asset>");
+    const address = new lwk.Address("<address>");
+    const asset = lwk.AssetId.fromString("<asset>");
     } // ANCHOR: ignore
     const address = wollet.address(null).address(); // ANCHOR: ignore
     const asset = network.policyAsset(); // ANCHOR: ignore

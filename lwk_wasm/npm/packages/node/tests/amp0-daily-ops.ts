@@ -9,6 +9,9 @@ function installWebSocketPolyfill(): void {
   globalWithWebSocket.WebSocket = WebSocket;
 }
 
+// TODO: address below
+// NOTE: Docs snippets are extracted from this file. Some placeholder lines intentionally use non-standard indentation, so do not run formatting tools here without verifying the mdBook output.
+
 export default async function runAmp0DailyOps() {
   try {
     const ciBranchName = process.env.CI_COMMIT_BRANCH;
@@ -24,15 +27,15 @@ export default async function runAmp0DailyOps() {
 
     // ANCHOR: amp0-daily-ops
     if (true) { // ANCHOR: ignore
-      const mnemonic = "<mnemonic>";
+    const mnemonic = "<mnemonic>";
     } // ANCHOR: ignore
     const mnemonic = "thrive metal cactus come oval candy medal bounce captain shock permit joke"; // ANCHOR: ignore
     const m = new lwk.Mnemonic(mnemonic);
     const network = lwk.Network.testnet();
     const signer = new lwk.Signer(m, network);
     if (true) { // ANCHOR: ignore
-      const username = "<username>";
-      const password = "<password>";
+    const username = "<username>";
+    const password = "<password>";
     } // ANCHOR: ignore
     const username = "userlwk001"; // ANCHOR: ignore
     const password = "userlwk001"; // ANCHOR: ignore

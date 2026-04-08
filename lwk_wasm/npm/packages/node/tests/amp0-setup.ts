@@ -9,21 +9,24 @@ function installWebSocketPolyfill(): void {
   globalWithWebSocket.WebSocket = WebSocket;
 }
 
+// TODO: address below
+// NOTE: Docs snippets are extracted from this file. Some placeholder lines intentionally use non-standard indentation, so do not run formatting tools here without verifying the mdBook output.
+
 export default async function runAmp0Setup() {
   try {
     installWebSocketPolyfill();
 
     // ANCHOR: amp0-setup
     if (true) { // ANCHOR: ignore
-      const mnemonic = "<mnemonic>";
+    const mnemonic = "<mnemonic>";
     } // ANCHOR: ignore
     const mnemonic = lwk.Mnemonic.fromRandom(12).toString(); // ANCHOR: ignore
     const m = new lwk.Mnemonic(mnemonic);
     const network = lwk.Network.testnet();
     const signer = new lwk.Signer(m, network);
     if (true) { // ANCHOR: ignore
-      const username = "<username>";
-      const password = "<password>";
+    const username = "<username>";
+    const password = "<password>";
     } // ANCHOR: ignore
     const username = "user" + signer.fingerprint(); // ANCHOR: ignore
     const password = "pass" + signer.fingerprint(); // ANCHOR: ignore

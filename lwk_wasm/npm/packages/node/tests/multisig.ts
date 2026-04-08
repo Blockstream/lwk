@@ -2,6 +2,8 @@ import * as lwk from "lwk_node";
 
 // TODO: use regtest instead of testnet:
 // however keep displaying testnet in the generated docs using // ANCHOR: ignore
+// TODO: address below
+// NOTE: Docs snippets are extracted from this file. Some placeholder lines intentionally use non-standard indentation, so do not run formatting tools here without verifying the mdBook output.
 
 export default async function runMultisigTest() {
   try {
@@ -12,7 +14,7 @@ export default async function runMultisigTest() {
 
     // Alice creates their signer and gets the xpub
     if (false) { // ANCHOR: ignore
-      const mnemonic_a = lwk.Mnemonic.fromRandom(12);
+    const mnemonic_a = lwk.Mnemonic.fromRandom(12);
     } // ANCHOR: ignore
     // Fixed mnemonic with some funds // ANCHOR: ignore
     const mnemonic_a = new lwk.Mnemonic("kind they sing appear whip boil divorce essence mask alien teach wire"); // ANCHOR: ignore
@@ -21,7 +23,7 @@ export default async function runMultisigTest() {
 
     // Bob creates their signer and gets the xpub
     if (false) { // ANCHOR: ignore
-      const mnemonic_b = lwk.Mnemonic.fromRandom(12);
+    const mnemonic_b = lwk.Mnemonic.fromRandom(12);
     } // ANCHOR: ignore
     // Fixed mnemonic with some funds // ANCHOR: ignore
     const mnemonic_b = new lwk.Mnemonic("vast response truth other mansion skull hold amused capital satoshi oxygen brass"); // ANCHOR: ignore
@@ -30,7 +32,7 @@ export default async function runMultisigTest() {
 
     // Carol, who acts as a coordinator, creates their signer and gets the xpub
     if (false) { // ANCHOR: ignore
-      const mnemonic_c = lwk.Mnemonic.fromRandom(12);
+    const mnemonic_c = lwk.Mnemonic.fromRandom(12);
     } // ANCHOR: ignore
     // Fixed mnemonic with some funds // ANCHOR: ignore
     const mnemonic_c = new lwk.Mnemonic("fresh inner begin grid symbol congress wall outer mass enable coil repeat"); // ANCHOR: ignore
@@ -39,7 +41,7 @@ export default async function runMultisigTest() {
 
     // Carol generates a random SLIP77 descriptor blinding key
     if (false) { // ANCHOR: ignore
-      const slip77_rand_key = "<random-64-hex-chars>";
+    const slip77_rand_key = "<random-64-hex-chars>";
     } // ANCHOR: ignore
     const slip77_rand_key = "1111111111111111111111111111111111111111111111111111111111111111"; // ANCHOR: ignore
     const desc_blinding_key = `slip77(${slip77_rand_key})`;
@@ -83,8 +85,8 @@ export default async function runMultisigTest() {
     // Carol creates a transaction send few sats to a certain address
     const sats = BigInt(100);
     if (false) { // ANCHOR: ignore
-      const address = new lwk.Address("<address>");
-      const asset = lwk.AssetId.fromString("<asset>");
+    const address = new lwk.Address("<address>");
+    const asset = lwk.AssetId.fromString("<asset>");
     } // ANCHOR: ignore
     const address = new lwk.Address("tlq1qq2g07nju42l0nlx0erqa3wsel2l8prnq96rlnhml262mcj7pe8w6ndvvyg237japt83z24m8gu4v3yfhaqvrqxydadc9scsmw"); // ANCHOR: ignore
     const asset = network.policyAsset(); // ANCHOR: ignore

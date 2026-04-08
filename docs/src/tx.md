@@ -50,11 +50,11 @@ a transaction encoded in a format that facilitates sharing the transaction with 
 ```
 </section>
 
-<div slot="title">Javascript</div>
+<div slot="title">TypeScript</div>
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/basics.js:tx:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/basics.ts:tx:ignore}}
 ```
 </section>
 </custom-tabs>

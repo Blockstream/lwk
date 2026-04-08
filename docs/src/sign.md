@@ -34,11 +34,11 @@ so offline `Signer`s can have `Wollet`s instance to enhance the validation perfo
 ```
 </section>
 
-<div slot="title">Javascript</div>
+<div slot="title">TypeScript</div>
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/basics.js:pset-details:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/basics.ts:pset-details:ignore}}
 ```
 </section>
 </custom-tabs>
@@ -66,11 +66,11 @@ Once the PSET has enough signatures, you can broadcast to the Liquid Network.
 ```
 </section>
 
-<div slot="title">Javascript</div>
+<div slot="title">TypeScript</div>
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/basics.js:sign:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/basics.ts:sign:ignore}}
 ```
 </section>
 </custom-tabs>

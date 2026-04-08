@@ -52,11 +52,11 @@ sequenceDiagram
 ```
 </section>
 
-<div slot="title">Javascript</div>
+<div slot="title">TypeScript</div>
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/multisig.js:multisig-setup:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/multisig.ts:multisig-setup:ignore}}
 ```
 </section>
 </custom-tabs>
@@ -91,11 +91,11 @@ With the wallet CT descriptor you can:
 ```
 </section>
 
-<div slot="title">Javascript</div>
+<div slot="title">TypeScript</div>
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/multisig.js:multisig-receive:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/multisig.ts:multisig-receive:ignore}}
 ```
 </section>
 </custom-tabs>
@@ -143,11 +143,11 @@ sequenceDiagram
 ```
 </section>
 
-<div slot="title">Javascript</div>
+<div slot="title">TypeScript</div>
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/multisig.js:multisig-send:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/multisig.ts:multisig-send:ignore}}
 ```
 </section>
 </custom-tabs>

@@ -28,15 +28,15 @@ you can call `Wollet::apply_tx()`.
 <section>
 
 ```python
-{{#include ../../lwk_wasm/tests/node/basics.js:broadcast:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/basics.ts:broadcast:ignore}}
 ```
 </section>
 
-<div slot="title">Javascript</div>
+<div slot="title">TypeScript</div>
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/basics.js:broadcast:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/basics.ts:broadcast:ignore}}
 ```
 </section>
 </custom-tabs>

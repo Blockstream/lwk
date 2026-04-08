@@ -50,11 +50,11 @@ for instance more transactions can be returned and balance can increase (or decr
 ```
 </section>
 
-<div slot="title">Javascript</div>
+<div slot="title">TypeScript</div>
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/basics.js:client:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/basics.ts:client:ignore}}
 ```
 </section>
 </custom-tabs>

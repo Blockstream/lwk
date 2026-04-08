@@ -94,11 +94,11 @@ Now that you have mnemonic/seed (or Jade), AMP ID and Watch-Only credentials (us
 ```
 </section>
 
-<div slot="title">Javascript</div>
+<div slot="title">TypeScript</div>
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/amp0-setup.js:amp0-setup:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/amp0-setup.ts:amp0-setup:ignore}}
 ```
 </section>
 </custom-tabs>
@@ -178,11 +178,11 @@ If all the AMP0 rules are respected, the transaction is cosigned by AMP0 and can
 ```
 </section>
 
-<div slot="title">Javascript</div>
+<div slot="title">TypeScript</div>
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/amp0-daily-ops.js:amp0-daily-ops:ignore}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/amp0-daily-ops.ts:amp0-daily-ops:ignore}}
 ```
 </section>
 </custom-tabs>

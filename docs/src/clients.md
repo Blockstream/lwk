@@ -84,11 +84,11 @@ This client is ideal for web applications and scenarios where HTTP-based communi
 ```
 </section>
 
-<div slot="title">Javascript</div>
+<div slot="title">TypeScript</div>
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/basics.js:esplora_client}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/basics.ts:esplora_client}}
 ```
 </section>
 </custom-tabs>
@@ -142,11 +142,11 @@ Use authenticated clients when:
 ```
 </section>
 
-<div slot="title">Javascript</div>
+<div slot="title">TypeScript</div>
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/basics.js:waterfalls_client}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/basics.ts:waterfalls_client}}
 ```
 </section>
 </custom-tabs>
@@ -189,11 +189,11 @@ When a primary request fails, manually evaluate the error to determine if a retr
 ```
 </section>
 
-<div slot="title">Javascript</div>
+<div slot="title">TypeScript</div>
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/fallback_client.js:fallback_client}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/fallback_client.ts:fallback_client}}
 ```
 </section>
 </custom-tabs>

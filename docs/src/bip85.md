@@ -23,11 +23,11 @@ To derive a BIP85 mnemonic, you need a software signer initialized with a mnemon
 ```
 </section>
 
-<div slot="title">Javascript</div>
+<div slot="title">TypeScript</div>
 <section>
 
 ```typescript
-{{#include ../../lwk_wasm/tests/node/bip85.js:bip85}}
+{{#include ../../lwk_wasm/npm/packages/node/tests/bip85.ts:bip85}}
 ```
 </section>
 </custom-tabs>

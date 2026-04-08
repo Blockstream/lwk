@@ -448,14 +448,14 @@ fn is_email(s: &str) -> bool {
     }
 
     if IpAddr::from_str(domain).is_ok() || SocketAddr::from_str(domain).is_ok() {
-        return true;
+        return cfg!(debug_assertions);
     }
 
-    // Basic checks: non-empty local part, non-empty domain
-    // Most domains have a dot, but for local testing we allow localhost.
-    (domain.contains('.') || domain == "localhost")
-        && !domain.starts_with('.')
-        && !domain.ends_with('.')
+    let is_regular_domain =
+        domain.contains('.') && !domain.starts_with('.') && !domain.ends_with('.');
+    let is_localhost = domain == "localhost";
+
+    is_regular_domain || (cfg!(debug_assertions) && is_localhost)
 }
 
 #[cfg(test)]
@@ -896,6 +896,21 @@ mod tests {
         assert_eq!(res_with_prefix.kind(), PaymentKind::LnUrl);
         assert!(res_with_prefix.lnurl().unwrap().lnurl().is_none());
         assert_eq!(res_with_prefix.lnurl().unwrap().lud16(), Some(email));
+    }
+
+    #[test]
+    fn test_is_email_debug_only_local_domains() {
+        assert!(is_email("user@example.com"));
+
+        if cfg!(debug_assertions) {
+            assert!(is_email("user@localhost"));
+            assert!(is_email("user@127.0.0.1"));
+            assert!(is_email("user@127.0.0.1:3000"));
+        } else {
+            assert!(!is_email("user@localhost"));
+            assert!(!is_email("user@127.0.0.1"));
+            assert!(!is_email("user@127.0.0.1:3000"));
+        }
     }
 
     #[tokio::test]

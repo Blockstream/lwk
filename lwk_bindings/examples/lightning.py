@@ -318,6 +318,46 @@ def resolve_bip353_offer():
     except Exception as e:
         print(f"Error resolving BIP353 payment instruction: {e}")
 
+def resolve_lnurl():
+    """Resolve an LNURL or Lightning Address to a Bolt11 invoice"""
+    lnurl_str = input('Enter LNURL string or Lightning Address (e.g. "citadel@geyser.fund"): ').strip()
+
+    try:
+        # If it looks like an email and doesn't have a schema, try adding 'lightning:' 
+        # to express deliberate intent as required by the library.
+        if "@" in lnurl_str and ":" not in lnurl_str:
+            lnurl_str = f"lightning:{lnurl_str}"
+
+        payment = Payment(lnurl_str)
+        
+        if payment.kind() != PaymentKind.LN_URL:
+            print(f"Error: Not a valid LNURL or Lightning Address. Kind: {payment.kind()}")
+            return
+
+        print("Resolving LNURL info...")
+        info = payment.resolve_lnurl_info()
+        print(f"Callback: {info.callback}")
+        print(f"Min sendable: {info.min_sendable // 1000} sats ({info.min_sendable} msat)")
+        print(f"Max sendable: {info.max_sendable // 1000} sats ({info.max_sendable} msat)")
+        print(f"Metadata: {info.metadata}")
+
+        amount_sats_str = input(f"Enter amount to pay in sats (between {info.min_sendable // 1000} and {info.max_sendable // 1000}): ").strip()
+        amount_sats = int(amount_sats_str)
+
+        print("Fetching invoice...")
+        invoice_payment = payment.fetch_lnurl_invoice(info, amount_sats)
+        invoice = invoice_payment.lightning_invoice()
+
+        if invoice is None:
+            print("Error: Failed to get a valid Bolt11 invoice")
+            return
+
+        print("\nResolved Bolt11 invoice:")
+        print(invoice)
+        print("\nUse menu item 3 to pay this invoice.")
+    except Exception as e:
+        print(f"Error resolving LNURL: {e}")
+
 def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_thread=False):
     """Pay a bolt11 invoice"""
     # Read bolt11 invoice from user
@@ -1002,6 +1042,7 @@ def main():
         print("17) Remove swap from store")
         print("18) Pay BOLT12 offer")
         print("19) Resolve BIP353 to BOLT12 offer")
+        print("20) Resolve LNURL to Bolt11 invoice")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -1112,6 +1153,9 @@ def main():
         elif choice == '19':
             print("\n=== Resolving BIP353 to BOLT12 Offer ===")
             resolve_bip353_offer()
+        elif choice == '20':
+            print("\n=== Resolving LNURL to Bolt11 Invoice ===")
+            resolve_lnurl()
         elif choice == 'q':
             print("Goodbye!")
             break

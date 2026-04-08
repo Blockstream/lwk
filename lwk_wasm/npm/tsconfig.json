@@ -5,6 +5,9 @@
       "path": "./scripts/tsconfig.json"
     },
     {
+      "path": "./packages/web/tsconfig.json"
+    },
+    {
       "path": "./packages/node/tsconfig.json"
     }
   ]

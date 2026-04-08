@@ -15,6 +15,7 @@
     "clean": "tsx scripts/build.ts clean",
     "prepare:generated": "tsx scripts/build.ts generate",
     "stage:node": "tsx scripts/build.ts stage-node",
+    "stage:web": "tsx scripts/build.ts stage-web",
     "build:packages": "npm run build -w lwk_node",
     "build": "npm run clean && npm run prepare:generated && npm run build:packages",
     "typecheck:scripts": "tsc -p scripts/tsconfig.json --noEmit",

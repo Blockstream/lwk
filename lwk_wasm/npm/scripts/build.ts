@@ -22,6 +22,8 @@ import {
   nodeDistGeneratedRoot,
   nodeDistRoot,
   nodeGeneratedRoot,
+  webDistGeneratedRoot,
+  webDistRoot,
   webGeneratedRoot,
 } from "./lib/paths.js";
 import {
@@ -37,10 +39,18 @@ const nodeGeneratedFiles = [
   "lwk_wasm_bg.wasm",
   "lwk_wasm_bg.wasm.d.ts",
 ] as const;
+const webGeneratedFiles = [
+  "lwk_wasm.js",
+  "lwk_wasm.d.ts",
+  "lwk_wasm_bg.js",
+  "lwk_wasm_bg.wasm",
+  "lwk_wasm_bg.wasm.d.ts",
+] as const;
 
 function clean(): void {
   rmSync(generatedRoot, { force: true, recursive: true });
   rmSync(nodeDistRoot, { force: true, recursive: true });
+  rmSync(webDistRoot, { force: true, recursive: true });
   rmSync(resolve(".tmp"), { force: true, recursive: true });
 }
 
@@ -56,11 +66,8 @@ function generate(): void {
   writeFileSync(generatedFeaturesPath, `${getWasmFeatures()}\n`);
 }
 
-function ensureGenerated(): void {
-  if (
-    !existsSync(nodeGeneratedRoot) ||
-    !hasCurrentGeneratedFeatures()
-  ) {
+function ensureGenerated(targetRoot: string): void {
+  if (!existsSync(targetRoot) || !hasCurrentGeneratedFeatures()) {
     generate();
   }
 }
@@ -78,7 +85,7 @@ function copyGeneratedFiles(
 }
 
 function stageNode(): void {
-  ensureGenerated();
+  ensureGenerated(nodeGeneratedRoot);
 
   rmSync(nodeDistRoot, { force: true, recursive: true });
   mkdirSync(nodeDistRoot, { recursive: true });
@@ -89,7 +96,20 @@ function stageNode(): void {
   );
 }
 
+function stageWeb(): void {
+  ensureGenerated(webGeneratedRoot);
+
+  rmSync(webDistRoot, { force: true, recursive: true });
+  mkdirSync(webDistRoot, { recursive: true });
+  copyGeneratedFiles(
+    webGeneratedRoot,
+    webDistGeneratedRoot,
+    webGeneratedFiles
+  );
+}
+
 function stage(): void {
+  stageWeb();
   stageNode();
 }
 
@@ -102,6 +122,9 @@ switch (mode) {
     break;
   case "stage-node":
     stageNode();
+    break;
+  case "stage-web":
+    stageWeb();
     break;
   case "stage":
     stage();

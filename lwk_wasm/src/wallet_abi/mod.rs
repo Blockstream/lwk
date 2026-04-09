@@ -2,4 +2,4 @@
 
 mod filters;
 
-pub use filters::WalletAbiTaprootHandle;
+pub use filters::{WalletAbiAssetFilter, WalletAbiTaprootHandle};

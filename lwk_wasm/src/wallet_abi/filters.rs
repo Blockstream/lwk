@@ -1,8 +1,9 @@
-use crate::Error;
+use crate::{AssetId, Error};
 
 use std::str::FromStr;
 
 use lwk_simplicity::taproot_pubkey_gen::TaprootPubkeyGen;
+use lwk_simplicity::wallet_abi::schema as abi;
 
 use wasm_bindgen::prelude::*;
 
@@ -37,6 +38,50 @@ impl From<&WalletAbiTaprootHandle> for TaprootPubkeyGen {
     }
 }
 
+/// An asset selector for wallet-funded inputs.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WalletAbiAssetFilter {
+    inner: abi::AssetFilter,
+}
+
+#[wasm_bindgen]
+impl WalletAbiAssetFilter {
+    /// Build the Wallet ABI `none` asset filter variant.
+    pub fn none() -> WalletAbiAssetFilter {
+        Self {
+            inner: abi::AssetFilter::None,
+        }
+    }
+
+    /// Build the Wallet ABI `exact` asset filter variant.
+    pub fn exact(asset_id: &AssetId) -> WalletAbiAssetFilter {
+        Self {
+            inner: abi::AssetFilter::Exact {
+                asset_id: (*asset_id).into(),
+            },
+        }
+    }
+
+    /// Return the canonical Wallet ABI variant tag string.
+    pub fn kind(&self) -> String {
+        match self.inner {
+            abi::AssetFilter::None => "none",
+            abi::AssetFilter::Exact { .. } => "exact",
+        }
+        .to_string()
+    }
+
+    /// Return the asset id when this filter is the `exact` variant.
+    #[wasm_bindgen(js_name = exactAssetId)]
+    pub fn exact_asset_id(&self) -> Option<AssetId> {
+        match self.inner {
+            abi::AssetFilter::Exact { asset_id } => Some(asset_id.into()),
+            abi::AssetFilter::None => None,
+        }
+    }
+}
+
 #[wasm_bindgen]
 impl WalletAbiTaprootHandle {
     /// Parse the canonical `<seed_or_ext-xonly_hex>:<pubkey>:<address>` taproot-handle string.
@@ -56,13 +101,15 @@ impl WalletAbiTaprootHandle {
 
 #[cfg(test)]
 mod tests {
-    use super::WalletAbiTaprootHandle;
+    use super::{WalletAbiAssetFilter, WalletAbiTaprootHandle};
 
     use std::str::FromStr;
 
     use lwk_common::Network;
     use lwk_simplicity::simplicityhl::elements::Address;
     use lwk_simplicity::taproot_pubkey_gen::TaprootPubkeyGen;
+
+    use crate::Network as WasmNetwork;
 
     #[test]
     fn wallet_abi_taproot_handle_roundtrip() {
@@ -79,5 +126,16 @@ mod tests {
         let parsed = WalletAbiTaprootHandle::from_string(&handle).expect("parse handle");
 
         assert_eq!(parsed.to_string(), handle);
+    }
+
+    #[test]
+    fn wallet_abi_asset_filter_roundtrip() {
+        let policy_asset = WasmNetwork::testnet().policy_asset();
+        let filter = WalletAbiAssetFilter::exact(&policy_asset);
+
+        assert_eq!(filter.kind(), "exact");
+        assert_eq!(filter.exact_asset_id(), Some(policy_asset));
+        assert_eq!(WalletAbiAssetFilter::none().kind(), "none");
+        assert_eq!(WalletAbiAssetFilter::none().exact_asset_id(), None);
     }
 }

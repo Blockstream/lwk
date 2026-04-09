@@ -1,10 +1,14 @@
 use std::sync::Arc;
+use std::{fmt, str::FromStr};
 
-use crate::{LwkError, Pset, XOnlyPublicKey};
+use crate::{LwkError, Pset, Signer, WalletAbiSignerContext, XOnlyPublicKey};
 
+use elements::bitcoin::bip32::DerivationPath;
 use lwk_simplicity::wallet_abi::KeyStoreMeta;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
-use lwk_wollet::secp256k1::{schnorr::Signature, Message, XOnlyPublicKey as SecpXOnlyPublicKey};
+use lwk_wollet::secp256k1::{
+    schnorr::Signature, Keypair, Message, XOnlyPublicKey as SecpXOnlyPublicKey,
+};
 use lwk_wollet::EC;
 
 /// Callback interface used by foreign code to provide runtime signer capabilities.
@@ -47,6 +51,23 @@ impl SignerMetaLink {
     pub fn new(callbacks: Arc<dyn WalletAbiSignerCallbacks>) -> Self {
         Self { inner: callbacks }
     }
+
+    /// Build a Rust-owned wallet-abi signer bridge from a software signer.
+    #[uniffi::constructor(name = "from_software_signer")]
+    pub fn from_software_signer(
+        signer: Arc<Signer>,
+        context: WalletAbiSignerContext,
+    ) -> Result<Self, LwkError> {
+        let derivation_path = software_signer_derivation_path(&context)?;
+        let derived_xprv = signer.inner.derive_xprv(&derivation_path)?;
+        let keypair = Keypair::from_secret_key(&EC, &derived_xprv.private_key);
+
+        Ok(Self::new(Arc::new(SoftwareSignerCallbacks {
+            signer,
+            keypair,
+            xonly_public_key: XOnlyPublicKey::from_keypair(&keypair),
+        })))
+    }
 }
 
 impl KeyStoreMeta for SignerMetaLink {
@@ -85,13 +106,54 @@ impl KeyStoreMeta for SignerMetaLink {
     }
 }
 
+fn software_signer_derivation_path(
+    context: &WalletAbiSignerContext,
+) -> Result<DerivationPath, LwkError> {
+    let coin_type = if context.network.is_mainnet() { 1776 } else { 1 };
+    DerivationPath::from_str(&format!(
+        "m/86h/{coin_type}h/{}h/0/0",
+        context.account_index
+    ))
+    .map_err(Into::into)
+}
+
+struct SoftwareSignerCallbacks {
+    signer: Arc<Signer>,
+    keypair: Keypair,
+    xonly_public_key: Arc<XOnlyPublicKey>,
+}
+
+impl fmt::Debug for SoftwareSignerCallbacks {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("SoftwareSignerCallbacks")
+    }
+}
+
+impl WalletAbiSignerCallbacks for SoftwareSignerCallbacks {
+    fn get_raw_signing_x_only_pubkey(&self) -> Result<Arc<XOnlyPublicKey>, LwkError> {
+        Ok(self.xonly_public_key.clone())
+    }
+
+    fn sign_pst(&self, pst: Arc<Pset>) -> Result<Arc<Pset>, LwkError> {
+        self.signer.sign(pst.as_ref())
+    }
+
+    fn sign_schnorr(&self, message: Vec<u8>) -> Result<Vec<u8>, LwkError> {
+        let message = Message::from_digest_slice(&message)?;
+        Ok(self.keypair.sign_schnorr(message).serialize().to_vec())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
     use elements::bitcoin::secp256k1::{Keypair, Message, Secp256k1, SecretKey};
+    use lwk_common::Signer as _;
+    use lwk_wollet::ElementsNetwork;
 
     use super::*;
+    use crate::{Mnemonic, Network};
 
     struct TestSignerCallbacks {
         keypair: Keypair,
@@ -162,5 +224,48 @@ mod tests {
         assert!(EC
             .verify_schnorr(&signature, &message, &xonly_public_key)
             .is_ok());
+    }
+
+    #[test]
+    fn signer_meta_link_from_software_signer_uses_context_key() {
+        let mnemonic = Mnemonic::new(lwk_test_util::TEST_MNEMONIC).expect("mnemonic");
+        let network: Arc<Network> = Arc::new(ElementsNetwork::default_regtest().into());
+        let signer = Signer::new(&mnemonic, &network).expect("signer");
+        let context = WalletAbiSignerContext {
+            network: network.clone(),
+            account_index: 7,
+        };
+        let signer_link =
+            SignerMetaLink::from_software_signer(signer.clone(), context.clone()).expect("link");
+        let derivation_path = software_signer_derivation_path(&context).expect("path");
+        let expected_xpub = signer
+            .inner
+            .derive_xpub(&derivation_path)
+            .expect("derive xpub");
+        let expected_xonly = expected_xpub.public_key.x_only_public_key().0;
+
+        assert_eq!(
+            signer_link
+                .get_raw_signing_x_only_pubkey()
+                .expect("x-only public key"),
+            expected_xonly
+        );
+
+        let message = Message::from_digest([0x33; 32]);
+        let signature = signer_link
+            .sign_schnorr(message, expected_xonly)
+            .expect("signature");
+
+        assert!(EC
+            .verify_schnorr(&signature, &message, &expected_xonly)
+            .is_ok());
+
+        let pset = Pset::new(include_str!("../../../lwk_jade/test_data/pset_to_be_signed.base64"))
+            .expect("pset");
+        let mut callback_pset = pset.inner();
+        signer_link.sign_pst(&mut callback_pset).expect("signed pset");
+
+        let expected_pset = signer.sign(pset.as_ref()).expect("expected signed pset");
+        assert_eq!(callback_pset.to_string(), expected_pset.to_string());
     }
 }

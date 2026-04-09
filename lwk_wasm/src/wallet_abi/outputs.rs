@@ -1,6 +1,9 @@
 use super::filters::WalletAbiFinalizerSpec;
+use super::json_from_str;
+use super::json_from_js_value;
+use super::js_value_from_json;
 
-use crate::{AssetId, PublicKey, Script};
+use crate::{AssetId, LockTime, PublicKey, Script, WalletAbiInputSchema};
 
 use lwk_simplicity::wallet_abi::schema as abi;
 
@@ -265,13 +268,102 @@ impl WalletAbiOutputSchema {
     }
 }
 
+/// Runtime parameters for a Wallet ABI transaction creation request.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq)]
+pub struct WalletAbiRuntimeParams {
+    inner: abi::RuntimeParams,
+}
+
+#[wasm_bindgen]
+impl WalletAbiRuntimeParams {
+    fn from_json_str(json: &str) -> Result<WalletAbiRuntimeParams, crate::Error> {
+        json_from_str(json).map(|inner| Self { inner })
+    }
+}
+
+#[wasm_bindgen]
+impl WalletAbiRuntimeParams {
+    /// Build runtime parameters from inputs, outputs, and optional fee settings.
+    pub fn new(
+        inputs: Vec<WalletAbiInputSchema>,
+        outputs: Vec<WalletAbiOutputSchema>,
+        fee_rate_sat_kvb: Option<f32>,
+        lock_time: Option<LockTime>,
+    ) -> WalletAbiRuntimeParams {
+        Self {
+            inner: abi::RuntimeParams {
+                inputs: inputs.into_iter().map(|input| input.inner).collect(),
+                outputs: outputs.into_iter().map(|output| output.inner).collect(),
+                fee_rate_sat_kvb,
+                lock_time: lock_time.map(Into::into),
+            },
+        }
+    }
+
+    /// Parse canonical Wallet ABI runtime params JSON.
+    #[wasm_bindgen(js_name = fromJson)]
+    pub fn from_json(json: JsValue) -> Result<WalletAbiRuntimeParams, crate::Error> {
+        json_from_js_value(json).map(|inner| Self { inner })
+    }
+
+    /// Serialize this runtime params payload to canonical Wallet ABI JSON.
+    #[wasm_bindgen(js_name = toJSON)]
+    pub fn to_json(&self) -> Result<JsValue, crate::Error> {
+        js_value_from_json(&self.inner)
+    }
+
+    /// Return the canonical JSON string for this runtime params payload.
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        serde_json::to_string(&self.inner).expect("runtime params contain simple data")
+    }
+
+    /// Return the runtime input list.
+    pub fn inputs(&self) -> Vec<WalletAbiInputSchema> {
+        self.inner
+            .inputs
+            .iter()
+            .cloned()
+            .map(|inner| WalletAbiInputSchema { inner })
+            .collect()
+    }
+
+    /// Return the runtime output list.
+    pub fn outputs(&self) -> Vec<WalletAbiOutputSchema> {
+        self.inner
+            .outputs
+            .iter()
+            .cloned()
+            .map(|inner| WalletAbiOutputSchema { inner })
+            .collect()
+    }
+
+    /// Return the fee rate in satoshi per kvB when present.
+    #[wasm_bindgen(js_name = feeRateSatKvb)]
+    pub fn fee_rate_sat_kvb(&self) -> Option<f32> {
+        self.inner.fee_rate_sat_kvb
+    }
+
+    /// Return the lock time when present.
+    #[wasm_bindgen(js_name = lockTime)]
+    pub fn lock_time(&self) -> Option<LockTime> {
+        self.inner.lock_time.map(Into::into)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        WalletAbiAssetVariant, WalletAbiBlinderVariant, WalletAbiLockVariant, WalletAbiOutputSchema,
+        WalletAbiAssetVariant, WalletAbiBlinderVariant, WalletAbiLockVariant,
+        WalletAbiOutputSchema, WalletAbiRuntimeParams,
     };
 
-    use crate::{Network, PublicKey, Script, SecretKey, WalletAbiFinalizerSpec};
+    use crate::{
+        LockTime, Network, PublicKey, Script, SecretKey, TxSequence, WalletAbiFinalizerSpec,
+        WalletAbiInputSchema, WalletAbiInputUnblinding, WalletAbiUtxoSource,
+        WalletAbiWalletSourceFilter,
+    };
 
     #[test]
     fn wallet_abi_lock_variant_roundtrip() {
@@ -350,5 +442,40 @@ mod tests {
         assert_eq!(output.lock().kind(), "script");
         assert_eq!(output.asset().asset_id_value(), Some(policy_asset));
         assert_eq!(output.blinder().kind(), "explicit");
+    }
+
+    #[test]
+    fn wallet_abi_runtime_params_roundtrip() {
+        let policy_asset = Network::testnet().policy_asset();
+        let params = WalletAbiRuntimeParams::new(
+            vec![WalletAbiInputSchema::from_sequence(
+                "i0",
+                &WalletAbiUtxoSource::wallet(&WalletAbiWalletSourceFilter::any()),
+                &WalletAbiInputUnblinding::wallet(),
+                &TxSequence::zero(),
+                &WalletAbiFinalizerSpec::wallet(),
+            )],
+            vec![WalletAbiOutputSchema::new(
+                "o0",
+                1_500,
+                &WalletAbiLockVariant::wallet(),
+                &WalletAbiAssetVariant::asset_id(&policy_asset),
+                &WalletAbiBlinderVariant::explicit(),
+            )],
+            Some(123.0),
+            Some(LockTime::from_consensus(42)),
+        );
+
+        let json = params.to_string_js();
+        let decoded = WalletAbiRuntimeParams::from_json_str(&json).expect("deserialize params");
+
+        assert_eq!(decoded.inputs()[0].id(), "i0".to_string());
+        assert_eq!(decoded.outputs()[0].id(), "o0".to_string());
+        assert_eq!(decoded.fee_rate_sat_kvb(), Some(123.0));
+        assert_eq!(
+            decoded.lock_time().expect("lock time").to_consensus_u32(),
+            42
+        );
+        assert!(json.contains("\"fee_rate_sat_kvb\":123.0"));
     }
 }

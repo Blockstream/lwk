@@ -565,7 +565,7 @@ impl WalletAbiInputUnblinding {
 #[wasm_bindgen]
 #[derive(Clone, Debug, PartialEq)]
 pub struct WalletAbiInputSchema {
-    inner: abi::InputSchema,
+    pub(crate) inner: abi::InputSchema,
 }
 
 #[wasm_bindgen]

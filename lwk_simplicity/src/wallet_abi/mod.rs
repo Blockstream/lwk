@@ -1,8 +1,10 @@
 //! Root Wallet ABI surface for provider-facing schema and runtime types.
 
+mod provider;
 pub mod schema;
 pub mod tx_resolution;
 
+pub use provider::{WalletAbiProvider, WalletAbiProviderBuilder};
 pub use schema::{
     deserialize_arguments, deserialize_witness, generate_request_id, resolve_arguments,
     resolve_witness, serialize_arguments, serialize_witness, AmountFilter, AssetFilter,

@@ -64,7 +64,8 @@ pub use wallet_abi::{
     WalletAbiPreviewOutputKind, WalletAbiRequestPreview, WalletAbiRuntimeParams,
     WalletAbiRuntimeSimfValue, WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments,
     WalletAbiSimfWitness, WalletAbiStatus, WalletAbiTaprootHandle, WalletAbiTransactionInfo,
-    WalletAbiTxCreateRequest, WalletAbiTxCreateResponse, WalletAbiUtxoSource,
+    WalletAbiTxCreateRequest, WalletAbiTxCreateResponse, WalletAbiTxEvaluateRequest,
+    WalletAbiUtxoSource,
     WalletAbiWalletSourceFilter,
 };
 

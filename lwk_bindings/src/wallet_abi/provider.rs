@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use crate::{LwkError, SignerMetaLink, WalletRuntimeDepsLink, XOnlyPublicKey};
-use lwk_simplicity::wallet_abi::KeyStoreMeta;
+use crate::{Address, LwkError, SignerMetaLink, WalletRuntimeDepsLink, XOnlyPublicKey};
+use lwk_simplicity::wallet_abi::{KeyStoreMeta, WalletReceiveAddressProvider};
 
 /// Source-owned bindings wrapper for the checked-in Wallet ABI provider facade.
 #[derive(uniffi::Object)]
@@ -23,6 +23,17 @@ impl WalletAbiProvider {
         Ok(Arc::new(
             self.signer
                 .get_raw_signing_x_only_pubkey()
+                .map_err(|error| LwkError::from(format!("{error}")))?
+                .into(),
+        ))
+    }
+
+    /// Return the active wallet receive address exposed at provider connect time.
+    pub fn get_signer_receive_address(&self) -> Result<Arc<Address>, LwkError> {
+        Ok(Arc::new(
+            self.wallet
+                .receive_address_provider
+                .get_signer_receive_address()
                 .map_err(|error| LwkError::from(format!("{error}")))?
                 .into(),
         ))
@@ -114,7 +125,9 @@ mod tests {
 
     impl WalletAbiReceiveAddressProviderCallbacks for TestReceiveAddressProviderCallbacks {
         fn get_signer_receive_address(&self) -> Result<Arc<Address>, LwkError> {
-            unreachable!("not used in provider xonly test")
+            Address::new(
+                "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn",
+            )
         }
     }
 
@@ -151,6 +164,42 @@ mod tests {
                 .expect("x-only public key")
                 .to_string(),
             expected
+        );
+    }
+
+    #[test]
+    fn wallet_abi_provider_get_signer_receive_address() {
+        let secp = Secp256k1::new();
+        let secret_key = SecretKey::from_slice(&[0x22; 32]).expect("secret key");
+        let keypair = Keypair::from_secret_key(&secp, &secret_key);
+        let expected_address = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
+        let provider = WalletAbiProvider::new(
+            Arc::new(SignerMetaLink::new(Arc::new(TestSignerCallbacks { keypair }))),
+            Arc::new(WalletRuntimeDepsLink::new(
+                Arc::new(WalletSessionFactoryLink::new(Arc::new(
+                    TestSessionFactoryCallbacks,
+                ))),
+                Arc::new(WalletOutputAllocatorLink::new(Arc::new(
+                    TestOutputAllocatorCallbacks,
+                ))),
+                Arc::new(WalletPrevoutResolverLink::new(Arc::new(
+                    TestPrevoutResolverCallbacks,
+                ))),
+                Arc::new(WalletBroadcasterLink::new(Arc::new(
+                    TestBroadcasterCallbacks,
+                ))),
+                Arc::new(WalletReceiveAddressProviderLink::new(Arc::new(
+                    TestReceiveAddressProviderCallbacks,
+                ))),
+            )),
+        );
+
+        assert_eq!(
+            provider
+                .get_signer_receive_address()
+                .expect("receive address")
+                .to_string(),
+            expected_address
         );
     }
 }

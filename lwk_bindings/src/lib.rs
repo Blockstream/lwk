@@ -64,12 +64,12 @@ pub use wallet_abi::{
     WalletAbiOutputSchema, WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput,
     WalletAbiPreviewOutputKind, WalletAbiRequestPreview, WalletAbiRuntimeParams,
     WalletAbiRequestSession, WalletAbiRuntimeSimfValue, WalletAbiRuntimeSimfWitness,
-    WalletAbiSignerCallbacks, WalletAbiSignerContext, WalletAbiSimfArguments,
-    WalletAbiSimfWitness, WalletAbiStatus, WalletAbiTaprootHandle, WalletAbiTransactionInfo,
-    WalletAbiTxCreateRequest, WalletAbiTxCreateResponse, WalletAbiTxEvaluateRequest,
-    WalletAbiTxEvaluateResponse, WalletAbiUtxoSource, WalletAbiWalletOutputRequest,
-    WalletAbiWalletOutputRole, WalletAbiWalletOutputTemplate, WalletAbiWalletSourceFilter,
-    SignerMetaLink,
+    WalletAbiSessionFactoryCallbacks, WalletAbiSignerCallbacks, WalletAbiSignerContext,
+    WalletAbiSimfArguments, WalletAbiSimfWitness, WalletAbiStatus, WalletAbiTaprootHandle,
+    WalletAbiTransactionInfo, WalletAbiTxCreateRequest, WalletAbiTxCreateResponse,
+    WalletAbiTxEvaluateRequest, WalletAbiTxEvaluateResponse, WalletAbiUtxoSource,
+    WalletAbiWalletOutputRequest, WalletAbiWalletOutputRole, WalletAbiWalletOutputTemplate,
+    WalletAbiWalletSourceFilter, SignerMetaLink, WalletSessionFactoryLink,
     wallet_abi_output_template_from_address,
 };
 

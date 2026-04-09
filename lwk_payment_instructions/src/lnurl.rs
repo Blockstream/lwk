@@ -49,6 +49,7 @@ impl LnUrlIdentifier {
 }
 
 fn lnurl_schema_for_domain(domain: &str) -> Result<&'static str, String> {
+    // TODO: support onion domains
     if domain.starts_with("127.0.0.1") || domain.starts_with("localhost") {
         if cfg!(debug_assertions) {
             // allow insecure LNURL resolution over HTTP for local domains in debug mode

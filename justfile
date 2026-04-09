@@ -126,10 +126,10 @@ aarch64-apple-ios-sim:
 swift: ios ios-sim
     # we are not using build-bindings-lib because we need the mac targets anyway
     cargo run --features bindings -- generate --library ./target/aarch64-apple-ios/release/liblwk.a --language swift --out-dir ./target/swift
-    mkdir -p ./target/swift/include
-    mv target/swift/lwkFFI.h target/swift/include
-    mv target/swift/lwkFFI.modulemap  target/swift/include/module.modulemap
-    xcodebuild -create-xcframework -library target/lipo-ios-sim/release/liblwk.a -headers target/swift/include -library target/aarch64-apple-ios/release/liblwk.a -headers target/swift/include -output target/lwkFFI.xcframework
+    xcodegen generate --spec lwk_bindings/swift/project.yml
+    xcodebuild archive -project lwk_bindings/swift/LwkBindings.xcodeproj -scheme lwkFFI -archivePath "./target/ios.xcarchive" -sdk iphoneos -destination "generic/platform=iOS"
+    xcodebuild archive -project lwk_bindings/swift/LwkBindings.xcodeproj -scheme lwkFFI -archivePath "./target/ios_sim.xcarchive" -sdk iphonesimulator -destination "generic/platform=iOS Simulator"
+    xcodebuild -create-xcframework -framework "./target/ios.xcarchive/Products/Library/Frameworks/lwkFFI.framework" -framework "./target/ios_sim.xcarchive/Products/Library/Frameworks/lwkFFI.framework" -output "./target/lwkFFI.xcframework"
 
 csharp-windows: build-bindings-lib
     cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.10.0+v0.29.4

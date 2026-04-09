@@ -22,7 +22,9 @@ pub use schema::outputs::{
     WalletAbiAssetVariant, WalletAbiBlinderVariant, WalletAbiLockVariant, WalletAbiOutputSchema,
     WalletAbiRuntimeParams,
 };
-pub use schema::preview::WalletAbiPreviewAssetDelta;
+pub use schema::preview::{
+    WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput, WalletAbiPreviewOutputKind,
+};
 pub use schema::roots::{
     WalletAbiErrorCode, WalletAbiErrorInfo, WalletAbiStatus, WalletAbiTransactionInfo,
     WalletAbiTxCreateRequest, WalletAbiTxCreateResponse,

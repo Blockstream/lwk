@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::blockdata::script::Script;
 use crate::types::AssetId;
 use crate::LwkError;
 use crate::wallet_abi::abi;
@@ -47,9 +48,105 @@ impl WalletAbiPreviewAssetDelta {
     }
 }
 
+/// High-level output classifications exposed in previews.
+#[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WalletAbiPreviewOutputKind {
+    /// Wallet-owned receive output.
+    Receive,
+    /// Wallet-owned change output.
+    Change,
+    /// Non-wallet or contract-directed output.
+    External,
+    /// Fee output added by runtime.
+    Fee,
+}
+
+/// Materialized output preview entry.
+#[derive(uniffi::Object, Clone)]
+pub struct WalletAbiPreviewOutput {
+    pub(crate) inner: abi::PreviewOutput,
+}
+
+#[uniffi::export]
+impl WalletAbiPreviewOutput {
+    /// Build a preview output entry.
+    #[uniffi::constructor]
+    pub fn new(
+        kind: WalletAbiPreviewOutputKind,
+        asset_id: AssetId,
+        amount_sat: u64,
+        script_pubkey: &Script,
+    ) -> Arc<Self> {
+        Arc::new(Self {
+            inner: abi::PreviewOutput {
+                kind: kind.into(),
+                asset_id: asset_id.into(),
+                amount_sat,
+                script_pubkey: script_pubkey.into(),
+            },
+        })
+    }
+
+    /// Parse canonical Wallet ABI preview output JSON.
+    #[uniffi::constructor]
+    pub fn from_json(json: &str) -> Result<Arc<Self>, LwkError> {
+        Ok(Arc::new(Self {
+            inner: serde_json::from_str(json)?,
+        }))
+    }
+
+    /// Serialize this preview output to canonical Wallet ABI JSON.
+    pub fn to_json(&self) -> Result<String, LwkError> {
+        Ok(serde_json::to_string(&self.inner)?)
+    }
+
+    /// Return the output classification.
+    pub fn kind(&self) -> WalletAbiPreviewOutputKind {
+        self.inner.kind.into()
+    }
+
+    /// Return the asset identifier for this output.
+    pub fn asset_id(&self) -> AssetId {
+        self.inner.asset_id.into()
+    }
+
+    /// Return the output amount in satoshis.
+    pub fn amount_sat(&self) -> u64 {
+        self.inner.amount_sat
+    }
+
+    /// Return the output locking script.
+    pub fn script_pubkey(&self) -> Arc<Script> {
+        Arc::new(self.inner.script_pubkey.clone().into())
+    }
+}
+
+impl From<abi::PreviewOutputKind> for WalletAbiPreviewOutputKind {
+    fn from(value: abi::PreviewOutputKind) -> Self {
+        match value {
+            abi::PreviewOutputKind::Receive => Self::Receive,
+            abi::PreviewOutputKind::Change => Self::Change,
+            abi::PreviewOutputKind::External => Self::External,
+            abi::PreviewOutputKind::Fee => Self::Fee,
+        }
+    }
+}
+
+impl From<WalletAbiPreviewOutputKind> for abi::PreviewOutputKind {
+    fn from(value: WalletAbiPreviewOutputKind) -> Self {
+        match value {
+            WalletAbiPreviewOutputKind::Receive => Self::Receive,
+            WalletAbiPreviewOutputKind::Change => Self::Change,
+            WalletAbiPreviewOutputKind::External => Self::External,
+            WalletAbiPreviewOutputKind::Fee => Self::Fee,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::WalletAbiPreviewAssetDelta;
+    use super::{WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput, WalletAbiPreviewOutputKind};
+    use crate::blockdata::script::Script;
     use crate::Network;
 
     #[test]
@@ -63,5 +160,25 @@ mod tests {
 
         assert_eq!(decoded.asset_id(), asset_id);
         assert_eq!(decoded.wallet_delta_sat(), -1_500);
+    }
+
+    #[test]
+    fn wallet_abi_preview_output_roundtrip() {
+        let asset_id = Network::testnet().policy_asset();
+        let script = Script::empty();
+        let output = WalletAbiPreviewOutput::new(
+            WalletAbiPreviewOutputKind::External,
+            asset_id,
+            1_500,
+            &script,
+        );
+
+        let json = output.to_json().expect("serialize preview output");
+        let decoded = WalletAbiPreviewOutput::from_json(&json).expect("deserialize preview output");
+
+        assert_eq!(decoded.kind(), WalletAbiPreviewOutputKind::External);
+        assert_eq!(decoded.asset_id(), asset_id);
+        assert_eq!(decoded.amount_sat(), 1_500);
+        assert_eq!(decoded.script_pubkey().to_string(), "");
     }
 }

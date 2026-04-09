@@ -11,6 +11,7 @@ use lwk_simplicity::wallet_abi::schema as abi;
 mod conversions;
 mod schema;
 
+pub use schema::capabilities::WalletAbiCapabilities;
 pub use schema::filters::{
     WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiFinalizerSpec, WalletAbiInputIssuance,
     WalletAbiInputIssuanceKind, WalletAbiInputSchema, WalletAbiInputUnblinding,

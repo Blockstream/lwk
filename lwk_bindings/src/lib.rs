@@ -57,12 +57,13 @@ mod wallet_abi;
 pub use wallet_abi::{
     wallet_abi_generate_request_id, WalletAbiAmountFilter, WalletAbiAssetFilter,
     WalletAbiAssetVariant, WalletAbiBlinderVariant, WalletAbiErrorCode, WalletAbiErrorInfo,
-    WalletAbiFinalizerSpec, WalletAbiInputIssuance, WalletAbiInputIssuanceKind,
-    WalletAbiInputSchema, WalletAbiInputUnblinding, WalletAbiInternalKeySource,
-    WalletAbiLockFilter, WalletAbiLockVariant, WalletAbiOutputSchema, WalletAbiRuntimeParams,
-    WalletAbiRuntimeSimfValue, WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments,
-    WalletAbiSimfWitness, WalletAbiStatus, WalletAbiTaprootHandle, WalletAbiTransactionInfo,
-    WalletAbiTxCreateRequest, WalletAbiTxCreateResponse, WalletAbiUtxoSource,
+    WalletAbiCapabilities, WalletAbiFinalizerSpec, WalletAbiInputIssuance,
+    WalletAbiInputIssuanceKind, WalletAbiInputSchema, WalletAbiInputUnblinding,
+    WalletAbiInternalKeySource, WalletAbiLockFilter, WalletAbiLockVariant,
+    WalletAbiOutputSchema, WalletAbiRuntimeParams, WalletAbiRuntimeSimfValue,
+    WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments, WalletAbiSimfWitness,
+    WalletAbiStatus, WalletAbiTaprootHandle, WalletAbiTransactionInfo, WalletAbiTxCreateRequest,
+    WalletAbiTxCreateResponse, WalletAbiUtxoSource,
     WalletAbiWalletSourceFilter,
 };
 

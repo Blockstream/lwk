@@ -178,6 +178,60 @@ impl WalletAbiLockFilter {
     }
 }
 
+/// A grouped filter for selecting wallet-funded UTXOs.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WalletAbiWalletSourceFilter {
+    inner: abi::WalletSourceFilter,
+}
+
+#[wasm_bindgen]
+impl WalletAbiWalletSourceFilter {
+    /// Build a wallet source filter from asset, amount, and lock filters.
+    #[wasm_bindgen(js_name = withFilters)]
+    pub fn with_filters(
+        asset: &WalletAbiAssetFilter,
+        amount: &WalletAbiAmountFilter,
+        lock: &WalletAbiLockFilter,
+    ) -> WalletAbiWalletSourceFilter {
+        Self {
+            inner: abi::WalletSourceFilter {
+                asset: asset.inner.clone(),
+                amount: amount.inner.clone(),
+                lock: lock.inner.clone(),
+            },
+        }
+    }
+
+    /// Build a wallet source filter that matches any wallet UTXO.
+    pub fn any() -> WalletAbiWalletSourceFilter {
+        Self {
+            inner: abi::WalletSourceFilter::default(),
+        }
+    }
+
+    /// Return the asset filter component.
+    pub fn asset(&self) -> WalletAbiAssetFilter {
+        WalletAbiAssetFilter {
+            inner: self.inner.asset.clone(),
+        }
+    }
+
+    /// Return the amount filter component.
+    pub fn amount(&self) -> WalletAbiAmountFilter {
+        WalletAbiAmountFilter {
+            inner: self.inner.amount.clone(),
+        }
+    }
+
+    /// Return the lock filter component.
+    pub fn lock(&self) -> WalletAbiLockFilter {
+        WalletAbiLockFilter {
+            inner: self.inner.lock.clone(),
+        }
+    }
+}
+
 #[wasm_bindgen]
 impl WalletAbiTaprootHandle {
     /// Parse the canonical `<seed_or_ext-xonly_hex>:<pubkey>:<address>` taproot-handle string.
@@ -199,6 +253,7 @@ impl WalletAbiTaprootHandle {
 mod tests {
     use super::{
         WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiLockFilter, WalletAbiTaprootHandle,
+        WalletAbiWalletSourceFilter,
     };
 
     use std::str::FromStr;
@@ -263,5 +318,22 @@ mod tests {
         );
         assert_eq!(WalletAbiLockFilter::none().kind(), "none");
         assert!(WalletAbiLockFilter::none().script_value().is_none());
+    }
+
+    #[test]
+    fn wallet_abi_wallet_source_filter_roundtrip() {
+        let policy_asset = WasmNetwork::testnet().policy_asset();
+        let filter = WalletAbiWalletSourceFilter::with_filters(
+            &WalletAbiAssetFilter::exact(&policy_asset),
+            &WalletAbiAmountFilter::min(2_000),
+            &WalletAbiLockFilter::script(&WasmScript::new("6a").expect("op return")),
+        );
+
+        assert_eq!(filter.asset().exact_asset_id(), Some(policy_asset));
+        assert_eq!(filter.amount().amount_sat(), Some(2_000));
+        assert_eq!(filter.lock().kind(), "script");
+        assert_eq!(WalletAbiWalletSourceFilter::any().asset().kind(), "none");
+        assert_eq!(WalletAbiWalletSourceFilter::any().amount().kind(), "none");
+        assert_eq!(WalletAbiWalletSourceFilter::any().lock().kind(), "none");
     }
 }

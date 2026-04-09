@@ -1,4 +1,4 @@
-use crate::{AssetId, Error, Script};
+use crate::{AssetId, Error, OutPoint, Script};
 
 use std::str::FromStr;
 
@@ -232,6 +232,63 @@ impl WalletAbiWalletSourceFilter {
     }
 }
 
+/// A Wallet ABI input UTXO source.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WalletAbiUtxoSource {
+    inner: abi::UTXOSource,
+}
+
+#[wasm_bindgen]
+impl WalletAbiUtxoSource {
+    /// Build the Wallet ABI `wallet` UTXO source variant.
+    pub fn wallet(filter: &WalletAbiWalletSourceFilter) -> WalletAbiUtxoSource {
+        Self {
+            inner: abi::UTXOSource::Wallet {
+                filter: filter.inner.clone(),
+            },
+        }
+    }
+
+    /// Build the Wallet ABI `provided` UTXO source variant.
+    pub fn provided(outpoint: &OutPoint) -> WalletAbiUtxoSource {
+        Self {
+            inner: abi::UTXOSource::Provided {
+                outpoint: outpoint.into(),
+            },
+        }
+    }
+
+    /// Return the canonical Wallet ABI variant tag string.
+    pub fn kind(&self) -> String {
+        match self.inner {
+            abi::UTXOSource::Wallet { .. } => "wallet",
+            abi::UTXOSource::Provided { .. } => "provided",
+        }
+        .to_string()
+    }
+
+    /// Return the wallet filter when this source is the `wallet` variant.
+    #[wasm_bindgen(js_name = walletFilter)]
+    pub fn wallet_filter(&self) -> Option<WalletAbiWalletSourceFilter> {
+        match &self.inner {
+            abi::UTXOSource::Wallet { filter } => Some(WalletAbiWalletSourceFilter {
+                inner: filter.clone(),
+            }),
+            abi::UTXOSource::Provided { .. } => None,
+        }
+    }
+
+    /// Return the outpoint when this source is the `provided` variant.
+    #[wasm_bindgen(js_name = providedOutpoint)]
+    pub fn provided_outpoint(&self) -> Option<OutPoint> {
+        match self.inner {
+            abi::UTXOSource::Provided { outpoint } => Some(outpoint.into()),
+            abi::UTXOSource::Wallet { .. } => None,
+        }
+    }
+}
+
 #[wasm_bindgen]
 impl WalletAbiTaprootHandle {
     /// Parse the canonical `<seed_or_ext-xonly_hex>:<pubkey>:<address>` taproot-handle string.
@@ -253,7 +310,7 @@ impl WalletAbiTaprootHandle {
 mod tests {
     use super::{
         WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiLockFilter, WalletAbiTaprootHandle,
-        WalletAbiWalletSourceFilter,
+        WalletAbiUtxoSource, WalletAbiWalletSourceFilter,
     };
 
     use std::str::FromStr;
@@ -262,7 +319,7 @@ mod tests {
     use lwk_simplicity::simplicityhl::elements::Address;
     use lwk_simplicity::taproot_pubkey_gen::TaprootPubkeyGen;
 
-    use crate::{Network as WasmNetwork, Script as WasmScript};
+    use crate::{Network as WasmNetwork, OutPoint as WasmOutPoint, Script as WasmScript};
 
     #[test]
     fn wallet_abi_taproot_handle_roundtrip() {
@@ -335,5 +392,29 @@ mod tests {
         assert_eq!(WalletAbiWalletSourceFilter::any().asset().kind(), "none");
         assert_eq!(WalletAbiWalletSourceFilter::any().amount().kind(), "none");
         assert_eq!(WalletAbiWalletSourceFilter::any().lock().kind(), "none");
+    }
+
+    #[test]
+    fn wallet_abi_utxo_source_roundtrip() {
+        let wallet_source = WalletAbiUtxoSource::wallet(&WalletAbiWalletSourceFilter::any());
+        let provided_outpoint = WasmOutPoint::new(
+            "[elements]0000000000000000000000000000000000000000000000000000000000000001:1",
+        )
+        .expect("outpoint");
+        let provided_source = WalletAbiUtxoSource::provided(&provided_outpoint);
+
+        assert_eq!(wallet_source.kind(), "wallet");
+        assert_eq!(wallet_source.wallet_filter().expect("wallet filter").lock().kind(), "none");
+        assert!(wallet_source.provided_outpoint().is_none());
+
+        assert_eq!(provided_source.kind(), "provided");
+        assert!(provided_source.wallet_filter().is_none());
+        assert_eq!(
+            provided_source
+                .provided_outpoint()
+                .expect("provided outpoint")
+                .to_string(),
+            provided_outpoint.to_string()
+        );
     }
 }

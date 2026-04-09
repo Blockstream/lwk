@@ -14,6 +14,7 @@ mod output_request;
 mod output_template;
 mod request_session;
 mod signer_context;
+mod signer_link;
 mod schema;
 
 pub use bip32::{
@@ -23,6 +24,7 @@ pub use output_request::{WalletAbiWalletOutputRequest, WalletAbiWalletOutputRole
 pub use output_template::{wallet_abi_output_template_from_address, WalletAbiWalletOutputTemplate};
 pub use request_session::WalletAbiRequestSession;
 pub use signer_context::WalletAbiSignerContext;
+pub use signer_link::{SignerMetaLink, WalletAbiSignerCallbacks};
 pub use schema::capabilities::WalletAbiCapabilities;
 pub use schema::evaluate::{WalletAbiTxEvaluateRequest, WalletAbiTxEvaluateResponse};
 pub use schema::filters::{

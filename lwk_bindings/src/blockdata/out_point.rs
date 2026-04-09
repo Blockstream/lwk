@@ -94,7 +94,7 @@ mod tests {
     #[test]
     fn test_out_point_from_parts() {
         let txid_hex = "0000000000000000000000000000000000000000000000000000000000000001";
-        let txid = Txid::new(&txid_hex.parse().unwrap()).unwrap();
+        let txid = Txid::from_string(txid_hex).unwrap();
         let vout = 5;
 
         let out_point = OutPoint::from_parts(&txid, vout);

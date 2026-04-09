@@ -246,12 +246,9 @@ mod tests {
     fn pset_input_builder() {
         use super::PsetInputBuilder;
 
-        let txid = Txid::new(
-            &"0000000000000000000000000000000000000000000000000000000000000001"
-                .parse()
-                .unwrap(),
-        )
-        .unwrap();
+        let txid =
+            Txid::from_string("0000000000000000000000000000000000000000000000000000000000000001")
+                .unwrap();
         let outpoint = crate::OutPoint::from_parts(&txid, 0);
         let builder = PsetInputBuilder::from_prevout(&outpoint);
         builder.sequence(&crate::TxSequence::zero()).unwrap();
@@ -282,12 +279,9 @@ mod tests {
     fn pset_builder_add_input_output() {
         let pset_builder = PsetBuilder::new_v2();
 
-        let txid = Txid::new(
-            &"0000000000000000000000000000000000000000000000000000000000000001"
-                .parse()
-                .unwrap(),
-        )
-        .unwrap();
+        let txid =
+            Txid::from_string("0000000000000000000000000000000000000000000000000000000000000001")
+                .unwrap();
         let outpoint = crate::OutPoint::from_parts(&txid, 0);
         let input_builder = PsetInputBuilder::from_prevout(&outpoint);
         input_builder.sequence(&crate::TxSequence::zero()).unwrap();

@@ -320,6 +320,14 @@ impl From<elements::bitcoin::address::ParseError> for LwkError {
     }
 }
 
+impl From<elements::hashes::FromSliceError> for LwkError {
+    fn from(value: elements::hashes::FromSliceError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
 #[cfg(feature = "lightning")]
 impl From<lwk_boltz::Error> for LwkError {
     fn from(value: lwk_boltz::Error) -> Self {

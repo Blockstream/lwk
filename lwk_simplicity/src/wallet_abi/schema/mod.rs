@@ -13,7 +13,8 @@ pub mod types;
 pub mod values;
 
 pub use runtime_deps::{
-    KeyStoreMeta, WalletOutputRequest, WalletOutputTemplate, WalletProviderMeta,
+    KeyStoreMeta, WalletBroadcaster, WalletOutputAllocator, WalletOutputRequest,
+    WalletOutputTemplate, WalletPrevoutResolver, WalletProviderMeta, WalletReceiveAddressProvider,
     WalletRequestSession, WalletRuntimeDeps, WalletSessionFactory,
 };
 pub use runtime_params::{

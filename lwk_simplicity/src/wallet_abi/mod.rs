@@ -9,9 +9,10 @@ pub use schema::{
     AssetVariant, BlinderVariant, ErrorInfo, FinalizerSpec, InputIssuance, InputIssuanceKind,
     InputSchema, InputUnblinding, InternalKeySource, KeyStoreMeta, LockFilter, LockVariant,
     RuntimeParams, RuntimeSimfValue, RuntimeSimfWitness, SimfArguments, SimfWitness,
-    TransactionInfo, TxCreateArtifacts, TxCreateRequest, TxCreateResponse, TX_CREATE_ABI_VERSION,
-    UTXOSource, WalletAbiErrorCode, WalletOutputRequest, WalletOutputTemplate,
-    WalletProviderMeta, WalletRequestSession, WalletRuntimeDeps, WalletSessionFactory,
-    WalletSourceFilter,
+    TransactionInfo, TxCreateArtifacts, TxCreateRequest, TxCreateResponse, UTXOSource,
+    WalletAbiErrorCode, WalletBroadcaster, WalletOutputAllocator, WalletOutputRequest,
+    WalletOutputTemplate, WalletPrevoutResolver, WalletProviderMeta, WalletReceiveAddressProvider,
+    WalletRequestSession, WalletRuntimeDeps, WalletSessionFactory, WalletSourceFilter,
+    TX_CREATE_ABI_VERSION,
 };
 pub use tx_resolution::runtime::Runtime as WalletAbiRuntime;

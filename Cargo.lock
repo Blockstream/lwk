@@ -2495,6 +2495,7 @@ dependencies = [
 name = "lwk_bindings"
 version = "0.16.0"
 dependencies = [
+ "camino",
  "elements 0.25.2",
  "log",
  "lwk_boltz",
@@ -2509,6 +2510,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "uniffi",
+ "uniffi_bindgen",
 ]
 
 [[package]]

@@ -42,7 +42,7 @@ pub fn simplicity_leaf_version() -> taproot::LeafVersion {
 /// Create a SHA256 context, initialized with a "TapData" tag and data
 ///
 /// Based on the C implementation of the `tapdata_init` jet:
-/// https://github.com/BlockstreamResearch/simplicity/blob/d190505509f4c04b1b9193c6739515f9faa18aac/C/jets.c#L1408
+/// <https://github.com/BlockstreamResearch/simplicity/blob/d190505509f4c04b1b9193c6739515f9faa18aac/C/jets.c#L1408>
 pub fn tap_data_hash(data: &[u8]) -> sha256::Hash {
     let tag = sha256::Hash::hash(b"TapData");
     let mut eng = sha256::Hash::engine();

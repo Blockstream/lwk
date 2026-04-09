@@ -1,3 +1,5 @@
+import json
+
 from lwk import *
 
 network = Network.testnet()
@@ -59,6 +61,75 @@ assert response_roundtrip.to_json() == response_json
 assert response_roundtrip.status() == WalletAbiStatus.ERROR
 assert response_roundtrip.error_info().code() == WalletAbiErrorCode.INVALID_REQUEST
 assert response_roundtrip.error_info().details_json() == "{\"field\":\"params\"}"
+
+capabilities = WalletAbiCapabilities(
+    Network.testnet(),
+    [
+        "wallet_abi_process_request",
+        "get_signer_receive_address",
+        "wallet_abi_evaluate_request",
+    ],
+)
+capabilities_roundtrip = WalletAbiCapabilities.from_json(capabilities.to_json())
+
+assert capabilities_roundtrip.abi_version() == "wallet-abi-0.1"
+assert capabilities_roundtrip.network() == Network.testnet()
+assert capabilities_roundtrip.methods() == [
+    "get_signer_receive_address",
+    "wallet_abi_evaluate_request",
+    "wallet_abi_process_request",
+]
+
+preview_delta = WalletAbiPreviewAssetDelta(network.policy_asset(), -1500)
+preview_output = WalletAbiPreviewOutput(
+    WalletAbiPreviewOutputKind.FEE,
+    network.policy_asset(),
+    600,
+    Script.empty(),
+)
+preview = WalletAbiRequestPreview(
+    [preview_delta],
+    [preview_output],
+    ["requires review"],
+)
+preview_roundtrip = WalletAbiRequestPreview.from_json(preview.to_json())
+
+assert preview_roundtrip.asset_deltas()[0].wallet_delta_sat() == -1500
+assert preview_roundtrip.outputs()[0].kind() == WalletAbiPreviewOutputKind.FEE
+assert preview_roundtrip.warnings() == ["requires review"]
+
+evaluate_request = WalletAbiTxEvaluateRequest.from_parts(
+    request_id,
+    Network.testnet(),
+    params,
+)
+evaluate_request_roundtrip = WalletAbiTxEvaluateRequest.from_json(
+    evaluate_request.to_json()
+)
+evaluate_response = WalletAbiTxEvaluateResponse.ok(evaluate_request, preview)
+evaluate_response_roundtrip = WalletAbiTxEvaluateResponse.from_json(
+    evaluate_response.to_json()
+)
+
+assert evaluate_request_roundtrip.to_json() == evaluate_request.to_json()
+assert evaluate_response_roundtrip.status() == WalletAbiStatus.OK
+assert evaluate_response_roundtrip.preview().warnings() == ["requires review"]
+assert evaluate_response_roundtrip.error_info() is None
+
+transaction = WalletAbiTransactionInfo(
+    "00",
+    Txid("0000000000000000000000000000000000000000000000000000000000000000"),
+)
+ok_response = WalletAbiTxCreateResponse.ok(
+    request_id,
+    Network.testnet(),
+    transaction,
+    json.dumps({"preview": json.loads(preview.to_json())}),
+)
+
+assert ok_response.preview() is not None
+assert ok_response.preview().outputs()[0].kind() == WalletAbiPreviewOutputKind.FEE
+assert ok_response.preview().warnings() == ["requires review"]
 
 taproot_handle = WalletAbiTaprootHandle.from_string(taproot_handle_string)
 

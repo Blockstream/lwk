@@ -23,7 +23,9 @@ pub use outputs::{
     WalletAbiAssetVariant, WalletAbiBlinderVariant, WalletAbiLockVariant, WalletAbiOutputSchema,
     WalletAbiRuntimeParams,
 };
-pub use preview::WalletAbiPreviewAssetDelta;
+pub use preview::{
+    WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput, WalletAbiPreviewOutputKind,
+};
 pub use simf::{
     WalletAbiRuntimeSimfValue, WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments,
     WalletAbiSimfWitness,

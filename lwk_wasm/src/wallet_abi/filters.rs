@@ -1,4 +1,4 @@
-use crate::{AssetId, Error};
+use crate::{AssetId, Error, Script};
 
 use std::str::FromStr;
 
@@ -134,6 +134,50 @@ impl WalletAbiAmountFilter {
     }
 }
 
+/// A lock selector for wallet-funded inputs.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WalletAbiLockFilter {
+    inner: abi::LockFilter,
+}
+
+#[wasm_bindgen]
+impl WalletAbiLockFilter {
+    /// Build the Wallet ABI `none` lock filter variant.
+    pub fn none() -> WalletAbiLockFilter {
+        Self {
+            inner: abi::LockFilter::None,
+        }
+    }
+
+    /// Build the Wallet ABI `script` lock filter variant.
+    pub fn script(script: &Script) -> WalletAbiLockFilter {
+        Self {
+            inner: abi::LockFilter::Script {
+                script: script.as_ref().clone(),
+            },
+        }
+    }
+
+    /// Return the canonical Wallet ABI variant tag string.
+    pub fn kind(&self) -> String {
+        match self.inner {
+            abi::LockFilter::None => "none",
+            abi::LockFilter::Script { .. } => "script",
+        }
+        .to_string()
+    }
+
+    /// Return the script when this filter is the `script` variant.
+    #[wasm_bindgen(js_name = scriptValue)]
+    pub fn script_value(&self) -> Option<Script> {
+        match &self.inner {
+            abi::LockFilter::Script { script } => Some(script.clone().into()),
+            abi::LockFilter::None => None,
+        }
+    }
+}
+
 #[wasm_bindgen]
 impl WalletAbiTaprootHandle {
     /// Parse the canonical `<seed_or_ext-xonly_hex>:<pubkey>:<address>` taproot-handle string.
@@ -153,7 +197,9 @@ impl WalletAbiTaprootHandle {
 
 #[cfg(test)]
 mod tests {
-    use super::{WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiTaprootHandle};
+    use super::{
+        WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiLockFilter, WalletAbiTaprootHandle,
+    };
 
     use std::str::FromStr;
 
@@ -161,7 +207,7 @@ mod tests {
     use lwk_simplicity::simplicityhl::elements::Address;
     use lwk_simplicity::taproot_pubkey_gen::TaprootPubkeyGen;
 
-    use crate::Network as WasmNetwork;
+    use crate::{Network as WasmNetwork, Script as WasmScript};
 
     #[test]
     fn wallet_abi_taproot_handle_roundtrip() {
@@ -203,5 +249,19 @@ mod tests {
         assert_eq!(minimum.amount_sat(), Some(600));
         assert_eq!(none.kind(), "none");
         assert_eq!(none.amount_sat(), None);
+    }
+
+    #[test]
+    fn wallet_abi_lock_filter_roundtrip() {
+        let script = WasmScript::new("6a").expect("op return");
+        let filter = WalletAbiLockFilter::script(&script);
+
+        assert_eq!(filter.kind(), "script");
+        assert_eq!(
+            filter.script_value().expect("script filter").to_string(),
+            script.to_string()
+        );
+        assert_eq!(WalletAbiLockFilter::none().kind(), "none");
+        assert!(WalletAbiLockFilter::none().script_value().is_none());
     }
 }

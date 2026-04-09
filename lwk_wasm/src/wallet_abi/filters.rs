@@ -430,7 +430,7 @@ impl WalletAbiInternalKeySource {
 #[wasm_bindgen]
 #[derive(Clone, Debug, PartialEq)]
 pub struct WalletAbiFinalizerSpec {
-    inner: abi::FinalizerSpec,
+    pub(crate) inner: abi::FinalizerSpec,
 }
 
 #[wasm_bindgen]

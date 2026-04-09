@@ -273,6 +273,13 @@ impl WalletAbiTxCreateResponse {
         self.inner.artifacts_json().map_err(Into::into)
     }
 
+    /// Return the typed preview payload when `artifacts.preview` is present.
+    pub fn preview(&self) -> Result<Option<Arc<WalletAbiRequestPreview>>, LwkError> {
+        self.inner.preview().map(|preview| {
+            preview.map(|inner| Arc::new(WalletAbiRequestPreview { inner }))
+        }).map_err(Into::into)
+    }
+
     /// Return the error payload when this response has `error` status.
     pub fn error_info(&self) -> Option<Arc<WalletAbiErrorInfo>> {
         self.inner.error.as_ref().map(|error| {
@@ -280,5 +287,60 @@ impl WalletAbiTxCreateResponse {
                 inner: error.clone(),
             })
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{WalletAbiTransactionInfo, WalletAbiTxCreateResponse};
+    use crate::{
+        Network, WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput, WalletAbiPreviewOutputKind,
+        WalletAbiRequestPreview,
+    };
+    use crate::blockdata::script::Script;
+
+    #[test]
+    fn wallet_abi_tx_create_response_preview() {
+        let network = Network::testnet();
+        let policy_asset = network.policy_asset();
+        let preview = WalletAbiRequestPreview::new(
+            vec![WalletAbiPreviewAssetDelta::new(policy_asset, -1_500)],
+            vec![WalletAbiPreviewOutput::new(
+                WalletAbiPreviewOutputKind::Fee,
+                policy_asset,
+                600,
+                &Script::empty(),
+            )],
+            vec![],
+        );
+        let transaction = WalletAbiTransactionInfo::new(
+            "00",
+            &"0000000000000000000000000000000000000000000000000000000000000000"
+                .parse()
+                .expect("valid txid"),
+        );
+        let mut artifacts = serde_json::Map::new();
+        artifacts.insert(
+            "preview".to_string(),
+            serde_json::from_str::<serde_json::Value>(
+                &preview.to_json().expect("serialize preview"),
+            )
+            .expect("preview json value"),
+        );
+        let response = WalletAbiTxCreateResponse::ok(
+            "0d6d53cd-a040-4f0c-8d28-c67b6608fb14",
+            &network,
+            &transaction,
+            Some(serde_json::to_string(&artifacts).expect("serialize artifacts")),
+        )
+        .expect("response");
+
+        let decoded = response
+            .preview()
+            .expect("preview accessor")
+            .expect("preview payload");
+
+        assert_eq!(decoded.asset_deltas()[0].wallet_delta_sat(), -1_500);
+        assert_eq!(decoded.outputs()[0].kind(), WalletAbiPreviewOutputKind::Fee);
     }
 }

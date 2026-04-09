@@ -381,6 +381,50 @@ impl WalletAbiInputIssuance {
     }
 }
 
+/// The internal key source used by a Wallet ABI finalizer.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq)]
+pub struct WalletAbiInternalKeySource {
+    inner: abi::InternalKeySource,
+}
+
+#[wasm_bindgen]
+impl WalletAbiInternalKeySource {
+    /// Build the Wallet ABI `bip0341` internal key source variant.
+    pub fn bip0341() -> WalletAbiInternalKeySource {
+        Self {
+            inner: abi::InternalKeySource::Bip0341,
+        }
+    }
+
+    /// Build the Wallet ABI `external` internal key source variant.
+    pub fn external(handle: &WalletAbiTaprootHandle) -> WalletAbiInternalKeySource {
+        Self {
+            inner: abi::InternalKeySource::External {
+                key: Box::new(handle.into()),
+            },
+        }
+    }
+
+    /// Return the canonical Wallet ABI variant tag string.
+    pub fn kind(&self) -> String {
+        match self.inner {
+            abi::InternalKeySource::Bip0341 => "bip0341",
+            abi::InternalKeySource::External { .. } => "external",
+        }
+        .to_string()
+    }
+
+    /// Return the external handle when this source is the `external` variant.
+    #[wasm_bindgen(js_name = externalHandle)]
+    pub fn external_handle(&self) -> Option<WalletAbiTaprootHandle> {
+        match &self.inner {
+            abi::InternalKeySource::External { key } => Some((**key).clone().into()),
+            abi::InternalKeySource::Bip0341 => None,
+        }
+    }
+}
+
 #[wasm_bindgen]
 impl WalletAbiTaprootHandle {
     /// Parse the canonical `<seed_or_ext-xonly_hex>:<pubkey>:<address>` taproot-handle string.
@@ -401,8 +445,9 @@ impl WalletAbiTaprootHandle {
 #[cfg(test)]
 mod tests {
     use super::{
-        WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiLockFilter, WalletAbiTaprootHandle,
-        WalletAbiInputIssuance, WalletAbiInputIssuanceKind, WalletAbiUtxoSource,
+        WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiInputIssuance,
+        WalletAbiInputIssuanceKind, WalletAbiInternalKeySource, WalletAbiLockFilter,
+        WalletAbiTaprootHandle, WalletAbiUtxoSource,
         WalletAbiWalletSourceFilter,
     };
 
@@ -527,5 +572,31 @@ mod tests {
         assert_eq!(reissuance.asset_amount_sat(), 2_000);
         assert_eq!(reissuance.token_amount_sat(), 250);
         assert_eq!(reissuance.entropy(), entropy);
+    }
+
+    #[test]
+    fn wallet_abi_internal_key_source_roundtrip() {
+        let handle = WalletAbiTaprootHandle::from_string(
+            &TaprootPubkeyGen::from(
+                &(),
+                Network::Liquid,
+                &|_, _, _| {
+                    Ok(Address::from_str("lq1qqvxk052kf3qtkxmrakx50a9gc3smqad2ync54hzntjt980kfej9kkfe0247rp5h4yzmdftsahhw64uy8pzfe7cpg4fgykm7cv")
+                        .expect("valid fixed address"))
+                },
+            )
+            .expect("build taproot handle")
+            .to_string(),
+        )
+        .expect("parse handle");
+        let external = WalletAbiInternalKeySource::external(&handle);
+
+        assert_eq!(WalletAbiInternalKeySource::bip0341().kind(), "bip0341");
+        assert_eq!(WalletAbiInternalKeySource::bip0341().external_handle(), None);
+        assert_eq!(external.kind(), "external");
+        assert_eq!(
+            external.external_handle().expect("external handle").to_string(),
+            handle.to_string()
+        );
     }
 }

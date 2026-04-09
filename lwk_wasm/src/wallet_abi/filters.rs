@@ -1,4 +1,4 @@
-use crate::{AssetId, Error, OutPoint, Script};
+use crate::{AssetId, Error, OutPoint, Script, SecretKey};
 use super::simf::{WalletAbiSimfArguments, WalletAbiSimfWitness};
 
 use std::str::FromStr;
@@ -509,6 +509,58 @@ impl WalletAbiFinalizerSpec {
     }
 }
 
+/// The input unblinding strategy for a Wallet ABI input.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WalletAbiInputUnblinding {
+    inner: abi::InputUnblinding,
+}
+
+#[wasm_bindgen]
+impl WalletAbiInputUnblinding {
+    /// Build the Wallet ABI `wallet` input unblinding variant.
+    pub fn wallet() -> WalletAbiInputUnblinding {
+        Self {
+            inner: abi::InputUnblinding::Wallet,
+        }
+    }
+
+    /// Build the Wallet ABI `provided` input unblinding variant.
+    pub fn provided(secret_key: &SecretKey) -> WalletAbiInputUnblinding {
+        Self {
+            inner: abi::InputUnblinding::Provided {
+                secret_key: (*secret_key).into(),
+            },
+        }
+    }
+
+    /// Build the Wallet ABI `explicit` input unblinding variant.
+    pub fn explicit() -> WalletAbiInputUnblinding {
+        Self {
+            inner: abi::InputUnblinding::Explicit,
+        }
+    }
+
+    /// Return the canonical Wallet ABI variant tag string.
+    pub fn kind(&self) -> String {
+        match self.inner {
+            abi::InputUnblinding::Wallet => "wallet",
+            abi::InputUnblinding::Provided { .. } => "provided",
+            abi::InputUnblinding::Explicit => "explicit",
+        }
+        .to_string()
+    }
+
+    /// Return the secret key when this unblinding mode is the `provided` variant.
+    #[wasm_bindgen(js_name = providedSecretKey)]
+    pub fn provided_secret_key(&self) -> Option<SecretKey> {
+        match self.inner {
+            abi::InputUnblinding::Provided { secret_key } => Some(secret_key.into()),
+            abi::InputUnblinding::Wallet | abi::InputUnblinding::Explicit => None,
+        }
+    }
+}
+
 #[wasm_bindgen]
 impl WalletAbiTaprootHandle {
     /// Parse the canonical `<seed_or_ext-xonly_hex>:<pubkey>:<address>` taproot-handle string.
@@ -530,8 +582,8 @@ impl WalletAbiTaprootHandle {
 mod tests {
     use super::{
         WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiInputIssuance,
-        WalletAbiInputIssuanceKind, WalletAbiInternalKeySource, WalletAbiLockFilter,
-        WalletAbiTaprootHandle, WalletAbiUtxoSource, WalletAbiFinalizerSpec,
+        WalletAbiInputIssuanceKind, WalletAbiInputUnblinding, WalletAbiInternalKeySource,
+        WalletAbiLockFilter, WalletAbiTaprootHandle, WalletAbiUtxoSource, WalletAbiFinalizerSpec,
         WalletAbiWalletSourceFilter,
     };
 
@@ -543,6 +595,7 @@ mod tests {
 
     use crate::{
         Network as WasmNetwork, OutPoint as WasmOutPoint, Script as WasmScript,
+        SecretKey as WasmSecretKey,
         SimplicityArguments, SimplicityTypedValue, SimplicityWitnessValues,
         WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments, WalletAbiSimfWitness,
         XOnlyPublicKey,
@@ -752,5 +805,20 @@ mod tests {
                 .kind(),
             "sig_hash_all"
         );
+    }
+
+    #[test]
+    fn wallet_abi_input_unblinding_roundtrip() {
+        let secret_key = WasmSecretKey::from_bytes(&[2_u8; 32]).expect("secret key");
+        let provided = WalletAbiInputUnblinding::provided(&secret_key);
+
+        assert_eq!(WalletAbiInputUnblinding::wallet().kind(), "wallet");
+        assert_eq!(WalletAbiInputUnblinding::wallet().provided_secret_key(), None);
+        assert_eq!(provided.kind(), "provided");
+        assert_eq!(
+            provided.provided_secret_key().expect("provided secret").to_bytes(),
+            secret_key.to_bytes()
+        );
+        assert_eq!(WalletAbiInputUnblinding::explicit().kind(), "explicit");
     }
 }

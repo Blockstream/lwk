@@ -63,10 +63,10 @@ pub use wallet_abi::{
     WalletAbiInternalKeySource, WalletAbiLockFilter, WalletAbiLockVariant,
     WalletAbiOutputSchema, WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput,
     WalletAbiPreviewOutputKind, WalletAbiRequestPreview, WalletAbiRuntimeParams,
-    WalletAbiRuntimeSimfValue, WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments,
-    WalletAbiSimfWitness, WalletAbiStatus, WalletAbiTaprootHandle, WalletAbiTransactionInfo,
-    WalletAbiTxCreateRequest, WalletAbiTxCreateResponse, WalletAbiTxEvaluateRequest,
-    WalletAbiTxEvaluateResponse, WalletAbiUtxoSource,
+    WalletAbiRequestSession, WalletAbiRuntimeSimfValue, WalletAbiRuntimeSimfWitness,
+    WalletAbiSimfArguments, WalletAbiSimfWitness, WalletAbiStatus, WalletAbiTaprootHandle,
+    WalletAbiTransactionInfo, WalletAbiTxCreateRequest, WalletAbiTxCreateResponse,
+    WalletAbiTxEvaluateRequest, WalletAbiTxEvaluateResponse, WalletAbiUtxoSource,
     WalletAbiWalletSourceFilter,
 };
 

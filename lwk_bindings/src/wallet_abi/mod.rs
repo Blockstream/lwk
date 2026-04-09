@@ -15,6 +15,7 @@ mod output_allocator_link;
 mod output_request;
 mod output_template;
 mod prevout_resolver_link;
+mod provider;
 mod receive_address_link;
 mod request_session;
 mod runtime_deps_link;
@@ -31,6 +32,7 @@ pub use output_allocator_link::{WalletAbiOutputAllocatorCallbacks, WalletOutputA
 pub use output_request::{WalletAbiWalletOutputRequest, WalletAbiWalletOutputRole};
 pub use output_template::{wallet_abi_output_template_from_address, WalletAbiWalletOutputTemplate};
 pub use prevout_resolver_link::{WalletAbiPrevoutResolverCallbacks, WalletPrevoutResolverLink};
+pub use provider::WalletAbiProvider;
 pub use receive_address_link::{
     WalletAbiReceiveAddressProviderCallbacks, WalletReceiveAddressProviderLink,
 };

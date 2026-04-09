@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+* deprecated `Txid::new()`, replacement `Txid::from_string()`
+* deprecated `Txid::bytes()`, replacement `Txid:to_bytes()`
+* deprecated `Script::new()`, replacement `Script::from_string()`
+* deprecated `Script::bytes()`, replacement `Script:to_bytes()`
+
 ## 0.16.0
 
 * uniffi upgrade 0.28.2 -> 0.29.4

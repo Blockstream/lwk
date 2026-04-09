@@ -204,9 +204,72 @@ impl WalletAbiBlinderVariant {
     }
 }
 
+/// A Wallet ABI output schema entry.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq)]
+pub struct WalletAbiOutputSchema {
+    pub(crate) inner: abi::OutputSchema,
+}
+
+#[wasm_bindgen]
+impl WalletAbiOutputSchema {
+    /// Build an output schema entry.
+    pub fn new(
+        id: &str,
+        amount_sat: u64,
+        lock: &WalletAbiLockVariant,
+        asset: &WalletAbiAssetVariant,
+        blinder: &WalletAbiBlinderVariant,
+    ) -> WalletAbiOutputSchema {
+        Self {
+            inner: abi::OutputSchema {
+                id: id.to_string(),
+                amount_sat,
+                lock: lock.inner.clone(),
+                asset: asset.inner.clone(),
+                blinder: blinder.inner.clone(),
+            },
+        }
+    }
+
+    /// Return the output identifier.
+    pub fn id(&self) -> String {
+        self.inner.id.clone()
+    }
+
+    /// Return the output amount in satoshi.
+    #[wasm_bindgen(js_name = amountSat)]
+    pub fn amount_sat(&self) -> u64 {
+        self.inner.amount_sat
+    }
+
+    /// Return the output lock variant.
+    pub fn lock(&self) -> WalletAbiLockVariant {
+        WalletAbiLockVariant {
+            inner: self.inner.lock.clone(),
+        }
+    }
+
+    /// Return the output asset variant.
+    pub fn asset(&self) -> WalletAbiAssetVariant {
+        WalletAbiAssetVariant {
+            inner: self.inner.asset.clone(),
+        }
+    }
+
+    /// Return the output blinder variant.
+    pub fn blinder(&self) -> WalletAbiBlinderVariant {
+        WalletAbiBlinderVariant {
+            inner: self.inner.blinder.clone(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{WalletAbiAssetVariant, WalletAbiBlinderVariant, WalletAbiLockVariant};
+    use super::{
+        WalletAbiAssetVariant, WalletAbiBlinderVariant, WalletAbiLockVariant, WalletAbiOutputSchema,
+    };
 
     use crate::{Network, PublicKey, Script, SecretKey, WalletAbiFinalizerSpec};
 
@@ -269,5 +332,23 @@ mod tests {
             public_key.to_string()
         );
         assert_eq!(WalletAbiBlinderVariant::explicit().kind(), "explicit");
+    }
+
+    #[test]
+    fn wallet_abi_output_schema_roundtrip() {
+        let policy_asset = Network::testnet().policy_asset();
+        let output = WalletAbiOutputSchema::new(
+            "change",
+            1_500,
+            &WalletAbiLockVariant::script(&Script::new("6a").expect("script")),
+            &WalletAbiAssetVariant::asset_id(&policy_asset),
+            &WalletAbiBlinderVariant::explicit(),
+        );
+
+        assert_eq!(output.id(), "change".to_string());
+        assert_eq!(output.amount_sat(), 1_500);
+        assert_eq!(output.lock().kind(), "script");
+        assert_eq!(output.asset().asset_id_value(), Some(policy_asset));
+        assert_eq!(output.blinder().kind(), "explicit");
     }
 }

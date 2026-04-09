@@ -8,4 +8,7 @@ pub use filters::{
     WalletAbiInputIssuance, WalletAbiInputIssuanceKind, WalletAbiUtxoSource,
     WalletAbiWalletSourceFilter,
 };
-pub use simf::{WalletAbiRuntimeSimfValue, WalletAbiSimfArguments};
+pub use simf::{
+    WalletAbiRuntimeSimfValue, WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments,
+    WalletAbiSimfWitness,
+};

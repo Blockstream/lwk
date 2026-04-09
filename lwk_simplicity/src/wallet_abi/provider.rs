@@ -9,6 +9,17 @@ use crate::wallet_abi::schema::{
 use lwk_wollet::elements::Address;
 use lwk_wollet::secp256k1::XOnlyPublicKey;
 
+/// JSON dispatch method name for the provider receive-address getter.
+pub const GET_SIGNER_RECEIVE_ADDRESS_METHOD: &str = "get_signer_receive_address";
+/// JSON dispatch method name for the provider signer x-only pubkey getter.
+pub const GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD: &str = "get_raw_signing_x_only_pubkey";
+/// JSON dispatch method name for tx-create request execution.
+pub const WALLET_ABI_PROCESS_REQUEST_METHOD: &str = "wallet_abi_process_request";
+/// JSON dispatch method name for provider discovery.
+pub const WALLET_ABI_GET_CAPABILITIES_METHOD: &str = "wallet_abi_get_capabilities";
+/// JSON dispatch method name for tx-evaluate request execution.
+pub const WALLET_ABI_EVALUATE_REQUEST_METHOD: &str = "wallet_abi_evaluate_request";
+
 /// Checked-in wallet-abi provider façade built on top of the runtime engine.
 pub struct WalletAbiProvider<
     Signer,
@@ -183,7 +194,11 @@ where
     PrevoutResolver: WalletPrevoutResolver,
     OutputAllocator: WalletOutputAllocator<Error = PrevoutResolver::Error>,
     Broadcaster: WalletBroadcaster<Error = PrevoutResolver::Error>,
-    WalletAbiError: From<Signer::Error> + From<SessionFactory::Error> + From<PrevoutResolver::Error>,
+    ReceiveAddressProvider: WalletReceiveAddressProvider,
+    WalletAbiError: From<Signer::Error>
+        + From<SessionFactory::Error>
+        + From<PrevoutResolver::Error>
+        + From<ReceiveAddressProvider::Error>,
 {
     /// Route one typed tx-create request through the checked-in runtime façade.
     pub async fn process_request(
@@ -212,6 +227,53 @@ where
         .evaluate_request()
         .await
     }
+
+    /// Dispatch one method-level JSON call without owning the outer JSON-RPC envelope.
+    pub async fn dispatch_json(
+        &self,
+        method: &str,
+        params: serde_json::Value,
+    ) -> Result<serde_json::Value, WalletAbiError> {
+        match method {
+            GET_SIGNER_RECEIVE_ADDRESS_METHOD => {
+                expect_no_params(method, &params)?;
+                Ok(serde_json::to_value(
+                    self.get_signer_receive_address()?.to_string(),
+                )?)
+            }
+            GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD => {
+                expect_no_params(method, &params)?;
+                Ok(serde_json::to_value(
+                    self.get_raw_signing_x_only_pubkey()?.to_string(),
+                )?)
+            }
+            WALLET_ABI_GET_CAPABILITIES_METHOD => {
+                expect_no_params(method, &params)?;
+                Ok(serde_json::to_value(self.get_capabilities().await?)?)
+            }
+            WALLET_ABI_PROCESS_REQUEST_METHOD => {
+                let request = serde_json::from_value::<TxCreateRequest>(params)?;
+                Ok(serde_json::to_value(self.process_request(request).await?)?)
+            }
+            WALLET_ABI_EVALUATE_REQUEST_METHOD => {
+                let request = serde_json::from_value::<TxEvaluateRequest>(params)?;
+                Ok(serde_json::to_value(self.evaluate_request(request).await?)?)
+            }
+            _ => Err(WalletAbiError::InvalidRequest(format!(
+                "unsupported wallet-abi method '{method}'"
+            ))),
+        }
+    }
+}
+
+fn expect_no_params(method: &str, params: &serde_json::Value) -> Result<(), WalletAbiError> {
+    if params.is_null() {
+        return Ok(());
+    }
+
+    Err(WalletAbiError::InvalidRequest(format!(
+        "wallet-abi method '{method}' does not accept params"
+    )))
 }
 
 impl<
@@ -245,11 +307,11 @@ where
         Ok(WalletCapabilities::new(
             session.network,
             [
-                "get_signer_receive_address",
-                "get_raw_signing_x_only_pubkey",
-                "wallet_abi_evaluate_request",
-                "wallet_abi_get_capabilities",
-                "wallet_abi_process_request",
+                GET_SIGNER_RECEIVE_ADDRESS_METHOD,
+                GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
+                WALLET_ABI_EVALUATE_REQUEST_METHOD,
+                WALLET_ABI_GET_CAPABILITIES_METHOD,
+                WALLET_ABI_PROCESS_REQUEST_METHOD,
             ],
         ))
     }
@@ -257,7 +319,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{Address, WalletAbiProviderBuilder, XOnlyPublicKey};
+    use super::{
+        Address, GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD, GET_SIGNER_RECEIVE_ADDRESS_METHOD,
+        WALLET_ABI_EVALUATE_REQUEST_METHOD, WALLET_ABI_GET_CAPABILITIES_METHOD,
+        WALLET_ABI_PROCESS_REQUEST_METHOD, WalletAbiProviderBuilder, XOnlyPublicKey,
+    };
     use crate::error::WalletAbiError;
     use crate::wallet_abi::schema::{
         AssetFilter, AssetVariant, BlinderVariant, InputSchema, InputUnblinding, KeyStoreMeta,
@@ -350,9 +416,15 @@ mod tests {
         }
     }
 
-    #[test]
-    fn provider_xonly_getter() {
-        let provider = WalletAbiProviderBuilder::new(
+    fn build_test_provider() -> super::WalletAbiProvider<
+        TestSigner,
+        TestSessionFactory,
+        TestPrevoutResolver,
+        TestOutputAllocator,
+        TestBroadcaster,
+        TestReceiveAddressProvider,
+    > {
+        WalletAbiProviderBuilder::new(
             TestSigner,
             TestSessionFactory,
             TestPrevoutResolver {
@@ -382,7 +454,12 @@ mod tests {
             },
             TestReceiveAddressProvider,
         )
-        .build();
+        .build()
+    }
+
+    #[test]
+    fn provider_xonly_getter() {
+        let provider = build_test_provider();
 
         assert_eq!(
             provider
@@ -397,37 +474,7 @@ mod tests {
 
     #[test]
     fn provider_receive_address_getter() {
-        let provider = WalletAbiProviderBuilder::new(
-            TestSigner,
-            TestSessionFactory,
-            TestPrevoutResolver {
-                derivation_pair: (
-                    PublicKey::from_str(
-                        "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
-                    )
-                    .expect("valid pubkey"),
-                    (
-                        Fingerprint::from_str("01020304").expect("valid fingerprint"),
-                        DerivationPath::from_str("m/84h/1h/0h/0/0").expect("valid derivation path"),
-                    ),
-                ),
-            },
-            TestOutputAllocator {
-                template: WalletOutputTemplate {
-                    script_pubkey: Address::from_str(
-                        "tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m",
-                    )
-                    .expect("valid address")
-                    .script_pubkey(),
-                    blinding_pubkey: None,
-                },
-            },
-            TestBroadcaster {
-                broadcast_calls: Arc::new(AtomicUsize::new(0)),
-            },
-            TestReceiveAddressProvider,
-        )
-        .build();
+        let provider = build_test_provider();
 
         assert_eq!(
             provider
@@ -440,51 +487,84 @@ mod tests {
 
     #[test]
     fn provider_capabilities_smoke() {
-        let provider = WalletAbiProviderBuilder::new(
-            TestSigner,
-            TestSessionFactory,
-            TestPrevoutResolver {
-                derivation_pair: (
-                    PublicKey::from_str(
-                        "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
-                    )
-                    .expect("valid pubkey"),
-                    (
-                        Fingerprint::from_str("01020304").expect("valid fingerprint"),
-                        DerivationPath::from_str("m/84h/1h/0h/0/0").expect("valid derivation path"),
-                    ),
-                ),
-            },
-            TestOutputAllocator {
-                template: WalletOutputTemplate {
-                    script_pubkey: Address::from_str(
-                        "tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m",
-                    )
-                    .expect("valid address")
-                    .script_pubkey(),
-                    blinding_pubkey: None,
-                },
-            },
-            TestBroadcaster {
-                broadcast_calls: Arc::new(AtomicUsize::new(0)),
-            },
-            TestReceiveAddressProvider,
-        )
-        .build();
+        let provider = build_test_provider();
 
         assert_eq!(
             ready(provider.get_capabilities()).expect("provider capabilities"),
             WalletCapabilities::new(
                 lwk_wollet::ElementsNetwork::LiquidTestnet,
                 [
-                    "get_signer_receive_address",
-                    "get_raw_signing_x_only_pubkey",
-                    "wallet_abi_evaluate_request",
-                    "wallet_abi_get_capabilities",
-                    "wallet_abi_process_request",
+                    GET_SIGNER_RECEIVE_ADDRESS_METHOD,
+                    GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
+                    WALLET_ABI_EVALUATE_REQUEST_METHOD,
+                    WALLET_ABI_GET_CAPABILITIES_METHOD,
+                    WALLET_ABI_PROCESS_REQUEST_METHOD,
                 ],
             ),
         );
+    }
+
+    #[test]
+    fn provider_dispatch_json_getter() {
+        let provider = build_test_provider();
+
+        assert_eq!(
+            ready(provider.dispatch_json(
+                GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
+                serde_json::Value::Null,
+            ))
+            .expect("dispatch xonly getter"),
+            serde_json::json!("79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"),
+        );
+    }
+
+    #[test]
+    fn provider_dispatch_json_capabilities() {
+        let provider = build_test_provider();
+
+        assert_eq!(
+            ready(provider.dispatch_json(
+                WALLET_ABI_GET_CAPABILITIES_METHOD,
+                serde_json::Value::Null,
+            ))
+            .expect("dispatch capabilities"),
+            serde_json::to_value(WalletCapabilities::new(
+                lwk_wollet::ElementsNetwork::LiquidTestnet,
+                [
+                    GET_SIGNER_RECEIVE_ADDRESS_METHOD,
+                    GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
+                    WALLET_ABI_EVALUATE_REQUEST_METHOD,
+                    WALLET_ABI_GET_CAPABILITIES_METHOD,
+                    WALLET_ABI_PROCESS_REQUEST_METHOD,
+                ],
+            ))
+            .expect("serialize capabilities"),
+        );
+    }
+
+    #[test]
+    fn provider_dispatch_json_unknown_method() {
+        let provider = build_test_provider();
+
+        let error = ready(provider.dispatch_json("wallet_abi_unknown", serde_json::Value::Null))
+            .expect_err("unknown method should fail");
+
+        assert!(matches!(error, WalletAbiError::InvalidRequest(_)));
+        assert!(error.to_string().contains("unsupported wallet-abi method"));
+    }
+
+    #[test]
+    fn provider_dispatch_json_rejects_getter_params() {
+        let provider = build_test_provider();
+
+        let error = ready(provider.dispatch_json(
+            GET_SIGNER_RECEIVE_ADDRESS_METHOD,
+            serde_json::json!([]),
+        ))
+        .expect_err("getter params should fail");
+
+        assert!(matches!(error, WalletAbiError::InvalidRequest(_)));
+        assert!(error.to_string().contains("does not accept params"));
     }
 
     #[derive(Debug, thiserror::Error)]

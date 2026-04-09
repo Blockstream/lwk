@@ -100,6 +100,21 @@ Build the Kotlin Multiplatform bindings (Android, iOS, and iOS Simulator) and ge
 just kotlin-multiplatform
 ```
 
+### Wallet ABI
+
+The Wallet ABI Kotlin surface is source-owned in `lwk_bindings` and mirrors the
+checked-in provider contract from `lwk_simplicity`.
+
+For Kotlin consumers this includes:
+
+* schema wrappers for capabilities, preview, and evaluate
+* thin provider and callback bridge types such as `WalletAbiProvider`,
+  `SignerMetaLink`, and `WalletRuntimeDepsLink`
+* method-level JSON dispatch via `WalletAbiProvider.dispatchJson(method, paramsJson)`
+
+The old generated `processJsonRpcRequest(String)` entrypoint is no longer part of
+the regenerated Kotlin API.
+
 ## Swift
 
 ### Example

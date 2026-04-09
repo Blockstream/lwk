@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+* add source-owned Wallet ABI provider bindings that mirror `lwk_simplicity`
+* add Wallet ABI schema wrappers for capabilities, preview, and evaluate
+* regenerate Kotlin Wallet ABI bindings with `WalletAbiProvider.dispatchJson(method, paramsJson)`
+* remove the stale generated `processJsonRpcRequest(String)` Wallet ABI entrypoint
+
 * deprecated `Txid::new()`, replacement `Txid::from_string()`
 * deprecated `Txid::bytes()`, replacement `Txid:to_bytes()`
 * deprecated `Script::new()`, replacement `Script::from_string()`

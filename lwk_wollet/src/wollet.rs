@@ -68,6 +68,7 @@ pub struct WolletBuilder {
     descriptor: WolletDescriptor,
     store: Arc<dyn DynStore>,
     txs_store: Arc<dyn DynStore>,
+    encrypt_txs_store: bool,
     /// Number of updates to trigger merge. None disables merging.
     merge_threshold: Option<usize>,
     utxo_only: bool,
@@ -81,6 +82,7 @@ impl WolletBuilder {
             descriptor,
             store: Arc::new(FakeStore::new()),
             txs_store: Arc::new(MemoryStore::new()),
+            encrypt_txs_store: false,
             merge_threshold: None,
             utxo_only: false,
         }
@@ -113,9 +115,15 @@ impl WolletBuilder {
         self
     }
 
-    /// Specify the store used to persist wallet transactions
-    pub fn with_txs_store(mut self, store: Arc<dyn DynStore>) -> Self {
+    /// Experimental: specify the store used to persist wallet transactions
+    ///
+    /// If `encrypt_txs_store` is true, the Store values and keys are encrypted with a secret derived from the [`Wollet`].
+    ///
+    /// If you use a store that lives in memory, we suggest `encrypt_txs_store` to be `false`.
+    /// If you use a persisted store, we suggest `encrypt_txs_store` to be `true`.
+    pub fn with_txs_store(mut self, store: Arc<dyn DynStore>, encrypt_txs_store: bool) -> Self {
         self.txs_store = store;
+        self.encrypt_txs_store = encrypt_txs_store;
         self
     }
 
@@ -137,7 +145,15 @@ impl WolletBuilder {
 
     /// Build the `Wollet`
     pub fn build(self) -> Result<Wollet, Error> {
-        let cache = Cache::new(self.txs_store);
+        let txs_store = if self.encrypt_txs_store {
+            let key_bytes = self.descriptor.encryption_key_bytes();
+            let encrypted_store =
+                EncryptedStore::new_with_key_encryption(self.txs_store, key_bytes);
+            Arc::new(encrypted_store)
+        } else {
+            self.txs_store
+        };
+        let cache = Cache::new(txs_store);
         let max_weight_to_satisfy = match self.descriptor.definite_descriptor(Chain::External, 0) {
             Ok(d) => d.max_weight_to_satisfy()?,
             Err(_) => 0, // If we don't have the descriptor we don't know this value

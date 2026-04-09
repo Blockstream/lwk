@@ -7,3 +7,4 @@ pub mod wallet_abi;
 
 // Re-export simplicityhl crate for bindings
 pub use simplicityhl;
+pub use wallet_abi::WalletAbiRuntime;

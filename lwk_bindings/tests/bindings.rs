@@ -28,6 +28,7 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/drain_lbtc.py",
     "tests/bindings/payment_instructions.py",
     "tests/bindings/fallback_client.py",
+    "tests/bindings/seriliazation_roundtrip.py",
 );
 
 #[cfg(all(feature = "foreign_bindings", feature = "simplicity"))]

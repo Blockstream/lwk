@@ -1,9 +1,9 @@
 use crate::error::WalletAbiError;
 use crate::wallet_abi::schema::runtime_deps::SplitWalletProvider;
 use crate::wallet_abi::schema::{
-    KeyStoreMeta, TxCreateRequest, TxCreateResponse, WalletBroadcaster, WalletCapabilities,
-    WalletOutputAllocator, WalletPrevoutResolver, WalletReceiveAddressProvider, WalletRuntimeDeps,
-    WalletSessionFactory,
+    KeyStoreMeta, TxCreateRequest, TxCreateResponse, TxEvaluateRequest, TxEvaluateResponse,
+    WalletBroadcaster, WalletCapabilities, WalletOutputAllocator, WalletPrevoutResolver,
+    WalletReceiveAddressProvider, WalletRuntimeDeps, WalletSessionFactory,
 };
 
 use lwk_wollet::elements::Address;
@@ -198,6 +198,20 @@ where
         .process_request()
         .await
     }
+
+    /// Route one typed tx-evaluate request through the checked-in runtime façade.
+    pub async fn evaluate_request(
+        &self,
+        request: TxEvaluateRequest,
+    ) -> Result<TxEvaluateResponse, WalletAbiError> {
+        crate::wallet_abi::WalletAbiRuntime::<TxEvaluateRequest, _, _, _>::new(
+            request,
+            &self.signer_meta,
+            &self.wallet_deps,
+        )
+        .evaluate_request()
+        .await
+    }
 }
 
 impl<
@@ -233,6 +247,7 @@ where
             [
                 "get_signer_receive_address",
                 "get_raw_signing_x_only_pubkey",
+                "wallet_abi_evaluate_request",
                 "wallet_abi_get_capabilities",
                 "wallet_abi_process_request",
             ],
@@ -246,10 +261,10 @@ mod tests {
     use crate::error::WalletAbiError;
     use crate::wallet_abi::schema::{
         AssetFilter, AssetVariant, BlinderVariant, InputSchema, InputUnblinding, KeyStoreMeta,
-        LockFilter, LockVariant, OutputSchema, TxCreateRequest, WalletCapabilities,
-        WalletOutputRequest, WalletBroadcaster, WalletOutputAllocator, WalletOutputTemplate,
-        WalletPrevoutResolver, WalletReceiveAddressProvider, WalletRequestSession,
-        WalletSessionFactory, WalletSourceFilter,
+        LockFilter, LockVariant, OutputSchema, TxCreateRequest, TxEvaluateRequest,
+        WalletCapabilities, WalletOutputRequest, WalletBroadcaster, WalletOutputAllocator,
+        WalletOutputTemplate, WalletPrevoutResolver, WalletReceiveAddressProvider,
+        WalletRequestSession, WalletSessionFactory, WalletSourceFilter,
     };
 
     use lwk_common::Signer as _;
@@ -464,6 +479,7 @@ mod tests {
                 [
                     "get_signer_receive_address",
                     "get_raw_signing_x_only_pubkey",
+                    "wallet_abi_evaluate_request",
                     "wallet_abi_get_capabilities",
                     "wallet_abi_process_request",
                 ],
@@ -709,6 +725,135 @@ mod tests {
                 .expect("preview accessor")
                 .expect("preview")
                 .asset_deltas,
+            vec![crate::wallet_abi::schema::PreviewAssetDelta {
+                asset_id: policy_asset,
+                wallet_delta_sat: -5_000,
+            }]
+        );
+    }
+
+    #[test]
+    fn provider_evaluate_request_smoke() {
+        let signer = SwSigner::new(
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+            false,
+        )
+        .expect("signer");
+        let derivation_path = DerivationPath::from_str("m/84h/1h/0h/0/0").expect("path");
+        let xpub = signer.derive_xpub(&derivation_path).expect("xpub");
+        let wallet_pubkey = PublicKey::new(xpub.public_key);
+        let blinding_pubkey = BlindingPublicKey::from_str(
+            "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        )
+        .expect("blinding pubkey");
+        let wallet_address = Address::p2wpkh(
+            &wallet_pubkey,
+            Some(blinding_pubkey),
+            lwk_wollet::ElementsNetwork::LiquidTestnet.address_params(),
+        );
+        let policy_asset = lwk_wollet::ElementsNetwork::LiquidTestnet.policy_asset();
+        let broadcast_calls = Arc::new(AtomicUsize::new(0));
+        let provider = WalletAbiProviderBuilder::new(
+            SigningKeyStore(signer),
+            FixedSessionFactory {
+                session: WalletRequestSession {
+                    session_id: "session-1".to_string(),
+                    network: lwk_wollet::ElementsNetwork::LiquidTestnet,
+                    spendable_utxos: Arc::from(vec![ExternalUtxo {
+                        outpoint: OutPoint::new(
+                            Txid::from_str(
+                                "0000000000000000000000000000000000000000000000000000000000000001",
+                            )
+                            .expect("txid"),
+                            0,
+                        ),
+                        txout: TxOut {
+                            asset: ConfidentialAsset::Explicit(policy_asset),
+                            value: Value::Explicit(20_000),
+                            nonce: Nonce::Null,
+                            script_pubkey: wallet_address.script_pubkey(),
+                            witness: TxOutWitness::default(),
+                        },
+                        tx: None,
+                        unblinded: TxOutSecrets::new(
+                            policy_asset,
+                            lwk_wollet::elements::confidential::AssetBlindingFactor::zero(),
+                            20_000,
+                            lwk_wollet::elements::confidential::ValueBlindingFactor::zero(),
+                        ),
+                        max_weight_to_satisfy: 107,
+                    }]),
+                },
+            },
+            TestPrevoutResolver {
+                derivation_pair: (
+                    wallet_pubkey,
+                    (
+                        Fingerprint::from_str("73c5da0a").expect("fingerprint"),
+                        derivation_path,
+                    ),
+                ),
+            },
+            TestOutputAllocator {
+                template: WalletOutputTemplate {
+                    script_pubkey: wallet_address.script_pubkey(),
+                    blinding_pubkey: Some(blinding_pubkey),
+                },
+            },
+            TestBroadcaster {
+                broadcast_calls: Arc::clone(&broadcast_calls),
+            },
+            TestReceiveAddressProvider,
+        )
+        .build();
+        let response = ready(provider.evaluate_request(
+            TxEvaluateRequest::from_parts(
+                "0d6d53cd-a040-4f0c-8d28-c67b6608fb14",
+                lwk_wollet::ElementsNetwork::LiquidTestnet,
+                crate::wallet_abi::schema::RuntimeParams {
+                    inputs: vec![InputSchema {
+                        id: "wallet-input".to_string(),
+                        utxo_source: crate::wallet_abi::schema::UTXOSource::Wallet {
+                            filter: WalletSourceFilter {
+                                asset: AssetFilter::Exact {
+                                    asset_id: policy_asset,
+                                },
+                                amount: crate::wallet_abi::schema::AmountFilter::Exact {
+                                    amount_sat: 20_000,
+                                },
+                                lock: LockFilter::None,
+                            },
+                        },
+                        unblinding: InputUnblinding::Wallet,
+                        ..InputSchema::default()
+                    }],
+                    outputs: vec![OutputSchema {
+                        id: "external".to_string(),
+                        amount_sat: 5_000,
+                        lock: LockVariant::Script {
+                            script: Address::from_str(
+                                "tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m",
+                            )
+                            .expect("external address")
+                            .script_pubkey(),
+                        },
+                        asset: AssetVariant::AssetId {
+                            asset_id: policy_asset,
+                        },
+                        blinder: BlinderVariant::Explicit,
+                    }],
+                    fee_rate_sat_kvb: Some(0.0),
+                    lock_time: None,
+                },
+            )
+            .expect("request"),
+        ))
+        .expect("evaluate request");
+
+        assert_eq!(broadcast_calls.load(Ordering::Relaxed), 0);
+        assert_eq!(response.status, crate::wallet_abi::schema::tx_create::Status::Ok);
+        assert_eq!(
+            response.preview.expect("preview").asset_deltas,
             vec![crate::wallet_abi::schema::PreviewAssetDelta {
                 asset_id: policy_asset,
                 wallet_delta_sat: -5_000,

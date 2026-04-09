@@ -323,11 +323,6 @@ def resolve_lnurl():
     lnurl_str = input('Enter LNURL string or Lightning Address (e.g. "citadel@geyser.fund"): ').strip()
 
     try:
-        # If it looks like an email and doesn't have a schema, try adding 'lightning:' 
-        # to express deliberate intent as required by the library.
-        if "@" in lnurl_str and ":" not in lnurl_str:
-            lnurl_str = f"lightning:{lnurl_str}"
-
         payment = Payment(lnurl_str)
         
         if payment.kind() != PaymentKind.LN_URL:

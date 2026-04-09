@@ -3,12 +3,14 @@ use std::sync::Arc;
 
 use crate::{
     Address, LwkError, SignerMetaLink, WalletAbiCapabilities, WalletAbiTxCreateRequest,
-    WalletAbiTxCreateResponse, WalletBroadcasterLink, WalletOutputAllocatorLink,
-    WalletPrevoutResolverLink, WalletRuntimeDepsLink, WalletSessionFactoryLink, XOnlyPublicKey,
+    WalletAbiTxCreateResponse, WalletAbiTxEvaluateRequest, WalletAbiTxEvaluateResponse,
+    WalletBroadcasterLink, WalletOutputAllocatorLink, WalletPrevoutResolverLink,
+    WalletRuntimeDepsLink, WalletSessionFactoryLink, XOnlyPublicKey,
 };
 use lwk_simplicity::wallet_abi::{
     GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD, GET_SIGNER_RECEIVE_ADDRESS_METHOD, KeyStoreMeta,
-    TxCreateRequest as SimplicityTxCreateRequest, WalletAbiRuntime as SimplicityWalletAbiRuntime,
+    TxCreateRequest as SimplicityTxCreateRequest, TxEvaluateRequest as SimplicityTxEvaluateRequest,
+    WalletAbiRuntime as SimplicityWalletAbiRuntime,
     WALLET_ABI_EVALUATE_REQUEST_METHOD, WALLET_ABI_GET_CAPABILITIES_METHOD,
     WALLET_ABI_PROCESS_REQUEST_METHOD,
     WalletBroadcaster as SimplicityWalletBroadcaster, WalletOutputAllocator, WalletOutputRequest,
@@ -240,6 +242,41 @@ impl WalletAbiProvider {
             ),
         }))
     }
+
+    /// Route one typed tx-evaluate request through the checked-in runtime facade.
+    pub fn evaluate_request(
+        &self,
+        request: &WalletAbiTxEvaluateRequest,
+    ) -> Result<Arc<WalletAbiTxEvaluateResponse>, LwkError> {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|error| LwkError::from(error.to_string()))?;
+        let signer = ProviderSigner {
+            inner: Arc::clone(&self.signer),
+        };
+        let wallet_deps = SimplicityWalletRuntimeDeps::new(
+            ProviderSessionFactory {
+                inner: Arc::clone(&self.wallet.session_factory),
+            },
+            ProviderWalletMeta {
+                prevout_resolver: Arc::clone(&self.wallet.prevout_resolver),
+                output_allocator: Arc::clone(&self.wallet.output_allocator),
+                broadcaster: Arc::clone(&self.wallet.broadcaster),
+            },
+        );
+
+        Ok(Arc::new(WalletAbiTxEvaluateResponse {
+            inner: runtime.block_on(
+                SimplicityWalletAbiRuntime::<SimplicityTxEvaluateRequest, _, _, _>::new(
+                    request.inner.clone(),
+                    &signer,
+                    &wallet_deps,
+                )
+                .evaluate_request(),
+            )?,
+        }))
+    }
 }
 
 #[cfg(test)]
@@ -256,8 +293,9 @@ mod tests {
         WalletAbiOutputAllocatorCallbacks, WalletAbiPrevoutResolverCallbacks,
         WalletAbiReceiveAddressProviderCallbacks, WalletAbiRequestSession, WalletAbiRuntimeParams,
         WalletAbiSessionFactoryCallbacks, WalletAbiSignerCallbacks, WalletAbiSignerContext,
-        WalletAbiTxCreateRequest, WalletAbiUtxoSource, WalletAbiWalletOutputRequest,
-        WalletAbiWalletOutputTemplate, WalletAbiWalletSourceFilter, WalletBroadcasterLink,
+        WalletAbiTxCreateRequest, WalletAbiTxEvaluateRequest, WalletAbiUtxoSource,
+        WalletAbiWalletOutputRequest, WalletAbiWalletOutputTemplate,
+        WalletAbiWalletSourceFilter, WalletBroadcasterLink,
         WalletOutputAllocatorLink, WalletPrevoutResolverLink, WalletReceiveAddressProviderLink,
         WalletSessionFactoryLink,
     };
@@ -627,5 +665,123 @@ mod tests {
                 WALLET_ABI_PROCESS_REQUEST_METHOD.to_string(),
             ]
         );
+    }
+
+    #[test]
+    fn wallet_abi_provider_evaluate_request() {
+        let network = Network::testnet();
+        let mnemonic = Mnemonic::new(lwk_test_util::TEST_MNEMONIC).expect("mnemonic");
+        let signer = Signer::new(&mnemonic, &network).expect("signer");
+        let signer_link = SignerMetaLink::from_software_signer(
+            signer.clone(),
+            WalletAbiSignerContext {
+                network: network.clone(),
+                account_index: 0,
+            },
+        )
+        .expect("signer link");
+        let derivation_pair = wallet_abi_bip32_derivation_pair_from_signer(
+            &signer,
+            vec![84 + (1 << 31), 1 + (1 << 31), 0 + (1 << 31), 0, 0],
+        )
+        .expect("derivation pair");
+        let wallet_pubkey =
+            elements::bitcoin::PublicKey::from_str(&derivation_pair.pubkey).expect("pubkey");
+        let blinding_pubkey = elements::secp256k1_zkp::PublicKey::from_str(
+            "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        )
+        .expect("blinding pubkey");
+        let wallet_address = Arc::new(Address::from(elements::Address::p2wpkh(
+            &wallet_pubkey,
+            Some(blinding_pubkey),
+            lwk_wollet::ElementsNetwork::LiquidTestnet.address_params(),
+        )));
+        let policy_asset = network.policy_asset();
+        let outpoint = OutPoint::from_parts(
+            &Txid::from_str("0000000000000000000000000000000000000000000000000000000000000001")
+                .expect("txid"),
+            0,
+        );
+        let tx_out = TxOut::from_explicit(
+            wallet_address.script_pubkey().as_ref(),
+            policy_asset,
+            20_000,
+        );
+        let tx_out_secrets = TxOutSecrets::from_explicit(policy_asset, 20_000);
+        let request = WalletAbiTxEvaluateRequest::from_parts(
+            "0d6d53cd-a040-4f0c-8d28-c67b6608fb14",
+            &network,
+            &WalletAbiRuntimeParams::new(
+                &[WalletAbiInputSchema::from_sequence(
+                    "wallet-input",
+                    &WalletAbiUtxoSource::wallet(&WalletAbiWalletSourceFilter::with_filters(
+                        &WalletAbiAssetFilter::exact(policy_asset),
+                        &WalletAbiAmountFilter::exact(20_000),
+                        &WalletAbiLockFilter::none(),
+                    )),
+                    &WalletAbiInputUnblinding::wallet(),
+                    &TxSequence::max(),
+                    &WalletAbiFinalizerSpec::wallet(),
+                )],
+                &[crate::WalletAbiOutputSchema::new(
+                    "external",
+                    5_000,
+                    &WalletAbiLockVariant::script(
+                        &Address::new(
+                            "tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m",
+                        )
+                        .expect("external address")
+                        .script_pubkey(),
+                    ),
+                    &WalletAbiAssetVariant::asset_id(policy_asset),
+                    &WalletAbiBlinderVariant::explicit(),
+                )],
+                Some(0.0),
+                None,
+            ),
+        )
+        .expect("request");
+        let provider = WalletAbiProvider::new(
+            Arc::new(signer_link),
+            Arc::new(WalletRuntimeDepsLink::new(
+                Arc::new(WalletSessionFactoryLink::new(Arc::new(
+                    ProcessSessionFactoryCallbacks {
+                        session: WalletAbiRequestSession {
+                            session_id: "session-1".to_string(),
+                            network: network.clone(),
+                            spendable_utxos: vec![ExternalUtxo::from_unchecked_data(
+                                &outpoint,
+                                &tx_out,
+                                &tx_out_secrets,
+                                107,
+                            )],
+                        },
+                    },
+                ))),
+                Arc::new(WalletOutputAllocatorLink::new(Arc::new(
+                    ProcessOutputAllocatorCallbacks {
+                        template: crate::wallet_abi_output_template_from_address(&wallet_address),
+                    },
+                ))),
+                Arc::new(WalletPrevoutResolverLink::new(Arc::new(
+                    ProcessPrevoutResolverCallbacks {
+                        derivation_pair,
+                        tx_out: tx_out.clone(),
+                        secrets: tx_out_secrets.clone(),
+                    },
+                ))),
+                Arc::new(WalletBroadcasterLink::new(Arc::new(
+                    TestBroadcasterCallbacks,
+                ))),
+                Arc::new(WalletReceiveAddressProviderLink::new(Arc::new(
+                    TestReceiveAddressProviderCallbacks,
+                ))),
+            )),
+        );
+
+        let response = provider.evaluate_request(&request).expect("evaluate request");
+
+        assert!(response.preview().is_some());
+        assert!(response.error_info().is_none());
     }
 }

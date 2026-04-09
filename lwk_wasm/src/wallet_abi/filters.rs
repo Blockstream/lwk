@@ -82,6 +82,58 @@ impl WalletAbiAssetFilter {
     }
 }
 
+/// An amount selector for wallet-funded inputs.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WalletAbiAmountFilter {
+    inner: abi::AmountFilter,
+}
+
+#[wasm_bindgen]
+impl WalletAbiAmountFilter {
+    /// Build the Wallet ABI `none` amount filter variant.
+    pub fn none() -> WalletAbiAmountFilter {
+        Self {
+            inner: abi::AmountFilter::None,
+        }
+    }
+
+    /// Build the Wallet ABI `exact` amount filter variant.
+    pub fn exact(amount_sat: u64) -> WalletAbiAmountFilter {
+        Self {
+            inner: abi::AmountFilter::Exact { amount_sat },
+        }
+    }
+
+    /// Build the Wallet ABI `min` amount filter variant.
+    pub fn min(amount_sat: u64) -> WalletAbiAmountFilter {
+        Self {
+            inner: abi::AmountFilter::Min { amount_sat },
+        }
+    }
+
+    /// Return the canonical Wallet ABI variant tag string.
+    pub fn kind(&self) -> String {
+        match self.inner {
+            abi::AmountFilter::None => "none",
+            abi::AmountFilter::Exact { .. } => "exact",
+            abi::AmountFilter::Min { .. } => "min",
+        }
+        .to_string()
+    }
+
+    /// Return the selected amount for `exact` and `min` variants.
+    #[wasm_bindgen(js_name = amountSat)]
+    pub fn amount_sat(&self) -> Option<u64> {
+        match self.inner {
+            abi::AmountFilter::Exact { amount_sat } | abi::AmountFilter::Min { amount_sat } => {
+                Some(amount_sat)
+            }
+            abi::AmountFilter::None => None,
+        }
+    }
+}
+
 #[wasm_bindgen]
 impl WalletAbiTaprootHandle {
     /// Parse the canonical `<seed_or_ext-xonly_hex>:<pubkey>:<address>` taproot-handle string.
@@ -101,7 +153,7 @@ impl WalletAbiTaprootHandle {
 
 #[cfg(test)]
 mod tests {
-    use super::{WalletAbiAssetFilter, WalletAbiTaprootHandle};
+    use super::{WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiTaprootHandle};
 
     use std::str::FromStr;
 
@@ -137,5 +189,19 @@ mod tests {
         assert_eq!(filter.exact_asset_id(), Some(policy_asset));
         assert_eq!(WalletAbiAssetFilter::none().kind(), "none");
         assert_eq!(WalletAbiAssetFilter::none().exact_asset_id(), None);
+    }
+
+    #[test]
+    fn wallet_abi_amount_filter_roundtrip() {
+        let exact = WalletAbiAmountFilter::exact(1_500);
+        let minimum = WalletAbiAmountFilter::min(600);
+        let none = WalletAbiAmountFilter::none();
+
+        assert_eq!(exact.kind(), "exact");
+        assert_eq!(exact.amount_sat(), Some(1_500));
+        assert_eq!(minimum.kind(), "min");
+        assert_eq!(minimum.amount_sat(), Some(600));
+        assert_eq!(none.kind(), "none");
+        assert_eq!(none.amount_sat(), None);
     }
 }

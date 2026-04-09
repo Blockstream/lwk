@@ -3,6 +3,7 @@
 mod capabilities;
 mod filters;
 mod outputs;
+mod preview;
 mod simf;
 
 use crate::Error;
@@ -22,6 +23,7 @@ pub use outputs::{
     WalletAbiAssetVariant, WalletAbiBlinderVariant, WalletAbiLockVariant, WalletAbiOutputSchema,
     WalletAbiRuntimeParams,
 };
+pub use preview::WalletAbiPreviewAssetDelta;
 pub use simf::{
     WalletAbiRuntimeSimfValue, WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments,
     WalletAbiSimfWitness,

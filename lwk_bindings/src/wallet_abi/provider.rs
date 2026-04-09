@@ -277,6 +277,51 @@ impl WalletAbiProvider {
             )?,
         }))
     }
+
+    /// Dispatch one method-level JSON call without owning the outer JSON-RPC envelope.
+    pub fn dispatch_json(&self, method: &str, params_json: &str) -> Result<String, LwkError> {
+        match method {
+            GET_SIGNER_RECEIVE_ADDRESS_METHOD => {
+                expect_no_params_json(method, params_json)?;
+                Ok(serde_json::to_string(
+                    &self.get_signer_receive_address()?.to_string(),
+                )?)
+            }
+            GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD => {
+                expect_no_params_json(method, params_json)?;
+                Ok(serde_json::to_string(
+                    &self.get_raw_signing_x_only_pubkey()?.to_string(),
+                )?)
+            }
+            WALLET_ABI_GET_CAPABILITIES_METHOD => {
+                expect_no_params_json(method, params_json)?;
+                self.get_capabilities()?.to_json()
+            }
+            WALLET_ABI_PROCESS_REQUEST_METHOD => {
+                let request = WalletAbiTxCreateRequest::from_json(params_json)?;
+                self.process_request(request.as_ref())
+                    .and_then(|response| response.to_json())
+            }
+            WALLET_ABI_EVALUATE_REQUEST_METHOD => {
+                let request = WalletAbiTxEvaluateRequest::from_json(params_json)?;
+                self.evaluate_request(request.as_ref())
+                    .and_then(|response| response.to_json())
+            }
+            _ => Err(LwkError::from(format!(
+                "unsupported wallet-abi method '{method}'"
+            ))),
+        }
+    }
+}
+
+fn expect_no_params_json(method: &str, params_json: &str) -> Result<(), LwkError> {
+    if serde_json::from_str::<serde_json::Value>(params_json)?.is_null() {
+        return Ok(());
+    }
+
+    Err(LwkError::from(format!(
+        "wallet-abi method '{method}' does not accept params"
+    )))
 }
 
 #[cfg(test)]
@@ -783,5 +828,121 @@ mod tests {
 
         assert!(response.preview().is_some());
         assert!(response.error_info().is_none());
+    }
+
+    #[test]
+    fn wallet_abi_provider_dispatch_json_matches_address_getter() {
+        let secp = Secp256k1::new();
+        let secret_key = SecretKey::from_slice(&[0x44; 32]).expect("secret key");
+        let keypair = Keypair::from_secret_key(&secp, &secret_key);
+        let provider = WalletAbiProvider::new(
+            Arc::new(SignerMetaLink::new(Arc::new(TestSignerCallbacks {
+                keypair,
+            }))),
+            Arc::new(WalletRuntimeDepsLink::new(
+                Arc::new(WalletSessionFactoryLink::new(Arc::new(
+                    TestSessionFactoryCallbacks,
+                ))),
+                Arc::new(WalletOutputAllocatorLink::new(Arc::new(
+                    TestOutputAllocatorCallbacks,
+                ))),
+                Arc::new(WalletPrevoutResolverLink::new(Arc::new(
+                    TestPrevoutResolverCallbacks,
+                ))),
+                Arc::new(WalletBroadcasterLink::new(Arc::new(
+                    TestBroadcasterCallbacks,
+                ))),
+                Arc::new(WalletReceiveAddressProviderLink::new(Arc::new(
+                    TestReceiveAddressProviderCallbacks,
+                ))),
+            )),
+        );
+
+        let typed_json = serde_json::to_string(
+            &provider
+                .get_signer_receive_address()
+                .expect("receive address")
+                .to_string(),
+        )
+        .expect("typed json");
+        let dispatch_json = provider
+            .dispatch_json(GET_SIGNER_RECEIVE_ADDRESS_METHOD, "null")
+            .expect("dispatch json");
+
+        assert_eq!(dispatch_json, typed_json);
+    }
+
+    #[test]
+    fn wallet_abi_provider_dispatch_json_rejects_unknown_method() {
+        let secp = Secp256k1::new();
+        let secret_key = SecretKey::from_slice(&[0x55; 32]).expect("secret key");
+        let keypair = Keypair::from_secret_key(&secp, &secret_key);
+        let provider = WalletAbiProvider::new(
+            Arc::new(SignerMetaLink::new(Arc::new(TestSignerCallbacks {
+                keypair,
+            }))),
+            Arc::new(WalletRuntimeDepsLink::new(
+                Arc::new(WalletSessionFactoryLink::new(Arc::new(
+                    TestSessionFactoryCallbacks,
+                ))),
+                Arc::new(WalletOutputAllocatorLink::new(Arc::new(
+                    TestOutputAllocatorCallbacks,
+                ))),
+                Arc::new(WalletPrevoutResolverLink::new(Arc::new(
+                    TestPrevoutResolverCallbacks,
+                ))),
+                Arc::new(WalletBroadcasterLink::new(Arc::new(
+                    TestBroadcasterCallbacks,
+                ))),
+                Arc::new(WalletReceiveAddressProviderLink::new(Arc::new(
+                    TestReceiveAddressProviderCallbacks,
+                ))),
+            )),
+        );
+
+        assert_eq!(
+            provider
+                .dispatch_json("wallet_abi_unknown", "null")
+                .expect_err("unknown method")
+                .to_string(),
+            "unsupported wallet-abi method 'wallet_abi_unknown'".to_string()
+        );
+    }
+
+    #[test]
+    fn wallet_abi_provider_dispatch_json_rejects_getter_params() {
+        let secp = Secp256k1::new();
+        let secret_key = SecretKey::from_slice(&[0x66; 32]).expect("secret key");
+        let keypair = Keypair::from_secret_key(&secp, &secret_key);
+        let provider = WalletAbiProvider::new(
+            Arc::new(SignerMetaLink::new(Arc::new(TestSignerCallbacks {
+                keypair,
+            }))),
+            Arc::new(WalletRuntimeDepsLink::new(
+                Arc::new(WalletSessionFactoryLink::new(Arc::new(
+                    TestSessionFactoryCallbacks,
+                ))),
+                Arc::new(WalletOutputAllocatorLink::new(Arc::new(
+                    TestOutputAllocatorCallbacks,
+                ))),
+                Arc::new(WalletPrevoutResolverLink::new(Arc::new(
+                    TestPrevoutResolverCallbacks,
+                ))),
+                Arc::new(WalletBroadcasterLink::new(Arc::new(
+                    TestBroadcasterCallbacks,
+                ))),
+                Arc::new(WalletReceiveAddressProviderLink::new(Arc::new(
+                    TestReceiveAddressProviderCallbacks,
+                ))),
+            )),
+        );
+
+        assert_eq!(
+            provider
+                .dispatch_json(GET_SIGNER_RECEIVE_ADDRESS_METHOD, "{}")
+                .expect_err("bad params")
+                .to_string(),
+            "wallet-abi method 'get_signer_receive_address' does not accept params".to_string()
+        );
     }
 }

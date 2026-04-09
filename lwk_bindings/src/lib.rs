@@ -68,7 +68,8 @@ pub use wallet_abi::{
     WalletAbiTaprootHandle, WalletAbiTransactionInfo, WalletAbiTxCreateRequest,
     WalletAbiTxCreateResponse, WalletAbiTxEvaluateRequest, WalletAbiTxEvaluateResponse,
     WalletAbiUtxoSource, WalletAbiWalletOutputRequest, WalletAbiWalletOutputRole,
-    WalletAbiWalletSourceFilter,
+    WalletAbiWalletOutputTemplate, WalletAbiWalletSourceFilter,
+    wallet_abi_output_template_from_address,
 };
 
 pub use blockdata::address::Address;

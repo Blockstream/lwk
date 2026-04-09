@@ -28,7 +28,10 @@ pub use preview::{
     WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput, WalletAbiPreviewOutputKind,
     WalletAbiRequestPreview,
 };
-pub use roots::{WalletAbiErrorInfo, WalletAbiTxCreateRequest};
+pub use roots::{
+    WalletAbiErrorInfo, WalletAbiStatus, WalletAbiTransactionInfo, WalletAbiTxCreateRequest,
+    WalletAbiTxCreateResponse,
+};
 pub use simf::{
     WalletAbiRuntimeSimfValue, WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments,
     WalletAbiSimfWitness,

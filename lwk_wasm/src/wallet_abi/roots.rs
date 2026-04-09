@@ -1,6 +1,6 @@
 use super::{json_from_js_value, json_from_str, js_value_from_json};
 
-use crate::{Error, Network, WalletAbiRuntimeParams};
+use crate::{Error, Network, Txid, WalletAbiRequestPreview, WalletAbiRuntimeParams};
 
 use lwk_simplicity::wallet_abi::schema as abi;
 
@@ -152,11 +152,190 @@ impl WalletAbiTxCreateRequest {
     }
 }
 
+/// The status of a Wallet ABI transaction creation response.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WalletAbiStatus {
+    /// The request succeeded.
+    Ok,
+    /// The request failed.
+    Error,
+}
+
+impl From<abi::tx_create::Status> for WalletAbiStatus {
+    fn from(value: abi::tx_create::Status) -> Self {
+        match value {
+            abi::tx_create::Status::Ok => Self::Ok,
+            abi::tx_create::Status::Error => Self::Error,
+        }
+    }
+}
+
+/// A created transaction payload returned by Wallet ABI.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WalletAbiTransactionInfo {
+    pub(crate) inner: abi::TransactionInfo,
+}
+
+#[wasm_bindgen]
+impl WalletAbiTransactionInfo {
+    /// Build transaction info from transaction hex and txid.
+    pub fn new(tx_hex: &str, txid: &Txid) -> WalletAbiTransactionInfo {
+        Self {
+            inner: abi::TransactionInfo {
+                tx_hex: tx_hex.to_string(),
+                txid: (*txid).into(),
+            },
+        }
+    }
+
+    /// Return the transaction hex.
+    #[wasm_bindgen(js_name = txHex)]
+    pub fn tx_hex(&self) -> String {
+        self.inner.tx_hex.clone()
+    }
+
+    /// Return the transaction id.
+    pub fn txid(&self) -> Txid {
+        self.inner.txid.into()
+    }
+}
+
+/// A typed Wallet ABI transaction creation response.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WalletAbiTxCreateResponse {
+    pub(crate) inner: abi::TxCreateResponse,
+}
+
+impl WalletAbiTxCreateResponse {
+    fn from_json_str(json: &str) -> Result<WalletAbiTxCreateResponse, Error> {
+        json_from_str(json).map(|inner| Self { inner })
+    }
+}
+
+#[wasm_bindgen]
+impl WalletAbiTxCreateResponse {
+    /// Build a successful transaction creation response.
+    pub fn ok(
+        request_id: &str,
+        network: &Network,
+        transaction: &WalletAbiTransactionInfo,
+        artifacts_json: Option<String>,
+    ) -> Result<WalletAbiTxCreateResponse, Error> {
+        abi::TxCreateResponse::ok_from_parts(
+            request_id,
+            network.into(),
+            transaction.clone().inner,
+            artifacts_json.as_deref(),
+        )
+        .map(|inner| Self { inner })
+        .map_err(|error| Error::Generic(error.to_string()))
+    }
+
+    /// Build an error transaction creation response.
+    pub fn error(
+        request_id: &str,
+        network: &Network,
+        error: &WalletAbiErrorInfo,
+    ) -> Result<WalletAbiTxCreateResponse, Error> {
+        abi::TxCreateResponse::error_from_parts(
+            request_id,
+            network.into(),
+            error.clone().inner,
+        )
+        .map(|inner| Self { inner })
+        .map_err(|error| Error::Generic(error.to_string()))
+    }
+
+    /// Parse canonical Wallet ABI response JSON.
+    #[wasm_bindgen(js_name = fromJson)]
+    pub fn from_json(json: JsValue) -> Result<WalletAbiTxCreateResponse, Error> {
+        json_from_js_value(json).map(|inner| Self { inner })
+    }
+
+    /// Serialize this response to canonical Wallet ABI JSON.
+    #[wasm_bindgen(js_name = toJSON)]
+    pub fn to_json(&self) -> Result<JsValue, Error> {
+        js_value_from_json(&self.inner)
+    }
+
+    /// Return the canonical JSON string for this response.
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        serde_json::to_string(&self.inner).expect("response contains simple data")
+    }
+
+    /// Return the ABI version string.
+    #[wasm_bindgen(js_name = abiVersion)]
+    pub fn abi_version(&self) -> String {
+        self.inner.abi_version.clone()
+    }
+
+    /// Return the request identifier as a UUID string.
+    #[wasm_bindgen(js_name = requestId)]
+    pub fn request_id(&self) -> String {
+        self.inner.request_id.to_string()
+    }
+
+    /// Return the target network.
+    pub fn network(&self) -> Network {
+        self.inner.network.into()
+    }
+
+    /// Return the response status.
+    pub fn status(&self) -> WalletAbiStatus {
+        self.inner.status.into()
+    }
+
+    /// Return the transaction when this response has `ok` status.
+    pub fn transaction(&self) -> Option<WalletAbiTransactionInfo> {
+        self.inner
+            .transaction
+            .as_ref()
+            .cloned()
+            .map(|inner| WalletAbiTransactionInfo { inner })
+    }
+
+    /// Returns canonical JSON for the open-ended `artifacts` payload.
+    #[wasm_bindgen(js_name = artifactsJson)]
+    pub fn artifacts_json(&self) -> Result<Option<String>, Error> {
+        self.inner
+            .artifacts_json()
+            .map_err(|error| Error::Generic(error.to_string()))
+    }
+
+    /// Return the typed preview payload when `artifacts.preview` is present.
+    pub fn preview(&self) -> Result<Option<WalletAbiRequestPreview>, Error> {
+        self.inner
+            .preview()
+            .map(|preview| preview.map(|inner| WalletAbiRequestPreview { inner }))
+            .map_err(|error| Error::Generic(error.to_string()))
+    }
+
+    /// Return the error payload when this response has `error` status.
+    #[wasm_bindgen(js_name = errorInfo)]
+    pub fn error_info(&self) -> Option<WalletAbiErrorInfo> {
+        self.inner
+            .error
+            .as_ref()
+            .cloned()
+            .map(|inner| WalletAbiErrorInfo { inner })
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{WalletAbiErrorInfo, WalletAbiTxCreateRequest};
+    use super::{
+        WalletAbiErrorInfo, WalletAbiStatus, WalletAbiTransactionInfo, WalletAbiTxCreateRequest,
+        WalletAbiTxCreateResponse,
+    };
 
-    use crate::{Network, WalletAbiRuntimeParams};
+    use crate::{
+        Network, Script, Txid, WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput,
+        WalletAbiPreviewOutputKind, WalletAbiRequestPreview, WalletAbiRuntimeParams,
+    };
 
     #[test]
     fn wallet_abi_error_info_roundtrip() {
@@ -197,5 +376,58 @@ mod tests {
         assert!(decoded.params().inputs().is_empty());
         assert!(decoded.params().outputs().is_empty());
         assert_eq!(decoded.broadcast(), true);
+    }
+
+    #[test]
+    fn wallet_abi_tx_create_response_roundtrip() {
+        let network = Network::testnet();
+        let policy_asset = network.policy_asset();
+        let preview = WalletAbiRequestPreview::new(
+            vec![WalletAbiPreviewAssetDelta::new(&policy_asset, -1_500)],
+            vec![WalletAbiPreviewOutput::new(
+                WalletAbiPreviewOutputKind::Fee,
+                &policy_asset,
+                600,
+                &Script::empty(),
+            )],
+            vec![],
+        );
+        let transaction = WalletAbiTransactionInfo::new(
+            "00",
+            &Txid::new("0000000000000000000000000000000000000000000000000000000000000000")
+                .expect("txid"),
+        );
+        let mut artifacts = serde_json::Map::new();
+        artifacts.insert(
+            "preview".to_string(),
+            serde_json::from_str::<serde_json::Value>(&preview.to_string_js())
+                .expect("preview json"),
+        );
+        let response = WalletAbiTxCreateResponse::ok(
+            "0d6d53cd-a040-4f0c-8d28-c67b6608fb14",
+            &network,
+            &transaction,
+            Some(serde_json::to_string(&artifacts).expect("artifacts json")),
+        )
+        .expect("response");
+
+        let json = response.to_string_js();
+        let decoded = WalletAbiTxCreateResponse::from_json_str(&json).expect("deserialize");
+
+        assert_eq!(decoded.status(), WalletAbiStatus::Ok);
+        assert_eq!(
+            decoded.transaction().expect("transaction").tx_hex(),
+            "00".to_string()
+        );
+        assert_eq!(
+            decoded
+                .preview()
+                .expect("preview accessor")
+                .expect("preview payload")
+                .outputs()[0]
+                .kind(),
+            WalletAbiPreviewOutputKind::Fee
+        );
+        assert!(decoded.error_info().is_none());
     }
 }

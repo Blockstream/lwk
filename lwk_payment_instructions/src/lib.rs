@@ -180,7 +180,9 @@ impl Payment {
         info: &LnUrlPayResponse,
         amount_sats: u64,
     ) -> Result<Self, String> {
-        let amount_msat = amount_sats * 1000;
+        let amount_msat = amount_sats
+            .checked_mul(1000)
+            .ok_or_else(|| "Amount overflow".to_string())?;
         if amount_msat < info.min_sendable || amount_msat > info.max_sendable {
             return Err(format!(
                 "Amount {} sats ({} msat) is out of range [{} msat, {} msat]",

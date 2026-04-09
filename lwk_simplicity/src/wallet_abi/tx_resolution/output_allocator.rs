@@ -62,7 +62,7 @@ where
                 _ => None,
             };
             let script = resolve_output_lock_script(
-                self.wallet_request_session.network,
+                self.wallet_request_session.network.into(),
                 wallet_template.as_ref(),
                 &output.lock,
                 &pst,
@@ -109,7 +109,7 @@ where
         pst.add_output(Output::new_explicit(
             Script::new(),
             fee_target_sat,
-            *self.wallet_request_session.network.policy_asset(),
+            self.wallet_request_session.network.policy_asset(),
             None,
         ));
 

@@ -85,7 +85,7 @@ where
             self.signer_meta,
             pst,
             artifacts.finalizers(),
-            wallet_session.network,
+            wallet_session.network.into(),
         )?;
         let pst = finalize_wallet_inputs(self.signer_meta, pst, artifacts.finalizers())?;
 
@@ -136,7 +136,7 @@ where
             self.signer_meta,
             fee_estimation_build,
             artifacts.finalizers(),
-            wallet_session.network,
+            wallet_session.network.into(),
         )?;
 
         Ok(calculate_fee(

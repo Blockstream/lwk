@@ -66,7 +66,7 @@ where
     ) -> Result<(PartiallySignedTransaction, ResolutionArtifacts), WalletAbiError> {
         let mut supply_and_demand: SupplyAndDemand = SupplyAndDemand::try_from_runtime_params(
             runtime_params,
-            *self.wallet_request_session.network.policy_asset(),
+            self.wallet_request_session.network.policy_asset(),
             self.fee_target_sat,
         )?;
         let mut artifacts: ResolutionArtifacts = ResolutionArtifacts::new();

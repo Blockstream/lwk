@@ -5,9 +5,9 @@ mod simf;
 
 pub use filters::{
     WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiInputIssuance,
-    WalletAbiInputIssuanceKind, WalletAbiInputUnblinding, WalletAbiInternalKeySource,
-    WalletAbiLockFilter, WalletAbiTaprootHandle, WalletAbiUtxoSource, WalletAbiFinalizerSpec,
-    WalletAbiWalletSourceFilter,
+    WalletAbiInputIssuanceKind, WalletAbiInputSchema, WalletAbiInputUnblinding,
+    WalletAbiInternalKeySource, WalletAbiLockFilter, WalletAbiTaprootHandle,
+    WalletAbiUtxoSource, WalletAbiFinalizerSpec, WalletAbiWalletSourceFilter,
 };
 pub use simf::{
     WalletAbiRuntimeSimfValue, WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments,

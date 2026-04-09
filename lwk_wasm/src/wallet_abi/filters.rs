@@ -1,4 +1,4 @@
-use crate::{AssetId, Error, OutPoint, Script, SecretKey};
+use crate::{AssetId, Error, OutPoint, Script, SecretKey, TxSequence};
 use super::simf::{WalletAbiSimfArguments, WalletAbiSimfWitness};
 
 use std::str::FromStr;
@@ -561,6 +561,86 @@ impl WalletAbiInputUnblinding {
     }
 }
 
+/// A Wallet ABI input schema entry.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq)]
+pub struct WalletAbiInputSchema {
+    inner: abi::InputSchema,
+}
+
+#[wasm_bindgen]
+impl WalletAbiInputSchema {
+    /// Build an input schema from a typed sequence wrapper.
+    #[wasm_bindgen(js_name = fromSequence)]
+    pub fn from_sequence(
+        id: &str,
+        utxo_source: &WalletAbiUtxoSource,
+        unblinding: &WalletAbiInputUnblinding,
+        sequence: &TxSequence,
+        finalizer: &WalletAbiFinalizerSpec,
+    ) -> WalletAbiInputSchema {
+        Self {
+            inner: abi::InputSchema {
+                id: id.to_string(),
+                utxo_source: utxo_source.inner.clone(),
+                unblinding: unblinding.inner.clone(),
+                sequence: sequence.into(),
+                issuance: None,
+                finalizer: finalizer.inner.clone(),
+            },
+        }
+    }
+
+    /// Return a copy of this input schema with issuance data attached.
+    #[wasm_bindgen(js_name = withIssuance)]
+    pub fn with_issuance(&self, issuance: &WalletAbiInputIssuance) -> WalletAbiInputSchema {
+        let mut inner = self.inner.clone();
+        inner.issuance = Some(issuance.inner.clone());
+        Self { inner }
+    }
+
+    /// Return the input identifier.
+    pub fn id(&self) -> String {
+        self.inner.id.clone()
+    }
+
+    /// Return the input UTXO source.
+    #[wasm_bindgen(js_name = utxoSource)]
+    pub fn utxo_source(&self) -> WalletAbiUtxoSource {
+        WalletAbiUtxoSource {
+            inner: self.inner.utxo_source.clone(),
+        }
+    }
+
+    /// Return the input unblinding strategy.
+    pub fn unblinding(&self) -> WalletAbiInputUnblinding {
+        WalletAbiInputUnblinding {
+            inner: self.inner.unblinding.clone(),
+        }
+    }
+
+    /// Return the input sequence.
+    pub fn sequence(&self) -> TxSequence {
+        self.inner.sequence.into()
+    }
+
+    /// Return the issuance data when this input carries an issuance.
+    pub fn issuance(&self) -> Option<WalletAbiInputIssuance> {
+        self.inner
+            .issuance
+            .as_ref()
+            .cloned()
+            .map(|inner| WalletAbiInputIssuance { inner })
+    }
+
+    /// Return the input finalizer specification.
+    pub fn finalizer(&self) -> WalletAbiFinalizerSpec {
+        WalletAbiFinalizerSpec {
+            inner: self.inner.finalizer.clone(),
+        }
+    }
+}
+
 #[wasm_bindgen]
 impl WalletAbiTaprootHandle {
     /// Parse the canonical `<seed_or_ext-xonly_hex>:<pubkey>:<address>` taproot-handle string.
@@ -582,9 +662,9 @@ impl WalletAbiTaprootHandle {
 mod tests {
     use super::{
         WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiInputIssuance,
-        WalletAbiInputIssuanceKind, WalletAbiInputUnblinding, WalletAbiInternalKeySource,
-        WalletAbiLockFilter, WalletAbiTaprootHandle, WalletAbiUtxoSource, WalletAbiFinalizerSpec,
-        WalletAbiWalletSourceFilter,
+        WalletAbiInputIssuanceKind, WalletAbiInputSchema, WalletAbiInputUnblinding,
+        WalletAbiInternalKeySource, WalletAbiLockFilter, WalletAbiTaprootHandle,
+        WalletAbiUtxoSource, WalletAbiFinalizerSpec, WalletAbiWalletSourceFilter,
     };
 
     use std::str::FromStr;
@@ -597,7 +677,8 @@ mod tests {
         Network as WasmNetwork, OutPoint as WasmOutPoint, Script as WasmScript,
         SecretKey as WasmSecretKey,
         SimplicityArguments, SimplicityTypedValue, SimplicityWitnessValues,
-        WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments, WalletAbiSimfWitness,
+        TxSequence as WasmTxSequence, WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments,
+        WalletAbiSimfWitness,
         XOnlyPublicKey,
     };
 
@@ -820,5 +901,26 @@ mod tests {
             secret_key.to_bytes()
         );
         assert_eq!(WalletAbiInputUnblinding::explicit().kind(), "explicit");
+    }
+
+    #[test]
+    fn wallet_abi_input_schema_roundtrip() {
+        let input = WalletAbiInputSchema::from_sequence(
+            "wallet-input",
+            &WalletAbiUtxoSource::wallet(&WalletAbiWalletSourceFilter::any()),
+            &WalletAbiInputUnblinding::wallet(),
+            &WasmTxSequence::zero(),
+            &WalletAbiFinalizerSpec::wallet(),
+        )
+        .with_issuance(
+            &WalletAbiInputIssuance::new(1_000, 500, &[9_u8; 32]).expect("issuance"),
+        );
+
+        assert_eq!(input.id(), "wallet-input".to_string());
+        assert_eq!(input.utxo_source().kind(), "wallet");
+        assert_eq!(input.unblinding().kind(), "wallet");
+        assert_eq!(input.sequence().to_consensus_u32(), 0);
+        assert_eq!(input.issuance().expect("issuance").asset_amount_sat(), 1_000);
+        assert_eq!(input.finalizer().kind(), "wallet");
     }
 }

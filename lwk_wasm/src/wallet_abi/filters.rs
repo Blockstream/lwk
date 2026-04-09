@@ -1,4 +1,5 @@
 use crate::{AssetId, Error, OutPoint, Script};
+use super::simf::{WalletAbiSimfArguments, WalletAbiSimfWitness};
 
 use std::str::FromStr;
 
@@ -425,6 +426,89 @@ impl WalletAbiInternalKeySource {
     }
 }
 
+/// A finalizer specification for a Wallet ABI input or output lock.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq)]
+pub struct WalletAbiFinalizerSpec {
+    inner: abi::FinalizerSpec,
+}
+
+#[wasm_bindgen]
+impl WalletAbiFinalizerSpec {
+    /// Build the Wallet ABI `wallet` finalizer variant.
+    pub fn wallet() -> WalletAbiFinalizerSpec {
+        Self {
+            inner: abi::FinalizerSpec::Wallet,
+        }
+    }
+
+    /// Build the Wallet ABI `simf` finalizer variant.
+    pub fn simf(
+        source_simf: &str,
+        internal_key: &WalletAbiInternalKeySource,
+        arguments: &WalletAbiSimfArguments,
+        witness: &WalletAbiSimfWitness,
+    ) -> Result<WalletAbiFinalizerSpec, Error> {
+        Ok(Self {
+            inner: abi::FinalizerSpec::Simf {
+                source_simf: source_simf.to_string(),
+                internal_key: internal_key.inner.clone(),
+                arguments: arguments.to_bytes()?,
+                witness: witness.to_bytes()?,
+            },
+        })
+    }
+
+    /// Return the canonical Wallet ABI variant tag string.
+    pub fn kind(&self) -> String {
+        match self.inner {
+            abi::FinalizerSpec::Wallet => "wallet",
+            abi::FinalizerSpec::Simf { .. } => "simf",
+        }
+        .to_string()
+    }
+
+    /// Return the Simplicity source program when this finalizer is the `simf` variant.
+    #[wasm_bindgen(js_name = sourceSimf)]
+    pub fn source_simf(&self) -> Option<String> {
+        match &self.inner {
+            abi::FinalizerSpec::Simf { source_simf, .. } => Some(source_simf.clone()),
+            abi::FinalizerSpec::Wallet => None,
+        }
+    }
+
+    /// Return the internal key source when this finalizer is the `simf` variant.
+    #[wasm_bindgen(js_name = internalKey)]
+    pub fn internal_key(&self) -> Option<WalletAbiInternalKeySource> {
+        match &self.inner {
+            abi::FinalizerSpec::Simf { internal_key, .. } => Some(WalletAbiInternalKeySource {
+                inner: internal_key.clone(),
+            }),
+            abi::FinalizerSpec::Wallet => None,
+        }
+    }
+
+    /// Return typed Simplicity arguments for the `simf` variant.
+    pub fn arguments(&self) -> Result<Option<WalletAbiSimfArguments>, Error> {
+        match &self.inner {
+            abi::FinalizerSpec::Simf { arguments, .. } => {
+                WalletAbiSimfArguments::from_bytes(arguments).map(Some)
+            }
+            abi::FinalizerSpec::Wallet => Ok(None),
+        }
+    }
+
+    /// Return typed Simplicity witness values for the `simf` variant.
+    pub fn witness(&self) -> Result<Option<WalletAbiSimfWitness>, Error> {
+        match &self.inner {
+            abi::FinalizerSpec::Simf { witness, .. } => {
+                WalletAbiSimfWitness::from_bytes(witness).map(Some)
+            }
+            abi::FinalizerSpec::Wallet => Ok(None),
+        }
+    }
+}
+
 #[wasm_bindgen]
 impl WalletAbiTaprootHandle {
     /// Parse the canonical `<seed_or_ext-xonly_hex>:<pubkey>:<address>` taproot-handle string.
@@ -447,7 +531,7 @@ mod tests {
     use super::{
         WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiInputIssuance,
         WalletAbiInputIssuanceKind, WalletAbiInternalKeySource, WalletAbiLockFilter,
-        WalletAbiTaprootHandle, WalletAbiUtxoSource,
+        WalletAbiTaprootHandle, WalletAbiUtxoSource, WalletAbiFinalizerSpec,
         WalletAbiWalletSourceFilter,
     };
 
@@ -457,7 +541,12 @@ mod tests {
     use lwk_simplicity::simplicityhl::elements::Address;
     use lwk_simplicity::taproot_pubkey_gen::TaprootPubkeyGen;
 
-    use crate::{Network as WasmNetwork, OutPoint as WasmOutPoint, Script as WasmScript};
+    use crate::{
+        Network as WasmNetwork, OutPoint as WasmOutPoint, Script as WasmScript,
+        SimplicityArguments, SimplicityTypedValue, SimplicityWitnessValues,
+        WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments, WalletAbiSimfWitness,
+        XOnlyPublicKey,
+    };
 
     #[test]
     fn wallet_abi_taproot_handle_roundtrip() {
@@ -597,6 +686,71 @@ mod tests {
         assert_eq!(
             external.external_handle().expect("external handle").to_string(),
             handle.to_string()
+        );
+    }
+
+    #[test]
+    fn wallet_abi_finalizer_spec_roundtrip() {
+        let handle = WalletAbiTaprootHandle::from_string(
+            &TaprootPubkeyGen::from(
+                &(),
+                Network::Liquid,
+                &|_, _, _| {
+                    Ok(Address::from_str("lq1qqvxk052kf3qtkxmrakx50a9gc3smqad2ync54hzntjt980kfej9kkfe0247rp5h4yzmdftsahhw64uy8pzfe7cpg4fgykm7cv")
+                        .expect("valid fixed address"))
+                },
+            )
+            .expect("build taproot handle")
+            .to_string(),
+        )
+        .expect("parse handle");
+        let arguments = WalletAbiSimfArguments::from_resolved(
+            &SimplicityArguments::new().add_value("a", &SimplicityTypedValue::from_u8(1)),
+        )
+        .expect("arguments");
+        let public_key = XOnlyPublicKey::from_string(
+            "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        )
+        .expect("xonly key");
+        let witness = WalletAbiSimfWitness::new_with_runtime_arguments(
+            &SimplicityWitnessValues::new(),
+            vec![WalletAbiRuntimeSimfWitness::sig_hash_all("sig", &public_key)],
+        )
+        .expect("witness");
+        let spec = WalletAbiFinalizerSpec::simf(
+            "main := unit",
+            &WalletAbiInternalKeySource::external(&handle),
+            &arguments,
+            &witness,
+        )
+        .expect("finalizer");
+
+        assert_eq!(WalletAbiFinalizerSpec::wallet().kind(), "wallet");
+        assert_eq!(WalletAbiFinalizerSpec::wallet().source_simf(), None);
+        assert_eq!(spec.kind(), "simf");
+        assert_eq!(spec.source_simf(), Some("main := unit".to_string()));
+        assert_eq!(
+            spec.internal_key()
+                .expect("internal key")
+                .external_handle()
+                .expect("external handle")
+                .to_string(),
+            handle.to_string()
+        );
+        assert_eq!(
+            spec.arguments()
+                .expect("arguments accessor")
+                .expect("simf arguments")
+                .runtime_argument_names(),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            spec.witness()
+                .expect("witness accessor")
+                .expect("simf witness")
+                .runtime_arguments()[0]
+                .kind(),
+            "sig_hash_all"
         );
     }
 }

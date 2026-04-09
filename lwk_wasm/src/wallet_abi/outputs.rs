@@ -1,6 +1,6 @@
 use super::filters::WalletAbiFinalizerSpec;
 
-use crate::{AssetId, Script};
+use crate::{AssetId, PublicKey, Script};
 
 use lwk_simplicity::wallet_abi::schema as abi;
 
@@ -148,11 +148,67 @@ impl WalletAbiAssetVariant {
     }
 }
 
+/// A Wallet ABI output blinder variant.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq)]
+pub struct WalletAbiBlinderVariant {
+    inner: abi::BlinderVariant,
+}
+
+#[wasm_bindgen]
+impl WalletAbiBlinderVariant {
+    /// Build the Wallet ABI `wallet` blinder variant.
+    pub fn wallet() -> WalletAbiBlinderVariant {
+        Self {
+            inner: abi::BlinderVariant::Wallet,
+        }
+    }
+
+    /// Build the Wallet ABI `provided` blinder variant.
+    pub fn provided(pubkey: &PublicKey) -> Result<WalletAbiBlinderVariant, crate::Error> {
+        Ok(Self {
+            inner: abi::BlinderVariant::Provided {
+                pubkey: lwk_wollet::elements::secp256k1_zkp::PublicKey::from_slice(
+                    &pubkey.to_bytes(),
+                )?,
+            },
+        })
+    }
+
+    /// Build the Wallet ABI `explicit` blinder variant.
+    pub fn explicit() -> WalletAbiBlinderVariant {
+        Self {
+            inner: abi::BlinderVariant::Explicit,
+        }
+    }
+
+    /// Return the canonical Wallet ABI variant tag string.
+    pub fn kind(&self) -> String {
+        match self.inner {
+            abi::BlinderVariant::Wallet => "wallet",
+            abi::BlinderVariant::Provided { .. } => "provided",
+            abi::BlinderVariant::Explicit => "explicit",
+        }
+        .to_string()
+    }
+
+    /// Return the pubkey when this blinder is the `provided` variant.
+    #[wasm_bindgen(js_name = providedPubkey)]
+    pub fn provided_pubkey(&self) -> Option<PublicKey> {
+        match &self.inner {
+            abi::BlinderVariant::Provided { pubkey } => {
+                PublicKey::from_bytes(&pubkey.serialize()).ok()
+            }
+            abi::BlinderVariant::Wallet | abi::BlinderVariant::Explicit => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{WalletAbiAssetVariant, WalletAbiLockVariant};
+    use super::{WalletAbiAssetVariant, WalletAbiBlinderVariant, WalletAbiLockVariant};
 
-    use crate::{Network, Script, WalletAbiFinalizerSpec};
+    use crate::{Network, PublicKey, Script, SecretKey, WalletAbiFinalizerSpec};
 
     #[test]
     fn wallet_abi_lock_variant_roundtrip() {
@@ -196,5 +252,22 @@ mod tests {
         assert_eq!(token_variant.input_index(), Some(3));
         assert_eq!(reissuance_variant.kind(), "re_issuance_asset");
         assert_eq!(reissuance_variant.input_index(), Some(4));
+    }
+
+    #[test]
+    fn wallet_abi_blinder_variant_roundtrip() {
+        let public_key = PublicKey::from_secret_key(
+            &SecretKey::from_bytes(&[3_u8; 32]).expect("secret key"),
+        );
+        let provided = WalletAbiBlinderVariant::provided(&public_key).expect("provided blinder");
+
+        assert_eq!(WalletAbiBlinderVariant::wallet().kind(), "wallet");
+        assert_eq!(WalletAbiBlinderVariant::wallet().provided_pubkey(), None);
+        assert_eq!(provided.kind(), "provided");
+        assert_eq!(
+            provided.provided_pubkey().expect("provided pubkey").to_string(),
+            public_key.to_string()
+        );
+        assert_eq!(WalletAbiBlinderVariant::explicit().kind(), "explicit");
     }
 }

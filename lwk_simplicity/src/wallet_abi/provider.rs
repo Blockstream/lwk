@@ -1,8 +1,9 @@
 use crate::error::WalletAbiError;
 use crate::wallet_abi::schema::runtime_deps::SplitWalletProvider;
 use crate::wallet_abi::schema::{
-    KeyStoreMeta, TxCreateRequest, TxCreateResponse, WalletBroadcaster, WalletOutputAllocator,
-    WalletPrevoutResolver, WalletReceiveAddressProvider, WalletRuntimeDeps, WalletSessionFactory,
+    KeyStoreMeta, TxCreateRequest, TxCreateResponse, WalletBroadcaster, WalletCapabilities,
+    WalletOutputAllocator, WalletPrevoutResolver, WalletReceiveAddressProvider, WalletRuntimeDeps,
+    WalletSessionFactory,
 };
 
 use lwk_wollet::elements::Address;
@@ -199,16 +200,56 @@ where
     }
 }
 
+impl<
+        Signer,
+        SessionFactory,
+        PrevoutResolver,
+        OutputAllocator,
+        Broadcaster,
+        ReceiveAddressProvider,
+    >
+    WalletAbiProvider<
+        Signer,
+        SessionFactory,
+        PrevoutResolver,
+        OutputAllocator,
+        Broadcaster,
+        ReceiveAddressProvider,
+    >
+where
+    SessionFactory: WalletSessionFactory,
+    WalletAbiError: From<SessionFactory::Error>,
+{
+    /// Return the provider discovery document for the active wallet/network context.
+    pub async fn get_capabilities(&self) -> Result<WalletCapabilities, WalletAbiError> {
+        let session = self
+            .wallet_deps
+            .session_factory
+            .open_wallet_request_session()
+            .await?;
+
+        Ok(WalletCapabilities::new(
+            session.network,
+            [
+                "get_signer_receive_address",
+                "get_raw_signing_x_only_pubkey",
+                "wallet_abi_get_capabilities",
+                "wallet_abi_process_request",
+            ],
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Address, WalletAbiProviderBuilder, XOnlyPublicKey};
     use crate::error::WalletAbiError;
     use crate::wallet_abi::schema::{
         AssetFilter, AssetVariant, BlinderVariant, InputSchema, InputUnblinding, KeyStoreMeta,
-        LockFilter, LockVariant, OutputSchema, TxCreateRequest, WalletOutputRequest,
-        WalletBroadcaster, WalletOutputAllocator, WalletOutputTemplate, WalletPrevoutResolver,
-        WalletReceiveAddressProvider, WalletRequestSession, WalletSessionFactory,
-        WalletSourceFilter,
+        LockFilter, LockVariant, OutputSchema, TxCreateRequest, WalletCapabilities,
+        WalletOutputRequest, WalletBroadcaster, WalletOutputAllocator, WalletOutputTemplate,
+        WalletPrevoutResolver, WalletReceiveAddressProvider, WalletRequestSession,
+        WalletSessionFactory, WalletSourceFilter,
     };
 
     use lwk_common::Signer as _;
@@ -264,6 +305,22 @@ mod tests {
             _xonly_public_key: SecpXOnlyPublicKey,
         ) -> Result<Signature, Self::Error> {
             Err(TestProviderError)
+        }
+    }
+
+    impl WalletSessionFactory for TestSessionFactory {
+        type Error = TestProviderError;
+
+        fn open_wallet_request_session(
+            &self,
+        ) -> impl Future<Output = Result<WalletRequestSession, Self::Error>> + Send + '_ {
+            async move {
+                Ok(WalletRequestSession {
+                    session_id: "capabilities-session".to_string(),
+                    network: lwk_wollet::ElementsNetwork::LiquidTestnet,
+                    spendable_utxos: Arc::from(Vec::<ExternalUtxo>::new()),
+                })
+            }
         }
     }
 
@@ -363,6 +420,54 @@ mod tests {
                 .expect("receive address")
                 .to_string(),
             "tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m",
+        );
+    }
+
+    #[test]
+    fn provider_capabilities_smoke() {
+        let provider = WalletAbiProviderBuilder::new(
+            TestSigner,
+            TestSessionFactory,
+            TestPrevoutResolver {
+                derivation_pair: (
+                    PublicKey::from_str(
+                        "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+                    )
+                    .expect("valid pubkey"),
+                    (
+                        Fingerprint::from_str("01020304").expect("valid fingerprint"),
+                        DerivationPath::from_str("m/84h/1h/0h/0/0").expect("valid derivation path"),
+                    ),
+                ),
+            },
+            TestOutputAllocator {
+                template: WalletOutputTemplate {
+                    script_pubkey: Address::from_str(
+                        "tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m",
+                    )
+                    .expect("valid address")
+                    .script_pubkey(),
+                    blinding_pubkey: None,
+                },
+            },
+            TestBroadcaster {
+                broadcast_calls: Arc::new(AtomicUsize::new(0)),
+            },
+            TestReceiveAddressProvider,
+        )
+        .build();
+
+        assert_eq!(
+            ready(provider.get_capabilities()).expect("provider capabilities"),
+            WalletCapabilities::new(
+                lwk_wollet::ElementsNetwork::LiquidTestnet,
+                [
+                    "get_signer_receive_address",
+                    "get_raw_signing_x_only_pubkey",
+                    "wallet_abi_get_capabilities",
+                    "wallet_abi_process_request",
+                ],
+            ),
         );
     }
 

@@ -1,7 +1,7 @@
 //! Liquid script
 
 use elements::{
-    hashes::{sha256, Hash},
+    hashes::{hex::FromHex, sha256, Hash},
     hex::ToHex,
     pset::serialize::Deserialize,
 };
@@ -44,9 +44,27 @@ impl Display for Script {
 impl Script {
     /// Construct a Script object from its hex representation.
     /// To create the hex representation of a script use `to_string()`.
+    ///
+    /// Deprecated: use `from_string()` instead.
     #[uniffi::constructor]
     pub fn new(hex: &Hex) -> Result<Arc<Self>, LwkError> {
         let inner = elements::Script::deserialize(hex.as_ref())?;
+        Ok(Arc::new(Self { inner }))
+    }
+
+    /// Construct a Script object from its bytes.
+    #[uniffi::constructor]
+    pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
+        let inner = elements::Script::deserialize(bytes)?;
+        Ok(Arc::new(Self { inner }))
+    }
+
+    /// Construct a Script object from its canonical string representation.
+    /// To create the string representation of a script use `to_string()`.
+    #[uniffi::constructor]
+    pub fn from_string(s: &str) -> Result<Arc<Self>, LwkError> {
+        let bytes = Vec::<u8>::from_hex(s)?;
+        let inner = elements::Script::deserialize(&bytes)?;
         Ok(Arc::new(Self { inner }))
     }
 
@@ -67,7 +85,14 @@ impl Script {
     }
 
     /// Return the consensus encoded bytes of the script.
+    ///
+    /// Deprecated: use `to_bytes()` instead.
     pub fn bytes(&self) -> Vec<u8> {
+        self.inner.as_bytes().to_vec()
+    }
+
+    /// Return the consensus encoded bytes of the script.
+    pub fn to_bytes(&self) -> Vec<u8> {
         self.inner.as_bytes().to_vec()
     }
 
@@ -114,11 +139,11 @@ mod tests {
     fn script() {
         let script_str = "0020d2e99f0c38089c08e5e1080ff6658c6075afaa7699d384333d956c470881afde";
 
-        let script = Script::new(&script_str.parse().unwrap()).unwrap();
+        let script = Script::from_string(script_str).unwrap();
         assert_eq!(script.to_string(), script_str);
 
         let script_bytes = Vec::<u8>::from_hex(script_str).unwrap();
-        assert_eq!(script.bytes(), script_bytes);
+        assert_eq!(script.to_bytes(), script_bytes);
 
         assert_eq!(
             script.to_asm(),
@@ -127,14 +152,14 @@ mod tests {
 
         assert!(is_provably_segwit(&script, &None));
 
-        let burn = Script::new(&"6a".parse().unwrap()).unwrap();
+        let burn = Script::from_string("6a").unwrap();
         assert!(burn.is_provably_unspendable());
     }
 
     #[test]
     fn test_script_empty() {
         let script = Script::empty();
-        assert!(script.bytes().is_empty());
+        assert!(script.to_bytes().is_empty());
         assert_eq!(script.to_string(), "");
         assert_eq!(script.to_asm(), "");
     }
@@ -153,7 +178,7 @@ mod tests {
         let script_str = "51200e3a715a8791642277e1fcb823d974dfb4d8c774ad86deea13a0ba3b2d5ca4d2";
         let expected_hash = "0ea9adeb75ca64bbda18269a25cb94ef71d76627b77243e506e55e9e2962134d";
 
-        let script = Script::new(&script_str.parse().unwrap()).unwrap();
+        let script = Script::from_string(script_str).unwrap();
         assert_eq!(script.jet_sha256_hex().to_string(), expected_hash);
     }
 }

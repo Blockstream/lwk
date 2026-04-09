@@ -236,13 +236,13 @@ mod tests {
                 assert!(!output.is_partially_blinded());
                 assert_eq!(output.asset().unwrap(), network.policy_asset());
                 assert_eq!(output.value().unwrap(), 250);
-                assert!(output.script_pubkey().bytes().is_empty());
+                assert!(output.script_pubkey().to_bytes().is_empty());
             } else {
                 assert!(output.is_partially_blinded());
                 assert!(output.asset().is_none());
                 assert!(output.value().is_none());
                 let script_pubkey = output.script_pubkey();
-                assert!(!script_pubkey.bytes().is_empty());
+                assert!(!script_pubkey.to_bytes().is_empty());
                 let private_blinding_key = desc.derive_blinding_key(&script_pubkey).unwrap();
                 let txout_secrets = output.unblind(&private_blinding_key).unwrap();
                 assert_eq!(txout_secrets.asset(), network.policy_asset());

@@ -10,7 +10,7 @@ pub use filters::{
     WalletAbiInternalKeySource, WalletAbiLockFilter, WalletAbiTaprootHandle,
     WalletAbiUtxoSource, WalletAbiFinalizerSpec, WalletAbiWalletSourceFilter,
 };
-pub use outputs::WalletAbiLockVariant;
+pub use outputs::{WalletAbiAssetVariant, WalletAbiLockVariant};
 pub use simf::{
     WalletAbiRuntimeSimfValue, WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments,
     WalletAbiSimfWitness,

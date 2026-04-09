@@ -46,6 +46,8 @@ mod store;
 mod tweak;
 mod tx_builder;
 mod update;
+#[cfg(feature = "simplicity")]
+mod wallet_abi;
 
 // TODO serial is not logically needed here, but it brings in web_sys dep
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
@@ -128,6 +130,8 @@ pub use store::{JsStorage, JsStoreLink, JsTestStore};
 pub use tweak::Tweak;
 pub use tx_builder::TxBuilder;
 pub use update::Update;
+#[cfg(feature = "simplicity")]
+pub use wallet_abi::*;
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use websocket::WebSocketSerial;

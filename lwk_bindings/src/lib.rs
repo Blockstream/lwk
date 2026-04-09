@@ -65,7 +65,7 @@ pub use wallet_abi::{
     WalletAbiRuntimeSimfValue, WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments,
     WalletAbiSimfWitness, WalletAbiStatus, WalletAbiTaprootHandle, WalletAbiTransactionInfo,
     WalletAbiTxCreateRequest, WalletAbiTxCreateResponse, WalletAbiTxEvaluateRequest,
-    WalletAbiUtxoSource,
+    WalletAbiTxEvaluateResponse, WalletAbiUtxoSource,
     WalletAbiWalletSourceFilter,
 };
 

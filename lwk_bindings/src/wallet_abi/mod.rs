@@ -12,7 +12,7 @@ mod conversions;
 mod schema;
 
 pub use schema::capabilities::WalletAbiCapabilities;
-pub use schema::evaluate::WalletAbiTxEvaluateRequest;
+pub use schema::evaluate::{WalletAbiTxEvaluateRequest, WalletAbiTxEvaluateResponse};
 pub use schema::filters::{
     WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiFinalizerSpec, WalletAbiInputIssuance,
     WalletAbiInputIssuanceKind, WalletAbiInputSchema, WalletAbiInputUnblinding,

@@ -17,6 +17,7 @@ mod output_template;
 mod prevout_resolver_link;
 mod receive_address_link;
 mod request_session;
+mod runtime_deps_link;
 mod session_factory_link;
 mod signer_context;
 mod signer_link;
@@ -34,6 +35,7 @@ pub use receive_address_link::{
     WalletAbiReceiveAddressProviderCallbacks, WalletReceiveAddressProviderLink,
 };
 pub use request_session::WalletAbiRequestSession;
+pub use runtime_deps_link::WalletRuntimeDepsLink;
 pub use session_factory_link::{WalletAbiSessionFactoryCallbacks, WalletSessionFactoryLink};
 pub use signer_context::WalletAbiSignerContext;
 pub use signer_link::{SignerMetaLink, WalletAbiSignerCallbacks};

@@ -71,8 +71,8 @@ pub use wallet_abi::{
     WalletAbiTransactionInfo, WalletAbiTxCreateRequest, WalletAbiTxCreateResponse,
     WalletAbiTxEvaluateRequest, WalletAbiTxEvaluateResponse, WalletAbiUtxoSource,
     WalletAbiWalletOutputRequest, WalletAbiWalletOutputRole, WalletAbiWalletOutputTemplate,
-    WalletAbiWalletSourceFilter, SignerMetaLink, WalletBroadcasterLink,
-    WalletOutputAllocatorLink, WalletPrevoutResolverLink, WalletReceiveAddressProviderLink,
+    WalletAbiWalletSourceFilter, SignerMetaLink, WalletBroadcasterLink, WalletOutputAllocatorLink,
+    WalletPrevoutResolverLink, WalletReceiveAddressProviderLink, WalletRuntimeDepsLink,
     WalletSessionFactoryLink,
     wallet_abi_output_template_from_address,
 };

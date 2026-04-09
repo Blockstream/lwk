@@ -21,7 +21,7 @@ pub use filters::{
     WalletAbiUtxoSource, WalletAbiFinalizerSpec, WalletAbiWalletSourceFilter,
 };
 pub use capabilities::WalletAbiCapabilities;
-pub use evaluate::WalletAbiTxEvaluateRequest;
+pub use evaluate::{WalletAbiTxEvaluateRequest, WalletAbiTxEvaluateResponse};
 pub use outputs::{
     WalletAbiAssetVariant, WalletAbiBlinderVariant, WalletAbiLockVariant, WalletAbiOutputSchema,
     WalletAbiRuntimeParams,

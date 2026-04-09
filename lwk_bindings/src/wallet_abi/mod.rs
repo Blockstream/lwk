@@ -24,6 +24,7 @@ pub use schema::outputs::{
 };
 pub use schema::preview::{
     WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput, WalletAbiPreviewOutputKind,
+    WalletAbiRequestPreview,
 };
 pub use schema::roots::{
     WalletAbiErrorCode, WalletAbiErrorInfo, WalletAbiStatus, WalletAbiTransactionInfo,

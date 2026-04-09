@@ -143,9 +143,81 @@ impl From<WalletAbiPreviewOutputKind> for abi::PreviewOutputKind {
     }
 }
 
+/// High-level preview payload for preflight transaction rendering.
+#[derive(uniffi::Object, Clone)]
+pub struct WalletAbiRequestPreview {
+    pub(crate) inner: abi::RequestPreview,
+}
+
+#[uniffi::export]
+impl WalletAbiRequestPreview {
+    /// Build a request preview payload.
+    #[uniffi::constructor]
+    pub fn new(
+        asset_deltas: Vec<Arc<WalletAbiPreviewAssetDelta>>,
+        outputs: Vec<Arc<WalletAbiPreviewOutput>>,
+        warnings: Vec<String>,
+    ) -> Arc<Self> {
+        Arc::new(Self {
+            inner: abi::RequestPreview {
+                asset_deltas: asset_deltas
+                    .into_iter()
+                    .map(|delta| delta.inner.clone())
+                    .collect(),
+                outputs: outputs
+                    .into_iter()
+                    .map(|output| output.inner.clone())
+                    .collect(),
+                warnings,
+            },
+        })
+    }
+
+    /// Parse canonical Wallet ABI request preview JSON.
+    #[uniffi::constructor]
+    pub fn from_json(json: &str) -> Result<Arc<Self>, LwkError> {
+        Ok(Arc::new(Self {
+            inner: serde_json::from_str(json)?,
+        }))
+    }
+
+    /// Serialize this request preview to canonical Wallet ABI JSON.
+    pub fn to_json(&self) -> Result<String, LwkError> {
+        Ok(serde_json::to_string(&self.inner)?)
+    }
+
+    /// Return the wallet asset delta entries.
+    pub fn asset_deltas(&self) -> Vec<Arc<WalletAbiPreviewAssetDelta>> {
+        self.inner
+            .asset_deltas
+            .iter()
+            .cloned()
+            .map(|inner| Arc::new(WalletAbiPreviewAssetDelta { inner }))
+            .collect()
+    }
+
+    /// Return the materialized outputs in transaction order.
+    pub fn outputs(&self) -> Vec<Arc<WalletAbiPreviewOutput>> {
+        self.inner
+            .outputs
+            .iter()
+            .cloned()
+            .map(|inner| Arc::new(WalletAbiPreviewOutput { inner }))
+            .collect()
+    }
+
+    /// Return producer-provided warnings for the caller UI.
+    pub fn warnings(&self) -> Vec<String> {
+        self.inner.warnings.clone()
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput, WalletAbiPreviewOutputKind};
+    use super::{
+        WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput, WalletAbiPreviewOutputKind,
+        WalletAbiRequestPreview,
+    };
     use crate::blockdata::script::Script;
     use crate::Network;
 
@@ -180,5 +252,30 @@ mod tests {
         assert_eq!(decoded.asset_id(), asset_id);
         assert_eq!(decoded.amount_sat(), 1_500);
         assert_eq!(decoded.script_pubkey().to_string(), "");
+    }
+
+    #[test]
+    fn wallet_abi_request_preview_roundtrip() {
+        let asset_id = Network::testnet().policy_asset();
+        let preview = WalletAbiRequestPreview::new(
+            vec![WalletAbiPreviewAssetDelta::new(asset_id, -1_500)],
+            vec![WalletAbiPreviewOutput::new(
+                WalletAbiPreviewOutputKind::Fee,
+                asset_id,
+                600,
+                &Script::empty(),
+            )],
+            vec!["requires confirmation".to_string()],
+        );
+
+        let json = preview.to_json().expect("serialize request preview");
+        let decoded = WalletAbiRequestPreview::from_json(&json).expect("deserialize request preview");
+
+        assert_eq!(decoded.asset_deltas()[0].wallet_delta_sat(), -1_500);
+        assert_eq!(decoded.outputs()[0].kind(), WalletAbiPreviewOutputKind::Fee);
+        assert_eq!(
+            decoded.warnings(),
+            vec!["requires confirmation".to_string()]
+        );
     }
 }

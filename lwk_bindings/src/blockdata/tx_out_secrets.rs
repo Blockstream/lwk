@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 #[cfg(feature = "simplicity")]
 use crate::types;
-use crate::types::{AssetId, Hex};
+use crate::types::AssetId;
 use elements::secp256k1_zkp::{Generator, PedersenCommitment, Tag};
 use lwk_wollet::EC;
 
@@ -82,12 +82,8 @@ impl TxOutSecrets {
     /// Return the asset blinding factor as a hex string.
     ///
     /// Deprecated: use `asset_blinding_factor()` instead.
-    pub fn asset_bf(&self) -> Hex {
-        self.inner
-            .asset_bf
-            .to_string()
-            .parse()
-            .expect("asset_bf to_string creates valid hex")
+    pub fn asset_bf(&self) -> String {
+        self.inner.asset_bf.to_string()
     }
 
     /// Return the value of the output.
@@ -98,12 +94,8 @@ impl TxOutSecrets {
     /// Return the value blinding factor as a hex string.
     ///
     /// Deprecated: use `value_blinding_factor()` instead.
-    pub fn value_bf(&self) -> Hex {
-        self.inner
-            .value_bf
-            .to_string()
-            .parse()
-            .expect("value_bf to_string creates valid hex")
+    pub fn value_bf(&self) -> String {
+        self.inner.value_bf.to_string()
     }
 
     /// Return true if the output is explicit (no blinding factors).
@@ -115,31 +107,25 @@ impl TxOutSecrets {
     /// Get the asset commitment
     ///
     /// If the output is explicit, returns the empty string
-    pub fn asset_commitment(&self) -> Hex {
+    pub fn asset_commitment(&self) -> String {
         if self.is_explicit() {
-            "".parse().expect("empty string")
+            String::new()
         } else {
-            self.asset_generator()
-                .to_string()
-                .parse()
-                .expect("from pedersen commitment")
+            self.asset_generator().to_string()
         }
     }
 
     /// Get the value commitment
     ///
     /// If the output is explicit, returns the empty string
-    pub fn value_commitment(&self) -> Hex {
+    pub fn value_commitment(&self) -> String {
         if self.is_explicit() {
-            "".parse().expect("empty string")
+            String::new()
         } else {
             let value = self.inner.value;
             let vbf = self.inner.value_bf.into_inner();
 
-            PedersenCommitment::new(&EC, value, vbf, self.asset_generator())
-                .to_string()
-                .parse()
-                .expect("from pedersen commitment")
+            PedersenCommitment::new(&EC, value, vbf, self.asset_generator()).to_string()
         }
     }
 }

@@ -6,7 +6,7 @@ use elements::{
     pset::serialize::Deserialize,
 };
 
-use crate::{types::Hex, LwkError};
+use crate::LwkError;
 use std::{fmt::Display, sync::Arc};
 
 /// A Liquid script
@@ -47,8 +47,9 @@ impl Script {
     ///
     /// Deprecated: use `from_string()` instead.
     #[uniffi::constructor]
-    pub fn new(hex: &Hex) -> Result<Arc<Self>, LwkError> {
-        let inner = elements::Script::deserialize(hex.as_ref())?;
+    pub fn new(hex: &str) -> Result<Arc<Self>, LwkError> {
+        let bytes = Vec::<u8>::from_hex(hex)?;
+        let inner = elements::Script::deserialize(&bytes)?;
         Ok(Arc::new(Self { inner }))
     }
 
@@ -99,12 +100,8 @@ impl Script {
     /// Returns SHA256 of the script's consensus bytes.
     ///
     /// Returns an equivalent value to the `jet::input_script_hash(index)`/`jet::output_script_hash(index)`.
-    pub fn jet_sha256_hex(&self) -> Hex {
-        Hex::from(
-            sha256::Hash::hash(self.inner.as_bytes())
-                .to_byte_array()
-                .to_vec(),
-        )
+    pub fn jet_sha256_hex(&self) -> String {
+        sha256::Hash::hash(self.inner.as_bytes()).to_hex()
     }
 
     // "asm" is a reserved keyword in some target languages, do not use it

@@ -8,8 +8,6 @@ use crate::blockdata::out_point::OutPoint;
 #[cfg(feature = "simplicity")]
 use crate::types::ContractHash;
 #[cfg(feature = "simplicity")]
-use crate::types::Hex;
-#[cfg(feature = "simplicity")]
 use crate::LwkError;
 
 /// A valid asset identifier.
@@ -49,15 +47,17 @@ uniffi::custom_type!(AssetId, String, {
 #[cfg(feature = "simplicity")]
 impl AssetId {
     /// Return the inner byte-order hex representation of the asset identifier.
-    pub fn inner_hex(&self) -> Hex {
-        Hex::from(self.inner.into_inner().to_byte_array().to_vec())
+    ///
+    /// Note: this method returns the hex representation in reverse byte-order compared to `to_string`.
+    pub fn inner_hex(&self) -> String {
+        self.inner.into_inner().to_byte_array().to_hex()
     }
 }
 
 /// TODO: delete when AssetId is refactored as uniffi::Object.
 #[cfg(feature = "simplicity")]
 #[uniffi::export]
-pub fn asset_id_inner_hex(asset_id: AssetId) -> Hex {
+pub fn asset_id_inner_hex(asset_id: AssetId) -> String {
     asset_id.inner_hex()
 }
 

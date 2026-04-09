@@ -1,4 +1,66 @@
 //! Root Wallet ABI surface for provider-facing schema and runtime types.
+//!
+//! The checked-in provider product lives at [`WalletAbiProvider`]. It exposes:
+//! - connect-time getters for signer identity and receive address
+//! - typed request execution for tx-create and tx-evaluate flows
+//! - provider discovery via [`WalletCapabilities`]
+//! - method-level JSON dispatch for external transports
+//!
+//! The runtime engine itself remains [`WalletAbiRuntime`], which builds and evaluates requests
+//! against request-scoped wallet dependencies.
+//!
+//! Typed usage:
+//!
+//! ```ignore
+//! use lwk_simplicity::wallet_abi::WalletAbiProviderBuilder;
+//!
+//! async fn typed_flow() -> Result<(), lwk_simplicity::error::WalletAbiError> {
+//!     let provider = WalletAbiProviderBuilder::new(
+//!         signer_meta,
+//!         session_factory,
+//!         prevout_resolver,
+//!         output_allocator,
+//!         broadcaster,
+//!         receive_address_provider,
+//!     )
+//!     .build();
+//!
+//!     let _xonly = provider.get_raw_signing_x_only_pubkey()?;
+//!     let _address = provider.get_signer_receive_address()?;
+//!     let _capabilities = provider.get_capabilities().await?;
+//!     let _preview = provider.evaluate_request(evaluate_request).await?;
+//!     let _response = provider.process_request(create_request).await?;
+//!     Ok(())
+//! }
+//! ```
+//!
+//! JSON dispatch usage:
+//!
+//! ```ignore
+//! use lwk_simplicity::wallet_abi::{
+//!     WalletAbiProviderBuilder, WALLET_ABI_GET_CAPABILITIES_METHOD,
+//! };
+//!
+//! async fn json_flow() -> Result<(), lwk_simplicity::error::WalletAbiError> {
+//!     let provider = WalletAbiProviderBuilder::new(
+//!         signer_meta,
+//!         session_factory,
+//!         prevout_resolver,
+//!         output_allocator,
+//!         broadcaster,
+//!         receive_address_provider,
+//!     )
+//!     .build();
+//!
+//!     let _result = provider
+//!         .dispatch_json(
+//!             WALLET_ABI_GET_CAPABILITIES_METHOD,
+//!             serde_json::Value::Null,
+//!         )
+//!         .await?;
+//!     Ok(())
+//! }
+//! ```
 
 mod provider;
 pub mod schema;

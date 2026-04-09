@@ -10,6 +10,7 @@ use lwk_simplicity::wallet_abi::schema as abi;
 
 mod conversions;
 mod bip32;
+mod broadcaster_link;
 mod output_allocator_link;
 mod output_request;
 mod output_template;
@@ -23,6 +24,7 @@ mod schema;
 pub use bip32::{
     wallet_abi_bip32_derivation_pair_from_signer, WalletAbiBip32DerivationPair,
 };
+pub use broadcaster_link::{WalletAbiBroadcasterCallbacks, WalletBroadcasterLink};
 pub use output_allocator_link::{WalletAbiOutputAllocatorCallbacks, WalletOutputAllocatorLink};
 pub use output_request::{WalletAbiWalletOutputRequest, WalletAbiWalletOutputRole};
 pub use output_template::{wallet_abi_output_template_from_address, WalletAbiWalletOutputTemplate};

@@ -55,9 +55,10 @@ pub use simplicity::{
 mod wallet_abi;
 #[cfg(feature = "simplicity")]
 pub use wallet_abi::{
-    wallet_abi_generate_request_id, WalletAbiAmountFilter, WalletAbiAssetFilter,
-    WalletAbiAssetVariant, WalletAbiBlinderVariant, WalletAbiErrorCode, WalletAbiErrorInfo,
-    WalletAbiCapabilities, WalletAbiFinalizerSpec, WalletAbiInputIssuance,
+    wallet_abi_bip32_derivation_pair_from_signer, wallet_abi_generate_request_id,
+    WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiAssetVariant,
+    WalletAbiBip32DerivationPair, WalletAbiBlinderVariant, WalletAbiCapabilities,
+    WalletAbiErrorCode, WalletAbiErrorInfo, WalletAbiFinalizerSpec, WalletAbiInputIssuance,
     WalletAbiInputIssuanceKind, WalletAbiInputSchema, WalletAbiInputUnblinding,
     WalletAbiInternalKeySource, WalletAbiLockFilter, WalletAbiLockVariant,
     WalletAbiOutputSchema, WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput,

@@ -9,8 +9,12 @@ use lwk_simplicity::taproot_pubkey_gen::TaprootPubkeyGen;
 use lwk_simplicity::wallet_abi::schema as abi;
 
 mod conversions;
+mod bip32;
 mod schema;
 
+pub use bip32::{
+    wallet_abi_bip32_derivation_pair_from_signer, WalletAbiBip32DerivationPair,
+};
 pub use schema::capabilities::WalletAbiCapabilities;
 pub use schema::evaluate::{WalletAbiTxEvaluateRequest, WalletAbiTxEvaluateResponse};
 pub use schema::filters::{

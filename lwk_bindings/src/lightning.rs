@@ -1191,7 +1191,10 @@ impl LockupResponse {
 #[uniffi::export]
 impl WebHook {
     #[uniffi::constructor]
-    pub fn new(url: String, status: Vec<String>) -> Arc<Self> {
-        Arc::new(Self { url, status })
+    pub fn new(url: String, status: &[String]) -> Arc<Self> {
+        Arc::new(Self {
+            url,
+            status: status.to_vec(),
+        })
     }
 }

@@ -1,6 +1,7 @@
 //! Typed Wallet ABI schema wrappers for wasm consumers.
 
 mod capabilities;
+mod evaluate;
 mod filters;
 mod outputs;
 mod preview;
@@ -20,6 +21,7 @@ pub use filters::{
     WalletAbiUtxoSource, WalletAbiFinalizerSpec, WalletAbiWalletSourceFilter,
 };
 pub use capabilities::WalletAbiCapabilities;
+pub use evaluate::WalletAbiTxEvaluateRequest;
 pub use outputs::{
     WalletAbiAssetVariant, WalletAbiBlinderVariant, WalletAbiLockVariant, WalletAbiOutputSchema,
     WalletAbiRuntimeParams,

@@ -4,5 +4,6 @@ mod filters;
 
 pub use filters::{
     WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiLockFilter, WalletAbiTaprootHandle,
-    WalletAbiUtxoSource, WalletAbiWalletSourceFilter,
+    WalletAbiInputIssuance, WalletAbiInputIssuanceKind, WalletAbiUtxoSource,
+    WalletAbiWalletSourceFilter,
 };

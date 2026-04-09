@@ -289,6 +289,98 @@ impl WalletAbiUtxoSource {
     }
 }
 
+/// The issuance kind for a Wallet ABI input issuance.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WalletAbiInputIssuanceKind {
+    /// Create a new asset issuance.
+    New,
+    /// Reissue an existing asset.
+    Reissue,
+}
+
+impl From<abi::InputIssuanceKind> for WalletAbiInputIssuanceKind {
+    fn from(value: abi::InputIssuanceKind) -> Self {
+        match value {
+            abi::InputIssuanceKind::New => Self::New,
+            abi::InputIssuanceKind::Reissue => Self::Reissue,
+        }
+    }
+}
+
+impl From<WalletAbiInputIssuanceKind> for abi::InputIssuanceKind {
+    fn from(value: WalletAbiInputIssuanceKind) -> Self {
+        match value {
+            WalletAbiInputIssuanceKind::New => Self::New,
+            WalletAbiInputIssuanceKind::Reissue => Self::Reissue,
+        }
+    }
+}
+
+/// Wallet ABI issuance data attached to an input.
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WalletAbiInputIssuance {
+    inner: abi::InputIssuance,
+}
+
+#[wasm_bindgen]
+impl WalletAbiInputIssuance {
+    /// Build a `new` input issuance object.
+    pub fn new(
+        asset_amount_sat: u64,
+        token_amount_sat: u64,
+        entropy: &[u8],
+    ) -> Result<WalletAbiInputIssuance, Error> {
+        Ok(Self {
+            inner: abi::InputIssuance {
+                kind: abi::InputIssuanceKind::New,
+                asset_amount_sat,
+                token_amount_sat,
+                entropy: entropy.try_into()?,
+            },
+        })
+    }
+
+    /// Build a `reissue` input issuance object.
+    pub fn reissue(
+        asset_amount_sat: u64,
+        token_amount_sat: u64,
+        entropy: &[u8],
+    ) -> Result<WalletAbiInputIssuance, Error> {
+        Ok(Self {
+            inner: abi::InputIssuance {
+                kind: abi::InputIssuanceKind::Reissue,
+                asset_amount_sat,
+                token_amount_sat,
+                entropy: entropy.try_into()?,
+            },
+        })
+    }
+
+    /// Return the issuance kind.
+    pub fn kind(&self) -> WalletAbiInputIssuanceKind {
+        self.inner.kind.clone().into()
+    }
+
+    /// Return the issued asset amount in satoshi.
+    #[wasm_bindgen(js_name = assetAmountSat)]
+    pub fn asset_amount_sat(&self) -> u64 {
+        self.inner.asset_amount_sat
+    }
+
+    /// Return the issued token amount in satoshi.
+    #[wasm_bindgen(js_name = tokenAmountSat)]
+    pub fn token_amount_sat(&self) -> u64 {
+        self.inner.token_amount_sat
+    }
+
+    /// Return the issuance entropy bytes.
+    pub fn entropy(&self) -> Vec<u8> {
+        self.inner.entropy.to_vec()
+    }
+}
+
 #[wasm_bindgen]
 impl WalletAbiTaprootHandle {
     /// Parse the canonical `<seed_or_ext-xonly_hex>:<pubkey>:<address>` taproot-handle string.
@@ -310,7 +402,8 @@ impl WalletAbiTaprootHandle {
 mod tests {
     use super::{
         WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiLockFilter, WalletAbiTaprootHandle,
-        WalletAbiUtxoSource, WalletAbiWalletSourceFilter,
+        WalletAbiInputIssuance, WalletAbiInputIssuanceKind, WalletAbiUtxoSource,
+        WalletAbiWalletSourceFilter,
     };
 
     use std::str::FromStr;
@@ -416,5 +509,23 @@ mod tests {
                 .to_string(),
             provided_outpoint.to_string()
         );
+    }
+
+    #[test]
+    fn wallet_abi_input_issuance_roundtrip() {
+        let entropy = [7_u8; 32];
+        let issuance = WalletAbiInputIssuance::new(1_000, 500, &entropy).expect("issuance");
+        let reissuance =
+            WalletAbiInputIssuance::reissue(2_000, 250, &entropy).expect("reissuance");
+
+        assert_eq!(issuance.kind(), WalletAbiInputIssuanceKind::New);
+        assert_eq!(issuance.asset_amount_sat(), 1_000);
+        assert_eq!(issuance.token_amount_sat(), 500);
+        assert_eq!(issuance.entropy(), entropy);
+
+        assert_eq!(reissuance.kind(), WalletAbiInputIssuanceKind::Reissue);
+        assert_eq!(reissuance.asset_amount_sat(), 2_000);
+        assert_eq!(reissuance.token_amount_sat(), 250);
+        assert_eq!(reissuance.entropy(), entropy);
     }
 }

@@ -8,8 +8,8 @@ For new additions or improvement, follow our [guidelines](GUIDE.md).
 Serve the docs locally:
 ```
 cd docs
-cargo install mdbook
-cargo install mdbook-mermaid
+cargo install mdbook --version 0.4.52 --locked --force
+cargo install mdbook-mermaid --version 0.16.2 --locked --force
 cargo install --path ./snippets/processor
 mdbook build
 mdbook serve

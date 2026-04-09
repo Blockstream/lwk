@@ -3,5 +3,6 @@
 pub mod capabilities;
 pub mod filters;
 pub mod outputs;
+pub mod preview;
 pub mod roots;
 pub mod simf;

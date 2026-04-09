@@ -5,6 +5,8 @@ use elements::bitcoin::address::NetworkUnchecked;
 use lightning::offers::offer::Offer;
 use lightning_invoice::Bolt11Invoice;
 
+use crate::Error;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Bip21(String);
 
@@ -67,9 +69,9 @@ impl PartialEq<str> for Bip21 {
 }
 
 impl FromStr for Bip21 {
-    type Err = String;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         let _bip21: bip21_crate::Uri<'_, NetworkUnchecked, Extras> =
             bip21_crate::Uri::from_str(s).map_err(|e| e.to_string())?;
         Ok(Self(s.to_string()))

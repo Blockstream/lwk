@@ -1,5 +1,7 @@
 use ::lnurl::lnurl::LnUrl;
 
+use crate::Error;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LnUrlIdentifier {
     /// A lnurl
@@ -33,13 +35,11 @@ impl LnUrlIdentifier {
         }
     }
 
-    pub fn resolve_url(&self) -> Result<String, String> {
+    pub fn resolve_url(&self) -> Result<String, Error> {
         match self {
             Self::LnUrl(lnurl) => Ok(lnurl.url.clone()),
             Self::Lud16(email) => {
-                let (user, domain) = email
-                    .split_once('@')
-                    .ok_or_else(|| "Invalid email".to_string())?;
+                let (user, domain) = email.split_once('@').ok_or("Invalid email")?;
 
                 let schema = lnurl_schema_for_domain(domain)?;
                 Ok(format!("{schema}://{domain}/.well-known/lnurlp/{user}"))
@@ -48,16 +48,17 @@ impl LnUrlIdentifier {
     }
 }
 
-fn lnurl_schema_for_domain(domain: &str) -> Result<&'static str, String> {
+fn lnurl_schema_for_domain(domain: &str) -> Result<&'static str, Error> {
     // TODO: support onion domains
     if domain.starts_with("127.0.0.1") || domain.starts_with("localhost") {
         if cfg!(debug_assertions) {
             // allow insecure LNURL resolution over HTTP for local domains in debug mode
             Ok("http")
         } else {
-            Err(format!(
-                "Refusing insecure LNURL resolution over HTTP for local domain: {domain}"
-            ))
+            Err(
+                format!("Refusing insecure LNURL resolution over HTTP for local domain: {domain}")
+                    .into(),
+            )
         }
     } else {
         Ok("https")

@@ -1,10 +1,11 @@
 use crate::error::WalletAbiError;
-use crate::wallet_abi::schema::{FinalizerSpec, InputSchema};
+use crate::wallet_abi::schema::{FinalizerSpec, InputSchema, UTXOSource};
 use crate::wallet_abi::tx_resolution::input_material::ResolvedInputMaterial;
+use crate::wallet_abi::tx_resolution::utils::add_balance;
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
-use lwk_wollet::elements::{Script, TxOutSecrets};
+use lwk_wollet::elements::{AssetId, Script, TxOutSecrets};
 use lwk_wollet::ExternalUtxo;
 
 #[derive(Debug, Default)]
@@ -12,6 +13,7 @@ pub(crate) struct ResolutionArtifacts {
     secrets: HashMap<usize, TxOutSecrets>,
     finalizers: Vec<FinalizerSpec>,
     wallet_input_finalization_weight: usize,
+    wallet_input_supply: BTreeMap<AssetId, u64>,
 }
 
 impl ResolutionArtifacts {
@@ -39,6 +41,12 @@ impl ResolutionArtifacts {
         self.wallet_input_finalization_weight
     }
 
+    /// Expose wallet-owned input supply so preview generation can compute net
+    /// wallet deltas after output materialization.
+    pub(crate) fn wallet_input_supply(&self) -> &BTreeMap<AssetId, u64> {
+        &self.wallet_input_supply
+    }
+
     /// Record one auxiliary wallet input in artifact state so blinding,
     /// finalization, and fee modeling all stay aligned with the concrete PSET
     /// input index that was added.
@@ -58,6 +66,11 @@ impl ResolutionArtifacts {
                     "wallet input finalization weight overflow".to_string(),
                 )
             })?;
+        add_balance(
+            &mut self.wallet_input_supply,
+            selected_wallet_utxo.unblinded.asset,
+            selected_wallet_utxo.unblinded.value,
+        )?;
 
         Ok(())
     }
@@ -89,6 +102,14 @@ impl ResolutionArtifacts {
                         "wallet input finalization weight overflow".to_string(),
                     )
                 })?;
+        }
+
+        if matches!(input.utxo_source, UTXOSource::Wallet { .. }) {
+            add_balance(
+                &mut self.wallet_input_supply,
+                material.secrets().asset,
+                material.secrets().value,
+            )?;
         }
 
         Ok(())

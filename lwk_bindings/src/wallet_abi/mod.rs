@@ -10,6 +10,7 @@ use lwk_simplicity::wallet_abi::schema as abi;
 
 mod conversions;
 mod bip32;
+mod output_request;
 mod request_session;
 mod signer_context;
 mod schema;
@@ -17,6 +18,7 @@ mod schema;
 pub use bip32::{
     wallet_abi_bip32_derivation_pair_from_signer, WalletAbiBip32DerivationPair,
 };
+pub use output_request::{WalletAbiWalletOutputRequest, WalletAbiWalletOutputRole};
 pub use request_session::WalletAbiRequestSession;
 pub use signer_context::WalletAbiSignerContext;
 pub use schema::capabilities::WalletAbiCapabilities;

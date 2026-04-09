@@ -40,7 +40,10 @@ impl AsRef<[u8]> for Hex {
 
 impl Display for Hex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.inner.to_hex()) // TODO: do without allocating
+        for byte in &self.inner {
+            write!(f, "{:02x}", byte)?;
+        }
+        Ok(())
     }
 }
 

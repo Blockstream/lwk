@@ -8,6 +8,22 @@ Liquid Wallet Kit working in the WASM environment.
 
 For an example usage see the [Liquid Web Wallet](https://liquidwebwallet.org/) ([source](https://github.com/RCasatta/liquid-web-wallet)). Works as CT descriptor watch-only wallet or connected to a Jade.
 
+## Wallet ABI schema
+
+With the `simplicity` feature, `lwk_wasm` exposes typed wasm-bindgen classes for the checked-in
+Wallet ABI schema defined in `lwk_simplicity`.
+
+This schema surface includes:
+
+* request-building types such as `WalletAbiRuntimeParams`, `WalletAbiInputSchema`, and `WalletAbiOutputSchema`
+* Simplicity finalizer helpers such as `WalletAbiSimfArguments` and `WalletAbiSimfWitness`
+* discovery and preview types such as `WalletAbiCapabilities` and `WalletAbiRequestPreview`
+* request and response envelopes such as `WalletAbiTxCreateRequest`, `WalletAbiTxCreateResponse`,
+  `WalletAbiTxEvaluateRequest`, and `WalletAbiTxEvaluateResponse`
+
+These exports are schema and helper wrappers only. Provider transport, WalletConnect session
+management, and JSON-RPC orchestration remain out of scope for `lwk_wasm`.
+
 
 ## For LWK Library developers
 

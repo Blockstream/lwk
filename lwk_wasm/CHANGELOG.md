@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+* Added typed Wallet ABI schema exports behind the `simplicity` feature.
+  * `lwk_wasm` now mirrors the checked-in Wallet ABI request, response, preview, and discovery
+    types from `lwk_simplicity`.
+  * This surface is limited to schema and helper wrappers; provider transport, WalletConnect
+    orchestration, and session logic remain out of scope.
 * Async constructors for `Jade`, `JadeWebSocket`, and `Amp0Connected` where deprecated due to [wasm-bindgen/wasm-bindgen#4402](https://github.com/wasm-bindgen/wasm-bindgen/pull/4402)
   * To avoid generating invalid TS code, macros `skip_typescript` was added to all of them.
   * Created static async factories `Jade.fromSerial(...)`, `JadeWebSocket.fromWebSocket(...)`, and `Amp0Connected.connect(...)` to replace deprecated constructors

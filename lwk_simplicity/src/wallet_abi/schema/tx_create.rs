@@ -1,4 +1,5 @@
 use crate::error::WalletAbiError;
+use crate::wallet_abi::schema::preview::RequestPreview;
 use crate::wallet_abi::schema::runtime_params::RuntimeParams;
 use crate::wallet_abi::schema::types::ErrorInfo;
 
@@ -218,6 +219,18 @@ impl TxCreateResponse {
             .map_err(WalletAbiError::from)
     }
 
+    /// Parse the optional `artifacts.preview` payload into a typed preview.
+    pub fn preview(&self) -> Result<Option<RequestPreview>, WalletAbiError> {
+        let Some(artifacts) = self.artifacts.as_ref() else {
+            return Ok(None);
+        };
+        let Some(preview) = artifacts.get("preview") else {
+            return Ok(None);
+        };
+
+        RequestPreview::from_artifact_value(preview).map(Some)
+    }
+
     /// Build a successful ABI response envelope.
     pub fn ok(
         request: &TxCreateRequest,
@@ -249,5 +262,49 @@ impl TxCreateResponse {
             artifacts: None,
             error: Some(error.into()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{TransactionInfo, TxCreateResponse};
+    use crate::wallet_abi::schema::{
+        PreviewAssetDelta, PreviewOutput, PreviewOutputKind, RequestPreview,
+    };
+
+    #[test]
+    fn tx_create_response_preview() {
+        let preview = RequestPreview {
+            asset_deltas: vec![PreviewAssetDelta {
+                asset_id: lwk_wollet::ElementsNetwork::LiquidTestnet.policy_asset(),
+                wallet_delta_sat: -1_500,
+            }],
+            outputs: vec![PreviewOutput {
+                kind: PreviewOutputKind::Fee,
+                asset_id: lwk_wollet::ElementsNetwork::LiquidTestnet.policy_asset(),
+                amount_sat: 600,
+                script_pubkey: lwk_wollet::elements::Script::new(),
+            }],
+            warnings: vec![],
+        };
+        let mut artifacts = serde_json::Map::new();
+        artifacts.insert(
+            "preview".to_string(),
+            preview.to_artifact_value().expect("preview artifact value"),
+        );
+        let response = TxCreateResponse::ok_from_parts(
+            "0d6d53cd-a040-4f0c-8d28-c67b6608fb14",
+            lwk_wollet::ElementsNetwork::LiquidTestnet,
+            TransactionInfo {
+                tx_hex: "00".to_string(),
+                txid: "0000000000000000000000000000000000000000000000000000000000000000"
+                    .parse()
+                    .expect("valid txid"),
+            },
+            Some(&serde_json::to_string(&artifacts).expect("serialize artifacts")),
+        )
+        .expect("response");
+
+        assert_eq!(response.preview().expect("preview accessor"), Some(preview));
     }
 }

@@ -7,6 +7,7 @@
 //! - [`values`]: Simplicity argument/witness serialization helpers.
 
 pub mod capabilities;
+pub mod preview;
 pub mod runtime_deps;
 pub mod runtime_params;
 pub mod tx_create;
@@ -14,6 +15,7 @@ pub mod types;
 pub mod values;
 
 pub use capabilities::WalletCapabilities;
+pub use preview::{PreviewAssetDelta, PreviewOutput, PreviewOutputKind, RequestPreview};
 pub use runtime_deps::{
     KeyStoreMeta, WalletBroadcaster, WalletOutputAllocator, WalletOutputRequest,
     WalletOutputTemplate, WalletPrevoutResolver, WalletProviderMeta, WalletReceiveAddressProvider,

@@ -2,13 +2,15 @@ use std::future::Future;
 use std::sync::Arc;
 
 use crate::{
-    Address, LwkError, SignerMetaLink, WalletAbiTxCreateRequest, WalletAbiTxCreateResponse,
-    WalletBroadcasterLink, WalletOutputAllocatorLink, WalletPrevoutResolverLink,
-    WalletRuntimeDepsLink, WalletSessionFactoryLink, XOnlyPublicKey,
+    Address, LwkError, SignerMetaLink, WalletAbiCapabilities, WalletAbiTxCreateRequest,
+    WalletAbiTxCreateResponse, WalletBroadcasterLink, WalletOutputAllocatorLink,
+    WalletPrevoutResolverLink, WalletRuntimeDepsLink, WalletSessionFactoryLink, XOnlyPublicKey,
 };
 use lwk_simplicity::wallet_abi::{
-    KeyStoreMeta, TxCreateRequest as SimplicityTxCreateRequest,
-    WalletAbiRuntime as SimplicityWalletAbiRuntime,
+    GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD, GET_SIGNER_RECEIVE_ADDRESS_METHOD, KeyStoreMeta,
+    TxCreateRequest as SimplicityTxCreateRequest, WalletAbiRuntime as SimplicityWalletAbiRuntime,
+    WALLET_ABI_EVALUATE_REQUEST_METHOD, WALLET_ABI_GET_CAPABILITIES_METHOD,
+    WALLET_ABI_PROCESS_REQUEST_METHOD,
     WalletBroadcaster as SimplicityWalletBroadcaster, WalletOutputAllocator, WalletOutputRequest,
     WalletOutputTemplate, WalletPrevoutResolver, WalletProviderMeta, WalletReceiveAddressProvider,
     WalletRequestSession as SimplicityWalletRequestSession,
@@ -214,6 +216,30 @@ impl WalletAbiProvider {
             )?,
         }))
     }
+
+    /// Return the provider discovery document for the active wallet/network context.
+    pub fn get_capabilities(&self) -> Result<Arc<WalletAbiCapabilities>, LwkError> {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|error| LwkError::from(error.to_string()))?;
+        let session = runtime
+            .block_on(self.wallet.session_factory.open_wallet_request_session())
+            .map_err(|error| LwkError::from(error.to_string()))?;
+
+        Ok(Arc::new(WalletAbiCapabilities {
+            inner: lwk_simplicity::wallet_abi::WalletCapabilities::new(
+                session.network,
+                [
+                    GET_SIGNER_RECEIVE_ADDRESS_METHOD,
+                    GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
+                    WALLET_ABI_EVALUATE_REQUEST_METHOD,
+                    WALLET_ABI_GET_CAPABILITIES_METHOD,
+                    WALLET_ABI_PROCESS_REQUEST_METHOD,
+                ],
+            ),
+        }))
+    }
 }
 
 #[cfg(test)]
@@ -260,7 +286,11 @@ mod tests {
 
     impl WalletAbiSessionFactoryCallbacks for TestSessionFactoryCallbacks {
         fn open_wallet_request_session(&self) -> Result<WalletAbiRequestSession, LwkError> {
-            unreachable!("not used in provider xonly test")
+            Ok(WalletAbiRequestSession {
+                session_id: "capabilities-session".to_string(),
+                network: Network::testnet(),
+                spendable_utxos: vec![],
+            })
         }
     }
 
@@ -554,5 +584,48 @@ mod tests {
         assert!(response.transaction().is_some());
         assert!(response.preview().expect("preview accessor").is_some());
         assert!(response.error_info().is_none());
+    }
+
+    #[test]
+    fn wallet_abi_provider_get_capabilities() {
+        let secp = Secp256k1::new();
+        let secret_key = SecretKey::from_slice(&[0x33; 32]).expect("secret key");
+        let keypair = Keypair::from_secret_key(&secp, &secret_key);
+        let provider = WalletAbiProvider::new(
+            Arc::new(SignerMetaLink::new(Arc::new(TestSignerCallbacks {
+                keypair,
+            }))),
+            Arc::new(WalletRuntimeDepsLink::new(
+                Arc::new(WalletSessionFactoryLink::new(Arc::new(
+                    TestSessionFactoryCallbacks,
+                ))),
+                Arc::new(WalletOutputAllocatorLink::new(Arc::new(
+                    TestOutputAllocatorCallbacks,
+                ))),
+                Arc::new(WalletPrevoutResolverLink::new(Arc::new(
+                    TestPrevoutResolverCallbacks,
+                ))),
+                Arc::new(WalletBroadcasterLink::new(Arc::new(
+                    TestBroadcasterCallbacks,
+                ))),
+                Arc::new(WalletReceiveAddressProviderLink::new(Arc::new(
+                    TestReceiveAddressProviderCallbacks,
+                ))),
+            )),
+        );
+
+        let capabilities = provider.get_capabilities().expect("capabilities");
+
+        assert_eq!(capabilities.network(), Network::testnet());
+        assert_eq!(
+            capabilities.methods(),
+            vec![
+                GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD.to_string(),
+                GET_SIGNER_RECEIVE_ADDRESS_METHOD.to_string(),
+                WALLET_ABI_EVALUATE_REQUEST_METHOD.to_string(),
+                WALLET_ABI_GET_CAPABILITIES_METHOD.to_string(),
+                WALLET_ABI_PROCESS_REQUEST_METHOD.to_string(),
+            ]
+        );
     }
 }

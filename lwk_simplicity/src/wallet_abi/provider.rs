@@ -1,7 +1,8 @@
 use crate::error::WalletAbiError;
 use crate::wallet_abi::schema::runtime_deps::SplitWalletProvider;
-use crate::wallet_abi::schema::{KeyStoreMeta, WalletRuntimeDeps};
+use crate::wallet_abi::schema::{KeyStoreMeta, WalletReceiveAddressProvider, WalletRuntimeDeps};
 
+use lwk_wollet::elements::Address;
 use lwk_wollet::secp256k1::XOnlyPublicKey;
 
 /// Checked-in wallet-abi provider façade built on top of the runtime engine.
@@ -128,11 +129,39 @@ where
     }
 }
 
+impl<
+        Signer,
+        SessionFactory,
+        PrevoutResolver,
+        OutputAllocator,
+        Broadcaster,
+        ReceiveAddressProvider,
+    >
+    WalletAbiProvider<
+        Signer,
+        SessionFactory,
+        PrevoutResolver,
+        OutputAllocator,
+        Broadcaster,
+        ReceiveAddressProvider,
+    >
+where
+    ReceiveAddressProvider: WalletReceiveAddressProvider,
+    WalletAbiError: From<ReceiveAddressProvider::Error>,
+{
+    /// Return the active wallet receive address exposed at provider connect time.
+    pub fn get_signer_receive_address(&self) -> Result<Address, WalletAbiError> {
+        self.receive_address_provider
+            .get_signer_receive_address()
+            .map_err(WalletAbiError::from)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{WalletAbiProviderBuilder, XOnlyPublicKey};
+    use super::{Address, WalletAbiProviderBuilder, XOnlyPublicKey};
     use crate::error::WalletAbiError;
-    use crate::wallet_abi::schema::KeyStoreMeta;
+    use crate::wallet_abi::schema::{KeyStoreMeta, WalletReceiveAddressProvider};
 
     use lwk_wollet::elements::pset::PartiallySignedTransaction;
     use lwk_wollet::secp256k1::schnorr::Signature;
@@ -180,6 +209,17 @@ mod tests {
         }
     }
 
+    impl WalletReceiveAddressProvider for TestReceiveAddressProvider {
+        type Error = TestProviderError;
+
+        fn get_signer_receive_address(&self) -> Result<Address, Self::Error> {
+            Address::from_str(
+                "tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m",
+            )
+            .map_err(|_| TestProviderError)
+        }
+    }
+
     #[test]
     fn provider_xonly_getter() {
         let provider = WalletAbiProviderBuilder::new(
@@ -200,6 +240,27 @@ mod tests {
                 "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
             )
             .expect("valid xonly pubkey"),
+        );
+    }
+
+    #[test]
+    fn provider_receive_address_getter() {
+        let provider = WalletAbiProviderBuilder::new(
+            TestSigner,
+            TestSessionFactory,
+            TestPrevoutResolver,
+            TestOutputAllocator,
+            TestBroadcaster,
+            TestReceiveAddressProvider,
+        )
+        .build();
+
+        assert_eq!(
+            provider
+                .get_signer_receive_address()
+                .expect("receive address")
+                .to_string(),
+            "tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m",
         );
     }
 }

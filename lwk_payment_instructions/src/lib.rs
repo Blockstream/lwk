@@ -947,9 +947,19 @@ mod tests {
             .create_async()
             .await;
 
-        // 1. Test resolve_lnurl_info with a Lightning Address (requires prefix)
-        let addr = format!("lightning:user@{}", server.host_with_port());
-        let payment = Payment::from_str(&addr).unwrap();
+        // 1. Test resolve_lnurl_info.
+        // Local LUD-16 parsing is enabled only with debug assertions, so fall back to a
+        // direct LNURL URL in release-style test builds.
+        let payment = if cfg!(debug_assertions) {
+            let addr = format!("lightning:user@{}", server.host_with_port());
+            Payment::from_str(&addr).unwrap()
+        } else {
+            Payment::LnUrlCat(LnUrlIdentifier::LnUrl(LnUrl::from_url(format!(
+                "{}{}",
+                server.url(),
+                lnurl_path
+            ))))
+        };
         let info = payment.resolve_lnurl_info().await.unwrap();
 
         assert_eq!(info.tag, "payRequest");

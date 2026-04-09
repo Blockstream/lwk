@@ -150,7 +150,7 @@ test_simplicity:
   extends: .base
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo test -p lwk_simplicity
+    - just simplicity-wallet-abi-check
 
 unit_tests:
   stage: test
@@ -443,4 +443,3 @@ publish_snapshot_to_maven:
     when: always
     expire_in: 7 days
   allow_failure: true
-

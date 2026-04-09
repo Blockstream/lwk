@@ -35,6 +35,12 @@ python-test-bindings-simplicity: python-build-bindings-simplicity
     PYTHONPATH=target/release/bindings/ python3 lwk_bindings/tests/bindings/simplicity_p2pk_regtest.py
     PYTHONPATH=target/release/bindings/ python3 lwk_bindings/tests/bindings/simplicity_options_regtest.py
 
+# Validate the Simplicity wallet ABI surface and downstream compile consumers.
+simplicity-wallet-abi-check:
+    cargo -q test -p lwk_simplicity
+    cargo -q check -p lwk_bindings --features simplicity
+    cargo -q check -p lwk_wasm --features simplicity
+
 # build the python bindings and start a python env with them
 python-env-bindings: python-build-bindings
     PYTHONPATH=target/release/bindings/ python3

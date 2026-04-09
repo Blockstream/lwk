@@ -272,7 +272,7 @@ impl WalletAbiOutputSchema {
 #[wasm_bindgen]
 #[derive(Clone, Debug, PartialEq)]
 pub struct WalletAbiRuntimeParams {
-    inner: abi::RuntimeParams,
+    pub(crate) inner: abi::RuntimeParams,
 }
 
 #[wasm_bindgen]

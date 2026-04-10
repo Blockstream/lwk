@@ -50,6 +50,11 @@
       "import": "./dist/protocol.js",
       "default": "./dist/protocol.js"
     },
+    "./walletconnect": {
+      "types": "./dist/walletconnect.d.ts",
+      "import": "./dist/walletconnect.js",
+      "default": "./dist/walletconnect.js"
+    },
     "./package.json": "./package.json"
   },
   "sideEffects": false,
@@ -65,6 +70,7 @@
     "prepack": "npm run build"
   },
   "dependencies": {
+    "@reown/appkit-common": "^1.8.19",
     "lwk_wallet_abi_web": "0.16.0"
   }
 }

@@ -172,7 +172,7 @@ impl LightningPayment {
     /// Returns an error if this is not a BOLT12 offer
     pub fn bolt12_invoice_amount(&self) -> Result<Option<u64>, LwkError> {
         let inner = self.inner.lock()?;
-        inner.bolt12_invoice_amount().map_err(Into::into)
+        Ok(inner.bolt12_invoice_amount()?)
     }
 
     /// Sets the amount for a BOLT12 offer without an amount

@@ -54,11 +54,11 @@ impl WolletDescriptor {
 
     /// Derive a scriptpubkey
     pub fn script_pubkey(&self, ext_int: Chain, index: u32) -> Result<Arc<Script>, LwkError> {
-        self.inner
+        Ok(self
+            .inner
             .script_pubkey(ext_int.into(), index)
-            .map_err(Into::into)
             .map(Into::into)
-            .map(Arc::new)
+            .map(Arc::new)?)
     }
 
     /// Whether the descriptor is AMP0

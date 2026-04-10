@@ -128,8 +128,8 @@ impl Signer {
     }
 
     /// Return the signer fingerprint
-    pub fn fingerprint(&self) -> Result<String, LwkError> {
-        Ok(self.inner.fingerprint().to_string())
+    pub fn fingerprint(&self) -> String {
+        self.inner.fingerprint().to_string()
     }
 
     /// Get the mnemonic of the signer
@@ -202,7 +202,7 @@ mod tests {
 
         assert_eq!(signer.mnemonic().unwrap(), mnemonic);
 
-        assert_eq!(signer.fingerprint().unwrap(), xpub[1..9])
+        assert_eq!(signer.fingerprint(), xpub[1..9])
     }
 
     #[test]

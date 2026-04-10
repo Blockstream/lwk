@@ -86,14 +86,14 @@ impl Amp0Pset {
     }
 
     /// Get the PSET
-    pub fn pset(&self) -> Result<Pset, LwkError> {
+    pub fn pset(&self) -> Pset {
         let pset = self.inner.pset().clone();
-        Ok(pset.into())
+        pset.into()
     }
 
     /// Get blinding nonces
-    pub fn blinding_nonces(&self) -> Result<Vec<String>, LwkError> {
-        Ok(self.inner.blinding_nonces().to_vec())
+    pub fn blinding_nonces(&self) -> Vec<String> {
+        self.inner.blinding_nonces().to_vec()
     }
 }
 

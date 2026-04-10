@@ -8,16 +8,16 @@ use crate::{
     WalletRuntimeDepsLink, WalletSessionFactoryLink, XOnlyPublicKey,
 };
 use lwk_simplicity::wallet_abi::{
-    GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD, GET_SIGNER_RECEIVE_ADDRESS_METHOD, KeyStoreMeta,
-    TxCreateRequest as SimplicityTxCreateRequest, TxEvaluateRequest as SimplicityTxEvaluateRequest,
+    KeyStoreMeta, TxCreateRequest as SimplicityTxCreateRequest,
+    TxEvaluateRequest as SimplicityTxEvaluateRequest,
     WalletAbiRuntime as SimplicityWalletAbiRuntime,
-    WALLET_ABI_EVALUATE_REQUEST_METHOD, WALLET_ABI_GET_CAPABILITIES_METHOD,
-    WALLET_ABI_PROCESS_REQUEST_METHOD,
     WalletBroadcaster as SimplicityWalletBroadcaster, WalletOutputAllocator, WalletOutputRequest,
     WalletOutputTemplate, WalletPrevoutResolver, WalletProviderMeta, WalletReceiveAddressProvider,
     WalletRequestSession as SimplicityWalletRequestSession,
     WalletRuntimeDeps as SimplicityWalletRuntimeDeps,
-    WalletSessionFactory as SimplicityWalletSessionFactory,
+    WalletSessionFactory as SimplicityWalletSessionFactory, GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
+    GET_SIGNER_RECEIVE_ADDRESS_METHOD, WALLET_ABI_EVALUATE_REQUEST_METHOD,
+    WALLET_ABI_GET_CAPABILITIES_METHOD, WALLET_ABI_PROCESS_REQUEST_METHOD,
 };
 use lwk_wollet::bitcoin::bip32::KeySource;
 use lwk_wollet::bitcoin::PublicKey;
@@ -76,15 +76,13 @@ struct ProviderSessionFactory {
 impl SimplicityWalletSessionFactory for ProviderSessionFactory {
     type Error = ProviderRuntimeError;
 
-    fn open_wallet_request_session(
+    async fn open_wallet_request_session(
         &self,
-    ) -> impl Future<Output = Result<SimplicityWalletRequestSession, Self::Error>> + Send + '_ {
-        async move {
-            self.inner
-                .open_wallet_request_session()
-                .await
-                .map_err(|error| ProviderRuntimeError(error.to_string()))
-        }
+    ) -> Result<SimplicityWalletRequestSession, Self::Error> {
+        self.inner
+            .open_wallet_request_session()
+            .await
+            .map_err(|error| ProviderRuntimeError(error.to_string()))
     }
 }
 
@@ -112,16 +110,11 @@ impl WalletProviderMeta for ProviderWalletMeta {
             .map_err(|error| ProviderRuntimeError(error.to_string()))
     }
 
-    fn get_tx_out(
-        &self,
-        outpoint: ElementsOutPoint,
-    ) -> impl Future<Output = Result<ElementsTxOut, Self::Error>> + Send + '_ {
-        async move {
-            self.prevout_resolver
-                .get_tx_out(outpoint)
-                .await
-                .map_err(|error| ProviderRuntimeError(error.to_string()))
-        }
+    async fn get_tx_out(&self, outpoint: ElementsOutPoint) -> Result<ElementsTxOut, Self::Error> {
+        self.prevout_resolver
+            .get_tx_out(outpoint)
+            .await
+            .map_err(|error| ProviderRuntimeError(error.to_string()))
     }
 
     fn get_wallet_output_template(
@@ -339,10 +332,9 @@ mod tests {
         WalletAbiReceiveAddressProviderCallbacks, WalletAbiRequestSession, WalletAbiRuntimeParams,
         WalletAbiSessionFactoryCallbacks, WalletAbiSignerCallbacks, WalletAbiSignerContext,
         WalletAbiTxCreateRequest, WalletAbiTxEvaluateRequest, WalletAbiUtxoSource,
-        WalletAbiWalletOutputRequest, WalletAbiWalletOutputTemplate,
-        WalletAbiWalletSourceFilter, WalletBroadcasterLink,
-        WalletOutputAllocatorLink, WalletPrevoutResolverLink, WalletReceiveAddressProviderLink,
-        WalletSessionFactoryLink,
+        WalletAbiWalletOutputRequest, WalletAbiWalletOutputTemplate, WalletAbiWalletSourceFilter,
+        WalletBroadcasterLink, WalletOutputAllocatorLink, WalletPrevoutResolverLink,
+        WalletReceiveAddressProviderLink, WalletSessionFactoryLink,
     };
     use elements::bitcoin::secp256k1::{Keypair, Secp256k1, SecretKey};
     use std::str::FromStr;
@@ -824,7 +816,9 @@ mod tests {
             )),
         );
 
-        let response = provider.evaluate_request(&request).expect("evaluate request");
+        let response = provider
+            .evaluate_request(&request)
+            .expect("evaluate request");
 
         assert!(response.preview().is_some());
         assert!(response.error_info().is_none());

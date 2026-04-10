@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use crate::{LwkError, Network};
 use crate::wallet_abi::abi;
+use crate::{LwkError, Network};
 
 /// Stable provider discovery document for the active wallet/network context.
 #[derive(uniffi::Object, Clone)]

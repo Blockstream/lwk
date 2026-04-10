@@ -8,9 +8,9 @@ use crate::{LwkError, Network, OutPoint, Script, Txid};
 use lwk_simplicity::taproot_pubkey_gen::TaprootPubkeyGen;
 use lwk_simplicity::wallet_abi::schema as abi;
 
-mod conversions;
 mod bip32;
 mod broadcaster_link;
+mod conversions;
 mod output_allocator_link;
 mod output_request;
 mod output_template;
@@ -19,14 +19,12 @@ mod provider;
 mod receive_address_link;
 mod request_session;
 mod runtime_deps_link;
+mod schema;
 mod session_factory_link;
 mod signer_context;
 mod signer_link;
-mod schema;
 
-pub use bip32::{
-    wallet_abi_bip32_derivation_pair_from_signer, WalletAbiBip32DerivationPair,
-};
+pub use bip32::{wallet_abi_bip32_derivation_pair_from_signer, WalletAbiBip32DerivationPair};
 pub use broadcaster_link::{WalletAbiBroadcasterCallbacks, WalletBroadcasterLink};
 pub use output_allocator_link::{WalletAbiOutputAllocatorCallbacks, WalletOutputAllocatorLink};
 pub use output_request::{WalletAbiWalletOutputRequest, WalletAbiWalletOutputRole};
@@ -38,9 +36,6 @@ pub use receive_address_link::{
 };
 pub use request_session::WalletAbiRequestSession;
 pub use runtime_deps_link::WalletRuntimeDepsLink;
-pub use session_factory_link::{WalletAbiSessionFactoryCallbacks, WalletSessionFactoryLink};
-pub use signer_context::WalletAbiSignerContext;
-pub use signer_link::{SignerMetaLink, WalletAbiSignerCallbacks};
 pub use schema::capabilities::WalletAbiCapabilities;
 pub use schema::evaluate::{WalletAbiTxEvaluateRequest, WalletAbiTxEvaluateResponse};
 pub use schema::filters::{
@@ -65,6 +60,9 @@ pub use schema::simf::{
     WalletAbiRuntimeSimfValue, WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments,
     WalletAbiSimfWitness,
 };
+pub use session_factory_link::{WalletAbiSessionFactoryCallbacks, WalletSessionFactoryLink};
+pub use signer_context::WalletAbiSignerContext;
+pub use signer_link::{SignerMetaLink, WalletAbiSignerCallbacks};
 
 /// Generate a fresh canonical Wallet ABI request identifier.
 #[uniffi::export]

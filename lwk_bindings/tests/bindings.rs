@@ -16,7 +16,8 @@ use camino::Utf8PathBuf;
 #[cfg(all(feature = "foreign_bindings", feature = "simplicity"))]
 use uniffi_bindgen::{
     bindings::{KotlinBindingGenerator, PythonBindingGenerator},
-    library_mode::generate_bindings, BindgenCrateConfigSupplier, EmptyCrateConfigSupplier,
+    library_mode::generate_bindings,
+    BindgenCrateConfigSupplier, EmptyCrateConfigSupplier,
 };
 
 #[cfg(feature = "foreign_bindings")]
@@ -190,11 +191,7 @@ fn run_simplicity_kotlin_test(script_file: &str) -> Result<(), Box<dyn std::erro
     } else if out_dir.join("uniffi").exists() {
         fs::rename(out_dir.join("uniffi"), generated_root.join("uniffi"))?;
     } else {
-        return Err(format!(
-            "missing generated Kotlin bindings in {}",
-            out_dir.display()
-        )
-        .into());
+        return Err(format!("missing generated Kotlin bindings in {}", out_dir.display()).into());
     }
 
     let script_path = manifest_dir.join(script_file).canonicalize()?;
@@ -338,7 +335,7 @@ fn uniffi_foreign_language_testcase_wallet_abi_schema_py() -> Result<(), Box<dyn
 
 #[cfg(all(feature = "foreign_bindings", feature = "simplicity"))]
 #[test]
-fn uniffi_foreign_language_testcase_wallet_abi_provider_kts()
--> Result<(), Box<dyn std::error::Error>> {
+fn uniffi_foreign_language_testcase_wallet_abi_provider_kts(
+) -> Result<(), Box<dyn std::error::Error>> {
     run_simplicity_kotlin_test("tests/bindings/wallet_abi_provider.kts")
 }

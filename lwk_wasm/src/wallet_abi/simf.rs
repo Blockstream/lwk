@@ -59,9 +59,7 @@ pub struct WalletAbiSimfArguments {
 impl WalletAbiSimfArguments {
     /// Build an arguments payload from static Simplicity arguments only.
     #[wasm_bindgen(js_name = fromResolved)]
-    pub fn from_resolved(
-        resolved: &SimplicityArguments,
-    ) -> Result<WalletAbiSimfArguments, Error> {
+    pub fn from_resolved(resolved: &SimplicityArguments) -> Result<WalletAbiSimfArguments, Error> {
         Ok(Self {
             inner: abi::SimfArguments::new(resolved.to_inner()?),
         })
@@ -123,10 +121,7 @@ pub struct WalletAbiRuntimeSimfWitness {
 impl WalletAbiRuntimeSimfWitness {
     /// Build the Wallet ABI `sig_hash_all` runtime witness variant.
     #[wasm_bindgen(js_name = sigHashAll)]
-    pub fn sig_hash_all(
-        name: &str,
-        public_key: &XOnlyPublicKey,
-    ) -> WalletAbiRuntimeSimfWitness {
+    pub fn sig_hash_all(name: &str, public_key: &XOnlyPublicKey) -> WalletAbiRuntimeSimfWitness {
         Self {
             inner: abi::RuntimeSimfWitness::SigHashAll {
                 name: name.to_string(),
@@ -236,16 +231,16 @@ mod tests {
         WalletAbiSimfWitness,
     };
 
-    use crate::{SimplicityArguments, SimplicityTypedValue, SimplicityWitnessValues, XOnlyPublicKey};
+    use crate::{
+        SimplicityArguments, SimplicityTypedValue, SimplicityWitnessValues, XOnlyPublicKey,
+    };
 
     #[test]
     fn wallet_abi_simf_arguments_roundtrip() {
-        let arguments =
-            WalletAbiSimfArguments::from_resolved(&SimplicityArguments::new().add_value(
-                "a",
-                &SimplicityTypedValue::from_u8(42),
-            ))
-            .expect("arguments");
+        let arguments = WalletAbiSimfArguments::from_resolved(
+            &SimplicityArguments::new().add_value("a", &SimplicityTypedValue::from_u8(42)),
+        )
+        .expect("arguments");
         let with_runtime = arguments.append_runtime_argument(
             "issuance_asset",
             &WalletAbiRuntimeSimfValue::new_issuance_asset(1),
@@ -254,7 +249,10 @@ mod tests {
         let encoded = with_runtime.to_bytes().expect("serialize arguments");
         let decoded = WalletAbiSimfArguments::from_bytes(&encoded).expect("deserialize arguments");
 
-        assert_eq!(decoded.runtime_argument_names(), vec!["issuance_asset".to_string()]);
+        assert_eq!(
+            decoded.runtime_argument_names(),
+            vec!["issuance_asset".to_string()]
+        );
         assert_eq!(
             decoded
                 .runtime_argument("issuance_asset")
@@ -278,11 +276,12 @@ mod tests {
         )
         .expect("xonly key");
         let witness = WalletAbiSimfWitness::new_with_runtime_arguments(
-            &SimplicityWitnessValues::new().add_value(
-                "w0",
-                &SimplicityTypedValue::from_boolean(true),
-            ),
-            vec![WalletAbiRuntimeSimfWitness::sig_hash_all("sig", &public_key)],
+            &SimplicityWitnessValues::new()
+                .add_value("w0", &SimplicityTypedValue::from_boolean(true)),
+            vec![WalletAbiRuntimeSimfWitness::sig_hash_all(
+                "sig",
+                &public_key,
+            )],
         )
         .expect("witness");
 

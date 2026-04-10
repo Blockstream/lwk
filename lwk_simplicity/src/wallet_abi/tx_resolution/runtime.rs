@@ -75,8 +75,8 @@ pub struct Runtime<'a, Request, Signer, SessionFactory, WalletProvider> {
     wallet_deps: &'a WalletRuntimeDeps<SessionFactory, WalletProvider>,
 }
 
-impl<'a, Request, Signer, SessionFactory, WalletProvider>
-    Runtime<'a, Request, Signer, SessionFactory, WalletProvider>
+impl<Request, Signer, SessionFactory, WalletProvider>
+    Runtime<'_, Request, Signer, SessionFactory, WalletProvider>
 where
     Request: RuntimeRequest,
     Signer: KeyStoreMeta,

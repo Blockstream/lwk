@@ -1,24 +1,25 @@
 use std::future::Future;
 use std::pin::pin;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
 
 use lwk_common::Signer as _;
 use lwk_signer::SwSigner;
 use lwk_simplicity::error::WalletAbiError;
-use lwk_simplicity::wallet_abi::{
-    AmountFilter, AssetFilter, AssetVariant, BlinderVariant, GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
-    GET_SIGNER_RECEIVE_ADDRESS_METHOD, InputSchema, InputUnblinding, KeyStoreMeta, LockFilter,
-    LockVariant, PreviewAssetDelta, RuntimeParams, TxCreateRequest, TxCreateResponse,
-    TxEvaluateRequest, TxEvaluateResponse, WALLET_ABI_EVALUATE_REQUEST_METHOD,
-    WALLET_ABI_GET_CAPABILITIES_METHOD, WALLET_ABI_PROCESS_REQUEST_METHOD, WalletAbiProvider,
-    WalletAbiProviderBuilder, WalletBroadcaster, WalletCapabilities, WalletOutputAllocator,
-    WalletOutputRequest, WalletOutputTemplate, WalletPrevoutResolver,
-    WalletReceiveAddressProvider, WalletRequestSession, WalletSessionFactory, WalletSourceFilter,
-};
 use lwk_simplicity::wallet_abi::schema::OutputSchema;
+use lwk_simplicity::wallet_abi::{
+    AmountFilter, AssetFilter, AssetVariant, BlinderVariant, InputSchema, InputUnblinding,
+    KeyStoreMeta, LockFilter, LockVariant, PreviewAssetDelta, RuntimeParams, TxCreateRequest,
+    TxCreateResponse, TxEvaluateRequest, TxEvaluateResponse, WalletAbiProvider,
+    WalletAbiProviderBuilder, WalletBroadcaster, WalletCapabilities, WalletOutputAllocator,
+    WalletOutputRequest, WalletOutputTemplate, WalletPrevoutResolver, WalletReceiveAddressProvider,
+    WalletRequestSession, WalletSessionFactory, WalletSourceFilter,
+    GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD, GET_SIGNER_RECEIVE_ADDRESS_METHOD,
+    WALLET_ABI_EVALUATE_REQUEST_METHOD, WALLET_ABI_GET_CAPABILITIES_METHOD,
+    WALLET_ABI_PROCESS_REQUEST_METHOD,
+};
 use lwk_wollet::bitcoin::bip32::{DerivationPath, Fingerprint, KeySource};
 use lwk_wollet::bitcoin::PublicKey;
 use lwk_wollet::elements::confidential::{Asset as ConfidentialAsset, Nonce, Value};
@@ -306,21 +307,15 @@ fn wallet_abi_provider_smoke() {
         .expect("typed receive address")
         .to_string();
     assert_eq!(
-        ready(provider.dispatch_json(
-            GET_SIGNER_RECEIVE_ADDRESS_METHOD,
-            serde_json::Value::Null,
-        ))
-        .expect("dispatch receive address"),
+        ready(provider.dispatch_json(GET_SIGNER_RECEIVE_ADDRESS_METHOD, serde_json::Value::Null,))
+            .expect("dispatch receive address"),
         serde_json::json!(receive_address),
     );
 
     let capabilities = ready(provider.get_capabilities()).expect("typed capabilities");
     let dispatch_capabilities: WalletCapabilities = serde_json::from_value(
-        ready(provider.dispatch_json(
-            WALLET_ABI_GET_CAPABILITIES_METHOD,
-            serde_json::Value::Null,
-        ))
-        .expect("dispatch capabilities"),
+        ready(provider.dispatch_json(WALLET_ABI_GET_CAPABILITIES_METHOD, serde_json::Value::Null))
+            .expect("dispatch capabilities"),
     )
     .expect("deserialize capabilities");
     assert_eq!(dispatch_capabilities, capabilities);
@@ -331,8 +326,8 @@ fn wallet_abi_provider_smoke() {
         runtime_params(harness.policy_asset),
     )
     .expect("evaluate request");
-    let typed_evaluate = ready(provider.evaluate_request(evaluate_request.clone()))
-        .expect("typed evaluate request");
+    let typed_evaluate =
+        ready(provider.evaluate_request(evaluate_request.clone())).expect("typed evaluate request");
     let dispatch_evaluate: TxEvaluateResponse = serde_json::from_value(
         ready(provider.dispatch_json(
             WALLET_ABI_EVALUATE_REQUEST_METHOD,

@@ -87,10 +87,7 @@ impl WalletAbiTxEvaluateResponse {
 
     /// Build an error transaction evaluation response.
     #[uniffi::constructor]
-    pub fn error(
-        request: &WalletAbiTxEvaluateRequest,
-        error: &WalletAbiErrorInfo,
-    ) -> Arc<Self> {
+    pub fn error(request: &WalletAbiTxEvaluateRequest, error: &WalletAbiErrorInfo) -> Arc<Self> {
         Arc::new(Self {
             inner: abi::TxEvaluateResponse {
                 abi_version: abi::TX_CREATE_ABI_VERSION.to_string(),
@@ -158,12 +155,12 @@ impl WalletAbiTxEvaluateResponse {
 #[cfg(test)]
 mod tests {
     use super::{WalletAbiTxEvaluateRequest, WalletAbiTxEvaluateResponse};
+    use crate::blockdata::script::Script;
     use crate::{
         Network, WalletAbiErrorInfo, WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput,
         WalletAbiPreviewOutputKind, WalletAbiRequestPreview, WalletAbiRuntimeParams,
         WalletAbiStatus,
     };
-    use crate::blockdata::script::Script;
 
     #[test]
     fn wallet_abi_tx_evaluate_request_roundtrip() {
@@ -175,8 +172,7 @@ mod tests {
         .expect("request");
 
         let json = request.to_json().expect("serialize request");
-        let decoded =
-            WalletAbiTxEvaluateRequest::from_json(&json).expect("deserialize request");
+        let decoded = WalletAbiTxEvaluateRequest::from_json(&json).expect("deserialize request");
 
         assert_eq!(decoded.abi_version(), "wallet-abi-0.1");
         assert_eq!(
@@ -222,20 +218,13 @@ mod tests {
         );
         assert!(decoded.error_info().is_none());
 
-        let error = WalletAbiErrorInfo::from_code_string(
-            "invalid_request",
-            "bad params",
-            None,
-        )
-        .expect("error info");
+        let error = WalletAbiErrorInfo::from_code_string("invalid_request", "bad params", None)
+            .expect("error info");
         let error_response = WalletAbiTxEvaluateResponse::error(&request, &error);
         assert_eq!(error_response.status(), WalletAbiStatus::Error);
         assert!(error_response.preview().is_none());
         assert_eq!(
-            error_response
-                .error_info()
-                .expect("error info")
-                .message(),
+            error_response.error_info().expect("error info").message(),
             "bad params".to_string()
         );
     }

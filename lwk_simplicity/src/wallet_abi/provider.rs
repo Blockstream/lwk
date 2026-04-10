@@ -320,15 +320,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::{
-        Address, GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD, GET_SIGNER_RECEIVE_ADDRESS_METHOD,
-        WALLET_ABI_EVALUATE_REQUEST_METHOD, WALLET_ABI_GET_CAPABILITIES_METHOD,
-        WALLET_ABI_PROCESS_REQUEST_METHOD, WalletAbiProviderBuilder, XOnlyPublicKey,
+        Address, WalletAbiProviderBuilder, XOnlyPublicKey, GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
+        GET_SIGNER_RECEIVE_ADDRESS_METHOD, WALLET_ABI_EVALUATE_REQUEST_METHOD,
+        WALLET_ABI_GET_CAPABILITIES_METHOD, WALLET_ABI_PROCESS_REQUEST_METHOD,
     };
     use crate::error::WalletAbiError;
     use crate::wallet_abi::schema::{
         AssetFilter, AssetVariant, BlinderVariant, InputSchema, InputUnblinding, KeyStoreMeta,
         LockFilter, LockVariant, OutputSchema, TxCreateRequest, TxEvaluateRequest,
-        WalletCapabilities, WalletOutputRequest, WalletBroadcaster, WalletOutputAllocator,
+        WalletBroadcaster, WalletCapabilities, WalletOutputAllocator, WalletOutputRequest,
         WalletOutputTemplate, WalletPrevoutResolver, WalletReceiveAddressProvider,
         WalletRequestSession, WalletSessionFactory, WalletSourceFilter,
     };
@@ -348,8 +348,8 @@ mod tests {
     use std::future::Future;
     use std::pin::pin;
     use std::str::FromStr;
-    use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
     use std::task::{Context, Poll, Waker};
 
     #[derive(Debug, thiserror::Error)]
@@ -523,10 +523,10 @@ mod tests {
         let provider = build_test_provider();
 
         assert_eq!(
-            ready(provider.dispatch_json(
-                WALLET_ABI_GET_CAPABILITIES_METHOD,
-                serde_json::Value::Null,
-            ))
+            ready(
+                provider
+                    .dispatch_json(WALLET_ABI_GET_CAPABILITIES_METHOD, serde_json::Value::Null,)
+            )
             .expect("dispatch capabilities"),
             serde_json::to_value(WalletCapabilities::new(
                 lwk_wollet::ElementsNetwork::LiquidTestnet,
@@ -557,11 +557,9 @@ mod tests {
     fn provider_dispatch_json_rejects_getter_params() {
         let provider = build_test_provider();
 
-        let error = ready(provider.dispatch_json(
-            GET_SIGNER_RECEIVE_ADDRESS_METHOD,
-            serde_json::json!([]),
-        ))
-        .expect_err("getter params should fail");
+        let error =
+            ready(provider.dispatch_json(GET_SIGNER_RECEIVE_ADDRESS_METHOD, serde_json::json!([])))
+                .expect_err("getter params should fail");
 
         assert!(matches!(error, WalletAbiError::InvalidRequest(_)));
         assert!(error.to_string().contains("does not accept params"));
@@ -798,7 +796,10 @@ mod tests {
         .expect("process request");
 
         assert_eq!(broadcast_calls.load(Ordering::Relaxed), 0);
-        assert_eq!(response.status, crate::wallet_abi::schema::tx_create::Status::Ok);
+        assert_eq!(
+            response.status,
+            crate::wallet_abi::schema::tx_create::Status::Ok
+        );
         assert_eq!(
             response
                 .preview()
@@ -931,7 +932,10 @@ mod tests {
         .expect("evaluate request");
 
         assert_eq!(broadcast_calls.load(Ordering::Relaxed), 0);
-        assert_eq!(response.status, crate::wallet_abi::schema::tx_create::Status::Ok);
+        assert_eq!(
+            response.status,
+            crate::wallet_abi::schema::tx_create::Status::Ok
+        );
         assert_eq!(
             response.preview.expect("preview").asset_deltas,
             vec![crate::wallet_abi::schema::PreviewAssetDelta {

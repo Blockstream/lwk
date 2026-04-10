@@ -34,7 +34,9 @@ pub enum SignerMetaLinkError {
     #[error("foreign signer returned invalid Schnorr signature bytes")]
     InvalidSignatureBytes,
     /// The returned Schnorr signature does not verify against the requested x-only public key.
-    #[error("foreign signer returned a signature that does not match the requested x-only public key")]
+    #[error(
+        "foreign signer returned a signature that does not match the requested x-only public key"
+    )]
     SignatureVerificationFailed,
 }
 
@@ -109,7 +111,11 @@ impl KeyStoreMeta for SignerMetaLink {
 fn software_signer_derivation_path(
     context: &WalletAbiSignerContext,
 ) -> Result<DerivationPath, LwkError> {
-    let coin_type = if context.network.is_mainnet() { 1776 } else { 1 };
+    let coin_type = if context.network.is_mainnet() {
+        1776
+    } else {
+        1
+    };
     DerivationPath::from_str(&format!(
         "m/86h/{coin_type}h/{}h/0/0",
         context.account_index
@@ -260,10 +266,14 @@ mod tests {
             .verify_schnorr(&signature, &message, &expected_xonly)
             .is_ok());
 
-        let pset = Pset::new(include_str!("../../../lwk_jade/test_data/pset_to_be_signed.base64"))
-            .expect("pset");
+        let pset = Pset::new(include_str!(
+            "../../../lwk_jade/test_data/pset_to_be_signed.base64"
+        ))
+        .expect("pset");
         let mut callback_pset = pset.inner();
-        signer_link.sign_pst(&mut callback_pset).expect("signed pset");
+        signer_link
+            .sign_pst(&mut callback_pset)
+            .expect("signed pset");
 
         let expected_pset = signer.sign(pset.as_ref()).expect("expected signed pset");
         assert_eq!(callback_pset.to_string(), expected_pset.to_string());

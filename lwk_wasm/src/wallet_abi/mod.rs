@@ -10,18 +10,18 @@ mod simf;
 
 use crate::Error;
 
-use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 use wasm_bindgen::JsValue;
 
-pub use filters::{
-    WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiInputIssuance,
-    WalletAbiInputIssuanceKind, WalletAbiInputSchema, WalletAbiInputUnblinding,
-    WalletAbiInternalKeySource, WalletAbiLockFilter, WalletAbiTaprootHandle,
-    WalletAbiUtxoSource, WalletAbiFinalizerSpec, WalletAbiWalletSourceFilter,
-};
 pub use capabilities::WalletAbiCapabilities;
 pub use evaluate::{WalletAbiTxEvaluateRequest, WalletAbiTxEvaluateResponse};
+pub use filters::{
+    WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiFinalizerSpec, WalletAbiInputIssuance,
+    WalletAbiInputIssuanceKind, WalletAbiInputSchema, WalletAbiInputUnblinding,
+    WalletAbiInternalKeySource, WalletAbiLockFilter, WalletAbiTaprootHandle, WalletAbiUtxoSource,
+    WalletAbiWalletSourceFilter,
+};
 pub use outputs::{
     WalletAbiAssetVariant, WalletAbiBlinderVariant, WalletAbiLockVariant, WalletAbiOutputSchema,
     WalletAbiRuntimeParams,
@@ -60,13 +60,6 @@ where
     }
 }
 
-pub(crate) fn json_from_str<T>(json: &str) -> Result<T, Error>
-where
-    T: DeserializeOwned,
-{
-    Ok(serde_json::from_str(json)?)
-}
-
 pub(crate) fn js_value_from_json<T>(value: &T) -> Result<JsValue, Error>
 where
     T: Serialize,
@@ -79,6 +72,8 @@ where
     #[cfg(not(target_arch = "wasm32"))]
     {
         let _ = value;
-        Err(Error::Generic("toJSON() is only available on wasm32 targets".into()))
+        Err(Error::Generic(
+            "toJSON() is only available on wasm32 targets".into(),
+        ))
     }
 }

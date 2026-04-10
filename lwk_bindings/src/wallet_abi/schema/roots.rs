@@ -275,9 +275,10 @@ impl WalletAbiTxCreateResponse {
 
     /// Return the typed preview payload when `artifacts.preview` is present.
     pub fn preview(&self) -> Result<Option<Arc<WalletAbiRequestPreview>>, LwkError> {
-        self.inner.preview().map(|preview| {
-            preview.map(|inner| Arc::new(WalletAbiRequestPreview { inner }))
-        }).map_err(Into::into)
+        self.inner
+            .preview()
+            .map(|preview| preview.map(|inner| Arc::new(WalletAbiRequestPreview { inner })))
+            .map_err(Into::into)
     }
 
     /// Return the error payload when this response has `error` status.
@@ -293,11 +294,11 @@ impl WalletAbiTxCreateResponse {
 #[cfg(test)]
 mod tests {
     use super::{WalletAbiTransactionInfo, WalletAbiTxCreateResponse};
+    use crate::blockdata::script::Script;
     use crate::{
         Network, WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput, WalletAbiPreviewOutputKind,
         WalletAbiRequestPreview,
     };
-    use crate::blockdata::script::Script;
 
     #[test]
     fn wallet_abi_tx_create_response_preview() {

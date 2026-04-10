@@ -67,9 +67,9 @@ pub mod schema;
 pub mod tx_resolution;
 
 pub use provider::{
-    GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD, GET_SIGNER_RECEIVE_ADDRESS_METHOD,
-    WALLET_ABI_EVALUATE_REQUEST_METHOD, WALLET_ABI_GET_CAPABILITIES_METHOD,
-    WALLET_ABI_PROCESS_REQUEST_METHOD, WalletAbiProvider, WalletAbiProviderBuilder,
+    WalletAbiProvider, WalletAbiProviderBuilder, GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
+    GET_SIGNER_RECEIVE_ADDRESS_METHOD, WALLET_ABI_EVALUATE_REQUEST_METHOD,
+    WALLET_ABI_GET_CAPABILITIES_METHOD, WALLET_ABI_PROCESS_REQUEST_METHOD,
 };
 pub use schema::{
     deserialize_arguments, deserialize_witness, generate_request_id, resolve_arguments,

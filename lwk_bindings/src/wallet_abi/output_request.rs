@@ -45,7 +45,8 @@ mod tests {
 
     #[test]
     fn wallet_abi_wallet_output_request_maps_runtime_roles_losslessly() {
-        let receive = WalletAbiWalletOutputRequest::from(&WalletOutputRequest::Receive { index: 3 });
+        let receive =
+            WalletAbiWalletOutputRequest::from(&WalletOutputRequest::Receive { index: 3 });
         let change = WalletAbiWalletOutputRequest::from(&WalletOutputRequest::Change {
             index: 5,
             asset_id: Network::testnet().policy_asset().into(),

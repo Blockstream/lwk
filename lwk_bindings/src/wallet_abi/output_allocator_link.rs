@@ -4,7 +4,9 @@ use crate::{
     LwkError, WalletAbiRequestSession, WalletAbiWalletOutputRequest, WalletAbiWalletOutputTemplate,
 };
 
-use lwk_simplicity::wallet_abi::{WalletOutputAllocator, WalletOutputRequest, WalletOutputTemplate};
+use lwk_simplicity::wallet_abi::{
+    WalletOutputAllocator, WalletOutputRequest, WalletOutputTemplate,
+};
 
 /// Foreign callback surface for deterministic wallet output allocation.
 #[uniffi::export(with_foreign)]
@@ -102,7 +104,10 @@ mod tests {
             assert_eq!(session.spendable_utxos.len(), 1);
             assert_eq!(request.role, crate::WalletAbiWalletOutputRole::Change);
             assert_eq!(request.ordinal, 3);
-            assert_eq!(request.asset_id, Some(Network::regtest_default().policy_asset()));
+            assert_eq!(
+                request.asset_id,
+                Some(Network::regtest_default().policy_asset())
+            );
             Ok(self.template.clone())
         }
     }
@@ -117,12 +122,16 @@ mod tests {
         let txout = TxOut::from_explicit(&Script::empty(), network.policy_asset(), 5_000);
         let secrets = TxOutSecrets::from_explicit(network.policy_asset(), 5_000);
         let utxo = ExternalUtxo::from_unchecked_data(&outpoint, &txout, &secrets, 136);
-        let script =
-            Script::new(&"0014d0c4a3ef09e997b6e99e397e518fe3e41a118ca1".parse().expect("hex"))
-                .expect("script");
-        let blinding_pubkey =
-            PublicKey::from_string("0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798")
-                .expect("blinding pubkey");
+        let script = Script::new(
+            &"0014d0c4a3ef09e997b6e99e397e518fe3e41a118ca1"
+                .parse()
+                .expect("hex"),
+        )
+        .expect("script");
+        let blinding_pubkey = PublicKey::from_string(
+            "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        )
+        .expect("blinding pubkey");
         let callbacks = Arc::new(TestOutputAllocatorCallbacks {
             template: WalletAbiWalletOutputTemplate {
                 script_pubkey: script.clone(),

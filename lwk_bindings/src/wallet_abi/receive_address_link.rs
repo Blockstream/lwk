@@ -67,11 +67,10 @@ mod tests {
             "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn",
         )
         .expect("address");
-        let link = WalletReceiveAddressProviderLink::new(Arc::new(
-            TestReceiveAddressProviderCallbacks {
+        let link =
+            WalletReceiveAddressProviderLink::new(Arc::new(TestReceiveAddressProviderCallbacks {
                 address: address.clone(),
-            },
-        ));
+            }));
 
         assert_eq!(
             link.get_signer_receive_address()

@@ -1,5 +1,5 @@
-use crate::{AssetId, Error, OutPoint, Script, SecretKey, TxSequence};
 use super::simf::{WalletAbiSimfArguments, WalletAbiSimfWitness};
+use crate::{AssetId, Error, OutPoint, Script, SecretKey, TxSequence};
 
 use std::str::FromStr;
 
@@ -661,10 +661,10 @@ impl WalletAbiTaprootHandle {
 #[cfg(test)]
 mod tests {
     use super::{
-        WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiInputIssuance,
-        WalletAbiInputIssuanceKind, WalletAbiInputSchema, WalletAbiInputUnblinding,
-        WalletAbiInternalKeySource, WalletAbiLockFilter, WalletAbiTaprootHandle,
-        WalletAbiUtxoSource, WalletAbiFinalizerSpec, WalletAbiWalletSourceFilter,
+        WalletAbiAmountFilter, WalletAbiAssetFilter, WalletAbiFinalizerSpec,
+        WalletAbiInputIssuance, WalletAbiInputIssuanceKind, WalletAbiInputSchema,
+        WalletAbiInputUnblinding, WalletAbiInternalKeySource, WalletAbiLockFilter,
+        WalletAbiTaprootHandle, WalletAbiUtxoSource, WalletAbiWalletSourceFilter,
     };
 
     use std::str::FromStr;
@@ -675,11 +675,9 @@ mod tests {
 
     use crate::{
         Network as WasmNetwork, OutPoint as WasmOutPoint, Script as WasmScript,
-        SecretKey as WasmSecretKey,
-        SimplicityArguments, SimplicityTypedValue, SimplicityWitnessValues,
-        TxSequence as WasmTxSequence, WalletAbiRuntimeSimfWitness, WalletAbiSimfArguments,
-        WalletAbiSimfWitness,
-        XOnlyPublicKey,
+        SecretKey as WasmSecretKey, SimplicityArguments, SimplicityTypedValue,
+        SimplicityWitnessValues, TxSequence as WasmTxSequence, WalletAbiRuntimeSimfWitness,
+        WalletAbiSimfArguments, WalletAbiSimfWitness, XOnlyPublicKey,
     };
 
     #[test]
@@ -765,7 +763,14 @@ mod tests {
         let provided_source = WalletAbiUtxoSource::provided(&provided_outpoint);
 
         assert_eq!(wallet_source.kind(), "wallet");
-        assert_eq!(wallet_source.wallet_filter().expect("wallet filter").lock().kind(), "none");
+        assert_eq!(
+            wallet_source
+                .wallet_filter()
+                .expect("wallet filter")
+                .lock()
+                .kind(),
+            "none"
+        );
         assert!(wallet_source.provided_outpoint().is_none());
 
         assert_eq!(provided_source.kind(), "provided");
@@ -783,8 +788,7 @@ mod tests {
     fn wallet_abi_input_issuance_roundtrip() {
         let entropy = [7_u8; 32];
         let issuance = WalletAbiInputIssuance::new(1_000, 500, &entropy).expect("issuance");
-        let reissuance =
-            WalletAbiInputIssuance::reissue(2_000, 250, &entropy).expect("reissuance");
+        let reissuance = WalletAbiInputIssuance::reissue(2_000, 250, &entropy).expect("reissuance");
 
         assert_eq!(issuance.kind(), WalletAbiInputIssuanceKind::New);
         assert_eq!(issuance.asset_amount_sat(), 1_000);
@@ -815,10 +819,16 @@ mod tests {
         let external = WalletAbiInternalKeySource::external(&handle);
 
         assert_eq!(WalletAbiInternalKeySource::bip0341().kind(), "bip0341");
-        assert_eq!(WalletAbiInternalKeySource::bip0341().external_handle(), None);
+        assert_eq!(
+            WalletAbiInternalKeySource::bip0341().external_handle(),
+            None
+        );
         assert_eq!(external.kind(), "external");
         assert_eq!(
-            external.external_handle().expect("external handle").to_string(),
+            external
+                .external_handle()
+                .expect("external handle")
+                .to_string(),
             handle.to_string()
         );
     }
@@ -848,7 +858,10 @@ mod tests {
         .expect("xonly key");
         let witness = WalletAbiSimfWitness::new_with_runtime_arguments(
             &SimplicityWitnessValues::new(),
-            vec![WalletAbiRuntimeSimfWitness::sig_hash_all("sig", &public_key)],
+            vec![WalletAbiRuntimeSimfWitness::sig_hash_all(
+                "sig",
+                &public_key,
+            )],
         )
         .expect("witness");
         let spec = WalletAbiFinalizerSpec::simf(
@@ -894,10 +907,16 @@ mod tests {
         let provided = WalletAbiInputUnblinding::provided(&secret_key);
 
         assert_eq!(WalletAbiInputUnblinding::wallet().kind(), "wallet");
-        assert_eq!(WalletAbiInputUnblinding::wallet().provided_secret_key(), None);
+        assert_eq!(
+            WalletAbiInputUnblinding::wallet().provided_secret_key(),
+            None
+        );
         assert_eq!(provided.kind(), "provided");
         assert_eq!(
-            provided.provided_secret_key().expect("provided secret").to_bytes(),
+            provided
+                .provided_secret_key()
+                .expect("provided secret")
+                .to_bytes(),
             secret_key.to_bytes()
         );
         assert_eq!(WalletAbiInputUnblinding::explicit().kind(), "explicit");
@@ -912,15 +931,16 @@ mod tests {
             &WasmTxSequence::zero(),
             &WalletAbiFinalizerSpec::wallet(),
         )
-        .with_issuance(
-            &WalletAbiInputIssuance::new(1_000, 500, &[9_u8; 32]).expect("issuance"),
-        );
+        .with_issuance(&WalletAbiInputIssuance::new(1_000, 500, &[9_u8; 32]).expect("issuance"));
 
         assert_eq!(input.id(), "wallet-input".to_string());
         assert_eq!(input.utxo_source().kind(), "wallet");
         assert_eq!(input.unblinding().kind(), "wallet");
         assert_eq!(input.sequence().to_consensus_u32(), 0);
-        assert_eq!(input.issuance().expect("issuance").asset_amount_sat(), 1_000);
+        assert_eq!(
+            input.issuance().expect("issuance").asset_amount_sat(),
+            1_000
+        );
         assert_eq!(input.finalizer().kind(), "wallet");
     }
 }

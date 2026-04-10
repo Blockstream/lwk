@@ -81,9 +81,8 @@ mod tests {
             Txid::from_str("3ac4f7d2d18e12256b4372d7947bf1df5cc640860cd63558e29cb2ec29319631")
                 .expect("txid"),
         );
-        let link = WalletBroadcasterLink::new(Arc::new(TestBroadcasterCallbacks {
-            txid: txid.clone(),
-        }));
+        let link =
+            WalletBroadcasterLink::new(Arc::new(TestBroadcasterCallbacks { txid: txid.clone() }));
         let tx = elements::Transaction {
             version: 2,
             lock_time: elements::LockTime::ZERO,

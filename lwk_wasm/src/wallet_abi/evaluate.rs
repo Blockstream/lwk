@@ -1,4 +1,4 @@
-use super::{json_from_js_value, json_from_str, js_value_from_json};
+use super::{js_value_from_json, json_from_js_value};
 
 use crate::{
     Error, Network, WalletAbiErrorInfo, WalletAbiRequestPreview, WalletAbiRuntimeParams,
@@ -14,12 +14,6 @@ use wasm_bindgen::prelude::*;
 #[derive(Clone, Debug, PartialEq)]
 pub struct WalletAbiTxEvaluateRequest {
     pub(crate) inner: abi::TxEvaluateRequest,
-}
-
-impl WalletAbiTxEvaluateRequest {
-    fn from_json_str(json: &str) -> Result<WalletAbiTxEvaluateRequest, Error> {
-        json_from_str(json).map(|inner| Self { inner })
-    }
 }
 
 #[wasm_bindgen]
@@ -84,12 +78,6 @@ impl WalletAbiTxEvaluateRequest {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WalletAbiTxEvaluateResponse {
     pub(crate) inner: abi::TxEvaluateResponse,
-}
-
-impl WalletAbiTxEvaluateResponse {
-    fn from_json_str(json: &str) -> Result<WalletAbiTxEvaluateResponse, Error> {
-        json_from_str(json).map(|inner| Self { inner })
-    }
 }
 
 #[wasm_bindgen]
@@ -201,7 +189,9 @@ mod tests {
         .expect("request");
 
         let json = request.to_string_js();
-        let decoded = WalletAbiTxEvaluateRequest::from_json_str(&json).expect("deserialize");
+        let decoded = WalletAbiTxEvaluateRequest {
+            inner: serde_json::from_str(&json).expect("deserialize"),
+        };
 
         assert_eq!(decoded.abi_version(), "wallet-abi-0.1".to_string());
         assert_eq!(
@@ -235,7 +225,9 @@ mod tests {
 
         let response = WalletAbiTxEvaluateResponse::ok(&request, &preview);
         let json = response.to_string_js();
-        let decoded = WalletAbiTxEvaluateResponse::from_json_str(&json).expect("deserialize");
+        let decoded = WalletAbiTxEvaluateResponse {
+            inner: serde_json::from_str(&json).expect("deserialize"),
+        };
 
         assert_eq!(decoded.status(), WalletAbiStatus::Ok);
         assert_eq!(

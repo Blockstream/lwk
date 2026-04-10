@@ -42,11 +42,11 @@ mod tests {
 
     use super::*;
     use crate::{
-        Address, LwkError, OutPoint, Transaction, TxOut, TxOutSecrets,
+        Address, LwkError, OutPoint, Transaction, TxOut, TxOutSecrets, Txid,
         WalletAbiBroadcasterCallbacks, WalletAbiOutputAllocatorCallbacks,
         WalletAbiPrevoutResolverCallbacks, WalletAbiReceiveAddressProviderCallbacks,
         WalletAbiRequestSession, WalletAbiSessionFactoryCallbacks, WalletAbiWalletOutputRequest,
-        WalletAbiWalletOutputTemplate, Txid,
+        WalletAbiWalletOutputTemplate,
     };
 
     struct TestSessionFactoryCallbacks;
@@ -130,8 +130,14 @@ mod tests {
         );
 
         assert!(Arc::ptr_eq(&runtime_deps.session_factory, &session_factory));
-        assert!(Arc::ptr_eq(&runtime_deps.output_allocator, &output_allocator));
-        assert!(Arc::ptr_eq(&runtime_deps.prevout_resolver, &prevout_resolver));
+        assert!(Arc::ptr_eq(
+            &runtime_deps.output_allocator,
+            &output_allocator
+        ));
+        assert!(Arc::ptr_eq(
+            &runtime_deps.prevout_resolver,
+            &prevout_resolver
+        ));
         assert!(Arc::ptr_eq(&runtime_deps.broadcaster, &broadcaster));
         assert!(Arc::ptr_eq(
             &runtime_deps.receive_address_provider,

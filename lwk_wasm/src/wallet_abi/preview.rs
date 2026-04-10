@@ -1,4 +1,4 @@
-use super::{json_from_js_value, json_from_str, js_value_from_json};
+use super::{js_value_from_json, json_from_js_value};
 
 use crate::{AssetId, Script};
 
@@ -131,12 +131,6 @@ pub struct WalletAbiRequestPreview {
     pub(crate) inner: abi::RequestPreview,
 }
 
-impl WalletAbiRequestPreview {
-    fn from_json_str(json: &str) -> Result<WalletAbiRequestPreview, crate::Error> {
-        json_from_str(json).map(|inner| Self { inner })
-    }
-}
-
 #[wasm_bindgen]
 impl WalletAbiRequestPreview {
     /// Build a request preview payload.
@@ -221,12 +215,8 @@ mod tests {
     fn wallet_abi_preview_output_roundtrip() {
         let asset_id = Network::testnet().policy_asset();
         let script = Script::new("6a").expect("script");
-        let output = WalletAbiPreviewOutput::new(
-            WalletAbiPreviewOutputKind::Fee,
-            &asset_id,
-            600,
-            &script,
-        );
+        let output =
+            WalletAbiPreviewOutput::new(WalletAbiPreviewOutputKind::Fee, &asset_id, 600, &script);
 
         assert_eq!(output.kind(), WalletAbiPreviewOutputKind::Fee);
         assert_eq!(output.asset_id(), asset_id);
@@ -249,10 +239,18 @@ mod tests {
         );
 
         let json = preview.to_string_js();
-        let decoded = WalletAbiRequestPreview::from_json_str(&json).expect("deserialize");
+        let decoded = WalletAbiRequestPreview {
+            inner: serde_json::from_str(&json).expect("deserialize"),
+        };
 
         assert_eq!(decoded.asset_deltas()[0].wallet_delta_sat(), -1_500);
-        assert_eq!(decoded.outputs()[0].kind(), WalletAbiPreviewOutputKind::External);
-        assert_eq!(decoded.warnings(), vec!["requires confirmation".to_string()]);
+        assert_eq!(
+            decoded.outputs()[0].kind(),
+            WalletAbiPreviewOutputKind::External
+        );
+        assert_eq!(
+            decoded.warnings(),
+            vec!["requires confirmation".to_string()]
+        );
     }
 }

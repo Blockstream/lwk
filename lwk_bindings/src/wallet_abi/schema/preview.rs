@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use crate::blockdata::script::Script;
 use crate::types::AssetId;
-use crate::LwkError;
 use crate::wallet_abi::abi;
+use crate::LwkError;
 
 /// Wallet balance delta preview for one asset.
 #[derive(uniffi::Object, Clone)]
@@ -269,7 +269,8 @@ mod tests {
         );
 
         let json = preview.to_json().expect("serialize request preview");
-        let decoded = WalletAbiRequestPreview::from_json(&json).expect("deserialize request preview");
+        let decoded =
+            WalletAbiRequestPreview::from_json(&json).expect("deserialize request preview");
 
         assert_eq!(decoded.asset_deltas()[0].wallet_delta_sat(), -1_500);
         assert_eq!(decoded.outputs()[0].kind(), WalletAbiPreviewOutputKind::Fee);

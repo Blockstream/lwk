@@ -1,4 +1,4 @@
-use super::{json_from_js_value, json_from_str, js_value_from_json};
+use super::{js_value_from_json, json_from_js_value};
 
 use crate::{Error, Network};
 
@@ -11,12 +11,6 @@ use wasm_bindgen::prelude::*;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WalletAbiCapabilities {
     inner: abi::WalletCapabilities,
-}
-
-impl WalletAbiCapabilities {
-    fn from_json_str(json: &str) -> Result<WalletAbiCapabilities, Error> {
-        json_from_str(json).map(|inner| Self { inner })
-    }
 }
 
 #[wasm_bindgen]
@@ -81,7 +75,9 @@ mod tests {
         );
 
         let json = capabilities.to_string_js();
-        let decoded = WalletAbiCapabilities::from_json_str(&json).expect("deserialize");
+        let decoded = WalletAbiCapabilities {
+            inner: serde_json::from_str(&json).expect("deserialize"),
+        };
 
         assert_eq!(decoded.abi_version(), "wallet-abi-0.1");
         assert_eq!(decoded.network(), Network::testnet());

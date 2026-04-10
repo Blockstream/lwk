@@ -1,7 +1,6 @@
 use super::filters::WalletAbiFinalizerSpec;
-use super::json_from_str;
-use super::json_from_js_value;
 use super::js_value_from_json;
+use super::json_from_js_value;
 
 use crate::{AssetId, LockTime, PublicKey, Script, WalletAbiInputSchema};
 
@@ -277,13 +276,6 @@ pub struct WalletAbiRuntimeParams {
 
 #[wasm_bindgen]
 impl WalletAbiRuntimeParams {
-    fn from_json_str(json: &str) -> Result<WalletAbiRuntimeParams, crate::Error> {
-        json_from_str(json).map(|inner| Self { inner })
-    }
-}
-
-#[wasm_bindgen]
-impl WalletAbiRuntimeParams {
     /// Build runtime parameters from inputs, outputs, and optional fee settings.
     pub fn new(
         inputs: Vec<WalletAbiInputSchema>,
@@ -374,7 +366,10 @@ mod tests {
         assert_eq!(WalletAbiLockVariant::wallet().kind(), "wallet");
         assert_eq!(script_variant.kind(), "script");
         assert_eq!(
-            script_variant.script_value().expect("script value").to_string(),
+            script_variant
+                .script_value()
+                .expect("script value")
+                .to_string(),
             script.to_string()
         );
         assert!(script_variant.finalizer_value().is_none());
@@ -411,16 +406,18 @@ mod tests {
 
     #[test]
     fn wallet_abi_blinder_variant_roundtrip() {
-        let public_key = PublicKey::from_secret_key(
-            &SecretKey::from_bytes(&[3_u8; 32]).expect("secret key"),
-        );
+        let public_key =
+            PublicKey::from_secret_key(&SecretKey::from_bytes(&[3_u8; 32]).expect("secret key"));
         let provided = WalletAbiBlinderVariant::provided(&public_key).expect("provided blinder");
 
         assert_eq!(WalletAbiBlinderVariant::wallet().kind(), "wallet");
         assert_eq!(WalletAbiBlinderVariant::wallet().provided_pubkey(), None);
         assert_eq!(provided.kind(), "provided");
         assert_eq!(
-            provided.provided_pubkey().expect("provided pubkey").to_string(),
+            provided
+                .provided_pubkey()
+                .expect("provided pubkey")
+                .to_string(),
             public_key.to_string()
         );
         assert_eq!(WalletAbiBlinderVariant::explicit().kind(), "explicit");
@@ -467,7 +464,9 @@ mod tests {
         );
 
         let json = params.to_string_js();
-        let decoded = WalletAbiRuntimeParams::from_json_str(&json).expect("deserialize params");
+        let decoded = WalletAbiRuntimeParams {
+            inner: serde_json::from_str(&json).expect("deserialize params"),
+        };
 
         assert_eq!(decoded.inputs()[0].id(), "i0".to_string());
         assert_eq!(decoded.outputs()[0].id(), "o0".to_string());

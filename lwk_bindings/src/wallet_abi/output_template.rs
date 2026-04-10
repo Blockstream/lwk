@@ -24,9 +24,7 @@ impl From<&lwk_simplicity::wallet_abi::WalletOutputTemplate> for WalletAbiWallet
 
 /// Build a wallet output template from a wallet-owned address.
 #[uniffi::export]
-pub fn wallet_abi_output_template_from_address(
-    address: &Address,
-) -> WalletAbiWalletOutputTemplate {
+pub fn wallet_abi_output_template_from_address(address: &Address) -> WalletAbiWalletOutputTemplate {
     WalletAbiWalletOutputTemplate {
         script_pubkey: address.script_pubkey(),
         blinding_pubkey: address
@@ -56,7 +54,10 @@ mod tests {
             "0014d0c4a3ef09e997b6e99e397e518fe3e41a118ca1"
         );
         assert_eq!(
-            template.blinding_pubkey.expect("blinding pubkey").to_string(),
+            template
+                .blinding_pubkey
+                .expect("blinding pubkey")
+                .to_string(),
             elements::bitcoin::PublicKey::new(
                 inner_address.blinding_pubkey.expect("address blinder"),
             )

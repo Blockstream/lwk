@@ -2,9 +2,7 @@ use std::future::Future;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use crate::{
-    LwkError, OutPoint, TxOut, TxOutSecrets, WalletAbiBip32DerivationPair,
-};
+use crate::{LwkError, OutPoint, TxOut, TxOutSecrets, WalletAbiBip32DerivationPair};
 
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, KeySource};
 use elements::bitcoin::PublicKey;
@@ -100,9 +98,10 @@ fn derivation_pair_from_binding(
     let fingerprint = Fingerprint::from_str(fingerprint).map_err(|error| {
         WalletPrevoutResolverLinkError::InvalidDerivationPair(error.to_string())
     })?;
-    let derivation_path = DerivationPath::from_str(&format!("m/{derivation_path}")).map_err(
-        |error| WalletPrevoutResolverLinkError::InvalidDerivationPair(error.to_string()),
-    )?;
+    let derivation_path =
+        DerivationPath::from_str(&format!("m/{derivation_path}")).map_err(|error| {
+            WalletPrevoutResolverLinkError::InvalidDerivationPair(error.to_string())
+        })?;
     let pubkey = PublicKey::from_str(&pair.pubkey).map_err(|error| {
         WalletPrevoutResolverLinkError::InvalidDerivationPair(error.to_string())
     })?;

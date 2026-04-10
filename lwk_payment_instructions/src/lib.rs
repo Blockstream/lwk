@@ -882,6 +882,14 @@ mod tests {
         assert_eq!(err, Error::ExpectedKind(PaymentKind::Bip353));
     }
 
+    #[tokio::test]
+    async fn test_resolve_non_lnurl_fails() {
+        let payment = Payment::from_str("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa").unwrap();
+        let err = payment.resolve_lnurl_info().await.unwrap_err();
+
+        assert_eq!(err, Error::ExpectedKind(PaymentKind::LnUrl));
+    }
+
     #[test]
     fn test_plain_email_parsed_as_lud16() {
         let email = "user@example.com";

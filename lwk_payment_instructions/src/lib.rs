@@ -337,7 +337,9 @@ fn parse_with_schema(
             if a.params == &AddressParams::LIQUID {
                 Ok(cat.clone())
             } else {
-                Err(format!("Using liquidnetwork schema with non-mainnet address: {s}").into())
+                Err(Error::WrongLiquidNetwork {
+                    expected_mainnet: true,
+                })
             }
         }
         (LiquidNetwork, Err(_)) => parse_liquid_bip21(s, true),
@@ -345,7 +347,9 @@ fn parse_with_schema(
             if a.params != &AddressParams::LIQUID {
                 Ok(cat.clone())
             } else {
-                Err(format!("Using liquidtestnet schema with mainnet address: {s}").into())
+                Err(Error::WrongLiquidNetwork {
+                    expected_mainnet: false,
+                })
             }
         }
         (LiquidTestnet, Err(_)) => parse_liquid_bip21(s, false),
@@ -379,10 +383,14 @@ fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<Payment, Error> {
 
     let is_liquid_mainnet = address.params == &AddressParams::LIQUID;
     if is_mainnet && !is_liquid_mainnet {
-        return Err(format!("Using liquidnetwork schema with non-mainnet address: {s}").into());
+        return Err(Error::WrongLiquidNetwork {
+            expected_mainnet: true,
+        });
     }
     if !is_mainnet && is_liquid_mainnet {
-        return Err(format!("Using liquidtestnet schema with mainnet address: {s}").into());
+        return Err(Error::WrongLiquidNetwork {
+            expected_mainnet: false,
+        });
     }
 
     let asset_str = url
@@ -513,19 +521,28 @@ mod tests {
         let payment_category = Payment::from_str("liquidtestnet:lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0").unwrap_err();
         assert_eq!(
             payment_category,
-            "Using liquidtestnet schema with mainnet address: liquidtestnet:lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0".into()
+            Error::WrongLiquidNetwork {
+                expected_mainnet: false
+            }
         );
 
         // valid testnet address with mainnet schema
         let payment_category = Payment::from_str("liquidnetwork:tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m").unwrap_err();
         assert_eq!(
             payment_category,
-            "Using liquidnetwork schema with non-mainnet address: liquidnetwork:tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m".into()
+            Error::WrongLiquidNetwork {
+                expected_mainnet: true
+            }
         );
 
         // valid testnet address with testnet schema
         let err = Payment::from_str("liquidtestnet:VJLDJCJZja8GZNBkLFAHWSNwuxMrzs1BpX1CAUqvfwgtRtDdVtPFWiQwnYMf76rMamsUgFFJVgf36eag?amount=10&assetid=ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2").unwrap_err();
-        assert_eq!(err, "Using liquidtestnet schema with mainnet address: liquidtestnet:VJLDJCJZja8GZNBkLFAHWSNwuxMrzs1BpX1CAUqvfwgtRtDdVtPFWiQwnYMf76rMamsUgFFJVgf36eag?amount=10&assetid=ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2".into());
+        assert_eq!(
+            err,
+            Error::WrongLiquidNetwork {
+                expected_mainnet: false
+            }
+        );
     }
 
     #[test]

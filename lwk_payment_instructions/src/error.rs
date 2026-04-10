@@ -7,6 +7,13 @@ pub enum Error {
     #[error("Expected payment kind {0:?}")]
     ExpectedKind(PaymentKind),
 
+    /// Liquid address network does not match the requested schema.
+    #[error(
+        "Wrong Liquid address network, expected {expected} address",
+        expected = if *.expected_mainnet { "mainnet" } else { "testnet" }
+    )]
+    WrongLiquidNetwork { expected_mainnet: bool },
+
     /// Generic error.
     #[error("{0}")]
     Generic(String),

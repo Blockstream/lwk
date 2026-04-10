@@ -337,10 +337,8 @@ impl Wollet {
         }
 
         cache.unblinded.extend(new_txs.unblinds);
-        cache.extend_all_txs(new_txs.txs)?;
-        cache.update_heights(&txid_height_new, &txid_height_delete);
-        cache.rebuild_sorted_txids();
-        cache.update_unspent(&txid_height_new, &txid_height_delete);
+        // TODO: migrate all cache mutation to this function
+        cache.update(&txid_height_new, &txid_height_delete, new_txs.txs)?;
         cache.timestamps.extend(timestamps);
         cache.scripts.extend(
             scripts_with_blinding_pubkey

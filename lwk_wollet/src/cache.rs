@@ -236,7 +236,7 @@ impl Cache {
             .collect()
     }
 
-    pub fn rebuild_sorted_txids(&mut self) {
+    fn rebuild_sorted_txids(&mut self) {
         let mut sorted: Vec<Txid> = self.heights.keys().cloned().collect();
         sorted.sort_by(|a, b| {
             // cannot panic here, sorted is heights keys
@@ -247,11 +247,7 @@ impl Cache {
         self.sorted_txids = sorted;
     }
 
-    pub fn update_unspent(
-        &mut self,
-        txid_height_new: &[(Txid, Option<u32>)],
-        deleted_txids: &[Txid],
-    ) {
+    fn update_unspent(&mut self, txid_height_new: &[(Txid, Option<u32>)], deleted_txids: &[Txid]) {
         let txids_new: HashSet<&Txid> = txid_height_new.iter().map(|(txid, _)| txid).collect();
 
         let outputs_new: Vec<OutPoint> = self
@@ -298,13 +294,13 @@ impl Cache {
             .retain(|o| deleted_txids.iter().all(|txid| txid != &o.txid));
     }
 
-    pub fn update_heights(&mut self, new: &[(Txid, Option<u32>)], to_delete: &[Txid]) {
+    fn update_heights(&mut self, new: &[(Txid, Option<u32>)], to_delete: &[Txid]) {
         self.heights.retain(|k, _| !to_delete.contains(k));
         // TODO: consider avoid the allocation here
         self.heights.extend(new.to_vec());
     }
 
-    pub fn extend_all_txs(&mut self, txs: Vec<(Txid, Transaction)>) -> Result<(), Error> {
+    fn extend_all_txs(&mut self, txs: Vec<(Txid, Transaction)>) -> Result<(), Error> {
         let mut txids = self.all_txids();
         for (txid, tx) in &txs {
             if tx.output.is_empty() {
@@ -321,6 +317,20 @@ impl Cache {
         self.txs_store
             .put(TXIDS_KEY, &txids)
             .map_err(Error::StoreError)?;
+        Ok(())
+    }
+
+    pub fn update(
+        &mut self,
+        txid_height_new: &[(Txid, Option<u32>)],
+        deleted_txids: &[Txid],
+        txs: Vec<(Txid, Transaction)>,
+    ) -> Result<(), Error> {
+        // TODO: cleanup this functions
+        self.extend_all_txs(txs)?;
+        self.update_heights(&txid_height_new, &deleted_txids);
+        self.rebuild_sorted_txids();
+        self.update_unspent(&txid_height_new, &deleted_txids);
         Ok(())
     }
 }

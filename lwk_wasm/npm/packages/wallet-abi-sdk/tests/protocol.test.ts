@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { networkFromString } from "lwk_wallet_abi_web/helpers";
 import {
+  createGetRawSigningXOnlyPubkeyRequest,
   createGetSignerReceiveAddressRequest,
   GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
   GET_SIGNER_RECEIVE_ADDRESS_METHOD,
@@ -16,6 +17,7 @@ import {
   isJsonRpcErrorResponse,
   isWalletAbiMethod,
   isWalletAbiProcessMethod,
+  parseGetRawSigningXOnlyPubkeyResponse,
   parseGetSignerReceiveAddressResponse,
   walletAbiNetworkFromLwkNetworkName,
   walletAbiNetworkFromNetwork,
@@ -127,5 +129,34 @@ test("get signer receive address envelope", () => {
     (error: unknown) =>
       error instanceof WalletAbiProtocolError &&
       error.message === `${GET_SIGNER_RECEIVE_ADDRESS_METHOD} failed: boom`
+  );
+});
+
+test("get raw signing xonly pubkey envelope", () => {
+  assert.deepEqual(createGetRawSigningXOnlyPubkeyRequest(8), {
+    id: 8,
+    jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
+    method: GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
+  });
+
+  assert.equal(
+    parseGetRawSigningXOnlyPubkeyResponse({
+      id: 8,
+      jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
+      result: "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+    }),
+    "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+  );
+
+  assert.throws(
+    () =>
+      parseGetRawSigningXOnlyPubkeyResponse({
+        id: 8,
+        jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
+        error: { code: -1, message: "boom" },
+      }),
+    (error: unknown) =>
+      error instanceof WalletAbiProtocolError &&
+      error.message === `${GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD} failed: boom`
   );
 });

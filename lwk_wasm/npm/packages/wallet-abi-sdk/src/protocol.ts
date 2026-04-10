@@ -56,7 +56,16 @@ export interface WalletAbiGetSignerReceiveAddressRequest {
   params?: Record<string, never>;
 }
 
+export interface WalletAbiGetRawSigningXOnlyPubkeyRequest {
+  id: number;
+  jsonrpc: typeof WALLET_ABI_JSON_RPC_VERSION;
+  method: typeof GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD;
+  params?: Record<string, never>;
+}
+
 export type WalletAbiGetSignerReceiveAddressResponse =
+  WalletAbiJsonRpcSuccessResponse<string>;
+export type WalletAbiGetRawSigningXOnlyPubkeyResponse =
   WalletAbiJsonRpcSuccessResponse<string>;
 
 export class WalletAbiProtocolError extends Error {
@@ -151,6 +160,16 @@ export function createGetSignerReceiveAddressRequest(
   };
 }
 
+export function createGetRawSigningXOnlyPubkeyRequest(
+  id: number
+): WalletAbiGetRawSigningXOnlyPubkeyRequest {
+  return {
+    id,
+    jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
+    method: GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
+  };
+}
+
 export function parseGetSignerReceiveAddressResponse(value: unknown): string {
   if (isJsonRpcErrorResponse(value)) {
     throw new WalletAbiProtocolError(
@@ -161,6 +180,22 @@ export function parseGetSignerReceiveAddressResponse(value: unknown): string {
   if (!isRecord(value) || typeof value.result !== "string") {
     throw new WalletAbiProtocolError(
       `expected ${GET_SIGNER_RECEIVE_ADDRESS_METHOD} result`
+    );
+  }
+
+  return value.result;
+}
+
+export function parseGetRawSigningXOnlyPubkeyResponse(value: unknown): string {
+  if (isJsonRpcErrorResponse(value)) {
+    throw new WalletAbiProtocolError(
+      `${GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD} failed: ${value.error.message}`
+    );
+  }
+
+  if (!isRecord(value) || typeof value.result !== "string") {
+    throw new WalletAbiProtocolError(
+      `expected ${GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD} result`
     );
   }
 

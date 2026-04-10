@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import type { SessionTypes } from "@walletconnect/types";
 import {
   WalletAbiRuntimeParams,
   WalletAbiTxCreateRequest,
@@ -19,7 +20,9 @@ import {
   createWalletAbiRequiredNamespaces,
   createWalletConnectRequester,
   createWalletAbiCaipNetwork,
+  isWalletAbiSession,
   isWalletAbiWalletConnectChain,
+  selectWalletAbiSessions,
   walletAbiNetworkToWalletConnectChain,
   walletConnectChainToWalletAbiNetwork,
 } from "lwk_wallet_abi_sdk/walletconnect";
@@ -183,4 +186,63 @@ test("walletconnect requester forwards tx-create params and dynamic topic", asyn
     jsonrpc: "2.0",
     result: { status: "ok" },
   });
+});
+
+test("walletconnect session selection prefers newest active session", () => {
+  const chainId = "walabi:testnet-liquid";
+  const newest = {
+    topic: "topic-new",
+    expiry: 20,
+    namespaces: {
+      walabi: {
+        methods: [...WALLET_ABI_WALLETCONNECT_METHODS],
+        chains: [chainId],
+        events: [],
+        accounts: [`${chainId}:wallet`],
+      },
+    },
+    requiredNamespaces: {
+      walabi: {
+        methods: [...WALLET_ABI_WALLETCONNECT_METHODS],
+        chains: [chainId],
+        events: [],
+      },
+    },
+  } as unknown as SessionTypes.Struct;
+  const oldest = {
+    ...newest,
+    topic: "topic-old",
+    expiry: 10,
+  } as SessionTypes.Struct;
+  const otherChain = {
+    ...newest,
+    topic: "topic-mainnet",
+    expiry: 30,
+    namespaces: {
+      walabi: {
+        methods: [...WALLET_ABI_WALLETCONNECT_METHODS],
+        chains: ["walabi:liquid"],
+        events: [],
+        accounts: ["walabi:liquid:wallet"],
+      },
+    },
+    requiredNamespaces: {
+      walabi: {
+        methods: [...WALLET_ABI_WALLETCONNECT_METHODS],
+        chains: ["walabi:liquid"],
+        events: [],
+      },
+    },
+  } as SessionTypes.Struct;
+
+  assert.equal(isWalletAbiSession(newest, chainId), true);
+  assert.equal(isWalletAbiSession(otherChain, chainId), false);
+
+  const selected = selectWalletAbiSessions([oldest, newest, otherChain], chainId);
+
+  assert.equal(selected.activeSession?.topic, "topic-new");
+  assert.deepEqual(
+    selected.staleSessions.map((session) => session.topic),
+    ["topic-old"]
+  );
 });

@@ -1,4 +1,5 @@
 import type { CustomCaipNetwork } from "@reown/appkit-common";
+import type { SessionTypes } from "@walletconnect/types";
 
 import {
   GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
@@ -66,6 +67,11 @@ export interface CreateWalletConnectRequesterOptions {
   client: WalletAbiWalletConnectClient;
   topic?: string;
   getTopic?(): string | null | undefined;
+}
+
+export interface SelectedWalletAbiSessions {
+  activeSession: SessionTypes.Struct | null;
+  staleSessions: SessionTypes.Struct[];
 }
 
 const WALLET_ABI_NATIVE_CURRENCY = {
@@ -301,5 +307,60 @@ export function createWalletConnectRequester(
 
       return createWalletAbiJsonRpcEnvelopeFromResult(request, result);
     },
+  };
+}
+
+function sessionContainsChain(
+  session: SessionTypes.Struct,
+  chainId: WalletAbiWalletConnectChain
+): boolean {
+  const namespace = session.namespaces[WALLET_ABI_WALLETCONNECT_NAMESPACE];
+  if (namespace === undefined) {
+    return false;
+  }
+
+  if (namespace.accounts.some((account) => account.startsWith(`${chainId}:`))) {
+    return true;
+  }
+
+  if (namespace.chains?.includes(chainId) === true) {
+    return true;
+  }
+
+  return (
+    session.requiredNamespaces[WALLET_ABI_WALLETCONNECT_NAMESPACE]?.chains?.includes(
+      chainId
+    ) === true
+  );
+}
+
+export function isWalletAbiSession(
+  session: SessionTypes.Struct,
+  chainId: WalletAbiWalletConnectChain
+): boolean {
+  const namespace = session.namespaces[WALLET_ABI_WALLETCONNECT_NAMESPACE];
+  if (namespace === undefined) {
+    return false;
+  }
+
+  const supportsMethods = WALLET_ABI_WALLETCONNECT_METHODS.every((method) =>
+    namespace.methods.includes(method)
+  );
+
+  return supportsMethods && sessionContainsChain(session, chainId);
+}
+
+export function selectWalletAbiSessions(
+  sessions: SessionTypes.Struct[],
+  chainId: WalletAbiWalletConnectChain
+): SelectedWalletAbiSessions {
+  const matchingSessions = sessions
+    .filter((session) => isWalletAbiSession(session, chainId))
+    .sort((left, right) => right.expiry - left.expiry);
+
+  const [activeSession, ...staleSessions] = matchingSessions;
+  return {
+    activeSession: activeSession ?? null,
+    staleSessions,
   };
 }

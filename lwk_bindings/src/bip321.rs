@@ -33,7 +33,7 @@ impl Bip321 {
     #[uniffi::constructor]
     pub fn new(s: &str) -> Result<Arc<Self>, LwkError> {
         let inner = lwk_payment_instructions::Bip321::from_str(s)
-            .map_err(|e| LwkError::Generic { msg: e })?;
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
         Ok(Arc::new(Self { inner }))
     }
 

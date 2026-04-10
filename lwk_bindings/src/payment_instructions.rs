@@ -135,7 +135,7 @@ impl Payment {
     #[uniffi::constructor]
     pub fn new(s: &str) -> Result<Arc<Self>, LwkError> {
         let inner = lwk_payment_instructions::Payment::from_str(s)
-            .map_err(|e| LwkError::Generic { msg: e })?;
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
         Ok(Arc::new(Self { inner }))
     }
 
@@ -182,7 +182,7 @@ impl Payment {
             .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
         let inner = runtime
             .block_on(self.inner.resolve_bip353())
-            .map_err(|e| LwkError::Generic { msg: e })?;
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
         Ok(Arc::new(Self { inner }))
     }
 
@@ -195,7 +195,7 @@ impl Payment {
             .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
         let inner = runtime
             .block_on(self.inner.resolve_lnurl_info())
-            .map_err(|e| LwkError::Generic { msg: e })?;
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
         Ok(inner.into())
     }
 
@@ -215,7 +215,7 @@ impl Payment {
                 &info.into(),
                 amount_sats,
             ))
-            .map_err(|e| LwkError::Generic { msg: e })?;
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
         Ok(Arc::new(Self { inner }))
     }
 

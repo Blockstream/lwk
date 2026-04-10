@@ -5,6 +5,7 @@ use lightning::offers::offer::Offer;
 use lightning_invoice::Bolt11Invoice;
 
 use crate::bip21::Bip21;
+use crate::Error;
 
 /// A mockup Bitcoin address used to inject into URIs without an address
 /// This is a valid P2PKH mainnet address (Satoshi's genesis block address)
@@ -83,9 +84,9 @@ impl PartialEq<str> for Bip321 {
 }
 
 impl FromStr for Bip321 {
-    type Err = String;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         // First try to parse as regular Bip21 (with address)
         if let Ok(bip21) = Bip21::from_str(s) {
             return Ok(Self {
@@ -100,12 +101,12 @@ impl FromStr for Bip321 {
 
         // Check that the scheme is "bitcoin" (case-insensitive)
         if !url.scheme().eq_ignore_ascii_case("bitcoin") {
-            return Err(format!("Invalid scheme: {}", url.scheme()));
+            return Err(format!("Invalid scheme: {}", url.scheme()).into());
         }
 
         // BIP321: if no address, there must be at least one query parameter
         if url.query().is_none() || url.query().map(|q| q.is_empty()).unwrap_or(true) {
-            return Err("BIP321 URI without address must have query parameters".to_string());
+            return Err("BIP321 URI without address must have query parameters".into());
         }
 
         // Build a new URI with the mockup address
@@ -120,7 +121,7 @@ impl FromStr for Bip321 {
             || inner.lightning().is_some()
             || inner.offer().is_some();
         if !known_payment {
-            return Err("BIP321 URI without address must have another payment method".to_string());
+            return Err("BIP321 URI without address must have another payment method".into());
         }
 
         Ok(Self {
@@ -164,7 +165,7 @@ mod tests {
         let bip321_err = Bip321::from_str(uri).unwrap_err();
         assert_eq!(
             bip321_err,
-            "BIP321 URI without address must have another payment method"
+            "BIP321 URI without address must have another payment method".into()
         );
     }
 

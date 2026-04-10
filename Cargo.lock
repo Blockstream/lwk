@@ -2643,6 +2643,7 @@ dependencies = [
  "rand 0.8.5",
  "reqwest",
  "serde",
+ "thiserror 1.0.69",
  "tokio",
  "url",
 ]

@@ -16,10 +16,12 @@ use lightning_invoice::Bolt11Invoice;
 
 mod bip21;
 mod bip321;
+mod error;
 mod lnurl;
 use ::lnurl::lnurl::LnUrl;
 pub use bip21::Bip21;
 pub use bip321::Bip321;
+pub use error::Error;
 pub use lnurl::{LnUrlIdentifier, LnUrlPayResponse};
 
 use crate::lnurl::LnUrlInvoiceResponse;
@@ -145,7 +147,7 @@ impl Payment {
     }
 
     /// Resolves a LNURL into its metadata (first step of LNURL-pay).
-    pub async fn resolve_lnurl_info(&self) -> Result<LnUrlPayResponse, String> {
+    pub async fn resolve_lnurl_info(&self) -> Result<LnUrlPayResponse, Error> {
         let lnurl = self
             .lnurl()
             .ok_or_else(|| "Payment is not a LNURL or LUD16".to_string())?;
@@ -160,7 +162,7 @@ impl Payment {
             .map_err(|e| format!("Failed to fetch LNURL info: {e}"))?;
 
         if !resp.status().is_success() {
-            return Err(format!("LNURL server returned error: {}", resp.status()));
+            return Err(format!("LNURL server returned error: {}", resp.status()).into());
         }
 
         let info: LnUrlPayResponse = resp
@@ -169,7 +171,7 @@ impl Payment {
             .map_err(|e| format!("Failed to parse LNURL info: {e}"))?;
 
         if info.tag != "payRequest" {
-            return Err(format!("Unsupported LNURL tag: {}", info.tag));
+            return Err(format!("Unsupported LNURL tag: {}", info.tag).into());
         }
 
         Ok(info)
@@ -179,7 +181,7 @@ impl Payment {
     pub async fn fetch_lnurl_invoice(
         info: &LnUrlPayResponse,
         amount_sats: u64,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, Error> {
         let amount_msat = amount_sats
             .checked_mul(1000)
             .ok_or_else(|| "Amount overflow".to_string())?;
@@ -187,7 +189,8 @@ impl Payment {
             return Err(format!(
                 "Amount {} sats ({} msat) is out of range [{} msat, {} msat]",
                 amount_sats, amount_msat, info.min_sendable, info.max_sendable
-            ));
+            )
+            .into());
         }
 
         let mut url = url::Url::parse(&info.callback).map_err(|e| e.to_string())?;
@@ -202,7 +205,7 @@ impl Payment {
             .map_err(|e| format!("Failed to fetch LNURL invoice: {e}"))?;
 
         if !resp.status().is_success() {
-            return Err(format!("LNURL callback returned error: {}", resp.status()));
+            return Err(format!("LNURL callback returned error: {}", resp.status()).into());
         }
 
         let res: LnUrlInvoiceResponse = resp
@@ -215,7 +218,8 @@ impl Payment {
                 return Err(format!(
                     "LNURL error: {}",
                     res.reason.unwrap_or_else(|| "Unknown error".to_string())
-                ));
+                )
+                .into());
             }
         }
 
@@ -224,7 +228,7 @@ impl Payment {
     }
 
     /// Resolves a BIP353 payment instruction into a lightning offer.
-    pub async fn resolve_bip353(&self) -> Result<Self, String> {
+    pub async fn resolve_bip353(&self) -> Result<Self, Error> {
         let bip353 = self
             .bip353()
             .ok_or_else(|| "Payment is not a BIP353 payment instruction".to_string())?;
@@ -240,7 +244,7 @@ impl Payment {
 async fn resolve_bip353_with_resolver<R: HrnResolver>(
     bip353: &str,
     resolver: &R,
-) -> Result<Offer, String> {
+) -> Result<Offer, Error> {
     let instructions =
         PaymentInstructions::parse(bip353, bitcoin::Network::Bitcoin, resolver, true)
             .await
@@ -257,7 +261,7 @@ async fn resolve_bip353_with_resolver<R: HrnResolver>(
                 _ => None,
             })
             .transpose()?
-            .ok_or_else(|| "BIP353 did not resolve to a lightning offer".to_string()),
+            .ok_or_else(|| "BIP353 did not resolve to a lightning offer".into()),
         PaymentInstructions::ConfigurableAmount(configurable) => configurable
             .methods()
             .find_map(|method| match method {
@@ -267,7 +271,7 @@ async fn resolve_bip353_with_resolver<R: HrnResolver>(
                 _ => None,
             })
             .transpose()?
-            .ok_or_else(|| "BIP353 did not resolve to a lightning offer".to_string()),
+            .ok_or_else(|| "BIP353 did not resolve to a lightning offer".into()),
     }
 }
 
@@ -280,8 +284,8 @@ enum Schema {
 }
 
 impl FromStr for Schema {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    type Err = Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "bitcoin" => Ok(Schema::Bitcoin),
             "liquidnetwork" => Ok(Schema::LiquidNetwork),
@@ -293,14 +297,14 @@ impl FromStr for Schema {
             "LIQUIDTESTNET" => Ok(Schema::LiquidTestnet),
             "LIGHTNING" => Ok(Schema::Lightning),
             "LNURLP" => Ok(Schema::LnUrlP),
-            _ => Err(format!("Invalid schema: {s}")),
+            _ => Err(format!("Invalid schema: {s}").into()),
         }
     }
 }
 
 impl FromStr for Payment {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    type Err = Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s.split_once(':') {
             Some((prefix, rest)) => {
                 let schema = Schema::from_str(prefix)?;
@@ -314,9 +318,9 @@ impl FromStr for Payment {
 
 fn parse_with_schema(
     schema: Schema,
-    cat: Result<Payment, String>,
+    cat: Result<Payment, Error>,
     s: &str,
-) -> Result<Payment, String> {
+) -> Result<Payment, Error> {
     use Payment::*;
     use Schema::*;
     match (schema, cat) {
@@ -325,7 +329,7 @@ fn parse_with_schema(
             Ok(bip21) => Ok(Bip21(bip21)),
             Err(_) => match bip321::Bip321::from_str(s) {
                 Ok(bip321) => Ok(Bip321(bip321)),
-                Err(_) => Err(format!("Invalid bip21 or bip321 URI: {s}")),
+                Err(_) => Err(format!("Invalid bip21 or bip321 URI: {s}").into()),
             },
         },
 
@@ -333,9 +337,7 @@ fn parse_with_schema(
             if a.params == &AddressParams::LIQUID {
                 Ok(cat.clone())
             } else {
-                Err(format!(
-                    "Using liquidnetwork schema with non-mainnet address: {s}"
-                ))
+                Err(format!("Using liquidnetwork schema with non-mainnet address: {s}").into())
             }
         }
         (LiquidNetwork, Err(_)) => parse_liquid_bip21(s, true),
@@ -343,9 +345,7 @@ fn parse_with_schema(
             if a.params != &AddressParams::LIQUID {
                 Ok(cat.clone())
             } else {
-                Err(format!(
-                    "Using liquidtestnet schema with mainnet address: {s}"
-                ))
+                Err(format!("Using liquidtestnet schema with mainnet address: {s}").into())
             }
         }
         (LiquidTestnet, Err(_)) => parse_liquid_bip21(s, false),
@@ -358,7 +358,7 @@ fn parse_with_schema(
             if is_email(rest) {
                 Ok(LnUrlCat(LnUrlIdentifier::Lud16(rest.to_string())))
             } else {
-                Err(format!("Invalid lightning schema: {s}"))
+                Err(format!("Invalid lightning schema: {s}").into())
             }
         }
         (LnUrlP, _) => {
@@ -367,11 +367,11 @@ fn parse_with_schema(
             let lnurl = LnUrl::from_url(s.to_string());
             Ok(LnUrlCat(LnUrlIdentifier::LnUrl(lnurl)))
         }
-        _ => Err(format!("Invalid schema: {s}")),
+        _ => Err(format!("Invalid schema: {s}").into()),
     }
 }
 
-fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<Payment, String> {
+fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<Payment, Error> {
     let url = url::Url::from_str(s).map_err(|e| e.to_string())?;
 
     let address_str = url.path();
@@ -379,14 +379,10 @@ fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<Payment, String> {
 
     let is_liquid_mainnet = address.params == &AddressParams::LIQUID;
     if is_mainnet && !is_liquid_mainnet {
-        return Err(format!(
-            "Using liquidnetwork schema with non-mainnet address: {s}"
-        ));
+        return Err(format!("Using liquidnetwork schema with non-mainnet address: {s}").into());
     }
     if !is_mainnet && is_liquid_mainnet {
-        return Err(format!(
-            "Using liquidtestnet schema with mainnet address: {s}"
-        ));
+        return Err(format!("Using liquidtestnet schema with mainnet address: {s}").into());
     }
 
     let asset_str = url
@@ -413,7 +409,7 @@ fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<Payment, String> {
     }))
 }
 
-fn parse_no_schema(s: &str) -> Result<Payment, String> {
+fn parse_no_schema(s: &str) -> Result<Payment, Error> {
     if let Ok(bitcoin_address) = bitcoin::Address::from_str(s) {
         return Ok(Payment::BitcoinAddress(bitcoin_address));
     }
@@ -438,7 +434,7 @@ fn parse_no_schema(s: &str) -> Result<Payment, String> {
     if is_email(s) {
         return Ok(Payment::LnUrlCat(LnUrlIdentifier::Lud16(s.to_string())));
     }
-    Err(format!("Invalid payment category: {s}"))
+    Err(format!("Invalid payment category: {s}").into())
 }
 
 fn is_email(s: &str) -> bool {
@@ -505,31 +501,31 @@ mod tests {
         let payment_category = Payment::from_str("bitcoin:invalid_address").unwrap_err();
         assert_eq!(
             payment_category,
-            "Invalid bip21 or bip321 URI: bitcoin:invalid_address"
+            "Invalid bip21 or bip321 URI: bitcoin:invalid_address".into()
         );
 
         // mixed case schema are not supported
         let payment_category =
             Payment::from_str("BITcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa").unwrap_err();
-        assert_eq!(payment_category, "Invalid schema: BITcoin");
+        assert_eq!(payment_category, "Invalid schema: BITcoin".into());
 
         // valid mainnet address with testnet schema
         let payment_category = Payment::from_str("liquidtestnet:lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0").unwrap_err();
         assert_eq!(
             payment_category,
-            "Using liquidtestnet schema with mainnet address: liquidtestnet:lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0"
+            "Using liquidtestnet schema with mainnet address: liquidtestnet:lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0".into()
         );
 
         // valid testnet address with mainnet schema
         let payment_category = Payment::from_str("liquidnetwork:tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m").unwrap_err();
         assert_eq!(
             payment_category,
-            "Using liquidnetwork schema with non-mainnet address: liquidnetwork:tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m"
+            "Using liquidnetwork schema with non-mainnet address: liquidnetwork:tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m".into()
         );
 
         // valid testnet address with testnet schema
         let err = Payment::from_str("liquidtestnet:VJLDJCJZja8GZNBkLFAHWSNwuxMrzs1BpX1CAUqvfwgtRtDdVtPFWiQwnYMf76rMamsUgFFJVgf36eag?amount=10&assetid=ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2").unwrap_err();
-        assert_eq!(err, "Using liquidtestnet schema with mainnet address: liquidtestnet:VJLDJCJZja8GZNBkLFAHWSNwuxMrzs1BpX1CAUqvfwgtRtDdVtPFWiQwnYMf76rMamsUgFFJVgf36eag?amount=10&assetid=ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2");
+        assert_eq!(err, "Using liquidtestnet schema with mainnet address: liquidtestnet:VJLDJCJZja8GZNBkLFAHWSNwuxMrzs1BpX1CAUqvfwgtRtDdVtPFWiQwnYMf76rMamsUgFFJVgf36eag?amount=10&assetid=ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2".into());
     }
 
     #[test]
@@ -710,7 +706,7 @@ mod tests {
         let err = Payment::from_str(liquid_bip21).unwrap_err();
         assert_eq!(
             err,
-            "Invalid payment request: assetID needs to be specified"
+            "Invalid payment request: assetID needs to be specified".into()
         );
     }
 
@@ -883,7 +879,7 @@ mod tests {
         let payment = Payment::from_str("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa").unwrap();
         let err = payment.resolve_bip353().await.unwrap_err();
 
-        assert_eq!(err, "Payment is not a BIP353 payment instruction");
+        assert_eq!(err, "Payment is not a BIP353 payment instruction".into());
     }
 
     #[test]
@@ -984,7 +980,7 @@ mod tests {
         let err = Payment::fetch_lnurl_invoice(&info, 1001) // 1001000 msat > 1000000
             .await
             .unwrap_err();
-        assert!(err.contains("out of range"));
+        assert!(err.to_string().contains("out of range"));
     }
 
     #[tokio::test]

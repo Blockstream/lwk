@@ -512,6 +512,10 @@ mod tests {
                 expected_mainnet: false
             }
         );
+        assert_eq!(
+            payment_category.to_string(),
+            "Wrong Liquid address network, expected testnet address"
+        );
 
         // valid testnet address with mainnet schema
         let payment_category = Payment::from_str("liquidnetwork:tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m").unwrap_err();

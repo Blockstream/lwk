@@ -1,6 +1,10 @@
 export {
   WalletAbiCapabilities,
   WalletAbiErrorInfo,
+  WalletAbiPreviewAssetDelta,
+  WalletAbiPreviewOutput,
+  WalletAbiPreviewOutputKind,
+  WalletAbiRequestPreview,
   WalletAbiStatus,
   WalletAbiTransactionInfo,
   WalletAbiTxCreateRequest,

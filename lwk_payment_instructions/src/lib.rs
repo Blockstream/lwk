@@ -155,20 +155,13 @@ impl Payment {
         let url_str = lnurl.resolve_url()?;
 
         let client = reqwest::Client::new();
-        let resp = client
-            .get(url_str)
-            .send()
-            .await
-            .map_err(|e| format!("Failed to fetch LNURL info: {e}"))?;
+        let resp = client.get(url_str).send().await?;
 
         if !resp.status().is_success() {
             return Err(Error::HttpStatus(resp.status()));
         }
 
-        let info: LnUrlPayResponse = resp
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse LNURL info: {e}"))?;
+        let info: LnUrlPayResponse = resp.json().await?;
 
         if info.tag != "payRequest" {
             return Err(format!("Unsupported LNURL tag: {}", info.tag).into());
@@ -198,20 +191,13 @@ impl Payment {
             .append_pair("amount", &amount_msat.to_string());
 
         let client = reqwest::Client::new();
-        let resp = client
-            .get(url)
-            .send()
-            .await
-            .map_err(|e| format!("Failed to fetch LNURL invoice: {e}"))?;
+        let resp = client.get(url).send().await?;
 
         if !resp.status().is_success() {
             return Err(Error::HttpStatus(resp.status()));
         }
 
-        let res: LnUrlInvoiceResponse = resp
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse LNURL invoice response: {e}"))?;
+        let res: LnUrlInvoiceResponse = resp.json().await?;
 
         if let Some(status) = res.status {
             if status == "ERROR" {

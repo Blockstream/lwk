@@ -26,6 +26,10 @@ pub enum Error {
     #[error("HTTP request returned status {0}")]
     HttpStatus(reqwest::StatusCode),
 
+    /// Reqwest error.
+    #[error("Reqwest error: {0}")]
+    Reqwest(String),
+
     /// Generic error.
     #[error("{0}")]
     Generic(String),
@@ -40,5 +44,12 @@ impl From<String> for Error {
 impl From<&str> for Error {
     fn from(s: &str) -> Self {
         Self::Generic(s.to_string())
+    }
+}
+
+// Store reqwest errors as strings so Error can keep deriving Clone, PartialEq, and Eq.
+impl From<reqwest::Error> for Error {
+    fn from(err: reqwest::Error) -> Self {
+        Self::Reqwest(err.to_string())
     }
 }

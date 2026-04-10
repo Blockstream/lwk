@@ -1025,6 +1025,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_resolve_lnurl_info_http_status_fails() {
+        let mut server = mockito::Server::new_async().await;
+
+        let lnurl_path = "/.well-known/lnurlp/user";
+        let _mock = server
+            .mock("GET", lnurl_path)
+            .with_status(500)
+            .create_async()
+            .await;
+
+        let payment = Payment::LnUrlCat(LnUrlIdentifier::LnUrl(LnUrl::from_url(format!(
+            "{}{}",
+            server.url(),
+            lnurl_path
+        ))));
+
+        let err = payment.resolve_lnurl_info().await.unwrap_err();
+        assert_eq!(
+            err,
+            Error::HttpStatus(reqwest::StatusCode::INTERNAL_SERVER_ERROR)
+        );
+    }
+
+    #[tokio::test]
     #[ignore = "requires live DNS access"]
     async fn test_resolve_bip353_matt() {
         let payment = Payment::from_str("₿matt@mattcorallo.com").unwrap();

@@ -30,3 +30,47 @@ export function loadLwkWalletAbiWeb(
 
   return initPromise;
 }
+
+export function assetIdFromString(assetId: string): lwkWeb.AssetId {
+  return lwkWeb.AssetId.fromString(assetId);
+}
+
+export function outPointFromString(outPoint: string): lwkWeb.OutPoint {
+  return new lwkWeb.OutPoint(outPoint);
+}
+
+export function scriptFromHex(scriptHex: string): lwkWeb.Script {
+  return new lwkWeb.Script(scriptHex);
+}
+
+export function contractHashFromString(hash: string): lwkWeb.ContractHash {
+  return lwkWeb.ContractHash.fromString(hash);
+}
+
+export function publicKeyFromString(pubkey: string): lwkWeb.PublicKey {
+  return lwkWeb.PublicKey.fromString(pubkey);
+}
+
+export function xOnlyPublicKeyFromString(
+  pubkey: string
+): lwkWeb.XOnlyPublicKey {
+  return lwkWeb.XOnlyPublicKey.fromString(pubkey);
+}
+
+export function txidFromString(txid: string): lwkWeb.Txid {
+  return new lwkWeb.Txid(txid);
+}
+
+type WalletAbiJsonValue =
+  | lwkWeb.WalletAbiCapabilities
+  | lwkWeb.WalletAbiErrorInfo
+  | lwkWeb.WalletAbiRequestPreview
+  | lwkWeb.WalletAbiRuntimeParams
+  | lwkWeb.WalletAbiTxCreateRequest
+  | lwkWeb.WalletAbiTxCreateResponse
+  | lwkWeb.WalletAbiTxEvaluateRequest
+  | lwkWeb.WalletAbiTxEvaluateResponse;
+
+export function walletAbiJsonString(value: WalletAbiJsonValue): string {
+  return value.toString();
+}

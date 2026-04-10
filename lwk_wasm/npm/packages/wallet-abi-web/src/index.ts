@@ -46,4 +46,14 @@ export {
   WalletAbiWalletSourceFilter,
   XOnlyPublicKey,
 } from "./schema.js";
-export { loadLwkWalletAbiWeb } from "./helpers.js";
+export {
+  assetIdFromString,
+  contractHashFromString,
+  loadLwkWalletAbiWeb,
+  outPointFromString,
+  publicKeyFromString,
+  scriptFromHex,
+  txidFromString,
+  walletAbiJsonString,
+  xOnlyPublicKeyFromString,
+} from "./helpers.js";

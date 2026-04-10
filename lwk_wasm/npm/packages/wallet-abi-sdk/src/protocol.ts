@@ -1,4 +1,9 @@
 import type { Network } from "lwk_wallet_abi_web/schema";
+import {
+  WalletAbiTxCreateRequest,
+  WalletAbiTxCreateResponse,
+  walletAbiJsonString,
+} from "lwk_wallet_abi_web";
 
 export const WALLET_ABI_JSON_RPC_VERSION = "2.0" as const;
 
@@ -67,6 +72,15 @@ export type WalletAbiGetSignerReceiveAddressResponse =
   WalletAbiJsonRpcSuccessResponse<string>;
 export type WalletAbiGetRawSigningXOnlyPubkeyResponse =
   WalletAbiJsonRpcSuccessResponse<string>;
+
+export interface WalletAbiProcessRequest {
+  id: number;
+  jsonrpc: typeof WALLET_ABI_JSON_RPC_VERSION;
+  method: typeof WALLET_ABI_PROCESS_REQUEST_METHOD;
+  params: unknown;
+}
+
+export type WalletAbiProcessResponse = WalletAbiJsonRpcSuccessResponse<unknown>;
 
 export class WalletAbiProtocolError extends Error {
   constructor(message: string) {
@@ -200,4 +214,34 @@ export function parseGetRawSigningXOnlyPubkeyResponse(value: unknown): string {
   }
 
   return value.result;
+}
+
+export function createProcessRequest(
+  id: number,
+  params: WalletAbiTxCreateRequest
+): WalletAbiProcessRequest {
+  return {
+    id,
+    jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
+    method: WALLET_ABI_PROCESS_REQUEST_METHOD,
+    params: JSON.parse(walletAbiJsonString(params)),
+  };
+}
+
+export function parseProcessRequestResponse(
+  value: unknown
+): WalletAbiTxCreateResponse {
+  if (isJsonRpcErrorResponse(value)) {
+    throw new WalletAbiProtocolError(
+      `${WALLET_ABI_PROCESS_REQUEST_METHOD} failed: ${value.error.message}`
+    );
+  }
+
+  if (!isRecord(value) || value.result === undefined) {
+    throw new WalletAbiProtocolError(
+      `expected ${WALLET_ABI_PROCESS_REQUEST_METHOD} result`
+    );
+  }
+
+  return WalletAbiTxCreateResponse.fromJson(value.result);
 }

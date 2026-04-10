@@ -3,6 +3,14 @@ import test from "node:test";
 
 import { networkFromString } from "lwk_wallet_abi_web/helpers";
 import {
+  WalletAbiRuntimeParams,
+  WalletAbiTransactionInfo,
+  WalletAbiTxCreateRequest,
+  WalletAbiTxCreateResponse,
+  Txid,
+} from "lwk_wallet_abi_web/schema";
+import {
+  createProcessRequest,
   createGetRawSigningXOnlyPubkeyRequest,
   createGetSignerReceiveAddressRequest,
   GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
@@ -17,6 +25,7 @@ import {
   isJsonRpcErrorResponse,
   isWalletAbiMethod,
   isWalletAbiProcessMethod,
+  parseProcessRequestResponse,
   parseGetRawSigningXOnlyPubkeyResponse,
   parseGetSignerReceiveAddressResponse,
   walletAbiNetworkFromLwkNetworkName,
@@ -159,4 +168,38 @@ test("get raw signing xonly pubkey envelope", () => {
       error instanceof WalletAbiProtocolError &&
       error.message === `${GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD} failed: boom`
   );
+});
+
+test("process request envelope", () => {
+  const network = networkFromString("liquid-testnet");
+  const request = WalletAbiTxCreateRequest.fromParts(
+    "00000000-0000-4000-8000-000000000002",
+    network,
+    WalletAbiRuntimeParams.new([], [], null, null),
+    false
+  );
+  const response = WalletAbiTxCreateResponse.ok(
+    request.requestId(),
+    network,
+    WalletAbiTransactionInfo.new(
+      "00",
+      new Txid("0000000000000000000000000000000000000000000000000000000000000000")
+    )
+  );
+
+  assert.deepEqual(createProcessRequest(9, request), {
+    id: 9,
+    jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
+    method: WALLET_ABI_PROCESS_REQUEST_METHOD,
+    params: request.toJSON(),
+  });
+
+  const parsed = parseProcessRequestResponse({
+    id: 9,
+    jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
+    result: response.toJSON(),
+  });
+
+  assert.equal(parsed.requestId(), request.requestId());
+  assert.equal(parsed.status(), response.status());
 });

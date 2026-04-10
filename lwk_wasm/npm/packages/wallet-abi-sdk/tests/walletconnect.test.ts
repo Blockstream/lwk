@@ -2,12 +2,22 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  WalletAbiRuntimeParams,
+  WalletAbiTxCreateRequest,
+} from "lwk_wallet_abi_sdk/schema";
+import { networkFromString } from "lwk_wallet_abi_sdk/helpers";
+import {
+  createGetSignerReceiveAddressRequest,
+  createProcessRequest,
+} from "lwk_wallet_abi_sdk/protocol";
+import {
   WALLET_ABI_WALLETCONNECT_CHAINS,
   WALLET_ABI_WALLETCONNECT_EVENTS,
   WALLET_ABI_WALLETCONNECT_METHODS,
   WALLET_ABI_WALLETCONNECT_NAMESPACE,
   createWalletAbiMetadata,
   createWalletAbiRequiredNamespaces,
+  createWalletConnectRequester,
   createWalletAbiCaipNetwork,
   isWalletAbiWalletConnectChain,
   walletAbiNetworkToWalletConnectChain,
@@ -101,4 +111,76 @@ test("walletconnect metadata defaults and overrides", () => {
   assert.equal(overridden.name, "Custom Wallet ABI");
   assert.deepEqual(overridden.icons, ["https://cdn.example.com/icon.png"]);
   assert.equal(overridden.url, "https://example.com/app");
+});
+
+test("walletconnect requester normalizes getter params", async () => {
+  const calls: unknown[] = [];
+  const requester = createWalletConnectRequester({
+    chainId: "walabi:testnet-liquid",
+    client: {
+      request(input) {
+        calls.push(input);
+        return "tlq1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqf6u0sd";
+      },
+    },
+  });
+
+  const response = await requester.request(createGetSignerReceiveAddressRequest(5));
+
+  assert.deepEqual(calls, [
+    {
+      chainId: "walabi:testnet-liquid",
+      request: {
+        method: "get_signer_receive_address",
+        params: {},
+      },
+    },
+  ]);
+  assert.deepEqual(response, {
+    id: 5,
+    jsonrpc: "2.0",
+    result:
+      "tlq1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqf6u0sd",
+  });
+});
+
+test("walletconnect requester forwards tx-create params and dynamic topic", async () => {
+  const calls: unknown[] = [];
+  const requester = createWalletConnectRequester({
+    chainId: "walabi:testnet-liquid",
+    topic: "ignored",
+    getTopic() {
+      return "topic-1";
+    },
+    client: {
+      request(input) {
+        calls.push(input);
+        return { status: "ok" };
+      },
+    },
+  });
+
+  const request = WalletAbiTxCreateRequest.fromParts(
+    "00000000-0000-4000-8000-000000000003",
+    networkFromString("liquid-testnet"),
+    WalletAbiRuntimeParams.new([], [], null, null),
+    false
+  );
+  const response = await requester.request(createProcessRequest(6, request));
+
+  assert.deepEqual(calls, [
+    {
+      chainId: "walabi:testnet-liquid",
+      topic: "topic-1",
+      request: {
+        method: "wallet_abi_process_request",
+        params: request.toJSON(),
+      },
+    },
+  ]);
+  assert.deepEqual(response, {
+    id: 6,
+    jsonrpc: "2.0",
+    result: { status: "ok" },
+  });
 });

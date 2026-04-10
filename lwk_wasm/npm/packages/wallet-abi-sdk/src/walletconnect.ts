@@ -3,10 +3,14 @@ import type { CustomCaipNetwork } from "@reown/appkit-common";
 import {
   GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
   GET_SIGNER_RECEIVE_ADDRESS_METHOD,
+  WALLET_ABI_JSON_RPC_VERSION,
   WALLET_ABI_PROCESS_REQUEST_METHOD,
   type WalletAbiMethod,
+  type WalletAbiJsonRpcRequest,
+  type WalletAbiJsonRpcResponse,
   type WalletAbiTransportNetwork,
 } from "./protocol.js";
+import type { WalletAbiRequester } from "./client.js";
 
 export const WALLET_ABI_WALLETCONNECT_NAMESPACE = "walabi" as const;
 
@@ -40,6 +44,28 @@ export interface WalletAbiMetadata {
   redirect: {
     universal: string;
   };
+}
+
+export interface WalletAbiWalletConnectSessionRequest {
+  chainId: WalletAbiWalletConnectChain;
+  request: {
+    method: WalletAbiMethod;
+    params?: unknown;
+  };
+  topic?: string;
+}
+
+export interface WalletAbiWalletConnectClient {
+  connect?(): Promise<void> | void;
+  disconnect?(): Promise<void> | void;
+  request(input: WalletAbiWalletConnectSessionRequest): Promise<unknown> | unknown;
+}
+
+export interface CreateWalletConnectRequesterOptions {
+  chainId: WalletAbiWalletConnectChain;
+  client: WalletAbiWalletConnectClient;
+  topic?: string;
+  getTopic?(): string | null | undefined;
 }
 
 const WALLET_ABI_NATIVE_CURRENCY = {
@@ -196,6 +222,84 @@ export function createWalletAbiMetadata(
     icons: overrides.icons ?? [`${normalizedUrl.origin}/favicon.ico`],
     redirect: overrides.redirect ?? {
       universal: normalizedUrl.toString(),
+    },
+  };
+}
+
+function resolveTopic(
+  options: CreateWalletConnectRequesterOptions
+): string | undefined {
+  const dynamicTopic = options.getTopic?.();
+  if (dynamicTopic === null) {
+    return undefined;
+  }
+
+  if (dynamicTopic !== undefined) {
+    return dynamicTopic.trim() || undefined;
+  }
+
+  return options.topic?.trim() || undefined;
+}
+
+function extractRequestParams(request: WalletAbiJsonRpcRequest): unknown {
+  if (request.method === WALLET_ABI_PROCESS_REQUEST_METHOD) {
+    return request.params;
+  }
+
+  if (
+    request.params === undefined ||
+    Object.keys(request.params).length === 0
+  ) {
+    return {};
+  }
+
+  return request.params;
+}
+
+function createWalletAbiJsonRpcEnvelopeFromResult(
+  request: WalletAbiJsonRpcRequest,
+  result: unknown
+): WalletAbiJsonRpcResponse {
+  let normalizedResult = result;
+
+  if (typeof normalizedResult === "string") {
+    try {
+      normalizedResult = JSON.parse(normalizedResult);
+    } catch {
+      // Keep plain getter strings untouched.
+    }
+  }
+
+  return {
+    id: request.id,
+    jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
+    result: normalizedResult,
+  } as WalletAbiJsonRpcResponse;
+}
+
+export function createWalletConnectRequester(
+  options: CreateWalletConnectRequesterOptions
+): WalletAbiRequester {
+  return {
+    connect() {
+      return options.client.connect?.();
+    },
+    disconnect() {
+      return options.client.disconnect?.();
+    },
+    async request(request) {
+      const topic = resolveTopic(options);
+      const params = extractRequestParams(request);
+      const result = await options.client.request({
+        chainId: options.chainId,
+        ...(topic === undefined ? {} : { topic }),
+        request: {
+          method: request.method,
+          ...(params === undefined ? {} : { params }),
+        },
+      });
+
+      return createWalletAbiJsonRpcEnvelopeFromResult(request, result);
     },
   };
 }

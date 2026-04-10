@@ -50,6 +50,11 @@
       "import": "./dist/protocol.js",
       "default": "./dist/protocol.js"
     },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js",
+      "default": "./dist/client.js"
+    },
     "./walletconnect": {
       "types": "./dist/walletconnect.d.ts",
       "import": "./dist/walletconnect.js",

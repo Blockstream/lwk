@@ -81,6 +81,15 @@ export interface WalletAbiProcessRequest {
 }
 
 export type WalletAbiProcessResponse = WalletAbiJsonRpcSuccessResponse<unknown>;
+export type WalletAbiJsonRpcRequest =
+  | WalletAbiGetSignerReceiveAddressRequest
+  | WalletAbiGetRawSigningXOnlyPubkeyRequest
+  | WalletAbiProcessRequest;
+export type WalletAbiJsonRpcResponse =
+  | WalletAbiGetSignerReceiveAddressResponse
+  | WalletAbiGetRawSigningXOnlyPubkeyResponse
+  | WalletAbiProcessResponse
+  | WalletAbiJsonRpcErrorResponse;
 
 export class WalletAbiProtocolError extends Error {
   constructor(message: string) {

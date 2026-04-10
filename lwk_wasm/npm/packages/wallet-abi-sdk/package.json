@@ -45,6 +45,11 @@
       "import": "./dist/helpers.js",
       "default": "./dist/helpers.js"
     },
+    "./protocol": {
+      "types": "./dist/protocol.d.ts",
+      "import": "./dist/protocol.js",
+      "default": "./dist/protocol.js"
+    },
     "./package.json": "./package.json"
   },
   "sideEffects": false,

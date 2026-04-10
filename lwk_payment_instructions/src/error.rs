@@ -22,6 +22,10 @@ pub enum Error {
     #[error("Invalid schema: {0}")]
     InvalidSchema(String),
 
+    /// HTTP request returned a non-success status.
+    #[error("HTTP request returned status {0}")]
+    HttpStatus(reqwest::StatusCode),
+
     /// Generic error.
     #[error("{0}")]
     Generic(String),

@@ -162,7 +162,7 @@ impl Payment {
             .map_err(|e| format!("Failed to fetch LNURL info: {e}"))?;
 
         if !resp.status().is_success() {
-            return Err(format!("LNURL server returned error: {}", resp.status()).into());
+            return Err(Error::HttpStatus(resp.status()));
         }
 
         let info: LnUrlPayResponse = resp
@@ -205,7 +205,7 @@ impl Payment {
             .map_err(|e| format!("Failed to fetch LNURL invoice: {e}"))?;
 
         if !resp.status().is_success() {
-            return Err(format!("LNURL callback returned error: {}", resp.status()).into());
+            return Err(Error::HttpStatus(resp.status()));
         }
 
         let res: LnUrlInvoiceResponse = resp

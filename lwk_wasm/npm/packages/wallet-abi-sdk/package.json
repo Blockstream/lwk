@@ -40,6 +40,11 @@
       "import": "./dist/schema.js",
       "default": "./dist/schema.js"
     },
+    "./helpers": {
+      "types": "./dist/helpers.d.ts",
+      "import": "./dist/helpers.js",
+      "default": "./dist/helpers.js"
+    },
     "./package.json": "./package.json"
   },
   "sideEffects": false,

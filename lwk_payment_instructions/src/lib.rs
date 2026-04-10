@@ -297,7 +297,7 @@ impl FromStr for Schema {
             "LIQUIDTESTNET" => Ok(Schema::LiquidTestnet),
             "LIGHTNING" => Ok(Schema::Lightning),
             "LNURLP" => Ok(Schema::LnUrlP),
-            _ => Err(format!("Invalid schema: {s}").into()),
+            _ => Err(Error::InvalidSchema(s.to_string())),
         }
     }
 }
@@ -371,7 +371,7 @@ fn parse_with_schema(
             let lnurl = LnUrl::from_url(s.to_string());
             Ok(LnUrlCat(LnUrlIdentifier::LnUrl(lnurl)))
         }
-        _ => Err(format!("Invalid schema: {s}").into()),
+        _ => Err(Error::InvalidSchema(s.to_string())),
     }
 }
 
@@ -515,7 +515,10 @@ mod tests {
         // mixed case schema are not supported
         let payment_category =
             Payment::from_str("BITcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa").unwrap_err();
-        assert_eq!(payment_category, "Invalid schema: BITcoin".into());
+        assert_eq!(
+            payment_category,
+            Error::InvalidSchema("BITcoin".to_string())
+        );
 
         // valid mainnet address with testnet schema
         let payment_category = Payment::from_str("liquidtestnet:lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0").unwrap_err();

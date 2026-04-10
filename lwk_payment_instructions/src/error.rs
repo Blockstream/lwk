@@ -18,6 +18,10 @@ pub enum Error {
     #[error("BIP353 did not resolve to a lightning offer")]
     Bip353OfferNotFound,
 
+    /// Invalid URI schema.
+    #[error("Invalid schema: {0}")]
+    InvalidSchema(String),
+
     /// Generic error.
     #[error("{0}")]
     Generic(String),

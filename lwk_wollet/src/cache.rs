@@ -199,6 +199,43 @@ impl Cache {
         })
     }
 
+    pub fn unspent(&self) -> &HashSet<OutPoint> {
+        &self.unspent
+    }
+
+    pub fn tx_height(&self, txid: &Txid) -> Option<&Option<Height>> {
+        self.heights.get(txid)
+    }
+
+    pub fn heights(&self) -> &HashMap<Txid, Option<Height>> {
+        &self.heights
+    }
+
+    pub fn all_txs(&self) -> impl Iterator<Item = (Txid, Transaction)> + '_ {
+        self.all_txids()
+            .into_iter()
+            .filter_map(|txid| self.tx(&txid).map(|tx| (txid, tx)))
+    }
+
+    pub fn tx(&self, txid: &Txid) -> Option<Transaction> {
+        // TODO: return result to handle the case where the store errors
+        let bytes = self.txs_store.get(&tx_key(txid)).ok()??;
+        elements::encode::deserialize(&bytes).ok()
+    }
+
+    pub fn all_txids(&self) -> HashSet<Txid> {
+        // TODO: consider reading them from the store only when the store is loaded
+        self.txs_store
+            .get(TXIDS_KEY)
+            .ok()
+            .flatten()
+            .and_then(|b| serde_json::from_slice::<Vec<String>>(&b).ok())
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|s| s.parse().ok())
+            .collect()
+    }
+
     pub fn rebuild_sorted_txids(&mut self) {
         let mut sorted: Vec<Txid> = self.heights.keys().cloned().collect();
         sorted.sort_by(|a, b| {
@@ -261,47 +298,10 @@ impl Cache {
             .retain(|o| deleted_txids.iter().all(|txid| txid != &o.txid));
     }
 
-    pub fn unspent(&self) -> &HashSet<OutPoint> {
-        &self.unspent
-    }
-
-    pub fn tx_height(&self, txid: &Txid) -> Option<&Option<Height>> {
-        self.heights.get(txid)
-    }
-
-    pub fn heights(&self) -> &HashMap<Txid, Option<Height>> {
-        &self.heights
-    }
-
     pub fn update_heights(&mut self, new: &[(Txid, Option<u32>)], to_delete: &[Txid]) {
         self.heights.retain(|k, _| !to_delete.contains(k));
         // TODO: consider avoid the allocation here
         self.heights.extend(new.to_vec());
-    }
-
-    pub fn all_txs(&self) -> impl Iterator<Item = (Txid, Transaction)> + '_ {
-        self.all_txids()
-            .into_iter()
-            .filter_map(|txid| self.tx(&txid).map(|tx| (txid, tx)))
-    }
-
-    pub fn tx(&self, txid: &Txid) -> Option<Transaction> {
-        // TODO: return result to handle the case where the store errors
-        let bytes = self.txs_store.get(&tx_key(txid)).ok()??;
-        elements::encode::deserialize(&bytes).ok()
-    }
-
-    pub fn all_txids(&self) -> HashSet<Txid> {
-        // TODO: consider reading them from the store only when the store is loaded
-        self.txs_store
-            .get(TXIDS_KEY)
-            .ok()
-            .flatten()
-            .and_then(|b| serde_json::from_slice::<Vec<String>>(&b).ok())
-            .unwrap_or_default()
-            .into_iter()
-            .filter_map(|s| s.parse().ok())
-            .collect()
     }
 
     pub fn extend_all_txs(&mut self, txs: Vec<(Txid, Transaction)>) -> Result<(), Error> {

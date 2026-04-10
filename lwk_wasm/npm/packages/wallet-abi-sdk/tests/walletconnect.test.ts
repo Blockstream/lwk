@@ -6,6 +6,7 @@ import {
   WALLET_ABI_WALLETCONNECT_EVENTS,
   WALLET_ABI_WALLETCONNECT_METHODS,
   WALLET_ABI_WALLETCONNECT_NAMESPACE,
+  createWalletAbiMetadata,
   createWalletAbiRequiredNamespaces,
   createWalletAbiCaipNetwork,
   isWalletAbiWalletConnectChain,
@@ -78,4 +79,26 @@ test("walletconnect required namespaces", () => {
       events: WALLET_ABI_WALLETCONNECT_EVENTS,
     },
   });
+});
+
+test("walletconnect metadata defaults and overrides", () => {
+  const defaults = createWalletAbiMetadata("https://example.com/app");
+  assert.equal(defaults.name, "LWK Wallet ABI SDK");
+  assert.equal(
+    defaults.description,
+    "Wallet ABI WalletConnect session for a browser application."
+  );
+  assert.equal(defaults.url, "https://example.com/app");
+  assert.deepEqual(defaults.icons, ["https://example.com/favicon.ico"]);
+  assert.deepEqual(defaults.redirect, {
+    universal: "https://example.com/app",
+  });
+
+  const overridden = createWalletAbiMetadata("https://example.com/app", {
+    name: "Custom Wallet ABI",
+    icons: ["https://cdn.example.com/icon.png"],
+  });
+  assert.equal(overridden.name, "Custom Wallet ABI");
+  assert.deepEqual(overridden.icons, ["https://cdn.example.com/icon.png"]);
+  assert.equal(overridden.url, "https://example.com/app");
 });

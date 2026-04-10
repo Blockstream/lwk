@@ -32,6 +32,16 @@ export interface WalletAbiWalletConnectNamespace {
   accounts?: readonly string[];
 }
 
+export interface WalletAbiMetadata {
+  name: string;
+  description: string;
+  url: string;
+  icons: string[];
+  redirect: {
+    universal: string;
+  };
+}
+
 const WALLET_ABI_NATIVE_CURRENCY = {
   name: "Liquid Bitcoin",
   symbol: "L-BTC",
@@ -167,6 +177,25 @@ export function createWalletAbiRequiredNamespaces(
       methods: WALLET_ABI_WALLETCONNECT_METHODS,
       chains,
       events: WALLET_ABI_WALLETCONNECT_EVENTS,
+    },
+  };
+}
+
+export function createWalletAbiMetadata(
+  appUrl: string,
+  overrides: Partial<WalletAbiMetadata> = {}
+): WalletAbiMetadata {
+  const normalizedUrl = new URL(appUrl);
+
+  return {
+    name: overrides.name ?? "LWK Wallet ABI SDK",
+    description:
+      overrides.description ??
+      "Wallet ABI WalletConnect session for a browser application.",
+    url: overrides.url ?? normalizedUrl.toString(),
+    icons: overrides.icons ?? [`${normalizedUrl.origin}/favicon.ico`],
+    redirect: overrides.redirect ?? {
+      universal: normalizedUrl.toString(),
     },
   };
 }

@@ -55,6 +55,11 @@
       "import": "./dist/client.js",
       "default": "./dist/client.js"
     },
+    "./builders": {
+      "types": "./dist/builders.d.ts",
+      "import": "./dist/builders.js",
+      "default": "./dist/builders.js"
+    },
     "./walletconnect": {
       "types": "./dist/walletconnect.d.ts",
       "import": "./dist/walletconnect.js",

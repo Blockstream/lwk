@@ -143,7 +143,7 @@ impl Transaction {
     /// For checking of surjection proofs and amounts, spent_utxos parameter
     /// should contain information about the prevouts. Note that the order of
     /// spent_utxos should be consistent with transaction inputs.
-    pub fn verify_tx_amt_proofs(&self, utxos: Vec<Arc<TxOut>>) -> Result<(), LwkError> {
+    pub fn verify_tx_amt_proofs(&self, utxos: &[Arc<TxOut>]) -> Result<(), LwkError> {
         let utxos_inner: Vec<elements::TxOut> = utxos.iter().map(|u| u.as_ref().into()).collect();
         self.inner.verify_tx_amt_proofs(&EC, &utxos_inner)?;
         Ok(())

@@ -79,9 +79,9 @@ impl AsRef<lwk_wollet::amp0::Amp0Pset> for Amp0Pset {
 impl Amp0Pset {
     /// Construct a PSET to use with AMP0
     #[uniffi::constructor]
-    pub fn new(pset: &Pset, blinding_nonces: Vec<String>) -> Result<Arc<Self>, LwkError> {
+    pub fn new(pset: &Pset, blinding_nonces: &[String]) -> Result<Arc<Self>, LwkError> {
         let pset = pset.as_ref().clone();
-        let inner = lwk_wollet::amp0::Amp0Pset::new(pset, blinding_nonces)?;
+        let inner = lwk_wollet::amp0::Amp0Pset::new(pset, blinding_nonces.to_vec())?;
         Ok(Arc::new(Self { inner }))
     }
 

@@ -201,11 +201,11 @@ impl TxBuilder {
     /// Possible errors:
     /// * OutPoint doesn't belong to the wallet
     /// * Insufficient funds (remember to include L-BTC utxos for fees)
-    pub fn set_wallet_utxos(&self, utxos: Vec<Arc<OutPoint>>) -> Result<(), LwkError> {
+    pub fn set_wallet_utxos(&self, utxos: &[Arc<OutPoint>]) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         let utxos = utxos
-            .into_iter()
+            .iter()
             .map(|arc| elements::OutPoint::from(arc.as_ref()))
             .collect();
         *lock = Some(inner.set_wallet_utxos(utxos));
@@ -215,11 +215,11 @@ impl TxBuilder {
     /// Adds external UTXOs
     ///
     /// Note: unblinded UTXOs with the same scriptpubkeys as the wallet, are considered external.
-    pub fn add_external_utxos(&self, utxos: Vec<Arc<ExternalUtxo>>) -> Result<(), LwkError> {
+    pub fn add_external_utxos(&self, utxos: &[Arc<ExternalUtxo>]) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         let utxos = utxos
-            .into_iter()
+            .iter()
             .map(|arc| lwk_wollet::ExternalUtxo::from(arc.as_ref()))
             .collect();
         *lock = Some(inner.add_external_utxos(utxos)?);
@@ -244,12 +244,11 @@ impl TxBuilder {
     /// Set data to take LiquiDEX proposals
     pub fn liquidex_take(
         &self,
-        proposals: Vec<Arc<ValidatedLiquidexProposal>>,
+        proposals: &[Arc<ValidatedLiquidexProposal>],
     ) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
-        *lock =
-            Some(inner.liquidex_take(proposals.into_iter().map(|p| p.as_ref().into()).collect())?);
+        *lock = Some(inner.liquidex_take(proposals.iter().map(|p| p.as_ref().into()).collect())?);
         Ok(())
     }
 

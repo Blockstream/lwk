@@ -569,15 +569,15 @@ impl BoltzSession {
     /// Get the raw swap data (JSON) for a specific swap ID from the store
     ///
     /// Returns `None` if no store is configured or the swap doesn't exist.
-    pub fn get_swap_data(&self, swap_id: String) -> Result<Option<String>, LwkError> {
-        Ok(self.inner.get_swap_data(&swap_id)?)
+    pub fn get_swap_data(&self, swap_id: &str) -> Result<Option<String>, LwkError> {
+        Ok(self.inner.get_swap_data(swap_id)?)
     }
 
     /// Remove a swap from the store
     ///
     /// Returns an error if no store is configured.
-    pub fn remove_swap(&self, swap_id: String) -> Result<(), LwkError> {
-        Ok(self.inner.remove_swap(&swap_id)?)
+    pub fn remove_swap(&self, swap_id: &str) -> Result<(), LwkError> {
+        Ok(self.inner.remove_swap(swap_id)?)
     }
 
     /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
@@ -860,12 +860,12 @@ impl PreparePayResponse {
     /// This can be useful when the app creates and broadcasts the lockup transaction and wants to
     /// persist the txid immediately before websocket updates arrive from Boltz. It helps avoid a
     /// race where a fast retry flow could submit the lockup transaction twice.
-    pub fn set_lockup_txid(&self, txid: String) -> Result<(), LwkError> {
+    pub fn set_lockup_txid(&self, txid: &str) -> Result<(), LwkError> {
         self.inner
             .lock()?
             .as_mut()
             .ok_or(LwkError::ObjectConsumed)?
-            .set_lockup_txid(txid)?;
+            .set_lockup_txid(txid.to_string())?;
         Ok(())
     }
 
@@ -1140,12 +1140,12 @@ impl LockupResponse {
     /// This can be useful when the app creates and broadcasts the lockup transaction and wants to
     /// persist the txid immediately before websocket updates arrive from Boltz. It helps avoid a
     /// race where a fast retry flow could submit the lockup transaction twice.
-    pub fn set_lockup_txid(&self, txid: String) -> Result<(), LwkError> {
+    pub fn set_lockup_txid(&self, txid: &str) -> Result<(), LwkError> {
         self.inner
             .lock()?
             .as_mut()
             .ok_or(LwkError::ObjectConsumed)?
-            .set_lockup_txid(txid)?;
+            .set_lockup_txid(txid.to_string())?;
         Ok(())
     }
 
@@ -1191,7 +1191,10 @@ impl LockupResponse {
 #[uniffi::export]
 impl WebHook {
     #[uniffi::constructor]
-    pub fn new(url: String, status: Vec<String>) -> Arc<Self> {
-        Arc::new(Self { url, status })
+    pub fn new(url: &str, status: &[String]) -> Arc<Self> {
+        Arc::new(Self {
+            url: url.to_string(),
+            status: status.to_vec(),
+        })
     }
 }

@@ -43,6 +43,7 @@ jobs:
         - uses: dtolnay/rust-toolchain@1.85.0
           with:
             targets: x86_64-apple-ios,aarch64-apple-ios,aarch64-apple-ios-sim,aarch64-apple-darwin
+        - run: brew install xcodegen
         - uses: extractions/setup-just@v2
           with:
             just-version: 1.5.0  # optional semver specification, otherwise latest

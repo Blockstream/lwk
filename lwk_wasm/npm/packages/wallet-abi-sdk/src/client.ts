@@ -4,6 +4,8 @@ import type {
 } from "./protocol.js";
 import {
   createGetSignerReceiveAddressRequest,
+  createGetRawSigningXOnlyPubkeyRequest,
+  parseGetRawSigningXOnlyPubkeyResponse,
   parseGetSignerReceiveAddressResponse,
 } from "./protocol.js";
 
@@ -92,6 +94,29 @@ export class WalletAbiClient {
       );
 
       return parseGetSignerReceiveAddressResponse(response);
+    } catch (error) {
+      if (error instanceof WalletAbiClientError) {
+        throw error;
+      }
+
+      throw new WalletAbiClientError(normalizeErrorMessage(error));
+    }
+  }
+
+  async getRawSigningXOnlyPubkey(): Promise<string> {
+    await this.connect();
+
+    try {
+      const response = await this.#withTimeout(
+        Promise.resolve(
+          this.#requester.request(
+            createGetRawSigningXOnlyPubkeyRequest(this.#nextRpcRequestId())
+          )
+        ),
+        `wallet request get_raw_signing_x_only_pubkey timed out after ${String(this.#requestTimeoutMs)}ms`
+      );
+
+      return parseGetRawSigningXOnlyPubkeyResponse(response);
     } catch (error) {
       if (error instanceof WalletAbiClientError) {
         throw error;

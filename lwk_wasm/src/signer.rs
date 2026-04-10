@@ -58,8 +58,8 @@ impl Signer {
 
     /// Return the extended public key of the signer
     #[wasm_bindgen(js_name = getMasterXpub)]
-    pub fn get_master_xpub(&self) -> Result<Xpub, Error> {
-        Ok(self.inner.xpub().into())
+    pub fn get_master_xpub(&self) -> Xpub {
+        self.inner.xpub().into()
     }
 
     /// Return keyorigin and xpub, like "[73c5da0a/84h/1h/0h]tpub..."
@@ -73,8 +73,8 @@ impl Signer {
     }
 
     /// Return the signer fingerprint
-    pub fn fingerprint(&self) -> Result<String, Error> {
-        Ok(self.inner.fingerprint().to_string())
+    pub fn fingerprint(&self) -> String {
+        self.inner.fingerprint().to_string()
     }
 
     /// Return the mnemonic of the signer

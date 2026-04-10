@@ -24,6 +24,9 @@ pub struct Cache {
     /// Store for all wallet transactions
     txs_store: Arc<dyn DynStore>,
 
+    /// all txids in txs_store
+    txids: HashSet<Txid>,
+
     /// contains all my script up to an empty batch of BATCHSIZE
     pub paths: HashMap<Script, (Chain, ChildNumber)>,
 
@@ -59,6 +62,7 @@ impl Default for Cache {
     fn default() -> Self {
         Self {
             txs_store: Arc::new(MemoryStore::default()),
+            txids: HashSet::default(),
             paths: HashMap::default(),
             scripts: HashMap::default(),
             heights: HashMap::default(),
@@ -220,7 +224,12 @@ impl Cache {
     }
 
     pub fn all_txids(&self) -> HashSet<Txid> {
-        // TODO: consider reading them from the store only when the store is loaded
+        // TODO: try to remove this clone
+        self.txids.clone()
+    }
+
+    #[allow(dead_code)]
+    pub fn all_txids_from_txs_store(&self) -> HashSet<Txid> {
         self.txs_store
             .get(TXIDS_KEY)
             .ok()
@@ -292,16 +301,16 @@ impl Cache {
     }
 
     fn extend_all_txs(&mut self, txs: Vec<(Txid, Transaction)>) -> Result<(), Error> {
-        let mut txids = self.all_txids();
         for (txid, tx) in &txs {
             self.txs_store
                 .put(&tx_key(txid), &elements::encode::serialize(tx))
                 .map_err(Error::StoreError)?;
-            txids.insert(*txid);
+            self.txids.insert(*txid);
         }
         // TODO: order keys
-        let txids = serde_json::to_vec(&txids.iter().map(|t| t.to_string()).collect::<Vec<_>>())
-            .map_err(Error::from)?;
+        let txids =
+            serde_json::to_vec(&self.txids.iter().map(|t| t.to_string()).collect::<Vec<_>>())
+                .map_err(Error::from)?;
         self.txs_store
             .put(TXIDS_KEY, &txids)
             .map_err(Error::StoreError)?;

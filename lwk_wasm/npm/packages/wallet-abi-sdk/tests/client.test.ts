@@ -79,7 +79,7 @@ test("wallet abi client gets signer receive address", async () => {
 
   assert.equal(
     address,
-    "tlq1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqf6u0sd"
+    "tlq1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqf6u0sd",
   );
   assert.equal(requestCalls, 1);
 });
@@ -91,15 +91,17 @@ test("wallet abi client processes tx-create requests", async () => {
     "00000000-0000-4000-8000-000000000004",
     network,
     WalletAbiRuntimeParams.new([], [], null, null),
-    false
+    false,
   );
   const expected = WalletAbiTxCreateResponse.ok(
     request.requestId(),
     network,
     WalletAbiTransactionInfo.new(
       "00",
-      new Txid("0000000000000000000000000000000000000000000000000000000000000000")
-    )
+      new Txid(
+        "0000000000000000000000000000000000000000000000000000000000000000",
+      ),
+    ),
   );
   const client = new WalletAbiClient({
     requester: {
@@ -145,7 +147,7 @@ test("wallet abi client gets raw signing xonly pubkey", async () => {
 
   assert.equal(
     xonly,
-    "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+    "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
   );
   assert.equal(requestCalls, 1);
 });

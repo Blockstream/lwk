@@ -45,7 +45,7 @@ export function hasCurrentGeneratedFeatures(): boolean {
 
 export function runWasmPack(
   target: "bundler" | "nodejs",
-  outDir: string
+  outDir: string,
 ): void {
   const features = getWasmFeatures();
   const args = ["build", crateRoot, "--target", target, "--out-dir", outDir];

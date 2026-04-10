@@ -126,4 +126,3 @@ Branding, secure-origin requirements, and runtime config loading remain caller c
 - app-local state management
 - `wallet_abi_get_capabilities`
 - `wallet_abi_evaluate_request`
-

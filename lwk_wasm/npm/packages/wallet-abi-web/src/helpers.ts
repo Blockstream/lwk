@@ -8,7 +8,7 @@ type LwkWalletAbiWebInitModule = LwkWalletAbiWebModule & {
 let initPromise: Promise<LwkWalletAbiWebModule> | undefined;
 
 export function loadLwkWalletAbiWeb(
-  moduleOrPath?: unknown
+  moduleOrPath?: unknown,
 ): Promise<LwkWalletAbiWebModule> {
   if (initPromise) {
     return initPromise;
@@ -52,7 +52,7 @@ export function publicKeyFromString(pubkey: string): lwkWeb.PublicKey {
 }
 
 export function xOnlyPublicKeyFromString(
-  pubkey: string
+  pubkey: string,
 ): lwkWeb.XOnlyPublicKey {
   return lwkWeb.XOnlyPublicKey.fromString(pubkey);
 }
@@ -63,7 +63,7 @@ export function txidFromString(txid: string): lwkWeb.Txid {
 
 export function networkFromString(
   name: string,
-  policyAssetHex?: string
+  policyAssetHex?: string,
 ): lwkWeb.Network {
   switch (name) {
     case "liquid":

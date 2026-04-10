@@ -59,7 +59,9 @@ export interface WalletAbiWalletConnectSessionRequest {
 export interface WalletAbiWalletConnectClient {
   connect?(): Promise<void> | void;
   disconnect?(): Promise<void> | void;
-  request(input: WalletAbiWalletConnectSessionRequest): Promise<unknown> | unknown;
+  request(
+    input: WalletAbiWalletConnectSessionRequest,
+  ): Promise<unknown> | unknown;
 }
 
 export interface CreateWalletConnectRequesterOptions {
@@ -80,11 +82,15 @@ export interface WalletAbiSessionApprovalSignClient {
   };
   on(
     event: "session_connect",
-    listener: (event: SignClientTypes.EventArguments["session_connect"]) => void
+    listener: (
+      event: SignClientTypes.EventArguments["session_connect"],
+    ) => void,
   ): void;
   off(
     event: "session_connect",
-    listener: (event: SignClientTypes.EventArguments["session_connect"]) => void
+    listener: (
+      event: SignClientTypes.EventArguments["session_connect"],
+    ) => void,
   ): void;
 }
 
@@ -145,7 +151,9 @@ function walletAbiNetworkRpcUrl(network: WalletAbiTransportNetwork): string {
   }
 }
 
-function walletAbiNetworkExplorerUrl(network: WalletAbiTransportNetwork): string {
+function walletAbiNetworkExplorerUrl(
+  network: WalletAbiTransportNetwork,
+): string {
   switch (network) {
     case "liquid":
       return "https://blockstream.info/liquid";
@@ -157,15 +165,15 @@ function walletAbiNetworkExplorerUrl(network: WalletAbiTransportNetwork): string
 }
 
 export function isWalletAbiWalletConnectChain(
-  value: string
+  value: string,
 ): value is WalletAbiWalletConnectChain {
   return WALLET_ABI_WALLETCONNECT_CHAINS.includes(
-    value as WalletAbiWalletConnectChain
+    value as WalletAbiWalletConnectChain,
   );
 }
 
 export function walletAbiNetworkToWalletConnectChain(
-  network: WalletAbiTransportNetwork
+  network: WalletAbiTransportNetwork,
 ): WalletAbiWalletConnectChain {
   switch (network) {
     case "liquid":
@@ -178,7 +186,7 @@ export function walletAbiNetworkToWalletConnectChain(
 }
 
 export function walletConnectChainToWalletAbiNetwork(
-  chainId: WalletAbiWalletConnectChain
+  chainId: WalletAbiWalletConnectChain,
 ): WalletAbiTransportNetwork {
   switch (chainId) {
     case "walabi:liquid":
@@ -191,7 +199,7 @@ export function walletConnectChainToWalletAbiNetwork(
 }
 
 export function createWalletAbiCaipNetwork(
-  network: WalletAbiTransportNetwork
+  network: WalletAbiTransportNetwork,
 ): CustomCaipNetwork {
   const caipNetworkId = walletAbiNetworkToWalletConnectChain(network);
   const [, chainReference] = caipNetworkId.split(":");
@@ -226,7 +234,7 @@ export function createWalletAbiRequiredNamespaces(
   input:
     | WalletAbiTransportNetwork
     | WalletAbiWalletConnectChain
-    | readonly WalletAbiWalletConnectChain[]
+    | readonly WalletAbiWalletConnectChain[],
 ): Record<
   typeof WALLET_ABI_WALLETCONNECT_NAMESPACE,
   WalletAbiWalletConnectNamespace
@@ -258,7 +266,7 @@ export function createWalletAbiRequiredNamespaces(
 
 export function createWalletAbiMetadata(
   appUrl: string,
-  overrides: Partial<WalletAbiMetadata> = {}
+  overrides: Partial<WalletAbiMetadata> = {},
 ): WalletAbiMetadata {
   const normalizedUrl = new URL(appUrl);
 
@@ -276,7 +284,7 @@ export function createWalletAbiMetadata(
 }
 
 function resolveTopic(
-  options: CreateWalletConnectRequesterOptions
+  options: CreateWalletConnectRequesterOptions,
 ): string | undefined {
   const dynamicTopic = options.getTopic?.();
   if (dynamicTopic === null) {
@@ -307,7 +315,7 @@ function extractRequestParams(request: WalletAbiJsonRpcRequest): unknown {
 
 function createWalletAbiJsonRpcEnvelopeFromResult(
   request: WalletAbiJsonRpcRequest,
-  result: unknown
+  result: unknown,
 ): WalletAbiJsonRpcResponse {
   let normalizedResult = result;
 
@@ -327,7 +335,7 @@ function createWalletAbiJsonRpcEnvelopeFromResult(
 }
 
 export function createWalletConnectRequester(
-  options: CreateWalletConnectRequesterOptions
+  options: CreateWalletConnectRequesterOptions,
 ): WalletAbiRequester {
   return {
     connect() {
@@ -355,7 +363,7 @@ export function createWalletConnectRequester(
 
 function sessionContainsChain(
   session: SessionTypes.Struct,
-  chainId: WalletAbiWalletConnectChain
+  chainId: WalletAbiWalletConnectChain,
 ): boolean {
   const namespace = session.namespaces[WALLET_ABI_WALLETCONNECT_NAMESPACE];
   if (namespace === undefined) {
@@ -371,15 +379,15 @@ function sessionContainsChain(
   }
 
   return (
-    session.requiredNamespaces[WALLET_ABI_WALLETCONNECT_NAMESPACE]?.chains?.includes(
-      chainId
-    ) === true
+    session.requiredNamespaces[
+      WALLET_ABI_WALLETCONNECT_NAMESPACE
+    ]?.chains?.includes(chainId) === true
   );
 }
 
 export function isWalletAbiSession(
   session: SessionTypes.Struct,
-  chainId: WalletAbiWalletConnectChain
+  chainId: WalletAbiWalletConnectChain,
 ): boolean {
   const namespace = session.namespaces[WALLET_ABI_WALLETCONNECT_NAMESPACE];
   if (namespace === undefined) {
@@ -387,7 +395,7 @@ export function isWalletAbiSession(
   }
 
   const supportsMethods = WALLET_ABI_WALLETCONNECT_METHODS.every((method) =>
-    namespace.methods.includes(method)
+    namespace.methods.includes(method),
   );
 
   return supportsMethods && sessionContainsChain(session, chainId);
@@ -395,7 +403,7 @@ export function isWalletAbiSession(
 
 export function selectWalletAbiSessions(
   sessions: SessionTypes.Struct[],
-  chainId: WalletAbiWalletConnectChain
+  chainId: WalletAbiWalletConnectChain,
 ): SelectedWalletAbiSessions {
   const matchingSessions = sessions
     .filter((session) => isWalletAbiSession(session, chainId))
@@ -410,9 +418,10 @@ export function selectWalletAbiSessions(
 
 function currentWalletAbiSession(
   signClient: WalletAbiSessionApprovalSignClient,
-  chainId: WalletAbiWalletConnectChain
+  chainId: WalletAbiWalletConnectChain,
 ): SessionTypes.Struct | null {
-  return selectWalletAbiSessions(signClient.session.getAll(), chainId).activeSession;
+  return selectWalletAbiSessions(signClient.session.getAll(), chainId)
+    .activeSession;
 }
 
 function sleep(delayMs: number): Promise<void> {
@@ -424,7 +433,7 @@ function sleep(delayMs: number): Promise<void> {
 function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
-  message: string
+  message: string,
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timeoutId = setTimeout(() => {
@@ -439,7 +448,7 @@ function withTimeout<T>(
       (error) => {
         clearTimeout(timeoutId);
         reject(error);
-      }
+      },
     );
   });
 }
@@ -514,7 +523,7 @@ export async function awaitWalletAbiApprovedSession({
     return await withTimeout(
       Promise.race([approvalPromise, sessionConnectPromise]),
       connectTimeoutMs,
-      "WalletConnect session approval timed out"
+      "WalletConnect session approval timed out",
     );
   } finally {
     stopWaiting();
@@ -556,7 +565,10 @@ interface WalletAbiSessionSignClient extends WalletAbiSessionApprovalSignClient 
     uri?: string;
     approval(): Promise<SessionTypes.Struct>;
   }>;
-  disconnect(input: { topic: string; reason: WalletAbiDisconnectReason }): Promise<void>;
+  disconnect(input: {
+    topic: string;
+    reason: WalletAbiDisconnectReason;
+  }): Promise<void>;
   request(input: {
     topic: string;
     chainId: WalletAbiWalletConnectChain;
@@ -567,24 +579,40 @@ interface WalletAbiSessionSignClient extends WalletAbiSessionApprovalSignClient 
   }): Promise<unknown>;
   on(
     event: "session_connect",
-    listener: (event: SignClientTypes.EventArguments["session_connect"]) => void
+    listener: (
+      event: SignClientTypes.EventArguments["session_connect"],
+    ) => void,
   ): void;
   on(
     event: "session_update",
-    listener: (event: SignClientTypes.EventArguments["session_update"]) => void
+    listener: (event: SignClientTypes.EventArguments["session_update"]) => void,
   ): void;
-  on(event: "session_delete", listener: (event: { topic: string }) => void): void;
-  on(event: "session_expire", listener: (event: { topic: string }) => void): void;
+  on(
+    event: "session_delete",
+    listener: (event: { topic: string }) => void,
+  ): void;
+  on(
+    event: "session_expire",
+    listener: (event: { topic: string }) => void,
+  ): void;
   off(
     event: "session_connect",
-    listener: (event: SignClientTypes.EventArguments["session_connect"]) => void
+    listener: (
+      event: SignClientTypes.EventArguments["session_connect"],
+    ) => void,
   ): void;
   off(
     event: "session_update",
-    listener: (event: SignClientTypes.EventArguments["session_update"]) => void
+    listener: (event: SignClientTypes.EventArguments["session_update"]) => void,
   ): void;
-  off(event: "session_delete", listener: (event: { topic: string }) => void): void;
-  off(event: "session_expire", listener: (event: { topic: string }) => void): void;
+  off(
+    event: "session_delete",
+    listener: (event: { topic: string }) => void,
+  ): void;
+  off(
+    event: "session_expire",
+    listener: (event: { topic: string }) => void,
+  ): void;
 }
 
 const DEFAULT_WALLET_ABI_STORAGE_PREFIX = "lwk-wallet-abi-sdk";
@@ -592,7 +620,7 @@ const DEFAULT_WALLET_ABI_STORAGE_PREFIX = "lwk-wallet-abi-sdk";
 function disconnectSession(
   signClient: WalletAbiSessionSignClient,
   topic: string,
-  reason: WalletAbiDisconnectReason
+  reason: WalletAbiDisconnectReason,
 ): Promise<void> {
   return signClient
     .disconnect({
@@ -603,7 +631,7 @@ function disconnectSession(
 }
 
 function createRequiredNamespaces(
-  chainId: WalletAbiWalletConnectChain
+  chainId: WalletAbiWalletConnectChain,
 ): Record<string, WalletAbiWalletConnectNamespace> {
   const requiredNamespaces = createWalletAbiRequiredNamespaces(chainId);
 
@@ -615,12 +643,12 @@ function createRequiredNamespaces(
         chains: [...value.chains],
         events: [...value.events],
       },
-    ])
+    ]),
   );
 }
 
 function normalizeRequestParams(
-  params: unknown
+  params: unknown,
 ): object | Record<string, unknown> | unknown[] {
   if (Array.isArray(params)) {
     return params;
@@ -634,7 +662,7 @@ function normalizeRequestParams(
 }
 
 function appKitControls(
-  connector: WalletAbiUniversalConnectorInstance
+  connector: WalletAbiUniversalConnectorInstance,
 ): WalletAbiAppKitControls {
   return connector.appKit;
 }
@@ -667,9 +695,7 @@ function describeWalletConnectError(error: unknown): string {
   return "Unknown error";
 }
 
-class WalletAbiUniversalSessionController
-  implements WalletAbiSessionController
-{
+class WalletAbiUniversalSessionController implements WalletAbiSessionController {
   readonly chainId: WalletAbiWalletConnectChain;
   readonly #connector: WalletAbiUniversalConnectorInstance;
   readonly #signClient: WalletAbiSessionSignClient;
@@ -684,7 +710,7 @@ class WalletAbiUniversalSessionController
     session: SessionTypes.Struct | null,
     chainId: WalletAbiWalletConnectChain,
     requiredNamespaces: Record<string, WalletAbiWalletConnectNamespace>,
-    disconnectReason: WalletAbiDisconnectReason
+    disconnectReason: WalletAbiDisconnectReason,
   ) {
     this.#connector = connector;
     this.#signClient = signClient;
@@ -707,7 +733,7 @@ class WalletAbiUniversalSessionController
 
     const { activeSession } = selectWalletAbiSessions(
       this.#signClient.session.getAll(),
-      this.chainId
+      this.chainId,
     );
     this.#session = activeSession;
     return activeSession;
@@ -740,7 +766,9 @@ class WalletAbiUniversalSessionController
       });
       this.#session = session;
     } catch (error) {
-      throw new Error(`Error connecting to wallet: ${describeWalletConnectError(error)}`);
+      throw new Error(
+        `Error connecting to wallet: ${describeWalletConnectError(error)}`,
+      );
     } finally {
       if (modalOpened) {
         await appKit.close().catch(() => undefined);
@@ -762,7 +790,11 @@ class WalletAbiUniversalSessionController
     }
 
     this.#session = null;
-    await disconnectSession(this.#signClient, session.topic, this.#disconnectReason);
+    await disconnectSession(
+      this.#signClient,
+      session.topic,
+      this.#disconnectReason,
+    );
   }
 
   request(request: WalletAbiWalletConnectRequest): Promise<unknown> {
@@ -777,7 +809,9 @@ class WalletAbiUniversalSessionController
       request: {
         method: request.method,
         params:
-          request.params === undefined ? undefined : normalizeRequestParams(request.params),
+          request.params === undefined
+            ? undefined
+            : normalizeRequestParams(request.params),
       },
     });
   }
@@ -836,13 +870,19 @@ class WalletAbiUniversalSessionController
     const extraSessions = this.#signClient.session
       .getAll()
       .filter(
-        (session) => session.topic !== activeTopic && isWalletAbiSession(session, this.chainId)
+        (session) =>
+          session.topic !== activeTopic &&
+          isWalletAbiSession(session, this.chainId),
       );
 
     await Promise.all(
       extraSessions.map((session) =>
-        disconnectSession(this.#signClient, session.topic, this.#disconnectReason)
-      )
+        disconnectSession(
+          this.#signClient,
+          session.topic,
+          this.#disconnectReason,
+        ),
+      ),
     );
   }
 }
@@ -854,18 +894,21 @@ export async function createWalletAbiSessionController({
   metadata,
   storagePrefix,
 }: CreateWalletAbiSessionControllerOptions): Promise<WalletAbiSessionController> {
-  const [{ UniversalConnector }, signClientModule, { getSdkError }] = await Promise.all([
-    import("@reown/appkit-universal-connector"),
-    import("@walletconnect/sign-client"),
-    import("@walletconnect/utils"),
-  ]);
+  const [{ UniversalConnector }, signClientModule, { getSdkError }] =
+    await Promise.all([
+      import("@reown/appkit-universal-connector"),
+      import("@walletconnect/sign-client"),
+      import("@walletconnect/utils"),
+    ]);
   const signClientFactory = signClientModule.default;
 
   const resolvedMetadata = createWalletAbiMetadata(appUrl, metadata);
   const chainId = walletAbiNetworkToWalletConnectChain(network);
   const caipNetwork = createWalletAbiCaipNetwork(network);
   const requiredNamespaces = createRequiredNamespaces(chainId);
-  const disconnectReason = getSdkError("USER_DISCONNECTED") as WalletAbiDisconnectReason;
+  const disconnectReason = getSdkError(
+    "USER_DISCONNECTED",
+  ) as WalletAbiDisconnectReason;
   const signClient = (await signClientFactory.init({
     projectId,
     metadata: resolvedMetadata,
@@ -874,12 +917,12 @@ export async function createWalletAbiSessionController({
 
   const { activeSession, staleSessions } = selectWalletAbiSessions(
     signClient.session.getAll(),
-    chainId
+    chainId,
   );
   await Promise.all(
     staleSessions.map((session) =>
-      disconnectSession(signClient, session.topic, disconnectReason)
-    )
+      disconnectSession(signClient, session.topic, disconnectReason),
+    ),
   );
 
   const connector = (await UniversalConnector.init({
@@ -908,6 +951,6 @@ export async function createWalletAbiSessionController({
     activeSession,
     chainId,
     requiredNamespaces,
-    disconnectReason
+    disconnectReason,
   );
 }

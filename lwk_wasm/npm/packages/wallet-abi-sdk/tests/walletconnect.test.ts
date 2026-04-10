@@ -45,21 +45,21 @@ test("walletconnect chain mapping", () => {
   assert.equal(walletAbiNetworkToWalletConnectChain("liquid"), "walabi:liquid");
   assert.equal(
     walletAbiNetworkToWalletConnectChain("testnet-liquid"),
-    "walabi:testnet-liquid"
+    "walabi:testnet-liquid",
   );
   assert.equal(
     walletAbiNetworkToWalletConnectChain("localtest-liquid"),
-    "walabi:localtest-liquid"
+    "walabi:localtest-liquid",
   );
 
   assert.equal(walletConnectChainToWalletAbiNetwork("walabi:liquid"), "liquid");
   assert.equal(
     walletConnectChainToWalletAbiNetwork("walabi:testnet-liquid"),
-    "testnet-liquid"
+    "testnet-liquid",
   );
   assert.equal(
     walletConnectChainToWalletAbiNetwork("walabi:localtest-liquid"),
-    "localtest-liquid"
+    "localtest-liquid",
   );
 });
 
@@ -101,7 +101,7 @@ test("walletconnect metadata defaults and overrides", () => {
   assert.equal(defaults.name, "LWK Wallet ABI SDK");
   assert.equal(
     defaults.description,
-    "Wallet ABI WalletConnect session for a browser application."
+    "Wallet ABI WalletConnect session for a browser application.",
   );
   assert.equal(defaults.url, "https://example.com/app");
   assert.deepEqual(defaults.icons, ["https://example.com/favicon.ico"]);
@@ -130,7 +130,9 @@ test("walletconnect requester normalizes getter params", async () => {
     },
   });
 
-  const response = await requester.request(createGetSignerReceiveAddressRequest(5));
+  const response = await requester.request(
+    createGetSignerReceiveAddressRequest(5),
+  );
 
   assert.deepEqual(calls, [
     {
@@ -144,8 +146,7 @@ test("walletconnect requester normalizes getter params", async () => {
   assert.deepEqual(response, {
     id: 5,
     jsonrpc: "2.0",
-    result:
-      "tlq1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqf6u0sd",
+    result: "tlq1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqf6u0sd",
   });
 });
 
@@ -169,7 +170,7 @@ test("walletconnect requester forwards tx-create params and dynamic topic", asyn
     "00000000-0000-4000-8000-000000000003",
     networkFromString("liquid-testnet"),
     WalletAbiRuntimeParams.new([], [], null, null),
-    false
+    false,
   );
   const response = await requester.request(createProcessRequest(6, request));
 
@@ -240,12 +241,15 @@ test("walletconnect session selection prefers newest active session", () => {
   assert.equal(isWalletAbiSession(newest, chainId), true);
   assert.equal(isWalletAbiSession(otherChain, chainId), false);
 
-  const selected = selectWalletAbiSessions([oldest, newest, otherChain], chainId);
+  const selected = selectWalletAbiSessions(
+    [oldest, newest, otherChain],
+    chainId,
+  );
 
   assert.equal(selected.activeSession?.topic, "topic-new");
   assert.deepEqual(
     selected.staleSessions.map((session) => session.topic),
-    ["topic-old"]
+    ["topic-old"],
   );
 });
 

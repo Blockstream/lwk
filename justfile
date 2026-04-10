@@ -45,6 +45,10 @@ simplicity-wallet-abi-check:
 wallet-abi-sdk-check:
     cd lwk_wasm/npm && LWK_WASM_FEATURES="serial,simplicity" npm run check
 
+# Validate eslint and prettier for the npm workspace.
+wasm-npm-style-check:
+    cd lwk_wasm/npm && npm run style:check
+
 # build the python bindings and start a python env with them
 python-env-bindings: python-build-bindings
     PYTHONPATH=target/release/bindings/ python3

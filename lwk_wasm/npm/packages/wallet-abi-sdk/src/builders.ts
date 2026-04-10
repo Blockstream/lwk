@@ -24,7 +24,7 @@ export function generateRequestId(): string {
   }
 
   throw new Error(
-    "Wallet ABI SDK requires globalThis.crypto.randomUUID() support."
+    "Wallet ABI SDK requires globalThis.crypto.randomUUID() support.",
   );
 }
 
@@ -38,10 +38,12 @@ export function createWalletInput(input: {
 }): WalletAbiInputSchema {
   let schema = WalletAbiInputSchema.fromSequence(
     input.id,
-    WalletAbiUtxoSource.wallet(input.filter ?? WalletAbiWalletSourceFilter.any()),
+    WalletAbiUtxoSource.wallet(
+      input.filter ?? WalletAbiWalletSourceFilter.any(),
+    ),
     input.unblinding ?? WalletAbiInputUnblinding.wallet(),
     input.sequence ?? TxSequence.max(),
-    input.finalizer ?? WalletAbiFinalizerSpec.wallet()
+    input.finalizer ?? WalletAbiFinalizerSpec.wallet(),
   );
 
   if (input.issuance !== undefined) {
@@ -64,7 +66,7 @@ export function createProvidedInput(input: {
     WalletAbiUtxoSource.provided(input.outpoint),
     input.unblinding ?? WalletAbiInputUnblinding.explicit(),
     input.sequence ?? TxSequence.max(),
-    input.finalizer ?? WalletAbiFinalizerSpec.wallet()
+    input.finalizer ?? WalletAbiFinalizerSpec.wallet(),
   );
 
   if (input.issuance !== undefined) {
@@ -84,6 +86,6 @@ export function createTxCreateRequest(input: {
     input.requestId ?? generateRequestId(),
     input.network,
     input.params,
-    input.broadcast ?? false
+    input.broadcast ?? false,
   );
 }

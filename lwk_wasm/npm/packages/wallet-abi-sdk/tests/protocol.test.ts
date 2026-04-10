@@ -50,19 +50,25 @@ test("wallet abi method guards", () => {
 
   assert.equal(
     isWalletAbiGetterMethod(GET_SIGNER_RECEIVE_ADDRESS_METHOD),
-    true
+    true,
   );
   assert.equal(
     isWalletAbiGetterMethod(GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD),
-    true
+    true,
   );
   assert.equal(
     isWalletAbiGetterMethod(WALLET_ABI_PROCESS_REQUEST_METHOD),
-    false
+    false,
   );
 
-  assert.equal(isWalletAbiProcessMethod(WALLET_ABI_PROCESS_REQUEST_METHOD), true);
-  assert.equal(isWalletAbiProcessMethod(GET_SIGNER_RECEIVE_ADDRESS_METHOD), false);
+  assert.equal(
+    isWalletAbiProcessMethod(WALLET_ABI_PROCESS_REQUEST_METHOD),
+    true,
+  );
+  assert.equal(
+    isWalletAbiProcessMethod(GET_SIGNER_RECEIVE_ADDRESS_METHOD),
+    false,
+  );
 });
 
 test("wallet abi network name translation", () => {
@@ -80,26 +86,26 @@ test("wallet abi network name translation", () => {
   assert.equal(walletAbiNetworkFromLwkNetworkName("liquid"), "liquid");
   assert.equal(
     walletAbiNetworkFromLwkNetworkName("liquid-testnet"),
-    "testnet-liquid"
+    "testnet-liquid",
   );
   assert.equal(
     walletAbiNetworkFromLwkNetworkName("liquid-regtest"),
-    "localtest-liquid"
+    "localtest-liquid",
   );
 
   assert.equal(walletAbiNetworkToLwkNetworkName("liquid"), "liquid");
   assert.equal(
     walletAbiNetworkToLwkNetworkName("testnet-liquid"),
-    "liquid-testnet"
+    "liquid-testnet",
   );
   assert.equal(
     walletAbiNetworkToLwkNetworkName("localtest-liquid"),
-    "liquid-regtest"
+    "liquid-regtest",
   );
 
   assert.equal(
     walletAbiNetworkFromNetwork(networkFromString("liquid-testnet")),
-    "testnet-liquid"
+    "testnet-liquid",
   );
 });
 
@@ -116,7 +122,7 @@ test("get signer receive address envelope", () => {
       jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
       result: "tex1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq0qfhdv",
     }),
-    "tex1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq0qfhdv"
+    "tex1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq0qfhdv",
   );
 
   assert.equal(
@@ -125,7 +131,7 @@ test("get signer receive address envelope", () => {
       jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
       error: { code: -1, message: "boom" },
     }),
-    true
+    true,
   );
 
   assert.throws(
@@ -137,7 +143,7 @@ test("get signer receive address envelope", () => {
       }),
     (error: unknown) =>
       error instanceof WalletAbiProtocolError &&
-      error.message === `${GET_SIGNER_RECEIVE_ADDRESS_METHOD} failed: boom`
+      error.message === `${GET_SIGNER_RECEIVE_ADDRESS_METHOD} failed: boom`,
   );
 });
 
@@ -152,9 +158,10 @@ test("get raw signing xonly pubkey envelope", () => {
     parseGetRawSigningXOnlyPubkeyResponse({
       id: 8,
       jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
-      result: "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      result:
+        "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
     }),
-    "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+    "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
   );
 
   assert.throws(
@@ -166,7 +173,7 @@ test("get raw signing xonly pubkey envelope", () => {
       }),
     (error: unknown) =>
       error instanceof WalletAbiProtocolError &&
-      error.message === `${GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD} failed: boom`
+      error.message === `${GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD} failed: boom`,
   );
 });
 
@@ -176,15 +183,17 @@ test("process request envelope", () => {
     "00000000-0000-4000-8000-000000000002",
     network,
     WalletAbiRuntimeParams.new([], [], null, null),
-    false
+    false,
   );
   const response = WalletAbiTxCreateResponse.ok(
     request.requestId(),
     network,
     WalletAbiTransactionInfo.new(
       "00",
-      new Txid("0000000000000000000000000000000000000000000000000000000000000000")
-    )
+      new Txid(
+        "0000000000000000000000000000000000000000000000000000000000000000",
+      ),
+    ),
   );
 
   assert.deepEqual(createProcessRequest(9, request), {

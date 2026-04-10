@@ -2,7 +2,10 @@ import type {
   WalletAbiJsonRpcRequest,
   WalletAbiJsonRpcResponse,
 } from "./protocol.js";
-import type { WalletAbiTxCreateRequest, WalletAbiTxCreateResponse } from "./schema.js";
+import type {
+  WalletAbiTxCreateRequest,
+  WalletAbiTxCreateResponse,
+} from "./schema.js";
 import {
   createProcessRequest,
   createGetSignerReceiveAddressRequest,
@@ -17,7 +20,9 @@ type MaybePromise<T> = Promise<T> | T;
 export interface WalletAbiRequester {
   connect?(): MaybePromise<void>;
   disconnect?(): MaybePromise<void>;
-  request(request: WalletAbiJsonRpcRequest): MaybePromise<WalletAbiJsonRpcResponse>;
+  request(
+    request: WalletAbiJsonRpcRequest,
+  ): MaybePromise<WalletAbiJsonRpcResponse>;
 }
 
 export interface WalletAbiClientOptions {
@@ -90,10 +95,10 @@ export class WalletAbiClient {
       const response = await this.#withTimeout(
         Promise.resolve(
           this.#requester.request(
-            createGetSignerReceiveAddressRequest(this.#nextRpcRequestId())
-          )
+            createGetSignerReceiveAddressRequest(this.#nextRpcRequestId()),
+          ),
         ),
-        `wallet request get_signer_receive_address timed out after ${String(this.#requestTimeoutMs)}ms`
+        `wallet request get_signer_receive_address timed out after ${String(this.#requestTimeoutMs)}ms`,
       );
 
       return parseGetSignerReceiveAddressResponse(response);
@@ -113,10 +118,10 @@ export class WalletAbiClient {
       const response = await this.#withTimeout(
         Promise.resolve(
           this.#requester.request(
-            createGetRawSigningXOnlyPubkeyRequest(this.#nextRpcRequestId())
-          )
+            createGetRawSigningXOnlyPubkeyRequest(this.#nextRpcRequestId()),
+          ),
         ),
-        `wallet request get_raw_signing_x_only_pubkey timed out after ${String(this.#requestTimeoutMs)}ms`
+        `wallet request get_raw_signing_x_only_pubkey timed out after ${String(this.#requestTimeoutMs)}ms`,
       );
 
       return parseGetRawSigningXOnlyPubkeyResponse(response);
@@ -130,7 +135,7 @@ export class WalletAbiClient {
   }
 
   async processRequest(
-    request: WalletAbiTxCreateRequest
+    request: WalletAbiTxCreateRequest,
   ): Promise<WalletAbiTxCreateResponse> {
     await this.connect();
 
@@ -138,10 +143,10 @@ export class WalletAbiClient {
       const response = await this.#withTimeout(
         Promise.resolve(
           this.#requester.request(
-            createProcessRequest(this.#nextRpcRequestId(), request)
-          )
+            createProcessRequest(this.#nextRpcRequestId(), request),
+          ),
         ),
-        `wallet request wallet_abi_process_request timed out after ${String(this.#requestTimeoutMs)}ms`
+        `wallet request wallet_abi_process_request timed out after ${String(this.#requestTimeoutMs)}ms`,
       );
 
       return parseProcessRequestResponse(response);

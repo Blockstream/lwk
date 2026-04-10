@@ -107,13 +107,13 @@ export function isWalletAbiMethod(value: string): value is WalletAbiMethod {
 }
 
 export function isJsonRpcErrorResponse(
-  value: unknown
+  value: unknown,
 ): value is WalletAbiJsonRpcErrorResponse {
   return isRecord(value) && isRecord(value.error);
 }
 
 export function isWalletAbiGetterMethod(
-  value: string
+  value: string,
 ): value is
   | typeof GET_SIGNER_RECEIVE_ADDRESS_METHOD
   | typeof GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD {
@@ -124,13 +124,13 @@ export function isWalletAbiGetterMethod(
 }
 
 export function isWalletAbiProcessMethod(
-  value: string
+  value: string,
 ): value is typeof WALLET_ABI_PROCESS_REQUEST_METHOD {
   return value === WALLET_ABI_PROCESS_REQUEST_METHOD;
 }
 
 export function walletAbiNetworkFromLwkNetworkName(
-  value: LwkWalletAbiNetworkName
+  value: LwkWalletAbiNetworkName,
 ): WalletAbiTransportNetwork {
   switch (value) {
     case "liquid":
@@ -143,7 +143,7 @@ export function walletAbiNetworkFromLwkNetworkName(
 }
 
 export function walletAbiNetworkToLwkNetworkName(
-  value: WalletAbiTransportNetwork
+  value: WalletAbiTransportNetwork,
 ): LwkWalletAbiNetworkName {
   switch (value) {
     case "liquid":
@@ -156,7 +156,7 @@ export function walletAbiNetworkToLwkNetworkName(
 }
 
 export function walletAbiNetworkFromNetwork(
-  network: Network
+  network: Network,
 ): WalletAbiTransportNetwork {
   if (network.isMainnet()) {
     return "liquid";
@@ -174,7 +174,7 @@ export function walletAbiNetworkFromNetwork(
 }
 
 export function createGetSignerReceiveAddressRequest(
-  id: number
+  id: number,
 ): WalletAbiGetSignerReceiveAddressRequest {
   return {
     id,
@@ -184,7 +184,7 @@ export function createGetSignerReceiveAddressRequest(
 }
 
 export function createGetRawSigningXOnlyPubkeyRequest(
-  id: number
+  id: number,
 ): WalletAbiGetRawSigningXOnlyPubkeyRequest {
   return {
     id,
@@ -196,13 +196,13 @@ export function createGetRawSigningXOnlyPubkeyRequest(
 export function parseGetSignerReceiveAddressResponse(value: unknown): string {
   if (isJsonRpcErrorResponse(value)) {
     throw new WalletAbiProtocolError(
-      `${GET_SIGNER_RECEIVE_ADDRESS_METHOD} failed: ${value.error.message}`
+      `${GET_SIGNER_RECEIVE_ADDRESS_METHOD} failed: ${value.error.message}`,
     );
   }
 
   if (!isRecord(value) || typeof value.result !== "string") {
     throw new WalletAbiProtocolError(
-      `expected ${GET_SIGNER_RECEIVE_ADDRESS_METHOD} result`
+      `expected ${GET_SIGNER_RECEIVE_ADDRESS_METHOD} result`,
     );
   }
 
@@ -212,13 +212,13 @@ export function parseGetSignerReceiveAddressResponse(value: unknown): string {
 export function parseGetRawSigningXOnlyPubkeyResponse(value: unknown): string {
   if (isJsonRpcErrorResponse(value)) {
     throw new WalletAbiProtocolError(
-      `${GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD} failed: ${value.error.message}`
+      `${GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD} failed: ${value.error.message}`,
     );
   }
 
   if (!isRecord(value) || typeof value.result !== "string") {
     throw new WalletAbiProtocolError(
-      `expected ${GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD} result`
+      `expected ${GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD} result`,
     );
   }
 
@@ -227,7 +227,7 @@ export function parseGetRawSigningXOnlyPubkeyResponse(value: unknown): string {
 
 export function createProcessRequest(
   id: number,
-  params: WalletAbiTxCreateRequest
+  params: WalletAbiTxCreateRequest,
 ): WalletAbiProcessRequest {
   return {
     id,
@@ -238,17 +238,17 @@ export function createProcessRequest(
 }
 
 export function parseProcessRequestResponse(
-  value: unknown
+  value: unknown,
 ): WalletAbiTxCreateResponse {
   if (isJsonRpcErrorResponse(value)) {
     throw new WalletAbiProtocolError(
-      `${WALLET_ABI_PROCESS_REQUEST_METHOD} failed: ${value.error.message}`
+      `${WALLET_ABI_PROCESS_REQUEST_METHOD} failed: ${value.error.message}`,
     );
   }
 
   if (!isRecord(value) || value.result === undefined) {
     throw new WalletAbiProtocolError(
-      `expected ${WALLET_ABI_PROCESS_REQUEST_METHOD} result`
+      `expected ${WALLET_ABI_PROCESS_REQUEST_METHOD} result`,
     );
   }
 

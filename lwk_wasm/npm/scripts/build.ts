@@ -75,7 +75,7 @@ function ensureGenerated(targetRoot: string): void {
 function copyGeneratedFiles(
   sourceRoot: string,
   destinationRoot: string,
-  files: readonly string[]
+  files: readonly string[],
 ): void {
   mkdirSync(destinationRoot, { recursive: true });
 
@@ -92,7 +92,7 @@ function stageNode(): void {
   copyGeneratedFiles(
     nodeGeneratedRoot,
     nodeDistGeneratedRoot,
-    nodeGeneratedFiles
+    nodeGeneratedFiles,
   );
 }
 
@@ -101,11 +101,7 @@ function stageWeb(): void {
 
   rmSync(webDistRoot, { force: true, recursive: true });
   mkdirSync(webDistRoot, { recursive: true });
-  copyGeneratedFiles(
-    webGeneratedRoot,
-    webDistGeneratedRoot,
-    webGeneratedFiles
-  );
+  copyGeneratedFiles(webGeneratedRoot, webDistGeneratedRoot, webGeneratedFiles);
 }
 
 function stage(): void {

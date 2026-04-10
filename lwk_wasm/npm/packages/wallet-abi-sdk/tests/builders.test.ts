@@ -29,7 +29,7 @@ test("builder generates request ids", () => {
   const requestId = generateRequestId();
   assert.match(
     requestId,
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u,
   );
 });
 
@@ -37,11 +37,11 @@ test("builder creates wallet inputs", () => {
   const filter = WalletAbiWalletSourceFilter.withFilters(
     WalletAbiAssetFilter.exact(
       assetIdFromString(
-        "144c654344aa716e1f3faf6f9bf8d832021ff5d6387b920ca43aa837ed3521f0"
-      )
+        "144c654344aa716e1f3faf6f9bf8d832021ff5d6387b920ca43aa837ed3521f0",
+      ),
     ),
     WalletAbiAmountFilter.exact(5_000n),
-    WalletAbiLockFilter.none()
+    WalletAbiLockFilter.none(),
   );
 
   const input = createWalletInput({
@@ -58,7 +58,7 @@ test("builder creates provided inputs", () => {
   const input = createProvidedInput({
     id: "provided-input",
     outpoint: outPointFromString(
-      "0000000000000000000000000000000000000000000000000000000000000000:1"
+      "0000000000000000000000000000000000000000000000000000000000000000:1",
     ),
   });
 
@@ -66,7 +66,7 @@ test("builder creates provided inputs", () => {
   assert.equal(input.utxoSource().kind(), "provided");
   assert.equal(
     input.utxoSource().providedOutpoint()?.txid().toString(),
-    "0000000000000000000000000000000000000000000000000000000000000000"
+    "0000000000000000000000000000000000000000000000000000000000000000",
   );
   assert.equal(input.utxoSource().providedOutpoint()?.vout(), 1);
   assert.equal(input.unblinding().kind(), "explicit");
@@ -86,11 +86,11 @@ test("builder creates tx-create requests", () => {
         1_000n,
         WalletAbiLockVariant.script(Script.empty()),
         WalletAbiAssetVariant.assetId(network.policyAsset()),
-        WalletAbiBlinderVariant.explicit()
+        WalletAbiBlinderVariant.explicit(),
       ),
     ],
     100.0,
-    null
+    null,
   );
 
   const request = createTxCreateRequest({
@@ -100,7 +100,7 @@ test("builder creates tx-create requests", () => {
 
   assert.match(
     request.requestId(),
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u,
   );
   assert.equal(request.network().isTestnet(), true);
   assert.equal(request.broadcast(), false);

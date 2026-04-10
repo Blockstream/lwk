@@ -36,31 +36,31 @@ const input = WalletAbiInputSchema.fromSequence(
   "input-0",
   WalletAbiUtxoSource.provided(
     new OutPoint(
-      "0000000000000000000000000000000000000000000000000000000000000000:0"
-    )
+      "0000000000000000000000000000000000000000000000000000000000000000:0",
+    ),
   ),
   WalletAbiInputUnblinding.explicit(),
   TxSequence.zero(),
-  WalletAbiFinalizerSpec.wallet()
+  WalletAbiFinalizerSpec.wallet(),
 );
 const output = WalletAbiOutputSchema.new(
   "output-0",
   1_000n,
   WalletAbiLockVariant.script(Script.empty()),
   WalletAbiAssetVariant.assetId(policyAsset),
-  WalletAbiBlinderVariant.explicit()
+  WalletAbiBlinderVariant.explicit(),
 );
 const params = WalletAbiRuntimeParams.new([input], [output], 100.0, null);
 const createRequest = WalletAbiTxCreateRequest.fromParts(
   "00000000-0000-4000-8000-000000000000",
   network,
   params,
-  false
+  false,
 );
 const evaluateRequest = WalletAbiTxEvaluateRequest.fromParts(
   "00000000-0000-4000-8000-000000000001",
   network,
-  params
+  params,
 );
 const preview = WalletAbiRequestPreview.new(
   [WalletAbiPreviewAssetDelta.new(policyAsset, -1_000n)],
@@ -69,31 +69,32 @@ const preview = WalletAbiRequestPreview.new(
       WalletAbiPreviewOutputKind.External,
       policyAsset,
       1_000n,
-      Script.empty()
+      Script.empty(),
     ),
   ],
-  []
+  [],
 );
 const transaction = WalletAbiTransactionInfo.new(
   "00",
-  new Txid("0000000000000000000000000000000000000000000000000000000000000000")
+  new Txid("0000000000000000000000000000000000000000000000000000000000000000"),
 );
 const createResponse = WalletAbiTxCreateResponse.ok(
   createRequest.requestId(),
   network,
   transaction,
-  JSON.stringify({ preview: JSON.parse(preview.toString()) })
+  JSON.stringify({ preview: JSON.parse(preview.toString()) }),
 );
 const evaluateResponse = WalletAbiTxEvaluateResponse.ok(
   evaluateRequest,
-  preview
+  preview,
 );
 
 const createResponseCtor: typeof WalletAbiTxCreateResponseFromSchema =
   WalletAbiTxCreateResponse;
 const evaluateRequestCtor: typeof WalletAbiTxEvaluateRequestFromSchema =
   WalletAbiTxEvaluateRequest;
-const parsedPreview: WalletAbiRequestPreview | undefined = createResponse.preview();
+const parsedPreview: WalletAbiRequestPreview | undefined =
+  createResponse.preview();
 const walletSourceFilter = WalletAbiWalletSourceFilter.any();
 
 void Network;

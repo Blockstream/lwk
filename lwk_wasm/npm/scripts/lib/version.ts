@@ -32,7 +32,7 @@ function readPublishedPackageVersions(): Array<{
     .sort((left, right) => left.localeCompare(right))
     .map((root) => {
       const packageJson = JSON.parse(
-        readFileSync(resolve(root, "package.json"), "utf8")
+        readFileSync(resolve(root, "package.json"), "utf8"),
       ) as {
         name?: string;
         version?: string;
@@ -55,7 +55,7 @@ export function ensureVersionsMatch(): void {
   for (const { name, version } of readPublishedPackageVersions()) {
     if (cargoVersion !== version) {
       throw new Error(
-        `Version mismatch: lwk_wasm/Cargo.toml is ${cargoVersion}, ${name} is ${version}`
+        `Version mismatch: lwk_wasm/Cargo.toml is ${cargoVersion}, ${name} is ${version}`,
       );
     }
   }

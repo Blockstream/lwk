@@ -9,11 +9,7 @@ const sharedGlobals = {
 
 export default [
   {
-    ignores: [
-      "generated/**",
-      "packages/*/dist/**",
-      "packages/node/tests/**",
-    ],
+    ignores: ["generated/**", "packages/*/dist/**", "packages/node/tests/**"],
   },
   {
     files: ["**/*.{js,mjs,cjs,ts}"],

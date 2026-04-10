@@ -3,9 +3,9 @@ import { loadLwkWalletAbiWeb as loadFromHelpers } from "lwk_wallet_abi_web/helpe
 
 const load: (moduleOrPath?: unknown) => Promise<typeof import("lwk_web")> =
   loadLwkWalletAbiWeb;
-const loadHelper: (moduleOrPath?: unknown) => Promise<
-  typeof import("lwk_web")
-> = loadFromHelpers;
+const loadHelper: (
+  moduleOrPath?: unknown,
+) => Promise<typeof import("lwk_web")> = loadFromHelpers;
 
 void load;
 void loadHelper;

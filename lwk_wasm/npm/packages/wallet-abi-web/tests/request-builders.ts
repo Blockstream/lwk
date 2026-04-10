@@ -21,7 +21,8 @@ import {
 
 const runtimeCtor: typeof WalletAbiRuntimeParamsFromSchema =
   WalletAbiRuntimeParams;
-const outputCtor: typeof WalletAbiOutputSchemaFromSchema = WalletAbiOutputSchema;
+const outputCtor: typeof WalletAbiOutputSchemaFromSchema =
+  WalletAbiOutputSchema;
 const issuanceKind: WalletAbiInputIssuanceKind = WalletAbiInputIssuanceKind.New;
 
 void runtimeCtor;

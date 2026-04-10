@@ -13,7 +13,7 @@ import { packageRoot } from "./paths.js";
 export function run(
   command: string,
   args: string[],
-  env?: NodeJS.ProcessEnv
+  env?: NodeJS.ProcessEnv,
 ): void {
   execFileSync(command, args, {
     cwd: packageRoot,

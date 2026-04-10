@@ -1,5 +1,5 @@
-import { Network, networkFromString } from "lwk_wallet_abi_web";
-import { networkFromString as networkFromHelpers } from "lwk_wallet_abi_web/helpers";
+import { Network, networkFromString } from "helpers_wallet_abi_web";
+import { networkFromString as networkFromHelpers } from "helpers_wallet_abi_web/helpers";
 
 const mainnet: Network = networkFromString("liquid");
 const testnet: Network = networkFromString("liquid-testnet");

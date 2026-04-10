@@ -1,9 +1,9 @@
-import type { Network } from "lwk_wallet_abi_web/schema";
+import type { Network } from "helpers_wallet_abi_web/schema";
 import {
   WalletAbiTxCreateRequest,
   WalletAbiTxCreateResponse,
   walletAbiJsonString,
-} from "lwk_wallet_abi_web";
+} from "helpers_wallet_abi_web";
 
 export const WALLET_ABI_JSON_RPC_VERSION = "2.0" as const;
 

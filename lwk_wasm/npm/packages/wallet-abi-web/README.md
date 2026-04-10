@@ -1,9 +1,11 @@
-# `lwk_wallet_abi_web`
+# `helpers_wallet_abi_web`
 
-Thin web-only Wallet ABI helpers for `lwk_web`.
+This package is a dev build for PoC testing only.
+
+Thin web-only Wallet ABI helpers for `wallet_abi_sdk_core_web`.
 
 ```sh
-npm install lwk_wallet_abi_web
+npm install helpers_wallet_abi_web
 ```
 
 ```ts
@@ -11,9 +13,9 @@ import {
   Network,
   WalletAbiCapabilities,
   loadLwkWalletAbiWeb,
-} from "lwk_wallet_abi_web";
-import { networkFromString } from "lwk_wallet_abi_web/helpers";
-import { WalletAbiTxCreateRequest } from "lwk_wallet_abi_web/schema";
+} from "helpers_wallet_abi_web";
+import { networkFromString } from "helpers_wallet_abi_web/helpers";
+import { WalletAbiTxCreateRequest } from "helpers_wallet_abi_web/schema";
 
 await loadLwkWalletAbiWeb();
 
@@ -27,7 +29,7 @@ void capabilities;
 void requestType;
 ```
 
-This package keeps `lwk_web` as the raw wasm projection and adds only:
+This package keeps `wallet_abi_sdk_core_web` as the raw wasm projection and adds only:
 
 - typed Wallet ABI schema re-exports
 - a memoized wasm loader
@@ -35,9 +37,9 @@ This package keeps `lwk_web` as the raw wasm projection and adds only:
 
 Exports:
 
-- `lwk_wallet_abi_web`
-- `lwk_wallet_abi_web/schema`
-- `lwk_wallet_abi_web/helpers`
+- `helpers_wallet_abi_web`
+- `helpers_wallet_abi_web/schema`
+- `helpers_wallet_abi_web/helpers`
 
 Out of scope:
 

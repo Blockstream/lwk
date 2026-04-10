@@ -2,7 +2,7 @@
  * `wasm-pack` invocation helpers for browser and Node targets.
  *
  * We intentionally publish runtime-specific packages from one Rust crate:
- * - `bundler` for `lwk_web`
+ * - `bundler` for `wallet_abi_sdk_core_web`
  * - `nodejs` for `lwk_node`
  *
  * The wasm build also needs `--cfg=web_sys_unstable_apis` so the `serial`

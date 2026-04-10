@@ -3,7 +3,7 @@
  *
  * The npm workspace publishes runtime-specific packages from one Rust crate:
  * - `lwk_node`
- * - `lwk_web`
+ * - `wallet_abi_sdk_core_web`
  *
  * The build pipeline has two phases:
  * - `generated/`: raw `wasm-pack` output for browser and Node targets

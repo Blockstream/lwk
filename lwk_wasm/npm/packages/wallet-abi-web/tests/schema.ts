@@ -23,12 +23,12 @@ import {
   WalletAbiTxEvaluateResponse,
   WalletAbiUtxoSource,
   WalletAbiWalletSourceFilter,
-} from "lwk_wallet_abi_web";
+} from "helpers_wallet_abi_web";
 import {
   WalletAbiTxCreateResponse as WalletAbiTxCreateResponseFromSchema,
   WalletAbiTxEvaluateRequest as WalletAbiTxEvaluateRequestFromSchema,
-} from "lwk_wallet_abi_web/schema";
-import { networkFromString } from "lwk_wallet_abi_web/helpers";
+} from "helpers_wallet_abi_web/schema";
+import { networkFromString } from "helpers_wallet_abi_web/helpers";
 
 const network = networkFromString("liquid-testnet");
 const policyAsset = network.policyAsset();

@@ -1,5 +1,5 @@
 {
-  "name": "lwk_web",
+  "name": "wallet_abi_sdk_core_web",
   "version": "0.16.0",
   "description": "Liquid Wallet Kit for browsers via WebAssembly",
   "license": "MIT OR BSD-2-Clause",
@@ -49,6 +49,6 @@
     "typecheck": "npm run build:features && tsc -p tsconfig.json --noEmit",
     "test": "npm run build:features && tsc -p tsconfig.json --noEmit",
     "pack:check": "npm run build && npm pack --dry-run",
-    "prepack": "npm run build"
+    "prepack": "npm run build:features"
   }
 }

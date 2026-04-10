@@ -7,11 +7,11 @@ import {
   WalletAbiTxCreateResponse,
   WalletAbiTxEvaluateRequest,
   WalletAbiTxEvaluateResponse,
-} from "lwk_wallet_abi_web";
+} from "helpers_wallet_abi_web";
 import {
   WalletAbiCapabilities as WalletAbiCapabilitiesFromSchema,
   WalletAbiTxCreateRequest as WalletAbiTxCreateRequestFromSchema,
-} from "lwk_wallet_abi_web/schema";
+} from "helpers_wallet_abi_web/schema";
 
 const capabilityCtor: typeof WalletAbiCapabilitiesFromSchema =
   WalletAbiCapabilities;

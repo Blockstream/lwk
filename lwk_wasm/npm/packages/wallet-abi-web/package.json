@@ -1,7 +1,7 @@
 {
-  "name": "lwk_wallet_abi_web",
+  "name": "helpers_wallet_abi_web",
   "version": "0.16.0",
-  "description": "Thin Wallet ABI helpers for lwk_web",
+  "description": "Thin Wallet ABI helpers for wallet_abi_sdk_core_web",
   "license": "MIT OR BSD-2-Clause",
   "homepage": "https://github.com/Blockstream/lwk/tree/master/lwk_wasm",
   "repository": {
@@ -53,14 +53,14 @@
     "access": "public"
   },
   "scripts": {
-    "build": "npm --prefix ../.. run build -w lwk_web && tsc -p tsconfig.build.json",
+    "build": "npm --prefix ../.. run build -w wallet_abi_sdk_core_web && tsc -p tsconfig.build.json",
     "build:features": "LWK_WASM_FEATURES=\"serial,simplicity\" npm run build",
     "typecheck": "npm run build:features && tsc -p tsconfig.json --noEmit",
     "test": "npm run build:features && tsc -p tsconfig.json --noEmit",
     "pack:check": "npm run build && npm pack --dry-run",
-    "prepack": "npm run build"
+    "prepack": "npm run build:features"
   },
   "dependencies": {
-    "lwk_web": "0.16.0"
+    "wallet_abi_sdk_core_web": "0.16.0"
   }
 }

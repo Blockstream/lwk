@@ -49,6 +49,13 @@ wallet-abi-sdk-check:
 wasm-npm-style-check:
     cd lwk_wasm/npm && npm run style:check
 
+# Refresh npm install state and validate the PoC test-publish workspace.
+wasm-npm-test-publish-check:
+    cd lwk_wasm/npm && npm ci
+    cd lwk_wasm/npm && LWK_WASM_FEATURES="serial,simplicity" npm run typecheck
+    cd lwk_wasm/npm && LWK_WASM_FEATURES="serial,simplicity" npm run test
+    cd lwk_wasm/npm && LWK_WASM_FEATURES="serial,simplicity" npm run pack:check
+
 # build the python bindings and start a python env with them
 python-env-bindings: python-build-bindings
     PYTHONPATH=target/release/bindings/ python3

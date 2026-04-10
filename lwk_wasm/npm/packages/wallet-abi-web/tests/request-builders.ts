@@ -13,11 +13,11 @@ import {
   WalletAbiRuntimeParams,
   WalletAbiUtxoSource,
   WalletAbiWalletSourceFilter,
-} from "lwk_wallet_abi_web";
+} from "helpers_wallet_abi_web";
 import {
   WalletAbiOutputSchema as WalletAbiOutputSchemaFromSchema,
   WalletAbiRuntimeParams as WalletAbiRuntimeParamsFromSchema,
-} from "lwk_wallet_abi_web/schema";
+} from "helpers_wallet_abi_web/schema";
 
 const runtimeCtor: typeof WalletAbiRuntimeParamsFromSchema =
   WalletAbiRuntimeParams;

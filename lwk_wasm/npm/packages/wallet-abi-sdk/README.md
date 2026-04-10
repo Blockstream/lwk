@@ -1,6 +1,8 @@
 # `lwk_wallet_abi_sdk`
 
-Browser-only headless Wallet ABI SDK built on top of `lwk_wallet_abi_web`.
+This package is a dev build for PoC testing only.
+
+Browser-only headless Wallet ABI SDK built on top of `helpers_wallet_abi_web`.
 
 ```sh
 npm install lwk_wallet_abi_sdk
@@ -8,8 +10,8 @@ npm install lwk_wallet_abi_sdk
 
 This package keeps the lower layers split clean:
 
-- `lwk_web`: raw generated wasm projection
-- `lwk_wallet_abi_web`: typed Wallet ABI schema and small helpers
+- `wallet_abi_sdk_core_web`: raw generated wasm projection
+- `helpers_wallet_abi_web`: typed Wallet ABI schema and small helpers
 - `lwk_wallet_abi_sdk`: protocol helpers, typed client, request builders, and WalletConnect session transport
 
 Current v1 scope:
@@ -32,7 +34,7 @@ Exports:
 
 The SDK owns the translation between the three network name layers used in the browser stack:
 
-- `lwk_wallet_abi_web` / `Network.toString()`: `liquid`, `liquid-testnet`, `liquid-regtest`
+- `helpers_wallet_abi_web` / `Network.toString()`: `liquid`, `liquid-testnet`, `liquid-regtest`
 - Wallet ABI transport names: `liquid`, `testnet-liquid`, `localtest-liquid`
 - WalletConnect chains: `walabi:liquid`, `walabi:testnet-liquid`, `walabi:localtest-liquid`
 
@@ -96,7 +98,7 @@ The SDK builders stay intentionally narrow and always return typed Wallet ABI cl
 - `createProvidedInput(...)`
 - `createTxCreateRequest(...)`
 
-They are request-assembly helpers only. They do not add app-specific DSLs or duplicate the schema classes from `lwk_wallet_abi_web`.
+They are request-assembly helpers only. They do not add app-specific DSLs or duplicate the schema classes from `helpers_wallet_abi_web`.
 
 ## WalletConnect notes
 

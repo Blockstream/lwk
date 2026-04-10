@@ -1,5 +1,7 @@
 # `lwk_node`
 
+This package is a dev build for PoC testing only.
+
 Liquid Wallet Kit for Node.js via WebAssembly.
 
 ```sh

@@ -3,8 +3,8 @@ import {
   WalletAbiPreviewOutput,
   WalletAbiPreviewOutputKind,
   WalletAbiRequestPreview,
-} from "lwk_wallet_abi_web";
-import { WalletAbiRequestPreview as WalletAbiRequestPreviewFromSchema } from "lwk_wallet_abi_web/schema";
+} from "helpers_wallet_abi_web";
+import { WalletAbiRequestPreview as WalletAbiRequestPreviewFromSchema } from "helpers_wallet_abi_web/schema";
 
 const previewCtor: typeof WalletAbiRequestPreviewFromSchema =
   WalletAbiRequestPreview;

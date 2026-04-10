@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { networkFromString } from "lwk_wallet_abi_web/helpers";
+import { networkFromString } from "helpers_wallet_abi_web/helpers";
 import {
   WalletAbiRuntimeParams,
   WalletAbiTransactionInfo,
   WalletAbiTxCreateRequest,
   WalletAbiTxCreateResponse,
   Txid,
-} from "lwk_wallet_abi_web/schema";
+} from "helpers_wallet_abi_web/schema";
 import {
   createProcessRequest,
   createGetRawSigningXOnlyPubkeyRequest,

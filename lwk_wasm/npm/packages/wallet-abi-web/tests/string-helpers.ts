@@ -16,11 +16,11 @@ import {
   txidFromString,
   walletAbiJsonString,
   xOnlyPublicKeyFromString,
-} from "lwk_wallet_abi_web";
+} from "helpers_wallet_abi_web";
 import {
   assetIdFromString as assetIdFromHelpers,
   walletAbiJsonString as walletAbiJsonStringFromHelpers,
-} from "lwk_wallet_abi_web/helpers";
+} from "helpers_wallet_abi_web/helpers";
 
 const asset: AssetId = assetIdFromString(
   "144c654344aa8b152b2573d7e26e4fbe0f2dba706f740dab9b257576c0eb0ef0",

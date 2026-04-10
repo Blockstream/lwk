@@ -6,11 +6,11 @@ import {
   WalletAbiSimfArguments,
   WalletAbiSimfWitness,
   WalletAbiTaprootHandle,
-} from "lwk_wallet_abi_web";
+} from "helpers_wallet_abi_web";
 import {
   WalletAbiFinalizerSpec as WalletAbiFinalizerSpecFromSchema,
   WalletAbiSimfArguments as WalletAbiSimfArgumentsFromSchema,
-} from "lwk_wallet_abi_web/schema";
+} from "helpers_wallet_abi_web/schema";
 
 const finalizerCtor: typeof WalletAbiFinalizerSpecFromSchema =
   WalletAbiFinalizerSpec;

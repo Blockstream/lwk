@@ -1,6 +1,6 @@
-import * as lwkWeb from "lwk_web";
+import * as lwkWeb from "wallet_abi_sdk_core_web";
 
-type LwkWalletAbiWebModule = typeof import("lwk_web");
+type LwkWalletAbiWebModule = typeof import("wallet_abi_sdk_core_web");
 type LwkWalletAbiWebInitModule = LwkWalletAbiWebModule & {
   default?: (moduleOrPath?: unknown) => Promise<unknown>;
 };

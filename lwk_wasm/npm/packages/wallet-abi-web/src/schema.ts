@@ -45,4 +45,4 @@ export {
   WalletAbiUtxoSource,
   WalletAbiWalletSourceFilter,
   XOnlyPublicKey,
-} from "lwk_web";
+} from "wallet_abi_sdk_core_web";

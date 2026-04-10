@@ -12,11 +12,11 @@ import {
   TxSequence,
   Txid,
   XOnlyPublicKey,
-} from "lwk_wallet_abi_web";
+} from "helpers_wallet_abi_web";
 import {
   Network as NetworkFromSchema,
   Script as ScriptFromSchema,
-} from "lwk_wallet_abi_web/schema";
+} from "helpers_wallet_abi_web/schema";
 
 const networkCtor: typeof NetworkFromSchema = Network;
 const scriptCtor: typeof ScriptFromSchema = Script;

@@ -50,6 +50,7 @@ export {
   assetIdFromString,
   contractHashFromString,
   loadLwkWalletAbiWeb,
+  networkFromString,
   outPointFromString,
   publicKeyFromString,
   scriptFromHex,

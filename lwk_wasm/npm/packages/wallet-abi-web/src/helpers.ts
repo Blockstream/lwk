@@ -61,6 +61,24 @@ export function txidFromString(txid: string): lwkWeb.Txid {
   return new lwkWeb.Txid(txid);
 }
 
+export function networkFromString(
+  name: string,
+  policyAssetHex?: string
+): lwkWeb.Network {
+  switch (name) {
+    case "liquid":
+      return lwkWeb.Network.mainnet();
+    case "liquid-testnet":
+      return lwkWeb.Network.testnet();
+    case "liquid-regtest":
+      return policyAssetHex === undefined
+        ? lwkWeb.Network.regtestDefault()
+        : lwkWeb.Network.regtest(assetIdFromString(policyAssetHex));
+    default:
+      throw new Error(`Unsupported Liquid network: ${name}`);
+  }
+}
+
 type WalletAbiJsonValue =
   | lwkWeb.WalletAbiCapabilities
   | lwkWeb.WalletAbiErrorInfo

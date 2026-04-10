@@ -14,3 +14,24 @@ export const WALLET_ABI_METHODS = [
 ] as const;
 
 export type WalletAbiMethod = (typeof WALLET_ABI_METHODS)[number];
+
+export function isWalletAbiMethod(value: string): value is WalletAbiMethod {
+  return WALLET_ABI_METHODS.includes(value as WalletAbiMethod);
+}
+
+export function isWalletAbiGetterMethod(
+  value: string
+): value is
+  | typeof GET_SIGNER_RECEIVE_ADDRESS_METHOD
+  | typeof GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD {
+  return (
+    value === GET_SIGNER_RECEIVE_ADDRESS_METHOD ||
+    value === GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD
+  );
+}
+
+export function isWalletAbiProcessMethod(
+  value: string
+): value is typeof WALLET_ABI_PROCESS_REQUEST_METHOD {
+  return value === WALLET_ABI_PROCESS_REQUEST_METHOD;
+}

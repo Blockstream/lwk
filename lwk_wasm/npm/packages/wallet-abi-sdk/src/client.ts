@@ -2,9 +2,12 @@ import type {
   WalletAbiJsonRpcRequest,
   WalletAbiJsonRpcResponse,
 } from "./protocol.js";
+import type { WalletAbiTxCreateRequest, WalletAbiTxCreateResponse } from "./schema.js";
 import {
+  createProcessRequest,
   createGetSignerReceiveAddressRequest,
   createGetRawSigningXOnlyPubkeyRequest,
+  parseProcessRequestResponse,
   parseGetRawSigningXOnlyPubkeyResponse,
   parseGetSignerReceiveAddressResponse,
 } from "./protocol.js";
@@ -117,6 +120,31 @@ export class WalletAbiClient {
       );
 
       return parseGetRawSigningXOnlyPubkeyResponse(response);
+    } catch (error) {
+      if (error instanceof WalletAbiClientError) {
+        throw error;
+      }
+
+      throw new WalletAbiClientError(normalizeErrorMessage(error));
+    }
+  }
+
+  async processRequest(
+    request: WalletAbiTxCreateRequest
+  ): Promise<WalletAbiTxCreateResponse> {
+    await this.connect();
+
+    try {
+      const response = await this.#withTimeout(
+        Promise.resolve(
+          this.#requester.request(
+            createProcessRequest(this.#nextRpcRequestId(), request)
+          )
+        ),
+        `wallet request wallet_abi_process_request timed out after ${String(this.#requestTimeoutMs)}ms`
+      );
+
+      return parseProcessRequestResponse(response);
     } catch (error) {
       if (error instanceof WalletAbiClientError) {
         throw error;

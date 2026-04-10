@@ -2,6 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  WalletAbiRuntimeParams,
+  WalletAbiTransactionInfo,
+  WalletAbiTxCreateRequest,
+  WalletAbiTxCreateResponse,
+  Txid,
+} from "lwk_wallet_abi_sdk/schema";
+import { networkFromString } from "lwk_wallet_abi_sdk/helpers";
+import {
   WalletAbiClient,
   WalletAbiClientError,
 } from "lwk_wallet_abi_sdk/client";
@@ -74,6 +82,45 @@ test("wallet abi client gets signer receive address", async () => {
     "tlq1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqf6u0sd"
   );
   assert.equal(requestCalls, 1);
+});
+
+test("wallet abi client processes tx-create requests", async () => {
+  let requestCalls = 0;
+  const network = networkFromString("liquid-testnet");
+  const request = WalletAbiTxCreateRequest.fromParts(
+    "00000000-0000-4000-8000-000000000004",
+    network,
+    WalletAbiRuntimeParams.new([], [], null, null),
+    false
+  );
+  const expected = WalletAbiTxCreateResponse.ok(
+    request.requestId(),
+    network,
+    WalletAbiTransactionInfo.new(
+      "00",
+      new Txid("0000000000000000000000000000000000000000000000000000000000000000")
+    )
+  );
+  const client = new WalletAbiClient({
+    requester: {
+      async connect() {},
+      request(jsonRpcRequest) {
+        requestCalls += 1;
+        assert.equal(jsonRpcRequest.method, "wallet_abi_process_request");
+        return {
+          id: jsonRpcRequest.id,
+          jsonrpc: "2.0",
+          result: expected.toJSON(),
+        };
+      },
+    },
+  });
+
+  const response = await client.processRequest(request);
+
+  assert.equal(requestCalls, 1);
+  assert.equal(response.requestId(), expected.requestId());
+  assert.equal(response.status(), expected.status());
 });
 
 test("wallet abi client gets raw signing xonly pubkey", async () => {

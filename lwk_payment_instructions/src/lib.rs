@@ -175,9 +175,7 @@ impl Payment {
         info: &LnUrlPayResponse,
         amount_sats: u64,
     ) -> Result<Self, Error> {
-        let amount_msat = amount_sats
-            .checked_mul(1000)
-            .ok_or_else(|| "Amount overflow".to_string())?;
+        let amount_msat = amount_sats.checked_mul(1000).ok_or(Error::AmountOverflow)?;
         if amount_msat < info.min_sendable || amount_msat > info.max_sendable {
             return Err(format!(
                 "Amount {} sats ({} msat) is out of range [{} msat, {} msat]",

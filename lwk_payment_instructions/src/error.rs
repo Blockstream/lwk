@@ -34,6 +34,10 @@ pub enum Error {
     #[error("URL parse error: {0}")]
     Url(String),
 
+    /// Amount overflow.
+    #[error("Amount overflow")]
+    AmountOverflow,
+
     /// Generic error.
     #[error("{0}")]
     Generic(String),

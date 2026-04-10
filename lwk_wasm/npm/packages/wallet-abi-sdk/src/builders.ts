@@ -1,4 +1,5 @@
 import {
+  OutPoint,
   TxSequence,
   WalletAbiFinalizerSpec,
   WalletAbiInputIssuance,
@@ -36,6 +37,29 @@ export function createWalletInput(input: {
     input.id,
     WalletAbiUtxoSource.wallet(input.filter ?? WalletAbiWalletSourceFilter.any()),
     input.unblinding ?? WalletAbiInputUnblinding.wallet(),
+    input.sequence ?? TxSequence.max(),
+    input.finalizer ?? WalletAbiFinalizerSpec.wallet()
+  );
+
+  if (input.issuance !== undefined) {
+    schema = schema.withIssuance(input.issuance);
+  }
+
+  return schema;
+}
+
+export function createProvidedInput(input: {
+  id: string;
+  outpoint: OutPoint;
+  unblinding?: WalletAbiInputUnblinding;
+  sequence?: TxSequence;
+  finalizer?: WalletAbiFinalizerSpec;
+  issuance?: WalletAbiInputIssuance;
+}): WalletAbiInputSchema {
+  let schema = WalletAbiInputSchema.fromSequence(
+    input.id,
+    WalletAbiUtxoSource.provided(input.outpoint),
+    input.unblinding ?? WalletAbiInputUnblinding.explicit(),
     input.sequence ?? TxSequence.max(),
     input.finalizer ?? WalletAbiFinalizerSpec.wallet()
   );

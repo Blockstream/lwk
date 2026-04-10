@@ -7,8 +7,15 @@ import {
   WalletAbiLockFilter,
   WalletAbiWalletSourceFilter,
 } from "lwk_wallet_abi_sdk/schema";
-import { createWalletInput, generateRequestId } from "lwk_wallet_abi_sdk/builders";
-import { assetIdFromString } from "lwk_wallet_abi_sdk/helpers";
+import {
+  createProvidedInput,
+  createWalletInput,
+  generateRequestId,
+} from "lwk_wallet_abi_sdk/builders";
+import {
+  assetIdFromString,
+  outPointFromString,
+} from "lwk_wallet_abi_sdk/helpers";
 
 test("builder generates request ids", () => {
   const requestId = generateRequestId();
@@ -37,4 +44,22 @@ test("builder creates wallet inputs", () => {
   assert.equal(input.id(), "wallet-input");
   assert.equal(input.utxoSource().kind(), "wallet");
   assert.equal(input.utxoSource().walletFilter()?.amount().amountSat(), 5_000n);
+});
+
+test("builder creates provided inputs", () => {
+  const input = createProvidedInput({
+    id: "provided-input",
+    outpoint: outPointFromString(
+      "0000000000000000000000000000000000000000000000000000000000000000:1"
+    ),
+  });
+
+  assert.equal(input.id(), "provided-input");
+  assert.equal(input.utxoSource().kind(), "provided");
+  assert.equal(
+    input.utxoSource().providedOutpoint()?.txid().toString(),
+    "0000000000000000000000000000000000000000000000000000000000000000"
+  );
+  assert.equal(input.utxoSource().providedOutpoint()?.vout(), 1);
+  assert.equal(input.unblinding().kind(), "explicit");
 });

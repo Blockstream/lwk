@@ -1,4 +1,16 @@
 export {
+  AssetId,
+  ContractHash,
+  LockTime,
+  Network,
+  OutPoint,
+  PublicKey,
+  Script,
+  SecretKey,
+  SimplicityArguments,
+  SimplicityWitnessValues,
+  TxSequence,
+  Txid,
   WalletAbiAmountFilter,
   WalletAbiAssetFilter,
   WalletAbiAssetVariant,
@@ -32,5 +44,6 @@ export {
   WalletAbiTxEvaluateResponse,
   WalletAbiUtxoSource,
   WalletAbiWalletSourceFilter,
+  XOnlyPublicKey,
 } from "./schema.js";
 export { loadLwkWalletAbiWeb } from "./helpers.js";

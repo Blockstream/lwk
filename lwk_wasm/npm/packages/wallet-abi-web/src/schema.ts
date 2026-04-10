@@ -1,4 +1,16 @@
 export {
+  AssetId,
+  ContractHash,
+  LockTime,
+  Network,
+  OutPoint,
+  PublicKey,
+  Script,
+  SecretKey,
+  SimplicityArguments,
+  SimplicityWitnessValues,
+  TxSequence,
+  Txid,
   WalletAbiAmountFilter,
   WalletAbiAssetFilter,
   WalletAbiAssetVariant,
@@ -32,4 +44,5 @@ export {
   WalletAbiTxEvaluateResponse,
   WalletAbiUtxoSource,
   WalletAbiWalletSourceFilter,
+  XOnlyPublicKey,
 } from "lwk_web";

@@ -150,7 +150,7 @@ impl Payment {
     pub async fn resolve_lnurl_info(&self) -> Result<LnUrlPayResponse, Error> {
         let lnurl = self
             .lnurl()
-            .ok_or_else(|| "Payment is not a LNURL or LUD16".to_string())?;
+            .ok_or(Error::ExpectedKind(PaymentKind::LnUrl))?;
 
         let url_str = lnurl.resolve_url()?;
 
@@ -231,7 +231,7 @@ impl Payment {
     pub async fn resolve_bip353(&self) -> Result<Self, Error> {
         let bip353 = self
             .bip353()
-            .ok_or_else(|| "Payment is not a BIP353 payment instruction".to_string())?;
+            .ok_or(Error::ExpectedKind(PaymentKind::Bip353))?;
 
         // we use google dns server to resolve
         let resolver = DNSHrnResolver(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)), 53));
@@ -879,7 +879,7 @@ mod tests {
         let payment = Payment::from_str("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa").unwrap();
         let err = payment.resolve_bip353().await.unwrap_err();
 
-        assert_eq!(err, "Payment is not a BIP353 payment instruction".into());
+        assert_eq!(err, Error::ExpectedKind(PaymentKind::Bip353));
     }
 
     #[test]

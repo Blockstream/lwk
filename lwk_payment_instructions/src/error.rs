@@ -1,6 +1,12 @@
+use crate::PaymentKind;
+
 /// Error type for the whole crate.
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Eq)]
 pub enum Error {
+    /// Unexpected payment kind.
+    #[error("Expected payment kind {0:?}")]
+    ExpectedKind(PaymentKind),
+
     /// Generic error.
     #[error("{0}")]
     Generic(String),

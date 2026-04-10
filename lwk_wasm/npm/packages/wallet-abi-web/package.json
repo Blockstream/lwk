@@ -36,6 +36,11 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "import": "./dist/schema.js",
+      "default": "./dist/schema.js"
+    },
     "./helpers": {
       "types": "./dist/helpers.d.ts",
       "import": "./dist/helpers.js",

@@ -7,5 +7,4 @@ export {
   WalletAbiTxCreateResponse,
   WalletAbiTxEvaluateRequest,
   WalletAbiTxEvaluateResponse,
-} from "./schema.js";
-export { loadLwkWalletAbiWeb } from "./helpers.js";
+} from "lwk_web";

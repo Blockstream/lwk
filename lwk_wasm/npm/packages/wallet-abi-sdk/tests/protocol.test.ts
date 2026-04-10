@@ -1,15 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { networkFromString } from "lwk_wallet_abi_web/helpers";
 import {
   GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
   GET_SIGNER_RECEIVE_ADDRESS_METHOD,
+  LWK_WALLET_ABI_NETWORK_NAMES,
   WALLET_ABI_JSON_RPC_VERSION,
   WALLET_ABI_METHODS,
+  WALLET_ABI_NETWORKS,
   WALLET_ABI_PROCESS_REQUEST_METHOD,
   isWalletAbiGetterMethod,
   isWalletAbiMethod,
   isWalletAbiProcessMethod,
+  walletAbiNetworkFromLwkNetworkName,
+  walletAbiNetworkFromNetwork,
+  walletAbiNetworkToLwkNetworkName,
 } from "lwk_wallet_abi_sdk/protocol";
 
 test("wallet abi protocol constants", () => {
@@ -42,4 +48,42 @@ test("wallet abi method guards", () => {
 
   assert.equal(isWalletAbiProcessMethod(WALLET_ABI_PROCESS_REQUEST_METHOD), true);
   assert.equal(isWalletAbiProcessMethod(GET_SIGNER_RECEIVE_ADDRESS_METHOD), false);
+});
+
+test("wallet abi network name translation", () => {
+  assert.deepEqual(LWK_WALLET_ABI_NETWORK_NAMES, [
+    "liquid",
+    "liquid-testnet",
+    "liquid-regtest",
+  ]);
+  assert.deepEqual(WALLET_ABI_NETWORKS, [
+    "liquid",
+    "testnet-liquid",
+    "localtest-liquid",
+  ]);
+
+  assert.equal(walletAbiNetworkFromLwkNetworkName("liquid"), "liquid");
+  assert.equal(
+    walletAbiNetworkFromLwkNetworkName("liquid-testnet"),
+    "testnet-liquid"
+  );
+  assert.equal(
+    walletAbiNetworkFromLwkNetworkName("liquid-regtest"),
+    "localtest-liquid"
+  );
+
+  assert.equal(walletAbiNetworkToLwkNetworkName("liquid"), "liquid");
+  assert.equal(
+    walletAbiNetworkToLwkNetworkName("testnet-liquid"),
+    "liquid-testnet"
+  );
+  assert.equal(
+    walletAbiNetworkToLwkNetworkName("localtest-liquid"),
+    "liquid-regtest"
+  );
+
+  assert.equal(
+    walletAbiNetworkFromNetwork(networkFromString("liquid-testnet")),
+    "testnet-liquid"
+  );
 });

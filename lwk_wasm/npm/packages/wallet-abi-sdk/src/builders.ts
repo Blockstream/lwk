@@ -1,10 +1,13 @@
 import {
+  Network,
   OutPoint,
   TxSequence,
   WalletAbiFinalizerSpec,
   WalletAbiInputIssuance,
   WalletAbiInputSchema,
   WalletAbiInputUnblinding,
+  WalletAbiRuntimeParams,
+  WalletAbiTxCreateRequest,
   WalletAbiUtxoSource,
   WalletAbiWalletSourceFilter,
 } from "./schema.js";
@@ -69,4 +72,18 @@ export function createProvidedInput(input: {
   }
 
   return schema;
+}
+
+export function createTxCreateRequest(input: {
+  network: Network;
+  params: WalletAbiRuntimeParams;
+  broadcast?: boolean;
+  requestId?: string;
+}): WalletAbiTxCreateRequest {
+  return WalletAbiTxCreateRequest.fromParts(
+    input.requestId ?? generateRequestId(),
+    input.network,
+    input.params,
+    input.broadcast ?? false
+  );
 }

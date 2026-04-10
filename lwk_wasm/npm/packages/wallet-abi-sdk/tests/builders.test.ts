@@ -2,18 +2,26 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  Script,
   WalletAbiAmountFilter,
+  WalletAbiAssetVariant,
   WalletAbiAssetFilter,
+  WalletAbiBlinderVariant,
   WalletAbiLockFilter,
+  WalletAbiLockVariant,
+  WalletAbiOutputSchema,
+  WalletAbiRuntimeParams,
   WalletAbiWalletSourceFilter,
 } from "lwk_wallet_abi_sdk/schema";
 import {
   createProvidedInput,
+  createTxCreateRequest,
   createWalletInput,
   generateRequestId,
 } from "lwk_wallet_abi_sdk/builders";
 import {
   assetIdFromString,
+  networkFromString,
   outPointFromString,
 } from "lwk_wallet_abi_sdk/helpers";
 
@@ -62,4 +70,39 @@ test("builder creates provided inputs", () => {
   );
   assert.equal(input.utxoSource().providedOutpoint()?.vout(), 1);
   assert.equal(input.unblinding().kind(), "explicit");
+});
+
+test("builder creates tx-create requests", () => {
+  const network = networkFromString("liquid-testnet");
+  const params = WalletAbiRuntimeParams.new(
+    [
+      createWalletInput({
+        id: "wallet-input",
+      }),
+    ],
+    [
+      WalletAbiOutputSchema.new(
+        "output-0",
+        1_000n,
+        WalletAbiLockVariant.script(Script.empty()),
+        WalletAbiAssetVariant.assetId(network.policyAsset()),
+        WalletAbiBlinderVariant.explicit()
+      ),
+    ],
+    100.0,
+    null
+  );
+
+  const request = createTxCreateRequest({
+    network,
+    params,
+  });
+
+  assert.match(
+    request.requestId(),
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u
+  );
+  assert.equal(request.network().isTestnet(), true);
+  assert.equal(request.broadcast(), false);
+  assert.equal(request.params().inputs()[0]?.id(), "wallet-input");
 });

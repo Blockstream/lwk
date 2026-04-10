@@ -76,7 +76,7 @@
     "build:features": "LWK_WASM_FEATURES=\"serial,simplicity\" npm run build",
     "typecheck": "npm run build:features && tsc -p tsconfig.json --noEmit",
     "test": "npm run build:features && node --import tsx --test tests/**/*.test.ts",
-    "pack:check": "npm run build && npm pack --dry-run",
+    "pack:check": "npm run build && npm pack --dry-run && publint . && TARBALL=$(npm pack --quiet | tail -n 1) && attw --profile esm-only \"$TARBALL\" && rm -f \"$TARBALL\"",
     "prepack": "npm run build"
   },
   "dependencies": {

@@ -16,16 +16,18 @@
     "prepare:generated": "tsx scripts/build.ts generate",
     "stage:node": "tsx scripts/build.ts stage-node",
     "stage:web": "tsx scripts/build.ts stage-web",
-    "build:packages": "npm run build -w lwk_web && npm run build -w lwk_wallet_abi_web && npm run build -w lwk_node",
+    "build:packages": "npm run build -w lwk_web && npm run build -w lwk_wallet_abi_web && npm run build -w lwk_wallet_abi_sdk && npm run build -w lwk_node",
     "build": "npm run clean && npm run prepare:generated && npm run build:packages",
     "typecheck:scripts": "tsc -p scripts/tsconfig.json --noEmit",
-    "typecheck": "npm run typecheck:scripts && npm run typecheck -w lwk_web && npm run typecheck -w lwk_wallet_abi_web && npm run typecheck -w lwk_node",
-    "test": "npm run test -w lwk_web && npm run test -w lwk_wallet_abi_web && npm run test -w lwk_node",
-    "pack:check": "npm run pack:check -w lwk_web && npm run pack:check -w lwk_wallet_abi_web && npm run pack:check -w lwk_node",
-    "check": "LWK_WASM_FEATURES=\"serial,simplicity\" npm run typecheck && npm run test && npm run pack:check"
+    "typecheck": "npm run typecheck:scripts && npm run typecheck -w lwk_web && npm run typecheck -w lwk_wallet_abi_web && npm run typecheck -w lwk_wallet_abi_sdk && npm run typecheck -w lwk_node",
+    "test": "npm run test -w lwk_web && npm run test -w lwk_wallet_abi_web && npm run test -w lwk_wallet_abi_sdk && npm run test -w lwk_node",
+    "pack:check": "npm run pack:check -w lwk_web && npm run pack:check -w lwk_wallet_abi_web && npm run pack:check -w lwk_wallet_abi_sdk && npm run pack:check -w lwk_node",
+    "check": "LWK_WASM_FEATURES=\"serial,simplicity\" npm run typecheck && LWK_WASM_FEATURES=\"serial,simplicity\" npm run test && LWK_WASM_FEATURES=\"serial,simplicity\" npm run pack:check"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.2",
     "@types/node": "^22.14.1",
+    "publint": "^0.3.15",
     "tsx": "^4.20.6",
     "typescript": "^5.8.3"
   }

@@ -41,6 +41,10 @@ simplicity-wallet-abi-check:
     cargo -q check -p lwk_bindings --features simplicity
     cargo -q check -p lwk_wasm --features simplicity
 
+# Validate the npm wallet ABI SDK package and workspace checks with Simplicity enabled.
+wallet-abi-sdk-check:
+    cd lwk_wasm/npm && LWK_WASM_FEATURES="serial,simplicity" npm run check
+
 # build the python bindings and start a python env with them
 python-env-bindings: python-build-bindings
     PYTHONPATH=target/release/bindings/ python3

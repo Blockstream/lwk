@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { SessionTypes } from "@walletconnect/types";
+import type { SessionTypes, SignClientTypes } from "@walletconnect/types";
 import {
   WalletAbiRuntimeParams,
   WalletAbiTxCreateRequest,
@@ -16,6 +16,7 @@ import {
   WALLET_ABI_WALLETCONNECT_EVENTS,
   WALLET_ABI_WALLETCONNECT_METHODS,
   WALLET_ABI_WALLETCONNECT_NAMESPACE,
+  awaitWalletAbiApprovedSession,
   createWalletAbiMetadata,
   createWalletAbiRequiredNamespaces,
   createWalletConnectRequester,
@@ -245,4 +246,98 @@ test("walletconnect session selection prefers newest active session", () => {
     selected.staleSessions.map((session) => session.topic),
     ["topic-old"]
   );
+});
+
+test("walletconnect approval wait reuses existing session", async () => {
+  const chainId = "walabi:testnet-liquid";
+  const session = {
+    topic: "topic-existing",
+    expiry: 10,
+    namespaces: {
+      walabi: {
+        methods: [...WALLET_ABI_WALLETCONNECT_METHODS],
+        chains: [chainId],
+        events: [],
+        accounts: [`${chainId}:wallet`],
+      },
+    },
+    requiredNamespaces: {
+      walabi: {
+        methods: [...WALLET_ABI_WALLETCONNECT_METHODS],
+        chains: [chainId],
+        events: [],
+      },
+    },
+  } as unknown as SessionTypes.Struct;
+
+  const selected = await awaitWalletAbiApprovedSession({
+    approval() {
+      throw new Error("should not run approval");
+    },
+    signClient: {
+      session: {
+        getAll() {
+          return [session];
+        },
+      },
+      on() {},
+      off() {},
+    },
+    chainId,
+  });
+
+  assert.equal(selected.topic, "topic-existing");
+});
+
+test("walletconnect approval wait falls back to connected session", async () => {
+  const chainId = "walabi:testnet-liquid";
+  const listeners = new Set<
+    (event: SignClientTypes.EventArguments["session_connect"]) => void
+  >();
+  const sessions: SessionTypes.Struct[] = [];
+  const session = {
+    topic: "topic-approved",
+    expiry: 10,
+    namespaces: {
+      walabi: {
+        methods: [...WALLET_ABI_WALLETCONNECT_METHODS],
+        chains: [chainId],
+        events: [],
+        accounts: [`${chainId}:wallet`],
+      },
+    },
+    requiredNamespaces: {
+      walabi: {
+        methods: [...WALLET_ABI_WALLETCONNECT_METHODS],
+        chains: [chainId],
+        events: [],
+      },
+    },
+  } as unknown as SessionTypes.Struct;
+
+  const result = await awaitWalletAbiApprovedSession({
+    approval() {
+      sessions.push(session);
+      return Promise.reject(new Error("approval rejected"));
+    },
+    signClient: {
+      session: {
+        getAll() {
+          return [...sessions];
+        },
+      },
+      on(_event, listener) {
+        listeners.add(listener);
+      },
+      off(_event, listener) {
+        listeners.delete(listener);
+      },
+    },
+    chainId,
+    approvalRejectionGraceMs: 50,
+    sessionPollMs: 5,
+  });
+
+  assert.equal(result.topic, "topic-approved");
+  assert.equal(listeners.size, 0);
 });

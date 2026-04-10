@@ -1,5 +1,5 @@
 import type { CustomCaipNetwork } from "@reown/appkit-common";
-import type { SessionTypes } from "@walletconnect/types";
+import type { SessionTypes, SignClientTypes } from "@walletconnect/types";
 
 import {
   GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
@@ -72,6 +72,29 @@ export interface CreateWalletConnectRequesterOptions {
 export interface SelectedWalletAbiSessions {
   activeSession: SessionTypes.Struct | null;
   staleSessions: SessionTypes.Struct[];
+}
+
+export interface WalletAbiSessionApprovalSignClient {
+  session: {
+    getAll(): SessionTypes.Struct[];
+  };
+  on(
+    event: "session_connect",
+    listener: (event: SignClientTypes.EventArguments["session_connect"]) => void
+  ): void;
+  off(
+    event: "session_connect",
+    listener: (event: SignClientTypes.EventArguments["session_connect"]) => void
+  ): void;
+}
+
+export interface AwaitWalletAbiApprovedSessionOptions {
+  approval(): Promise<SessionTypes.Struct>;
+  signClient: WalletAbiSessionApprovalSignClient;
+  chainId: WalletAbiWalletConnectChain;
+  connectTimeoutMs?: number;
+  approvalRejectionGraceMs?: number;
+  sessionPollMs?: number;
 }
 
 const WALLET_ABI_NATIVE_CURRENCY = {
@@ -363,4 +386,117 @@ export function selectWalletAbiSessions(
     activeSession: activeSession ?? null,
     staleSessions,
   };
+}
+
+function currentWalletAbiSession(
+  signClient: WalletAbiSessionApprovalSignClient,
+  chainId: WalletAbiWalletConnectChain
+): SessionTypes.Struct | null {
+  return selectWalletAbiSessions(signClient.session.getAll(), chainId).activeSession;
+}
+
+function sleep(delayMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
+}
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(message));
+    }, timeoutMs);
+
+    promise.then(
+      (result) => {
+        clearTimeout(timeoutId);
+        resolve(result);
+      },
+      (error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      }
+    );
+  });
+}
+
+export async function awaitWalletAbiApprovedSession({
+  approval,
+  signClient,
+  chainId,
+  connectTimeoutMs = 90_000,
+  approvalRejectionGraceMs = 1_500,
+  sessionPollMs = 250,
+}: AwaitWalletAbiApprovedSessionOptions): Promise<SessionTypes.Struct> {
+  const existingSession = currentWalletAbiSession(signClient, chainId);
+  if (existingSession !== null) {
+    return existingSession;
+  }
+
+  let active = true;
+  let cleanupListener: (() => void) | null = null;
+
+  const stopWaiting = () => {
+    if (!active) {
+      return;
+    }
+
+    active = false;
+    cleanupListener?.();
+    cleanupListener = null;
+  };
+
+  const sessionConnectPromise = new Promise<SessionTypes.Struct>((resolve) => {
+    const onConnected = ({
+      session,
+    }: SignClientTypes.EventArguments["session_connect"]) => {
+      if (!isWalletAbiSession(session, chainId)) {
+        return;
+      }
+
+      stopWaiting();
+      resolve(session);
+    };
+
+    cleanupListener = () => {
+      signClient.off("session_connect", onConnected);
+    };
+    signClient.on("session_connect", onConnected);
+  });
+
+  const approvalPromise = approval()
+    .then((session) => {
+      stopWaiting();
+      return session;
+    })
+    .catch(async (error) => {
+      const deadline = Date.now() + approvalRejectionGraceMs;
+
+      while (active && Date.now() < deadline) {
+        const nextSession = currentWalletAbiSession(signClient, chainId);
+        if (nextSession !== null) {
+          stopWaiting();
+          return nextSession;
+        }
+
+        await sleep(sessionPollMs);
+      }
+
+      stopWaiting();
+      throw error;
+    });
+
+  try {
+    return await withTimeout(
+      Promise.race([approvalPromise, sessionConnectPromise]),
+      connectTimeoutMs,
+      "WalletConnect session approval timed out"
+    );
+  } finally {
+    stopWaiting();
+  }
 }

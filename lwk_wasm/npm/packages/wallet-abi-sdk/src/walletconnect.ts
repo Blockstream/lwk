@@ -1,6 +1,12 @@
 import type { CustomCaipNetwork } from "@reown/appkit-common";
 
-import type { WalletAbiTransportNetwork } from "./protocol.js";
+import {
+  GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
+  GET_SIGNER_RECEIVE_ADDRESS_METHOD,
+  WALLET_ABI_PROCESS_REQUEST_METHOD,
+  type WalletAbiMethod,
+  type WalletAbiTransportNetwork,
+} from "./protocol.js";
 
 export const WALLET_ABI_WALLETCONNECT_NAMESPACE = "walabi" as const;
 
@@ -9,9 +15,22 @@ export const WALLET_ABI_WALLETCONNECT_CHAINS = [
   "walabi:testnet-liquid",
   "walabi:localtest-liquid",
 ] as const;
+export const WALLET_ABI_WALLETCONNECT_METHODS = [
+  GET_SIGNER_RECEIVE_ADDRESS_METHOD,
+  GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
+  WALLET_ABI_PROCESS_REQUEST_METHOD,
+] as const;
+export const WALLET_ABI_WALLETCONNECT_EVENTS = [] as const;
 
 export type WalletAbiWalletConnectChain =
   (typeof WALLET_ABI_WALLETCONNECT_CHAINS)[number];
+
+export interface WalletAbiWalletConnectNamespace {
+  methods: readonly WalletAbiMethod[];
+  chains: readonly WalletAbiWalletConnectChain[];
+  events: readonly string[];
+  accounts?: readonly string[];
+}
 
 const WALLET_ABI_NATIVE_CURRENCY = {
   name: "Liquid Bitcoin",
@@ -116,4 +135,38 @@ export function createWalletAbiCaipNetwork(
     },
     testnet: network !== "liquid",
   } as unknown as CustomCaipNetwork;
+}
+
+export function createWalletAbiRequiredNamespaces(
+  input:
+    | WalletAbiTransportNetwork
+    | WalletAbiWalletConnectChain
+    | readonly WalletAbiWalletConnectChain[]
+): Record<
+  typeof WALLET_ABI_WALLETCONNECT_NAMESPACE,
+  WalletAbiWalletConnectNamespace
+> {
+  let chains: readonly WalletAbiWalletConnectChain[];
+
+  if (Array.isArray(input)) {
+    chains = input;
+  } else {
+    const singleInput = input as
+      | WalletAbiTransportNetwork
+      | WalletAbiWalletConnectChain;
+
+    if (isWalletAbiWalletConnectChain(singleInput)) {
+      chains = [singleInput];
+    } else {
+      chains = [walletAbiNetworkToWalletConnectChain(singleInput)];
+    }
+  }
+
+  return {
+    [WALLET_ABI_WALLETCONNECT_NAMESPACE]: {
+      methods: WALLET_ABI_WALLETCONNECT_METHODS,
+      chains,
+      events: WALLET_ABI_WALLETCONNECT_EVENTS,
+    },
+  };
 }

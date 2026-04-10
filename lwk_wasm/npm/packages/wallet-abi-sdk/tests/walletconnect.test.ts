@@ -3,7 +3,10 @@ import test from "node:test";
 
 import {
   WALLET_ABI_WALLETCONNECT_CHAINS,
+  WALLET_ABI_WALLETCONNECT_EVENTS,
+  WALLET_ABI_WALLETCONNECT_METHODS,
   WALLET_ABI_WALLETCONNECT_NAMESPACE,
+  createWalletAbiRequiredNamespaces,
   createWalletAbiCaipNetwork,
   isWalletAbiWalletConnectChain,
   walletAbiNetworkToWalletConnectChain,
@@ -52,4 +55,27 @@ test("walletconnect caip network shape", () => {
   assert.equal(network.chainNamespace, WALLET_ABI_WALLETCONNECT_NAMESPACE);
   assert.equal(network.name, "Liquid Testnet");
   assert.equal(network.testnet, true);
+});
+
+test("walletconnect required namespaces", () => {
+  assert.deepEqual(WALLET_ABI_WALLETCONNECT_METHODS, [
+    "get_signer_receive_address",
+    "get_raw_signing_x_only_pubkey",
+    "wallet_abi_process_request",
+  ]);
+  assert.deepEqual(WALLET_ABI_WALLETCONNECT_EVENTS, []);
+  assert.deepEqual(createWalletAbiRequiredNamespaces("testnet-liquid"), {
+    walabi: {
+      methods: WALLET_ABI_WALLETCONNECT_METHODS,
+      chains: ["walabi:testnet-liquid"],
+      events: WALLET_ABI_WALLETCONNECT_EVENTS,
+    },
+  });
+  assert.deepEqual(createWalletAbiRequiredNamespaces("walabi:liquid"), {
+    walabi: {
+      methods: WALLET_ABI_WALLETCONNECT_METHODS,
+      chains: ["walabi:liquid"],
+      events: WALLET_ABI_WALLETCONNECT_EVENTS,
+    },
+  });
 });

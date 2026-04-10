@@ -14,6 +14,10 @@ pub enum Error {
     )]
     WrongLiquidNetwork { expected_mainnet: bool },
 
+    /// BIP353 did not resolve to a lightning offer.
+    #[error("BIP353 did not resolve to a lightning offer")]
+    Bip353OfferNotFound,
+
     /// Generic error.
     #[error("{0}")]
     Generic(String),

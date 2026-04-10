@@ -261,7 +261,7 @@ async fn resolve_bip353_with_resolver<R: HrnResolver>(
                 _ => None,
             })
             .transpose()?
-            .ok_or_else(|| "BIP353 did not resolve to a lightning offer".into()),
+            .ok_or(Error::Bip353OfferNotFound),
         PaymentInstructions::ConfigurableAmount(configurable) => configurable
             .methods()
             .find_map(|method| match method {
@@ -271,7 +271,7 @@ async fn resolve_bip353_with_resolver<R: HrnResolver>(
                 _ => None,
             })
             .transpose()?
-            .ok_or_else(|| "BIP353 did not resolve to a lightning offer".into()),
+            .ok_or(Error::Bip353OfferNotFound),
     }
 }
 

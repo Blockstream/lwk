@@ -72,4 +72,17 @@ fn test_txs_store() {
         .collect();
     assert!(persisted_txids.contains(&txid1));
     assert!(persisted_txids.contains(&txid2));
+
+    // check that a new wollet using the same store has all the txs (without syncing)
+    let wollet2 = WolletBuilder::new(network, wd.clone())
+        .with_store(store.clone())
+        .with_txs_store(store.clone(), encrypt_txs_store)
+        .build()
+        .unwrap();
+
+    let opt = TxsOpt::default();
+    let txs = wollet2.txs(&opt).unwrap();
+    assert_eq!(txs.len(), 2);
+    assert!(txs.iter().any(|tx| tx.txid() == txid1));
+    assert!(txs.iter().any(|tx| tx.txid() == txid2));
 }

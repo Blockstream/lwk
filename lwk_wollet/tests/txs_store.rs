@@ -25,6 +25,7 @@ fn test_txs_store() {
     // We use an unencrypted file store, let's follow the the doc suggestion and make the wollet encrypting it
     let encrypt_txs_store = true;
     let mut wollet = WolletBuilder::new(network, wd.clone())
+        .with_store(store.clone())
         .with_txs_store(store.clone(), encrypt_txs_store)
         .build()
         .unwrap();
@@ -62,4 +63,13 @@ fn test_txs_store() {
     assert_eq!(all_txids.len(), 2);
     assert!(all_txids.contains(&txid1));
     assert!(all_txids.contains(&txid2));
+
+    // check that the persisted updates in Wollet.store have the full txs in them
+    let updates = wollet.updates().unwrap();
+    let persisted_txids: HashSet<Txid> = updates
+        .iter()
+        .flat_map(|u| u.new_txs.txs.iter().map(|(txid, _)| *txid))
+        .collect();
+    assert!(persisted_txids.contains(&txid1));
+    assert!(persisted_txids.contains(&txid2));
 }

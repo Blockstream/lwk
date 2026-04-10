@@ -6,10 +6,7 @@ use elements::{
 };
 use lwk_wollet::{hashes::hex::FromHex, WalletTx, EC};
 
-use crate::{
-    types::{AssetId, Hex},
-    LwkError, TxIn, TxOut, Txid,
-};
+use crate::{types::AssetId, LwkError, TxIn, TxOut, Txid};
 use std::{fmt::Display, sync::Arc};
 
 /// A Liquid transaction
@@ -62,8 +59,9 @@ impl Transaction {
     ///
     /// Deprecated: use `from_string()` instead.
     #[uniffi::constructor]
-    pub fn new(hex: &Hex) -> Result<Arc<Self>, LwkError> {
-        let inner: elements::Transaction = elements::Transaction::deserialize(hex.as_ref())?;
+    pub fn new(hex: &str) -> Result<Arc<Self>, LwkError> {
+        let bytes = Vec::<u8>::from_hex(hex)?;
+        let inner: elements::Transaction = elements::Transaction::deserialize(&bytes)?;
         Ok(Arc::new(Self { inner }))
     }
 

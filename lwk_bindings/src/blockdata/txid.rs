@@ -4,7 +4,7 @@ use std::{fmt::Display, str::FromStr, sync::Arc};
 
 use elements::hashes::Hash;
 
-use crate::{types::Hex, LwkError};
+use crate::LwkError;
 
 /// A transaction identifier.
 #[derive(uniffi::Object, PartialEq, Eq, Debug)]
@@ -53,8 +53,8 @@ impl Txid {
     ///
     /// Deprecated: use `from_string()` instead.
     #[uniffi::constructor]
-    pub fn new(hex: &Hex) -> Result<Arc<Self>, LwkError> {
-        let inner: elements::Txid = hex.to_string().parse()?;
+    pub fn new(hex: &str) -> Result<Arc<Self>, LwkError> {
+        let inner: elements::Txid = hex.parse()?;
         Ok(Arc::new(Self { inner }))
     }
 

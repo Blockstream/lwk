@@ -1,4 +1,4 @@
-use super::{Hex, PublicKey, SecretKey, XOnlyPublicKey};
+use super::{PublicKey, SecretKey, XOnlyPublicKey};
 
 use crate::LwkError;
 
@@ -6,7 +6,11 @@ use std::sync::Arc;
 
 use lwk_wollet::EC;
 
-use elements::bitcoin::secp256k1::{self, Message, Secp256k1};
+use elements::{
+    bitcoin::secp256k1::{self, Message, Secp256k1},
+    hashes::hex::FromHex,
+    hex::ToHex,
+};
 
 /// A secp256k1 keypair.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone)]
@@ -88,10 +92,11 @@ impl Keypair {
     }
 
     /// Sign a 32-byte message hash using Schnorr signature.
-    pub fn sign_schnorr(&self, msg: &Hex) -> Result<Hex, LwkError> {
-        let message = Message::from_digest(msg.as_ref().try_into()?);
+    pub fn sign_schnorr(&self, msg: &str) -> Result<String, LwkError> {
+        let bytes = Vec::<u8>::from_hex(msg)?;
+        let message: Message = Message::from_digest_slice(&bytes)?;
         let sig = EC.sign_schnorr(&message, &self.inner);
-        Ok(sig.serialize().to_vec().into())
+        Ok(sig.serialize().to_vec().to_hex())
     }
 }
 
@@ -114,6 +119,7 @@ impl Keypair {
 
 #[cfg(test)]
 mod tests {
+    use elements::hex::ToHex;
     use lwk_wollet::EC;
 
     use lwk_wollet::secp256k1::{schnorr, Message};
@@ -145,12 +151,13 @@ mod tests {
         let kp = Keypair::from_secret_bytes(&secret_key_bytes).unwrap();
         let mut msg_bytes = [0x33; 32];
         msg_bytes[31] = 0x44;
-        let msg: super::Hex = msg_bytes.as_slice().into();
+        let msg = msg_bytes.to_hex();
 
         let sig = kp.sign_schnorr(&msg).unwrap();
-        assert_eq!(sig.as_ref().len(), 64);
+        let sig_bytes = <Vec<u8> as elements::hashes::hex::FromHex>::from_hex(&sig).unwrap();
+        assert_eq!(sig_bytes.len(), 64);
 
-        let sig = schnorr::Signature::from_slice(sig.as_ref()).unwrap();
+        let sig = schnorr::Signature::from_slice(&sig_bytes).unwrap();
         let message = Message::from_digest(msg_bytes);
 
         let pubkey: elements::bitcoin::secp256k1::XOnlyPublicKey = kp.x_only_public_key().into();

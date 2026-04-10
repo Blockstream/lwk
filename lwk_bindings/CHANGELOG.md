@@ -6,6 +6,7 @@
 * deprecated `Txid::bytes()`, replacement `Txid:to_bytes()`
 * deprecated `Script::new()`, replacement `Script::from_string()`
 * deprecated `Script::bytes()`, replacement `Script:to_bytes()`
+* removed `Hex` (struct): functions returning it will return `String` instead, and functions accepting it will accept `&str` instead. This should not affect end user languages.
 
 ## 0.16.0
 

@@ -88,6 +88,26 @@ export interface WalletAbiSessionApprovalSignClient {
   ): void;
 }
 
+export interface WalletAbiWalletConnectRequest {
+  method: WalletAbiMethod;
+  params?: unknown;
+}
+
+export interface WalletAbiSessionControllerCallbacks {
+  onConnected?(): void;
+  onUpdated?(): void;
+  onDisconnected?(): void;
+}
+
+export interface WalletAbiSessionController {
+  readonly chainId: WalletAbiWalletConnectChain;
+  session(): SessionTypes.Struct | null;
+  connect(): Promise<SessionTypes.Struct>;
+  disconnect(): Promise<void>;
+  request(request: WalletAbiWalletConnectRequest): Promise<unknown>;
+  subscribe(callbacks: WalletAbiSessionControllerCallbacks): () => void;
+}
+
 export interface AwaitWalletAbiApprovedSessionOptions {
   approval(): Promise<SessionTypes.Struct>;
   signClient: WalletAbiSessionApprovalSignClient;
@@ -499,4 +519,395 @@ export async function awaitWalletAbiApprovedSession({
   } finally {
     stopWaiting();
   }
+}
+
+export interface CreateWalletAbiSessionControllerOptions {
+  projectId: string;
+  network: WalletAbiTransportNetwork;
+  appUrl: string;
+  metadata?: Partial<WalletAbiMetadata>;
+  storagePrefix?: string;
+}
+
+interface WalletAbiDisconnectReason {
+  code: number;
+  message: string;
+}
+
+interface WalletAbiAppKitControls {
+  open(options?: { uri?: string }): Promise<void>;
+  close(): Promise<void>;
+}
+
+interface WalletAbiUniversalConnectorInstance {
+  appKit: WalletAbiAppKitControls;
+}
+
+interface WalletAbiSessionStore {
+  getAll(): SessionTypes.Struct[];
+  get(topic: string): SessionTypes.Struct;
+}
+
+interface WalletAbiSessionSignClient extends WalletAbiSessionApprovalSignClient {
+  session: WalletAbiSessionStore;
+  connect(input: {
+    requiredNamespaces: Record<string, WalletAbiWalletConnectNamespace>;
+  }): Promise<{
+    uri?: string;
+    approval(): Promise<SessionTypes.Struct>;
+  }>;
+  disconnect(input: { topic: string; reason: WalletAbiDisconnectReason }): Promise<void>;
+  request(input: {
+    topic: string;
+    chainId: WalletAbiWalletConnectChain;
+    request: {
+      method: WalletAbiMethod;
+      params?: object | Record<string, unknown> | unknown[];
+    };
+  }): Promise<unknown>;
+  on(
+    event: "session_connect",
+    listener: (event: SignClientTypes.EventArguments["session_connect"]) => void
+  ): void;
+  on(
+    event: "session_update",
+    listener: (event: SignClientTypes.EventArguments["session_update"]) => void
+  ): void;
+  on(event: "session_delete", listener: (event: { topic: string }) => void): void;
+  on(event: "session_expire", listener: (event: { topic: string }) => void): void;
+  off(
+    event: "session_connect",
+    listener: (event: SignClientTypes.EventArguments["session_connect"]) => void
+  ): void;
+  off(
+    event: "session_update",
+    listener: (event: SignClientTypes.EventArguments["session_update"]) => void
+  ): void;
+  off(event: "session_delete", listener: (event: { topic: string }) => void): void;
+  off(event: "session_expire", listener: (event: { topic: string }) => void): void;
+}
+
+const DEFAULT_WALLET_ABI_STORAGE_PREFIX = "lwk-wallet-abi-sdk";
+
+function disconnectSession(
+  signClient: WalletAbiSessionSignClient,
+  topic: string,
+  reason: WalletAbiDisconnectReason
+): Promise<void> {
+  return signClient
+    .disconnect({
+      topic,
+      reason,
+    })
+    .catch(() => undefined);
+}
+
+function createRequiredNamespaces(
+  chainId: WalletAbiWalletConnectChain
+): Record<string, WalletAbiWalletConnectNamespace> {
+  const requiredNamespaces = createWalletAbiRequiredNamespaces(chainId);
+
+  return Object.fromEntries(
+    Object.entries(requiredNamespaces).map(([namespace, value]) => [
+      namespace,
+      {
+        methods: [...value.methods],
+        chains: [...value.chains],
+        events: [...value.events],
+      },
+    ])
+  );
+}
+
+function normalizeRequestParams(
+  params: unknown
+): object | Record<string, unknown> | unknown[] {
+  if (Array.isArray(params)) {
+    return params;
+  }
+
+  if (typeof params === "object" && params !== null) {
+    return params as Record<string, unknown>;
+  }
+
+  throw new Error("WalletConnect request params must be an object or array");
+}
+
+function appKitControls(
+  connector: WalletAbiUniversalConnectorInstance
+): WalletAbiAppKitControls {
+  return connector.appKit;
+}
+
+function describeWalletConnectError(error: unknown): string {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  if (typeof error === "string" && error.trim().length > 0) {
+    return error;
+  }
+
+  if (typeof error === "object" && error !== null) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim().length > 0) {
+      return message;
+    }
+
+    try {
+      const serialized = JSON.stringify(error);
+      if (serialized.length > 0) {
+        return serialized;
+      }
+    } catch {
+      // Ignore serialization failures and fall back to a generic string.
+    }
+  }
+
+  return "Unknown error";
+}
+
+class WalletAbiUniversalSessionController
+  implements WalletAbiSessionController
+{
+  readonly chainId: WalletAbiWalletConnectChain;
+  readonly #connector: WalletAbiUniversalConnectorInstance;
+  readonly #signClient: WalletAbiSessionSignClient;
+  readonly #requiredNamespaces: Record<string, WalletAbiWalletConnectNamespace>;
+  readonly #disconnectReason: WalletAbiDisconnectReason;
+
+  #session: SessionTypes.Struct | null;
+
+  constructor(
+    connector: WalletAbiUniversalConnectorInstance,
+    signClient: WalletAbiSessionSignClient,
+    session: SessionTypes.Struct | null,
+    chainId: WalletAbiWalletConnectChain,
+    requiredNamespaces: Record<string, WalletAbiWalletConnectNamespace>,
+    disconnectReason: WalletAbiDisconnectReason
+  ) {
+    this.#connector = connector;
+    this.#signClient = signClient;
+    this.#session = session;
+    this.chainId = chainId;
+    this.#requiredNamespaces = requiredNamespaces;
+    this.#disconnectReason = disconnectReason;
+  }
+
+  session(): SessionTypes.Struct | null {
+    if (this.#session !== null) {
+      try {
+        const nextSession = this.#signClient.session.get(this.#session.topic);
+        this.#session = nextSession;
+        return nextSession;
+      } catch {
+        this.#session = null;
+      }
+    }
+
+    const { activeSession } = selectWalletAbiSessions(
+      this.#signClient.session.getAll(),
+      this.chainId
+    );
+    this.#session = activeSession;
+    return activeSession;
+  }
+
+  async connect(): Promise<SessionTypes.Struct> {
+    const existingSession = this.session();
+    if (existingSession !== null) {
+      return existingSession;
+    }
+
+    const appKit = appKitControls(this.#connector);
+    let session: SessionTypes.Struct | undefined;
+    let modalOpened = false;
+
+    try {
+      const { uri, approval } = await this.#signClient.connect({
+        requiredNamespaces: this.#requiredNamespaces,
+      });
+
+      if (uri !== undefined) {
+        await appKit.open({ uri });
+        modalOpened = true;
+      }
+
+      session = await awaitWalletAbiApprovedSession({
+        approval,
+        signClient: this.#signClient,
+        chainId: this.chainId,
+      });
+      this.#session = session;
+    } catch (error) {
+      throw new Error(`Error connecting to wallet: ${describeWalletConnectError(error)}`);
+    } finally {
+      if (modalOpened) {
+        await appKit.close().catch(() => undefined);
+      }
+    }
+
+    if (session === undefined) {
+      throw new Error("Error connecting to wallet: No session found");
+    }
+
+    await this.#disconnectExtraSessions(session.topic);
+    return session;
+  }
+
+  async disconnect(): Promise<void> {
+    const session = this.session();
+    if (session === null) {
+      return;
+    }
+
+    this.#session = null;
+    await disconnectSession(this.#signClient, session.topic, this.#disconnectReason);
+  }
+
+  request(request: WalletAbiWalletConnectRequest): Promise<unknown> {
+    const session = this.session();
+    if (session === null) {
+      throw new Error("WalletConnect session is not connected");
+    }
+
+    return this.#signClient.request({
+      topic: session.topic,
+      chainId: this.chainId,
+      request: {
+        method: request.method,
+        params:
+          request.params === undefined ? undefined : normalizeRequestParams(request.params),
+      },
+    });
+  }
+
+  subscribe(callbacks: WalletAbiSessionControllerCallbacks): () => void {
+    const onConnected = ({
+      session,
+    }: SignClientTypes.EventArguments["session_connect"]) => {
+      if (!isWalletAbiSession(session, this.chainId)) {
+        return;
+      }
+
+      this.#session = session;
+      callbacks.onConnected?.();
+    };
+    const onUpdated = ({
+      topic,
+    }: SignClientTypes.EventArguments["session_update"]) => {
+      if (this.#session?.topic !== topic) {
+        return;
+      }
+
+      try {
+        this.#session = this.#signClient.session.get(topic);
+      } catch {
+        this.#session = null;
+        callbacks.onDisconnected?.();
+        return;
+      }
+
+      callbacks.onUpdated?.();
+    };
+    const onDisconnected = ({ topic }: { topic: string }) => {
+      if (this.#session?.topic !== topic) {
+        return;
+      }
+
+      this.#session = null;
+      callbacks.onDisconnected?.();
+    };
+
+    this.#signClient.on("session_connect", onConnected);
+    this.#signClient.on("session_update", onUpdated);
+    this.#signClient.on("session_delete", onDisconnected);
+    this.#signClient.on("session_expire", onDisconnected);
+
+    return () => {
+      this.#signClient.off("session_connect", onConnected);
+      this.#signClient.off("session_update", onUpdated);
+      this.#signClient.off("session_delete", onDisconnected);
+      this.#signClient.off("session_expire", onDisconnected);
+    };
+  }
+
+  async #disconnectExtraSessions(activeTopic: string): Promise<void> {
+    const extraSessions = this.#signClient.session
+      .getAll()
+      .filter(
+        (session) => session.topic !== activeTopic && isWalletAbiSession(session, this.chainId)
+      );
+
+    await Promise.all(
+      extraSessions.map((session) =>
+        disconnectSession(this.#signClient, session.topic, this.#disconnectReason)
+      )
+    );
+  }
+}
+
+export async function createWalletAbiSessionController({
+  projectId,
+  network,
+  appUrl,
+  metadata,
+  storagePrefix,
+}: CreateWalletAbiSessionControllerOptions): Promise<WalletAbiSessionController> {
+  const [{ UniversalConnector }, signClientModule, { getSdkError }] = await Promise.all([
+    import("@reown/appkit-universal-connector"),
+    import("@walletconnect/sign-client"),
+    import("@walletconnect/utils"),
+  ]);
+  const signClientFactory = signClientModule.default;
+
+  const resolvedMetadata = createWalletAbiMetadata(appUrl, metadata);
+  const chainId = walletAbiNetworkToWalletConnectChain(network);
+  const caipNetwork = createWalletAbiCaipNetwork(network);
+  const requiredNamespaces = createRequiredNamespaces(chainId);
+  const disconnectReason = getSdkError("USER_DISCONNECTED") as WalletAbiDisconnectReason;
+  const signClient = (await signClientFactory.init({
+    projectId,
+    metadata: resolvedMetadata,
+    customStoragePrefix: storagePrefix ?? DEFAULT_WALLET_ABI_STORAGE_PREFIX,
+  })) as WalletAbiSessionSignClient;
+
+  const { activeSession, staleSessions } = selectWalletAbiSessions(
+    signClient.session.getAll(),
+    chainId
+  );
+  await Promise.all(
+    staleSessions.map((session) =>
+      disconnectSession(signClient, session.topic, disconnectReason)
+    )
+  );
+
+  const connector = (await UniversalConnector.init({
+    projectId,
+    metadata: resolvedMetadata,
+    networks: [
+      {
+        namespace: WALLET_ABI_WALLETCONNECT_NAMESPACE,
+        chains: [caipNetwork],
+        methods: [...WALLET_ABI_WALLETCONNECT_METHODS],
+        events: [...WALLET_ABI_WALLETCONNECT_EVENTS],
+      },
+    ],
+    modalConfig: {
+      themeMode: "light",
+    },
+    providerConfig: {
+      client: signClient as unknown as never,
+      ...(activeSession === null ? {} : { session: activeSession }),
+    },
+  })) as unknown as WalletAbiUniversalConnectorInstance;
+
+  return new WalletAbiUniversalSessionController(
+    connector,
+    signClient,
+    activeSession,
+    chainId,
+    requiredNamespaces,
+    disconnectReason
+  );
 }

@@ -19,6 +19,7 @@ import {
   awaitWalletAbiApprovedSession,
   createWalletAbiMetadata,
   createWalletAbiRequiredNamespaces,
+  createWalletAbiSessionController,
   createWalletConnectRequester,
   createWalletAbiCaipNetwork,
   isWalletAbiSession,
@@ -340,4 +341,8 @@ test("walletconnect approval wait falls back to connected session", async () => 
 
   assert.equal(result.topic, "topic-approved");
   assert.equal(listeners.size, 0);
+});
+
+test("walletconnect session controller factory is exported", () => {
+  assert.equal(typeof createWalletAbiSessionController, "function");
 });

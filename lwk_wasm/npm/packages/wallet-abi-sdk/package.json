@@ -1,0 +1,60 @@
+{
+  "name": "lwk_wallet_abi_sdk",
+  "version": "0.16.0",
+  "description": "Headless Wallet ABI SDK for lwk_wallet_abi_web",
+  "license": "MIT OR BSD-2-Clause",
+  "homepage": "https://github.com/Blockstream/lwk/tree/master/lwk_wasm",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Blockstream/lwk.git",
+    "directory": "lwk_wasm/npm/packages/wallet-abi-sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/Blockstream/lwk/issues"
+  },
+  "keywords": [
+    "blockstream",
+    "liquid",
+    "wallet",
+    "wallet-abi",
+    "walletconnect",
+    "browser",
+    "typescript"
+  ],
+  "type": "module",
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "import": "./dist/schema.js",
+      "default": "./dist/schema.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "npm --prefix ../.. run build -w lwk_wallet_abi_web && tsc -p tsconfig.build.json",
+    "build:features": "LWK_WASM_FEATURES=\"serial,simplicity\" npm run build",
+    "typecheck": "npm run build:features && tsc -p tsconfig.json --noEmit",
+    "test": "npm run build:features && node --import tsx --test tests/**/*.test.ts",
+    "pack:check": "npm run build && npm pack --dry-run",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "lwk_wallet_abi_web": "0.16.0"
+  }
+}

@@ -97,7 +97,7 @@ impl FromStr for Bip321 {
         }
 
         // Try to parse as URL first to validate structure
-        let url = url::Url::from_str(s).map_err(|e| e.to_string())?;
+        let url = url::Url::from_str(s)?;
 
         // Check that the scheme is "bitcoin" (case-insensitive)
         if !url.scheme().eq_ignore_ascii_case("bitcoin") {

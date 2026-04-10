@@ -30,6 +30,10 @@ pub enum Error {
     #[error("Reqwest error: {0}")]
     Reqwest(String),
 
+    /// URL parse error.
+    #[error("URL parse error: {0}")]
+    Url(String),
+
     /// Generic error.
     #[error("{0}")]
     Generic(String),
@@ -51,5 +55,12 @@ impl From<&str> for Error {
 impl From<reqwest::Error> for Error {
     fn from(err: reqwest::Error) -> Self {
         Self::Reqwest(err.to_string())
+    }
+}
+
+// Store url parse errors as strings so Error can keep deriving Clone, PartialEq, and Eq.
+impl From<url::ParseError> for Error {
+    fn from(err: url::ParseError) -> Self {
+        Self::Url(err.to_string())
     }
 }

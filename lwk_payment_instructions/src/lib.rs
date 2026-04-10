@@ -186,7 +186,7 @@ impl Payment {
             .into());
         }
 
-        let mut url = url::Url::parse(&info.callback).map_err(|e| e.to_string())?;
+        let mut url = url::Url::parse(&info.callback)?;
         url.query_pairs_mut()
             .append_pair("amount", &amount_msat.to_string());
 
@@ -353,7 +353,7 @@ fn parse_with_schema(
         }
         (LnUrlP, _) => {
             // lnurlp://<url> can be an lnurl
-            url::Url::from_str(s).map_err(|e| e.to_string())?;
+            url::Url::from_str(s)?;
             let lnurl = LnUrl::from_url(s.to_string());
             Ok(LnUrlCat(LnUrlIdentifier::LnUrl(lnurl)))
         }
@@ -362,7 +362,7 @@ fn parse_with_schema(
 }
 
 fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<Payment, Error> {
-    let url = url::Url::from_str(s).map_err(|e| e.to_string())?;
+    let url = url::Url::from_str(s)?;
 
     let address_str = url.path();
     let address = elements::Address::from_str(address_str).map_err(|e| e.to_string())?;

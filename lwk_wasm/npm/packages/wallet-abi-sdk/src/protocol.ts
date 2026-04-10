@@ -32,8 +32,52 @@ export type LwkWalletAbiNetworkName =
   (typeof LWK_WALLET_ABI_NETWORK_NAMES)[number];
 export type WalletAbiTransportNetwork = (typeof WALLET_ABI_NETWORKS)[number];
 
+export interface WalletAbiJsonRpcSuccessResponse<TResult> {
+  id: number;
+  jsonrpc: typeof WALLET_ABI_JSON_RPC_VERSION;
+  result: TResult;
+}
+
+export interface WalletAbiJsonRpcErrorObject {
+  code: number;
+  message: string;
+}
+
+export interface WalletAbiJsonRpcErrorResponse {
+  id: number;
+  jsonrpc: typeof WALLET_ABI_JSON_RPC_VERSION;
+  error: WalletAbiJsonRpcErrorObject;
+}
+
+export interface WalletAbiGetSignerReceiveAddressRequest {
+  id: number;
+  jsonrpc: typeof WALLET_ABI_JSON_RPC_VERSION;
+  method: typeof GET_SIGNER_RECEIVE_ADDRESS_METHOD;
+  params?: Record<string, never>;
+}
+
+export type WalletAbiGetSignerReceiveAddressResponse =
+  WalletAbiJsonRpcSuccessResponse<string>;
+
+export class WalletAbiProtocolError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "WalletAbiProtocolError";
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export function isWalletAbiMethod(value: string): value is WalletAbiMethod {
   return WALLET_ABI_METHODS.includes(value as WalletAbiMethod);
+}
+
+export function isJsonRpcErrorResponse(
+  value: unknown
+): value is WalletAbiJsonRpcErrorResponse {
+  return isRecord(value) && isRecord(value.error);
 }
 
 export function isWalletAbiGetterMethod(
@@ -95,4 +139,30 @@ export function walletAbiNetworkFromNetwork(
   }
 
   throw new Error(`unsupported wallet network "${network.toString()}"`);
+}
+
+export function createGetSignerReceiveAddressRequest(
+  id: number
+): WalletAbiGetSignerReceiveAddressRequest {
+  return {
+    id,
+    jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
+    method: GET_SIGNER_RECEIVE_ADDRESS_METHOD,
+  };
+}
+
+export function parseGetSignerReceiveAddressResponse(value: unknown): string {
+  if (isJsonRpcErrorResponse(value)) {
+    throw new WalletAbiProtocolError(
+      `${GET_SIGNER_RECEIVE_ADDRESS_METHOD} failed: ${value.error.message}`
+    );
+  }
+
+  if (!isRecord(value) || typeof value.result !== "string") {
+    throw new WalletAbiProtocolError(
+      `expected ${GET_SIGNER_RECEIVE_ADDRESS_METHOD} result`
+    );
+  }
+
+  return value.result;
 }

@@ -3,16 +3,20 @@ import test from "node:test";
 
 import { networkFromString } from "lwk_wallet_abi_web/helpers";
 import {
+  createGetSignerReceiveAddressRequest,
   GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
   GET_SIGNER_RECEIVE_ADDRESS_METHOD,
   LWK_WALLET_ABI_NETWORK_NAMES,
+  WalletAbiProtocolError,
   WALLET_ABI_JSON_RPC_VERSION,
   WALLET_ABI_METHODS,
   WALLET_ABI_NETWORKS,
   WALLET_ABI_PROCESS_REQUEST_METHOD,
   isWalletAbiGetterMethod,
+  isJsonRpcErrorResponse,
   isWalletAbiMethod,
   isWalletAbiProcessMethod,
+  parseGetSignerReceiveAddressResponse,
   walletAbiNetworkFromLwkNetworkName,
   walletAbiNetworkFromNetwork,
   walletAbiNetworkToLwkNetworkName,
@@ -85,5 +89,43 @@ test("wallet abi network name translation", () => {
   assert.equal(
     walletAbiNetworkFromNetwork(networkFromString("liquid-testnet")),
     "testnet-liquid"
+  );
+});
+
+test("get signer receive address envelope", () => {
+  assert.deepEqual(createGetSignerReceiveAddressRequest(7), {
+    id: 7,
+    jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
+    method: GET_SIGNER_RECEIVE_ADDRESS_METHOD,
+  });
+
+  assert.equal(
+    parseGetSignerReceiveAddressResponse({
+      id: 7,
+      jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
+      result: "tex1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq0qfhdv",
+    }),
+    "tex1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq0qfhdv"
+  );
+
+  assert.equal(
+    isJsonRpcErrorResponse({
+      id: 7,
+      jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
+      error: { code: -1, message: "boom" },
+    }),
+    true
+  );
+
+  assert.throws(
+    () =>
+      parseGetSignerReceiveAddressResponse({
+        id: 7,
+        jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
+        error: { code: -1, message: "boom" },
+      }),
+    (error: unknown) =>
+      error instanceof WalletAbiProtocolError &&
+      error.message === `${GET_SIGNER_RECEIVE_ADDRESS_METHOD} failed: boom`
   );
 });

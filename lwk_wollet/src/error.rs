@@ -291,6 +291,12 @@ pub enum Error {
         "Wollet and client are incompatible: they must be both 'utxo_only' or both non-'utxo_only'"
     )]
     UtxoOnlyIncompatible,
+
+    #[error("Cannot access browser window for async sleep")]
+    AsyncSleepMissingWindow,
+
+    #[error("Async sleep failed: {0}")]
+    AsyncSleepFailed(String),
 }
 
 // cannot derive automatically with this error because of trait bound

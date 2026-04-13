@@ -282,7 +282,7 @@ impl Wollet {
         };
 
         let update = Update {
-            version: 2,
+            version: 3,
             wollet_status: self.status(),
             new_txs: DownloadTxResult {
                 txs: vec![(txid, tx)],
@@ -762,6 +762,13 @@ impl Encodable for Update {
             }
         }
         bytes_written += self.tip.consensus_encode(&mut w)?;
+        if self.version >= 3 {
+            bytes_written +=
+                elements::encode::VarInt(self.unspent.len() as u64).consensus_encode(&mut w)?;
+            for op in &self.unspent {
+                bytes_written += op.consensus_encode(&mut w)?;
+            }
+        }
 
         Ok(bytes_written)
     }
@@ -775,7 +782,7 @@ impl Decodable for Update {
         }
 
         let version = u8::consensus_decode(&mut d)?;
-        if version > 2 {
+        if version > 3 {
             return Err(elements::encode::Error::ParseFailed("Unsupported version"));
         }
         let wollet_status = if version >= 1 {
@@ -831,7 +838,7 @@ impl Decodable for Update {
                     _ => return Err(elements::encode::Error::ParseFailed("Invalid chain")),
                 };
                 let child_number: ChildNumber = u32::consensus_decode(&mut d)?.into();
-                let blinding_pubkey = if version == 2 {
+                let blinding_pubkey = if version >= 2 {
                     let bytes: [u8; 33] = Decodable::consensus_decode(&mut d)?;
                     if bytes == [0u8; 33] {
                         None
@@ -848,6 +855,17 @@ impl Decodable for Update {
 
         let tip = BlockHeader::consensus_decode(&mut d)?;
 
+        let unspent = if version >= 3 {
+            let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
+            let mut vec = Vec::with_capacity(len as usize);
+            for _ in 0..len {
+                vec.push(OutPoint::consensus_decode(&mut d)?);
+            }
+            vec
+        } else {
+            vec![]
+        };
+
         Ok(Self {
             version,
             wollet_status,
@@ -857,7 +875,7 @@ impl Decodable for Update {
             timestamps,
             scripts_with_blinding_pubkey,
             tip,
-            unspent: vec![],
+            unspent,
         })
     }
 }

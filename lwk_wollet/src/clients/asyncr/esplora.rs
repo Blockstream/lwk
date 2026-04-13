@@ -392,7 +392,7 @@ impl EsploraClient {
                 .collect();
 
             let update = Update {
-                version: 2,
+                version: 3,
                 wollet_status,
                 new_txs,
                 txid_height_new,

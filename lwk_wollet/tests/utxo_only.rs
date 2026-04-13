@@ -266,11 +266,12 @@ async fn test_esplora_waterfalls_testnet_utxo_only_2() {
 fn test_faucet() {
     // Simulate a couple of errors that we see with the testnet faucet
     let env = TestEnvBuilder::from_env().with_waterfalls().build();
+    let network = ElementsNetwork::default_regtest();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
-    let client = EsploraClientBuilder::new(&env.waterfalls_url(), ElementsNetwork::Liquid)
+    let client = EsploraClientBuilder::new(&env.waterfalls_url(), network)
         .utxo_only(true)
         .waterfalls(true)
         .build_blocking()

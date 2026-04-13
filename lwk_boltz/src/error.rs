@@ -82,6 +82,9 @@ pub enum Error {
     #[error("BIP32 derivation error: {0}")]
     Bip32(#[from] lwk_wollet::bitcoin::bip32::Error),
 
+    #[error(transparent)]
+    Wollet(#[from] lwk_wollet::Error),
+
     #[error("Secp256k1 error: {0}")]
     Secp256k1(#[from] lwk_wollet::secp256k1::Error),
 

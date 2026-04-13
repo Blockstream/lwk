@@ -423,3 +423,41 @@ async fn test_incompatible_utxo_only_async() {
     let err = client_waterfalls_uo.full_scan(&wollet).await.unwrap_err();
     assert!(matches!(err, Error::UtxoOnlyIncompatible));
 }
+
+#[test]
+fn test_waterfalls_utxo_only_persisted() {
+    let env = TestEnvBuilder::from_env().with_waterfalls().build();
+    let network = ElementsNetwork::default_regtest();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
+    let client = EsploraClientBuilder::new(&env.waterfalls_url(), network)
+        .utxo_only(true)
+        .waterfalls(true)
+        .build_blocking()
+        .unwrap();
+    let opt = TestWolletOpt { utxo_only: true };
+    let mut w = TestWollet::with_opt(client, &desc, &opt);
+
+    let lbtc = w.policy_asset();
+    let _txid0 = w.fund_btc(&env);
+    let updates = w.wollet.updates().unwrap();
+    assert!(!updates.is_empty());
+    assert!(updates.iter().any(|u| !u.unspent.is_empty()));
+    let balance = w.balance(&lbtc);
+
+    // restart using the same datadir
+    let wollet = WolletBuilder::new(network, desc.parse().unwrap())
+        .with_legacy_fs_store(w.path())
+        .unwrap()
+        .utxo_only(true)
+        .build()
+        .unwrap();
+    // From persisted updates
+    let updates = wollet.updates().unwrap();
+    assert!(!updates.is_empty());
+    assert!(updates.iter().any(|u| !u.unspent.is_empty()));
+    let new_balance = wollet.balance().unwrap();
+    assert_eq!(new_balance.get(&lbtc).unwrap(), &balance);
+}

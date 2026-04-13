@@ -261,6 +261,11 @@ impl Cache {
             .retain(|o| deleted_txids.iter().all(|txid| txid != &o.txid));
     }
 
+    pub fn update_unspent_utxos_only(&mut self, unspent: Vec<OutPoint>) {
+        self.unspent.clear();
+        self.unspent.extend(unspent);
+    }
+
     pub fn unspent(&self) -> &HashSet<OutPoint> {
         &self.unspent
     }

@@ -405,6 +405,7 @@ impl EsploraClient {
                 timestamps,
                 scripts_with_blinding_pubkey,
                 tip,
+                unspent,
             };
             Ok(Some(update))
         } else {

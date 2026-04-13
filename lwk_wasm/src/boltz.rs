@@ -475,7 +475,7 @@ mod tests {
         assert!(result);
         let wait_secs = 20;
         for i in 0..wait_secs {
-            async_sleep(1_000).await;
+            async_sleep(1_000).await.unwrap();
             scan_wollet(&mut wollet, &mut client).await;
             let balance3 = lbtc_balance(&wollet);
             if balance3 > balance2 {

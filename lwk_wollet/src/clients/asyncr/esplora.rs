@@ -861,7 +861,7 @@ impl EsploraClient {
 
                 log::debug!("{url} waiting {secs}");
 
-                async_sleep(secs * 1000).await;
+                async_sleep(secs * 1000).await?;
                 attempt += 1;
             } else if response.status() == 401 {
                 // 401 Unauthorized, the token is expired, so we need to refresh it
@@ -930,7 +930,7 @@ impl EsploraClient {
 
                 log::debug!("{url} waiting {secs}");
 
-                async_sleep(secs * 1000).await;
+                async_sleep(secs * 1000).await?;
                 attempt += 1;
             } else if response.status() == 401 {
                 // 401 Unauthorized, the token is expired, so we need to refresh it
@@ -1116,7 +1116,7 @@ mod tests {
     #[tokio::test]
     async fn sleep_test() {
         // TODO this doesn't last a second when run, is it right?
-        async_sleep(1).await;
+        async_sleep(1).await.unwrap();
     }
 
     #[ignore]

@@ -774,7 +774,8 @@ pub async fn next_status(
             let remaining = deadline - async_now().await;
             tokio::select! {
                 update = rx.recv() => update?,
-                _ = async_sleep(remaining) => {
+                sleep_result = async_sleep(remaining) => {
+                    sleep_result?;
                     log::warn!("Timeout while waiting state for swap id {swap_id}");
                     return Err(Error::Timeout(swap_id.to_string()));
                 }

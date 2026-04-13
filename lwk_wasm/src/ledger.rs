@@ -232,7 +232,7 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
                 }
             }
             attempts += 1;
-            lwk_wollet::clients::asyncr::async_sleep(sleep_ms).await;
+            lwk_wollet::clients::asyncr::async_sleep(sleep_ms).await?;
 
             if attempts >= total_attempts {
                 console_log!("Timeout waiting for response");

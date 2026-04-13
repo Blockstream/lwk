@@ -524,6 +524,7 @@ mod tests {
             .prepare_pay(&lightning_payment, &refund_address, None)
             .await
             .unwrap_err();
+        eprintln!("duplicate invoice error: {err:?}");
         assert!(matches!(
             err,
             lwk_boltz::Error::BoltzBackendHttpError { status, error } if status == 400 && error.as_ref().unwrap() == "a swap with this invoice exists already"

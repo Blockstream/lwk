@@ -5,17 +5,17 @@ use crate::ElementsNetwork;
 
 use crate::{
     cache::{Height, Timestamp},
-    BlindingPublicKey, Chain, DownloadTxResult, Error, WolletDescriptor, EC,
+    BlindingPublicKey, Chain, Error, WolletDescriptor, EC,
 };
 use elements::{
     bitcoin::bip32::ChildNumber,
     confidential::{Asset, AssetBlindingFactor, Nonce, Value, ValueBlindingFactor},
-    AssetIssuance, LockTime, Script, Sequence, TxInWitness, TxOut, TxOutSecrets,
+    Script, TxOut, TxOutSecrets,
 };
 use elements::{BlockHash, OutPoint, Txid};
 use serde::Deserialize;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     ops::{Index, IndexMut},
 };
 
@@ -240,46 +240,6 @@ pub(crate) fn check_witnesses_non_empty(tx: &elements::Transaction) -> Result<()
         return Err(Error::EmptyWitness);
     }
     Ok(())
-}
-
-// Creates a dummy tx having inputs spending all the outputs of the download transactions which are not unspent.
-//
-// We may need to return a vec of transactions if some kind of transaction limits arise.
-// TODO: Add only outpoints the wallet owns.
-fn create_dummy_tx(unspent: &[OutPoint], new_txs: &DownloadTxResult) -> elements::Transaction {
-    let mut all_outputs: HashSet<OutPoint> = new_txs
-        .txs
-        .iter()
-        .flat_map(|(txid, tx)| {
-            tx.output
-                .iter()
-                .enumerate()
-                .map(|(i, _)| OutPoint::new(*txid, i as u32))
-        })
-        .collect();
-    all_outputs.retain(|o| !unspent.contains(o));
-    let spent_outputs = all_outputs;
-
-    let inputs = spent_outputs
-        .iter()
-        .map(|o| elements::TxIn {
-            previous_output: *o,
-            script_sig: elements::Script::default(),
-            sequence: Sequence::MAX,
-            is_pegin: false,
-            asset_issuance: AssetIssuance::default(),
-            witness: TxInWitness::default(),
-        })
-        .collect();
-
-    let outputs = vec![];
-
-    elements::Transaction {
-        version: 1,
-        input: inputs,
-        output: outputs,
-        lock_time: LockTime::ZERO,
-    }
 }
 
 #[cfg(test)]

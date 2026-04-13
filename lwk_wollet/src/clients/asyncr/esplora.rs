@@ -2,7 +2,7 @@
 //! the standard esplora client of which contain a lot of duplicated code.
 
 use crate::async_util::async_sleep;
-use crate::clients::{create_dummy_tx, try_unblind, Capability, History, TokenProvider};
+use crate::clients::{try_unblind, Capability, History, TokenProvider};
 use crate::clients::{EsploraClientBuilder, LastUnused};
 use crate::descriptor::url_encode_descriptor;
 use crate::BlindingPublicKey;
@@ -335,14 +335,9 @@ impl EsploraClient {
         };
 
         let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
-        let mut new_txs = self
+        let new_txs = self
             .download_txs(&history_txs_id, &scripts, cache, &descriptor)
             .await?;
-
-        if self.utxo_only {
-            let tx = create_dummy_tx(&unspent, &new_txs);
-            new_txs.txs.push((tx.txid(), tx));
-        }
 
         let history_txs_heights_plus_tip: HashSet<Height> = txid_height
             .values()
@@ -397,7 +392,7 @@ impl EsploraClient {
                 .collect();
 
             let update = Update {
-                version: 2,
+                version: 3,
                 wollet_status,
                 new_txs,
                 txid_height_new,
@@ -405,6 +400,7 @@ impl EsploraClient {
                 timestamps,
                 scripts_with_blinding_pubkey,
                 tip,
+                unspent,
             };
             Ok(Some(update))
         } else {

@@ -81,6 +81,13 @@ pub struct Update {
 
     /// The tip of the blockchain at the time the update was generated
     pub tip: BlockHeader,
+
+    /// The unspent outputs
+    ///
+    /// In general utxos are not returned by the server, and they are computed
+    /// by the [`Wollet`] from its transactions. However if the server is
+    /// "utxo only" they are returned so we store them here.
+    pub unspent: Vec<OutPoint>,
 }
 
 impl Update {
@@ -90,6 +97,7 @@ impl Update {
             && self.txid_height_new.is_empty()
             && self.txid_height_delete.is_empty()
             && self.scripts_with_blinding_pubkey.is_empty()
+            && self.unspent.is_empty()
     }
 
     /// Prune the update, removing unneeded data from transactions.
@@ -215,6 +223,9 @@ impl Update {
         // Update version to latest
         self.version = following.version;
 
+        // Update unspent to latest
+        self.unspent = following.unspent;
+
         // We don't need to update the wollet status, it's right to keep the status of the first update
     }
 }
@@ -254,8 +265,24 @@ impl Wollet {
             }
         }
 
+        let unspent = if self.utxo_only() {
+            let mut unspent = self.cache.unspent().clone();
+            for input in tx.input.iter() {
+                unspent.remove(&input.previous_output);
+            }
+            for vout in 0..tx.output.len() {
+                let outpoint = OutPoint::new(txid, vout as u32);
+                if unblinds.iter().any(|(op, _)| op == &outpoint) {
+                    unspent.insert(outpoint);
+                }
+            }
+            unspent.into_iter().collect()
+        } else {
+            vec![]
+        };
+
         let update = Update {
-            version: 2,
+            version: 3,
             wollet_status: self.status(),
             new_txs: DownloadTxResult {
                 txs: vec![(txid, tx)],
@@ -266,6 +293,7 @@ impl Wollet {
             timestamps: vec![],
             scripts_with_blinding_pubkey: vec![],
             tip: default_blockheader(),
+            unspent,
         };
 
         self.apply_update_inner(update, do_persist)?;
@@ -309,6 +337,7 @@ impl Wollet {
             }
         }
         let descriptor = self.wollet_descriptor();
+        let utxo_only = self.utxo_only();
         let cache = &mut self.cache;
         let Update {
             version: _,
@@ -319,6 +348,7 @@ impl Wollet {
             timestamps,
             scripts_with_blinding_pubkey,
             tip,
+            unspent,
         } = update.clone();
 
         let scripts_with_blinding_pubkey =
@@ -340,7 +370,11 @@ impl Wollet {
         cache.extend_all_txs(new_txs.txs)?;
         cache.update_heights(&txid_height_new, &txid_height_delete);
         cache.rebuild_sorted_txids();
-        cache.update_unspent(&txid_height_new, &txid_height_delete);
+        if utxo_only {
+            cache.update_unspent_utxos_only(unspent);
+        } else {
+            cache.update_unspent(&txid_height_new, &txid_height_delete);
+        }
         cache.timestamps.extend(timestamps);
         cache.scripts.extend(
             scripts_with_blinding_pubkey
@@ -728,6 +762,13 @@ impl Encodable for Update {
             }
         }
         bytes_written += self.tip.consensus_encode(&mut w)?;
+        if self.version >= 3 {
+            bytes_written +=
+                elements::encode::VarInt(self.unspent.len() as u64).consensus_encode(&mut w)?;
+            for op in &self.unspent {
+                bytes_written += op.consensus_encode(&mut w)?;
+            }
+        }
 
         Ok(bytes_written)
     }
@@ -741,7 +782,7 @@ impl Decodable for Update {
         }
 
         let version = u8::consensus_decode(&mut d)?;
-        if version > 2 {
+        if version > 3 {
             return Err(elements::encode::Error::ParseFailed("Unsupported version"));
         }
         let wollet_status = if version >= 1 {
@@ -797,7 +838,7 @@ impl Decodable for Update {
                     _ => return Err(elements::encode::Error::ParseFailed("Invalid chain")),
                 };
                 let child_number: ChildNumber = u32::consensus_decode(&mut d)?.into();
-                let blinding_pubkey = if version == 2 {
+                let blinding_pubkey = if version >= 2 {
                     let bytes: [u8; 33] = Decodable::consensus_decode(&mut d)?;
                     if bytes == [0u8; 33] {
                         None
@@ -814,6 +855,17 @@ impl Decodable for Update {
 
         let tip = BlockHeader::consensus_decode(&mut d)?;
 
+        let unspent = if version >= 3 {
+            let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
+            let mut vec = Vec::with_capacity(len as usize);
+            for _ in 0..len {
+                vec.push(OutPoint::consensus_decode(&mut d)?);
+            }
+            vec
+        } else {
+            vec![]
+        };
+
         Ok(Self {
             version,
             wollet_status,
@@ -823,6 +875,7 @@ impl Decodable for Update {
             timestamps,
             scripts_with_blinding_pubkey,
             tip,
+            unspent,
         })
     }
 }
@@ -864,6 +917,7 @@ mod test {
             scripts_with_blinding_pubkey: Default::default(),
             tip,
             wollet_status: 1,
+            unspent: Default::default(),
         };
         assert!(update.only_tip());
         update
@@ -918,6 +972,7 @@ mod test {
             scripts_with_blinding_pubkey,
             tip,
             wollet_status: 1,
+            unspent: vec![],
         };
 
         let mut vec = vec![];

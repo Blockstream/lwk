@@ -1499,6 +1499,7 @@ mod tests {
             timestamps: vec![(tip.height, tip.time)],
             scripts_with_blinding_pubkey: Vec::new(),
             tip,
+            unspent: Vec::new(),
         };
 
         wollet.apply_update(update.clone()).unwrap();

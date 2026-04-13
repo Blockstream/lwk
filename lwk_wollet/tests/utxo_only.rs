@@ -151,7 +151,8 @@ fn test_waterfalls_utxo_only_with_dummy() {
         .full_scan(&wollet_utxo_only)
         .unwrap()
         .unwrap();
-    assert!(update
+    // No more dummy txs
+    assert!(!update
         .new_txs
         .txs
         .iter()
@@ -177,7 +178,8 @@ fn test_waterfalls_utxo_only_with_dummy() {
         .full_scan(&wollet_utxo_only)
         .unwrap()
         .unwrap();
-    assert!(update
+    // No more dummy txs
+    assert!(!update
         .new_txs
         .txs
         .iter()

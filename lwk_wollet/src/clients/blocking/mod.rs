@@ -2,7 +2,7 @@
 
 use crate::{
     cache::{Height, Timestamp, BATCH_SIZE},
-    clients::{create_dummy_tx, try_unblind},
+    clients::try_unblind,
     update::{DownloadTxResult, Update},
     wollet::WolletState,
     BlindingPublicKey, Chain, Error, WolletDescriptor,
@@ -204,12 +204,7 @@ pub trait BlockchainBackend {
         let tip = self.tip()?;
 
         let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
-        let mut new_txs = self.download_txs(&history_txs_id, &scripts, state, &descriptor)?;
-
-        if self.utxo_only() {
-            let tx = create_dummy_tx(&unspent, &new_txs);
-            new_txs.txs.push((tx.txid(), tx));
-        }
+        let new_txs = self.download_txs(&history_txs_id, &scripts, state, &descriptor)?;
 
         let history_txs_heights_plus_tip: HashSet<Height> = txid_height
             .values()

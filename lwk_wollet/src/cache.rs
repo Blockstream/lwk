@@ -24,9 +24,6 @@ pub struct Cache {
     /// Store for all wallet transactions
     txs_store: Arc<dyn DynStore>,
 
-    /// Dummy txs for utxo only mode
-    dummy_txids: HashSet<Txid>,
-
     /// contains all my script up to an empty batch of BATCHSIZE
     pub paths: HashMap<Script, (Chain, ChildNumber)>,
 
@@ -62,7 +59,6 @@ impl Default for Cache {
     fn default() -> Self {
         Self {
             txs_store: Arc::new(MemoryStore::default()),
-            dummy_txids: HashSet::default(),
             paths: HashMap::default(),
             scripts: HashMap::default(),
             heights: HashMap::default(),
@@ -225,21 +221,11 @@ impl Cache {
             .cloned()
             .collect();
 
-        let mut inputs_new: HashSet<OutPoint> = txids_new
+        let inputs_new: HashSet<OutPoint> = txids_new
             .iter()
             .filter_map(|txid| self.tx(txid))
             .flat_map(|tx| tx.input.into_iter().map(|i| i.previous_output))
             .collect();
-
-        // In utxo_only mode the client creates a dummy tx whose inputs are outputs known to be
-        // spent by transactions that were not fetched. Remove those from unspent.
-        let inputs_from_dummmy_txs: HashSet<OutPoint> = self
-            .dummy_txids
-            .iter()
-            .filter_map(|txid| self.tx(txid))
-            .flat_map(|tx| tx.input.into_iter().map(|i| i.previous_output))
-            .collect();
-        inputs_new.extend(inputs_from_dummmy_txs);
 
         let inputs_to_restore: Vec<OutPoint> = deleted_txids
             .iter()
@@ -312,9 +298,6 @@ impl Cache {
     pub fn extend_all_txs(&mut self, txs: Vec<(Txid, Transaction)>) -> Result<(), Error> {
         let mut txids = self.all_txids();
         for (txid, tx) in &txs {
-            if tx.output.is_empty() {
-                self.dummy_txids.insert(*txid);
-            }
             self.txs_store
                 .put(&tx_key(txid), &elements::encode::serialize(tx))
                 .map_err(Error::StoreError)?;

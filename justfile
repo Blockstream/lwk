@@ -3,6 +3,7 @@ default:
     just --list
 
 SIMPLICITY_FEATURES := if env_var_or_default("SIMPLICITY", "") != "" { "--features simplicity" } else { "" }
+LIB_EXTENSION := if os() == "macos" { "dylib" } else { "so" }
 
 # build the bindings lib: liblwk.so (as specified in lwk_bindings/Cargo.toml)
 build-bindings-lib:
@@ -13,8 +14,8 @@ build-bindings-lib:
 python-build-bindings: build-bindings-lib
     # note production wheels are built with maturin, but this can be useful during development
     # we use release to generate interfaces only because build-bindings-lib is done in release, so we find intermediate packages
-    cargo run --release --features bindings -- generate --library target/release/liblwk.so --language python --out-dir target/release/bindings
-    cp target/release/liblwk.so target/release/bindings
+    cargo run --release --features bindings -- generate --library target/release/liblwk.{{LIB_EXTENSION}} --language python --out-dir target/release/bindings
+    cp target/release/liblwk.{{LIB_EXTENSION}} target/release/bindings
 
 # smoke test the python bindings
 python-test-bindings: python-build-bindings
@@ -26,8 +27,8 @@ build-bindings-lib-simplicity:
 
 # build the python bindings with simplicity enabled
 python-build-bindings-simplicity: build-bindings-lib-simplicity
-    cargo run --release --features bindings,simplicity -- generate --library target/release/liblwk.so --language python --out-dir target/release/bindings
-    cp target/release/liblwk.so target/release/bindings
+    cargo run --release --features bindings,simplicity -- generate --library target/release/liblwk.{{LIB_EXTENSION}} --language python --out-dir target/release/bindings
+    cp target/release/liblwk.{{LIB_EXTENSION}} target/release/bindings
 
 # smoke test the python bindings with simplicity
 python-test-bindings-simplicity: python-build-bindings-simplicity
@@ -56,7 +57,7 @@ docker-nix-push: docker-nix-build
     docker push xenoky/lwk-nix-builder # require credentials
 
 kotlin: build-bindings-lib
-    cargo run --release --features bindings -- generate --library target/release/liblwk.so --language kotlin --out-dir target/release/kotlin
+    cargo run --release --features bindings -- generate --library target/release/liblwk.{{LIB_EXTENSION}} --language kotlin --out-dir target/release/kotlin
     cp -a target/release/kotlin/lwk lwk_bindings/android_bindings/lib/src/androidMain/kotlin
 
 # Cross build the lib for aarch64-linux-android

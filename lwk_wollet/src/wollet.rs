@@ -196,6 +196,7 @@ impl WolletBuilder {
             }
         }
 
+        wollet.cache.add_txids_from_txs_store();
         Ok(wollet)
     }
 }

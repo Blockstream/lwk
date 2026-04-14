@@ -228,9 +228,9 @@ impl Cache {
         self.txids.clone()
     }
 
-    #[allow(dead_code)]
-    pub fn all_txids_from_txs_store(&self) -> HashSet<Txid> {
-        self.txs_store
+    pub fn add_txids_from_txs_store(&mut self) {
+        let txids: HashSet<Txid> = self
+            .txs_store
             .get(TXIDS_KEY)
             .ok()
             .flatten()
@@ -238,7 +238,8 @@ impl Cache {
             .unwrap_or_default()
             .into_iter()
             .filter_map(|s| s.parse().ok())
-            .collect()
+            .collect();
+        self.txids.extend(txids);
     }
 
     pub fn txs_store_is_persisted(&self) -> bool {
@@ -311,13 +312,15 @@ impl Cache {
                 .map_err(Error::StoreError)?;
             self.txids.insert(*txid);
         }
-        // TODO: order keys
-        let txids =
-            serde_json::to_vec(&self.txids.iter().map(|t| t.to_string()).collect::<Vec<_>>())
-                .map_err(Error::from)?;
-        self.txs_store
-            .put(TXIDS_KEY, &txids)
-            .map_err(Error::StoreError)?;
+        if !txs.is_empty() {
+            // TODO: order keys
+            let txids =
+                serde_json::to_vec(&self.txids.iter().map(|t| t.to_string()).collect::<Vec<_>>())
+                    .map_err(Error::from)?;
+            self.txs_store
+                .put(TXIDS_KEY, &txids)
+                .map_err(Error::StoreError)?;
+        }
         Ok(())
     }
 

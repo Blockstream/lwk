@@ -96,4 +96,7 @@ fn test_txs_store() {
     assert_eq!(txs.len(), 2);
     assert!(txs.iter().any(|tx| tx.txid() == txid1));
     assert!(txs.iter().any(|tx| tx.txid() == txid2));
+
+    // To ensure we have the same txids, we need to check the status
+    assert_eq!(wollet.status(), wollet2.status());
 }

@@ -475,6 +475,12 @@ impl Wollet {
             }
         }
 
+        if self.cache.txs_store_is_persisted() {
+            // Txs are perstisted in the txs store,
+            // remove them from the Update so we don't store the twice
+            update.new_txs.txs.clear();
+        }
+
         // Store as a new update
         let key = update_key(*next_index);
         let bytes = update.serialize()?;

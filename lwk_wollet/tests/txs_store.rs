@@ -80,8 +80,8 @@ fn test_txs_store() {
         .iter()
         .flat_map(|u| u.new_txs.txs.iter().map(|(txid, _)| *txid))
         .collect();
-    assert!(persisted_txids.contains(&txid1));
-    assert!(persisted_txids.contains(&txid2));
+    assert!(!persisted_txids.contains(&txid1));
+    assert!(!persisted_txids.contains(&txid2));
 
     // check that a new wollet using the same store has all the txs (without syncing)
     let wollet2 = WolletBuilder::new(network, wd.clone())

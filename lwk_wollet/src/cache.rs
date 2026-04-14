@@ -241,6 +241,10 @@ impl Cache {
             .collect()
     }
 
+    pub fn txs_store_is_persisted(&self) -> bool {
+        self.txs_store.is_persisted()
+    }
+
     fn rebuild_sorted_txids(&mut self) {
         let mut sorted: Vec<Txid> = self.heights.keys().cloned().collect();
         sorted.sort_by(|a, b| {

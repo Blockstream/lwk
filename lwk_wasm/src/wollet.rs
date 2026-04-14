@@ -139,11 +139,17 @@ impl Wollet {
         Ok(self.inner.assets_owned()?.into())
     }
 
-    /// Get the wallet transactions
+    /// Get the wallet transactions, sorted by height descending, then txid descending with unconfirmed first
     pub fn transactions(&self) -> Result<Vec<WalletTx>, Error> {
+        self.transactions_paginated(0, u32::MAX)
+    }
+
+    /// Get the wallet transactions with pagination sorted by height descending, then txid descending with unconfirmed first
+    #[wasm_bindgen(js_name = transactionsPaginated)]
+    pub fn transactions_paginated(&self, offset: u32, limit: u32) -> Result<Vec<WalletTx>, Error> {
         Ok(self
             .inner
-            .transactions()?
+            .transactions_paginated(offset as usize, limit as usize)?
             .into_iter()
             .map(Into::into)
             .collect())

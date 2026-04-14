@@ -14,7 +14,7 @@ lwk_wollet = { version = "0.16.0", default-features = false }
 
 simplicityhl = { version = "0.4.1" }
 
-thiserror = "2"
+thiserror = { workspace = true }
 
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }

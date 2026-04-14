@@ -12,7 +12,7 @@ rand = { version = "0.8", features = ["std", "std_rng"] }
 
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1.0", features = ["derive"] }
-thiserror = "1"
+thiserror = { workspace = true }
 bitcoin-payment-instructions = { version = "0.7.0", default-features = false, features = ["std"] }
 elements.workspace = true
 lightning = { version = "0.1.7", default-features = false }

@@ -24,9 +24,19 @@ fn test_txs_store() {
     let wd: WolletDescriptor = d.parse().unwrap();
     // We use an unencrypted file store, let's follow the the doc suggestion and make the wollet encrypting it
     let encrypt_txs_store = true;
+
+    let err = WolletBuilder::new(network, wd.clone())
+        .with_txs_store(store.clone(), encrypt_txs_store)
+        .build()
+        .unwrap_err()
+        .to_string();
+    let expected = "If txs store is persited, merge threshold must be 1";
+    assert!(err.contains(expected));
+
     let mut wollet = WolletBuilder::new(network, wd.clone())
         .with_store(store.clone())
         .with_txs_store(store.clone(), encrypt_txs_store)
+        .with_merge_threshold(Some(1))
         .build()
         .unwrap();
     let mut client = test_client_electrum(&env.electrum_url());
@@ -77,6 +87,7 @@ fn test_txs_store() {
     let wollet2 = WolletBuilder::new(network, wd.clone())
         .with_store(store.clone())
         .with_txs_store(store.clone(), encrypt_txs_store)
+        .with_merge_threshold(Some(1))
         .build()
         .unwrap();
 

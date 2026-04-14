@@ -145,6 +145,13 @@ impl WolletBuilder {
 
     /// Build the `Wollet`
     pub fn build(self) -> Result<Wollet, Error> {
+        if self.txs_store.is_persisted() && self.merge_threshold != Some(1) {
+            // This simplifies implementation, otherwise we would need to remember in which
+            // update each transaction was added.
+            return Err(Error::Generic(
+                "If txs store is persited, merge threshold must be 1".into(),
+            ));
+        }
         let txs_store = if self.encrypt_txs_store {
             let key_bytes = self.descriptor.encryption_key_bytes();
             let encrypted_store =

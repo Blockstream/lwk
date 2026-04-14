@@ -54,6 +54,15 @@ pub trait Store: Send + Sync + Debug {
     ///
     /// Returns `Ok(())` even if the key did not exist.
     fn remove<K: AsRef<[u8]>>(&self, key: K) -> Result<(), Self::Error>; // TODO: Should return Option<Vec<u8>> of the removed value
+
+    /// Returns `true` if this store persists data across process restarts.
+    ///
+    /// The default implementation returns `false` (in-memory / ephemeral).
+    /// Implementations backed by durable storage (e.g. [`FileStore`]) should
+    /// override this to return `true`.
+    fn is_persisted(&self) -> bool {
+        false
+    }
 }
 
 /// An object-safe key-value storage trait for use with `dyn`.
@@ -71,6 +80,12 @@ pub trait DynStore: Send + Sync + Debug {
     fn put(&self, key: &str, value: &[u8]) -> Result<(), BoxError>;
     /// Remove a value by key.
     fn remove(&self, key: &str) -> Result<(), BoxError>;
+    /// Returns `true` if this store persists data across process restarts.
+    ///
+    /// Defaults to `false`.
+    fn is_persisted(&self) -> bool {
+        false
+    }
 }
 
 /// Error type for the [`Store`] impl on `Arc<dyn DynStore>`.
@@ -114,6 +129,10 @@ impl Store for Arc<dyn DynStore> {
         let key = std::str::from_utf8(key.as_ref()).map_err(|e| ArcDynStoreError(Box::new(e)))?;
         DynStore::remove(self.as_ref(), key).map_err(ArcDynStoreError)
     }
+
+    fn is_persisted(&self) -> bool {
+        DynStore::is_persisted(self.as_ref())
+    }
 }
 
 /// Blanket implementation of [`DynStore`] for any type implementing [`Store`].
@@ -128,6 +147,10 @@ impl<S: Store> DynStore for S {
 
     fn remove(&self, key: &str) -> Result<(), BoxError> {
         Store::remove(self, key).map_err(|e| Box::new(e) as BoxError)
+    }
+
+    fn is_persisted(&self) -> bool {
+        Store::is_persisted(self)
     }
 }
 
@@ -296,6 +319,11 @@ impl FileStore {
 }
 impl Store for FileStore {
     type Error = std::io::Error;
+
+    fn is_persisted(&self) -> bool {
+        true
+    }
+
     fn get<K: AsRef<[u8]>>(&self, key: K) -> Result<Option<Vec<u8>>, Self::Error> {
         let root = self.root.lock().expect("lock poisoned");
         let path = Self::file_path(&root, key.as_ref())?;
@@ -448,6 +476,10 @@ impl<S: Store> EncryptedStore<S> {
 
 impl<S: Store> Store for EncryptedStore<S> {
     type Error = EncryptedStoreError<S::Error>;
+
+    fn is_persisted(&self) -> bool {
+        self.inner.is_persisted()
+    }
 
     fn get<K: AsRef<[u8]>>(&self, key: K) -> Result<Option<Vec<u8>>, Self::Error> {
         let key = self.effective_key(key)?;

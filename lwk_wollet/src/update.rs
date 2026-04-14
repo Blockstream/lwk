@@ -477,7 +477,7 @@ impl Wollet {
 
         if self.cache.txs_store_is_persisted() {
             // Txs are perstisted in the txs store,
-            // remove them from the Update so we don't store the twice
+            // remove them from the Update so we don't store them twice
             update.new_txs.txs.clear();
         }
 

@@ -1,7 +1,7 @@
 on:
   push:
     branches:
-      - master
+      - feature/wallet-runtime
     tags:
       - 'bindings_*'
   pull_request: {}
@@ -12,6 +12,8 @@ jobs:
 
   build:
     runs-on: macos-26
+    env:
+      SIMPLICITY: "1"
     steps:
       - name: "Show default version of NDK"
         run: echo $ANDROID_NDK_ROOT
@@ -50,7 +52,10 @@ jobs:
       - name: Temporarily save artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lwk-artifact
-          path: lwk_bindings/android_bindings
-          retention-days: 1
+          name: lwk-mobile-bindings
+          path: |
+            lwk_bindings/android_bindings/lib/build/outputs/**
+            lwk_bindings/android_bindings/lib/build/XCFrameworks/release/**
+          if-no-files-found: error
+          retention-days: 30
 

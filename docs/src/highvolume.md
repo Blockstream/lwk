@@ -76,3 +76,13 @@ You need to mark you `Wollet` as "utxo only" with `WolletBuilder::utxo_only()`,
 and you need to use Waterfalls with a "utxo only" client (`EsploraClientBuilder::utxo_only()`).
 Then automatically you will only download transactions that have an unspent output,
 drastically reducing the network, memory and disk usage.
+
+## Use `txs_store`
+By default, transactions are stored in memory,
+this allows to make operations such as return transactions list fast.
+However for large wallets, they might saturate all the available memory of the host.
+
+A possible solution is to use a `Store` for the transactions with `WolletBuilder::with_txs_store()`.
+The store can be a file, multiple files, a database or something more complicated.
+This can reduce the memory usage significantly,
+however it could make operation such as getting all transactions slower.

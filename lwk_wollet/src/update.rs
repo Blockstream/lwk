@@ -217,8 +217,10 @@ impl Update {
         self.scripts_with_blinding_pubkey
             .extend(following.scripts_with_blinding_pubkey);
 
-        // Update tip to other's tip
-        self.tip = following.tip;
+        // Update tip (if it's not default, which means "don't change the tip")
+        if following.tip != default_blockheader() {
+            self.tip = following.tip;
+        }
 
         // Update version to latest
         self.version = following.version;

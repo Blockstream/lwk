@@ -4279,9 +4279,8 @@ fn test_merge_tx_update() {
         .with_merge_threshold(Some(1))
         .build()
         .unwrap();
-     
-    // FIXME: these should be equal
-    assert_ne!(wollet.status(), wollet2.status());
+
+    assert_eq!(wollet.status(), wollet2.status());
 }
 
 #[test]

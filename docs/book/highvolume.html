@@ -1,0 +1,310 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>High-Volume Wallets - LWK Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="styles.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">LWK Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/blockstream/lwk" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/blockstream/lwk/edit/master/docs/src/src/highvolume.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="high-volume-wallets"><a class="header" href="#high-volume-wallets">High-Volume Wallets</a></h1>
+<p>When the number of transactions grows significantly,
+handling a wallet can become challenging.
+To make it easier, LWK provides various utilities to handle high-volume wallets.
+In this section we provide an overview.
+You can use one, or combinations of them.</p>
+<p>The approaches in this guide are complex or experimental.
+Before trying them,
+our first and most obvious suggestion is to increase the computing resources on your machine.
+This might be the simplest approach, with little to none engineering overhead.
+If this is not possible, or not enough consider applying one or more of the suggestions below.</p>
+<h2 id="transaction-batching"><a class="header" href="#transaction-batching">Transaction Batching</a></h2>
+<p>To reduce the number of transaction consider using a single transaction for multiple "send" operation (e.g. calling <code>add_recipient</code> multiple times).
+In this way you can do a "batch send" with a single transaction.</p>
+<h2 id="rotate-wallets"><a class="header" href="#rotate-wallets">Rotate Wallets</a></h2>
+<p>Once a <code>Wollet</code> has too many transactions it might become impractical to use it,
+it can become too slow or have unsustainable resource requirements.</p>
+<p>A simple approach to avoid this is to rotate the wallet.
+Once it reaches a certain number of transactions,
+you stop using it and you start to use another.</p>
+<p>Note that you don't need to generate another BIP39 mnemonic/seed.
+You can use the same secret,
+and use the next BIP32 account, just by bumping the index.</p>
+<h2 id="update-pruning"><a class="header" href="#update-pruning">Update Pruning</a></h2>
+<p>The largest component in memory and disk usage are Liquid transactions.
+They are huge, and their largest part are rangeproofs.
+Those are used when unblinding transactions,
+but later they're not used anymore (unless in extremely particular cases).</p>
+<p>You can remove them calling <code>Update::prune()</code> before applying and persisting the update.</p>
+<h2 id="merge-updates"><a class="header" href="#merge-updates">Merge Updates</a></h2>
+<p>Every time you get new transactions,
+the <code>Wollet</code> fetches a new <code>Update</code> which is applied and (optionally) persisted.
+These updates are sequential, the new one applies on top of the previous.
+When the <code>Wollet</code> restarts,
+it reads the <code>Update</code>s from where they were perstised and applies them to reconstruct the last <code>Wollet</code> state.</p>
+<p>These <code>Update</code>s can become quite a lot and it could be useful to compact them.</p>
+<p>One way it's to sync specifying another directory,
+all transactions will be downloaded again,
+and you will have a single compacted update.</p>
+<p>However for large wallets, this might not be ideal.
+For them we have <code>WolletBuilder::with_merge_thresold()</code>.
+It allows to specify a threshold after which all updates are compacted into one.</p>
+<h2 id="waterfalls"><a class="header" href="#waterfalls">Waterfalls</a></h2>
+<p>If your wallet consists in a large number of scriptpubkeys,
+using <code>Esplora</code> or <code>Electrum</code> will require a large number of network roundtrips to perform a full scan of the wallet.
+If this is an issue for your setup,
+consider using <code>Waterfalls</code> to fetch blockchain data.
+<code>Waterfalls</code> is an optimized scriptpubkey/address data indexer that reduces server load, client load, network roundtrip.
+Switching to it makes full scan faster.</p>
+<p>This improvement comes with a trade off, the client shares with the Waterfalls server its descriptor (without the descriptor blinding key) revealing all the descriptor scriptpubkeys.
+We think this trade off is reasonable,
+moreover if you're using a self-hosted Waterfalls server, you have no downside.</p>
+<h2 id="utxo-only-mode"><a class="header" href="#utxo-only-mode">UTXO only mode</a></h2>
+<p>In some cases you don't care about all transactions,
+and you just care about your UTXOs.
+Having the UTXOs allows you to show the balance and construct transactions,
+and often times this is enough.</p>
+<p>For this case you can use "utxo only" mode.
+You need to mark you <code>Wollet</code> as "utxo only" with <code>WolletBuilder::utxo_only()</code>,
+and you need to use Waterfalls with a "utxo only" client (<code>EsploraClientBuilder::utxo_only()</code>).
+Then automatically you will only download transactions that have an unspent output,
+drastically reducing the network, memory and disk usage.</p>
+<h2 id="use-txs_store"><a class="header" href="#use-txs_store">Use <code>txs_store</code></a></h2>
+<p>By default, transactions are stored in memory,
+this allows to make operations such as return transactions list fast.
+However for large wallets, they might saturate all the available memory of the host.</p>
+<p>A possible solution is to use a <code>Store</code> for the transactions with <code>WolletBuilder::with_txs_store()</code>.
+The store can be a file, multiple files, a database or something more complicated.
+This can reduce the memory usage significantly,
+however it could make operation such as getting all transactions slower.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="bip85.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="arch.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="bip85.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="arch.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid.min.js"></script>
+        <script src="mermaid-init.js"></script>
+        <script src="tabs.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

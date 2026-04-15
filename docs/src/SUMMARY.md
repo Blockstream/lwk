@@ -28,6 +28,7 @@
   * [Pegin]() #(pegin.md) ❌
   * [Bip85](bip85.md) ✅
   * [CLI]() #(cli.md) 🚧
+  * [High-Volume Wallets](highvolume.md)
 * [Miscellaneous]() #(misc.md) ❌
   * [Architecture](arch.md) 🚧
   * [Use Cases]() #(usecases.md) ❌

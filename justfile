@@ -82,33 +82,52 @@ kotlin: build-bindings-lib
 
 # Cross build the lib for aarch64-linux-android
 aarch64-linux-android:
-	cargo ndk -t aarch64-linux-android -o target/release/android/jniLibs build -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t aarch64-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
 
 # Cross build the lib for armv7-linux-androideabi
 armv7-linux-androideabi:
-	cargo ndk -t armv7-linux-androideabi -o target/release/android/jniLibs build -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t armv7-linux-androideabi -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
 
 # Cross build the lib for i686-linux-android
 i686-linux-android:
-	cargo ndk -t i686-linux-android -o target/release/android/jniLibs build -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t i686-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
 
 # Cross build the lib for x86_64-linux-android
 x86_64-linux-android:
-	cargo ndk -t x86_64-linux-android -o target/release/android/jniLibs build -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t x86_64-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
 
 # After cross building all the lib for android put them in final dir
 android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
     cp -a target/release/android/jniLibs lwk_bindings/android_bindings/lib/src/androidMain
+
+# Gobley emits @Throws annotations for native overrides that Kotlin 2.3 metadata rejects.
+normalize-kotlin-native:
+    find lwk_bindings/android_bindings/lib/src/nativeMain/kotlin -name '*.kt' -exec perl -i -ne 'print unless /@Throws\(LwkException::class\)/' {} +
 
 # Build the kotlin multiplatform interface and android, ios and jvm
 kotlin-multiplatform: ios ios-sim android jvm
     cargo install --bin gobley-uniffi-bindgen gobley-uniffi-bindgen@0.3.7
     gobley-uniffi-bindgen --config ./lwk_bindings/uniffi.kotlin-multiplatform.toml --library target/aarch64-apple-ios/release/liblwk.a  --out-dir target/release/kotlin-multiplatform
     cp -a target/release/kotlin-multiplatform/* lwk_bindings/android_bindings/lib/src/
+    just normalize-kotlin-native
     mkdir -p ./lwk_bindings/android_bindings/lib/src/libs/ios-arm64/
     mkdir -p ./lwk_bindings/android_bindings/lib/src/libs/ios-simulator-arm64/
     cp target/aarch64-apple-ios/release/liblwk.a lwk_bindings/android_bindings/lib/src/libs/ios-arm64/
     cp target/lipo-ios-sim/release/liblwk.a lwk_bindings/android_bindings/lib/src/libs/ios-simulator-arm64/
+
+# Publish the Kotlin bindings locally with Simplicity enabled using the configured Gradle publishing target.
+maven-publish version:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -z "{{version}}" ]; then
+      echo "usage: just maven-publish <version>" >&2
+      exit 1
+    fi
+    SIMPLICITY=1 just kotlin-multiplatform
+    cd lwk_bindings/android_bindings && \
+        ORG_GRADLE_PROJECT_POM_ARTIFACT_ID="${ORG_GRADLE_PROJECT_POM_ARTIFACT_ID:-lwk}" \
+        ORG_GRADLE_PROJECT_VERSION_NAME="{{version}}" \
+        ./gradlew publish --console=plain --no-daemon
 
 jvm: aarch64-apple-darwin # x86_64-unknown-linux-gnu
     mkdir -p lwk_bindings/android_bindings/lib/src/jvmMain/resources/darwin-aarch64

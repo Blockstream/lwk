@@ -64,3 +64,15 @@ Switching to it makes full scan faster.
 This improvement comes with a trade off, the client shares with the Waterfalls server its descriptor (without the descriptor blinding key) revealing all the descriptor scriptpubkeys.
 We think this trade off is reasonable,
 moreover if you're using a self-hosted Waterfalls server, you have no downside.
+
+## UTXO only mode
+In some cases you don't care about all transactions,
+and you just care about your UTXOs.
+Having the UTXOs allows you to show the balance and construct transactions,
+and often times this enough.
+
+For this case you can use "utxo only" mode.
+You need to mark you `Wollet` as "utxo only" with `WolletBuilder::utxo_only()`,
+and you need to use Waterfalls with a "utxo only" client (`EsploraClientBuilder::utxo_only()`).
+Then automatically you will only download transactions that have an unspent output,
+drastically reducing the network, memory and disk usage.

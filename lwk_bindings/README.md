@@ -100,6 +100,19 @@ Build the Kotlin Multiplatform bindings (Android, iOS, and iOS Simulator) and ge
 just kotlin-multiplatform
 ```
 
+### Publish to Maven
+
+For local publishing:
+
+* for `github.com/KyrylR`, start with the GitHub-backed namespace `io.github.kyrylr`, or use a reversed DNS namespace you control
+* store your Central Portal token in `~/.gradle/gradle.properties` as `mavenCentralUsername` and `mavenCentralPassword`
+* start from `android_bindings/gradle.publish.example.properties` and copy the needed keys into `~/.gradle/gradle.properties`
+* configure signing locally for release publishing
+
+Use these commands:
+
+* `just maven-publish <version>` to build a Simplicity-enabled publishable package and run Gradle `publish` with your local repository configuration
+
 ### Wallet ABI
 
 The Wallet ABI Kotlin surface is source-owned in `lwk_bindings` and mirrors the

@@ -35,3 +35,20 @@ Those are used when unblinding transactions,
 but later they're not used anymore (unless in extermely particular cases).
 
 You can remove them calling `Update::prune()` before applying and persiting the update.
+
+## Merge Updates
+Every time you get new transactions,
+the `Wollet` fetches a new `Update` which is applied and (optionally) persisted.
+These updates are sequential, the new one applies on top of the previous.
+When the `Wollet` restarts,
+it reads the `Update`s from where they were perstised and applies them to reconstruct the last `Wollet` state.
+
+These `Update`s can become quite a lot and it could be useful to compact them.
+
+One way it's to sync specifying another directory,
+all transactions will be downloaded again,
+and you will have a single compacted update.
+
+However for large wallets, this might not be ideal.
+For them we have `Wollet::with_merge_thresold()`.
+It allows to specify a threshold after which all updates are compacted into one.

@@ -129,10 +129,10 @@ pub struct PreparePayResponse {
     inner: Mutex<Option<lwk_boltz::blocking::PreparePayResponse>>,
 }
 
-#[derive(uniffi::Object)]
+#[derive(uniffi::Record)]
 pub struct WebHook {
-    url: String,
-    status: Vec<String>,
+    pub url: String,
+    pub status: Vec<String>,
 }
 
 #[derive(uniffi::Object)]
@@ -381,7 +381,7 @@ impl BoltzSession {
         &self,
         lightning_payment: &LightningPayment,
         refund_address: &Address,
-        webhook: Option<Arc<WebHook>>,
+        webhook: Option<WebHook>,
     ) -> Result<PreparePayResponse, LwkError> {
         let status = webhook
             .as_ref()
@@ -429,7 +429,7 @@ impl BoltzSession {
         amount: u64,
         description: Option<String>,
         claim_address: &Address,
-        webhook: Option<Arc<WebHook>>,
+        webhook: Option<WebHook>,
     ) -> Result<InvoiceResponse, LwkError> {
         let status = webhook
             .as_ref()
@@ -478,7 +478,7 @@ impl BoltzSession {
         amount: u64,
         refund_address: &BitcoinAddress,
         claim_address: &Address,
-        webhook: Option<Arc<WebHook>>,
+        webhook: Option<WebHook>,
     ) -> Result<LockupResponse, LwkError> {
         let webhook = webhook
             .as_ref()
@@ -504,7 +504,7 @@ impl BoltzSession {
         amount: u64,
         refund_address: &Address,
         claim_address: &BitcoinAddress,
-        webhook: Option<Arc<WebHook>>,
+        webhook: Option<WebHook>,
     ) -> Result<LockupResponse, LwkError> {
         let webhook = webhook
             .as_ref()
@@ -1185,16 +1185,5 @@ impl LockupResponse {
             .as_ref()
             .ok_or(LwkError::ObjectConsumed)?
             .serialize()?)
-    }
-}
-
-#[uniffi::export]
-impl WebHook {
-    #[uniffi::constructor]
-    pub fn new(url: &str, status: &[String]) -> Arc<Self> {
-        Arc::new(Self {
-            url: url.to_string(),
-            status: status.to_vec(),
-        })
     }
 }

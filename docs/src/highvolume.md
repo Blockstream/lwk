@@ -52,3 +52,15 @@ and you will have a single compacted update.
 However for large wallets, this might not be ideal.
 For them we have `Wollet::with_merge_thresold()`.
 It allows to specify a threshold after which all updates are compacted into one.
+
+## Waterfalls
+If your wallet consists in a large number of scriptpubkeys,
+using `Esplora` or `Electrum` will require a large number of network roundtrips to perform a full scan of the wallet.
+If this is an issue for your setup,
+consider using `Waterfalls` to fetch blockchain data.
+`Waterfalls` is an optimized scriptpubkey/address data indexer that reduces server load, client load, network roundtrip.
+Switching to it makes full scan faster.
+
+This improvement comes with a trade off, the client shares with the Waterfalls server its descriptor (without the descriptor blinding key) revealing all the descriptor scriptpubkeys.
+We think this trade off is reasonable,
+moreover if you're using a self-hosted Waterfalls server, you have no downside.

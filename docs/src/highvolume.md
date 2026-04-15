@@ -24,7 +24,7 @@ A simple approach to avoid this is to rotate the wallet.
 Once it reaches a certain number of transactions,
 you stop using it and you start to use another.
 
-Note that you dont need to generate another BIP39 mnemonic/seed.
+Note that you don't need to generate another BIP39 mnemonic/seed.
 You can use the same secret,
 and use the next BIP32 account, just by bumping the index.
 
@@ -32,9 +32,9 @@ and use the next BIP32 account, just by bumping the index.
 The largest component in memory and disk usage are Liquid transactions.
 They are huge, and their largest part are rangeproofs.
 Those are used when unblinding transactions,
-but later they're not used anymore (unless in extermely particular cases).
+but later they're not used anymore (unless in extremely particular cases).
 
-You can remove them calling `Update::prune()` before applying and persiting the update.
+You can remove them calling `Update::prune()` before applying and persisting the update.
 
 ## Merge Updates
 Every time you get new transactions,
@@ -50,7 +50,7 @@ all transactions will be downloaded again,
 and you will have a single compacted update.
 
 However for large wallets, this might not be ideal.
-For them we have `Wollet::with_merge_thresold()`.
+For them we have `WolletBuilder::with_merge_thresold()`.
 It allows to specify a threshold after which all updates are compacted into one.
 
 ## Waterfalls
@@ -69,7 +69,7 @@ moreover if you're using a self-hosted Waterfalls server, you have no downside.
 In some cases you don't care about all transactions,
 and you just care about your UTXOs.
 Having the UTXOs allows you to show the balance and construct transactions,
-and often times this enough.
+and often times this is enough.
 
 For this case you can use "utxo only" mode.
 You need to mark you `Wollet` as "utxo only" with `WolletBuilder::utxo_only()`,

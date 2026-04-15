@@ -4240,6 +4240,51 @@ fn test_merge_updates_e2e() {
 }
 
 #[test]
+fn test_merge_tx_update() {
+    // Merge a transaction update
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let network = ElementsNetwork::default_regtest();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+
+    let mut client = test_client_electrum(&env.electrum_url());
+    let dir = tempfile::TempDir::new().unwrap();
+    let mut wollet = WolletBuilder::new(network, desc.parse().unwrap())
+        .with_legacy_fs_store(&dir)
+        .unwrap()
+        .with_merge_threshold(Some(1))
+        .build()
+        .unwrap();
+
+    // Fund
+    let addr = wollet.address(None).unwrap();
+    let txid = env.elementsd_sendtoaddress(addr.address(), 10000, None);
+    wait_for_tx(&mut wollet, &mut client, &txid);
+
+    // Apply any transaction
+    let tx = elements::Transaction {
+        version: 2,
+        lock_time: elements::LockTime::ZERO,
+        input: vec![],
+        output: vec![],
+    };
+    wollet.apply_transaction(tx).unwrap();
+
+    // Reload from store
+    let wollet2 = WolletBuilder::new(network, desc.parse().unwrap())
+        .with_legacy_fs_store(&dir)
+        .unwrap()
+        .with_merge_threshold(Some(1))
+        .build()
+        .unwrap();
+     
+    // FIXME: these should be equal
+    assert_ne!(wollet.status(), wollet2.status());
+}
+
+#[test]
 fn test_removed_tx() {
     // Behavior for a removed tx
     let env = TestEnvBuilder::from_env().with_electrum().build();

@@ -15,3 +15,15 @@ If this is not possible, or not enough consider applying one or more of the sugg
 ## Transaction Batching
 To reduce the number of transaction consider using a single transaction for multiple "send" operation (e.g. calling `add_recipient` multiple times).
 In this way you can do a "batch send" with a single transaction.
+
+## Rotate Wallets
+Once a `Wollet` has too many transactions it might become impractical to use it,
+it can become too slow or have unsustainable resource requirements.
+
+A simple approach to avoid this is to rotate the wallet.
+Once it reaches a certain number of transactions,
+you stop using it and you start to use another.
+
+Note that you dont need to generate another BIP39 mnemonic/seed.
+You can use the same secret,
+and use the next BIP32 account, just by bumping the index.

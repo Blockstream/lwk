@@ -412,7 +412,8 @@ publish_snapshot_to_maven:
     SIMPLICITY: "1"
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
-      when: on_success
+      # when: on_success # TODO restore once fixed
+      when: manual
   script:
     - just kotlin-multiplatform
     - cd lwk_bindings/android_bindings

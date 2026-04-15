@@ -27,3 +27,11 @@ you stop using it and you start to use another.
 Note that you dont need to generate another BIP39 mnemonic/seed.
 You can use the same secret,
 and use the next BIP32 account, just by bumping the index.
+
+## Update Pruning
+The largest component in memory and disk usage are Liquid transactions.
+They are huge, and their largest part are rangeproofs.
+Those are used when unblinding transactions,
+but later they're not used anymore (unless in extermely particular cases).
+
+You can remove them calling `Update::prune()` before applying and persiting the update.

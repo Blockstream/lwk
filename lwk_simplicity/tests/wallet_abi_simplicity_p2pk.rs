@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::thread::sleep;
-use std::time::Duration;
 
 use lwk_simplicity::scripts::{create_p2tr_address, load_program};
 use lwk_simplicity::simplicityhl::{
@@ -12,7 +10,6 @@ use lwk_simplicity::wallet_abi::schema::{
     InputSchema, InputUnblinding, InternalKeySource, LockVariant, OutputSchema, PreviewOutputKind,
     RuntimeParams, RuntimeSimfWitness, SimfArguments, SimfWitness, UTXOSource,
 };
-use lwk_wollet::blocking::BlockchainBackend;
 use lwk_wollet::elements::encode::deserialize;
 use lwk_wollet::elements::hex::{FromHex, ToHex};
 use lwk_wollet::elements::Transaction;
@@ -20,7 +17,7 @@ use lwk_wollet::{Chain, ElectrumClient, ElectrumUrl, WolletBuilder, WolletDescri
 #[path = "common/wallet_abi.rs"]
 mod wallet_abi_common;
 
-use wallet_abi_common::WalletAbiLiveHarness;
+use wallet_abi_common::{wait_for_tx, WalletAbiLiveHarness};
 
 #[test]
 fn wallet_abi_spends_p2pk_simf_input() {
@@ -58,20 +55,7 @@ fn wallet_abi_spends_p2pk_simf_input() {
         .env
         .elementsd_sendtoaddress(&p2pk_address, 100_000, None);
     harness.env.elementsd_generate(1);
-    for _ in 0..120 {
-        if let Some(update) = client.full_scan(&p2pk_wallet).expect("p2pk scan") {
-            p2pk_wallet.apply_update(update).expect("p2pk update");
-        }
-        if p2pk_wallet
-            .transactions()
-            .expect("p2pk transactions")
-            .iter()
-            .any(|tx| tx.txid == funding_txid)
-        {
-            break;
-        }
-        sleep(Duration::from_millis(500));
-    }
+    wait_for_tx(&mut p2pk_wallet, &mut client, &funding_txid);
     assert!(p2pk_wallet
         .transactions()
         .expect("p2pk transactions")

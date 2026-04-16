@@ -417,7 +417,7 @@ fn sync<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S) {
     }
 }
 
-fn wait_for_tx<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S, txid: &Txid) {
+pub fn wait_for_tx<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S, txid: &Txid) {
     for _ in 0..120 {
         sync(wollet, client);
         let list = wollet.transactions().unwrap();

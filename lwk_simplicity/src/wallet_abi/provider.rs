@@ -392,16 +392,12 @@ mod tests {
     impl WalletSessionFactory for TestSessionFactory {
         type Error = TestProviderError;
 
-        fn open_wallet_request_session(
-            &self,
-        ) -> impl Future<Output = Result<WalletRequestSession, Self::Error>> + Send + '_ {
-            async move {
-                Ok(WalletRequestSession {
-                    session_id: "capabilities-session".to_string(),
-                    network: lwk_wollet::ElementsNetwork::LiquidTestnet,
-                    spendable_utxos: Arc::from(Vec::<ExternalUtxo>::new()),
-                })
-            }
+        async fn open_wallet_request_session(&self) -> Result<WalletRequestSession, Self::Error> {
+            Ok(WalletRequestSession {
+                session_id: "capabilities-session".to_string(),
+                network: lwk_wollet::ElementsNetwork::LiquidTestnet,
+                spendable_utxos: Arc::from(Vec::<ExternalUtxo>::new()),
+            })
         }
     }
 
@@ -610,11 +606,8 @@ mod tests {
     impl WalletSessionFactory for FixedSessionFactory {
         type Error = ProcessRequestError;
 
-        fn open_wallet_request_session(
-            &self,
-        ) -> impl Future<Output = Result<WalletRequestSession, Self::Error>> + Send + '_ {
-            let session = self.session.clone();
-            async move { Ok(session) }
+        async fn open_wallet_request_session(&self) -> Result<WalletRequestSession, Self::Error> {
+            Ok(self.session.clone())
         }
     }
 
@@ -636,11 +629,8 @@ mod tests {
             Err(ProcessRequestError::Test)
         }
 
-        fn get_tx_out(
-            &self,
-            _outpoint: OutPoint,
-        ) -> impl Future<Output = Result<TxOut, Self::Error>> + Send + '_ {
-            async move { Err(ProcessRequestError::Test) }
+        async fn get_tx_out(&self, _outpoint: OutPoint) -> Result<TxOut, Self::Error> {
+            Err(ProcessRequestError::Test)
         }
     }
 
@@ -672,7 +662,7 @@ mod tests {
             _tx: &Transaction,
         ) -> impl Future<Output = Result<Txid, Self::Error>> + Send + '_ {
             self.broadcast_calls.fetch_add(1, Ordering::Relaxed);
-            async move { Err(ProcessRequestError::Test) }
+            std::future::ready(Err(ProcessRequestError::Test))
         }
     }
 

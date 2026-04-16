@@ -360,7 +360,7 @@ mod tests {
         assert_eq!(decoded.network(), Network::testnet());
         assert!(decoded.params().inputs().is_empty());
         assert!(decoded.params().outputs().is_empty());
-        assert_eq!(decoded.broadcast(), true);
+        assert!(decoded.broadcast());
     }
 
     #[test]

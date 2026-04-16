@@ -77,11 +77,8 @@ struct FixedSessionFactory {
 impl WalletSessionFactory for FixedSessionFactory {
     type Error = ProviderError;
 
-    fn open_wallet_request_session(
-        &self,
-    ) -> impl Future<Output = Result<WalletRequestSession, Self::Error>> + Send + '_ {
-        let session = self.session.clone();
-        async move { Ok(session) }
+    async fn open_wallet_request_session(&self) -> Result<WalletRequestSession, Self::Error> {
+        Ok(self.session.clone())
     }
 }
 
@@ -103,11 +100,8 @@ impl WalletPrevoutResolver for TestPrevoutResolver {
         Err(ProviderError::Test)
     }
 
-    fn get_tx_out(
-        &self,
-        _outpoint: OutPoint,
-    ) -> impl Future<Output = Result<TxOut, Self::Error>> + Send + '_ {
-        async move { Err(ProviderError::Test) }
+    async fn get_tx_out(&self, _outpoint: OutPoint) -> Result<TxOut, Self::Error> {
+        Err(ProviderError::Test)
     }
 }
 
@@ -139,7 +133,7 @@ impl WalletBroadcaster for TestBroadcaster {
         _tx: &Transaction,
     ) -> impl Future<Output = Result<Txid, Self::Error>> + Send + '_ {
         self.broadcast_calls.fetch_add(1, Ordering::Relaxed);
-        async move { Err(ProviderError::Test) }
+        std::future::ready(Err(ProviderError::Test))
     }
 }
 

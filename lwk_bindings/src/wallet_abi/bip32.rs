@@ -58,7 +58,7 @@ mod tests {
         let mnemonic = Mnemonic::new(lwk_test_util::TEST_MNEMONIC).expect("mnemonic");
         let network: Network = ElementsNetwork::default_regtest().into();
         let signer = Signer::new(&mnemonic, &network).expect("signer");
-        let derivation_path = vec![84 + (1 << 31), 1 + (1 << 31), 0 + (1 << 31), 0, 5];
+        let derivation_path = vec![84 + (1 << 31), 1 + (1 << 31), 1 << 31, 0, 5];
 
         let pair = wallet_abi_bip32_derivation_pair_from_signer(&signer, derivation_path)
             .expect("derive pair");

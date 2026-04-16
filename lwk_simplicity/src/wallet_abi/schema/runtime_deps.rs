@@ -467,11 +467,8 @@ mod tests {
             Ok(self.secrets)
         }
 
-        fn get_tx_out(
-            &self,
-            _outpoint: OutPoint,
-        ) -> impl Future<Output = Result<TxOut, Self::Error>> + Send + '_ {
-            async move { Ok(self.tx_out.clone()) }
+        async fn get_tx_out(&self, _outpoint: OutPoint) -> Result<TxOut, Self::Error> {
+            Ok(self.tx_out.clone())
         }
     }
 
@@ -502,7 +499,7 @@ mod tests {
             &self,
             _tx: &Transaction,
         ) -> impl Future<Output = Result<Txid, Self::Error>> + Send + '_ {
-            async move { Ok(self.txid) }
+            std::future::ready(Ok(self.txid))
         }
     }
 

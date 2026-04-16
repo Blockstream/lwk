@@ -556,7 +556,7 @@ mod tests {
         .expect("signer link");
         let derivation_pair = wallet_abi_bip32_derivation_pair_from_signer(
             &signer,
-            vec![84 + (1 << 31), 1 + (1 << 31), 0 + (1 << 31), 0, 0],
+            vec![84 + (1 << 31), 1 + (1 << 31), 1 << 31, 0, 0],
         )
         .expect("derivation pair");
         let wallet_pubkey =
@@ -719,7 +719,7 @@ mod tests {
         .expect("signer link");
         let derivation_pair = wallet_abi_bip32_derivation_pair_from_signer(
             &signer,
-            vec![84 + (1 << 31), 1 + (1 << 31), 0 + (1 << 31), 0, 0],
+            vec![84 + (1 << 31), 1 + (1 << 31), 1 << 31, 0, 0],
         )
         .expect("derivation pair");
         let wallet_pubkey =

@@ -538,12 +538,9 @@ mod tests {
     impl WalletSessionFactory for TestSessionFactory {
         type Error = TestRuntimeError;
 
-        fn open_wallet_request_session(
-            &self,
-        ) -> impl Future<Output = Result<WalletRequestSession, Self::Error>> + Send + '_ {
+        async fn open_wallet_request_session(&self) -> Result<WalletRequestSession, Self::Error> {
             self.calls.fetch_add(1, Ordering::Relaxed);
-            let session = self.session.clone();
-            async move { Ok(session) }
+            Ok(self.session.clone())
         }
     }
 
@@ -567,11 +564,8 @@ mod tests {
             Err(TestRuntimeError)
         }
 
-        fn get_tx_out(
-            &self,
-            _outpoint: OutPoint,
-        ) -> impl Future<Output = Result<TxOut, Self::Error>> + Send + '_ {
-            async move { Err(TestRuntimeError) }
+        async fn get_tx_out(&self, _outpoint: OutPoint) -> Result<TxOut, Self::Error> {
+            Err(TestRuntimeError)
         }
 
         fn get_wallet_output_template(
@@ -587,7 +581,7 @@ mod tests {
             _tx: &Transaction,
         ) -> impl Future<Output = Result<Txid, Self::Error>> + Send + '_ {
             self.broadcast_calls.fetch_add(1, Ordering::Relaxed);
-            async move { Ok(Txid::all_zeros()) }
+            std::future::ready(Ok(Txid::all_zeros()))
         }
     }
 

@@ -41,18 +41,6 @@ impl Wollet {
         Ok(Self { inner })
     }
 
-    /// Experimental: create a "utxo only" `Wollet`
-    #[wasm_bindgen(js_name = "newUtxoOnly")]
-    pub fn new_utxo_only(
-        network: &Network,
-        descriptor: &WolletDescriptor,
-    ) -> Result<Wollet, Error> {
-        let inner = lwk_wollet::WolletBuilder::new(network.into(), descriptor.into())
-            .utxo_only(true)
-            .build()?;
-        Ok(Self { inner })
-    }
-
     /// Get a wallet address with the correspondong derivation index
     ///
     /// If Some return the address at the given index,

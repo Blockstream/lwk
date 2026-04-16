@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use wasm_bindgen::prelude::*;
 
-use crate::{Error, Network, Wollet, WolletDescriptor};
+use crate::{Error, JsStorage, JsStoreLink, Network, Wollet, WolletDescriptor};
 
 /// A builder for constructing [`Wollet`] instances.
 #[wasm_bindgen]
@@ -36,6 +38,16 @@ impl WolletBuilder {
     #[wasm_bindgen(js_name = utxoOnly)]
     pub fn utxo_only(self, utxo_only: bool) -> Self {
         self.inner.utxo_only(utxo_only).into()
+    }
+
+    /// Persist wallet updates in the given JavaScript storage object.
+    ///
+    /// The JS object must have `get(key)`, `put(key, value)`, and `remove(key)` methods.
+    #[wasm_bindgen(js_name = withStore)]
+    pub fn with_store(self, storage: JsStorage) -> Self {
+        self.inner
+            .with_store(Arc::new(JsStoreLink::new(storage)))
+            .into()
     }
 
     /// Build the wallet from this builder.

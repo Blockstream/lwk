@@ -1,7 +1,7 @@
 use lwk_simplicity::wallet_abi::schema::{
     AssetFilter, AssetVariant, BlinderVariant, InputIssuance, InputIssuanceKind, InputSchema,
-    LockVariant, OutputSchema, PreviewOutputKind, RuntimeParams, TxCreateRequest,
-    TxEvaluateRequest, UTXOSource, WalletSourceFilter,
+    LockVariant, OutputSchema, PreviewOutputKind, RuntimeParams, TxCreateRequest, UTXOSource,
+    WalletSourceFilter,
 };
 
 #[path = "common/wallet_abi.rs"]
@@ -42,13 +42,9 @@ fn wallet_abi_new_issuance() {
     };
 
     let request_id = "78e8809f-c3de-4f46-a270-ae4ed8dd51c5";
-    let evaluate_response = harness
-        .evaluate_request(
-            TxEvaluateRequest::from_parts(request_id, harness.network, params.clone())
-                .expect("evaluate request"),
-        )
-        .expect("evaluate request");
-    let preview = evaluate_response.preview.expect("preview");
+    let (preview, response) = harness
+        .evaluate_then_process(request_id, params)
+        .expect("request roundtrip");
 
     let issued_asset = preview
         .outputs
@@ -81,21 +77,6 @@ fn wallet_abi_new_issuance() {
             .expect("reissuance token delta")
             .wallet_delta_sat,
         1
-    );
-
-    let response = harness
-        .process_request(
-            TxCreateRequest::from_parts(request_id, harness.network, params, true)
-                .expect("process request"),
-        )
-        .expect("process request");
-
-    assert_eq!(
-        response
-            .preview()
-            .expect("process preview accessor")
-            .expect("process preview"),
-        preview
     );
 
     let transaction = response.transaction.expect("transaction");
@@ -205,13 +186,9 @@ fn wallet_abi_reissuance() {
     };
 
     let request_id = "9de5cd8d-c344-4e95-8798-7be733fb1fd1";
-    let evaluate_response = harness
-        .evaluate_request(
-            TxEvaluateRequest::from_parts(request_id, harness.network, params.clone())
-                .expect("evaluate request"),
-        )
-        .expect("evaluate request");
-    let preview = evaluate_response.preview.expect("preview");
+    let (preview, response) = harness
+        .evaluate_then_process(request_id, params)
+        .expect("request roundtrip");
 
     assert_eq!(
         preview
@@ -226,21 +203,6 @@ fn wallet_abi_reissuance() {
         .asset_deltas
         .iter()
         .all(|delta| delta.asset_id != issuance.token));
-
-    let response = harness
-        .process_request(
-            TxCreateRequest::from_parts(request_id, harness.network, params, true)
-                .expect("process request"),
-        )
-        .expect("process request");
-
-    assert_eq!(
-        response
-            .preview()
-            .expect("process preview accessor")
-            .expect("process preview"),
-        preview
-    );
 
     let transaction = response.transaction.expect("transaction");
     harness.mine_and_sync_sender(1);

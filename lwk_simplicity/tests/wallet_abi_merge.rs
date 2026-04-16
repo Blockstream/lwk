@@ -1,6 +1,5 @@
 use lwk_simplicity::wallet_abi::schema::{
-    AssetVariant, BlinderVariant, LockVariant, OutputSchema, RuntimeParams, TxCreateRequest,
-    TxEvaluateRequest,
+    AssetVariant, BlinderVariant, LockVariant, OutputSchema, RuntimeParams,
 };
 use lwk_wollet::elements::encode::deserialize;
 use lwk_wollet::elements::hex::FromHex;
@@ -37,23 +36,9 @@ fn wallet_abi_merge_lbtc_inputs() {
     };
 
     let request_id = uuid::Uuid::new_v4().to_string();
-    let evaluate_request =
-        TxEvaluateRequest::from_parts(&request_id, harness.network, params.clone())
-            .expect("evaluate request");
-    let evaluate_response = harness
-        .evaluate_request(evaluate_request)
-        .expect("evaluate request");
-    let preview = evaluate_response.preview.expect("preview");
-
-    let request =
-        TxCreateRequest::from_parts(&request_id, harness.network, params, true).expect("request");
-    let response = harness.process_request(request).expect("process request");
-    let process_preview = response
-        .preview()
-        .expect("process preview accessor")
-        .expect("process preview");
-    assert_eq!(process_preview, preview);
-
+    let (_, response) = harness
+        .evaluate_then_process(&request_id, params)
+        .expect("request roundtrip");
     let transaction = response.transaction.expect("transaction");
     let tx_bytes = Vec::<u8>::from_hex(&transaction.tx_hex).expect("transaction hex");
     let tx: Transaction = deserialize(&tx_bytes).expect("transaction decode");

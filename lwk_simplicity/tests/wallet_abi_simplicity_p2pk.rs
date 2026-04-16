@@ -10,8 +10,7 @@ use lwk_simplicity::simplicityhl::{
 use lwk_simplicity::wallet_abi::schema::{
     serialize_arguments, serialize_witness, AssetVariant, BlinderVariant, FinalizerSpec,
     InputSchema, InputUnblinding, InternalKeySource, LockVariant, OutputSchema, PreviewOutputKind,
-    RuntimeParams, RuntimeSimfWitness, SimfArguments, SimfWitness, TxCreateRequest,
-    TxEvaluateRequest, UTXOSource,
+    RuntimeParams, RuntimeSimfWitness, SimfArguments, SimfWitness, UTXOSource,
 };
 use lwk_wollet::blocking::BlockchainBackend;
 use lwk_wollet::elements::encode::deserialize;
@@ -125,33 +124,14 @@ fn wallet_abi_spends_p2pk_simf_input() {
     };
 
     let request_id = "6eb5292b-595d-4998-9470-2dff682d1bcb";
-    let evaluate_response = harness
-        .evaluate_request(
-            TxEvaluateRequest::from_parts(request_id, harness.network, params.clone())
-                .expect("evaluate request"),
-        )
-        .expect("evaluate request");
-    let preview = evaluate_response.preview.expect("preview");
+    let (preview, response) = harness
+        .evaluate_then_process(request_id, params)
+        .expect("request roundtrip");
     assert!(preview.outputs.iter().any(|output| {
         output.kind == PreviewOutputKind::Receive
             && output.asset_id == policy_asset
             && output.amount_sat == 50_000
     }));
-
-    let response = harness
-        .process_request(
-            TxCreateRequest::from_parts(request_id, harness.network, params, true)
-                .expect("process request"),
-        )
-        .expect("process request");
-
-    assert_eq!(
-        response
-            .preview()
-            .expect("process preview accessor")
-            .expect("process preview"),
-        preview
-    );
 
     let transaction = response.transaction.expect("transaction");
     let tx_bytes = Vec::<u8>::from_hex(&transaction.tx_hex).expect("transaction hex");

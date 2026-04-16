@@ -1,6 +1,5 @@
 use lwk_simplicity::wallet_abi::schema::{
-    AssetVariant, BlinderVariant, LockVariant, OutputSchema, RuntimeParams, TxCreateRequest,
-    TxEvaluateRequest,
+    AssetVariant, BlinderVariant, LockVariant, OutputSchema, RuntimeParams,
 };
 
 #[path = "common/wallet_abi.rs"]
@@ -34,30 +33,15 @@ fn wallet_abi_transfer_lbtc() {
     };
 
     let request_id = uuid::Uuid::new_v4().to_string();
-    let evaluate_request =
-        TxEvaluateRequest::from_parts(&request_id, harness.network, params.clone())
-            .expect("evaluate request");
-    let evaluate_response = harness
-        .evaluate_request(evaluate_request)
-        .expect("evaluate request");
-    let preview = evaluate_response.preview.expect("preview");
+    let (preview, process_response) = harness
+        .evaluate_then_process(&request_id, params)
+        .expect("request roundtrip");
     let preview_delta = preview
         .asset_deltas
         .iter()
         .find(|delta| delta.asset_id == policy_asset)
         .expect("policy asset preview delta")
         .wallet_delta_sat;
-
-    let process_request = TxCreateRequest::from_parts(&request_id, harness.network, params, true)
-        .expect("process request");
-    let process_response = harness
-        .process_request(process_request)
-        .expect("process request");
-    let process_preview = process_response
-        .preview()
-        .expect("process preview accessor")
-        .expect("process preview");
-    assert_eq!(process_preview, preview);
 
     let txid = process_response.transaction.expect("transaction info").txid;
     harness.mine_and_sync_sender(1);

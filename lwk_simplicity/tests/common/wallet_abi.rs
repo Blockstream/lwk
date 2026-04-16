@@ -9,9 +9,10 @@ use lwk_common::Signer as _;
 use lwk_signer::{SignError, SwSigner};
 use lwk_simplicity::error::WalletAbiError;
 use lwk_simplicity::wallet_abi::schema::{
-    KeyStoreMeta, TxCreateRequest, TxCreateResponse, TxEvaluateRequest, TxEvaluateResponse,
-    WalletOutputAllocator, WalletOutputRequest, WalletOutputTemplate, WalletPrevoutResolver,
-    WalletProviderMeta, WalletRequestSession, WalletRuntimeDeps, WalletSessionFactory,
+    KeyStoreMeta, RequestPreview, RuntimeParams, TxCreateRequest, TxCreateResponse,
+    TxEvaluateRequest, TxEvaluateResponse, WalletOutputAllocator, WalletOutputRequest,
+    WalletOutputTemplate, WalletPrevoutResolver, WalletProviderMeta, WalletRequestSession,
+    WalletRuntimeDeps, WalletSessionFactory,
 };
 use lwk_simplicity::wallet_abi::tx_resolution::runtime::Runtime as WalletAbiRuntime;
 use lwk_test_util::{generate_mnemonic, generate_slip77, TestEnv, TestEnvBuilder};
@@ -335,6 +336,34 @@ impl WalletAbiLiveHarness {
             WalletAbiRuntime::<TxCreateRequest, _, _, _>::new(request, &signer, &wallet_deps)
                 .process_request(),
         )
+    }
+
+    pub fn evaluate_then_process(
+        &mut self,
+        request_id: &str,
+        params: RuntimeParams,
+    ) -> Result<(RequestPreview, TxCreateResponse), WalletAbiError> {
+        let preview = self
+            .evaluate_request(
+                TxEvaluateRequest::from_parts(request_id, self.network, params.clone())
+                    .expect("evaluate request"),
+            )?
+            .preview
+            .expect("preview");
+        let response = self.process_request(
+            TxCreateRequest::from_parts(request_id, self.network, params, true)
+                .expect("process request"),
+        )?;
+
+        assert_eq!(
+            response
+                .preview()
+                .expect("process preview accessor")
+                .expect("process preview"),
+            preview
+        );
+
+        Ok((preview, response))
     }
 
     fn sync_sender(&mut self) {

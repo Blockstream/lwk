@@ -2,8 +2,7 @@ use std::str::FromStr;
 
 use lwk_common::Signer as _;
 use lwk_simplicity::wallet_abi::schema::{
-    AssetVariant, BlinderVariant, LockVariant, OutputSchema, RuntimeParams, TxCreateRequest,
-    TxEvaluateRequest,
+    AssetVariant, BlinderVariant, LockVariant, OutputSchema, RuntimeParams,
 };
 use lwk_test_util::generate_slip77;
 use lwk_wollet::bitcoin::bip32::DerivationPath;
@@ -84,28 +83,9 @@ fn wallet_abi_blinds_wallet_and_script_outputs() {
     };
 
     let request_id = "f4505c4b-d19d-4472-8d1c-118902926698";
-    let evaluate_response = harness
-        .evaluate_request(
-            TxEvaluateRequest::from_parts(request_id, harness.network, params.clone())
-                .expect("evaluate request"),
-        )
-        .expect("evaluate request");
-    let preview = evaluate_response.preview.expect("preview");
-
-    let response = harness
-        .process_request(
-            TxCreateRequest::from_parts(request_id, harness.network, params, true)
-                .expect("process request"),
-        )
+    let (_, response) = harness
+        .evaluate_then_process(request_id, params)
         .expect("process request");
-
-    assert_eq!(
-        response
-            .preview()
-            .expect("process preview accessor")
-            .expect("process preview"),
-        preview
-    );
 
     let transaction = response.transaction.expect("transaction");
     let tx_bytes = Vec::<u8>::from_hex(&transaction.tx_hex).expect("transaction hex");

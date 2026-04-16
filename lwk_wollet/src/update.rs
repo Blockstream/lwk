@@ -322,6 +322,7 @@ impl Wollet {
     }
 
     /// Same as [`Wollet::apply_update()`] but only apply the update in memory, without persisting it.
+    #[deprecated(since = "0.17.0", note = "please use `apply_update`")]
     pub fn apply_update_no_persist(&mut self, update: Update) -> Result<(), Error> {
         self.apply_update_inner(update, true)
     }
@@ -562,6 +563,7 @@ impl Wollet {
     }
 
     /// Same as [`Wollet::apply_transaction()`] but only apply the update in memory, without persisting it.
+    #[deprecated(since = "0.17.0", note = "please use `apply_transaction`")]
     pub fn apply_transaction_no_persist(
         &mut self,
         tx: Transaction,

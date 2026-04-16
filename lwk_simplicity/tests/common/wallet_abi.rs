@@ -237,9 +237,9 @@ impl WalletProviderMeta for LiveWalletProvider {
 pub struct WalletAbiLiveHarness {
     pub env: TestEnv,
     pub network: ElementsNetwork,
+    pub sender_wallet: Wollet,
     sender_signer: SwSigner,
     sender_descriptor: WolletDescriptor,
-    sender_wallet: Wollet,
 }
 
 impl Default for WalletAbiLiveHarness {

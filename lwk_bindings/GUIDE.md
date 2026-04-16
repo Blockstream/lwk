@@ -56,6 +56,11 @@ This avoids ambiguity. Use constructors names that explicitly mention the format
 For instance, builders can use `new()` to initialize the builder as empty/default.
 However objects that can appear both in bytes and string, must not use `new()`.
 
+## `uniffi::Object` vs `uniffi::Record`
+Use `#[derive(uniffi::Record)]` for a rust struct without any methods. This allows the target language to interact with the fields natively without FFI overhead.
+
+Use `#[derive(uniffi::Object)]` for a rust struct that either a wrapper for other type, contains a primitive lock like `Mutex` or it manages internal state or behavior.
+
 ## (De)serialization
 When using `#[derive(uniffi::Object)]` on a rust struct follow these conventions:
 

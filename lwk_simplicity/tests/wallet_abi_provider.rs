@@ -10,15 +10,13 @@ use lwk_signer::SwSigner;
 use lwk_simplicity::error::WalletAbiError;
 use lwk_simplicity::wallet_abi::schema::OutputSchema;
 use lwk_simplicity::wallet_abi::{
-    AmountFilter, AssetFilter, AssetVariant, BlinderVariant, InputSchema, InputUnblinding,
-    KeyStoreMeta, LockFilter, LockVariant, PreviewAssetDelta, RuntimeParams, TxCreateRequest,
-    TxCreateResponse, TxEvaluateRequest, TxEvaluateResponse, WalletAbiProvider,
+    AssetVariant, BlinderVariant, KeyStoreMeta, LockVariant, PreviewAssetDelta, RuntimeParams,
+    TxCreateRequest, TxCreateResponse, TxEvaluateRequest, TxEvaluateResponse, WalletAbiProvider,
     WalletAbiProviderBuilder, WalletBroadcaster, WalletCapabilities, WalletOutputAllocator,
     WalletOutputRequest, WalletOutputTemplate, WalletPrevoutResolver, WalletReceiveAddressProvider,
-    WalletRequestSession, WalletSessionFactory, WalletSourceFilter,
-    GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD, GET_SIGNER_RECEIVE_ADDRESS_METHOD,
-    WALLET_ABI_EVALUATE_REQUEST_METHOD, WALLET_ABI_GET_CAPABILITIES_METHOD,
-    WALLET_ABI_PROCESS_REQUEST_METHOD,
+    WalletRequestSession, WalletSessionFactory, GET_RAW_SIGNING_X_ONLY_PUBKEY_METHOD,
+    GET_SIGNER_RECEIVE_ADDRESS_METHOD, WALLET_ABI_EVALUATE_REQUEST_METHOD,
+    WALLET_ABI_GET_CAPABILITIES_METHOD, WALLET_ABI_PROCESS_REQUEST_METHOD,
 };
 use lwk_wollet::bitcoin::bip32::{DerivationPath, Fingerprint, KeySource};
 use lwk_wollet::bitcoin::PublicKey;
@@ -31,6 +29,7 @@ use lwk_wollet::elements::{
 use lwk_wollet::secp256k1::schnorr::Signature;
 use lwk_wollet::secp256k1::{Message, XOnlyPublicKey};
 use lwk_wollet::ExternalUtxo;
+use serde::de::DeserializeOwned;
 
 #[derive(Debug, thiserror::Error)]
 enum ProviderError {
@@ -149,15 +148,17 @@ impl WalletReceiveAddressProvider for TestReceiveAddressProvider {
     }
 }
 
+type TestProvider = WalletAbiProvider<
+    SigningKeyStore,
+    FixedSessionFactory,
+    TestPrevoutResolver,
+    TestOutputAllocator,
+    TestBroadcaster,
+    TestReceiveAddressProvider,
+>;
+
 struct TestHarness {
-    provider: WalletAbiProvider<
-        SigningKeyStore,
-        FixedSessionFactory,
-        TestPrevoutResolver,
-        TestOutputAllocator,
-        TestBroadcaster,
-        TestReceiveAddressProvider,
-    >,
+    provider: TestProvider,
     broadcast_calls: Arc<AtomicUsize>,
     policy_asset: AssetId,
 }
@@ -248,18 +249,7 @@ fn build_provider() -> TestHarness {
 
 fn runtime_params(policy_asset: AssetId) -> RuntimeParams {
     RuntimeParams {
-        inputs: vec![InputSchema {
-            id: "wallet-input".to_string(),
-            utxo_source: lwk_simplicity::wallet_abi::UTXOSource::Wallet {
-                filter: WalletSourceFilter {
-                    asset: AssetFilter::Exact { asset_id: policy_asset },
-                    amount: AmountFilter::Exact { amount_sat: 20_000 },
-                    lock: LockFilter::None,
-                },
-            },
-            unblinding: InputUnblinding::Wallet,
-            ..InputSchema::default()
-        }],
+        inputs: vec![],
         outputs: vec![OutputSchema {
             id: "external".to_string(),
             amount_sat: 5_000,
@@ -307,11 +297,11 @@ fn wallet_abi_provider_smoke() {
     );
 
     let capabilities = ready(provider.get_capabilities()).expect("typed capabilities");
-    let dispatch_capabilities: WalletCapabilities = serde_json::from_value(
-        ready(provider.dispatch_json(WALLET_ABI_GET_CAPABILITIES_METHOD, serde_json::Value::Null))
-            .expect("dispatch capabilities"),
-    )
-    .expect("deserialize capabilities");
+    let dispatch_capabilities: WalletCapabilities = dispatch(
+        provider,
+        WALLET_ABI_GET_CAPABILITIES_METHOD,
+        serde_json::Value::Null,
+    );
     assert_eq!(dispatch_capabilities, capabilities);
 
     let evaluate_request = TxEvaluateRequest::from_parts(
@@ -322,14 +312,11 @@ fn wallet_abi_provider_smoke() {
     .expect("evaluate request");
     let typed_evaluate =
         ready(provider.evaluate_request(evaluate_request.clone())).expect("typed evaluate request");
-    let dispatch_evaluate: TxEvaluateResponse = serde_json::from_value(
-        ready(provider.dispatch_json(
-            WALLET_ABI_EVALUATE_REQUEST_METHOD,
-            serde_json::to_value(&evaluate_request).expect("serialize evaluate request"),
-        ))
-        .expect("dispatch evaluate request"),
-    )
-    .expect("deserialize evaluate response");
+    let dispatch_evaluate: TxEvaluateResponse = dispatch(
+        provider,
+        WALLET_ABI_EVALUATE_REQUEST_METHOD,
+        serde_json::to_value(&evaluate_request).expect("serialize evaluate request"),
+    );
     assert_eq!(dispatch_evaluate, typed_evaluate);
 
     let process_request = TxCreateRequest::from_parts(
@@ -341,42 +328,43 @@ fn wallet_abi_provider_smoke() {
     .expect("process request");
     let typed_process =
         ready(provider.process_request(process_request.clone())).expect("typed process request");
-    let dispatch_process: TxCreateResponse = serde_json::from_value(
-        ready(provider.dispatch_json(
-            WALLET_ABI_PROCESS_REQUEST_METHOD,
-            serde_json::to_value(&process_request).expect("serialize process request"),
-        ))
-        .expect("dispatch process request"),
-    )
-    .expect("deserialize process response");
+    let dispatch_process: TxCreateResponse = dispatch(
+        provider,
+        WALLET_ABI_PROCESS_REQUEST_METHOD,
+        serde_json::to_value(&process_request).expect("serialize process request"),
+    );
 
     assert_eq!(dispatch_process.request_id, typed_process.request_id);
     assert_eq!(dispatch_process.network, typed_process.network);
     assert_eq!(dispatch_process.status, typed_process.status);
-    assert_eq!(
-        dispatch_process.preview().expect("dispatch preview"),
-        typed_process.preview().expect("typed preview"),
-    );
+    let dispatch_preview = dispatch_process
+        .preview()
+        .expect("dispatch preview accessor");
+    let typed_preview = typed_process.preview().expect("typed preview accessor");
+    assert_eq!(dispatch_preview, typed_preview);
     assert_eq!(
         dispatch_process.transaction.is_some(),
         typed_process.transaction.is_some(),
     );
     assert_eq!(harness.broadcast_calls.load(Ordering::Relaxed), 0);
+    let typed_preview = typed_preview.expect("typed preview");
     assert_eq!(
-        typed_process.preview().expect("typed preview accessor"),
-        Some(lwk_simplicity::wallet_abi::RequestPreview {
-            asset_deltas: vec![PreviewAssetDelta {
-                asset_id: harness.policy_asset,
-                wallet_delta_sat: -5_000,
-            }],
-            outputs: typed_process
-                .preview()
-                .expect("typed preview accessor")
-                .expect("typed preview")
-                .outputs,
-            warnings: vec![],
-        }),
+        typed_preview.asset_deltas,
+        vec![PreviewAssetDelta {
+            asset_id: harness.policy_asset,
+            wallet_delta_sat: -5_000,
+        }],
     );
+    assert!(typed_preview.warnings.is_empty());
+}
+
+fn dispatch<T: DeserializeOwned>(
+    provider: &TestProvider,
+    method: &str,
+    params: serde_json::Value,
+) -> T {
+    serde_json::from_value(ready(provider.dispatch_json(method, params)).expect("dispatch value"))
+        .expect("deserialize dispatch value")
 }
 
 fn ready<T>(future: impl Future<Output = T>) -> T {

@@ -326,7 +326,11 @@ impl Wollet {
         self.apply_update_inner(update, true)
     }
 
-    fn apply_update_inner(&mut self, update: Update, skip_persist: bool) -> Result<(), Error> {
+    pub(crate) fn apply_update_inner(
+        &mut self,
+        update: Update,
+        skip_persist: bool,
+    ) -> Result<(), Error> {
         // TODO should accept &Update
 
         if update.wollet_status != 0 {

@@ -182,7 +182,8 @@ impl WolletBuilder {
             match wollet.store.get(&key) {
                 Ok(Some(bytes)) => {
                     let update = Update::deserialize(&bytes)?;
-                    wollet.apply_update_no_persist(update)?;
+                    let skip_persist = true;
+                    wollet.apply_update_inner(update, skip_persist)?;
                 }
                 Ok(None) => {
                     let mut next_update_index = wollet

@@ -190,7 +190,7 @@ mod tests {
 
         let builder = TxBuilder::new(&network);
         let pset_maker = builder
-            .liquidex_make(utxo, addr, 1, wanted_asset)
+            .liquidex_make(&utxo, &addr, 1, &wanted_asset)
             .unwrap()
             .finish(&wollet)
             .unwrap();

@@ -14,6 +14,12 @@ pub struct Wollet {
     inner: lwk_wollet::Wollet,
 }
 
+impl From<lwk_wollet::Wollet> for Wollet {
+    fn from(inner: lwk_wollet::Wollet) -> Self {
+        Self { inner }
+    }
+}
+
 impl AsRef<lwk_wollet::Wollet> for Wollet {
     fn as_ref(&self) -> &lwk_wollet::Wollet {
         &self.inner

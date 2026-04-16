@@ -9,12 +9,8 @@ mod wallet_abi_common;
 
 use wallet_abi_common::WalletAbiLiveHarness;
 
-#[test]
-fn wallet_abi_new_issuance() {
-    let mut harness = WalletAbiLiveHarness::new();
-    harness.fund_sender_lbtc(100_000);
-
-    let params = RuntimeParams {
+fn new_issuance_params() -> RuntimeParams {
+    RuntimeParams {
         inputs: vec![InputSchema::new("issuance").with_issuance(InputIssuance {
             kind: InputIssuanceKind::New,
             asset_amount_sat: 5,
@@ -39,7 +35,15 @@ fn wallet_abi_new_issuance() {
         ],
         fee_rate_sat_kvb: None,
         lock_time: None,
-    };
+    }
+}
+
+#[test]
+fn wallet_abi_new_issuance() {
+    let mut harness = WalletAbiLiveHarness::new();
+    harness.fund_sender_lbtc(100_000);
+
+    let params = new_issuance_params();
 
     let request_id = "78e8809f-c3de-4f46-a270-ae4ed8dd51c5";
     let (preview, response) = harness
@@ -106,39 +110,12 @@ fn wallet_abi_reissuance() {
     let mut harness = WalletAbiLiveHarness::new();
     harness.fund_sender_lbtc(100_000);
 
-    let initial_params = RuntimeParams {
-        inputs: vec![InputSchema::new("issuance").with_issuance(InputIssuance {
-            kind: InputIssuanceKind::New,
-            asset_amount_sat: 5,
-            token_amount_sat: 1,
-            entropy: [7; 32],
-        })],
-        outputs: vec![
-            OutputSchema {
-                id: "issued_asset".into(),
-                amount_sat: 5,
-                lock: LockVariant::Wallet,
-                asset: AssetVariant::NewIssuanceAsset { input_index: 0 },
-                blinder: BlinderVariant::Wallet,
-            },
-            OutputSchema {
-                id: "reissuance_token".into(),
-                amount_sat: 1,
-                lock: LockVariant::Wallet,
-                asset: AssetVariant::NewIssuanceToken { input_index: 0 },
-                blinder: BlinderVariant::Wallet,
-            },
-        ],
-        fee_rate_sat_kvb: None,
-        lock_time: None,
-    };
-
     let issuance_response = harness
         .process_request(
             TxCreateRequest::from_parts(
                 "406d1c2c-6927-4f78-a9ce-f54b5ec9bb9e",
                 harness.network,
-                initial_params,
+                new_issuance_params(),
                 true,
             )
             .expect("issuance request"),

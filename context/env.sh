@@ -9,7 +9,7 @@ export JADE_EMULATOR_IMAGE_VERSION="1.0.27"
 export PIN_SERVER_IMAGE_NAME=tulipan81/blind_pin_server
 export PIN_SERVER_IMAGE_VERSION=v0.0.7
 export ANDROID_NDK_HOME="$PWD/bin/android-ndk"
-export LIB_EXT=$([ $(uname) == "Darwin" ] && echo "dylib" || echo "so")
+export LIB_EXT=$([ "$(uname)" = "Darwin" ] && echo "dylib" || echo "so")
 export CLASSPATH="$CLASSPATH:$PWD/bin/jna-5.13.0.jar"
 export PATH="$PATH:$PWD/bin/kotlinc/bin:$PWD/bin/openlogic-openjdk-11.0.21+9-linux-x64/bin:$PWD/bin/swift-5.5-RELEASE-ubuntu18.04/usr/bin"
 export WASM_BINDGEN_TEST_TIMEOUT=60

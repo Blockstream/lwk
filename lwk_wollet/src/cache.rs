@@ -79,7 +79,7 @@ impl Default for Cache {
 
 impl std::hash::Hash for Cache {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        let mut vec: Vec<_> = self.all_txids().into_iter().collect();
+        let mut vec: Vec<_> = self.all_txids().iter().collect();
         vec.sort();
         vec.hash(state);
 
@@ -213,8 +213,8 @@ impl Cache {
 
     pub fn all_txs(&self) -> impl Iterator<Item = (Txid, Transaction)> + '_ {
         self.all_txids()
-            .into_iter()
-            .filter_map(|txid| self.tx(&txid).map(|tx| (txid, tx)))
+            .iter()
+            .filter_map(|&txid| self.tx(&txid).map(|tx| (txid, tx)))
     }
 
     pub fn tx(&self, txid: &Txid) -> Option<Transaction> {
@@ -223,9 +223,8 @@ impl Cache {
         elements::encode::deserialize(&bytes).ok()
     }
 
-    pub fn all_txids(&self) -> HashSet<Txid> {
-        // TODO: try to remove this clone
-        self.txids.clone()
+    pub fn all_txids(&self) -> &HashSet<Txid> {
+        &self.txids
     }
 
     pub fn add_txids_from_txs_store(&mut self) {

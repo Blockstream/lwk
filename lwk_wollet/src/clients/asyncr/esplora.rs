@@ -711,8 +711,8 @@ impl EsploraClient {
         let mut txs = vec![];
         let mut unblinds = vec![];
 
-        let mut txs_in_db = cache.all_txids();
-        let txs_to_download: Vec<Txid> = history_txs_id.difference(&txs_in_db).cloned().collect();
+        let txs_in_db = cache.all_txids();
+        let txs_to_download: Vec<Txid> = history_txs_id.difference(txs_in_db).cloned().collect();
 
         let mut stream = iter(txs_to_download.iter().cloned())
             .map(|txid| async move {
@@ -724,8 +724,6 @@ impl EsploraClient {
         while let Some(result) = stream.next().await {
             match result {
                 Ok((txid, tx)) => {
-                    txs_in_db.insert(txid);
-
                     for (i, output) in tx.output.iter().enumerate() {
                         // could be the searched script it's not yet in the cache, because created in the current run, thus it's searched also in the `scripts`
                         if cache.paths.contains_key(&output.script_pubkey)

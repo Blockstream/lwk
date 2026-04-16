@@ -248,7 +248,7 @@ impl Wollet {
     fn apply_transaction_inner(
         &mut self,
         tx: Transaction,
-        do_persist: bool,
+        skip_persist: bool,
     ) -> Result<SignedBalance, Error> {
         let initial_balance = self.balance()?;
         let mut unblinds = vec![];
@@ -298,7 +298,7 @@ impl Wollet {
             unspent,
         };
 
-        self.apply_update_inner(update, do_persist)?;
+        self.apply_update_inner(update, skip_persist)?;
         let final_balance = self.balance()?;
         Ok(final_balance - initial_balance)
     }
@@ -318,15 +318,15 @@ impl Wollet {
     /// will cause this function to return a [`Error::UpdateOnDifferentStatus`].
     /// Callers should either avoid applying updates and transactions, or they can catch the error and wait for a new full scan to be completed and applied.
     pub fn apply_update(&mut self, update: Update) -> Result<(), Error> {
-        self.apply_update_inner(update, true)
+        self.apply_update_inner(update, false)
     }
 
     /// Same as [`Wollet::apply_update()`] but only apply the update in memory, without persisting it.
     pub fn apply_update_no_persist(&mut self, update: Update) -> Result<(), Error> {
-        self.apply_update_inner(update, false)
+        self.apply_update_inner(update, true)
     }
 
-    fn apply_update_inner(&mut self, update: Update, do_persist: bool) -> Result<(), Error> {
+    fn apply_update_inner(&mut self, update: Update, skip_persist: bool) -> Result<(), Error> {
         // TODO should accept &Update
 
         if update.wollet_status != 0 {
@@ -441,7 +441,7 @@ impl Wollet {
                 .fetch_max(last_used_internal + 1, atomic::Ordering::Relaxed);
         }
 
-        if do_persist {
+        if !skip_persist {
             self.persist_update(update)?;
         }
 
@@ -554,7 +554,7 @@ impl Wollet {
     /// Calling this method, might cause [`Wollet::apply_update()`] to fail with a
     /// [`Error::UpdateOnDifferentStatus`], make sure to either avoid it or handle the error properly.
     pub fn apply_transaction(&mut self, tx: Transaction) -> Result<SignedBalance, Error> {
-        self.apply_transaction_inner(tx, true)
+        self.apply_transaction_inner(tx, false)
     }
 
     /// Same as [`Wollet::apply_transaction()`] but only apply the update in memory, without persisting it.
@@ -562,7 +562,7 @@ impl Wollet {
         &mut self,
         tx: Transaction,
     ) -> Result<SignedBalance, Error> {
-        self.apply_transaction_inner(tx, false)
+        self.apply_transaction_inner(tx, true)
     }
 }
 

@@ -300,8 +300,7 @@ impl Cache {
 
     fn update_heights(&mut self, new: &[(Txid, Option<u32>)], to_delete: &[Txid]) {
         self.heights.retain(|k, _| !to_delete.contains(k));
-        // TODO: consider avoid the allocation here
-        self.heights.extend(new.to_vec());
+        self.heights.extend(new.iter().copied());
     }
 
     fn extend_all_txs(&mut self, txs: Vec<(Txid, Transaction)>) -> Result<(), Error> {

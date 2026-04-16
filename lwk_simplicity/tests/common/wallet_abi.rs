@@ -18,13 +18,14 @@ use lwk_test_util::{generate_mnemonic, generate_slip77, TestEnv, TestEnvBuilder}
 use lwk_wollet::bitcoin::bip32::{DerivationPath, KeySource};
 use lwk_wollet::bitcoin::PublicKey;
 use lwk_wollet::blocking::BlockchainBackend;
+use lwk_wollet::elements::bitcoin::secp256k1::Keypair;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use lwk_wollet::elements::{Address, OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
 use lwk_wollet::secp256k1::schnorr::Signature;
 use lwk_wollet::secp256k1::{Message, XOnlyPublicKey};
 use lwk_wollet::{
     Chain, ElectrumClient, ElectrumUrl, ElementsNetwork, ExternalUtxo, WalletTx, Wollet,
-    WolletBuilder, WolletDescriptor,
+    WolletBuilder, WolletDescriptor, EC,
 };
 
 const WALLET_ACCOUNT_PATH: &str = "m/84h/1h/0h";
@@ -50,11 +51,15 @@ impl From<LiveHarnessError> for WalletAbiError {
 
 struct LiveSigner {
     signer: SwSigner,
+    xonly_public_key: XOnlyPublicKey,
 }
 
 impl LiveSigner {
-    fn new(signer: SwSigner) -> Self {
-        Self { signer }
+    fn new(signer: SwSigner, xonly_public_key: XOnlyPublicKey) -> Self {
+        Self {
+            signer,
+            xonly_public_key,
+        }
     }
 }
 
@@ -62,7 +67,7 @@ impl KeyStoreMeta for LiveSigner {
     type Error = LiveHarnessError;
 
     fn get_raw_signing_x_only_pubkey(&self) -> Result<XOnlyPublicKey, Self::Error> {
-        Ok(self.signer.xpub().public_key.x_only_public_key().0)
+        Ok(self.xonly_public_key)
     }
 
     fn sign_pst(&self, pst: &mut PartiallySignedTransaction) -> Result<(), Self::Error> {
@@ -72,12 +77,13 @@ impl KeyStoreMeta for LiveSigner {
 
     fn sign_schnorr(
         &self,
-        _message: Message,
+        message: Message,
         _xonly_public_key: XOnlyPublicKey,
     ) -> Result<Signature, Self::Error> {
-        Err(LiveHarnessError::Unsupported(
-            "sign_schnorr is only enabled for Simplicity input tests",
-        ))
+        let root_xprv = self.signer.derive_xprv(&"m".parse().expect("root path"))?;
+        let keypair = Keypair::from_secret_key(&EC, &root_xprv.private_key);
+
+        Ok(EC.sign_schnorr(&message, &keypair))
     }
 }
 
@@ -154,11 +160,22 @@ impl WalletPrevoutResolver for LiveWalletProvider {
 
     fn get_tx_out(
         &self,
-        _outpoint: OutPoint,
+        outpoint: OutPoint,
     ) -> impl Future<Output = Result<TxOut, Self::Error>> + Send + '_ {
-        future_ready(Err(LiveHarnessError::Unsupported(
-            "get_tx_out is only enabled for Simplicity provided-input tests",
-        )))
+        let result = ElectrumUrl::from_str(&self.electrum_url)
+            .map_err(|_| LiveHarnessError::Unsupported("invalid electrum url"))
+            .and_then(|electrum_url| {
+                let client = ElectrumClient::new(&electrum_url)?;
+                let transaction = client.get_transaction(outpoint.txid)?;
+                transaction
+                    .output
+                    .get(outpoint.vout as usize)
+                    .cloned()
+                    .ok_or(LiveHarnessError::Unsupported(
+                        "provided prevout output index does not exist",
+                    ))
+            });
+        future_ready(result)
     }
 }
 
@@ -238,6 +255,7 @@ pub struct WalletAbiLiveHarness {
     pub env: TestEnv,
     pub network: ElementsNetwork,
     pub sender_wallet: Wollet,
+    pub sender_xonly_public_key: XOnlyPublicKey,
     sender_signer: SwSigner,
     sender_descriptor: WolletDescriptor,
 }
@@ -253,6 +271,7 @@ impl WalletAbiLiveHarness {
         let env = TestEnvBuilder::from_env().with_electrum().build();
         let network = ElementsNetwork::default_regtest();
         let sender_signer = generate_signer();
+        let sender_xonly_public_key = sender_signer.xpub().public_key.x_only_public_key().0;
         let sender_descriptor = wallet_descriptor(&sender_signer, &generate_slip77());
         let sender_wallet = WolletBuilder::new(network, sender_descriptor.clone())
             .build()
@@ -264,6 +283,7 @@ impl WalletAbiLiveHarness {
             sender_signer,
             sender_descriptor,
             sender_wallet,
+            sender_xonly_public_key,
         }
     }
 
@@ -295,7 +315,7 @@ impl WalletAbiLiveHarness {
         &mut self,
         request: TxEvaluateRequest,
     ) -> Result<TxEvaluateResponse, WalletAbiError> {
-        let signer = LiveSigner::new(self.sender_signer.clone());
+        let signer = LiveSigner::new(self.sender_signer.clone(), self.sender_xonly_public_key);
         let wallet_deps = self.wallet_runtime_deps()?;
 
         ready(
@@ -308,7 +328,7 @@ impl WalletAbiLiveHarness {
         &mut self,
         request: TxCreateRequest,
     ) -> Result<TxCreateResponse, WalletAbiError> {
-        let signer = LiveSigner::new(self.sender_signer.clone());
+        let signer = LiveSigner::new(self.sender_signer.clone(), self.sender_xonly_public_key);
         let wallet_deps = self.wallet_runtime_deps()?;
 
         ready(

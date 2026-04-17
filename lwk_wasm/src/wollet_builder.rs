@@ -40,11 +40,13 @@ impl WolletBuilder {
         self.inner.utxo_only(utxo_only).into()
     }
 
-    /// Persist wallet updates in the given JavaScript storage object.
+    /// Experimental: Persist wallet updates in the given JavaScript storage object.
+    ///
+    /// Wallet data is persisted in clear.
     ///
     /// The JS object must have `get(key)`, `put(key, value)`, and `remove(key)` methods.
-    #[wasm_bindgen(js_name = withStore)]
-    pub fn with_store(self, storage: JsStorage) -> Self {
+    #[wasm_bindgen(js_name = withExperimentalStore)]
+    pub fn with_experimental_store(self, storage: JsStorage) -> Self {
         self.inner
             .with_store(Arc::new(JsStoreLink::new(storage)))
             .into()

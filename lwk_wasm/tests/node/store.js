@@ -36,7 +36,7 @@ function runWolletBuilderStoreTest() {
     const jsStorage = createStorage();
 
     const wollet = new lwk.WolletBuilder(network, descriptor)
-        .withStore(jsStorage)
+        .withExperimentalStore(jsStorage)
         .build();
     wollet.applyUpdate(update);
 

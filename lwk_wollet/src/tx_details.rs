@@ -148,9 +148,22 @@ impl Wollet {
         txid: &Txid,
         height: Option<u32>,
         unspent: &HashSet<OutPoint>,
+        without_tx: bool,
     ) -> Result<Option<TxDetails>, Error> {
-        if let Some(tx) = self.cache.tx(txid) {
-            let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
+        let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
+        if without_tx {
+            Ok(Some(TxDetails {
+                tx: None,
+                txid: *txid,
+                fees: HashMap::new(),
+                height,
+                timestamp,
+                inputs: Vec::new(),
+                outputs: Vec::new(),
+                type_: "".into(),
+                balance: SignedBalance::default(),
+            }))
+        } else if let Some(tx) = self.cache.tx(txid) {
             let mut inputs = vec![];
             for txin in &tx.input {
                 let outpoint = txin.previous_output;
@@ -244,7 +257,7 @@ impl Wollet {
     pub fn tx_details(&self, txid: &Txid, _opt: &TxOpt) -> Result<Option<TxDetails>, Error> {
         let unspent = self.cache.unspent();
         let height = *self.cache.tx_height(txid).unwrap_or(&None);
-        self.tx_details_inner(txid, height, unspent)
+        self.tx_details_inner(txid, height, unspent, false)
     }
 
     /// Get the transaction list
@@ -257,7 +270,7 @@ impl Wollet {
         let offset = opt.offset.unwrap_or(0);
         let limit = opt.limit.unwrap_or(usize::MAX);
         for (txid, height) in self.cache.sorted_txids().skip(offset).take(limit) {
-            if let Some(tx) = self.tx_details_inner(txid, *height, unspent)? {
+            if let Some(tx) = self.tx_details_inner(txid, *height, unspent, opt.without_tx)? {
                 txs.push(tx);
             }
         }
@@ -277,6 +290,11 @@ pub struct TxsOpt {
     pub offset: Option<usize>,
     /// Return at most `limit` transactions
     pub limit: Option<usize>,
+    /// Do not fetch and parse the full transactions
+    ///
+    /// This can improve performance significantly, but some returned
+    /// value might become inaccurate.
+    pub without_tx: bool,
 }
 
 // TODO: consider having different types for input and outputs

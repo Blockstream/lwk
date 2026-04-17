@@ -74,6 +74,7 @@ function runWolletBuilderStoreTest() {
     const txsStorage = createStorage(true);
     const wolletWithTxsStore = new lwk.WolletBuilder(network, descriptor)
         .withExperimentalStore(jsStorageWithTxsStore)
+        .withMergeThreshold(1)
         .withTxsStore(txsStorage, false)
         .build();
     wolletWithTxsStore.applyUpdate(update);

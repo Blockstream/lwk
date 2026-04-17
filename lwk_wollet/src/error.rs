@@ -104,6 +104,9 @@ pub enum Error {
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
 
+    #[error(transparent)]
+    DescriptorGeneration(#[from] lwk_common::DescriptorGenerationError),
+
     #[error("Address must be explicit")]
     NotExplicitAddress,
 

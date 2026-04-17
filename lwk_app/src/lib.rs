@@ -1250,7 +1250,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             let amp2 = s.config.amp2_client()?;
             let signer = s.get_available_signer(&r.name)?;
-            let desc = amp2.descriptor_from_str(&amp2userkey(signer)?)?;
+            let desc =
+                amp2.descriptor_from_str(&amp2userkey(signer)?, &r.descriptor_blinding_key)?;
             let descriptor = desc.descriptor().to_string();
             Response::result(
                 request.id,
@@ -1263,7 +1264,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             let amp2 = s.config.amp2_client()?;
             let signer = s.get_available_signer(&r.name)?;
-            let desc = amp2.descriptor_from_str(&amp2userkey(signer)?)?;
+            let desc =
+                amp2.descriptor_from_str(&amp2userkey(signer)?, &r.descriptor_blinding_key)?;
             let wid = amp2.blocking_register(desc)?.wid;
             Response::result(
                 request.id,

@@ -130,4 +130,20 @@ fn test_tx_details() {
     let txs2 = w.wollet.txs(&txsopt).unwrap();
     assert_eq!(txs2.len(), 1);
     assert_eq!(txs[1], txs2[0]);
+
+    // Tx list without txs
+    let txsopt = TxsOpt {
+        without_tx: true,
+        ..Default::default()
+    };
+    let txs_minimal = w.wollet.txs(&txsopt).unwrap();
+    assert_eq!(txs_minimal.len(), 2);
+    assert!(txs_minimal.iter().any(|tx| tx.txid() == txid1));
+    assert!(txs_minimal.iter().any(|tx| tx.txid() == txid2));
+    assert!(txs_minimal.iter().all(|tx| tx.tx().is_none()));
+    assert!(txs_minimal.iter().all(|tx| tx.tx_type().is_empty()));
+    assert!(txs_minimal.iter().all(|tx| tx.balance().is_empty()));
+    assert!(txs_minimal.iter().all(|tx| tx.fees().is_empty()));
+    assert!(txs_minimal.iter().all(|tx| tx.inputs().is_empty()));
+    assert!(txs_minimal.iter().all(|tx| tx.outputs().is_empty()));
 }

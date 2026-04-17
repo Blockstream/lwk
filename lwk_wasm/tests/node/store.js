@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const lwk = require('lwk_node');
 
-function createStorage() {
+function createStorage(isPersisted = false) {
     const store = new Map();
     return {
         get(key) {
@@ -14,6 +14,9 @@ function createStorage() {
         },
         remove(key) {
             store.delete(key);
+        },
+        isPersisted() {
+            return isPersisted;
         },
         _data: store
     };
@@ -44,7 +47,7 @@ function runWolletBuilderStoreTest() {
     const network = lwk.Network.testnet();
     const descriptor = new lwk.WolletDescriptor(descriptorString);
     const update = lwk.Update.deserializeDecryptedBase64(encryptedUpdate, descriptor);
-    const jsStorage = createStorage();
+    const jsStorage = createStorage(false);
 
     const wollet = new lwk.WolletBuilder(network, descriptor)
         .withExperimentalStore(jsStorage)
@@ -67,8 +70,8 @@ function runWolletBuilderStoreTest() {
     assert.strictEqual(restored.transactions().length, expectedTransactions);
     assert.strictEqual(JSON.stringify(restored.balance().toJSON()), expectedBalance);
 
-    const jsStorageWithTxsStore = createStorage();
-    const txsStorage = createStorage();
+    const jsStorageWithTxsStore = createStorage(false);
+    const txsStorage = createStorage(true);
     const wolletWithTxsStore = new lwk.WolletBuilder(network, descriptor)
         .withExperimentalStore(jsStorageWithTxsStore)
         .withTxsStore(txsStorage, false)

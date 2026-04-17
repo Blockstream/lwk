@@ -1,7 +1,7 @@
 //! Duck-typed JavaScript storage interface for WASM.
 //!
 //! JavaScript doesn't have traits, so we use duck typing: any JS object with
-//! `get`, `put`, and `remove` methods can be used as storage.
+//! `get`, `put`, `remove`, and `isPersisted` methods can be used as storage.
 
 use wasm_bindgen::prelude::*;
 
@@ -14,7 +14,7 @@ extern "C" {
     /// A duck-typed JavaScript storage object.
     ///
     /// Any JS object with `get(key) -> Uint8Array|null`, `put(key, value)`,
-    /// and `remove(key)` methods can be used.
+    /// `remove(key)`, and `isPersisted() -> boolean` methods can be used.
     ///
     /// Example JS implementation:
     /// ```js
@@ -22,7 +22,8 @@ extern "C" {
     ///     _data: new Map(),
     ///     get(key) { return this._data.get(key) || null; },
     ///     put(key, value) { this._data.set(key, value); },
-    ///     remove(key) { this._data.delete(key); }
+    ///     remove(key) { this._data.delete(key); },
+    ///     isPersisted() { return false; }
     /// };
     /// ```
     pub type JsStorage;
@@ -38,6 +39,10 @@ extern "C" {
     /// Remove a key.
     #[wasm_bindgen(method, catch)]
     fn remove(this: &JsStorage, key: &str) -> Result<(), JsValue>;
+
+    /// Whether this store persists data across process restarts.
+    #[wasm_bindgen(method, catch, js_name = isPersisted)]
+    fn is_persisted(this: &JsStorage) -> Result<bool, JsValue>;
 }
 
 /// Error type for the JS store bridge.
@@ -64,7 +69,8 @@ impl std::fmt::Debug for JsStoreLink {
 impl JsStoreLink {
     /// Create a new `JsStoreLink` from a JavaScript storage object.
     ///
-    /// The JS object must have `get(key)`, `put(key, value)`, and `remove(key)` methods.
+    /// The JS object must have `get(key)`, `put(key, value)`, `remove(key)`,
+    /// and `isPersisted()` methods.
     #[wasm_bindgen(constructor)]
     pub fn new(storage: JsStorage) -> Self {
         Self { inner: storage }
@@ -93,6 +99,10 @@ impl lwk_common::Store for JsStoreLink {
         self.inner
             .remove(&key_str)
             .map_err(|e| JsStoreError::Js(format!("{e:?}")))
+    }
+
+    fn is_persisted(&self) -> bool {
+        self.inner.is_persisted().unwrap_or(false)
     }
 }
 
@@ -164,6 +174,9 @@ mod tests {
                 },
                 remove: function(key) {
                     store.delete(key);
+                },
+                isPersisted: function() {
+                    return false;
                 }
             };
         }
@@ -202,6 +215,7 @@ mod tests {
             link.get("Liquid:Tx:abc123").unwrap(),
             Some(b"tx_data".to_vec())
         );
+        assert!(!link.is_persisted());
     }
 
     #[wasm_bindgen_test]

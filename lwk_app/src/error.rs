@@ -1,5 +1,6 @@
 use std::sync::{MutexGuard, PoisonError};
 
+use lwk_common::DescriptorGenerationError;
 use lwk_tiny_jrpc::error::ImplementationDefinedCode;
 use serde_json::json;
 
@@ -103,6 +104,9 @@ pub enum Error {
 
     #[error("Received stop command")]
     Stop,
+
+    #[error("Descriptor Generation Error: {0}.")]
+    DescriptorGeneration(#[from] DescriptorGenerationError),
 
     // TODO remove into specific errors
     #[error("Generic error {0}")]

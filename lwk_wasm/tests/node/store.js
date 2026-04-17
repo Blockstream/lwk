@@ -51,6 +51,7 @@ function runWolletBuilderStoreTest() {
         .build();
 
     assert.strictEqual(restored.address(0).address().toString(), expectedAddress);
+    assert.strictEqual(1, expectedTransactions);
     assert.strictEqual(restored.transactions().length, expectedTransactions);
     assert.strictEqual(JSON.stringify(restored.balance().toJSON()), expectedBalance);
 }

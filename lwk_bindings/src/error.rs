@@ -237,6 +237,14 @@ impl From<elements::VerificationError> for LwkError {
     }
 }
 
+impl From<lwk_common::DescriptorGenerationError> for LwkError {
+    fn from(value: lwk_common::DescriptorGenerationError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
 #[cfg(feature = "simplicity")]
 impl From<lwk_simplicity::error::ProgramError> for LwkError {
     fn from(value: lwk_simplicity::error::ProgramError) -> Self {

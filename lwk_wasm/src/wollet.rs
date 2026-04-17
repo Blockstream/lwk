@@ -14,6 +14,12 @@ pub struct Wollet {
     inner: lwk_wollet::Wollet,
 }
 
+impl From<lwk_wollet::Wollet> for Wollet {
+    fn from(inner: lwk_wollet::Wollet) -> Self {
+        Self { inner }
+    }
+}
+
 impl AsRef<lwk_wollet::Wollet> for Wollet {
     fn as_ref(&self) -> &lwk_wollet::Wollet {
         &self.inner
@@ -32,18 +38,6 @@ impl Wollet {
     #[wasm_bindgen(constructor)]
     pub fn new(network: &Network, descriptor: &WolletDescriptor) -> Result<Wollet, Error> {
         let inner = lwk_wollet::WolletBuilder::new(network.into(), descriptor.into()).build()?;
-        Ok(Self { inner })
-    }
-
-    /// Experimental: create a "utxo only" `Wollet`
-    #[wasm_bindgen(js_name = "newUtxoOnly")]
-    pub fn new_utxo_only(
-        network: &Network,
-        descriptor: &WolletDescriptor,
-    ) -> Result<Wollet, Error> {
-        let inner = lwk_wollet::WolletBuilder::new(network.into(), descriptor.into())
-            .utxo_only(true)
-            .build()?;
         Ok(Self { inner })
     }
 

@@ -39,7 +39,7 @@ async function runListTransactionsTest() {
 
         // Fetch transactions using waterfalls and utxos only
         const client_utxo_only = new lwk.EsploraClient(network, "https://waterfalls.liquidwebwallet.org/liquidtestnet/api", true, 4, true);
-        const wollet_utxo_only = lwk.Wollet.newUtxoOnly(network, desc);
+        const wollet_utxo_only = new lwk.WolletBuilder(network, desc).utxoOnly(true).build();
         console.log("Starting UTXO-only full scan...");
         const update_utxo_only = await client_utxo_only.fullScan(wollet_utxo_only);
         if (update_utxo_only) {

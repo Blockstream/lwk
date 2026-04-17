@@ -52,6 +52,7 @@ mod update;
 mod websocket;
 
 mod wollet;
+mod wollet_builder;
 #[cfg(feature = "simplicity")]
 mod xonly_public_key;
 mod xpub;
@@ -133,6 +134,7 @@ pub use update::Update;
 pub use websocket::WebSocketSerial;
 
 pub use wollet::Wollet;
+pub use wollet_builder::WolletBuilder;
 #[cfg(feature = "simplicity")]
 pub use xonly_public_key::XOnlyPublicKey;
 pub use xpub::Xpub;

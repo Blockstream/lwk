@@ -280,14 +280,13 @@ pub trait BlockchainBackend {
         let mut txs = vec![];
         let mut unblinds = vec![];
 
-        let mut txs_in_db = state.txs().clone();
+        let txs_in_db = state.txs();
         let txs_to_download: Vec<Txid> = history_txs_id.difference(&txs_in_db).cloned().collect();
 
         let txs_downloaded = self.get_transactions(&txs_to_download)?;
 
         for tx in txs_downloaded.into_iter() {
             let txid = tx.txid();
-            txs_in_db.insert(txid);
 
             for (i, output) in tx.output.iter().enumerate() {
                 // could be the searched script it's not yet in the cache, because created in the current run, thus it's searched also in the `scripts`

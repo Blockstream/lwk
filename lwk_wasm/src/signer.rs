@@ -50,8 +50,7 @@ impl Signer {
 
         let script_variant = lwk_common::Singlesig::Wpkh;
         let blinding_variant = lwk_common::DescriptorBlindingKey::Slip77;
-        let desc_str = lwk_common::singlesig_desc(&self.inner, script_variant, blinding_variant)
-            .map_err(Error::Generic)?;
+        let desc_str = lwk_common::singlesig_desc(&self.inner, script_variant, blinding_variant)?;
 
         WolletDescriptor::new(&desc_str)
     }

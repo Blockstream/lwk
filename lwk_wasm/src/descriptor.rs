@@ -67,8 +67,7 @@ impl WolletDescriptor {
             xpubs,
             Multisig::Wsh,
             DescriptorBlindingKey::Slip77Rand,
-        )
-        .map_err(Error::Generic)?;
+        )?;
         let desc = lwk_wollet::WolletDescriptor::from_str(&desc)?;
         Ok(desc.into())
     }

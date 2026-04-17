@@ -203,8 +203,7 @@ impl Jade {
         let signer = self.get_or_create_fake_signer().await?;
 
         let desc_str =
-            lwk_common::singlesig_desc(signer, script_variant, DescriptorBlindingKey::Slip77)
-                .map_err(Error::Generic)?;
+            lwk_common::singlesig_desc(signer, script_variant, DescriptorBlindingKey::Slip77)?;
         WolletDescriptor::new(&desc_str)
     }
 

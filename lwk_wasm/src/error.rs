@@ -102,6 +102,9 @@ pub enum Error {
     #[error("{0:?}")]
     Unblind(#[from] lwk_wollet::elements::UnblindError),
 
+    #[error(transparent)]
+    DescriptorGeneration(#[from] lwk_common::DescriptorGenerationError),
+
     #[error("{0}")]
     Generic(String),
 
@@ -228,6 +231,7 @@ impl Error {
             Error::TaprootBuilder(_) => "TaprootBuilderError",
             Error::HashesFromSlice(_) => "HashesFromSliceError",
             Error::ParsePublicKey(_) => "ParsePublicKeyError",
+            Error::DescriptorGeneration(_) => "DescriptorGenerationError",
         }
     }
 }

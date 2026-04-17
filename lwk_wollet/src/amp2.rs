@@ -123,22 +123,28 @@ impl Amp2 {
     pub fn descriptor_from_str(
         &self,
         keyorigin_xpub: &str,
+        descriptor_blinding_key: &str,
     ) -> Result<Amp2Descriptor, crate::Error> {
         let (keysource, xpub) = keyorigin_xpub_from_str(keyorigin_xpub)?;
         let keysource = keysource.ok_or_else(|| crate::Error::MissingKeyorigin)?;
-        Ok(self.descriptor(keysource, xpub))
+        self.descriptor(keysource, xpub, descriptor_blinding_key)
     }
 
     /// Get an AMP2 wallet descriptor
-    pub fn descriptor(&self, user_keysource: KeySource, user_xpub: Xpub) -> Amp2Descriptor {
+    pub fn descriptor(
+        &self,
+        user_keysource: KeySource,
+        user_xpub: Xpub,
+        descriptor_blinding_key: &str,
+    ) -> Result<Amp2Descriptor, crate::Error> {
         // TODO; check Xpub network is consistent
-        // TODO: allow to set custom blinding key
-        let k = "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)";
         let amp2_xpub = &self.server_key;
         let user_xpub = format!("[{}/{}]{}", user_keysource.0, user_keysource.1, user_xpub);
-        let s = format!("ct({k},elwsh(multi(2,{amp2_xpub}/<0;1>/*,{user_xpub}/<0;1>/*)))");
-        let descriptor: WolletDescriptor = s.parse().expect("fixed descriptor structure");
-        Amp2Descriptor::new(descriptor)
+        let s = format!(
+            "ct({descriptor_blinding_key},elwsh(multi(2,{amp2_xpub}/<0;1>/*,{user_xpub}/<0;1>/*)))"
+        );
+        let descriptor: WolletDescriptor = s.parse()?;
+        Ok(Amp2Descriptor::new(descriptor))
     }
 
     /// Register an AMP2 wallet with the AMP2 server
@@ -237,11 +243,17 @@ mod test {
     fn amp2_desc() {
         let (keysource, xpub) = user_key();
         let keyorigin_xpub = "[c67f5991/87'/1'/0']tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj";
+        let descriptor_blinding_key =
+            "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)";
         let expected = "ct(slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67),elwsh(multi(2,[3d970d04/87'/1'/0']tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd/<0;1>/*,[c67f5991/87'/1'/0']tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj/<0;1>/*)))#6j2fne4s";
 
         let amp2 = Amp2::new_testnet();
-        let desc = amp2.descriptor(keysource, xpub);
-        let desc1 = amp2.descriptor_from_str(keyorigin_xpub).unwrap();
+        let desc = amp2
+            .descriptor(keysource, xpub, descriptor_blinding_key)
+            .unwrap();
+        let desc1 = amp2
+            .descriptor_from_str(keyorigin_xpub, descriptor_blinding_key)
+            .unwrap();
         assert_eq!(desc.descriptor().to_string(), expected);
         assert_eq!(desc1.descriptor().to_string(), expected);
     }
@@ -250,8 +262,12 @@ mod test {
     #[tokio::test]
     async fn amp2_network_calls() {
         let (keysource, xpub) = user_key();
+        let descriptor_blinding_key =
+            "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)";
         let amp2 = Amp2::new_testnet();
-        let d = amp2.descriptor(keysource, xpub);
+        let d = amp2
+            .descriptor(keysource, xpub, descriptor_blinding_key)
+            .unwrap();
         let r = amp2.register(d).await.unwrap();
         assert!(!r.wid.is_empty());
 

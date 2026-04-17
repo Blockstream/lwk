@@ -11,7 +11,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 /// Transaction details
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct TxDetails {
-    tx: Transaction,
+    tx: Option<Transaction>,
 
     // Data extracted from tx
     txid: Txid,
@@ -32,7 +32,7 @@ pub struct TxDetails {
 impl TxDetails {
     /// Transaction
     pub fn tx(&self) -> Option<&Transaction> {
-        Some(&self.tx)
+        self.tx.as_ref()
     }
 
     /// Txid
@@ -222,7 +222,7 @@ impl Wollet {
             };
 
             Ok(Some(TxDetails {
-                tx: tx.clone(),
+                tx: Some(tx.clone()),
                 txid: *txid,
                 fees,
                 height,

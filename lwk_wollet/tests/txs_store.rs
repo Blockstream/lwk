@@ -169,7 +169,11 @@ async fn test_txs_store_huge() {
     let t = t5.duration_since(t4).as_millis();
     println!("2nd apply update: {:>6} ms", t);
 
-    let txs = wollet.txs(&TxsOpt::default()).unwrap();
+    let opt = TxsOpt {
+        without_tx: true,
+        ..Default::default()
+    };
+    let txs = wollet.txs(&opt).unwrap();
     let t6 = Instant::now();
     let t = t6.duration_since(t5).as_millis();
     println!("get all txs:      {:>6} ms", t);

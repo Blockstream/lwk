@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use elements::bitcoin::bip32::{DerivationPath, KeySource, Xpub};
+use elements::bitcoin::bip32::{DerivationPath, Error as Bip32Error, KeySource, Xpub};
 use elements::hex::ToHex;
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use rand::{thread_rng, Rng};
@@ -8,42 +8,45 @@ use thiserror::Error;
 
 use crate::Signer;
 
-// TODO impl error handling
 /// Generate a singlesig descriptor with the given parameters
 pub fn singlesig_desc<S: Signer + ?Sized>(
     signer: &S,
     script_variant: Singlesig,
     blinding_variant: DescriptorBlindingKey,
-) -> Result<String, String> {
-    let is_mainnet = signer.is_mainnet().map_err(|e| format!("{e:?}"))?;
+) -> Result<String, DescriptorGenerationError> {
+    let is_mainnet = signer
+        .is_mainnet()
+        .map_err(|e| DescriptorGenerationError::SignerMainnet(format!("{e:?}")))?;
     let coin_type = if is_mainnet { 1776 } else { 1 };
     let (prefix, path, suffix) = match script_variant {
         Singlesig::Wpkh => ("elwpkh", format!("84h/{coin_type}h/0h"), ""),
         Singlesig::ShWpkh => ("elsh(wpkh", format!("49h/{coin_type}h/0h"), ")"),
     };
 
-    let fingerprint = signer.fingerprint().map_err(|e| format!("{e:?}"))?;
+    let fingerprint = signer
+        .fingerprint()
+        .map_err(|e| DescriptorGenerationError::XpubFingerprint(format!("{e:?}")))?;
 
     let xpub = signer
-        .derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).map_err(|e| format!("{e:?}"))?)
-        .map_err(|e| format!("{e:?}"))?;
+        .derive_xpub(&DerivationPath::from_str(&format!("m/{path}"))?)
+        .map_err(|e| DescriptorGenerationError::SignerXpubGen(format!("{e:?}")))?;
 
     let blinding_key = match blinding_variant {
         DescriptorBlindingKey::Slip77 => format!(
             "slip77({})",
             signer
                 .slip77_master_blinding_key()
-                .map_err(|e| format!("{e:?}"))?
+                .map_err(|e| DescriptorGenerationError::SignerMasterBlidingKey(format!("{e:?}")))?
         ),
         DescriptorBlindingKey::Slip77Rand => {
-            return Err("Random slip77 key not supported in singlesig descriptor generation".into())
+            return Err(DescriptorGenerationError::UnsupportedRandomSlip77)
         }
         DescriptorBlindingKey::Elip151 => "elip151".to_string(),
     };
 
     // m / purpose' / coin_type' / account' / change / address_index
     let desc = format!("ct({blinding_key},{prefix}([{fingerprint}/{path}]{xpub}/<0;1>/*){suffix})");
-    let checksum = desc_checksum(&desc).map_err(|e| format!("{e:?}"))?;
+    let checksum = desc_checksum(&desc).map_err(DescriptorGenerationError::MiniscriptChecksum)?;
     Ok(format!("{desc}#{checksum}"))
 }
 
@@ -51,18 +54,20 @@ fn fmt_path(path: &DerivationPath) -> String {
     path.to_string().replace("m/", "").replace('\'', "h")
 }
 
-// TODO impl error handling
 /// Generate a multisig descriptor with the given parameters
 pub fn multisig_desc(
     threshold: u32,
     xpubs: Vec<(Option<KeySource>, Xpub)>,
     script_variant: Multisig,
     blinding_variant: DescriptorBlindingKey,
-) -> Result<String, String> {
+) -> Result<String, DescriptorGenerationError> {
     if threshold == 0 {
-        return Err("Threshold cannot be 0".into());
+        return Err(DescriptorGenerationError::NonZeroThreshold);
     } else if threshold as usize > xpubs.len() {
-        return Err("Threshold cannot be greater than the number of xpubs".into());
+        return Err(DescriptorGenerationError::ThresholdGreaterThanXpubs {
+            threshold: threshold as usize,
+            xpubs: xpubs.len(),
+        });
     }
 
     let (prefix, suffix) = match script_variant {
@@ -71,9 +76,7 @@ pub fn multisig_desc(
 
     let blinding_key = match blinding_variant {
         DescriptorBlindingKey::Slip77 => {
-            return Err(
-                "Deterministic slip77 key not supported in multisig descriptor generation".into(),
-            )
+            return Err(DescriptorGenerationError::UnsupportedDeterministicSlip77)
         }
         DescriptorBlindingKey::Slip77Rand => {
             let mut bytes = [0u8; 32];
@@ -96,8 +99,62 @@ pub fn multisig_desc(
         .collect::<Vec<_>>()
         .join(",");
     let desc = format!("ct({blinding_key},{prefix}({threshold},{xpubs}){suffix})");
-    let checksum = desc_checksum(&desc).map_err(|e| format!("{e:?}"))?;
+    let checksum = desc_checksum(&desc).map_err(DescriptorGenerationError::MiniscriptChecksum)?;
     Ok(format!("{desc}#{checksum}"))
+}
+
+/// Represents errors that can occur during the generation of a single or multi signature descriptor.
+#[derive(Error, Debug)]
+pub enum DescriptorGenerationError {
+    /// Error while generating the extended public key (xpub) for a signer. (singlesig)
+    #[error("{0}")]
+    SignerXpubGen(String),
+
+    /// Error related to a signer being used on the mainnet. (singlesig)
+    #[error("{0}")]
+    SignerMainnet(String),
+
+    /// Error while fetching or processing the fingerprint of an extended
+    /// public key (xpub). (singlesig)
+    #[error("{0}")]
+    XpubFingerprint(String),
+
+    /// Error during a BIP32 (Hierarchical Deterministic Wallet) operation,
+    /// such as key derivation or conversion. (singlesig)
+    #[error("{0}")]
+    Bip32Conversion(#[from] Bip32Error),
+
+    /// Error encountered while working with the master blinding key for a signer. (singlesig)
+    #[error("{0}")]
+    SignerMasterBlidingKey(String),
+
+    /// Indicates that generating a random SLIP77 key is not supported during
+    /// singlesig descriptor generation. (singlesig)
+    #[error("Random slip77 key not supported in singlesig descriptor generation")]
+    UnsupportedRandomSlip77,
+
+    /// Error encountered while generating or verifying the checksum in a Miniscript.
+    #[error("{0}")]
+    MiniscriptChecksum(elements_miniscript::Error),
+
+    /// Error returned when the specified threshold for the multisig descriptor is zero. (multisig)
+    #[error("Threshold cannot be 0")]
+    NonZeroThreshold,
+
+    /// Error returned when the threshold specified for the multisig descriptor
+    /// is greater than the total number of extended public keys (xpubs). (multisig)
+    #[error("Threshold cannot be greater than the number of xpubs, [threshold: {threshold}, xpubs: {xpubs}")]
+    ThresholdGreaterThanXpubs {
+        /// The specified number of signatures required to spend the multisig
+        threshold: usize,
+        /// The total number of extended public keys provided for the multisig
+        xpubs: usize,
+    },
+
+    /// This error occurs when an attempt is made to use a deterministic SLIP77 key
+    /// during multisig descriptor generation, which is not supported. (multisig)
+    #[error("Deterministic slip77 key not supported in multisig descriptor generation")]
+    UnsupportedDeterministicSlip77,
 }
 
 #[derive(Debug, Clone, Copy)]

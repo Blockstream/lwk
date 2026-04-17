@@ -11,7 +11,7 @@ use elements::{
 };
 use elements_miniscript::slip77::MasterBlindingKey;
 
-use crate::descriptor::Bip;
+use crate::descriptor::{Bip, DescriptorGenerationError};
 
 /// A trait defining methods of signers, providing blanket implementations for some methods.
 pub trait Signer {
@@ -79,7 +79,7 @@ pub trait Signer {
     /// Return the Witness Public Key Hash, slip77, descriptor for this signer
     ///
     /// Example: "ct(slip77(...),elwpkh([73c5da0a/84'/1'/0']xpub.../<0;1>/*))#2e4n992d"
-    fn wpkh_slip77_descriptor(&self) -> Result<String, String> {
+    fn wpkh_slip77_descriptor(&self) -> Result<String, DescriptorGenerationError> {
         crate::singlesig_desc(
             self,
             crate::Singlesig::Wpkh,

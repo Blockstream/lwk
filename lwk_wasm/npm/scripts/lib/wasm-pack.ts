@@ -25,7 +25,7 @@ function appendRustCfg(existing: string | undefined): string {
 }
 
 export function getWasmFeatures(): string {
-  return (process.env.LWK_WASM_FEATURES ?? "serial")
+  return (process.env.LWK_WASM_FEATURES ?? "serial,simplicity")
     .split(",")
     .map((feature) => feature.trim())
     .filter(Boolean)

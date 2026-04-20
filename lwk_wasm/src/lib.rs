@@ -45,6 +45,7 @@ mod store;
 #[cfg(feature = "simplicity")]
 mod tweak;
 mod tx_builder;
+mod tx_details;
 mod update;
 
 // TODO serial is not logically needed here, but it brings in web_sys dep

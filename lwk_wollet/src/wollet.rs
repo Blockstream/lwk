@@ -397,6 +397,15 @@ impl Wollet {
             .lock()
             .map_err(|_| Error::Generic("next_update_index lock poisoned".into()))
     }
+
+    pub(crate) fn get_update(&self, index: usize) -> Result<Option<Update>, Error> {
+        Ok(self
+            .updates_store
+            .get(&update_key(index))
+            .map_err(|e| Error::Generic(format!("store error: {e}")))?
+            .map(|u| Update::deserialize(&u))
+            .transpose()?)
+    }
 }
 
 impl Wollet {
@@ -1187,14 +1196,10 @@ impl Wollet {
     pub fn updates(&self) -> Result<Vec<Update>, Error> {
         let mut updates = vec![];
         for i in 0.. {
-            let key = update_key(i);
-            match self.updates_store.get(&key) {
-                Ok(Some(bytes)) => {
-                    let update = Update::deserialize(&bytes)?;
-                    updates.push(update);
-                }
-                Ok(None) => break,
-                Err(e) => return Err(Error::Generic(format!("store error: {e}"))),
+            if let Some(update) = self.get_update(i)? {
+                updates.push(update);
+            } else {
+                break;
             }
         }
         Ok(updates)

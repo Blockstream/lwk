@@ -460,25 +460,22 @@ impl Wollet {
         // Check if we can coalesce with the previous update (both are "only tip" updates)
         if update.only_tip() && *next_index > 0 {
             let prev_key = update_key(*next_index - 1);
-            if let Ok(Some(prev_bytes)) = self.updates_store.get(&prev_key) {
-                if let Ok(prev_update) = Update::deserialize(&prev_bytes) {
-                    if prev_update.only_tip() {
-                        // Coalesce: overwrite the previous update
-                        // Keep the previous wollet status so reapplying works correctly
-                        update.wollet_status = prev_update.wollet_status;
-                        // Merge timestamps
-                        update.timestamps = [prev_update.timestamps, update.timestamps].concat();
+            if let Ok(Some(prev_update)) = self.get_update(*next_index - 1) {
+                if prev_update.only_tip() {
+                    // Coalesce: overwrite the previous update
+                    // Keep the previous wollet status so reapplying works correctly
+                    update.wollet_status = prev_update.wollet_status;
+                    // Merge timestamps
+                    update.timestamps = [prev_update.timestamps, update.timestamps].concat();
 
-                        let bytes = update.serialize()?;
-                        self.updates_store
-                            .put(&prev_key, &bytes)
-                            .map_err(|e| Error::Generic(format!("store error: {e}")))?;
-                        return Ok(());
-                    }
+                    let bytes = update.serialize()?;
+                    self.updates_store
+                        .put(&prev_key, &bytes)
+                        .map_err(|e| Error::Generic(format!("store error: {e}")))?;
+                    return Ok(());
                 }
             }
         }
-
         if self.cache.txs_store_is_persisted() {
             // Txs are perstisted in the txs store,
             // remove them from the Update so we don't store them twice
@@ -505,20 +502,15 @@ impl Wollet {
         };
 
         // Read and merge all persisted updates
-        let first_bytes = self
-            .updates_store
-            .get(&update_key(0))
-            .map_err(|e| Error::Generic(format!("store error: {e}")))?
+        let mut merged = self
+            .get_update(0)?
             .ok_or_else(|| Error::Generic("expected update 0 to exist".into()))?;
-        let mut merged = Update::deserialize(&first_bytes)?;
 
         for i in 1..next_index {
-            let bytes = self
-                .updates_store
-                .get(&update_key(i))
-                .map_err(|e| Error::Generic(format!("store error: {e}")))?
+            let update = self
+                .get_update(i)?
                 .ok_or_else(|| Error::Generic(format!("expected update {i} to exist")))?;
-            merged.merge(Update::deserialize(&bytes)?);
+            merged.merge(update);
         }
 
         // Delete all old updates from last to first to avoid holes on crash

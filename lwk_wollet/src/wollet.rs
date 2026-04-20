@@ -413,6 +413,13 @@ impl Wollet {
             .put(&update_key(index), &update.serialize()?)
             .map_err(|e| Error::Generic(format!("store error: {e}")))?)
     }
+
+    pub(crate) fn remove_update(&self, index: usize) -> Result<(), Error> {
+        Ok(self
+            .updates_store
+            .remove(&update_key(index))
+            .map_err(|e| Error::Generic(format!("store error: {e}")))?)
+    }
 }
 
 impl Wollet {

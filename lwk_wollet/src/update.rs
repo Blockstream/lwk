@@ -3,7 +3,7 @@ use crate::clients::try_unblind;
 use crate::descriptor::Chain;
 use crate::elements::{OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
-use crate::wollet::{update_key, WolletState};
+use crate::wollet::WolletState;
 use crate::EC;
 use crate::{BlindingPublicKey, Wollet, WolletDescriptor};
 use base64::prelude::*;
@@ -508,9 +508,7 @@ impl Wollet {
 
         // Delete all old updates from last to first to avoid holes on crash
         for j in (0..next_index).rev() {
-            self.updates_store
-                .remove(&update_key(j))
-                .map_err(|e| Error::Generic(format!("failed to remove update {j}: {e}")))?;
+            self.remove_update(j)?;
         }
         // A crash here or during the removal loop will leave the cache empty or at an old state,
         // which is not the end of the world, the following scan will bring it back.

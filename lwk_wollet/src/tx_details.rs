@@ -89,6 +89,31 @@ impl TxDetails {
     pub fn outputs(&self) -> &[TxOutDetails] {
         &self.outputs
     }
+
+    fn unblinded_str(&self) -> String {
+        self.inputs()
+            .iter()
+            .chain(self.outputs().iter())
+            .filter_map(|e| e.unblinded_str())
+            .collect::<Vec<_>>()
+            .join(",")
+    }
+
+    /// Generate the "unblinded" URL
+    ///
+    /// In general block explorer cannot display input and output assets and amounts,
+    /// as those values are confidential. However, if the wallet provides the unblinded values,
+    /// the browser can verify that the unblinded values commit the the confidential ones,
+    /// and display the unblinded/explicit values instead of the confidential ones.
+    pub fn unblinded_url(&self, explorer_url: &str) -> String {
+        let base = explorer_url.trim_end_matches('/');
+        let blinded = self.unblinded_str();
+        if blinded.is_empty() {
+            format!("{}/tx/{}", base, &self.txid)
+        } else {
+            format!("{}/tx/{}#blinded={}", base, &self.txid, blinded)
+        }
+    }
 }
 
 impl Wollet {
@@ -380,5 +405,14 @@ impl TxOutDetails {
     /// incorrectly. For wallet outputs, it can be outdated.
     pub fn is_spent(&self) -> bool {
         self.is_spent
+    }
+
+    fn unblinded_str(&self) -> Option<String> {
+        if self.is_explicit() {
+            None
+        } else {
+            self.unblinded()
+                .map(|u| format!("{},{},{},{}", u.value, u.asset, u.value_bf, u.asset_bf))
+        }
     }
 }

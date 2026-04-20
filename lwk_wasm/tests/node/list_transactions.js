@@ -27,6 +27,8 @@ async function runListTransactionsTest() {
         const opt = lwk.TxsOpt.default();
         const txs2 = wollet.txs(opt);
         console.assert(txs.length === txs2.length);
+        const num_txs = wollet.numTxs();
+        console.assert(txs.length === num_txs);
 
         const limit = 10;
         const page1 = wollet.transactionsPaginated(0, limit);

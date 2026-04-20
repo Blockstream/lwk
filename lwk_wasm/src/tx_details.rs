@@ -106,5 +106,15 @@ impl Wollet {
             .collect())
     }
 
+    /// Number of transactions
+    #[wasm_bindgen(js_name = numTxs)]
+    pub fn num_txs(&self) -> Result<usize, Error> {
+        let opt = lwk_wollet::TxsOpt {
+            without_tx: true,
+            ..Default::default()
+        };
+        Ok(self.inner().txs(&opt)?.len())
+    }
+
     // TODO: tx_details
 }

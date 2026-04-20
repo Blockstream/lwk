@@ -34,7 +34,7 @@ impl WalletAbiTxEvaluateRequest {
     #[uniffi::constructor]
     pub fn from_json(json: &str) -> Result<Arc<Self>, LwkError> {
         Ok(Arc::new(Self {
-            inner: serde_json::from_str(json)?,
+            inner: super::from_json_compat(json)?,
         }))
     }
 
@@ -104,7 +104,7 @@ impl WalletAbiTxEvaluateResponse {
     #[uniffi::constructor]
     pub fn from_json(json: &str) -> Result<Arc<Self>, LwkError> {
         Ok(Arc::new(Self {
-            inner: serde_json::from_str(json)?,
+            inner: super::from_json_compat(json)?,
         }))
     }
 
@@ -162,6 +162,15 @@ mod tests {
         WalletAbiStatus,
     };
 
+    fn json_with_top_level_network(json: String, network: &str) -> String {
+        let mut value: serde_json::Value = serde_json::from_str(&json).expect("json value");
+        value.as_object_mut().expect("json object").insert(
+            "network".to_string(),
+            serde_json::Value::String(network.to_string()),
+        );
+        serde_json::to_string(&value).expect("json string")
+    }
+
     #[test]
     fn wallet_abi_tx_evaluate_request_roundtrip() {
         let request = WalletAbiTxEvaluateRequest::from_parts(
@@ -184,6 +193,29 @@ mod tests {
         assert!(decoded.params().outputs().is_empty());
         assert_eq!(decoded.params().fee_rate_sat_kvb(), None);
         assert_eq!(decoded.params().lock_time(), None);
+    }
+
+    #[test]
+    fn wallet_abi_tx_evaluate_request_accept_legacy_network_aliases() {
+        for (network, alias) in [
+            (Network::mainnet(), "liquid"),
+            (Network::testnet(), "testnet-liquid"),
+            (Network::regtest_default(), "localtest-liquid"),
+        ] {
+            let request = WalletAbiTxEvaluateRequest::from_parts(
+                "0d6d53cd-a040-4f0c-8d28-c67b6608fb14",
+                &network,
+                &WalletAbiRuntimeParams::new(&[], &[], None, None),
+            )
+            .expect("request");
+            let json =
+                json_with_top_level_network(request.to_json().expect("serialize request"), alias);
+
+            let decoded =
+                WalletAbiTxEvaluateRequest::from_json(&json).expect("deserialize request");
+
+            assert_eq!(decoded.network(), network);
+        }
     }
 
     #[test]
@@ -227,5 +259,42 @@ mod tests {
             error_response.error_info().expect("error info").message(),
             "bad params".to_string()
         );
+    }
+
+    #[test]
+    fn wallet_abi_tx_evaluate_response_accept_legacy_network_aliases() {
+        for (network, alias) in [
+            (Network::mainnet(), "liquid"),
+            (Network::testnet(), "testnet-liquid"),
+            (Network::regtest_default(), "localtest-liquid"),
+        ] {
+            let request = WalletAbiTxEvaluateRequest::from_parts(
+                "0d6d53cd-a040-4f0c-8d28-c67b6608fb14",
+                &network,
+                &WalletAbiRuntimeParams::new(&[], &[], None, None),
+            )
+            .expect("request");
+            let preview = WalletAbiRequestPreview::new(
+                vec![WalletAbiPreviewAssetDelta::new(
+                    network.policy_asset(),
+                    -1_500,
+                )],
+                vec![WalletAbiPreviewOutput::new(
+                    WalletAbiPreviewOutputKind::External,
+                    network.policy_asset(),
+                    1_500,
+                    &Script::empty(),
+                )],
+                vec![],
+            );
+            let response = WalletAbiTxEvaluateResponse::ok(&request, &preview);
+            let json =
+                json_with_top_level_network(response.to_json().expect("serialize response"), alias);
+
+            let decoded =
+                WalletAbiTxEvaluateResponse::from_json(&json).expect("deserialize response");
+
+            assert_eq!(decoded.network(), network);
+        }
     }
 }

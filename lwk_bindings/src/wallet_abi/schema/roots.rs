@@ -143,7 +143,7 @@ impl WalletAbiTxCreateRequest {
     #[uniffi::constructor]
     pub fn from_json(json: &str) -> Result<Arc<Self>, LwkError> {
         Ok(Arc::new(Self {
-            inner: serde_json::from_str(json)?,
+            inner: super::from_json_compat(json)?,
         }))
     }
 
@@ -230,7 +230,7 @@ impl WalletAbiTxCreateResponse {
     #[uniffi::constructor]
     pub fn from_json(json: &str) -> Result<Arc<Self>, LwkError> {
         Ok(Arc::new(Self {
-            inner: serde_json::from_str(json)?,
+            inner: super::from_json_compat(json)?,
         }))
     }
 
@@ -293,12 +293,64 @@ impl WalletAbiTxCreateResponse {
 
 #[cfg(test)]
 mod tests {
-    use super::{WalletAbiTransactionInfo, WalletAbiTxCreateResponse};
+    use super::{WalletAbiTransactionInfo, WalletAbiTxCreateRequest, WalletAbiTxCreateResponse};
     use crate::blockdata::script::Script;
     use crate::{
         Network, WalletAbiPreviewAssetDelta, WalletAbiPreviewOutput, WalletAbiPreviewOutputKind,
-        WalletAbiRequestPreview,
+        WalletAbiRequestPreview, WalletAbiRuntimeParams, WalletAbiStatus,
     };
+
+    fn json_with_top_level_network(json: String, network: &str) -> String {
+        let mut value: serde_json::Value = serde_json::from_str(&json).expect("json value");
+        value.as_object_mut().expect("json object").insert(
+            "network".to_string(),
+            serde_json::Value::String(network.to_string()),
+        );
+        serde_json::to_string(&value).expect("json string")
+    }
+
+    #[test]
+    fn wallet_abi_tx_create_request_roundtrip() {
+        let request = WalletAbiTxCreateRequest::from_parts(
+            "0d6d53cd-a040-4f0c-8d28-c67b6608fb14",
+            &Network::testnet(),
+            &WalletAbiRuntimeParams::new(&[], &[], None, None),
+            false,
+        )
+        .expect("request");
+
+        let json = request.to_json().expect("serialize request");
+        let decoded = WalletAbiTxCreateRequest::from_json(&json).expect("deserialize request");
+
+        assert_eq!(decoded.abi_version(), "wallet-abi-0.1");
+        assert_eq!(decoded.network(), Network::testnet());
+        assert!(!decoded.broadcast());
+        assert!(decoded.params().inputs().is_empty());
+        assert!(decoded.params().outputs().is_empty());
+    }
+
+    #[test]
+    fn wallet_abi_tx_create_request_accept_legacy_network_aliases() {
+        for (network, alias) in [
+            (Network::mainnet(), "liquid"),
+            (Network::testnet(), "testnet-liquid"),
+            (Network::regtest_default(), "localtest-liquid"),
+        ] {
+            let request = WalletAbiTxCreateRequest::from_parts(
+                "0d6d53cd-a040-4f0c-8d28-c67b6608fb14",
+                &network,
+                &WalletAbiRuntimeParams::new(&[], &[], None, None),
+                false,
+            )
+            .expect("request");
+            let json =
+                json_with_top_level_network(request.to_json().expect("serialize request"), alias);
+
+            let decoded = WalletAbiTxCreateRequest::from_json(&json).expect("deserialize request");
+
+            assert_eq!(decoded.network(), network);
+        }
+    }
 
     #[test]
     fn wallet_abi_tx_create_response_preview() {
@@ -335,13 +387,78 @@ mod tests {
             Some(serde_json::to_string(&artifacts).expect("serialize artifacts")),
         )
         .expect("response");
+        let response_json = response.to_json().expect("serialize response");
+        let decoded =
+            WalletAbiTxCreateResponse::from_json(&response_json).expect("deserialize response");
 
-        let decoded = response
+        let decoded_preview = decoded
             .preview()
             .expect("preview accessor")
             .expect("preview payload");
 
-        assert_eq!(decoded.asset_deltas()[0].wallet_delta_sat(), -1_500);
-        assert_eq!(decoded.outputs()[0].kind(), WalletAbiPreviewOutputKind::Fee);
+        assert_eq!(decoded.status(), WalletAbiStatus::Ok);
+        assert_eq!(decoded_preview.asset_deltas()[0].wallet_delta_sat(), -1_500);
+        assert_eq!(
+            decoded_preview.outputs()[0].kind(),
+            WalletAbiPreviewOutputKind::Fee
+        );
+    }
+
+    #[test]
+    fn wallet_abi_tx_create_response_accept_legacy_network_aliases() {
+        for (network, alias) in [
+            (Network::mainnet(), "liquid"),
+            (Network::testnet(), "testnet-liquid"),
+            (Network::regtest_default(), "localtest-liquid"),
+        ] {
+            let response = WalletAbiTxCreateResponse::ok(
+                "0d6d53cd-a040-4f0c-8d28-c67b6608fb14",
+                &network,
+                &WalletAbiTransactionInfo::new(
+                    "00",
+                    &"0000000000000000000000000000000000000000000000000000000000000000"
+                        .parse()
+                        .expect("valid txid"),
+                ),
+                None,
+            )
+            .expect("response");
+            let json =
+                json_with_top_level_network(response.to_json().expect("serialize response"), alias);
+
+            let decoded =
+                WalletAbiTxCreateResponse::from_json(&json).expect("deserialize response");
+
+            assert_eq!(decoded.network(), network);
+        }
+    }
+
+    #[test]
+    fn wallet_abi_tx_create_response_does_not_rewrite_nested_network_fields() {
+        let response = WalletAbiTxCreateResponse::ok(
+            "0d6d53cd-a040-4f0c-8d28-c67b6608fb14",
+            &Network::mainnet(),
+            &WalletAbiTransactionInfo::new(
+                "00",
+                &"0000000000000000000000000000000000000000000000000000000000000000"
+                    .parse()
+                    .expect("valid txid"),
+            ),
+            Some(r#"{"network":"testnet-liquid"}"#.to_string()),
+        )
+        .expect("response");
+        let json =
+            json_with_top_level_network(response.to_json().expect("serialize response"), "liquid");
+
+        let decoded = WalletAbiTxCreateResponse::from_json(&json).expect("deserialize response");
+        let artifacts_json = decoded
+            .artifacts_json()
+            .expect("artifacts json")
+            .expect("artifacts payload");
+        let artifacts: serde_json::Value =
+            serde_json::from_str(&artifacts_json).expect("artifacts value");
+
+        assert_eq!(decoded.network(), Network::mainnet());
+        assert_eq!(artifacts["network"], "testnet-liquid");
     }
 }

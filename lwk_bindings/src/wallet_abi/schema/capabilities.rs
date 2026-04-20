@@ -23,7 +23,7 @@ impl WalletAbiCapabilities {
     #[uniffi::constructor]
     pub fn from_json(json: &str) -> Result<Arc<Self>, LwkError> {
         Ok(Arc::new(Self {
-            inner: serde_json::from_str(json)?,
+            inner: super::from_json_compat(json)?,
         }))
     }
 
@@ -53,6 +53,15 @@ mod tests {
     use super::WalletAbiCapabilities;
     use crate::Network;
 
+    fn json_with_top_level_network(json: String, network: &str) -> String {
+        let mut value: serde_json::Value = serde_json::from_str(&json).expect("json value");
+        value.as_object_mut().expect("json object").insert(
+            "network".to_string(),
+            serde_json::Value::String(network.to_string()),
+        );
+        serde_json::to_string(&value).expect("json string")
+    }
+
     #[test]
     fn wallet_abi_capabilities_roundtrip() {
         let capabilities = WalletAbiCapabilities::new(
@@ -76,5 +85,65 @@ mod tests {
                 "wallet_abi_process_request".to_string(),
             ]
         );
+    }
+
+    #[test]
+    fn wallet_abi_capabilities_accept_legacy_network_aliases() {
+        for (network, alias) in [
+            (Network::mainnet(), "liquid"),
+            (Network::testnet(), "testnet-liquid"),
+            (Network::regtest_default(), "localtest-liquid"),
+        ] {
+            let capabilities = WalletAbiCapabilities::new(
+                &network,
+                vec!["wallet_abi_process_request".to_string()],
+            );
+            let json = json_with_top_level_network(
+                capabilities.to_json().expect("serialize capabilities"),
+                alias,
+            );
+
+            let decoded =
+                WalletAbiCapabilities::from_json(&json).expect("deserialize capabilities");
+
+            assert_eq!(decoded.network(), network);
+        }
+    }
+
+    #[test]
+    fn wallet_abi_capabilities_reject_invalid_network_alias() {
+        let capabilities = WalletAbiCapabilities::new(
+            &Network::testnet(),
+            vec!["wallet_abi_process_request".to_string()],
+        );
+        let json = json_with_top_level_network(
+            capabilities.to_json().expect("serialize capabilities"),
+            "broken-network",
+        );
+
+        assert!(WalletAbiCapabilities::from_json(&json).is_err());
+    }
+
+    #[test]
+    fn wallet_abi_capabilities_preserve_non_network_errors() {
+        let capabilities = WalletAbiCapabilities::new(
+            &Network::testnet(),
+            vec!["wallet_abi_process_request".to_string()],
+        );
+        let mut value: serde_json::Value =
+            serde_json::from_str(&capabilities.to_json().expect("serialize capabilities"))
+                .expect("json value");
+        let object = value.as_object_mut().expect("json object");
+        object.insert(
+            "network".to_string(),
+            serde_json::Value::String("testnet-liquid".to_string()),
+        );
+        object.insert(
+            "methods".to_string(),
+            serde_json::Value::String("not-an-array".to_string()),
+        );
+        let json = serde_json::to_string(&value).expect("json string");
+
+        assert!(WalletAbiCapabilities::from_json(&json).is_err());
     }
 }

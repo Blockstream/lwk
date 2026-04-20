@@ -23,6 +23,7 @@ mod schema;
 mod session_factory_link;
 mod signer_context;
 mod signer_link;
+mod walletconnect_coordinator;
 
 pub use bip32::{wallet_abi_bip32_derivation_pair_from_signer, WalletAbiBip32DerivationPair};
 pub use broadcaster_link::{WalletAbiBroadcasterCallbacks, WalletBroadcasterLink};
@@ -63,6 +64,14 @@ pub use schema::simf::{
 pub use session_factory_link::{WalletAbiSessionFactoryCallbacks, WalletSessionFactoryLink};
 pub use signer_context::WalletAbiSignerContext;
 pub use signer_link::{SignerMetaLink, WalletAbiSignerCallbacks};
+pub use walletconnect_coordinator::{
+    WalletAbiWalletConnectApproveSessionAction, WalletAbiWalletConnectCoordinator,
+    WalletAbiWalletConnectDisconnectSessionAction, WalletAbiWalletConnectOverlay,
+    WalletAbiWalletConnectOverlayKind, WalletAbiWalletConnectReasonKind,
+    WalletAbiWalletConnectRejectSessionAction, WalletAbiWalletConnectSessionInfo,
+    WalletAbiWalletConnectSessionProposal, WalletAbiWalletConnectTransportAction,
+    WalletAbiWalletConnectTransportActionKind, WalletAbiWalletConnectUiState,
+};
 
 /// Generate a fresh canonical Wallet ABI request identifier.
 #[uniffi::export]

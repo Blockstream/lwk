@@ -52,8 +52,8 @@ pub(crate) fn update_key(index: usize) -> String {
 pub struct Wollet {
     pub(crate) network: ElementsNetwork,
     pub(crate) cache: Cache,
-    pub(crate) store: Arc<dyn DynStore>,
     pub(crate) descriptor: WolletDescriptor,
+    pub(crate) store: Arc<dyn DynStore>,
     /// Counter for the next update key
     pub(crate) next_update_index: Mutex<usize>,
     pub(crate) merge_threshold: Option<usize>,
@@ -67,10 +67,10 @@ pub struct WolletBuilder {
     network: ElementsNetwork,
     descriptor: WolletDescriptor,
     store: Arc<dyn DynStore>,
-    txs_store: Arc<dyn DynStore>,
-    encrypt_txs_store: bool,
     /// Number of updates to trigger merge. None disables merging.
     merge_threshold: Option<usize>,
+    txs_store: Arc<dyn DynStore>,
+    encrypt_txs_store: bool,
     utxo_only: bool,
 }
 

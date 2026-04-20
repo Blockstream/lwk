@@ -7,8 +7,10 @@ use std::str::FromStr;
 
 fn serial_test_setup() -> Jade {
     Jade::from_any_serial(lwk_common::Network::TestnetLiquid, Some(TIMEOUT))
+        .into_iter()
+        .filter_map(Result::ok)
+        .collect::<Vec<_>>()
         .pop()
-        .unwrap()
         .unwrap()
 }
 

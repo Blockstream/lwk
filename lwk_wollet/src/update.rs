@@ -459,8 +459,8 @@ impl Wollet {
 
         // Check if we can coalesce with the previous update (both are "only tip" updates)
         if update.only_tip() && *next_index > 0 {
-            let prev_key = update_key(*next_index - 1);
-            if let Ok(Some(prev_update)) = self.get_update(*next_index - 1) {
+            let prev_index = *next_index - 1;
+            if let Ok(Some(prev_update)) = self.get_update(prev_index) {
                 if prev_update.only_tip() {
                     // Coalesce: overwrite the previous update
                     // Keep the previous wollet status so reapplying works correctly
@@ -468,10 +468,7 @@ impl Wollet {
                     // Merge timestamps
                     update.timestamps = [prev_update.timestamps, update.timestamps].concat();
 
-                    let bytes = update.serialize()?;
-                    self.updates_store
-                        .put(&prev_key, &bytes)
-                        .map_err(|e| Error::Generic(format!("store error: {e}")))?;
+                    self.set_update(prev_index, update)?;
                     return Ok(());
                 }
             }
@@ -483,11 +480,7 @@ impl Wollet {
         }
 
         // Store as a new update
-        let key = update_key(*next_index);
-        let bytes = update.serialize()?;
-        self.updates_store
-            .put(&key, &bytes)
-            .map_err(|e| Error::Generic(format!("store error: {e}")))?;
+        self.set_update(*next_index, update)?;
         *next_index += 1;
 
         *next_index = self.merge_updates(*next_index)?;
@@ -523,10 +516,7 @@ impl Wollet {
         // which is not the end of the world, the following scan will bring it back.
 
         // Store the merged update as update 0
-        let merged_bytes = merged.serialize()?;
-        self.updates_store
-            .put(&update_key(0), &merged_bytes)
-            .map_err(|e| Error::Generic(format!("failed to store merged update: {e}")))?;
+        self.set_update(0, merged)?;
 
         let next_index = 1;
         Ok(next_index)

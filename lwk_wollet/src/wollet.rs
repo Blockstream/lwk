@@ -406,6 +406,13 @@ impl Wollet {
             .map(|u| Update::deserialize(&u))
             .transpose()?)
     }
+
+    pub(crate) fn set_update(&self, index: usize, update: Update) -> Result<(), Error> {
+        Ok(self
+            .updates_store
+            .put(&update_key(index), &update.serialize()?)
+            .map_err(|e| Error::Generic(format!("store error: {e}")))?)
+    }
 }
 
 impl Wollet {

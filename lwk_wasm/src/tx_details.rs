@@ -61,10 +61,15 @@ impl TxDetails {
         self.inner.fees_asset(&asset.into())
     }
 
+    /// Unblinded URL
+    #[wasm_bindgen(js_name = unblindedUrl)]
+    pub fn unblinded_url(&self, explorer_url: &str) -> String {
+        self.inner.unblinded_url(explorer_url)
+    }
+
     // TODO: expose fees (need to handle hashmap, do we want to expose it?)
     // TODO: expose inputs (needs TxOutDetails wrapping)
     // TODO: expose outputs (needs TxOutDetails wrapping)
-    // TODO: expose unblinded_url (needs lwk_wollet::TxDetails::unblinded_url())
 }
 
 /// Options for transaction details

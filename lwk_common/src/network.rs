@@ -31,7 +31,7 @@ const GENESIS_LIQUID_REGTEST: [u8; 32] = [
 ];
 
 /// The network of the elements blockchain.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
 pub enum Network {
     /// Liquid mainnet
     Liquid,
@@ -104,6 +104,16 @@ impl Network {
             Network::Liquid => 2,
             Network::LiquidTestnet => 0,
             Network::ElementsRegtest { .. } => 0,
+        }
+    }
+
+    /// Return the string representation of this network.
+    // TODO: check if safe to remove and use `.to_string` instead
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Network::Liquid => "liquid",
+            Network::LiquidTestnet => "liquid-testnet",
+            Network::ElementsRegtest { .. } => "liquid-regtest",
         }
     }
 }

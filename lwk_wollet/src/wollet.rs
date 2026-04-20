@@ -66,7 +66,7 @@ pub struct Wollet {
 pub struct WolletBuilder {
     network: ElementsNetwork,
     descriptor: WolletDescriptor,
-    store: Arc<dyn DynStore>,
+    updates_store: Arc<dyn DynStore>,
     /// Number of updates to trigger merge. None disables merging.
     merge_threshold: Option<usize>,
     txs_store: Arc<dyn DynStore>,
@@ -80,7 +80,7 @@ impl WolletBuilder {
         Self {
             network,
             descriptor,
-            store: Arc::new(FakeStore::new()),
+            updates_store: Arc::new(FakeStore::new()),
             txs_store: Arc::new(MemoryStore::new()),
             encrypt_txs_store: false,
             merge_threshold: None,
@@ -111,7 +111,7 @@ impl WolletBuilder {
 
     /// Specify the `Wollet` store for persistence
     pub fn with_store(mut self, store: Arc<dyn DynStore>) -> Self {
-        self.store = store;
+        self.updates_store = store;
         self
     }
 
@@ -139,7 +139,7 @@ impl WolletBuilder {
         let key_bytes = self.descriptor.encryption_key_bytes();
         let encrypted_store = EncryptedStore::new(file_store, key_bytes);
 
-        self.store = Arc::new(encrypted_store);
+        self.updates_store = Arc::new(encrypted_store);
         Ok(self)
     }
 
@@ -169,7 +169,7 @@ impl WolletBuilder {
             cache,
             network: self.network,
             descriptor: self.descriptor,
-            store: self.store,
+            store: self.updates_store,
             next_update_index: Mutex::new(0),
             max_weight_to_satisfy,
             merge_threshold: self.merge_threshold,

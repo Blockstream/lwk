@@ -463,7 +463,7 @@ impl Wollet {
         // Check if we can coalesce with the previous update (both are "only tip" updates)
         if update.only_tip() && *next_index > 0 {
             let prev_key = update_key(*next_index - 1);
-            if let Ok(Some(prev_bytes)) = self.store.get(&prev_key) {
+            if let Ok(Some(prev_bytes)) = self.updates_store.get(&prev_key) {
                 if let Ok(prev_update) = Update::deserialize(&prev_bytes) {
                     if prev_update.only_tip() {
                         // Coalesce: overwrite the previous update
@@ -473,7 +473,7 @@ impl Wollet {
                         update.timestamps = [prev_update.timestamps, update.timestamps].concat();
 
                         let bytes = update.serialize()?;
-                        self.store
+                        self.updates_store
                             .put(&prev_key, &bytes)
                             .map_err(|e| Error::Generic(format!("store error: {e}")))?;
                         return Ok(());
@@ -491,7 +491,7 @@ impl Wollet {
         // Store as a new update
         let key = update_key(*next_index);
         let bytes = update.serialize()?;
-        self.store
+        self.updates_store
             .put(&key, &bytes)
             .map_err(|e| Error::Generic(format!("store error: {e}")))?;
         *next_index += 1;
@@ -509,7 +509,7 @@ impl Wollet {
 
         // Read and merge all persisted updates
         let first_bytes = self
-            .store
+            .updates_store
             .get(&update_key(0))
             .map_err(|e| Error::Generic(format!("store error: {e}")))?
             .ok_or_else(|| Error::Generic("expected update 0 to exist".into()))?;
@@ -517,7 +517,7 @@ impl Wollet {
 
         for i in 1..next_index {
             let bytes = self
-                .store
+                .updates_store
                 .get(&update_key(i))
                 .map_err(|e| Error::Generic(format!("store error: {e}")))?
                 .ok_or_else(|| Error::Generic(format!("expected update {i} to exist")))?;
@@ -526,7 +526,7 @@ impl Wollet {
 
         // Delete all old updates from last to first to avoid holes on crash
         for j in (0..next_index).rev() {
-            self.store
+            self.updates_store
                 .remove(&update_key(j))
                 .map_err(|e| Error::Generic(format!("failed to remove update {j}: {e}")))?;
         }
@@ -535,7 +535,7 @@ impl Wollet {
 
         // Store the merged update as update 0
         let merged_bytes = merged.serialize()?;
-        self.store
+        self.updates_store
             .put(&update_key(0), &merged_bytes)
             .map_err(|e| Error::Generic(format!("failed to store merged update: {e}")))?;
 

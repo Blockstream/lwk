@@ -53,7 +53,7 @@ pub struct Wollet {
     pub(crate) network: ElementsNetwork,
     pub(crate) cache: Cache,
     pub(crate) descriptor: WolletDescriptor,
-    pub(crate) store: Arc<dyn DynStore>,
+    pub(crate) updates_store: Arc<dyn DynStore>,
     /// Counter for the next update key
     pub(crate) next_update_index: Mutex<usize>,
     pub(crate) merge_threshold: Option<usize>,
@@ -169,7 +169,7 @@ impl WolletBuilder {
             cache,
             network: self.network,
             descriptor: self.descriptor,
-            store: self.updates_store,
+            updates_store: self.updates_store,
             next_update_index: Mutex::new(0),
             max_weight_to_satisfy,
             merge_threshold: self.merge_threshold,
@@ -179,7 +179,7 @@ impl WolletBuilder {
         // Restore updates from the store using indexed keys
         for i in 0.. {
             let key = update_key(i);
-            match wollet.store.get(&key) {
+            match wollet.updates_store.get(&key) {
                 Ok(Some(bytes)) => {
                     let update = Update::deserialize(&bytes)?;
                     let skip_persist = true;
@@ -1179,7 +1179,7 @@ impl Wollet {
         let mut updates = vec![];
         for i in 0.. {
             let key = update_key(i);
-            match self.store.get(&key) {
+            match self.updates_store.get(&key) {
                 Ok(Some(bytes)) => {
                     let update = Update::deserialize(&bytes)?;
                     updates.push(update);

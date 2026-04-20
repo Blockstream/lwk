@@ -129,8 +129,8 @@ impl From<ElementsNetwork> for lwk_common::Network {
         match network {
             ElementsNetwork::Liquid => lwk_common::Network::Liquid,
             ElementsNetwork::LiquidTestnet => lwk_common::Network::LiquidTestnet,
-            ElementsNetwork::ElementsRegtest { policy_asset: _ } => {
-                lwk_common::Network::ElementsRegtest
+            ElementsNetwork::ElementsRegtest { policy_asset } => {
+                lwk_common::Network::ElementsRegtest { policy_asset }
             }
         }
     }

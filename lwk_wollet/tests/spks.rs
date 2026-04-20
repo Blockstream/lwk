@@ -22,7 +22,7 @@ fn test_spks() {
     let lbtc = wallet.policy_asset();
     let sats = 1_000_000;
     let addr_from_wd = _wd
-        .address(0, lwk_common::Network::ElementsRegtest.address_params())
+        .address(0, lwk_common::Network::default_regtest().address_params())
         .unwrap();
     wallet.fund(&env, sats, Some(addr_from_wd.clone()), None);
 
@@ -87,7 +87,7 @@ fn test_explicit_spks() {
     let mut wallet = TestWollet::new(client, &desc);
     let sats = 1_000_000;
     let addr_from_wd = wd
-        .address(0, lwk_common::Network::ElementsRegtest.address_params())
+        .address(0, lwk_common::Network::default_regtest().address_params())
         .unwrap();
     wallet.fund_explicit(&env, sats, Some(addr_from_wd.clone()), None);
 

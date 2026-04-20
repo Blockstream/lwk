@@ -37,8 +37,12 @@ pub enum Network {
     Liquid,
     /// Liquid testnet
     LiquidTestnet,
-    /// Liquid regtest
-    ElementsRegtest,
+    /// Liquid regtest with a custom policy asset.
+    ElementsRegtest {
+        /// The policy asset to use for this regtest network.
+        /// You can use the default one using [`Network::default_regtest()`].
+        policy_asset: AssetId,
+    },
 }
 
 impl Network {
@@ -52,7 +56,7 @@ impl Network {
         match self {
             Network::Liquid => &AssetId::LIQUID_BTC,
             Network::LiquidTestnet => LIQUID_TESTNET_POLICY_ASSET,
-            Network::ElementsRegtest => LIQUID_REGTEST_POLICY_ASSET,
+            Network::ElementsRegtest { .. } => LIQUID_REGTEST_POLICY_ASSET,
         }
     }
 
@@ -61,7 +65,7 @@ impl Network {
         match self {
             Network::Liquid => BlockHash::from_byte_array(GENESIS_LIQUID),
             Network::LiquidTestnet => BlockHash::from_byte_array(GENESIS_LIQUID_TESTNET),
-            Network::ElementsRegtest => BlockHash::from_byte_array(GENESIS_LIQUID_REGTEST),
+            Network::ElementsRegtest { .. } => BlockHash::from_byte_array(GENESIS_LIQUID_REGTEST),
         }
     }
 
@@ -70,7 +74,14 @@ impl Network {
         match self {
             Network::Liquid => &AddressParams::LIQUID,
             Network::LiquidTestnet => &AddressParams::LIQUID_TESTNET,
-            Network::ElementsRegtest => &AddressParams::ELEMENTS,
+            Network::ElementsRegtest { .. } => &AddressParams::ELEMENTS,
+        }
+    }
+
+    /// Return the default regtest network using the default regtest policy asset.
+    pub fn default_regtest() -> Network {
+        Network::ElementsRegtest {
+            policy_asset: *LIQUID_REGTEST_POLICY_ASSET,
         }
     }
 
@@ -81,7 +92,7 @@ impl Network {
         match self {
             Network::Liquid => 20160,
             Network::LiquidTestnet => 1000,
-            Network::ElementsRegtest => 10,
+            Network::ElementsRegtest { .. } => 10,
         }
     }
 
@@ -92,7 +103,7 @@ impl Network {
         match self {
             Network::Liquid => 2,
             Network::LiquidTestnet => 0,
-            Network::ElementsRegtest => 0,
+            Network::ElementsRegtest { .. } => 0,
         }
     }
 }
@@ -102,7 +113,7 @@ impl std::fmt::Display for Network {
         match self {
             Network::Liquid => write!(f, "liquid"),
             Network::LiquidTestnet => write!(f, "testnet-liquid"),
-            Network::ElementsRegtest => write!(f, "localtest-liquid"),
+            Network::ElementsRegtest { .. } => write!(f, "localtest-liquid"),
         }
     }
 }
@@ -114,7 +125,7 @@ impl FromStr for Network {
         match s {
             "liquid" => Ok(Network::Liquid),
             "testnet-liquid" => Ok(Network::LiquidTestnet),
-            "localtest-liquid" => Ok(Network::ElementsRegtest),
+            "localtest-liquid" => Ok(Network::default_regtest()),
             _ => Err(
                 "invalid network, possible value are: 'liquid', 'testnet-liquid', 'localtest-liquid'"
                     .to_string(),
@@ -155,7 +166,7 @@ mod tests {
             "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49"
         );
         assert_eq!(
-            Network::ElementsRegtest.policy_asset().to_string(),
+            Network::default_regtest().policy_asset().to_string(),
             "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
         );
 
@@ -170,7 +181,7 @@ mod tests {
             "a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1"
         );
         assert_eq!(
-            Network::ElementsRegtest.genesis_hash().to_string(),
+            Network::default_regtest().genesis_hash().to_string(),
             "c7af03b0774a3498a574902bd41045c1633fd40b69ca163345c5d9c78bfd6af7"
         );
     }

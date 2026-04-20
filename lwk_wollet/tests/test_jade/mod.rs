@@ -184,7 +184,7 @@ mod serial {
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_roundtrip() {
         let env = TestEnvBuilder::from_env().with_electrum().build();
-        let network = lwk_common::Network::ElementsRegtest;
+        let network = lwk_common::Network::default_regtest();
         let ports = Jade::available_ports_with_jade();
         let port_name = &ports.first().unwrap().port_name;
         let jade = Jade::from_serial(network, port_name, None).unwrap();
@@ -205,7 +205,7 @@ mod serial {
     fn jade_multi_multisig() {
         init_logging();
         let env = TestEnvBuilder::from_env().with_electrum().build();
-        let network = lwk_common::Network::ElementsRegtest;
+        let network = lwk_common::Network::default_regtest();
         let ports = Jade::available_ports_with_jade();
         let port_name = &ports.first().unwrap().port_name;
         let jade = Jade::from_serial(network, port_name, None).unwrap();
@@ -220,7 +220,7 @@ pub fn register_multisig(signers: &[&AnySigner], name: &str, desc: &str) {
     let desc_orig: WolletDescriptor = desc.parse().unwrap();
     let desc: JadeDescriptor = desc_orig.ct_descriptor().unwrap().try_into().unwrap();
     let params = RegisterMultisigParams {
-        network: lwk_common::Network::ElementsRegtest,
+        network: lwk_common::Network::default_regtest(),
         multisig_name: name.into(),
         descriptor: desc,
     };

@@ -102,7 +102,7 @@ mod test {
 
         let connection = Connection::PartialReadTest { data, status: 0 };
 
-        let jade = Jade::new(connection, Network::ElementsRegtest);
+        let jade = Jade::new(connection, Network::default_regtest());
         let result: Value = jade.send(Request::Ping).unwrap();
         assert_eq!(result, text);
     }

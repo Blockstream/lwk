@@ -41,8 +41,8 @@ impl From<&Network> for lwk_common::Network {
         match value.inner {
             lwk_wollet::ElementsNetwork::Liquid => lwk_common::Network::Liquid,
             lwk_wollet::ElementsNetwork::LiquidTestnet => lwk_common::Network::LiquidTestnet,
-            lwk_wollet::ElementsNetwork::ElementsRegtest { .. } => {
-                lwk_common::Network::ElementsRegtest
+            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset } => {
+                lwk_common::Network::ElementsRegtest { policy_asset }
             }
         }
     }

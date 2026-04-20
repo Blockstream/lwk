@@ -326,7 +326,7 @@ impl<S: Stream> Amp0<S> {
         match self.network {
             Network::Liquid => "https://green-liquid-mainnet.blockstream.com",
             Network::LiquidTestnet => "https://green-liquid-testnet.blockstream.com",
-            Network::ElementsRegtest => "http://127.0.0.1:9908",
+            Network::ElementsRegtest { .. } => "http://127.0.0.1:9908",
         }
     }
 
@@ -1221,7 +1221,7 @@ fn server_master_xpub(network: &Network) -> Xpub {
             "c660eec6d9c536f4121854146da22e02d4c91d72af004d41729b9a592f0788e5",
             NetworkKind::Test,
         ),
-        Network::ElementsRegtest => (
+        Network::ElementsRegtest { .. } => (
             "036307e560072ed6ce0aa5465534fb5c258a2ccfbc257f369e8e7a181b16d897b3",
             "b60befcc619bb1c212732770fe181f2f1aa824ab89f8aab49f2e13e3a56f0f04",
             NetworkKind::Test,
@@ -1289,7 +1289,7 @@ pub fn default_url(network: Network) -> Result<&'static str, Error> {
     match network {
         Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),
         Network::LiquidTestnet => Ok("wss://green-liquid-testnet.blockstream.com/v2/ws/"),
-        Network::ElementsRegtest => Ok("ws://localhost:8080/v2/ws"),
+        Network::ElementsRegtest { .. } => Ok("ws://localhost:8080/v2/ws"),
     }
 }
 
@@ -2068,7 +2068,7 @@ mod tests {
 
         let (network, elements_network, url) = if regtest {
             (
-                Network::ElementsRegtest,
+                Network::default_regtest(),
                 ElementsNetwork::default_regtest(),
                 "tcp://localhost:19002",
             )
@@ -2153,7 +2153,7 @@ mod tests {
         let xpub = server_master_xpub(&Network::LiquidTestnet);
         assert_eq!(xpub.fingerprint().to_string(), AMP0_FINGERPRINT_TESTNET);
 
-        let xpub = server_master_xpub(&Network::ElementsRegtest);
+        let xpub = server_master_xpub(&Network::default_regtest());
         assert_eq!(xpub.fingerprint().to_string(), AMP0_FINGERPRINT_REGTEST);
     }
 
@@ -2237,7 +2237,7 @@ mod tests {
 
         assert_eq!(derive_gait_path(register_xpub), gait_path_hex);
 
-        let network = lwk_common::Network::ElementsRegtest;
+        let network = lwk_common::Network::default_regtest();
         assert_eq!(
             signer_data.login_address(&network).to_string(),
             login_address
@@ -2278,7 +2278,7 @@ mod tests {
         use lwk_signer::SwSigner;
 
         let network = if regtest {
-            Network::ElementsRegtest
+            Network::default_regtest()
         } else {
             Network::LiquidTestnet
         };

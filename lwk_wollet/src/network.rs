@@ -130,7 +130,7 @@ impl From<ElementsNetwork> for lwk_common::Network {
             ElementsNetwork::Liquid => lwk_common::Network::Liquid,
             ElementsNetwork::LiquidTestnet => lwk_common::Network::LiquidTestnet,
             ElementsNetwork::ElementsRegtest { policy_asset: _ } => {
-                lwk_common::Network::LocaltestLiquid
+                lwk_common::Network::ElementsRegtest
             }
         }
     }

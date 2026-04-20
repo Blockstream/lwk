@@ -42,7 +42,7 @@ impl From<&Network> for lwk_common::Network {
             lwk_wollet::ElementsNetwork::Liquid => lwk_common::Network::Liquid,
             lwk_wollet::ElementsNetwork::LiquidTestnet => lwk_common::Network::LiquidTestnet,
             lwk_wollet::ElementsNetwork::ElementsRegtest { .. } => {
-                lwk_common::Network::LocaltestLiquid
+                lwk_common::Network::ElementsRegtest
             }
         }
     }

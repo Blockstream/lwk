@@ -207,7 +207,7 @@ mod tests {
     fn test_parse_localtest_liquid_network() {
         // Test with LocaltestLiquid network (regtest)
         let addr = "lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0";
-        let result = Address::parse(addr, Network::LocaltestLiquid);
+        let result = Address::parse(addr, Network::ElementsRegtest);
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),

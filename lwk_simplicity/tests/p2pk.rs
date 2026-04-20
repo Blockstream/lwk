@@ -93,8 +93,7 @@ fn test_simplicity_p2pk() {
 
     // Compute message and sign
     let input_index = 0;
-    let message =
-        get_sighash_all(&tx, &program, &xonly, &txouts, input_index, network.into()).unwrap();
+    let message = get_sighash_all(&tx, &program, &xonly, &txouts, input_index, network).unwrap();
 
     let signature = EC.sign_schnorr(&message, &keypair);
 
@@ -114,7 +113,7 @@ fn test_simplicity_p2pk() {
         &txouts,
         input_index,
         witness_values,
-        network.into(),
+        network,
         log_level,
     )
     .unwrap();
@@ -215,8 +214,7 @@ fn test_simplicity_mixed_p2pk() {
         .collect();
 
     let input_idx_s = 0;
-    let message =
-        get_sighash_all(&tx, &program, &xonly, &utxos, input_idx_s, network.into()).unwrap();
+    let message = get_sighash_all(&tx, &program, &xonly, &utxos, input_idx_s, network).unwrap();
 
     let signature = EC.sign_schnorr(&message, &keypair);
 
@@ -235,7 +233,7 @@ fn test_simplicity_mixed_p2pk() {
         &utxos,
         input_idx_s,
         witness_values,
-        network.into(),
+        network,
         log_level,
     )
     .unwrap();

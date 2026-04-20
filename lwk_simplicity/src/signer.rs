@@ -126,6 +126,6 @@ pub fn get_and_verify_env(
         cmr,
         control_block(cmr, *program_public_key),
         None,
-        network.genesis_hash(),
+        network.genesis_block_hash(),
     ))
 }

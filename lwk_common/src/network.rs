@@ -61,7 +61,7 @@ impl Network {
     }
 
     /// Return the genesis block hash for this network.
-    pub fn genesis_hash(&self) -> BlockHash {
+    pub fn genesis_block_hash(&self) -> BlockHash {
         match self {
             Network::Liquid => BlockHash::from_byte_array(GENESIS_LIQUID),
             Network::LiquidTestnet => BlockHash::from_byte_array(GENESIS_LIQUID_TESTNET),
@@ -173,15 +173,15 @@ mod tests {
         // Genesis block hash display (reversed hex) as seen on explorers/nodes
         // Took from: https://github.com/ElementsProject/elements/blob/6bb916a57fa8b677bd8060491ea7ab28b77794ff/src/chainparams.cpp#L1323
         assert_eq!(
-            Network::Liquid.genesis_hash().to_string(),
+            Network::Liquid.genesis_block_hash().to_string(),
             "1466275836220db2944ca059a3a10ef6fd2ea684b0688d2c379296888a206003"
         );
         assert_eq!(
-            Network::LiquidTestnet.genesis_hash().to_string(),
+            Network::LiquidTestnet.genesis_block_hash().to_string(),
             "a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1"
         );
         assert_eq!(
-            Network::default_regtest().genesis_hash().to_string(),
+            Network::default_regtest().genesis_block_hash().to_string(),
             "c7af03b0774a3498a574902bd41045c1633fd40b69ca163345c5d9c78bfd6af7"
         );
     }

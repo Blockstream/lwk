@@ -1,0 +1,24 @@
+{
+  "name": "wallet_abi_harness",
+  "private": true,
+  "version": "0.16.0",
+  "description": "Local Wallet ABI browser harness for builders and WalletConnect transport smoke testing",
+  "license": "MIT OR BSD-2-Clause",
+  "type": "module",
+  "scripts": {
+    "dev": "npm --prefix ../.. run build -w lwk_wallet_abi_sdk && vite",
+    "dev:live": "npm run dev",
+    "build": "npm --prefix ../.. run build -w lwk_wallet_abi_sdk && vite build",
+    "typecheck": "npm --prefix ../.. run build -w lwk_wallet_abi_sdk && tsc -p tsconfig.json --noEmit",
+    "test": "npm run typecheck && vitest run",
+    "test:live": "npm run typecheck && WALLET_ABI_HARNESS_LIVE=1 vitest run tests/live.test.ts"
+  },
+  "dependencies": {
+    "lwk_wallet_abi_sdk": "0.16.0"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5",
+    "vite-plugin-wasm": "^3.4.1",
+    "vitest": "^2.1.8"
+  }
+}

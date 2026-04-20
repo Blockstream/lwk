@@ -380,7 +380,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::SignerLoadJade = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let id = XKeyIdentifier::from_str(&r.id)?;
-            let signer = AppSigner::new_jade(id, r.emulator, s.config.jade_network())?;
+            let signer = AppSigner::new_jade(id, r.emulator, s.config.network)?;
             let resp: response::Signer = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
             s.persist(&request)?;
@@ -643,7 +643,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::SignerRegisterMultisig = serde_json::from_value(params)?;
             let mut s = state.lock()?;
 
-            let network = s.config.jade_network();
+            let network = s.config.network;
             let descriptor = s.wollets.get(&r.wallet)?.descriptor()?.clone();
             let signer = s.get_available_signer(&r.name)?;
 
@@ -1178,7 +1178,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             let (network, timeout) = {
                 let s = state.lock()?;
-                (s.config.jade_network(), Some(s.config.timeout))
+                (s.config.network, Some(s.config.timeout))
             };
             log::debug!("jade network: {network}");
 

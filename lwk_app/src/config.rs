@@ -1,7 +1,6 @@
 use crate::{blockchain_client::BlockchainClient, consts, Error};
 use lwk_common::electrum_ssl::LIQUID_SOCKET;
 use lwk_common::electrum_ssl::LIQUID_TESTNET_SOCKET;
-use lwk_common::Network as JadeNetwork;
 use lwk_jade::TIMEOUT;
 use lwk_wollet::amp2::Amp2;
 use lwk_wollet::clients::blocking::EsploraClient;
@@ -84,16 +83,6 @@ impl Config {
             scanning_interval: Duration::from_secs(1),
             amp2_url: "".into(),
             amp2_keyorigin_xpub: "".into(),
-        }
-    }
-
-    pub fn jade_network(&self) -> JadeNetwork {
-        match self.network {
-            ElementsNetwork::Liquid => JadeNetwork::Liquid,
-            ElementsNetwork::LiquidTestnet => JadeNetwork::LiquidTestnet,
-            ElementsNetwork::ElementsRegtest { policy_asset } => {
-                JadeNetwork::ElementsRegtest { policy_asset }
-            }
         }
     }
 

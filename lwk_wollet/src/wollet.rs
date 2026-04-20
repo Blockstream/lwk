@@ -55,7 +55,7 @@ pub struct Wollet {
     pub(crate) descriptor: WolletDescriptor,
     pub(crate) updates_store: Arc<dyn DynStore>,
     /// Counter for the next update key
-    pub(crate) next_update_index: Mutex<usize>,
+    next_update_index: Mutex<usize>,
     merge_threshold: Option<usize>,
     /// cached value
     max_weight_to_satisfy: usize,
@@ -186,10 +186,7 @@ impl WolletBuilder {
                     wollet.apply_update_inner(update, skip_persist)?;
                 }
                 Ok(None) => {
-                    let mut next_update_index = wollet
-                        .next_update_index
-                        .lock()
-                        .map_err(|_| Error::Generic("next_update_index lock poisoned".into()))?;
+                    let mut next_update_index = wollet.next_update_index()?;
                     *next_update_index = wollet.merge_updates(i)?;
                     break;
                 }
@@ -393,6 +390,12 @@ impl std::hash::Hash for Wollet {
 impl Wollet {
     pub(crate) fn merge_threshold(&self) -> Option<usize> {
         self.merge_threshold
+    }
+
+    pub(crate) fn next_update_index(&self) -> Result<std::sync::MutexGuard<'_, usize>, Error> {
+        self.next_update_index
+            .lock()
+            .map_err(|_| Error::Generic("next_update_index lock poisoned".into()))
     }
 }
 

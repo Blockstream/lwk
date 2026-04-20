@@ -455,10 +455,7 @@ impl Wollet {
 
     /// Persist an update to the store using an indexed key
     fn persist_update(&self, mut update: Update) -> Result<(), Error> {
-        let mut next_index = self
-            .next_update_index
-            .lock()
-            .map_err(|_| Error::Generic("next_update_index lock poisoned".into()))?;
+        let mut next_index = self.next_update_index()?;
 
         // Check if we can coalesce with the previous update (both are "only tip" updates)
         if update.only_tip() && *next_index > 0 {

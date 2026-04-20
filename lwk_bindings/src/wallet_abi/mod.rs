@@ -67,10 +67,13 @@ pub use signer_link::{SignerMetaLink, WalletAbiSignerCallbacks};
 pub use walletconnect_coordinator::{
     WalletAbiWalletConnectApproveSessionAction, WalletAbiWalletConnectCoordinator,
     WalletAbiWalletConnectDisconnectSessionAction, WalletAbiWalletConnectOverlay,
-    WalletAbiWalletConnectOverlayKind, WalletAbiWalletConnectReasonKind,
-    WalletAbiWalletConnectRejectSessionAction, WalletAbiWalletConnectSessionInfo,
-    WalletAbiWalletConnectSessionProposal, WalletAbiWalletConnectTransportAction,
-    WalletAbiWalletConnectTransportActionKind, WalletAbiWalletConnectUiState,
+    WalletAbiWalletConnectOverlayKind, WalletAbiWalletConnectPendingRequestsReconcileResult,
+    WalletAbiWalletConnectReasonKind, WalletAbiWalletConnectRejectSessionAction,
+    WalletAbiWalletConnectRespondSuccessAction, WalletAbiWalletConnectRespondWalletAbiErrorAction,
+    WalletAbiWalletConnectRpcErrorKind, WalletAbiWalletConnectSessionInfo,
+    WalletAbiWalletConnectSessionProposal, WalletAbiWalletConnectSessionRequest,
+    WalletAbiWalletConnectTransportAction, WalletAbiWalletConnectTransportActionKind,
+    WalletAbiWalletConnectUiState,
 };
 
 /// Generate a fresh canonical Wallet ABI request identifier.

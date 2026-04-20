@@ -73,13 +73,16 @@ pub use wallet_abi::{
     WalletAbiUtxoSource, WalletAbiWalletConnectApproveSessionAction,
     WalletAbiWalletConnectCoordinator, WalletAbiWalletConnectDisconnectSessionAction,
     WalletAbiWalletConnectOverlay, WalletAbiWalletConnectOverlayKind,
-    WalletAbiWalletConnectReasonKind, WalletAbiWalletConnectRejectSessionAction,
+    WalletAbiWalletConnectPendingRequestsReconcileResult, WalletAbiWalletConnectReasonKind,
+    WalletAbiWalletConnectRejectSessionAction, WalletAbiWalletConnectRespondSuccessAction,
+    WalletAbiWalletConnectRespondWalletAbiErrorAction, WalletAbiWalletConnectRpcErrorKind,
     WalletAbiWalletConnectSessionInfo, WalletAbiWalletConnectSessionProposal,
-    WalletAbiWalletConnectTransportAction, WalletAbiWalletConnectTransportActionKind,
-    WalletAbiWalletConnectUiState, WalletAbiWalletOutputRequest, WalletAbiWalletOutputRole,
-    WalletAbiWalletOutputTemplate, WalletAbiWalletSourceFilter, WalletBroadcasterLink,
-    WalletOutputAllocatorLink, WalletPrevoutResolverLink, WalletReceiveAddressProviderLink,
-    WalletRuntimeDepsLink, WalletSessionFactoryLink,
+    WalletAbiWalletConnectSessionRequest, WalletAbiWalletConnectTransportAction,
+    WalletAbiWalletConnectTransportActionKind, WalletAbiWalletConnectUiState,
+    WalletAbiWalletOutputRequest, WalletAbiWalletOutputRole, WalletAbiWalletOutputTemplate,
+    WalletAbiWalletSourceFilter, WalletBroadcasterLink, WalletOutputAllocatorLink,
+    WalletPrevoutResolverLink, WalletReceiveAddressProviderLink, WalletRuntimeDepsLink,
+    WalletSessionFactoryLink,
 };
 
 pub use blockdata::address::Address;

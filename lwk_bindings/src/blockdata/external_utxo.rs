@@ -92,4 +92,8 @@ impl From<&ExternalUtxo> for lwk_wollet::ExternalUtxo {
     }
 }
 
-// TODO: method to inspect inner
+impl ExternalUtxo {
+    pub(crate) fn inner(&self) -> &lwk_wollet::ExternalUtxo {
+        &self.inner
+    }
+}

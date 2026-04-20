@@ -2551,6 +2551,7 @@ dependencies = [
  "lwk_simplicity",
  "lwk_test_util",
  "lwk_wollet",
+ "serde",
  "serde_json",
  "tempfile",
  "thiserror 1.0.69",

@@ -73,6 +73,28 @@ impl Network {
             Network::ElementsRegtest => &AddressParams::ELEMENTS,
         }
     }
+
+    /// Return the dynamic epoch length of this network
+    pub fn dynamic_epoch_length(&self) -> u32 {
+        // taken from elements chainparams.cpp
+        // TODO upstream to rust elements
+        match self {
+            Network::Liquid => 20160,
+            Network::LiquidTestnet => 1000,
+            Network::ElementsRegtest => 10,
+        }
+    }
+
+    /// Return the dynamic epoch length of this network
+    pub fn total_valid_epochs(&self) -> u32 {
+        // taken from elements chainparams.cpp
+        // TODO upstream to rust elements
+        match self {
+            Network::Liquid => 2,
+            Network::LiquidTestnet => 0,
+            Network::ElementsRegtest => 0,
+        }
+    }
 }
 
 impl std::fmt::Display for Network {

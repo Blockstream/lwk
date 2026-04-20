@@ -243,6 +243,23 @@ fn default_blockheader() -> BlockHeader {
     }
 }
 
+impl Wollet {
+    /// Restore updates from the store using indexed keys
+    pub(crate) fn restore_updates(&mut self) -> Result<(), Error> {
+        for i in 0.. {
+            if let Some(update) = self.get_update(i)? {
+                let skip_persist = true;
+                self.apply_update_inner(update, skip_persist)?;
+            } else {
+                let mut next_update_index = self.next_update_index()?;
+                *next_update_index = self.merge_updates(i)?;
+                break;
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Update the wallet state from blockchain data
 impl Wollet {
     /// Get all the persisted updates of this wallet

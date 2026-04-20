@@ -176,17 +176,7 @@ impl WolletBuilder {
             utxo_only: self.utxo_only,
         };
 
-        // Restore updates from the store using indexed keys
-        for i in 0.. {
-            if let Some(update) = wollet.get_update(i)? {
-                let skip_persist = true;
-                wollet.apply_update_inner(update, skip_persist)?;
-            } else {
-                let mut next_update_index = wollet.next_update_index()?;
-                *next_update_index = wollet.merge_updates(i)?;
-                break;
-            }
-        }
+        wollet.restore_updates()?;
 
         wollet.cache.add_txids_from_txs_store();
         Ok(wollet)

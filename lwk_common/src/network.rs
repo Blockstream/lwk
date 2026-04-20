@@ -162,6 +162,11 @@ impl<'de> Deserialize<'de> for Network {
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        collections::hash_map::DefaultHasher,
+        hash::{Hash, Hasher},
+    };
+
     use super::*;
 
     #[test]
@@ -194,5 +199,24 @@ mod tests {
             Network::default_regtest().genesis_block_hash().to_string(),
             "c7af03b0774a3498a574902bd41045c1633fd40b69ca163345c5d9c78bfd6af7"
         );
+    }
+
+    #[test]
+    fn test_config_hash() {
+        // Old Config struct had a single field,
+        // so its hash is the same as the field hash
+        #[derive(Hash)]
+        struct Config {
+            network: Network,
+        }
+        let network = Network::Liquid;
+        let config = Config { network };
+        let mut hasher = DefaultHasher::new();
+        config.hash(&mut hasher);
+        assert_eq!(13646096770106105413, hasher.finish());
+
+        let mut hasher = DefaultHasher::new();
+        network.hash(&mut hasher);
+        assert_eq!(13646096770106105413, hasher.finish());
     }
 }

@@ -251,17 +251,17 @@ pub(crate) fn update_key(index: usize) -> String {
 }
 
 impl Wollet {
-    pub(crate) fn merge_threshold(&self) -> Option<usize> {
+    fn merge_threshold(&self) -> Option<usize> {
         self.merge_threshold
     }
 
-    pub(crate) fn next_update_index(&self) -> Result<std::sync::MutexGuard<'_, usize>, Error> {
+    fn next_update_index(&self) -> Result<std::sync::MutexGuard<'_, usize>, Error> {
         self.next_update_index
             .lock()
             .map_err(|_| Error::Generic("next_update_index lock poisoned".into()))
     }
 
-    pub(crate) fn get_update(&self, index: usize) -> Result<Option<Update>, Error> {
+    fn get_update(&self, index: usize) -> Result<Option<Update>, Error> {
         Ok(self
             .updates_store
             .get(&update_key(index))
@@ -270,14 +270,14 @@ impl Wollet {
             .transpose()?)
     }
 
-    pub(crate) fn set_update(&self, index: usize, update: Update) -> Result<(), Error> {
+    fn set_update(&self, index: usize, update: Update) -> Result<(), Error> {
         Ok(self
             .updates_store
             .put(&update_key(index), &update.serialize()?)
             .map_err(|e| Error::Generic(format!("store error: {e}")))?)
     }
 
-    pub(crate) fn remove_update(&self, index: usize) -> Result<(), Error> {
+    fn remove_update(&self, index: usize) -> Result<(), Error> {
         Ok(self
             .updates_store
             .remove(&update_key(index))

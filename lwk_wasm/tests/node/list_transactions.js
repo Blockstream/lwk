@@ -38,6 +38,16 @@ async function runListTransactionsTest() {
         console.assert(page2.length === limit);
         console.assert(JSON.stringify(page2.map(t => t.txid)) === JSON.stringify(txs.slice(offset, offset + limit).map(t => t.txid)));
 
+        const page1_opt = lwk.TxsOpt.withPagination(0, limit);
+        const page1_txs = wollet.txs(page1_opt);
+        console.assert(page1_txs.length === limit);
+        console.assert(JSON.stringify(page1_txs.map(t => t.txid)) === JSON.stringify(txs2.slice(0, limit).map(t => t.txid)));
+
+        const page2_opt = lwk.TxsOpt.withPagination(offset, limit);
+        const page2_txs = wollet.txs(page2_opt);
+        console.assert(page2.length === limit);
+        console.assert(JSON.stringify(page2_txs.map(t => t.txid)) === JSON.stringify(txs2.slice(offset, offset + limit).map(t => t.txid)));
+
         const balance = wollet.balance();
 
         // Fetch transactions using waterfalls and utxos only

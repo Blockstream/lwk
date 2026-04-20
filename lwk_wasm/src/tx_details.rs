@@ -81,7 +81,15 @@ impl TxsOpt {
         Self { inner }
     }
 
-    // TODO: more constructors
+    #[wasm_bindgen(js_name = withPagination)]
+    pub fn with_pagination(offset: usize, limit: usize) -> Self {
+        let inner = lwk_wollet::TxsOpt {
+            offset: Some(offset),
+            limit: Some(limit),
+            ..Default::default()
+        };
+        Self { inner }
+    }
 }
 
 #[wasm_bindgen]

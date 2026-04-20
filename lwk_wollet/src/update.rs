@@ -243,7 +243,47 @@ fn default_blockheader() -> BlockHeader {
     }
 }
 
+/// Length of the zero-padded update key format (e.g., "000000000000")
+const UPDATE_KEY_LEN: usize = 12;
+
+pub(crate) fn update_key(index: usize) -> String {
+    format!("{index:0>width$}", width = UPDATE_KEY_LEN)
+}
+
 impl Wollet {
+    pub(crate) fn merge_threshold(&self) -> Option<usize> {
+        self.merge_threshold
+    }
+
+    pub(crate) fn next_update_index(&self) -> Result<std::sync::MutexGuard<'_, usize>, Error> {
+        self.next_update_index
+            .lock()
+            .map_err(|_| Error::Generic("next_update_index lock poisoned".into()))
+    }
+
+    pub(crate) fn get_update(&self, index: usize) -> Result<Option<Update>, Error> {
+        Ok(self
+            .updates_store
+            .get(&update_key(index))
+            .map_err(|e| Error::Generic(format!("store error: {e}")))?
+            .map(|u| Update::deserialize(&u))
+            .transpose()?)
+    }
+
+    pub(crate) fn set_update(&self, index: usize, update: Update) -> Result<(), Error> {
+        Ok(self
+            .updates_store
+            .put(&update_key(index), &update.serialize()?)
+            .map_err(|e| Error::Generic(format!("store error: {e}")))?)
+    }
+
+    pub(crate) fn remove_update(&self, index: usize) -> Result<(), Error> {
+        Ok(self
+            .updates_store
+            .remove(&update_key(index))
+            .map_err(|e| Error::Generic(format!("store error: {e}")))?)
+    }
+
     /// Restore updates from the store using indexed keys
     pub(crate) fn restore_updates(&mut self) -> Result<(), Error> {
         for i in 0.. {
@@ -903,15 +943,17 @@ impl Decodable for Update {
 
 #[cfg(test)]
 mod test {
+    use std::sync::Arc;
+    use lwk_common::DynStore;
 
     use elements::{
         encode::{Decodable, Encodable},
         Script,
     };
 
-    use crate::{update::DownloadTxResult, Chain, Update, WolletBuilder, WolletDescriptor};
+    use crate::{update::DownloadTxResult, Chain, Update, WolletBuilder, WolletDescriptor, ElementsNetwork};
 
-    use super::EncodableTxOutSecrets;
+    use super::{EncodableTxOutSecrets, update_key};
 
     pub fn download_tx_result_test_vector() -> DownloadTxResult {
         // there are issue in moving this in test_util
@@ -1069,5 +1111,118 @@ mod test {
         assert_eq!(update_pruned.serialize().unwrap().len(), 1106);
         assert_eq!(update.new_txs.txs.len(), update_pruned.new_txs.txs.len());
         assert_eq!(update.new_txs.unblinds, update_pruned.new_txs.unblinds);
+    }
+
+    /// Test that verifies the merge functionality works correctly.
+    /// Creates 3 updates, stores them, builds with merge_threshold=Some(2),
+    /// and verifies they are merged into a single update.
+    ///
+    /// Expected final state (from lwk_test_util/test_data/merge_updates/README.md):
+    /// - Balance: 899,974 sats
+    /// - Transactions: 2
+    /// - UTXOs: 1 (change output)
+    #[test]
+    fn test_merge_updates() {
+        use lwk_common::MemoryStore;
+        use lwk_test_util::{
+            update_merge_test_1, update_merge_test_2, update_merge_test_3,
+            update_merge_test_descriptor,
+        };
+
+        // Load the descriptor
+        let desc_str = update_merge_test_descriptor();
+        let desc: WolletDescriptor = desc_str.parse().unwrap();
+
+        // Load the three updates
+        let update1_bytes = update_merge_test_1();
+        let update2_bytes = update_merge_test_2();
+        let update3_bytes = update_merge_test_3();
+
+        // Create a memory store and manually insert the updates
+        let store = Arc::new(MemoryStore::default());
+        store
+            .put(&update_key(0), &update1_bytes)
+            .expect("Failed to store update 0");
+        store
+            .put(&update_key(1), &update2_bytes)
+            .expect("Failed to store update 1");
+        store
+            .put(&update_key(2), &update3_bytes)
+            .expect("Failed to store update 2");
+
+        // Build with merge_threshold=Some(2) (should trigger merge since we have 3 updates)
+        let wollet = WolletBuilder::new(ElementsNetwork::default_regtest(), desc.clone())
+            .with_store(store.clone())
+            .with_merge_threshold(Some(2))
+            .build()
+            .expect("Failed to build wollet");
+
+        // Verify state is correct (hardcoded values from README.md)
+        let balance = wollet.balance().expect("Failed to get balance");
+        let txs = wollet.transactions().expect("Failed to get transactions");
+        let utxos = wollet.utxos().expect("Failed to get utxos");
+        let policy_asset = wollet.policy_asset();
+        let btc_balance = balance.get(&policy_asset).copied().unwrap_or(0);
+
+        // Expected final state: Balance 899,974, Transactions: 2, UTXOs: 1
+        assert_eq!(
+            btc_balance, 899_974,
+            "Balance should be exactly 899,974 sats after merging all updates"
+        );
+        assert_eq!(
+            txs.len(),
+            2,
+            "Should have exactly 2 transactions after merge"
+        );
+        assert_eq!(utxos.len(), 1, "Should have exactly 1 UTXO after merge");
+
+        // Verify that updates were merged - only update 0 should exist
+        assert!(
+            store.get(&update_key(0)).unwrap().is_some(),
+            "Update 0 should exist"
+        );
+        assert!(
+            store.get(&update_key(1)).unwrap().is_none(),
+            "Update 1 should have been deleted"
+        );
+        assert!(
+            store.get(&update_key(2)).unwrap().is_none(),
+            "Update 2 should have been deleted"
+        );
+        assert!(
+            store.get(&update_key(3)).unwrap().is_none(),
+            "Update 3 should have been deleted"
+        );
+
+        // Verify the merged update can be deserialized and applied to a fresh wallet
+        let merged_bytes = store.get(&update_key(0)).unwrap().unwrap();
+        let merged_update =
+            Update::deserialize(&merged_bytes).expect("Failed to deserialize merged update");
+
+        // Apply merged update to a fresh wallet
+        let mut fresh_wollet = WolletBuilder::new(ElementsNetwork::default_regtest(), desc.clone())
+            .build()
+            .unwrap();
+        fresh_wollet
+            .apply_update(merged_update)
+            .expect("Failed to apply merged update");
+
+        // Verify fresh wallet has same state
+        let fresh_balance = fresh_wollet.balance().unwrap();
+        let fresh_btc_balance = fresh_balance.get(&policy_asset).copied().unwrap_or(0);
+        assert_eq!(
+            btc_balance, fresh_btc_balance,
+            "Merged update should produce same balance"
+        );
+        assert_eq!(
+            wollet.transactions().unwrap().len(),
+            fresh_wollet.transactions().unwrap().len(),
+            "Merged update should produce same transaction count"
+        );
+        assert_eq!(
+            wollet.utxos().unwrap().len(),
+            fresh_wollet.utxos().unwrap().len(),
+            "Merged update should produce same UTXO count"
+        );
     }
 }

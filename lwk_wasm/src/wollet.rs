@@ -41,6 +41,10 @@ impl Wollet {
         Ok(Self { inner })
     }
 
+    pub(crate) fn inner(&self) -> &lwk_wollet::Wollet {
+        &self.inner
+    }
+
     /// Get a wallet address with the correspondong derivation index
     ///
     /// If Some return the address at the given index,

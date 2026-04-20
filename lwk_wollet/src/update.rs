@@ -245,6 +245,19 @@ fn default_blockheader() -> BlockHeader {
 
 /// Update the wallet state from blockchain data
 impl Wollet {
+    /// Get all the persisted updates of this wallet
+    pub fn updates(&self) -> Result<Vec<Update>, Error> {
+        let mut updates = vec![];
+        for i in 0.. {
+            if let Some(update) = self.get_update(i)? {
+                updates.push(update);
+            } else {
+                break;
+            }
+        }
+        Ok(updates)
+    }
+
     fn apply_transaction_inner(
         &mut self,
         tx: Transaction,

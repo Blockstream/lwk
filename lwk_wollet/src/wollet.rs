@@ -1205,19 +1205,6 @@ impl Wollet {
         Ok(pset.extract_tx()?)
     }
 
-    /// Get all the persisted updates of this wallet
-    pub fn updates(&self) -> Result<Vec<Update>, Error> {
-        let mut updates = vec![];
-        for i in 0.. {
-            if let Some(update) = self.get_update(i)? {
-                updates.push(update);
-            } else {
-                break;
-            }
-        }
-        Ok(updates)
-    }
-
     /// A deterministic value derived from the descriptor, the config and the content of this wollet,
     /// including what's in the wallet cache (transactions etc)
     ///

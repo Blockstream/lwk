@@ -56,7 +56,7 @@ pub struct Wollet {
     pub(crate) updates_store: Arc<dyn DynStore>,
     /// Counter for the next update key
     pub(crate) next_update_index: Mutex<usize>,
-    pub(crate) merge_threshold: Option<usize>,
+    merge_threshold: Option<usize>,
     /// cached value
     max_weight_to_satisfy: usize,
     utxo_only: bool,
@@ -387,6 +387,12 @@ impl std::hash::Hash for Wollet {
         self.network.hash(state);
         self.cache.hash(state);
         self.descriptor.hash(state);
+    }
+}
+
+impl Wollet {
+    pub(crate) fn merge_threshold(&self) -> Option<usize> {
+        self.merge_threshold
     }
 }
 

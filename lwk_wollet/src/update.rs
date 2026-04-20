@@ -502,7 +502,7 @@ impl Wollet {
     }
 
     pub(crate) fn merge_updates(&self, next_index: usize) -> Result<usize, Error> {
-        match self.merge_threshold {
+        match self.merge_threshold() {
             Some(threshold) if threshold < next_index => (),
             _ => return Ok(next_index), // Not merging
         };

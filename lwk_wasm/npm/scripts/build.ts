@@ -51,6 +51,10 @@ function clean(): void {
   rmSync(generatedRoot, { force: true, recursive: true });
   rmSync(nodeDistRoot, { force: true, recursive: true });
   rmSync(webDistRoot, { force: true, recursive: true });
+  rmSync(resolve("packages/wallet-abi-harness/dist"), {
+    force: true,
+    recursive: true,
+  });
   rmSync(resolve(".tmp"), { force: true, recursive: true });
 }
 

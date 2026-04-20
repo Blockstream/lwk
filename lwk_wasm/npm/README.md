@@ -16,6 +16,10 @@ Package roles:
 - `helpers_wallet_abi_web`: thin web-only Wallet ABI wrapper over `wallet_abi_sdk_core_web`
 - `lwk_wallet_abi_sdk`: headless browser Wallet ABI SDK over `helpers_wallet_abi_web`
 
+Local-only workspace package:
+
+- `wallet_abi_harness`: private Vite harness for Wallet ABI request building, shareable scenario URLs, WalletConnect pairing, and transcript inspection
+
 The wrapper layers stay split on purpose:
 
 - `helpers_wallet_abi_web` adds typed Wallet ABI imports and a few schema helpers only
@@ -26,6 +30,8 @@ Still out of scope for this workspace:
 - React providers and hooks
 - page-level application state
 - wallet-side native provider bridges
+
+The local harness is intentionally private and is not part of the published tarball checks.
 
 Workspace development:
 

@@ -52,6 +52,15 @@ async function runListTransactionsTest() {
 
         const balance = wollet.balance();
 
+        const url = "https://blockstream.info/liquidtestnet/";
+        const tx = txs[0];
+        const txid = tx.txid();
+        const txopt = lwk.TxOpt.default();
+        const tx2 = wollet.txDetails(txid, txopt);
+        const old_url = tx.unblindedUrl(url);
+        const new_url = tx2.unblindedUrl(url);
+        console.assert(old_url === new_url);
+
         // Fetch transactions using waterfalls and utxos only
         const client_utxo_only = new lwk.EsploraClient(network, "https://waterfalls.liquidwebwallet.org/liquidtestnet/api", true, 4, true);
         const wollet_utxo_only = new lwk.WolletBuilder(network, desc).utxoOnly(true).build();

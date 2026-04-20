@@ -178,19 +178,13 @@ impl WolletBuilder {
 
         // Restore updates from the store using indexed keys
         for i in 0.. {
-            let key = update_key(i);
-            match wollet.updates_store.get(&key) {
-                Ok(Some(bytes)) => {
-                    let update = Update::deserialize(&bytes)?;
-                    let skip_persist = true;
-                    wollet.apply_update_inner(update, skip_persist)?;
-                }
-                Ok(None) => {
-                    let mut next_update_index = wollet.next_update_index()?;
-                    *next_update_index = wollet.merge_updates(i)?;
-                    break;
-                }
-                Err(e) => return Err(Error::Generic(format!("store error: {e}"))),
+            if let Some(update) = wollet.get_update(i)? {
+                let skip_persist = true;
+                wollet.apply_update_inner(update, skip_persist)?;
+            } else {
+                let mut next_update_index = wollet.next_update_index()?;
+                *next_update_index = wollet.merge_updates(i)?;
+                break;
             }
         }
 

@@ -473,13 +473,27 @@ impl Client {
         self.make_request(Method::AssetPublish, Some(req))
     }
 
-    pub fn amp2_descriptor(&self, name: String) -> Result<response::Amp2Descriptor, Error> {
-        let req = request::Amp2Descriptor { name };
+    pub fn amp2_descriptor(
+        &self,
+        name: String,
+        descriptor_blinding_key: String,
+    ) -> Result<response::Amp2Descriptor, Error> {
+        let req = request::Amp2Descriptor {
+            name,
+            descriptor_blinding_key,
+        };
         self.make_request(Method::Amp2Descriptor, Some(req))
     }
 
-    pub fn amp2_register(&self, name: String) -> Result<response::Amp2Register, Error> {
-        let req = request::Amp2Register { name };
+    pub fn amp2_register(
+        &self,
+        name: String,
+        descriptor_blinding_key: String,
+    ) -> Result<response::Amp2Register, Error> {
+        let req = request::Amp2Register {
+            name,
+            descriptor_blinding_key,
+        };
         self.make_request(Method::Amp2Register, Some(req))
     }
 

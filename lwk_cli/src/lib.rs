@@ -463,12 +463,18 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             }
         },
         CliCommand::Amp2(a) => match a.command {
-            Amp2Command::Descriptor { signer } => {
-                let r = client.amp2_descriptor(signer)?;
+            Amp2Command::Descriptor {
+                signer,
+                descriptor_blinding_key,
+            } => {
+                let r = client.amp2_descriptor(signer, descriptor_blinding_key)?;
                 serde_json::to_value(r)?
             }
-            Amp2Command::Register { signer } => {
-                let r = client.amp2_register(signer)?;
+            Amp2Command::Register {
+                signer,
+                descriptor_blinding_key,
+            } => {
+                let r = client.amp2_register(signer, descriptor_blinding_key)?;
                 serde_json::to_value(r)?
             }
             Amp2Command::Cosign { pset } => {

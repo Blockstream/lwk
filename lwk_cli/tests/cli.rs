@@ -1576,9 +1576,10 @@ fn test_amp2() {
 
     sw_signer(&cli, "sw");
 
+    let dbk = "--descriptor-blinding-key \"slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)\"";
     for cmd in [
-        format!("{cli} amp2 descriptor -s sw"),
-        format!("{cli} amp2 register -s sw"),
+        format!("{cli} amp2 descriptor -s sw {dbk}"),
+        format!("{cli} amp2 register -s sw {dbk}"),
         format!("{cli} amp2 cosign -p fake_pset"),
     ] {
         let err = sh_err(&cmd);
@@ -1599,8 +1600,8 @@ fn test_amp2() {
     std::thread::sleep(std::time::Duration::from_millis(500));
 
     for cmd in [
-        format!("{cli} amp2 descriptor -s sw"),
-        format!("{cli} amp2 register -s sw"),
+        format!("{cli} amp2 descriptor -s sw {dbk}"),
+        format!("{cli} amp2 register -s sw {dbk}"),
         format!("{cli} amp2 cosign -p fake_pset"),
     ] {
         let err = sh_err(&cmd);
@@ -1624,8 +1625,8 @@ fn test_amp2() {
     sw_signer(&cli, "sw");
 
     for cmd in [
-        format!("{cli} amp2 descriptor -s sw"),
-        format!("{cli} amp2 register -s sw"),
+        format!("{cli} amp2 descriptor -s sw {dbk}"),
+        format!("{cli} amp2 register -s sw {dbk}"),
         format!("{cli} amp2 cosign -p fake_pset"),
     ] {
         let err = sh_err(&cmd);

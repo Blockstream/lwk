@@ -904,6 +904,10 @@ pub enum Amp2Command {
         /// Signer name
         #[arg(short, long, env)]
         signer: String,
+
+        /// Descriptor blinding key
+        #[arg(short, long)]
+        descriptor_blinding_key: String,
     },
 
     /// Register an AMP2 wallet with the AMP2 server
@@ -911,6 +915,10 @@ pub enum Amp2Command {
         /// Signer name
         #[arg(short, long, env)]
         signer: String,
+
+        /// Descriptor blinding key
+        #[arg(short, long)]
+        descriptor_blinding_key: String,
     },
 
     /// Ask AMP2 server to cosign a PSET

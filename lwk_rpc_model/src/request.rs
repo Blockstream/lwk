@@ -514,6 +514,8 @@ pub struct LiquidexToProposal {
 pub struct Amp2Descriptor {
     /// The signer name
     pub name: String,
+    /// The descriptor blinding key
+    pub descriptor_blinding_key: String,
 }
 
 /// Request to register an AMP2 wallet descriptor
@@ -521,6 +523,8 @@ pub struct Amp2Descriptor {
 pub struct Amp2Register {
     /// The signer name
     pub name: String,
+    /// The descriptor blinding key
+    pub descriptor_blinding_key: String,
 }
 
 /// Request for AMP2 to cosign a PSET

@@ -67,8 +67,15 @@ impl Amp2 {
 
     /// Get an AMP2 wallet descriptor from the keyorigin xpub string obtained from a signer
     #[wasm_bindgen(js_name = descriptorFromStr)]
-    pub fn descriptor_from_str(&self, keyorigin_xpub: &str) -> Result<Amp2Descriptor, Error> {
-        Ok(self.inner.descriptor_from_str(keyorigin_xpub)?.into())
+    pub fn descriptor_from_str(
+        &self,
+        keyorigin_xpub: &str,
+        descriptor_blinding_key: &str,
+    ) -> Result<Amp2Descriptor, Error> {
+        Ok(self
+            .inner
+            .descriptor_from_str(keyorigin_xpub, descriptor_blinding_key)?
+            .into())
     }
 
     /// Register an AMP2 wallet with the AMP2 server

@@ -1,4 +1,6 @@
-use crate::{AssetId, Balance, Error, Transaction, Txid, Wollet};
+use crate::{
+    Address, AssetId, Balance, Error, OutPoint, Script, Transaction, TxOutSecrets, Txid, Wollet,
+};
 use wasm_bindgen::prelude::*;
 
 /// Transaction details
@@ -67,9 +69,76 @@ impl TxDetails {
         self.inner.unblinded_url(explorer_url)
     }
 
+    /// Inputs
+    pub fn inputs(&self) -> Vec<TxOutDetails> {
+        self.inner.inputs().iter().map(Into::into).collect()
+    }
+
+    /// Outputs
+    pub fn outputs(&self) -> Vec<TxOutDetails> {
+        self.inner.outputs().iter().map(Into::into).collect()
+    }
+
     // TODO: expose fees (need to handle hashmap, do we want to expose it?)
-    // TODO: expose inputs (needs TxOutDetails wrapping)
-    // TODO: expose outputs (needs TxOutDetails wrapping)
+}
+
+/// Transaction output details
+#[derive(Debug)]
+#[wasm_bindgen]
+pub struct TxOutDetails {
+    inner: lwk_wollet::TxOutDetails,
+}
+
+impl From<&lwk_wollet::TxOutDetails> for TxOutDetails {
+    fn from(inner: &lwk_wollet::TxOutDetails) -> Self {
+        Self {
+            inner: inner.clone(),
+        }
+    }
+}
+
+#[wasm_bindgen]
+impl TxOutDetails {
+    /// Outpoint
+    pub fn outpoint(&self) -> OutPoint {
+        self.inner.outpoint().into()
+    }
+
+    /// Scriptpubkey
+    pub fn script_pubkey(&self) -> Option<Script> {
+        self.inner.script_pubkey().map(Into::into)
+    }
+
+    /// Height
+    pub fn height(&self) -> Option<u32> {
+        self.inner.height()
+    }
+
+    /// Address
+    pub fn address(&self) -> Option<Address> {
+        self.inner.address().map(Into::into)
+    }
+
+    /// Unblinded values (asset, amount, blinders)
+    pub fn unblinded(&self) -> Option<TxOutSecrets> {
+        self.inner.unblinded().map(Into::into)
+    }
+
+    /// Whether the transaction output is explicit
+    pub fn is_explicit(&self) -> bool {
+        self.inner.is_explicit()
+    }
+
+    /// Whether the output is spent by a previously downloaded transaction
+    ///
+    /// Note: this value might be inaccurate. We compute this from downloaded
+    /// transactions, however we only download transactions relevant for the
+    /// wallet (i.e. if they include inputs or outputs that belong to the
+    /// wallet), thus for non-wallet outputs we might set this value
+    /// incorrectly. For wallet outputs, it can be outdated.
+    pub fn is_spent(&self) -> bool {
+        self.inner.is_spent()
+    }
 }
 
 /// Options for transaction details

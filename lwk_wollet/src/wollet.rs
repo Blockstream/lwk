@@ -53,7 +53,7 @@ pub struct Wollet {
     pub(crate) network: ElementsNetwork,
     pub(crate) cache: Cache,
     pub(crate) descriptor: WolletDescriptor,
-    pub(crate) updates_store: Arc<dyn DynStore>,
+    updates_store: Arc<dyn DynStore>,
     /// Counter for the next update key
     next_update_index: Mutex<usize>,
     merge_threshold: Option<usize>,

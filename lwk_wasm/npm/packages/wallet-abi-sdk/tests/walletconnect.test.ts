@@ -180,7 +180,10 @@ test("walletconnect requester forwards tx-create params and dynamic topic", asyn
       topic: "topic-1",
       request: {
         method: "wallet_abi_process_request",
-        params: request.toJSON(),
+        params: {
+          ...request.toJSON(),
+          network: "testnet-liquid",
+        },
       },
     },
   ]);

@@ -15,6 +15,7 @@ import {
   assetIdFromString,
   loadLwkWalletAbiWeb,
   networkFromString,
+  walletAbiTxCreateRequestToJson,
   walletAbiNetworkToLwkNetworkName,
   type WalletAbiProcessRequest,
   type WalletAbiTxCreateRequest,
@@ -324,7 +325,7 @@ export async function createScenarioBundle(
   return {
     request,
     envelope,
-    requestJson: formatJson(request.toJSON()),
+    requestJson: formatJson(walletAbiTxCreateRequestToJson(request)),
     envelopeJson: formatJson(envelope),
   };
 }

@@ -30,6 +30,7 @@ import {
   parseGetSignerReceiveAddressResponse,
   walletAbiNetworkFromLwkNetworkName,
   walletAbiNetworkFromNetwork,
+  walletAbiTxCreateRequestToJson,
   walletAbiNetworkToLwkNetworkName,
 } from "lwk_wallet_abi_sdk/protocol";
 
@@ -196,11 +197,19 @@ test("process request envelope", () => {
     ),
   );
 
+  assert.deepEqual(walletAbiTxCreateRequestToJson(request), {
+    ...request.toJSON(),
+    network: "testnet-liquid",
+  });
+
   assert.deepEqual(createProcessRequest(9, request), {
     id: 9,
     jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
     method: WALLET_ABI_PROCESS_REQUEST_METHOD,
-    params: request.toJSON(),
+    params: {
+      ...request.toJSON(),
+      network: "testnet-liquid",
+    },
   });
 
   const parsed = parseProcessRequestResponse({

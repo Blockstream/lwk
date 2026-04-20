@@ -145,7 +145,7 @@ describe("session wrapper", () => {
     expect(fake.requestCalls[0]).toMatchObject({
       method: "wallet_abi_process_request",
       params: {
-        network: "LiquidTestnet",
+        network: "testnet-liquid",
       },
     });
   });

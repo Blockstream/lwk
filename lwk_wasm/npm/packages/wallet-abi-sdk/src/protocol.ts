@@ -225,6 +225,21 @@ export function parseGetRawSigningXOnlyPubkeyResponse(value: unknown): string {
   return value.result;
 }
 
+export function walletAbiTxCreateRequestToJson(
+  request: WalletAbiTxCreateRequest,
+): unknown {
+  const json = JSON.parse(walletAbiJsonString(request)) as unknown;
+
+  if (!isRecord(json)) {
+    throw new WalletAbiProtocolError("expected tx-create request object");
+  }
+
+  return {
+    ...json,
+    network: walletAbiNetworkFromNetwork(request.network()),
+  };
+}
+
 export function createProcessRequest(
   id: number,
   params: WalletAbiTxCreateRequest,
@@ -233,7 +248,7 @@ export function createProcessRequest(
     id,
     jsonrpc: WALLET_ABI_JSON_RPC_VERSION,
     method: WALLET_ABI_PROCESS_REQUEST_METHOD,
-    params: JSON.parse(walletAbiJsonString(params)),
+    params: walletAbiTxCreateRequestToJson(params),
   };
 }
 

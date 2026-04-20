@@ -27,7 +27,7 @@ describe("request compilation", () => {
       jsonrpc: "2.0",
       method: "wallet_abi_process_request",
       params: {
-        network: "LiquidTestnet",
+        network: "testnet-liquid",
         broadcast: true,
         params: {
           inputs: [],
@@ -66,7 +66,7 @@ describe("request compilation", () => {
       .toString();
 
     expect(envelope.params).toMatchObject({
-      network: "LiquidTestnet",
+      network: "testnet-liquid",
       params: {
         outputs: [
           {
@@ -97,7 +97,7 @@ describe("request compilation", () => {
     );
 
     expect(envelope.params).toMatchObject({
-      network: "LiquidTestnet",
+      network: "testnet-liquid",
       broadcast: true,
       params: {
         inputs: [
@@ -151,7 +151,7 @@ describe("request compilation", () => {
     );
 
     expect(envelope.params).toMatchObject({
-      network: "LiquidTestnet",
+      network: "testnet-liquid",
       params: {
         inputs: [
           {

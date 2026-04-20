@@ -36,7 +36,7 @@ pub enum Network {
     /// Liquid mainnet
     Liquid,
     /// Liquid testnet
-    TestnetLiquid,
+    LiquidTestnet,
     /// Liquid regtest
     LocaltestLiquid,
 }
@@ -51,7 +51,7 @@ impl Network {
     pub fn policy_asset(&self) -> &'static AssetId {
         match self {
             Network::Liquid => &AssetId::LIQUID_BTC,
-            Network::TestnetLiquid => LIQUID_TESTNET_POLICY_ASSET,
+            Network::LiquidTestnet => LIQUID_TESTNET_POLICY_ASSET,
             Network::LocaltestLiquid => LIQUID_REGTEST_POLICY_ASSET,
         }
     }
@@ -60,7 +60,7 @@ impl Network {
     pub fn genesis_hash(&self) -> BlockHash {
         match self {
             Network::Liquid => BlockHash::from_byte_array(GENESIS_LIQUID),
-            Network::TestnetLiquid => BlockHash::from_byte_array(GENESIS_LIQUID_TESTNET),
+            Network::LiquidTestnet => BlockHash::from_byte_array(GENESIS_LIQUID_TESTNET),
             Network::LocaltestLiquid => BlockHash::from_byte_array(GENESIS_LIQUID_REGTEST),
         }
     }
@@ -69,7 +69,7 @@ impl Network {
     pub fn address_params(&self) -> &'static AddressParams {
         match self {
             Network::Liquid => &AddressParams::LIQUID,
-            Network::TestnetLiquid => &AddressParams::LIQUID_TESTNET,
+            Network::LiquidTestnet => &AddressParams::LIQUID_TESTNET,
             Network::LocaltestLiquid => &AddressParams::ELEMENTS,
         }
     }
@@ -79,7 +79,7 @@ impl std::fmt::Display for Network {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Network::Liquid => write!(f, "liquid"),
-            Network::TestnetLiquid => write!(f, "testnet-liquid"),
+            Network::LiquidTestnet => write!(f, "testnet-liquid"),
             Network::LocaltestLiquid => write!(f, "localtest-liquid"),
         }
     }
@@ -91,7 +91,7 @@ impl FromStr for Network {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "liquid" => Ok(Network::Liquid),
-            "testnet-liquid" => Ok(Network::TestnetLiquid),
+            "testnet-liquid" => Ok(Network::LiquidTestnet),
             "localtest-liquid" => Ok(Network::LocaltestLiquid),
             _ => Err(
                 "invalid network, possible value are: 'liquid', 'testnet-liquid', 'localtest-liquid'"
@@ -129,7 +129,7 @@ mod tests {
             "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d"
         );
         assert_eq!(
-            Network::TestnetLiquid.policy_asset().to_string(),
+            Network::LiquidTestnet.policy_asset().to_string(),
             "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49"
         );
         assert_eq!(
@@ -144,7 +144,7 @@ mod tests {
             "1466275836220db2944ca059a3a10ef6fd2ea684b0688d2c379296888a206003"
         );
         assert_eq!(
-            Network::TestnetLiquid.genesis_hash().to_string(),
+            Network::LiquidTestnet.genesis_hash().to_string(),
             "a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1"
         );
         assert_eq!(

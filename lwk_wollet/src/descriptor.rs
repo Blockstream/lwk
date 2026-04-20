@@ -915,7 +915,7 @@ mod test {
         for network in [
             lwk_common::Network::Liquid,
             lwk_common::Network::LocaltestLiquid,
-            lwk_common::Network::TestnetLiquid,
+            lwk_common::Network::LiquidTestnet,
         ] {
             let signer = lwk_signer::SwSigner::new(mnemonic, network.is_mainnet()).unwrap();
 
@@ -939,7 +939,7 @@ mod test {
                     assert_eq!(desc_str, "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84h/1h/0h]tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#xte2lx9x","2");
                     assert_eq!(abandon_dwid, "2cb9-6c92-93b8-1f96-0c3f-afc7-9504-afdd", "2");
                 }
-                lwk_common::Network::TestnetLiquid => {
+                lwk_common::Network::LiquidTestnet => {
                     assert_eq!(desc_str, "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84h/1h/0h]tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#xte2lx9x","3");
                     assert_eq!(abandon_dwid, "5f42-ad62-d515-96f8-ed85-5d5f-0e86-467e", "3");
                 }
@@ -1321,7 +1321,7 @@ fn test_elip_dwid() {
         (
             format!("ct({view},elwpkh({ko_xpub_test}/0/*))"),
             "Liquid Testnet",
-            Network::TestnetLiquid,
+            Network::LiquidTestnet,
         ),
         (
             format!("ct({view},elwpkh({ko_xpub_test}/0/*))"),
@@ -1364,7 +1364,7 @@ fn test_elip_dwid() {
         let dwid = d.dwid(network).unwrap();
         let network_str = match network {
             Network::Liquid => "Liquid",
-            Network::TestnetLiquid => "Liquid Testnet",
+            Network::LiquidTestnet => "Liquid Testnet",
             Network::LocaltestLiquid => "Liquid Regtest",
         };
         println!("* Test Vector {i}");

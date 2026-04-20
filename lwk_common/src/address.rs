@@ -116,7 +116,7 @@ mod tests {
     #[test]
     fn test_parse_liquid_testnet_confidential_success() {
         let addr = "tlq1qqvzrwmpx0vq2kqcpnxtgszzlqqvyyqgfdqwjvd4s40rutvcf3zh0kuk6d549cauk00d7cv8tychpk9su4c0h7e0ukgq6ssd9q";
-        let result = Address::parse(addr, Network::TestnetLiquid);
+        let result = Address::parse(addr, Network::LiquidTestnet);
         assert!(result.is_ok());
         let address = result.unwrap();
         assert_eq!(address.to_string(), addr);
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn test_parse_liquid_testnet_unconfidential_fail() {
         let addr = "tex1qx90cvlsrluvqjj9uv54an54sv0kqfse45nyrxx";
-        let result = Address::parse(addr, Network::TestnetLiquid);
+        let result = Address::parse(addr, Network::LiquidTestnet);
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
@@ -136,7 +136,7 @@ mod tests {
     #[test]
     fn test_parse_mainnet_address_with_testnet_network() {
         let addr = "lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0";
-        let result = Address::parse(addr, Network::TestnetLiquid);
+        let result = Address::parse(addr, Network::LiquidTestnet);
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),

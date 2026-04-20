@@ -49,7 +49,7 @@ fn test_amp0_setup() -> Result<(), Box<dyn std::error::Error>> {
     use lwk_wollet::amp0::blocking::{Amp0, Amp0Connected};
 
     // Create signer and watch only credentials
-    let network = Network::TestnetLiquid;
+    let network = Network::LiquidTestnet;
     let is_mainnet = false;
     let (signer, mnemonic) = SwSigner::random(is_mainnet)?;
     let username = "<username>";
@@ -109,7 +109,7 @@ fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
     let amp_id = "";
 
     // Create AMP0 context
-    let network = Network::TestnetLiquid;
+    let network = Network::LiquidTestnet;
 
     let mut amp0 = Amp0::new(network, username, password, amp_id)?;
 

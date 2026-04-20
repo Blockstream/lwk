@@ -40,7 +40,7 @@ impl From<&Network> for lwk_common::Network {
     fn from(value: &Network) -> Self {
         match value.inner {
             lwk_wollet::ElementsNetwork::Liquid => lwk_common::Network::Liquid,
-            lwk_wollet::ElementsNetwork::LiquidTestnet => lwk_common::Network::TestnetLiquid,
+            lwk_wollet::ElementsNetwork::LiquidTestnet => lwk_common::Network::LiquidTestnet,
             lwk_wollet::ElementsNetwork::ElementsRegtest { .. } => {
                 lwk_common::Network::LocaltestLiquid
             }

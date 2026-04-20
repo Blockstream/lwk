@@ -6,7 +6,7 @@ use lwk_jade::{
 use std::str::FromStr;
 
 fn serial_test_setup() -> Jade {
-    Jade::from_any_serial(lwk_common::Network::TestnetLiquid, Some(TIMEOUT))
+    Jade::from_any_serial(lwk_common::Network::LiquidTestnet, Some(TIMEOUT))
         .into_iter()
         .filter_map(Result::ok)
         .collect::<Vec<_>>()
@@ -67,7 +67,7 @@ fn receive_address() {
     jade_api.unlock().unwrap();
 
     let params = GetReceiveAddressParams {
-        network: lwk_common::Network::TestnetLiquid,
+        network: lwk_common::Network::LiquidTestnet,
         address: SingleOrMulti::Single {
             variant: Variant::ShWpkh,
             path: vec![2147483697, 2147483648, 2147483648, 0, 143],

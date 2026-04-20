@@ -325,7 +325,7 @@ impl<S: Stream> Amp0<S> {
     fn http_url(&self) -> &'static str {
         match self.network {
             Network::Liquid => "https://green-liquid-mainnet.blockstream.com",
-            Network::TestnetLiquid => "https://green-liquid-testnet.blockstream.com",
+            Network::LiquidTestnet => "https://green-liquid-testnet.blockstream.com",
             Network::LocaltestLiquid => "http://127.0.0.1:9908",
         }
     }
@@ -1216,7 +1216,7 @@ fn server_master_xpub(network: &Network) -> Xpub {
             "02721cc509aa0c2f4a90628e9da0391b196abeabc6393ed4789dd6222c43c489",
             NetworkKind::Main,
         ),
-        Network::TestnetLiquid => (
+        Network::LiquidTestnet => (
             "02c47d84a5b256ee3c29df89642d14b6ed73d17a2b8af0aca18f6f1900f1633533",
             "c660eec6d9c536f4121854146da22e02d4c91d72af004d41729b9a592f0788e5",
             NetworkKind::Test,
@@ -1288,7 +1288,7 @@ fn amp_descriptor(
 pub fn default_url(network: Network) -> Result<&'static str, Error> {
     match network {
         Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),
-        Network::TestnetLiquid => Ok("wss://green-liquid-testnet.blockstream.com/v2/ws/"),
+        Network::LiquidTestnet => Ok("wss://green-liquid-testnet.blockstream.com/v2/ws/"),
         Network::LocaltestLiquid => Ok("ws://localhost:8080/v2/ws"),
     }
 }
@@ -1988,7 +1988,7 @@ mod tests {
     #[ignore] // Requires network connectivity
     async fn test_amp0_ext_testnet() {
         amp0_addr(
-            Network::TestnetLiquid,
+            Network::LiquidTestnet,
             "userleo3456",
             "userleo3456",
             "GA2g7wuT1j4PMPriUGRWhHTcGxMEWV",
@@ -2074,7 +2074,7 @@ mod tests {
             )
         } else {
             (
-                Network::TestnetLiquid,
+                Network::LiquidTestnet,
                 ElementsNetwork::LiquidTestnet,
                 "ssl://elements-testnet.blockstream.info:50002",
             )
@@ -2150,7 +2150,7 @@ mod tests {
         let xpub = server_master_xpub(&Network::Liquid);
         assert_eq!(xpub.fingerprint().to_string(), AMP0_FINGERPRINT_MAINNET);
 
-        let xpub = server_master_xpub(&Network::TestnetLiquid);
+        let xpub = server_master_xpub(&Network::LiquidTestnet);
         assert_eq!(xpub.fingerprint().to_string(), AMP0_FINGERPRINT_TESTNET);
 
         let xpub = server_master_xpub(&Network::LocaltestLiquid);
@@ -2280,7 +2280,7 @@ mod tests {
         let network = if regtest {
             Network::LocaltestLiquid
         } else {
-            Network::TestnetLiquid
+            Network::LiquidTestnet
         };
 
         // Create signer and watch only credentials

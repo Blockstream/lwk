@@ -90,7 +90,7 @@ impl Config {
     pub fn jade_network(&self) -> JadeNetwork {
         match self.network {
             ElementsNetwork::Liquid => JadeNetwork::Liquid,
-            ElementsNetwork::LiquidTestnet => JadeNetwork::TestnetLiquid,
+            ElementsNetwork::LiquidTestnet => JadeNetwork::LiquidTestnet,
             ElementsNetwork::ElementsRegtest { .. } => JadeNetwork::LocaltestLiquid,
         }
     }

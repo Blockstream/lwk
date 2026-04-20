@@ -339,3 +339,10 @@ fn uniffi_foreign_language_testcase_wallet_abi_provider_kts(
 ) -> Result<(), Box<dyn std::error::Error>> {
     run_simplicity_kotlin_test("tests/bindings/wallet_abi_provider.kts")
 }
+
+#[cfg(all(feature = "foreign_bindings", feature = "simplicity"))]
+#[test]
+fn uniffi_foreign_language_testcase_wallet_abi_walletconnect_coordinator_kts(
+) -> Result<(), Box<dyn std::error::Error>> {
+    run_simplicity_kotlin_test("tests/bindings/wallet_abi_walletconnect_coordinator.kts")
+}

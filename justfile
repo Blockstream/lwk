@@ -41,6 +41,11 @@ simplicity-wallet-abi-check:
     cargo -q check -p lwk_bindings --features simplicity
     cargo -q check -p lwk_wasm --features simplicity
 
+# Validate the WalletConnect coordinator unit path and Kotlin foreign bindings.
+walletconnect-coordinator-check:
+    cargo -q test -p lwk_bindings --features simplicity walletconnect_coordinator
+    cargo -q test -p lwk_bindings --features foreign_bindings,simplicity uniffi_foreign_language_testcase_wallet_abi_walletconnect_coordinator_kts
+
 # Validate the npm wallet ABI SDK package and workspace checks with Simplicity enabled.
 wallet-abi-sdk-check:
     cd lwk_wasm/npm && LWK_WASM_FEATURES="serial,simplicity" npm run check
@@ -55,6 +60,10 @@ wasm-npm-test-publish-check:
     cd lwk_wasm/npm && LWK_WASM_FEATURES="serial,simplicity" npm run typecheck
     cd lwk_wasm/npm && LWK_WASM_FEATURES="serial,simplicity" npm run test
     cd lwk_wasm/npm && LWK_WASM_FEATURES="serial,simplicity" npm run pack:check
+
+# Run the manual WalletConnect live smoke scaffold from the wallet-abi harness workspace.
+walletconnect-live-smoke:
+    cd lwk_wasm/npm/packages/wallet-abi-harness && npm run test:live
 
 # build the python bindings and start a python env with them
 python-env-bindings: python-build-bindings

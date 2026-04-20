@@ -92,6 +92,21 @@ impl TxsOpt {
     }
 }
 
+/// Options for transaction details
+#[derive(Debug)]
+#[wasm_bindgen]
+pub struct TxOpt {
+    inner: lwk_wollet::TxOpt,
+}
+
+#[wasm_bindgen]
+impl TxOpt {
+    pub fn default() -> Self {
+        let inner = lwk_wollet::TxOpt::default();
+        Self { inner }
+    }
+}
+
 #[wasm_bindgen]
 impl Wollet {
     /// Get the transaction list
@@ -116,5 +131,14 @@ impl Wollet {
         Ok(self.inner().txs(&opt)?.len())
     }
 
-    // TODO: tx_details
+    /// Get the details of a transaction
+    ///
+    /// **Unstable**: This API may change without notice.
+    #[wasm_bindgen(js_name = txDetails)]
+    pub fn tx_details(&self, txid: &Txid, opt: &TxOpt) -> Result<Option<TxDetails>, Error> {
+        Ok(self
+            .inner()
+            .tx_details(&txid.into(), &opt.inner)?
+            .map(Into::into))
+    }
 }

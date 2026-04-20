@@ -52,11 +52,11 @@ impl Network {
     }
 
     /// Return the policy asset for this network.
-    pub fn policy_asset(&self) -> &'static AssetId {
+    pub fn policy_asset(&self) -> AssetId {
         match self {
-            Network::Liquid => &AssetId::LIQUID_BTC,
-            Network::LiquidTestnet => LIQUID_TESTNET_POLICY_ASSET,
-            Network::ElementsRegtest { .. } => LIQUID_REGTEST_POLICY_ASSET,
+            Network::Liquid => AssetId::LIQUID_BTC,
+            Network::LiquidTestnet => *LIQUID_TESTNET_POLICY_ASSET,
+            Network::ElementsRegtest { policy_asset } => *policy_asset,
         }
     }
 

@@ -103,7 +103,6 @@ mod elements_wallet;
 mod error;
 mod liquidex;
 mod model;
-mod network;
 pub mod pegin;
 mod tx_details;
 
@@ -133,7 +132,6 @@ pub use crate::model::{
     AddressResult, ExternalUtxo, IssuanceDetails, Recipient, UnvalidatedRecipient, WalletTx,
     WalletTxOut,
 };
-pub use crate::network::ElementsNetwork;
 pub use crate::pegin::fed_peg_script;
 #[cfg(feature = "registry")]
 pub use crate::registry::RegistryAssetData;
@@ -149,6 +147,8 @@ pub use lwk_common::{
     BoxError, DynStore, EncryptedStore, EncryptedStoreError, FakeStore, FileStore, MemoryStore,
     Store,
 };
+
+pub use lwk_common::Network as ElementsNetwork;
 
 #[cfg(feature = "prices")]
 pub use crate::prices::{

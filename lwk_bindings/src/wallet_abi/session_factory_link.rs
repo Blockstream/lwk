@@ -1,6 +1,7 @@
 use std::future::Future;
 use std::sync::Arc;
 
+use crate::wallet_abi::request_session::session_to_runtime;
 use crate::{LwkError, WalletAbiRequestSession};
 
 use lwk_simplicity::wallet_abi::WalletSessionFactory;
@@ -46,25 +47,9 @@ impl WalletSessionFactory for WalletSessionFactoryLink {
         let result = self
             .inner
             .open_wallet_request_session()
-            .map(session_from_binding)
+            .map(|session| session_to_runtime(&session))
             .map_err(|error| WalletSessionFactoryLinkError::Foreign(format!("{error:?}")));
         async move { result }
-    }
-}
-
-fn session_from_binding(
-    session: WalletAbiRequestSession,
-) -> lwk_simplicity::wallet_abi::WalletRequestSession {
-    lwk_simplicity::wallet_abi::WalletRequestSession {
-        session_id: session.session_id,
-        network: session.network.as_ref().into(),
-        spendable_utxos: Arc::from(
-            session
-                .spendable_utxos
-                .into_iter()
-                .map(|utxo| utxo.as_ref().into())
-                .collect::<Vec<_>>(),
-        ),
     }
 }
 

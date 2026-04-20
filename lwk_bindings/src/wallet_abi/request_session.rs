@@ -13,6 +13,37 @@ pub struct WalletAbiRequestSession {
     pub spendable_utxos: Vec<Arc<ExternalUtxo>>,
 }
 
+pub(crate) fn session_to_runtime(
+    session: &WalletAbiRequestSession,
+) -> lwk_simplicity::wallet_abi::WalletRequestSession {
+    lwk_simplicity::wallet_abi::WalletRequestSession {
+        session_id: session.session_id.clone(),
+        network: session.network.as_ref().into(),
+        spendable_utxos: Arc::from(
+            session
+                .spendable_utxos
+                .iter()
+                .map(|utxo| utxo.as_ref().into())
+                .collect::<Vec<_>>(),
+        ),
+    }
+}
+
+pub(crate) fn session_from_runtime(
+    session: &lwk_simplicity::wallet_abi::WalletRequestSession,
+) -> WalletAbiRequestSession {
+    WalletAbiRequestSession {
+        session_id: session.session_id.clone(),
+        network: Arc::new(session.network.into()),
+        spendable_utxos: session
+            .spendable_utxos
+            .iter()
+            .cloned()
+            .map(|utxo| Arc::new(utxo.into()))
+            .collect(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;

@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use crate::{
-    LwkError, WalletAbiRequestSession, WalletAbiWalletOutputRequest, WalletAbiWalletOutputTemplate,
+    wallet_abi::request_session::session_from_runtime, LwkError, WalletAbiRequestSession,
+    WalletAbiWalletOutputRequest, WalletAbiWalletOutputTemplate,
 };
 
 use lwk_simplicity::wallet_abi::{
@@ -51,19 +52,7 @@ impl WalletOutputAllocator for WalletOutputAllocatorLink {
         request: &WalletOutputRequest,
     ) -> Result<WalletOutputTemplate, Self::Error> {
         self.inner
-            .get_wallet_output_template(
-                WalletAbiRequestSession {
-                    session_id: session.session_id.clone(),
-                    network: Arc::new(session.network.into()),
-                    spendable_utxos: session
-                        .spendable_utxos
-                        .iter()
-                        .cloned()
-                        .map(|utxo| Arc::new(utxo.into()))
-                        .collect(),
-                },
-                request.into(),
-            )
+            .get_wallet_output_template(session_from_runtime(session), request.into())
             .map(template_from_binding)
             .map_err(|error| WalletOutputAllocatorLinkError::Foreign(format!("{error:?}")))
     }

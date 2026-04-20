@@ -149,6 +149,12 @@ impl From<Txid> for elements::Txid {
     }
 }
 
+impl From<&Txid> for elements::Txid {
+    fn from(value: &Txid) -> Self {
+        value.inner
+    }
+}
+
 #[wasm_bindgen]
 impl Txid {
     /// Creates a `Txid` from its hex string representation (64 characters).

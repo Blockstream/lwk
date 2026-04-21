@@ -188,7 +188,7 @@ impl Update {
     ///
     /// NOTE: it's caller responsibility to ensure that the following update is the next in sequence
     /// and updates are not mixed up.
-    pub(crate) fn merge(&mut self, following: Update) {
+    fn merge(&mut self, following: Update) {
         // By construction there should not be duplicate txs,
         // even if so when merged in the hashmap they will be overridden.
         self.new_txs.txs.extend(following.new_txs.txs);
@@ -246,7 +246,7 @@ fn default_blockheader() -> BlockHeader {
 /// Length of the zero-padded update key format (e.g., "000000000000")
 const UPDATE_KEY_LEN: usize = 12;
 
-pub(crate) fn update_key(index: usize) -> String {
+fn update_key(index: usize) -> String {
     format!("{index:0>width$}", width = UPDATE_KEY_LEN)
 }
 
@@ -397,7 +397,7 @@ impl Wollet {
         self.apply_update_inner(update, true)
     }
 
-    pub(crate) fn apply_update_inner(
+    fn apply_update_inner(
         &mut self,
         update: Update,
         skip_persist: bool,
@@ -558,7 +558,7 @@ impl Wollet {
         Ok(())
     }
 
-    pub(crate) fn merge_updates(&self, next_index: usize) -> Result<usize, Error> {
+    fn merge_updates(&self, next_index: usize) -> Result<usize, Error> {
         match self.merge_threshold() {
             Some(threshold) if threshold < next_index => (),
             _ => return Ok(next_index), // Not merging

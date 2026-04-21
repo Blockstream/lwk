@@ -288,8 +288,7 @@ impl Wollet {
     pub(crate) fn restore_updates(&mut self) -> Result<(), Error> {
         for i in 0.. {
             if let Some(update) = self.get_update(i)? {
-                let skip_persist = true;
-                self.apply_update_inner(update, skip_persist)?;
+                self.apply_update_inner(update)?;
             } else {
                 let mut next_update_index = self.next_update_index()?;
                 *next_update_index = self.merge_updates(i)?;
@@ -368,7 +367,10 @@ impl Wollet {
             unspent,
         };
 
-        self.apply_update_inner(update, skip_persist)?;
+        self.apply_update_inner(update.clone())?;
+        if !skip_persist {
+            self.persist_update(update)?;
+        }
         let final_balance = self.balance()?;
         Ok(final_balance - initial_balance)
     }
@@ -388,20 +390,17 @@ impl Wollet {
     /// will cause this function to return a [`Error::UpdateOnDifferentStatus`].
     /// Callers should either avoid applying updates and transactions, or they can catch the error and wait for a new full scan to be completed and applied.
     pub fn apply_update(&mut self, update: Update) -> Result<(), Error> {
-        self.apply_update_inner(update, false)
+        self.apply_update_inner(update.clone())?;
+        self.persist_update(update)
     }
 
     /// Same as [`Wollet::apply_update()`] but only apply the update in memory, without persisting it.
     #[deprecated(since = "0.17.0", note = "please use `apply_update`")]
     pub fn apply_update_no_persist(&mut self, update: Update) -> Result<(), Error> {
-        self.apply_update_inner(update, true)
+        self.apply_update_inner(update)
     }
 
-    fn apply_update_inner(
-        &mut self,
-        update: Update,
-        skip_persist: bool,
-    ) -> Result<(), Error> {
+    fn apply_update_inner(&mut self, update: Update) -> Result<(), Error> {
         // TODO should accept &Update
 
         if update.wollet_status != 0 {
@@ -426,7 +425,7 @@ impl Wollet {
             scripts_with_blinding_pubkey,
             tip,
             unspent,
-        } = update.clone();
+        } = update;
 
         let scripts_with_blinding_pubkey =
             compute_blinding_pubkey_if_missing(scripts_with_blinding_pubkey, descriptor)?;
@@ -514,10 +513,6 @@ impl Wollet {
             cache
                 .last_unused_internal
                 .fetch_max(last_used_internal + 1, atomic::Ordering::Relaxed);
-        }
-
-        if !skip_persist {
-            self.persist_update(update)?;
         }
 
         Ok(())
@@ -943,17 +938,19 @@ impl Decodable for Update {
 
 #[cfg(test)]
 mod test {
-    use std::sync::Arc;
     use lwk_common::DynStore;
+    use std::sync::Arc;
 
     use elements::{
         encode::{Decodable, Encodable},
         Script,
     };
 
-    use crate::{update::DownloadTxResult, Chain, Update, WolletBuilder, WolletDescriptor, ElementsNetwork};
+    use crate::{
+        update::DownloadTxResult, Chain, ElementsNetwork, Update, WolletBuilder, WolletDescriptor,
+    };
 
-    use super::{EncodableTxOutSecrets, update_key};
+    use super::{update_key, EncodableTxOutSecrets};
 
     pub fn download_tx_result_test_vector() -> DownloadTxResult {
         // there are issue in moving this in test_util

@@ -47,6 +47,7 @@ impl TxDetails {
     /// however might be inaccurate. Use this if you want a simple
     /// description of what this transaction is doing, but do
     /// not rely on the value returned.
+    #[wasm_bindgen(js_name = txType)]
     pub fn tx_type(&self) -> String {
         self.inner.tx_type().into()
     }

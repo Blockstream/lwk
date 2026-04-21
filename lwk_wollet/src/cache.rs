@@ -303,8 +303,8 @@ impl Cache {
         self.heights.extend(new.iter().copied());
     }
 
-    fn extend_all_txs(&mut self, txs: Vec<(Txid, Transaction)>) -> Result<(), Error> {
-        for (txid, tx) in &txs {
+    fn extend_all_txs(&mut self, txs: &[(Txid, Transaction)]) -> Result<(), Error> {
+        for (txid, tx) in txs {
             self.txs_store
                 .put(&tx_key(txid), &elements::encode::serialize(tx))
                 .map_err(Error::StoreError)?;
@@ -331,7 +331,7 @@ impl Cache {
         unspent: Vec<OutPoint>,
     ) -> Result<(), Error> {
         // TODO: cleanup this functions
-        self.extend_all_txs(txs)?;
+        self.extend_all_txs(&txs)?;
         self.update_heights(txid_height_new, deleted_txids);
         self.rebuild_sorted_txids();
         if utxo_only {

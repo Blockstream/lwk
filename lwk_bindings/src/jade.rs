@@ -295,7 +295,7 @@ mod tests {
     const P2PK_SOURCE: &str = include_str!("../../lwk_simplicity/data/p2pk.simf");
 
     #[test]
-    fn jade_signs_only_wallet_input_in_mixed_simplicity_pset() {
+    fn jade_signs_explicit_wallet_input_and_skips_simplicity_input() {
         let env = lwk_test_util::TestEnvBuilder::from_env()
             .with_electrum()
             .build();
@@ -317,11 +317,13 @@ mod tests {
             .unwrap();
 
         let wallet_funding_address = jade_wollet.address(Some(0)).unwrap();
+        let explicit_wallet_address = wallet_funding_address.address().to_unconfidential();
         let wallet_funding_txid =
-            env.elementsd_sendtoaddress(wallet_funding_address.address(), 10_000, None);
+            env.elementsd_sendtoaddress(&explicit_wallet_address, 10_000, None);
         env.elementsd_generate(1);
         wait_for_tx(&mut jade_wollet, &mut client, &wallet_funding_txid);
-        assert_eq!(jade_wollet.utxos().unwrap().len(), 1);
+        let jade_explicit_utxos = jade_wollet.explicit_utxos().unwrap();
+        assert_eq!(jade_explicit_utxos.len(), 1);
 
         let (simplicity_address, mut simplicity_wollet) = simplicity_p2pk_wallet(network);
         let asset_amount = 1;
@@ -337,14 +339,16 @@ mod tests {
         let simplicity_utxos = simplicity_wollet.explicit_utxos().unwrap();
         assert_eq!(simplicity_utxos.len(), 1);
 
+        let mut external_utxos = simplicity_utxos;
+        external_utxos.extend(jade_explicit_utxos);
+
         let node_address = env.elementsd_getnewaddress().to_unconfidential();
         let pset = jade_wollet
             .tx_builder()
             .add_explicit_recipient(&node_address, asset_amount, asset)
             .unwrap()
-            .add_external_utxos(simplicity_utxos)
+            .add_external_utxos(external_utxos)
             .unwrap()
-            .drain_lbtc_wallet()
             .finish()
             .unwrap();
         assert_eq!(pset.inputs().len(), 2);
@@ -352,15 +356,15 @@ mod tests {
         let wallet_input_index = wallet_input_index(&pset, &jade_fingerprint);
         let simplicity_input_index = simplicity_input_index(&pset, &jade_fingerprint);
         assert_ne!(wallet_input_index, simplicity_input_index);
+        assert!(is_explicit_input(&pset.inputs()[wallet_input_index]));
 
         for input in pset.inputs() {
             assert!(input.partial_sigs.is_empty());
         }
-        assert!(
-            pset.outputs()
-                .iter()
-                .any(|output| is_explicit_normal_output(output))
-        );
+        assert!(pset
+            .outputs()
+            .iter()
+            .any(|output| is_explicit_normal_output(output)));
         assert!(!has_jade_derivation(
             &pset.inputs()[simplicity_input_index],
             &jade_fingerprint
@@ -447,6 +451,14 @@ mod tests {
     fn is_p2tr_script(script: &elements::Script) -> bool {
         let bytes = script.as_bytes();
         bytes.len() == 34 && bytes[0] == 0x51 && bytes[1] == 0x20
+    }
+
+    fn is_explicit_input(input: &elements::pset::Input) -> bool {
+        input
+            .witness_utxo
+            .as_ref()
+            .map(|utxo| matches!(utxo.value, elements::confidential::Value::Explicit(_)))
+            .unwrap_or(false)
     }
 
     fn is_explicit_normal_output(output: &elements::pset::Output) -> bool {

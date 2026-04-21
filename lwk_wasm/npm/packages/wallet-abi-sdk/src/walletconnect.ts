@@ -519,9 +519,24 @@ export async function awaitWalletAbiApprovedSession({
       throw error;
     });
 
+  const sessionPollPromise = new Promise<SessionTypes.Struct>(
+    async (resolve) => {
+      while (active) {
+        const nextSession = currentWalletAbiSession(signClient, chainId);
+        if (nextSession !== null) {
+          stopWaiting();
+          resolve(nextSession);
+          return;
+        }
+
+        await sleep(sessionPollMs);
+      }
+    },
+  );
+
   try {
     return await withTimeout(
-      Promise.race([approvalPromise, sessionConnectPromise]),
+      Promise.race([approvalPromise, sessionConnectPromise, sessionPollPromise]),
       connectTimeoutMs,
       "WalletConnect session approval timed out",
     );

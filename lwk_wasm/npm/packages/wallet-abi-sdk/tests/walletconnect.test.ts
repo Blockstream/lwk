@@ -350,6 +350,51 @@ test("walletconnect approval wait falls back to connected session", async () => 
   assert.equal(listeners.size, 0);
 });
 
+test("walletconnect approval wait polls while approval is pending", async () => {
+  const chainId = "walabi:testnet-liquid";
+  const session = {
+    topic: "topic-polled",
+    expiry: 10,
+    namespaces: {
+      walabi: {
+        methods: [...WALLET_ABI_WALLETCONNECT_METHODS],
+        chains: [chainId],
+        events: [],
+        accounts: [`${chainId}:wallet`],
+      },
+    },
+    requiredNamespaces: {
+      walabi: {
+        methods: [...WALLET_ABI_WALLETCONNECT_METHODS],
+        chains: [chainId],
+        events: [],
+      },
+    },
+  } as unknown as SessionTypes.Struct;
+  let polls = 0;
+
+  const result = await awaitWalletAbiApprovedSession({
+    approval() {
+      return new Promise<SessionTypes.Struct>(() => {});
+    },
+    signClient: {
+      session: {
+        getAll() {
+          polls += 1;
+          return polls >= 2 ? [session] : [];
+        },
+      },
+      on() {},
+      off() {},
+    },
+    chainId,
+    connectTimeoutMs: 100,
+    sessionPollMs: 5,
+  });
+
+  assert.equal(result.topic, "topic-polled");
+});
+
 test("walletconnect session controller factory is exported", () => {
   assert.equal(typeof createWalletAbiSessionController, "function");
 });

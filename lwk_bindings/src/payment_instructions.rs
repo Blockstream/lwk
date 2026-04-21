@@ -160,63 +160,9 @@ impl Payment {
             .map(|addr| Arc::new(Address::from(addr.clone())))
     }
 
-    /// Returns the Lightning invoice if this is a `LightningInvoice` category, `None` otherwise
-    #[cfg(feature = "lightning")]
-    pub fn lightning_invoice(&self) -> Option<Arc<crate::Bolt11Invoice>> {
-        self.inner
-            .lightning_invoice()
-            .and_then(|inv| crate::Bolt11Invoice::new(&inv.to_string()).ok())
-    }
-
     /// Returns the Lightning offer as a string if this is a LightningOffer category, None otherwise
     pub fn lightning_offer(&self) -> Option<String> {
         self.inner.lightning_offer().map(|offer| offer.to_string())
-    }
-
-    /// Resolves a BIP353 payment instruction into a LightningOffer payment.
-    #[cfg(feature = "lightning")]
-    pub fn resolve_bip353(&self) -> Result<Arc<Self>, LwkError> {
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
-        let inner = runtime
-            .block_on(self.inner.resolve_bip353())
-            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
-        Ok(Arc::new(Self { inner }))
-    }
-
-    /// Resolves a LNURL into its metadata (first step of LNURL-pay).
-    #[cfg(feature = "lightning")]
-    pub fn resolve_lnurl_info(&self) -> Result<LnUrlPayResponse, LwkError> {
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
-        let inner = runtime
-            .block_on(self.inner.resolve_lnurl_info())
-            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
-        Ok(inner.into())
-    }
-
-    /// Fetches a Bolt11 invoice from a LNURL callback (second step of LNURL-pay).
-    #[cfg(feature = "lightning")]
-    pub fn fetch_lnurl_invoice(
-        &self,
-        info: &LnUrlPayResponse,
-        amount_sats: u64,
-    ) -> Result<Arc<Self>, LwkError> {
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
-        let inner = runtime
-            .block_on(lwk_payment_instructions::Payment::fetch_lnurl_invoice(
-                &info.into(),
-                amount_sats,
-            ))
-            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
-        Ok(Arc::new(Self { inner }))
     }
 
     /// Returns the LNURL as a string if this is an LnUrl category, None otherwise
@@ -251,12 +197,65 @@ impl Payment {
             satoshi: bip21.satoshi,
         })
     }
+}
+
+#[cfg(feature = "lightning")]
+#[uniffi::export]
+impl Payment {
+    /// Returns the Lightning invoice if this is a `LightningInvoice` category, `None` otherwise
+    pub fn lightning_invoice(&self) -> Option<Arc<crate::Bolt11Invoice>> {
+        self.inner
+            .lightning_invoice()
+            .and_then(|inv| crate::Bolt11Invoice::new(&inv.to_string()).ok())
+    }
+
+    /// Resolves a BIP353 payment instruction into a LightningOffer payment.
+    pub fn resolve_bip353(&self) -> Result<Arc<Self>, LwkError> {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+        let inner = runtime
+            .block_on(self.inner.resolve_bip353())
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+        Ok(Arc::new(Self { inner }))
+    }
+
+    /// Resolves a LNURL into its metadata (first step of LNURL-pay).
+    pub fn resolve_lnurl_info(&self) -> Result<LnUrlPayResponse, LwkError> {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+        let inner = runtime
+            .block_on(self.inner.resolve_lnurl_info())
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+        Ok(inner.into())
+    }
+
+    /// Fetches a Bolt11 invoice from a LNURL callback (second step of LNURL-pay).
+    pub fn fetch_lnurl_invoice(
+        &self,
+        info: &LnUrlPayResponse,
+        amount_sats: u64,
+    ) -> Result<Arc<Self>, LwkError> {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+        let inner = runtime
+            .block_on(lwk_payment_instructions::Payment::fetch_lnurl_invoice(
+                &info.into(),
+                amount_sats,
+            ))
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+        Ok(Arc::new(Self { inner }))
+    }
 
     /// Returns a `LightningPayment`` if this category is payable via Lightning
     ///
     /// Returns `Some` for `LightningInvoice`, `LightningOffer`, and `LnUrl` categories.
     /// The returned `LightningPayment` can be used with `BoltzSession::prepare_pay()`.
-    #[cfg(feature = "lightning")]
     pub fn lightning_payment(&self) -> Option<Arc<crate::LightningPayment>> {
         use lwk_payment_instructions::Payment as P;
         match &self.inner {

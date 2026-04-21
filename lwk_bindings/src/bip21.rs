@@ -60,14 +60,6 @@ impl Bip21 {
         self.inner.message()
     }
 
-    /// Returns the lightning BOLT11 invoice as a string if present
-    #[cfg(feature = "lightning")]
-    pub fn lightning(&self) -> Option<Arc<crate::Bolt11Invoice>> {
-        self.inner
-            .lightning()
-            .and_then(|inv| crate::Bolt11Invoice::new(&inv.to_string()).ok())
-    }
-
     /// Returns the BOLT12 offer as a string if present
     pub fn offer(&self) -> Option<String> {
         self.inner.offer().map(|o| o.to_string())
@@ -86,5 +78,16 @@ impl Bip21 {
     /// Returns the silent payment address (BIP-352) if present
     pub fn silent_payment_address(&self) -> Option<String> {
         self.inner.silent_payment_address().map(|sp| sp.to_string())
+    }
+}
+
+#[cfg(feature = "lightning")]
+#[uniffi::export]
+impl Bip21 {
+    /// Returns the lightning BOLT11 invoice as a string if present
+    pub fn lightning(&self) -> Option<Arc<crate::Bolt11Invoice>> {
+        self.inner
+            .lightning()
+            .and_then(|inv| crate::Bolt11Invoice::new(&inv.to_string()).ok())
     }
 }

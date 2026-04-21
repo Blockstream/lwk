@@ -100,15 +100,21 @@ mod tests {
     #[wasm_bindgen_test]
     async fn test_amp2() {
         let expected = "ct(slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67),elwsh(multi(2,[3d970d04/87'/1'/0']tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd/<0;1>/*,[c67f5991/87'/1'/0']tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj/<0;1>/*)))#6j2fne4s";
+        let descriptor_blinding_key =
+            "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)";
         let k = "[c67f5991/87'/1'/0']tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj";
         let amp2 = Amp2::new_testnet();
-        let d = amp2.descriptor_from_str(k).unwrap();
+        let d = amp2
+            .descriptor_from_str(k, descriptor_blinding_key)
+            .unwrap();
         assert_eq!(d.descriptor().to_string(), expected);
 
         let server_key = "[3d970d04/87h/1h/0h]tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
         let url = "http://127.0.0.1:5000";
         let amp2 = Amp2::new(server_key.into(), url.into()).unwrap();
-        let d = amp2.descriptor_from_str(k).unwrap();
+        let d = amp2
+            .descriptor_from_str(k, descriptor_blinding_key)
+            .unwrap();
         assert_eq!(d.descriptor().to_string(), expected);
     }
 }

@@ -176,10 +176,10 @@ mod transport_tests {
         wait_for_tx(&mut jade_wollet, &mut client, &wallet_funding_txid);
         assert_eq!(jade_wollet.utxos().unwrap().len(), 1);
 
-        let node_address = env.elementsd_getnewaddress();
+        let node_address = env.elementsd_getnewaddress().to_unconfidential();
         let pset = jade_wollet
             .tx_builder()
-            .add_recipient(&node_address, 1_000, jade_wollet.policy_asset())
+            .add_explicit_recipient(&node_address, 1_000, jade_wollet.policy_asset())
             .unwrap()
             .finish()
             .unwrap();
@@ -337,10 +337,10 @@ mod tests {
         let simplicity_utxos = simplicity_wollet.explicit_utxos().unwrap();
         assert_eq!(simplicity_utxos.len(), 1);
 
-        let node_address = env.elementsd_getnewaddress();
+        let node_address = env.elementsd_getnewaddress().to_unconfidential();
         let pset = jade_wollet
             .tx_builder()
-            .add_recipient(&node_address, asset_amount, asset)
+            .add_explicit_recipient(&node_address, asset_amount, asset)
             .unwrap()
             .add_external_utxos(simplicity_utxos)
             .unwrap()
@@ -356,6 +356,11 @@ mod tests {
         for input in pset.inputs() {
             assert!(input.partial_sigs.is_empty());
         }
+        assert!(
+            pset.outputs()
+                .iter()
+                .any(|output| is_explicit_normal_output(output))
+        );
         assert!(!has_jade_derivation(
             &pset.inputs()[simplicity_input_index],
             &jade_fingerprint
@@ -442,6 +447,16 @@ mod tests {
     fn is_p2tr_script(script: &elements::Script) -> bool {
         let bytes = script.as_bytes();
         bytes.len() == 34 && bytes[0] == 0x51 && bytes[1] == 0x20
+    }
+
+    fn is_explicit_normal_output(output: &elements::pset::Output) -> bool {
+        !output.script_pubkey.is_empty()
+            && output.script_pubkey != lwk_common::burn_script()
+            && output.blinding_key.is_none()
+            && output.asset_comm.is_none()
+            && output.amount_comm.is_none()
+            && output.blind_asset_proof.is_none()
+            && output.blind_value_proof.is_none()
     }
 
     fn pset_without_partial_sigs(

@@ -117,6 +117,14 @@ pub(crate) fn json_to_cbor(value: &serde_json::Value) -> Result<serde_cbor::Valu
     Ok(serde_cbor::from_slice(&serde_cbor::to_vec(&value)?)?)
 }
 
+fn is_explicit_output(output: &elements::pset::Output) -> bool {
+    output.blinding_key.is_none()
+        && output.asset_comm.is_none()
+        && output.amount_comm.is_none()
+        && output.blind_asset_proof.is_none()
+        && output.blind_value_proof.is_none()
+}
+
 fn create_jade_sign_req(
     pset: &mut PartiallySignedTransaction,
     my_fingerprint: Fingerprint,
@@ -134,7 +142,9 @@ fn create_jade_sign_req(
         asset_ids_in_tx.insert(asset_id);
         let mut asset_id = serialize(&asset_id);
         asset_id.reverse(); // Jade want it reversed
-        let unblinded = output.script_pubkey.is_empty() || output.script_pubkey == burn_script;
+        let unblinded = output.script_pubkey.is_empty()
+            || output.script_pubkey == burn_script
+            || is_explicit_output(output);
         let trusted_commitment = if unblinded {
             // fee output or burn output
             None

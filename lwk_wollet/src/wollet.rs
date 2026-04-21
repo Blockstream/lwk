@@ -12,9 +12,10 @@ use crate::model::{
     AddressResult, BitcoinAddressResult, ExternalUtxo, IssuanceDetails, WalletTx, WalletTxOut,
 };
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
+use crate::update::UpdatesPersister;
 use crate::util::EC;
 use crate::ElementsNetwork;
-use crate::{BlindingPublicKey, Update, WolletDescriptor};
+use crate::{BlindingPublicKey, WolletDescriptor};
 use elements::bitcoin::bip32::ChildNumber;
 use elements::{bitcoin, Address};
 use elements_miniscript::psbt::PsbtExt;
@@ -30,7 +31,7 @@ use lwk_common::{
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hasher;
 use std::path::Path;
-use std::sync::{atomic, Arc, Mutex};
+use std::sync::{atomic, Arc};
 
 sha256t_hash_newtype! {
     /// The tag of the hash
@@ -41,22 +42,15 @@ sha256t_hash_newtype! {
     pub struct DirectoryIdHash(_);
 }
 
-/// Length of the zero-padded update key format (e.g., "000000000000")
-const UPDATE_KEY_LEN: usize = 12;
-
-pub(crate) fn update_key(index: usize) -> String {
-    format!("{index:0>width$}", width = UPDATE_KEY_LEN)
-}
-
 /// A watch-only wallet defined by a CT descriptor.
 pub struct Wollet {
     pub(crate) network: ElementsNetwork,
     pub(crate) cache: Cache,
-    pub(crate) store: Arc<dyn DynStore>,
     pub(crate) descriptor: WolletDescriptor,
-    /// Counter for the next update key
-    pub(crate) next_update_index: Mutex<usize>,
-    pub(crate) merge_threshold: Option<usize>,
+
+    // Fields for managing `Update`s
+    pub(crate) updates_persister: UpdatesPersister,
+
     /// cached value
     max_weight_to_satisfy: usize,
     utxo_only: bool,
@@ -66,11 +60,11 @@ pub struct Wollet {
 pub struct WolletBuilder {
     network: ElementsNetwork,
     descriptor: WolletDescriptor,
-    store: Arc<dyn DynStore>,
-    txs_store: Arc<dyn DynStore>,
-    encrypt_txs_store: bool,
+    updates_store: Arc<dyn DynStore>,
     /// Number of updates to trigger merge. None disables merging.
     merge_threshold: Option<usize>,
+    txs_store: Arc<dyn DynStore>,
+    encrypt_txs_store: bool,
     utxo_only: bool,
 }
 
@@ -80,7 +74,7 @@ impl WolletBuilder {
         Self {
             network,
             descriptor,
-            store: Arc::new(FakeStore::new()),
+            updates_store: Arc::new(FakeStore::new()),
             txs_store: Arc::new(MemoryStore::new()),
             encrypt_txs_store: false,
             merge_threshold: None,
@@ -111,7 +105,7 @@ impl WolletBuilder {
 
     /// Specify the `Wollet` store for persistence
     pub fn with_store(mut self, store: Arc<dyn DynStore>) -> Self {
-        self.store = store;
+        self.updates_store = store;
         self
     }
 
@@ -139,7 +133,7 @@ impl WolletBuilder {
         let key_bytes = self.descriptor.encryption_key_bytes();
         let encrypted_store = EncryptedStore::new(file_store, key_bytes);
 
-        self.store = Arc::new(encrypted_store);
+        self.updates_store = Arc::new(encrypted_store);
         Ok(self)
     }
 
@@ -165,37 +159,17 @@ impl WolletBuilder {
             Ok(d) => d.max_weight_to_satisfy()?,
             Err(_) => 0, // If we don't have the descriptor we don't know this value
         };
+        let updates_persister = UpdatesPersister::new(self.updates_store, self.merge_threshold);
         let mut wollet = Wollet {
             cache,
             network: self.network,
             descriptor: self.descriptor,
-            store: self.store,
-            next_update_index: Mutex::new(0),
+            updates_persister,
             max_weight_to_satisfy,
-            merge_threshold: self.merge_threshold,
             utxo_only: self.utxo_only,
         };
 
-        // Restore updates from the store using indexed keys
-        for i in 0.. {
-            let key = update_key(i);
-            match wollet.store.get(&key) {
-                Ok(Some(bytes)) => {
-                    let update = Update::deserialize(&bytes)?;
-                    let skip_persist = true;
-                    wollet.apply_update_inner(update, skip_persist)?;
-                }
-                Ok(None) => {
-                    let mut next_update_index = wollet
-                        .next_update_index
-                        .lock()
-                        .map_err(|_| Error::Generic("next_update_index lock poisoned".into()))?;
-                    *next_update_index = wollet.merge_updates(i)?;
-                    break;
-                }
-                Err(e) => return Err(Error::Generic(format!("store error: {e}"))),
-            }
-        }
+        wollet.restore_updates()?;
 
         wollet.cache.add_txids_from_txs_store();
         Ok(wollet)
@@ -1173,24 +1147,6 @@ impl Wollet {
         Ok(pset.extract_tx()?)
     }
 
-    /// Get all the persisted updates of this wallet.
-    /// Applying in the same order these updates to an empty wallet, recreates this wallet state.
-    pub fn updates(&self) -> Result<Vec<Update>, Error> {
-        let mut updates = vec![];
-        for i in 0.. {
-            let key = update_key(i);
-            match self.store.get(&key) {
-                Ok(Some(bytes)) => {
-                    let update = Update::deserialize(&bytes)?;
-                    updates.push(update);
-                }
-                Ok(None) => break,
-                Err(e) => return Err(Error::Generic(format!("store error: {e}"))),
-            }
-        }
-        Ok(updates)
-    }
-
     /// A deterministic value derived from the descriptor, the config and the content of this wollet,
     /// including what's in the wallet cache (transactions etc)
     ///
@@ -1384,7 +1340,7 @@ mod tests {
     use crate::elements::bitcoin::bip32::{Xpriv, Xpub};
     use crate::elements::bitcoin::network::Network;
     use crate::elements::AddressParams;
-    use crate::DownloadTxResult;
+    use crate::{DownloadTxResult, Update};
     use elements_miniscript::confidential::bare::tweak_private_key;
     use elements_miniscript::confidential::Key;
     use elements_miniscript::descriptor::checksum::desc_checksum;
@@ -1654,119 +1610,6 @@ mod tests {
         );
         assert_eq!(txs3.len(), 2, "Should have 2 transactions after sending");
         assert_eq!(utxos3.len(), 1, "Should have 1 UTXO after sending (change)");
-    }
-
-    /// Test that verifies the merge functionality works correctly.
-    /// Creates 3 updates, stores them, builds with merge_threshold=Some(2),
-    /// and verifies they are merged into a single update.
-    ///
-    /// Expected final state (from lwk_test_util/test_data/merge_updates/README.md):
-    /// - Balance: 899,974 sats
-    /// - Transactions: 2
-    /// - UTXOs: 1 (change output)
-    #[test]
-    fn test_merge_updates() {
-        use lwk_common::MemoryStore;
-        use lwk_test_util::{
-            update_merge_test_1, update_merge_test_2, update_merge_test_3,
-            update_merge_test_descriptor,
-        };
-
-        // Load the descriptor
-        let desc_str = update_merge_test_descriptor();
-        let desc: WolletDescriptor = desc_str.parse().unwrap();
-
-        // Load the three updates
-        let update1_bytes = update_merge_test_1();
-        let update2_bytes = update_merge_test_2();
-        let update3_bytes = update_merge_test_3();
-
-        // Create a memory store and manually insert the updates
-        let store = Arc::new(MemoryStore::default());
-        store
-            .put(&update_key(0), &update1_bytes)
-            .expect("Failed to store update 0");
-        store
-            .put(&update_key(1), &update2_bytes)
-            .expect("Failed to store update 1");
-        store
-            .put(&update_key(2), &update3_bytes)
-            .expect("Failed to store update 2");
-
-        // Build with merge_threshold=Some(2) (should trigger merge since we have 3 updates)
-        let wollet = WolletBuilder::new(ElementsNetwork::default_regtest(), desc.clone())
-            .with_store(store.clone())
-            .with_merge_threshold(Some(2))
-            .build()
-            .expect("Failed to build wollet");
-
-        // Verify state is correct (hardcoded values from README.md)
-        let balance = wollet.balance().expect("Failed to get balance");
-        let txs = wollet.transactions().expect("Failed to get transactions");
-        let utxos = wollet.utxos().expect("Failed to get utxos");
-        let policy_asset = wollet.policy_asset();
-        let btc_balance = balance.get(&policy_asset).copied().unwrap_or(0);
-
-        // Expected final state: Balance 899,974, Transactions: 2, UTXOs: 1
-        assert_eq!(
-            btc_balance, 899_974,
-            "Balance should be exactly 899,974 sats after merging all updates"
-        );
-        assert_eq!(
-            txs.len(),
-            2,
-            "Should have exactly 2 transactions after merge"
-        );
-        assert_eq!(utxos.len(), 1, "Should have exactly 1 UTXO after merge");
-
-        // Verify that updates were merged - only update 0 should exist
-        assert!(
-            store.get(&update_key(0)).unwrap().is_some(),
-            "Update 0 should exist"
-        );
-        assert!(
-            store.get(&update_key(1)).unwrap().is_none(),
-            "Update 1 should have been deleted"
-        );
-        assert!(
-            store.get(&update_key(2)).unwrap().is_none(),
-            "Update 2 should have been deleted"
-        );
-        assert!(
-            store.get(&update_key(3)).unwrap().is_none(),
-            "Update 3 should have been deleted"
-        );
-
-        // Verify the merged update can be deserialized and applied to a fresh wallet
-        let merged_bytes = store.get(&update_key(0)).unwrap().unwrap();
-        let merged_update =
-            Update::deserialize(&merged_bytes).expect("Failed to deserialize merged update");
-
-        // Apply merged update to a fresh wallet
-        let mut fresh_wollet = WolletBuilder::new(ElementsNetwork::default_regtest(), desc.clone())
-            .build()
-            .unwrap();
-        fresh_wollet
-            .apply_update(merged_update)
-            .expect("Failed to apply merged update");
-
-        // Verify fresh wallet has same state
-        let fresh_balance = fresh_wollet.balance().unwrap();
-        let fresh_btc_balance = fresh_balance.get(&policy_asset).copied().unwrap_or(0);
-        assert_eq!(
-            btc_balance, fresh_btc_balance,
-            "Merged update should produce same balance"
-        );
-        assert_eq!(
-            wollet.transactions().unwrap().len(),
-            fresh_wollet.transactions().unwrap().len(),
-            "Merged update should produce same transaction count"
-        );
-        assert_eq!(
-            wollet.utxos().unwrap().len(),
-            fresh_wollet.utxos().unwrap().len(),
-            "Merged update should produce same UTXO count"
-        );
     }
 
     #[test]

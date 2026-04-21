@@ -26,10 +26,8 @@ pub fn simplicity_derive_xonly_pubkey(
 #[uniffi::export]
 pub fn simplicity_control_block(
     cmr: &Cmr,
-    internal_key: &XOnlyPublicKey,
 ) -> Result<Arc<ControlBlock>, LwkError> {
-    let internal_key = internal_key.to_simplicityhl()?;
-    let control_block = scripts::control_block(cmr.inner(), internal_key);
+    let control_block = scripts::control_block(cmr.inner());
     let serialized = control_block.serialize();
     ControlBlock::from_bytes(&serialized)
 }

@@ -1,3 +1,4 @@
+
 use simplicityhl::elements::{taproot, Address, AddressParams, Script};
 
 use simplicityhl::simplicity::bitcoin::{secp256k1, XOnlyPublicKey};
@@ -5,12 +6,29 @@ use simplicityhl::simplicity::hashes::{sha256, Hash, HashEngine};
 use simplicityhl::{Arguments, CompiledProgram};
 
 use crate::error::ProgramError;
+use crate::wallet_abi::schema::runtime_params::bip_0341_example_internal_key;
 
 /// Load program source and compile it to a Simplicity program.
 ///
 /// # Errors
 /// Returns error if the program fails to compile.
 pub fn load_program(source: &str, arguments: Arguments) -> Result<CompiledProgram, ProgramError> {
+    let compiled =
+        CompiledProgram::new(source, arguments, false).map_err(ProgramError::Compilation)?;
+
+    Ok(compiled)
+}
+
+/// Load program source and compile it to a Simplicity program using debug symbols.
+/// NOTE: **This should not be used in general**, but remains for existing legacy programs
+/// that were previously compiled with debug symbols.
+///
+/// # Errors
+/// Returns error if the program fails to compile.
+pub fn load_program_with_debug_symbols(
+    source: &str,
+    arguments: Arguments,
+) -> Result<CompiledProgram, ProgramError> {
     let compiled =
         CompiledProgram::new(source, arguments, true).map_err(ProgramError::Compilation)?;
 
@@ -19,6 +37,22 @@ pub fn load_program(source: &str, arguments: Arguments) -> Result<CompiledProgra
 
 /// Generate a non-confidential P2TR address for the given program CMR and key.
 pub fn create_p2tr_address(
+    cmr: simplicityhl::simplicity::Cmr,
+    params: &'static AddressParams,
+) -> Address {
+    let nums_key = bip_0341_example_internal_key();
+    let spend_info = taproot_spending_info(cmr, nums_key);
+
+    Address::p2tr(
+        secp256k1::SECP256K1,
+        spend_info.internal_key(),
+        spend_info.merkle_root(),
+        None,
+        params,
+    )
+}
+
+pub fn create_p2tr_address_with_pub_key(
     cmr: simplicityhl::simplicity::Cmr,
     x_only_public_key: &XOnlyPublicKey,
     params: &'static AddressParams,
@@ -57,11 +91,17 @@ pub fn tap_data_hash(data: &[u8]) -> sha256::Hash {
 /// # Panics
 ///
 /// Panics if the taproot tree is invalid (should never happen with valid CMR).
-pub fn control_block(
+pub fn control_block(cmr: simplicityhl::simplicity::Cmr) -> taproot::ControlBlock {
+    control_block_for_pub_key(cmr, bip_0341_example_internal_key())
+}
+
+///
+///
+pub fn control_block_for_pub_key(
     cmr: simplicityhl::simplicity::Cmr,
-    internal_key: XOnlyPublicKey,
+    pub_key: XOnlyPublicKey,
 ) -> taproot::ControlBlock {
-    let info = taproot_spending_info(cmr, internal_key);
+    let info = taproot_spending_info(cmr, pub_key);
     let script_ver = script_version(cmr);
 
     info.control_block(&script_ver)

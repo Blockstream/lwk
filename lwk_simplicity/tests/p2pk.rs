@@ -52,7 +52,7 @@ fn test_simplicity_p2pk() {
 
     // Create p2tr address
     let cmr = program.commit().cmr();
-    let address = create_p2tr_address(cmr, &xonly, params);
+    let address = create_p2tr_address(cmr, params);
     let spk = address.script_pubkey();
 
     // Create Wollet with the spk
@@ -93,8 +93,7 @@ fn test_simplicity_p2pk() {
 
     // Compute message and sign
     let input_index = 0;
-    let message =
-        get_sighash_all(&tx, &program, &xonly, &txouts, input_index, network.into()).unwrap();
+    let message = get_sighash_all(&tx, &program, &txouts, input_index, network.into()).unwrap();
 
     let signature = EC.sign_schnorr(&message, &keypair);
 
@@ -110,7 +109,6 @@ fn test_simplicity_p2pk() {
     let tx = finalize_transaction(
         tx,
         &program,
-        &xonly,
         &txouts,
         input_index,
         witness_values,
@@ -153,7 +151,7 @@ fn test_simplicity_mixed_p2pk() {
     let source = include_str!("../data/p2pk.simf");
     let program = load_program(source, arguments).unwrap();
     let cmr = program.commit().cmr();
-    let address = create_p2tr_address(cmr, &xonly, params);
+    let address = create_p2tr_address(cmr, params);
     let spk = address.script_pubkey();
     let desc = format!(":{}", spk.to_hex());
     let wd = WolletDescriptor::from_str(&desc).unwrap();
@@ -215,8 +213,7 @@ fn test_simplicity_mixed_p2pk() {
         .collect();
 
     let input_idx_s = 0;
-    let message =
-        get_sighash_all(&tx, &program, &xonly, &utxos, input_idx_s, network.into()).unwrap();
+    let message = get_sighash_all(&tx, &program, &utxos, input_idx_s, network.into()).unwrap();
 
     let signature = EC.sign_schnorr(&message, &keypair);
 
@@ -231,7 +228,6 @@ fn test_simplicity_mixed_p2pk() {
     tx = finalize_transaction(
         tx,
         &program,
-        &xonly,
         &utxos,
         input_idx_s,
         witness_values,

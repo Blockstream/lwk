@@ -2,7 +2,8 @@ import os
 import time
 from lwk import *
 
-_SIMF_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "lwk_simplicity", "data")
+_SIMF_DIR = os.path.join(os.path.dirname(
+    __file__), "..", "..", "..", "lwk_simplicity", "data")
 P2PK_SOURCE = open(os.path.join(_SIMF_DIR, "p2pk.simf")).read()
 
 # 1. Set up regtest environment
@@ -12,18 +13,20 @@ policy_asset = network.policy_asset()
 client = ElectrumClient.from_url(node.electrum_url())
 
 # 2. Create signer and derive x-only public key
-mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
+mnemonic = Mnemonic(
+    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
 signer = Signer(mnemonic, network)
 derivation_path = "m/86'/1'/0'/0/0"
 xonly_pubkey = simplicity_derive_xonly_pubkey(signer, derivation_path)
 
 # 3. Compile P2PK program with the public key
 args = SimplicityArguments()
-args = args.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(xonly_pubkey.to_bytes()))
+args = args.add_value(
+    "PUBLIC_KEY", SimplicityTypedValue.u256(xonly_pubkey.to_bytes()))
 program = SimplicityProgram.load(P2PK_SOURCE, args)
 
 # 4. Create P2TR address from the program
-simplicity_address = program.create_p2tr_address(xonly_pubkey, network)
+simplicity_address = program.create_p2tr_address(network)
 simplicity_script = simplicity_address.script_pubkey()
 
 # Create Wollet
@@ -33,7 +36,8 @@ assert str(simplicity_address) == str(wollet.address(0).address())
 
 # 5. Fund the Simplicity address
 funded_satoshi = 100000
-funding_txid = node.send_to_address(simplicity_address, funded_satoshi, asset=None)
+funding_txid = node.send_to_address(
+    simplicity_address, funded_satoshi, asset=None)
 node.generate(1)
 funding_tx = wollet.wait_for_tx(funding_txid, client).tx()
 
@@ -44,7 +48,8 @@ vout, funding_output = next(
 )
 
 # 7. Create ExternalUtxo for TxBuilder
-SIMPLICITY_WITNESS_WEIGHT = 700  # FIXME(KyrylR): Conservative estimate for Simplicity witness
+# FIXME(KyrylR): Conservative estimate for Simplicity witness
+SIMPLICITY_WITNESS_WEIGHT = 700
 unblinded = TxOutSecrets.from_explicit(policy_asset, funded_satoshi)
 external_utxo = ExternalUtxo.from_unchecked_data(
     OutPoint.from_parts(funding_txid, vout),
@@ -74,10 +79,11 @@ signature = program.create_p2pk_signature(
 
 # 10. Finalize transaction with Simplicity witness
 witness = SimplicityWitnessValues()
-witness = witness.add_value("SIGNATURE", SimplicityTypedValue.byte_array(signature))
+witness = witness.add_value(
+    "SIGNATURE", SimplicityTypedValue.byte_array(signature))
 
 finalized_tx = program.finalize_transaction(
-    unsigned_tx, xonly_pubkey, all_utxos, 0,
+    unsigned_tx, all_utxos, 0,
     witness, network, SimplicityLogLevel.NONE
 )
 
@@ -85,11 +91,12 @@ finalized_tx = program.finalize_transaction(
 finalized_witness = finalized_tx.inputs()[0].witness()
 assert not finalized_witness.is_empty(), "Finalized witness should not be empty"
 finalized_script_witness = finalized_witness.script_witness()
-assert len(finalized_script_witness) == 4, "Simplicity witness should have 4 elements"
+assert len(
+    finalized_script_witness) == 4, "Simplicity witness should have 4 elements"
 
 # Run the program to get the pruned program and witness bytes
 run_result = program.run(
-    unsigned_tx, xonly_pubkey, all_utxos, 0,
+    unsigned_tx,  all_utxos, 0,
     witness, network, SimplicityLogLevel.NONE
 )
 
@@ -99,11 +106,12 @@ simplicity_witness_bytes = run_result.witness_bytes()
 simplicity_program_bytes = run_result.program_bytes()
 cmr = run_result.cmr()
 
-control_block = simplicity_control_block(cmr, xonly_pubkey)
+control_block = simplicity_control_block(cmr)
 control_block_hex = control_block.to_bytes().hex()
 
 # Verify it matches what program.control_block() returns
-program_control_block_hex = program.control_block(xonly_pubkey).to_bytes().hex()
+program_control_block_hex = program.control_block(
+    xonly_pubkey).to_bytes().hex()
 assert control_block_hex == program_control_block_hex, \
     "simplicity_control_block should match program.control_block()"
 

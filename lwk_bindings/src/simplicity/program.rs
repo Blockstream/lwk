@@ -6,7 +6,6 @@ use lwk_simplicity::signer;
 use lwk_simplicity::simplicityhl;
 
 use crate::blockdata::tx_out::TxOut;
-use crate::types::XOnlyPublicKey;
 use crate::{Address, ControlBlock, LwkError, Network, Transaction};
 
 use super::arguments::{SimplicityArguments, SimplicityWitnessValues};
@@ -38,15 +37,13 @@ impl SimplicityProgram {
     /// Create a P2TR (Pay-to-Taproot) address for this Simplicity program.
     pub fn create_p2tr_address(
         &self,
-        internal_key: &XOnlyPublicKey,
         network: &Network,
     ) -> Result<Arc<Address>, LwkError> {
-        let x_only_key = internal_key.to_simplicityhl()?;
 
         let inner_network: lwk_common::Network = network.into();
         let cmr = self.inner.commit().cmr();
         let address =
-            scripts::create_p2tr_address(cmr, &x_only_key, inner_network.address_params());
+            scripts::create_p2tr_address(cmr,  inner_network.address_params());
 
         Ok(Arc::new(address.into()))
     }
@@ -54,12 +51,10 @@ impl SimplicityProgram {
     /// Get the taproot control block for script-path spending.
     pub fn control_block(
         &self,
-        internal_key: &XOnlyPublicKey,
     ) -> Result<Arc<ControlBlock>, LwkError> {
-        let x_only_key = internal_key.to_simplicityhl()?;
 
         let cmr = self.inner.commit().cmr();
-        let control_block = scripts::control_block(cmr, x_only_key);
+        let control_block = scripts::control_block(cmr);
 
         ControlBlock::from_bytes(&control_block.serialize())
     }
@@ -68,18 +63,15 @@ impl SimplicityProgram {
     pub fn get_sighash_all(
         &self,
         tx: &Transaction,
-        program_public_key: &XOnlyPublicKey,
         utxos: &[Arc<TxOut>],
         input_index: u32,
         network: &Network,
     ) -> Result<Vec<u8>, LwkError> {
-        let x_only_key = program_public_key.to_simplicityhl()?;
         let utxos_inner = convert_utxos(utxos);
 
         let message = signer::get_sighash_all(
             tx.as_ref(),
             &self.inner,
-            &x_only_key,
             &utxos_inner,
             input_index as usize,
             network.into(),
@@ -93,20 +85,17 @@ impl SimplicityProgram {
     pub fn finalize_transaction(
         &self,
         tx: &Transaction,
-        program_public_key: &XOnlyPublicKey,
         utxos: &[Arc<TxOut>],
         input_index: u32,
         witness_values: &SimplicityWitnessValues,
         network: &Network,
         log_level: SimplicityLogLevel,
     ) -> Result<Arc<Transaction>, LwkError> {
-        let x_only_key = program_public_key.to_simplicityhl()?;
         let utxos_inner = convert_utxos(utxos);
 
         let finalized = signer::finalize_transaction(
             tx.as_ref().clone(),
             &self.inner,
-            &x_only_key,
             &utxos_inner,
             input_index as usize,
             witness_values.to_inner()?,
@@ -129,13 +118,11 @@ impl SimplicityProgram {
         network: &Network,
     ) -> Result<Vec<u8>, LwkError> {
         let keypair = derive_keypair(signer, derivation_path)?;
-        let x_only_pubkey = keypair.x_only_public_key().0;
         let utxos_inner = convert_utxos(utxos);
 
         let sighash = signer::get_sighash_all(
             tx.as_ref(),
             &self.inner,
-            &x_only_pubkey,
             &utxos_inner,
             input_index as usize,
             network.into(),
@@ -151,20 +138,17 @@ impl SimplicityProgram {
     pub fn run(
         &self,
         tx: &Transaction,
-        program_public_key: &XOnlyPublicKey,
         utxos: &[Arc<TxOut>],
         input_index: u32,
         witness_values: &SimplicityWitnessValues,
         network: &Network,
         log_level: SimplicityLogLevel,
     ) -> Result<Arc<SimplicityRunResult>, LwkError> {
-        let x_only_key = program_public_key.to_simplicityhl()?;
         let utxos_inner = convert_utxos(utxos);
 
         let env = signer::get_and_verify_env(
             tx.as_ref(),
             &self.inner,
-            &x_only_key,
             &utxos_inner,
             network.into(),
             input_index as usize,

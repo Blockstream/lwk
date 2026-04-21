@@ -398,7 +398,7 @@ impl InternalKeySource {
 /// Compatibility note:
 /// the exact 32-byte value is part of the `wallet-abi-0.1` behavior contract and
 /// MUST remain stable unless the ABI is versioned accordingly.
-pub(crate) fn bip_0341_example_internal_key() -> XOnlyPublicKey {
+pub fn bip_0341_example_internal_key() -> XOnlyPublicKey {
     #[allow(clippy::unwrap_used)]
     XOnlyPublicKey::from_slice(&[
         0x50, 0x92, 0x9b, 0x74, 0xc1, 0xa0, 0x49, 0x54, 0xb7, 0x8b, 0x4b, 0x60, 0x35, 0xe9, 0x7a,

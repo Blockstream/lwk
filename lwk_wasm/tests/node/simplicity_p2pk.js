@@ -40,7 +40,7 @@ async function runSimplicityP2pkTest() {
     assertEqual(cmr, TEST_CMR, "CMR mismatch");
 
     // Test creating P2TR address for p2pk program
-    const address = program.createP2trAddress(lwk.XOnlyPublicKey.fromString(TEST_PUBLIC_KEY), network);
+    const address = program.createP2trAddress(network);
     assertEqual(address.toString(), TEST_ADDRESS, "Address mismatch");
 
     // Test building witness values with signature (64 bytes)

@@ -35,10 +35,8 @@ pub fn simplicity_derive_xonly_pubkey(
 #[wasm_bindgen(js_name = simplicityControlBlock)]
 pub fn simplicity_control_block(
     cmr: &Cmr,
-    internal_key: &XOnlyPublicKey,
 ) -> Result<ControlBlock, Error> {
-    let internal_key_inner = internal_key.to_simplicityhl()?;
-    let control_block = scripts::control_block(cmr.inner(), internal_key_inner);
+    let control_block = scripts::control_block(cmr.inner());
     let serialized = control_block.serialize();
     ControlBlock::from_bytes(&serialized)
 }

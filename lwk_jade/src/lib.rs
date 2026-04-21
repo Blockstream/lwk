@@ -335,12 +335,7 @@ fn tx_input_params(
     let params = sign_liquid_tx::TxInputParams {
         is_witness: Some(true),
         script_code: script_code.as_bytes().to_vec(),
-        value_commitment: txout
-            .value
-            .commitment()
-            .ok_or(Error::NonConfidentialInput(input_index))?
-            .serialize()
-            .to_vec(),
+        value_commitment: serialize(&txout.value),
         path,
         sighash: Some(1),
         ae_host_commitment: vec![1u8; 32], // TODO verify anti-exfil
@@ -423,9 +418,18 @@ fn is_multisig(script: &Script) -> bool {
 mod test {
     use std::str::FromStr;
 
-    use elements::Script;
+    use elements::{
+        bitcoin::{
+            bip32::{DerivationPath, Fingerprint},
+            PublicKey,
+        },
+        confidential::{Asset, Nonce, Value},
+        encode::serialize,
+        pset::Input,
+        Script, TxOut, TxOutWitness,
+    };
 
-    use crate::{is_multisig, json_to_cbor};
+    use crate::{is_multisig, json_to_cbor, tx_input_params};
 
     fn cbor_to_json(value: serde_cbor::Value) -> Result<serde_json::Value, crate::Error> {
         Ok(serde_json::to_value(value)?)
@@ -452,5 +456,39 @@ mod test {
             "OP_0 OP_PUSHBYTES_20 14fe45f2c2a2b7c00d0940d694a3b6af6c9bf165"
         );
         assert!(!is_multisig(&not_multisig));
+    }
+
+    #[test]
+    fn tx_input_params_encodes_explicit_input_value() {
+        let fingerprint = Fingerprint::from([1, 2, 3, 4]);
+        let public_key = PublicKey::from_str(
+            "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        )
+        .unwrap();
+        let txout = TxOut {
+            asset: Asset::Explicit(*lwk_common::Network::Liquid.policy_asset()),
+            value: Value::Explicit(1_000),
+            nonce: Nonce::Null,
+            script_pubkey: Script::from_str("00141111111111111111111111111111111111111111")
+                .unwrap(),
+            witness: TxOutWitness::default(),
+        };
+        let mut input = Input::default();
+        input.witness_utxo = Some(txout.clone());
+        input.bip32_derivation.insert(
+            public_key,
+            (
+                fingerprint,
+                DerivationPath::from_str("m/84h/1h/0h/0/0").unwrap(),
+            ),
+        );
+
+        let (params, signed_key) = tx_input_params(&input, 0, &fingerprint).unwrap();
+
+        let explicit_value = serialize(&txout.value);
+        assert_eq!(explicit_value.len(), 9);
+        assert_eq!(explicit_value[0], 1);
+        assert_eq!(params.value_commitment, explicit_value);
+        assert_eq!(signed_key, Some(public_key));
     }
 }

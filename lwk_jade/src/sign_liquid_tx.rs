@@ -151,22 +151,30 @@ pub struct Entity {
     pub domain: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct TxInputParams {
-    pub is_witness: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_witness: Option<bool>,
 
-    #[serde(with = "serde_bytes", rename = "script")]
+    #[serde(
+        default,
+        with = "serde_bytes",
+        rename = "script",
+        skip_serializing_if = "Vec::is_empty"
+    )]
     pub script_code: Vec<u8>,
 
-    #[serde(with = "serde_bytes")]
+    #[serde(default, with = "serde_bytes", skip_serializing_if = "Vec::is_empty")]
     pub value_commitment: Vec<u8>,
 
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub path: Vec<u32>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sighash: Option<u32>,
 
     /// 32 bytes anti-exfiltration commitment (random data not verified for now). TODO verify
-    #[serde(with = "serde_bytes")]
+    #[serde(default, with = "serde_bytes", skip_serializing_if = "Vec::is_empty")]
     pub ae_host_commitment: Vec<u8>,
 }
 

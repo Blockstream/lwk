@@ -14,6 +14,7 @@ lwk_wollet = { version = "0.16.0" }
 lwk_test_util = { version = "0.16.0" }
 lwk_payment_instructions = { version = "0.16.0" }
 lwk_boltz = { version = "0.16.0", optional = true }
+lwk_jade = { version = "0.16.0", optional = true, default-features = false }
 lwk_simplicity = { version = "0.16.0", optional = true }
 tokio = { version = "1.0", features = [
     "rt",
@@ -31,6 +32,11 @@ uniffi = { version = "=0.29.4", features = ["build"] }
 
 [dev-dependencies]
 camino = "1.1"
+lwk_containers = { version = "0.14.0" }
+lwk_jade = { version = "0.16.0", default-features = false, features = [
+    "sync",
+    "test_emulator",
+] }
 tempfile = "3.8.0"
 uniffi_bindgen = "=0.29.4"
 
@@ -41,6 +47,7 @@ name = "lwk"
 [features]
 default = ["lightning"]
 foreign_bindings = []
+jade = ["dep:lwk_jade", "lwk_jade/sync"]
 lightning = ["lwk_boltz", "tokio", "log"]
 simplicity = ["lwk_simplicity", "tokio"]
 

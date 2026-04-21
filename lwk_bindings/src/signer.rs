@@ -1,9 +1,12 @@
 use crate::{LwkError, Mnemonic, Network, Pset, WolletDescriptor};
 use std::sync::Arc;
 
+/// Singlesig script variants supported by descriptor helpers.
 #[derive(uniffi::Enum)]
 pub enum Singlesig {
+    /// Native segwit P2WPKH.
     Wpkh,
+    /// Wrapped segwit P2SH-P2WPKH.
     ShWpkh,
 }
 
@@ -16,10 +19,14 @@ impl From<Singlesig> for lwk_common::Singlesig {
     }
 }
 
+/// Blinding key variants supported by descriptor helpers.
 #[derive(uniffi::Enum)]
 pub enum DescriptorBlindingKey {
+    /// Deterministic SLIP77 blinding key.
     Slip77,
+    /// Randomized SLIP77 blinding key.
     Slip77Rand,
+    /// ELIP151 blinding key.
     Elip151,
 }
 
@@ -37,6 +44,12 @@ impl From<DescriptorBlindingKey> for lwk_common::DescriptorBlindingKey {
 #[derive(uniffi::Object)]
 pub struct Bip {
     inner: lwk_common::Bip,
+}
+
+impl Bip {
+    pub(crate) fn inner(&self) -> lwk_common::Bip {
+        self.inner
+    }
 }
 
 #[uniffi::export]
@@ -122,7 +135,7 @@ impl Signer {
         let is_mainnet = lwk_common::Signer::is_mainnet(&self.inner)?;
         Ok(lwk_common::Signer::keyorigin_xpub(
             &self.inner,
-            bip.inner,
+            bip.inner(),
             is_mainnet,
         )?)
     }

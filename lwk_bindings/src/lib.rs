@@ -13,6 +13,8 @@ mod desc;
 mod electrum_client;
 mod error;
 mod esplora_client;
+#[cfg(feature = "jade")]
+mod jade;
 mod liquidex;
 mod mnemonic;
 mod network;
@@ -104,7 +106,7 @@ pub use blockdata::wallet_tx::WalletTx;
 pub use blockdata::wallet_tx_out::WalletTxOut;
 
 pub use crate::contract::Contract;
-pub use crate::signer::{Bip, Signer};
+pub use crate::signer::{Bip, DescriptorBlindingKey, Signer, Singlesig};
 #[cfg(feature = "simplicity")]
 pub use crate::types::{
     asset_id_from_issuance, asset_id_inner_hex, reissuance_token_from_issuance,
@@ -118,6 +120,8 @@ pub use desc::WolletDescriptor;
 pub use electrum_client::ElectrumClient;
 pub use error::LwkError;
 pub use esplora_client::{EsploraClient, EsploraClientBuilder};
+#[cfg(feature = "jade")]
+pub use jade::Jade;
 pub use liquidex::{AssetAmount, UnvalidatedLiquidexProposal, ValidatedLiquidexProposal};
 pub use mnemonic::Mnemonic;
 pub use network::Network;

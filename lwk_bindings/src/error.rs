@@ -137,6 +137,15 @@ impl From<lwk_signer::SignError> for LwkError {
     }
 }
 
+#[cfg(feature = "jade")]
+impl From<lwk_jade::Error> for LwkError {
+    fn from(value: lwk_jade::Error) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
 impl From<serde_json::Error> for LwkError {
     fn from(value: serde_json::Error) -> Self {
         LwkError::Generic {

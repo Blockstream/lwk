@@ -11,6 +11,7 @@ use tempfile::TempDir;
 /// A struct for Jade testing with emulator
 pub struct TestJadeEmulator<'a> {
     pub jade: Jade,
+    port: u16,
     // Keep the containers and temp dir so they are not dropped.
     _jade_emul: Container<'a, JadeEmulator>,
     _pin_server: Option<Container<'a, PinServer>>,
@@ -27,10 +28,16 @@ impl<'a> TestJadeEmulator<'a> {
         let jade = Jade::new(stream.into(), network);
         Self {
             jade,
+            port,
             _jade_emul: container,
             _pin_server: None,
             _pin_server_dir: None,
         }
+    }
+
+    /// Return the host port of the Jade emulator socket.
+    pub fn port(&self) -> u16 {
+        self.port
     }
 
     /// Set a mnemonic

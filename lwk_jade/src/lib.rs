@@ -25,7 +25,10 @@ use std::collections::HashSet;
 
 pub use consts::{BAUD_RATE, TIMEOUT};
 use elements::{
-    bitcoin::bip32::{ChildNumber, DerivationPath, Fingerprint},
+    bitcoin::{
+        bip32::{ChildNumber, DerivationPath, Fingerprint},
+        PublicKey,
+    },
     encode::serialize,
     hex::ToHex,
     opcodes::{
@@ -266,6 +269,74 @@ fn create_jade_sign_req(
         additional_info: None,
     };
     Ok(params)
+}
+
+fn tx_input_params(
+    input: &elements::pset::Input,
+    input_index: usize,
+    my_fingerprint: &Fingerprint,
+) -> Result<(sign_liquid_tx::TxInputParams, Option<PublicKey>)> {
+    let Some((want_public_key, (_, derivation_path))) = input
+        .bip32_derivation
+        .iter()
+        .find(|(_, (fingerprint, _))| fingerprint == my_fingerprint)
+    else {
+        return Ok((sign_liquid_tx::TxInputParams::default(), None));
+    };
+
+    let path = derivation_path_to_vec(derivation_path);
+
+    // TODO? verify `want_public_key` is one of the key of the descriptor?
+
+    let txout = input
+        .witness_utxo
+        .as_ref()
+        .ok_or(Error::MissingWitnessUtxoInInput(input_index))?;
+
+    let previous_output_script = &txout.script_pubkey;
+
+    let is_nested_wpkh = previous_output_script.is_p2sh()
+        && input
+            .redeem_script
+            .as_ref()
+            .map(|x| x.is_v0_p2wpkh())
+            .unwrap_or(false);
+
+    let script_code = if previous_output_script.is_v0_p2wpkh() {
+        script_code_wpkh(previous_output_script)
+    } else if previous_output_script.is_v0_p2wsh() {
+        input
+            .witness_script
+            .clone()
+            .ok_or(Error::MissingWitnessScript(input_index))?
+    } else if is_nested_wpkh {
+        script_code_wpkh(
+            input
+                .redeem_script
+                .as_ref()
+                .expect("Redeem script non-empty checked earlier"),
+        )
+    } else {
+        return Err(Error::UnsupportedScriptPubkeyType(
+            previous_output_script.asm(),
+        ));
+    };
+
+    let params = sign_liquid_tx::TxInputParams {
+        is_witness: Some(true),
+        script_code: script_code.as_bytes().to_vec(),
+        value_commitment: txout
+            .value
+            .commitment()
+            .ok_or(Error::NonConfidentialInput(input_index))?
+            .serialize()
+            .to_vec(),
+        path,
+        sighash: Some(1),
+        ae_host_commitment: vec![1u8; 32], // TODO verify anti-exfil
+    };
+
+    Ok((params, Some(*want_public_key)))
 }
 
 // Get a script from witness script pubkey hash

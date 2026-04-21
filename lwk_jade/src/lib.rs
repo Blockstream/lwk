@@ -46,7 +46,7 @@ use lwk_common::{burn_script, Network};
 use register_multisig::RegisteredMultisigDetails;
 use sign_liquid_tx::{AssetInfo, Change, Commitment, Contract, Prevout, SignLiquidTxParams};
 #[cfg(feature = "sync")]
-pub use sync::Jade;
+pub use sync::{Jade, JadeTransport};
 
 #[cfg(feature = "serial")]
 pub use serialport;

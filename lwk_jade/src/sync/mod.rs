@@ -18,6 +18,7 @@ use crate::{
     derivation_path_to_vec, json_to_cbor, try_parse_response, vec_to_derivation_path, Error, Result,
 };
 use connection::Connection;
+pub use connection::JadeTransport;
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use elements::bitcoin::sign_message::MessageSignature;
 use elements::pset::PartiallySignedTransaction;
@@ -329,6 +330,10 @@ impl Jade {
         let stream = std::net::TcpStream::connect(socket)?;
         let conn = Connection::TcpStream(stream);
         Ok(Self::new(conn, network))
+    }
+
+    pub fn from_transport(transport: Box<dyn JadeTransport>, network: Network) -> Self {
+        Self::new(transport.into(), network)
     }
 
     pub fn get_receive_address_single(&self, variant: Variant, path: Vec<u32>) -> Result<String> {

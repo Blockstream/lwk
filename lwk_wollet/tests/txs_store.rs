@@ -27,7 +27,8 @@ fn test_txs_store() {
     let encrypt_txs_store = true;
 
     let err = WolletBuilder::new(network, wd.clone())
-        .with_txs_store(store.clone(), encrypt_txs_store)
+        .with_txs_store(store.clone())
+        .set_encryption_txs_store(encrypt_txs_store)
         .build()
         .unwrap_err()
         .to_string();
@@ -36,7 +37,8 @@ fn test_txs_store() {
 
     let mut wollet = WolletBuilder::new(network, wd.clone())
         .with_store(store.clone())
-        .with_txs_store(store.clone(), encrypt_txs_store)
+        .with_txs_store(store.clone())
+        .set_encryption_txs_store(encrypt_txs_store)
         .with_merge_threshold(Some(1))
         .build()
         .unwrap();
@@ -87,7 +89,8 @@ fn test_txs_store() {
     // check that a new wollet using the same store has all the txs (without syncing)
     let wollet2 = WolletBuilder::new(network, wd.clone())
         .with_store(store.clone())
-        .with_txs_store(store.clone(), encrypt_txs_store)
+        .with_txs_store(store.clone())
+        .set_encryption_txs_store(encrypt_txs_store)
         .with_merge_threshold(Some(1))
         .build()
         .unwrap();
@@ -124,7 +127,8 @@ async fn test_txs_store_huge() {
     let mut wollet = WolletBuilder::new(network, desc.parse().unwrap())
         .with_legacy_fs_store(&upd_dir)
         .unwrap()
-        .with_txs_store(txs_store.clone(), encrypt_txs_store)
+        .with_txs_store(txs_store.clone())
+        .set_encryption_txs_store(encrypt_txs_store)
         .with_merge_threshold(Some(1))
         .build()
         .unwrap();
@@ -183,7 +187,8 @@ async fn test_txs_store_huge() {
     let wollet2 = WolletBuilder::new(network, desc.parse().unwrap())
         .with_legacy_fs_store(&upd_dir)
         .unwrap()
-        .with_txs_store(txs_store.clone(), encrypt_txs_store)
+        .with_txs_store(txs_store.clone())
+        .set_encryption_txs_store(encrypt_txs_store)
         .with_merge_threshold(Some(1))
         .build()
         .unwrap();

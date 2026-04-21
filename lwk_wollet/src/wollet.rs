@@ -110,14 +110,16 @@ impl WolletBuilder {
     }
 
     /// Experimental: specify the store used to persist wallet transactions
-    ///
-    /// If `encrypt_txs_store` is true, the Store values and keys are encrypted with a secret derived from the [`Wollet`].
-    ///
-    /// If you use a store that lives in memory, we suggest `encrypt_txs_store` to be `false`.
-    /// If you use a persisted store, we suggest `encrypt_txs_store` to be `true`.
-    pub fn with_txs_store(mut self, store: Arc<dyn DynStore>, encrypt_txs_store: bool) -> Self {
+    pub fn with_txs_store(mut self, store: Arc<dyn DynStore>) -> Self {
         self.txs_store = store;
-        self.encrypt_txs_store = encrypt_txs_store;
+        self
+    }
+
+    /// Set encryption for txs store
+    ///
+    /// Default: encrypted if store is persisted
+    pub fn set_encryption_txs_store(mut self, encrypt: bool) -> Self {
+        self.encrypt_txs_store = encrypt;
         self
     }
 

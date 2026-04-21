@@ -14,9 +14,9 @@ use elements::encode::{Decodable, Encodable};
 use elements::hash_types::TxMerkleNode;
 use elements::{BlockExtData, BlockHash, BlockHeader, TxInWitness, TxOutWitness};
 use lwk_common::SignedBalance;
-use lwk_common::{decrypt_with_nonce_prefix, encrypt_with_random_nonce};
+use lwk_common::{decrypt_with_nonce_prefix, encrypt_with_random_nonce, DynStore};
 use std::collections::HashMap;
-use std::sync::atomic;
+use std::sync::{atomic, Arc, Mutex};
 
 /// Transactions downloaded and unblinded
 #[derive(Default, Clone, PartialEq, Eq, Debug)]
@@ -48,6 +48,128 @@ impl DownloadTxResult {
                 }
             }
         }
+    }
+}
+
+// Internal struct to handle operations regarding `Update`s persistence
+pub(crate) struct UpdatesPersister {
+    updates_store: Arc<dyn DynStore>,
+    merge_threshold: Option<usize>,
+    next_update_index: Mutex<usize>,
+}
+
+impl UpdatesPersister {
+    pub(crate) fn new(updates_store: Arc<dyn DynStore>, merge_threshold: Option<usize>) -> Self {
+        Self {
+            updates_store,
+            merge_threshold,
+            next_update_index: Mutex::new(0),
+        }
+    }
+
+    fn get_update(&self, index: usize) -> Result<Option<Update>, Error> {
+        Ok(self
+            .updates_store
+            .get(&update_key(index))
+            .map_err(|e| Error::Generic(format!("store error: {e}")))?
+            .map(|u| Update::deserialize(&u))
+            .transpose()?)
+    }
+
+    fn set_update(&self, index: usize, update: &Update) -> Result<(), Error> {
+        self.updates_store
+            .put(&update_key(index), &update.serialize()?)
+            .map_err(|e| Error::Generic(format!("store error: {e}")))
+    }
+
+    fn remove_update(&self, index: usize) -> Result<(), Error> {
+        self.updates_store
+            .remove(&update_key(index))
+            .map_err(|e| Error::Generic(format!("store error: {e}")))
+    }
+
+    fn merge_updates(&self, next_index: usize) -> Result<usize, Error> {
+        match self.merge_threshold {
+            Some(threshold) if threshold < next_index => (),
+            _ => return Ok(next_index), // Not merging
+        };
+
+        // Read and merge all persisted updates
+        let mut merged = self
+            .get_update(0)?
+            .ok_or_else(|| Error::Generic("expected update 0 to exist".into()))?;
+
+        for i in 1..next_index {
+            let update = self
+                .get_update(i)?
+                .ok_or_else(|| Error::Generic(format!("expected update {i} to exist")))?;
+            merged.merge(update);
+        }
+
+        // Delete all old updates from last to first to avoid holes on crash
+        for j in (0..next_index).rev() {
+            self.remove_update(j)?;
+        }
+        // A crash here or during the removal loop will leave the cache empty or at an old state,
+        // which is not the end of the world, the following scan will bring it back.
+
+        // Store the merged update as update 0
+        self.set_update(0, &merged)?;
+
+        let next_index = 1;
+        Ok(next_index)
+    }
+
+    fn read(&self) -> Result<Vec<Update>, Error> {
+        let mut updates = vec![];
+        for i in 0.. {
+            if let Some(update) = self.get_update(i)? {
+                updates.push(update);
+            } else {
+                break;
+            }
+        }
+        Ok(updates)
+    }
+
+    fn next_update_index(&self) -> Result<std::sync::MutexGuard<'_, usize>, Error> {
+        self.next_update_index
+            .lock()
+            .map_err(|_| Error::Generic("next_update_index lock poisoned".into()))
+    }
+
+    fn persist(&self, mut update: Update, txs_store_is_persisted: bool) -> Result<(), Error> {
+        let mut next_index = self.next_update_index()?;
+
+        // Check if we can coalesce with the previous update (both are "only tip" updates)
+        if update.only_tip() && *next_index > 0 {
+            let prev_index = *next_index - 1;
+            if let Ok(Some(prev_update)) = self.get_update(prev_index) {
+                if prev_update.only_tip() {
+                    // Coalesce: overwrite the previous update
+                    // Keep the previous wollet status so reapplying works correctly
+                    update.wollet_status = prev_update.wollet_status;
+                    // Merge timestamps
+                    update.timestamps = [prev_update.timestamps, update.timestamps].concat();
+
+                    self.set_update(prev_index, &update)?;
+                    return Ok(());
+                }
+            }
+        }
+        if txs_store_is_persisted {
+            // Txs are perstisted in the txs store,
+            // remove them from the Update so we don't store them twice
+            update.new_txs.txs.clear();
+        }
+
+        // Store as a new update
+        self.set_update(*next_index, &update)?;
+        *next_index += 1;
+
+        *next_index = self.merge_updates(*next_index)?;
+
+        Ok(())
     }
 }
 
@@ -251,45 +373,14 @@ fn update_key(index: usize) -> String {
 }
 
 impl Wollet {
-    fn merge_threshold(&self) -> Option<usize> {
-        self.merge_threshold
-    }
-
-    fn next_update_index(&self) -> Result<std::sync::MutexGuard<'_, usize>, Error> {
-        self.next_update_index
-            .lock()
-            .map_err(|_| Error::Generic("next_update_index lock poisoned".into()))
-    }
-
-    fn get_update(&self, index: usize) -> Result<Option<Update>, Error> {
-        Ok(self
-            .updates_store
-            .get(&update_key(index))
-            .map_err(|e| Error::Generic(format!("store error: {e}")))?
-            .map(|u| Update::deserialize(&u))
-            .transpose()?)
-    }
-
-    fn set_update(&self, index: usize, update: &Update) -> Result<(), Error> {
-        self.updates_store
-            .put(&update_key(index), &update.serialize()?)
-            .map_err(|e| Error::Generic(format!("store error: {e}")))
-    }
-
-    fn remove_update(&self, index: usize) -> Result<(), Error> {
-        self.updates_store
-            .remove(&update_key(index))
-            .map_err(|e| Error::Generic(format!("store error: {e}")))
-    }
-
     /// Restore updates from the store using indexed keys
     pub(crate) fn restore_updates(&mut self) -> Result<(), Error> {
         for i in 0.. {
-            if let Some(update) = self.get_update(i)? {
+            if let Some(update) = self.updates_persister.get_update(i)? {
                 self.apply_update_inner(update)?;
             } else {
-                let mut next_update_index = self.next_update_index()?;
-                *next_update_index = self.merge_updates(i)?;
+                let mut next_update_index = self.updates_persister.next_update_index()?;
+                *next_update_index = self.updates_persister.merge_updates(i)?;
                 break;
             }
         }
@@ -301,15 +392,7 @@ impl Wollet {
 impl Wollet {
     /// Get all the persisted updates of this wallet
     pub fn updates(&self) -> Result<Vec<Update>, Error> {
-        let mut updates = vec![];
-        for i in 0.. {
-            if let Some(update) = self.get_update(i)? {
-                updates.push(update);
-            } else {
-                break;
-            }
-        }
-        Ok(updates)
+        self.updates_persister.read()
     }
 
     fn apply_transaction_inner(
@@ -517,70 +600,9 @@ impl Wollet {
     }
 
     /// Persist an update to the store using an indexed key
-    fn persist_update(&self, mut update: Update) -> Result<(), Error> {
-        let mut next_index = self.next_update_index()?;
-
-        // Check if we can coalesce with the previous update (both are "only tip" updates)
-        if update.only_tip() && *next_index > 0 {
-            let prev_index = *next_index - 1;
-            if let Ok(Some(prev_update)) = self.get_update(prev_index) {
-                if prev_update.only_tip() {
-                    // Coalesce: overwrite the previous update
-                    // Keep the previous wollet status so reapplying works correctly
-                    update.wollet_status = prev_update.wollet_status;
-                    // Merge timestamps
-                    update.timestamps = [prev_update.timestamps, update.timestamps].concat();
-
-                    self.set_update(prev_index, &update)?;
-                    return Ok(());
-                }
-            }
-        }
-        if self.cache.txs_store_is_persisted() {
-            // Txs are perstisted in the txs store,
-            // remove them from the Update so we don't store them twice
-            update.new_txs.txs.clear();
-        }
-
-        // Store as a new update
-        self.set_update(*next_index, &update)?;
-        *next_index += 1;
-
-        *next_index = self.merge_updates(*next_index)?;
-
-        Ok(())
-    }
-
-    fn merge_updates(&self, next_index: usize) -> Result<usize, Error> {
-        match self.merge_threshold() {
-            Some(threshold) if threshold < next_index => (),
-            _ => return Ok(next_index), // Not merging
-        };
-
-        // Read and merge all persisted updates
-        let mut merged = self
-            .get_update(0)?
-            .ok_or_else(|| Error::Generic("expected update 0 to exist".into()))?;
-
-        for i in 1..next_index {
-            let update = self
-                .get_update(i)?
-                .ok_or_else(|| Error::Generic(format!("expected update {i} to exist")))?;
-            merged.merge(update);
-        }
-
-        // Delete all old updates from last to first to avoid holes on crash
-        for j in (0..next_index).rev() {
-            self.remove_update(j)?;
-        }
-        // A crash here or during the removal loop will leave the cache empty or at an old state,
-        // which is not the end of the world, the following scan will bring it back.
-
-        // Store the merged update as update 0
-        self.set_update(0, &merged)?;
-
-        let next_index = 1;
-        Ok(next_index)
+    fn persist_update(&self, update: Update) -> Result<(), Error> {
+        self.updates_persister
+            .persist(update, self.cache.txs_store_is_persisted())
     }
 
     /// Apply a transaction to the wallet state

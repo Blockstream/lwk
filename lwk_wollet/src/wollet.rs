@@ -12,6 +12,7 @@ use crate::model::{
     AddressResult, BitcoinAddressResult, ExternalUtxo, IssuanceDetails, WalletTx, WalletTxOut,
 };
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
+use crate::update::UpdatesPersister;
 use crate::util::EC;
 use crate::ElementsNetwork;
 use crate::{BlindingPublicKey, WolletDescriptor};
@@ -30,7 +31,7 @@ use lwk_common::{
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hasher;
 use std::path::Path;
-use std::sync::{atomic, Arc, Mutex};
+use std::sync::{atomic, Arc};
 
 sha256t_hash_newtype! {
     /// The tag of the hash
@@ -48,9 +49,7 @@ pub struct Wollet {
     pub(crate) descriptor: WolletDescriptor,
 
     // Fields for managing `Update`s
-    pub(crate) updates_store: Arc<dyn DynStore>,
-    pub(crate) next_update_index: Mutex<usize>,
-    pub(crate) merge_threshold: Option<usize>,
+    pub(crate) updates_persister: UpdatesPersister,
 
     /// cached value
     max_weight_to_satisfy: usize,
@@ -160,14 +159,13 @@ impl WolletBuilder {
             Ok(d) => d.max_weight_to_satisfy()?,
             Err(_) => 0, // If we don't have the descriptor we don't know this value
         };
+        let updates_persister = UpdatesPersister::new(self.updates_store, self.merge_threshold);
         let mut wollet = Wollet {
             cache,
             network: self.network,
             descriptor: self.descriptor,
-            updates_store: self.updates_store,
-            next_update_index: Mutex::new(0),
+            updates_persister,
             max_weight_to_satisfy,
-            merge_threshold: self.merge_threshold,
             utxo_only: self.utxo_only,
         };
 

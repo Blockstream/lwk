@@ -26,7 +26,10 @@ pub fn run_program(
 
     let mut tracker = DefaultTracker::new(satisfied.debug_symbols()).with_log_level(log_level);
 
-    let pruned = satisfied.redeem().prune_with_tracker(env, &mut tracker)?;
+    let pruned = satisfied
+        .redeem()
+        .prune_with_tracker(env, &mut tracker)
+        .map_err(ProgramError::Pruning)?;
     let mut mac = BitMachine::for_program(&pruned)?;
 
     let result = mac.exec(&pruned, env).map_err(ProgramError::Execution)?;

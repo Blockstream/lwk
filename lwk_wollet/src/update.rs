@@ -271,17 +271,15 @@ impl Wollet {
     }
 
     fn set_update(&self, index: usize, update: Update) -> Result<(), Error> {
-        Ok(self
-            .updates_store
+        self.updates_store
             .put(&update_key(index), &update.serialize()?)
-            .map_err(|e| Error::Generic(format!("store error: {e}")))?)
+            .map_err(|e| Error::Generic(format!("store error: {e}")))
     }
 
     fn remove_update(&self, index: usize) -> Result<(), Error> {
-        Ok(self
-            .updates_store
+        self.updates_store
             .remove(&update_key(index))
-            .map_err(|e| Error::Generic(format!("store error: {e}")))?)
+            .map_err(|e| Error::Generic(format!("store error: {e}")))
     }
 
     /// Restore updates from the store using indexed keys

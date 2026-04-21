@@ -64,7 +64,7 @@ pub struct WolletBuilder {
     /// Number of updates to trigger merge. None disables merging.
     merge_threshold: Option<usize>,
     txs_store: Arc<dyn DynStore>,
-    encrypt_txs_store: bool,
+    encrypt_txs_store: Option<bool>,
     utxo_only: bool,
 }
 
@@ -76,7 +76,7 @@ impl WolletBuilder {
             descriptor,
             updates_store: Arc::new(FakeStore::new()),
             txs_store: Arc::new(MemoryStore::new()),
-            encrypt_txs_store: false,
+            encrypt_txs_store: None,
             merge_threshold: None,
             utxo_only: false,
         }
@@ -119,7 +119,7 @@ impl WolletBuilder {
     ///
     /// Default: encrypted if store is persisted
     pub fn set_encryption_txs_store(mut self, encrypt: bool) -> Self {
-        self.encrypt_txs_store = encrypt;
+        self.encrypt_txs_store = Some(encrypt);
         self
     }
 
@@ -148,7 +148,10 @@ impl WolletBuilder {
                 "If txs store is persited, merge threshold must be 1".into(),
             ));
         }
-        let txs_store = if self.encrypt_txs_store {
+        let encrypt_txs_store = self
+            .encrypt_txs_store
+            .unwrap_or(self.txs_store.is_persisted());
+        let txs_store = if encrypt_txs_store {
             let key_bytes = self.descriptor.encryption_key_bytes();
             let encrypted_store =
                 EncryptedStore::new_with_key_encryption(self.txs_store, key_bytes);

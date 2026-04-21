@@ -43,7 +43,7 @@ describe("request compilation", () => {
               asset: {
                 asset_id: TESTNET_POLICY_ASSET,
               },
-              blinder: "wallet",
+              blinder: "explicit",
             },
           ],
         },

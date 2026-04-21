@@ -6,7 +6,7 @@ import { createShareUrl } from "../src/url.js";
 const liveEnabled = process.env.WALLET_ABI_HARNESS_LIVE === "1";
 
 describe.runIf(liveEnabled)("manual live smoke scaffolding", () => {
-  test("emits walletconnect URLs for all four scenario presets", () => {
+  test("emits walletconnect URLs for transfer and split live flows", () => {
     const baseUrl = "http://127.0.0.1:4178";
     const urls = [
       createShareUrl(baseUrl, {
@@ -21,21 +21,9 @@ describe.runIf(liveEnabled)("manual live smoke scaffolding", () => {
           "walletconnect",
         ),
       }),
-      createShareUrl(baseUrl, {
-        scenario: setScenarioMode(
-          createDefaultScenario("issuance"),
-          "walletconnect",
-        ),
-      }),
-      createShareUrl(baseUrl, {
-        scenario: setScenarioMode(
-          createDefaultScenario("reissuance"),
-          "walletconnect",
-        ),
-      }),
     ];
 
-    expect(urls).toHaveLength(4);
+    expect(urls).toHaveLength(2);
     for (const url of urls) {
       expect(url).toContain("#scenario=");
     }

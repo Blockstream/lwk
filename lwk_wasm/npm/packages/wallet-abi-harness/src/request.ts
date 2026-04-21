@@ -118,12 +118,15 @@ async function createRecipientOutput(
   const lwk = await loadLwkWalletAbiWeb();
   const address = lwk.Address.parse(recipient.recipientAddress, network);
 
+  // External recipients are expressed as raw script locks here. Without a
+  // bound wallet template or an exposed address blinding pubkey in this layer,
+  // the valid request shape is an explicit output.
   return WalletAbiOutputSchema.new(
     recipient.id,
     parsePositiveBigInt(recipient.amountSat, `${recipient.id} amount`),
     WalletAbiLockVariant.script(address.scriptPubkey()),
     WalletAbiAssetVariant.assetId(resolveAssetId(recipient.assetId, network)),
-    WalletAbiBlinderVariant.wallet(),
+    WalletAbiBlinderVariant.explicit(),
   );
 }
 

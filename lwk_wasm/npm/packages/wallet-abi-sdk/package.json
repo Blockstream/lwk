@@ -1,6 +1,6 @@
 {
   "name": "lwk_wallet_abi_sdk",
-  "version": "0.16.0",
+  "version": "0.16.1",
   "description": "Headless Wallet ABI SDK for helpers_wallet_abi_web",
   "license": "MIT OR BSD-2-Clause",
   "homepage": "https://github.com/Blockstream/lwk/tree/master/lwk_wasm",
@@ -76,7 +76,7 @@
     "build:features": "LWK_WASM_FEATURES=\"serial,simplicity\" npm run build",
     "typecheck": "npm run build:features && tsc -p tsconfig.json --noEmit",
     "test": "npm run build:features && node --import tsx --test tests/**/*.test.ts",
-    "pack:check": "npm run build && npm pack --dry-run && publint . && TARBALL=$(npm pack --quiet | tail -n 1) && attw --profile esm-only \"$TARBALL\" && rm -f \"$TARBALL\"",
+    "pack:check": "npm run build:features && npm pack --dry-run && publint . && TARBALL=$(npm pack --quiet | tail -n 1) && attw --profile esm-only \"$TARBALL\" && rm -f \"$TARBALL\"",
     "prepack": "npm run build:features"
   },
   "dependencies": {
@@ -85,6 +85,6 @@
     "@walletconnect/sign-client": "^2.23.7",
     "@walletconnect/types": "^2.23.7",
     "@walletconnect/utils": "^2.23.7",
-    "helpers_wallet_abi_web": "0.16.0"
+    "helpers_wallet_abi_web": "0.16.1"
   }
 }

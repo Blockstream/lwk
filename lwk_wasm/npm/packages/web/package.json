@@ -1,6 +1,6 @@
 {
   "name": "wallet_abi_sdk_core_web",
-  "version": "0.16.0",
+  "version": "0.16.1",
   "description": "Liquid Wallet Kit for browsers via WebAssembly",
   "license": "MIT OR BSD-2-Clause",
   "homepage": "https://github.com/Blockstream/lwk/tree/master/lwk_wasm",
@@ -48,7 +48,7 @@
     "build:features": "LWK_WASM_FEATURES=\"serial,simplicity\" npm run build",
     "typecheck": "npm run build:features && tsc -p tsconfig.json --noEmit",
     "test": "npm run build:features && tsc -p tsconfig.json --noEmit",
-    "pack:check": "npm run build && npm pack --dry-run",
+    "pack:check": "npm run build:features && npm pack --dry-run",
     "prepack": "npm run build:features"
   }
 }

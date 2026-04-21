@@ -82,6 +82,9 @@ function formatStateLabel(state: AppState["connectionState"]): string {
 
 function createInitialState(): AppState {
   const decoded = decodeHarnessLocation(window.location.hash);
+  const envProjectId =
+    (import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined) ??
+    "";
   const scenario = decoded.rawEnvelope
     ? {
         ...cloneScenario(decoded.scenario),
@@ -100,7 +103,7 @@ function createInitialState(): AppState {
     compiledEnvelopeText: "",
     previewError: null,
     shareUrl: "",
-    projectId: "",
+    projectId: envProjectId.trim(),
     appUrl: `${window.location.origin}${window.location.pathname}`,
     storagePrefix: "lwk-wallet-abi-harness",
     connectionState: "disconnected",

@@ -98,6 +98,23 @@ impl PsetInput {
             vec![asset.into(), token.into()]
         })
     }
+
+    /// Number of partial signatures currently attached to this input.
+    pub fn partial_signature_count(&self) -> u32 {
+        self.inner.partial_sigs.len() as u32
+    }
+
+    /// Public keys for partial signatures currently attached to this input.
+    pub fn partial_signature_public_keys(&self) -> Vec<String> {
+        let mut keys: Vec<_> = self
+            .inner
+            .partial_sigs
+            .keys()
+            .map(ToString::to_string)
+            .collect();
+        keys.sort();
+        keys
+    }
 }
 
 /// Builder for PSET inputs

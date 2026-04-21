@@ -60,6 +60,7 @@ impl TxDetails {
     }
 
     /// Asset fees
+    #[wasm_bindgen(js_name = feesAsset)]
     pub fn fees_asset(&self, asset: &AssetId) -> u64 {
         self.inner.fees_asset(&asset.into())
     }

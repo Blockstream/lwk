@@ -1,6 +1,6 @@
 {
   "name": "lwk_wallet_abi_sdk",
-  "version": "0.16.1",
+  "version": "0.16.2",
   "description": "Headless Wallet ABI SDK for helpers_wallet_abi_web",
   "license": "MIT OR BSD-2-Clause",
   "homepage": "https://github.com/Blockstream/lwk/tree/master/lwk_wasm",

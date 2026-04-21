@@ -299,13 +299,17 @@ async function main() {
     );
   } finally {
     if (topic) {
-      await signClient.disconnect({
-        topic,
-        reason: {
-          code: 6_000,
-          message: "Wallet ABI live E2E completed",
-        },
-      }).catch((error) => {
+      await withTimeout(
+        signClient.disconnect({
+          topic,
+          reason: {
+            code: 6_000,
+            message: "Wallet ABI live E2E completed",
+          },
+        }),
+        5_000,
+        "Timed out disconnecting WalletConnect session",
+      ).catch((error) => {
         console.warn(
           `[live-e2e] disconnect warning: ${describeError(error)}`,
         );
@@ -316,7 +320,11 @@ async function main() {
       signClient.core.relayer as { disconnect?: () => Promise<void> }
     ).disconnect;
     if (disconnectRelayer !== undefined) {
-      await disconnectRelayer.call(signClient.core.relayer).catch((error) => {
+      await withTimeout(
+        disconnectRelayer.call(signClient.core.relayer),
+        5_000,
+        "Timed out disconnecting WalletConnect relayer",
+      ).catch((error) => {
         console.warn(
           `[live-e2e] relayer disconnect warning: ${describeError(error)}`,
         );

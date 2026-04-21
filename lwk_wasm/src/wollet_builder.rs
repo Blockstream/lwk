@@ -55,14 +55,11 @@ impl WolletBuilder {
     /// Experimental: persist wallet transactions in the given JavaScript
     /// storage object.
     ///
-    /// If `encrypt_txs_store` is `true`, transaction values and keys are
-    /// encrypted with a secret derived from the descriptor.
-    ///
     /// The JS object must have `get(key)`, `put(key, value)`, and `remove(key)` methods.
     #[wasm_bindgen(js_name = withTxsStore)]
-    pub fn with_txs_store(self, storage: JsStorage, encrypt_txs_store: bool) -> Self {
+    pub fn with_txs_store(self, storage: JsStorage) -> Self {
         self.inner
-            .with_txs_store(Arc::new(JsStoreLink::new(storage)), encrypt_txs_store)
+            .with_txs_store(Arc::new(JsStoreLink::new(storage)))
             .into()
     }
 

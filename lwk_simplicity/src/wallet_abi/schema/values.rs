@@ -113,8 +113,13 @@ pub fn resolve_arguments(
 
     let mut final_arguments: HashMap<WitnessName, Value> = HashMap::<WitnessName, Value>::new();
 
-    for static_arg in simf_arguments.resolved.iter() {
-        final_arguments.insert(static_arg.0.clone(), static_arg.1.clone());
+    for (static_arg_name, static_arg_value) in simf_arguments.resolved.iter() {
+        if final_arguments.contains_key(static_arg_name) {
+            return Err(WalletAbiError::InvalidRequest(format!(
+                "duplicate static Simplicity argument '{static_arg_name}' found"
+            )));
+        }
+        final_arguments.insert(static_arg_name.clone(), static_arg_value.clone());
     }
 
     for (name, value) in simf_arguments.runtime_arguments {

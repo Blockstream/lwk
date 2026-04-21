@@ -81,7 +81,7 @@ pub fn generate_public_key_without_private() -> (PublicKey, Vec<u8>) {
 ///
 /// # Panics
 /// Panics if the system random number generator fails.
-pub fn get_random_seed() -> [u8; 32] {
+fn get_random_seed() -> [u8; 32] {
     let mut bytes: [u8; 32] = [0; 32];
     thread_rng().fill_bytes(&mut bytes);
     bytes

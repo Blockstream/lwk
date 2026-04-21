@@ -23,6 +23,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-22.04' }}
       - run: cargo build
       - run: cargo build --features serial
+      - run: cargo build --features simplicity
       - run: cargo test --lib  # integration tests requires binaries for the test env...
 
   nix:

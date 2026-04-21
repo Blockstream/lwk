@@ -6,11 +6,11 @@
 //! - [`types`]: shared envelope support types.
 //! - [`values`]: Simplicity argument/witness serialization helpers.
 
-pub mod runtime_deps;
-pub mod runtime_params;
-pub mod tx_create;
-pub mod types;
-pub mod values;
+mod runtime_deps;
+mod runtime_params;
+mod tx_create;
+mod types;
+mod values;
 
 pub use runtime_deps::{
     KeyStoreMeta, WalletOutputRequest, WalletOutputTemplate, WalletProviderMeta,

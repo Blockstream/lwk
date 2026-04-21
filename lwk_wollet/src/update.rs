@@ -270,7 +270,7 @@ impl Wollet {
             .transpose()?)
     }
 
-    fn set_update(&self, index: usize, update: Update) -> Result<(), Error> {
+    fn set_update(&self, index: usize, update: &Update) -> Result<(), Error> {
         self.updates_store
             .put(&update_key(index), &update.serialize()?)
             .map_err(|e| Error::Generic(format!("store error: {e}")))
@@ -531,7 +531,7 @@ impl Wollet {
                     // Merge timestamps
                     update.timestamps = [prev_update.timestamps, update.timestamps].concat();
 
-                    self.set_update(prev_index, update)?;
+                    self.set_update(prev_index, &update)?;
                     return Ok(());
                 }
             }
@@ -543,7 +543,7 @@ impl Wollet {
         }
 
         // Store as a new update
-        self.set_update(*next_index, update)?;
+        self.set_update(*next_index, &update)?;
         *next_index += 1;
 
         *next_index = self.merge_updates(*next_index)?;
@@ -577,7 +577,7 @@ impl Wollet {
         // which is not the end of the world, the following scan will bring it back.
 
         // Store the merged update as update 0
-        self.set_update(0, merged)?;
+        self.set_update(0, &merged)?;
 
         let next_index = 1;
         Ok(next_index)

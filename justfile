@@ -3,11 +3,12 @@ default:
     just --list
 
 SIMPLICITY_FEATURES := if env_var_or_default("SIMPLICITY", "") != "" { "--features simplicity" } else { "" }
+JADE_FEATURES := if env_var_or_default("JADE", "") != "" { "--features jade" } else { "" }
 
 # build the bindings lib: liblwk.so (as specified in lwk_bindings/Cargo.toml)
 build-bindings-lib:
     # a debug build would be fine if used only to generate interfaces files but some jobs use it to package it, thus release is necessary.
-    cargo build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
+    cargo build --release -p lwk_bindings {{SIMPLICITY_FEATURES}} {{JADE_FEATURES}}
 
 # build the python interface "lwk.py"
 python-build-bindings: build-bindings-lib
@@ -91,19 +92,19 @@ kotlin: build-bindings-lib
 
 # Cross build the lib for aarch64-linux-android
 aarch64-linux-android:
-	cargo ndk -t aarch64-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t aarch64-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}} {{JADE_FEATURES}}
 
 # Cross build the lib for armv7-linux-androideabi
 armv7-linux-androideabi:
-	cargo ndk -t armv7-linux-androideabi -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t armv7-linux-androideabi -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}} {{JADE_FEATURES}}
 
 # Cross build the lib for i686-linux-android
 i686-linux-android:
-	cargo ndk -t i686-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t i686-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}} {{JADE_FEATURES}}
 
 # Cross build the lib for x86_64-linux-android
 x86_64-linux-android:
-	cargo ndk -t x86_64-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t x86_64-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}} {{JADE_FEATURES}}
 
 # After cross building all the lib for android put them in final dir
 android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
@@ -124,7 +125,7 @@ kotlin-multiplatform: ios ios-sim android jvm
     cp target/aarch64-apple-ios/release/liblwk.a lwk_bindings/android_bindings/lib/src/libs/ios-arm64/
     cp target/lipo-ios-sim/release/liblwk.a lwk_bindings/android_bindings/lib/src/libs/ios-simulator-arm64/
 
-# Publish the Kotlin bindings locally with Simplicity enabled using the configured Gradle publishing target.
+# Publish the Kotlin bindings locally with Simplicity and Jade enabled using the configured Gradle publishing target.
 maven-publish version:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -132,7 +133,7 @@ maven-publish version:
       echo "usage: just maven-publish <version>" >&2
       exit 1
     fi
-    SIMPLICITY=1 just kotlin-multiplatform
+    SIMPLICITY=1 JADE=1 just kotlin-multiplatform
     cd lwk_bindings/android_bindings && \
         ORG_GRADLE_PROJECT_POM_ARTIFACT_ID="${ORG_GRADLE_PROJECT_POM_ARTIFACT_ID:-lwk}" \
         ORG_GRADLE_PROJECT_VERSION_NAME="{{version}}" \
@@ -144,11 +145,11 @@ jvm: aarch64-apple-darwin # x86_64-unknown-linux-gnu
 
 # Build aarch64-apple-darwin
 aarch64-apple-darwin:
-    MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target aarch64-apple-darwin -p lwk_bindings {{SIMPLICITY_FEATURES}}
+    MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target aarch64-apple-darwin -p lwk_bindings {{SIMPLICITY_FEATURES}} {{JADE_FEATURES}}
 
 # Build x86_64-unknown-linux-gnu
 x86_64-unknown-linux-gnu:
-    cargo build --release --target x86_64-unknown-linux-gnu -p lwk_bindings {{SIMPLICITY_FEATURES}}
+    cargo build --release --target x86_64-unknown-linux-gnu -p lwk_bindings {{SIMPLICITY_FEATURES}} {{JADE_FEATURES}}
 
 # Build ios (works only on mac)
 ios: aarch64-apple-ios
@@ -160,15 +161,15 @@ ios-sim: x86_64-apple-ios aarch64-apple-ios-sim
 
 # Build x86_64-apple-ios
 x86_64-apple-ios:
-    IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target x86_64-apple-ios -p lwk_bindings {{SIMPLICITY_FEATURES}}
+    IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target x86_64-apple-ios -p lwk_bindings {{SIMPLICITY_FEATURES}} {{JADE_FEATURES}}
 
 # Build aarch64-apple-ios
 aarch64-apple-ios:
-    IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target aarch64-apple-ios -p lwk_bindings {{SIMPLICITY_FEATURES}}
+    IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target aarch64-apple-ios -p lwk_bindings {{SIMPLICITY_FEATURES}} {{JADE_FEATURES}}
 
 # Build aarch64-apple-ios-sim
 aarch64-apple-ios-sim:
-    IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target aarch64-apple-ios-sim -p lwk_bindings {{SIMPLICITY_FEATURES}}
+    IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target aarch64-apple-ios-sim -p lwk_bindings {{SIMPLICITY_FEATURES}} {{JADE_FEATURES}}
 
 # Build the swift framework (works only on mac)
 swift: ios ios-sim

@@ -19,7 +19,7 @@ To publish the Kotlin bindings yourself:
 
 For local publishing commands:
 
-* `just maven-publish <version>` builds with `SIMPLICITY=1` and runs Gradle `publish` against whatever repository target your local Gradle properties configure
+* `just maven-publish <version>` builds with `SIMPLICITY=1 JADE=1` and runs Gradle `publish` against whatever repository target your local Gradle properties configure
 
 The Gradle publishing configuration also accepts environment variables through
 the standard `ORG_GRADLE_PROJECT_*` mapping if you prefer not to store the

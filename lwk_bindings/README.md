@@ -111,7 +111,7 @@ For local publishing:
 
 Use these commands:
 
-* `just maven-publish <version>` to build a Simplicity-enabled publishable package and run Gradle `publish` with your local repository configuration
+* `just maven-publish <version>` to build a Simplicity- and Jade-enabled publishable package and run Gradle `publish` with your local repository configuration
 
 ### Wallet ABI
 

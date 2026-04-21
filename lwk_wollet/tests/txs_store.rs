@@ -198,3 +198,78 @@ async fn test_txs_store_huge() {
 
     assert_eq!(wollet.status(), wollet2.status());
 }
+
+#[test]
+fn test_set_encryption_txs_store() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let s = generate_signer();
+    let view_key = generate_view_key();
+    let d = format!("ct({view_key},elwpkh({}/*))", s.xpub());
+
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &d);
+    let txid = w.fund_btc(&env);
+    assert_eq!(w.wollet.transactions().unwrap().len(), 1);
+
+    let mut client = test_client_electrum(&env.electrum_url());
+    let network = ElementsNetwork::default_regtest();
+    let wd: WolletDescriptor = d.parse().unwrap();
+
+    // If using a FileStore (persisted), by default is encrypted
+    let dir = TempDir::new().unwrap();
+    let fs_store = Arc::new(FileStore::new(dir.path().to_path_buf()).unwrap());
+    assert!(lwk_common::Store::is_persisted(fs_store.as_ref()));
+    let mut wollet = WolletBuilder::new(network, wd.clone())
+        .with_txs_store(fs_store.clone())
+        .with_merge_threshold(Some(1))
+        .build()
+        .unwrap();
+    wait_for_tx(&mut wollet, &mut client, &txid);
+
+    // With encrypted wrapper it works
+    let enc_store = EncryptedStore::new_with_key_encryption(
+        fs_store.clone() as Arc<dyn DynStore>,
+        wd.encryption_key_bytes(),
+    );
+    assert!(lwk_common::Store::get(&enc_store, "wollet:txids")
+        .unwrap()
+        .is_some());
+
+    // If using a MemoryStore (not persisted), by default is not encrypted
+    let mem_store = Arc::new(MemoryStore::new());
+    assert!(!lwk_common::Store::is_persisted(mem_store.as_ref()));
+    let mut wollet = WolletBuilder::new(network, wd.clone())
+        .with_txs_store(mem_store.clone())
+        .with_merge_threshold(Some(1))
+        .build()
+        .unwrap();
+    wait_for_tx(&mut wollet, &mut client, &txid);
+
+    assert!(lwk_common::Store::get(mem_store.as_ref(), "wollet:txids")
+        .unwrap()
+        .is_some());
+
+    // But we can encrypt it if we want
+    let mem_store = Arc::new(MemoryStore::new());
+    let mut wollet = WolletBuilder::new(network, wd.clone())
+        .with_txs_store(mem_store.clone())
+        .set_encryption_txs_store(true)
+        .with_merge_threshold(Some(1))
+        .build()
+        .unwrap();
+    wait_for_tx(&mut wollet, &mut client, &txid);
+
+    // Nothing here
+    assert!(lwk_common::Store::get(mem_store.as_ref(), "wollet:txids")
+        .unwrap()
+        .is_none());
+    // We can see txids if we use the encrpted wrapper
+    let enc_store = EncryptedStore::new_with_key_encryption(
+        mem_store.clone() as Arc<dyn DynStore>,
+        wd.encryption_key_bytes(),
+    );
+    assert!(lwk_common::Store::get(&enc_store, "wollet:txids")
+        .unwrap()
+        .is_some());
+}

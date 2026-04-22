@@ -36,7 +36,7 @@ fn test_txs_store() {
     assert!(err.contains(expected));
 
     let mut wollet = WolletBuilder::new(network, wd.clone())
-        .with_store(store.clone())
+        .with_updates_store(store.clone())
         .with_txs_store(store.clone())
         .set_encryption_txs_store(encrypt_txs_store)
         .with_merge_threshold(Some(1))
@@ -88,7 +88,7 @@ fn test_txs_store() {
 
     // check that a new wollet using the same store has all the txs (without syncing)
     let wollet2 = WolletBuilder::new(network, wd.clone())
-        .with_store(store.clone())
+        .with_updates_store(store.clone())
         .with_txs_store(store.clone())
         .set_encryption_txs_store(encrypt_txs_store)
         .with_merge_threshold(Some(1))

@@ -103,7 +103,17 @@ impl WolletBuilder {
         self
     }
 
+    /// Experimental: specify the store used to persist `Update`s
+    pub fn with_updates_store(mut self, store: Arc<dyn DynStore>) -> Self {
+        self.updates_store = store;
+        self
+    }
+
     /// Specify the `Wollet` store for persistence
+    #[deprecated(
+        since = "0.17.0",
+        note = "please use `with_stores` or `with_updates_store`"
+    )]
     pub fn with_store(mut self, store: Arc<dyn DynStore>) -> Self {
         self.updates_store = store;
         self
@@ -377,7 +387,7 @@ impl Wollet {
         descriptor: WolletDescriptor,
     ) -> Result<Self, Error> {
         WolletBuilder::new(network, descriptor)
-            .with_store(store)
+            .with_updates_store(store)
             .build()
     }
 

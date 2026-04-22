@@ -1169,7 +1169,7 @@ mod test {
 
         // Build with merge_threshold=Some(2) (should trigger merge since we have 3 updates)
         let wollet = WolletBuilder::new(ElementsNetwork::default_regtest(), desc.clone())
-            .with_store(store.clone())
+            .with_updates_store(store.clone())
             .with_merge_threshold(Some(2))
             .build()
             .expect("Failed to build wollet");

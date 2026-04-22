@@ -48,7 +48,7 @@ impl WolletBuilder {
     #[wasm_bindgen(js_name = withExperimentalStore)]
     pub fn with_experimental_store(self, storage: JsStorage) -> Self {
         self.inner
-            .with_store(Arc::new(JsStoreLink::new(storage)))
+            .with_updates_store(Arc::new(JsStoreLink::new(storage)))
             .into()
     }
 

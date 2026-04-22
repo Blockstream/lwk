@@ -223,6 +223,25 @@ impl Cache {
         elements::encode::deserialize(&bytes).ok()
     }
 
+    /// Return the transaction from the in-memory `txs` slice when available, and
+    /// fall back to the cache/store otherwise.
+    ///
+    /// This avoids hitting `self.tx()` for transactions downloaded in the current
+    /// update, which can be more expensive when it reads from disk. The fallback is
+    /// still required because some callers pass txids for already-known
+    /// transactions, for example when only their confirmation height changed.
+    pub(crate) fn tx_as_fallback(
+        &self,
+        txid: &Txid,
+        txs: &[(Txid, Transaction)],
+    ) -> Option<Transaction> {
+        // Usually txs is small thus we do a linear search instead of building an HashMap
+        txs.iter()
+            .find(|(candidate, _)| candidate == txid)
+            .map(|(_, tx)| tx.clone())
+            .or_else(|| self.tx(txid))
+    }
+
     pub fn all_txids(&self) -> &HashSet<Txid> {
         &self.txids
     }

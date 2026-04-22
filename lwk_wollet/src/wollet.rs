@@ -155,8 +155,9 @@ impl WolletBuilder {
         self
     }
 
-    /// Use the legacy `Wollet` store
-    pub fn with_legacy_fs_store<P: AsRef<Path>>(mut self, datadir: P) -> Result<Self, Error> {
+
+    /// Create the legacy `Wollet` (unencrypted) updates store
+    pub fn create_legacy_fs_store<P: AsRef<Path>>(&self, datadir: P) -> Result<FileStore, Error> {
         // Build path: datadir/network/enc_cache/hash(descriptor)
         let mut path = datadir.as_ref().to_path_buf();
         path.push(self.network.as_str());
@@ -164,9 +165,14 @@ impl WolletBuilder {
         path.push(DirectoryIdHash::hash(self.descriptor.to_string().as_bytes()).to_string());
 
         let file_store = FileStore::new(path)?;
+        Ok(file_store)
+    }
+
+    /// Use the legacy `Wollet` store
+    pub fn with_legacy_fs_store<P: AsRef<Path>>(mut self, datadir: P) -> Result<Self, Error> {
+        let file_store = self.create_legacy_fs_store(datadir)?;
         let key_bytes = self.descriptor.encryption_key_bytes();
         let encrypted_store = EncryptedStore::new(file_store, key_bytes);
-
         self.updates_store = Arc::new(encrypted_store);
         self.with_stores_disallowed = true;
         Ok(self)

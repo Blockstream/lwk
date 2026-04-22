@@ -275,7 +275,12 @@ impl Cache {
         self.sorted_txids = sorted;
     }
 
-    fn update_unspent(&mut self, txid_height_new: &[(Txid, Option<u32>)], deleted_txids: &[Txid]) {
+    fn update_unspent(
+        &mut self,
+        txid_height_new: &[(Txid, Option<u32>)],
+        deleted_txids: &[Txid],
+        new_txs: &[(Txid, Transaction)],
+    ) {
         let txids_new: HashSet<&Txid> = txid_height_new.iter().map(|(txid, _)| txid).collect();
 
         let outputs_new: Vec<OutPoint> = self
@@ -345,18 +350,18 @@ impl Cache {
         &mut self,
         txid_height_new: &[(Txid, Option<u32>)],
         deleted_txids: &[Txid],
-        txs: Vec<(Txid, Transaction)>,
+        txs: &[(Txid, Transaction)],
         utxo_only: bool,
         unspent: Vec<OutPoint>,
     ) -> Result<(), Error> {
         // TODO: cleanup this functions
-        self.extend_all_txs(&txs)?;
+        self.extend_all_txs(txs)?;
         self.update_heights(txid_height_new, deleted_txids);
         self.rebuild_sorted_txids();
         if utxo_only {
             self.update_unspent_utxos_only(unspent);
         } else {
-            self.update_unspent(txid_height_new, deleted_txids);
+            self.update_unspent(txid_height_new, deleted_txids, txs);
         }
         Ok(())
     }

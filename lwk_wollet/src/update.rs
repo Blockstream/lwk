@@ -528,7 +528,7 @@ impl Wollet {
         cache.update(
             &txid_height_new,
             &txid_height_delete,
-            new_txs.txs,
+            &new_txs.txs,
             utxo_only,
             unspent,
         )?;

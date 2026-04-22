@@ -57,6 +57,7 @@ pub struct Wollet {
 }
 
 /// A builder for constructing [`Wollet`] instances
+#[derive(Debug)]
 pub struct WolletBuilder {
     network: ElementsNetwork,
     descriptor: WolletDescriptor,

@@ -61,6 +61,7 @@ pub struct Wollet {
 pub struct WolletBuilder {
     network: ElementsNetwork,
     descriptor: WolletDescriptor,
+    with_stores_disallowed: bool,
     updates_store: Arc<dyn DynStore>,
     /// Number of updates to trigger merge. None disables merging.
     merge_threshold: Option<usize>,
@@ -75,6 +76,7 @@ impl WolletBuilder {
         Self {
             network,
             descriptor,
+            with_stores_disallowed: false,
             updates_store: Arc::new(FakeStore::new()),
             txs_store: Arc::new(MemoryStore::new()),
             encrypt_txs_store: None,
@@ -83,12 +85,28 @@ impl WolletBuilder {
         }
     }
 
+    /// Experimental: Set all key-value stores for peristence
+    ///
+    /// Use `store` for all key-value stores used by the `Wollet`.
+    pub fn with_stores(mut self, store: Arc<dyn DynStore>) -> Result<Self, Error> {
+        if self.with_stores_disallowed {
+            return Err(Error::Generic(
+                "`with_stores` must be called before other functions".into(),
+            ));
+        }
+        self.updates_store = store.clone();
+        self.txs_store = store;
+        self.merge_threshold = Some(1);
+        Ok(self)
+    }
+
     /// Set a threshold to merge updates
     ///
     /// When the number of updates exceeds the threshold, they are merged into one.
     /// Set to None to disable merging (default).
     pub fn with_merge_threshold(mut self, threshold: Option<usize>) -> Self {
         self.merge_threshold = threshold;
+        self.with_stores_disallowed = true;
         self
     }
 
@@ -107,6 +125,7 @@ impl WolletBuilder {
     /// Experimental: specify the store used to persist `Update`s
     pub fn with_updates_store(mut self, store: Arc<dyn DynStore>) -> Self {
         self.updates_store = store;
+        self.with_stores_disallowed = true;
         self
     }
 
@@ -117,12 +136,14 @@ impl WolletBuilder {
     )]
     pub fn with_store(mut self, store: Arc<dyn DynStore>) -> Self {
         self.updates_store = store;
+        self.with_stores_disallowed = true;
         self
     }
 
     /// Experimental: specify the store used to persist wallet transactions
     pub fn with_txs_store(mut self, store: Arc<dyn DynStore>) -> Self {
         self.txs_store = store;
+        self.with_stores_disallowed = true;
         self
     }
 
@@ -147,6 +168,7 @@ impl WolletBuilder {
         let encrypted_store = EncryptedStore::new(file_store, key_bytes);
 
         self.updates_store = Arc::new(encrypted_store);
+        self.with_stores_disallowed = true;
         Ok(self)
     }
 

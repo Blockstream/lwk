@@ -53,7 +53,7 @@ pub enum ProgramError {
 
     /// Returned when the program cannot be pruned against the transaction environment.
     #[error("Failed to prune program: {0}")]
-    Pruning(#[from] simplicityhl::simplicity::bit_machine::ExecutionError),
+    Pruning(simplicityhl::simplicity::bit_machine::ExecutionError),
 
     #[error("Failed to construct a Bit Machine with enough space: {0}")]
     BitMachineCreation(#[from] simplicityhl::simplicity::bit_machine::LimitError),

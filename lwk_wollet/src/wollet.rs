@@ -65,6 +65,7 @@ pub struct WolletBuilder {
     updates_store: Arc<dyn DynStore>,
     /// Number of updates to trigger merge. None disables merging.
     merge_threshold: Option<usize>,
+    encrypt_updates_store: Option<bool>,
     txs_store: Arc<dyn DynStore>,
     encrypt_txs_store: Option<bool>,
     utxo_only: bool,
@@ -78,6 +79,7 @@ impl WolletBuilder {
             descriptor,
             with_stores_disallowed: false,
             updates_store: Arc::new(FakeStore::new()),
+            encrypt_updates_store: None,
             txs_store: Arc::new(MemoryStore::new()),
             encrypt_txs_store: None,
             merge_threshold: None,
@@ -155,6 +157,13 @@ impl WolletBuilder {
         self
     }
 
+    /// Set encryption for updates store
+    ///
+    /// Default: encrypted if store is persisted
+    pub fn set_encryption_updates_store(mut self, encrypt: bool) -> Self {
+        self.encrypt_updates_store = Some(encrypt);
+        self
+    }
 
     /// Create the legacy `Wollet` (unencrypted) updates store
     pub fn create_legacy_fs_store<P: AsRef<Path>>(&self, datadir: P) -> Result<FileStore, Error> {
@@ -171,9 +180,7 @@ impl WolletBuilder {
     /// Use the legacy `Wollet` store
     pub fn with_legacy_fs_store<P: AsRef<Path>>(mut self, datadir: P) -> Result<Self, Error> {
         let file_store = self.create_legacy_fs_store(datadir)?;
-        let key_bytes = self.descriptor.encryption_key_bytes();
-        let encrypted_store = EncryptedStore::new(file_store, key_bytes);
-        self.updates_store = Arc::new(encrypted_store);
+        self.updates_store = Arc::new(file_store);
         self.with_stores_disallowed = true;
         Ok(self)
     }
@@ -187,6 +194,7 @@ impl WolletBuilder {
                 "If txs store is persited, merge threshold must be 1".into(),
             ));
         }
+
         let encrypt_txs_store = self
             .encrypt_txs_store
             .unwrap_or(self.txs_store.is_persisted());
@@ -198,12 +206,25 @@ impl WolletBuilder {
         } else {
             self.txs_store
         };
+
+        let encrypt_updates_store = self
+            .encrypt_updates_store
+            .unwrap_or(self.updates_store.is_persisted());
+        let updates_store = if encrypt_updates_store {
+            let key_bytes = self.descriptor.encryption_key_bytes();
+            // For updates, keys are not encrypted
+            let encrypted_store = EncryptedStore::new(self.updates_store, key_bytes);
+            Arc::new(encrypted_store)
+        } else {
+            self.updates_store
+        };
+
         let cache = Cache::new(txs_store);
         let max_weight_to_satisfy = match self.descriptor.definite_descriptor(Chain::External, 0) {
             Ok(d) => d.max_weight_to_satisfy()?,
             Err(_) => 0, // If we don't have the descriptor we don't know this value
         };
-        let updates_persister = UpdatesPersister::new(self.updates_store, self.merge_threshold);
+        let updates_persister = UpdatesPersister::new(updates_store, self.merge_threshold);
         let mut wollet = Wollet {
             cache,
             network: self.network,

@@ -299,7 +299,9 @@ impl Cache {
 
         let inputs_to_restore: Vec<OutPoint> = deleted_txids
             .iter()
-            .filter_map(|txid| self.tx(txid))
+            // Merged updates can still carry the full transaction in `new_txs` even
+            // when the resulting update marks its txid as deleted.
+            .filter_map(|txid| self.tx_as_fallback(txid, new_txs))
             .flat_map(|tx| tx.input.into_iter().map(|i| i.previous_output))
             // we're assuming: in unblinded => belongs to wollet
             .filter(|op| self.unblinded.contains_key(op))

@@ -293,7 +293,7 @@ impl Cache {
 
         let inputs_new: HashSet<OutPoint> = txids_new
             .iter()
-            .filter_map(|txid| self.tx(txid))
+            .filter_map(|txid| self.tx_as_fallback(txid, new_txs))
             .flat_map(|tx| tx.input.into_iter().map(|i| i.previous_output))
             .collect();
 

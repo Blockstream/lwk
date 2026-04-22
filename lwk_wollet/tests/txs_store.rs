@@ -273,3 +273,63 @@ fn test_set_encryption_txs_store() {
         .unwrap()
         .is_some());
 }
+
+#[test]
+fn test_set_encryption_updates_store() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let s = generate_signer();
+    let view_key = generate_view_key();
+    let d = format!("ct({view_key},elwpkh({}/*))", s.xpub());
+
+    let network = ElementsNetwork::default_regtest();
+    let wd: WolletDescriptor = d.parse().unwrap();
+
+    // If using a FileStore (persisted), by default is encrypted
+    let dir = TempDir::new().unwrap();
+    let fs_store = Arc::new(FileStore::new(dir.path().to_path_buf()).unwrap());
+    assert!(lwk_common::Store::is_persisted(fs_store.as_ref()));
+    let mut wollet = WolletBuilder::new(network, wd.clone())
+        .with_updates_store(fs_store.clone())
+        .with_merge_threshold(Some(1))
+        .build()
+        .unwrap();
+
+    // Sync and apply one update
+    let mut client = test_client_electrum(&env.electrum_url());
+    let update = client.full_scan(&wollet).unwrap().unwrap();
+    wollet.apply_update(update.clone()).unwrap();
+
+    // Updates store is encrypted
+    let bytes = lwk_common::Store::get(fs_store.as_ref(), "000000000000")
+        .unwrap()
+        .unwrap();
+    assert!(Update::deserialize(&bytes).is_err());
+
+    let enc_store = EncryptedStore::new(
+        fs_store.clone() as Arc<dyn DynStore>,
+        wd.encryption_key_bytes(),
+    );
+    let bytes = lwk_common::Store::get(&enc_store, "000000000000")
+        .unwrap()
+        .unwrap();
+    assert!(Update::deserialize(&bytes).is_ok());
+
+    // We can remove encryption
+    let dir = TempDir::new().unwrap();
+    let fs_store = Arc::new(FileStore::new(dir.path().to_path_buf()).unwrap());
+    let mut wollet = WolletBuilder::new(network, wd.clone())
+        .with_updates_store(fs_store.clone())
+        .set_encryption_updates_store(false)
+        .with_merge_threshold(Some(1))
+        .build()
+        .unwrap();
+
+    wollet.apply_update(update.clone()).unwrap();
+
+    // Updates store is not encrypted
+    let bytes = lwk_common::Store::get(fs_store.as_ref(), "000000000000")
+        .unwrap()
+        .unwrap();
+    assert!(Update::deserialize(&bytes).is_ok());
+}

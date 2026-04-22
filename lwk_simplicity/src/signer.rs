@@ -65,6 +65,12 @@ pub fn finalize_transaction(
     let (simplicity_program_bytes, simplicity_witness_bytes) = pruned.to_vec_with_witness();
     let cmr = pruned.cmr();
 
+    if input_index > tx.input.len() {
+        return Err(ProgramError::UtxoIndexOutOfBounds {
+            input_index,
+            utxo_count: tx.input.len(),
+        });
+    }
     tx.input[input_index].witness = TxInWitness {
         amount_rangeproof: None,
         inflation_keys_rangeproof: None,

@@ -75,12 +75,11 @@ function runWolletBuilderStoreTest() {
     const wolletWithTxsStore = new lwk.WolletBuilder(network, descriptor)
         .withExperimentalStore(jsStorageWithTxsStore)
         .withMergeThreshold(1)
-        .withTxsStore(txsStorage, false)
+        .withTxsStore(txsStorage)
         .build();
     wolletWithTxsStore.applyUpdate(update);
 
     assert(jsStorageWithTxsStore._data.has('000000000000'));
-    assert(txsStorage._data.has('wollet:txids'));
     assert(
         storageSize(jsStorageWithTxsStore) < jsStorageWithoutTxsStoreSize,
         'jsStorage should be smaller when transactions are stored separately'

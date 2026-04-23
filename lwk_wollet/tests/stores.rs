@@ -110,4 +110,6 @@ fn fake_txs_store_full_scan_after_transaction() {
 
     assert_eq!(wollet.address(None).unwrap().index(), 1);
     assert_eq!(wollet.txs(&TxsOpt::without_tx()).unwrap().len(), 1);
+
+    assert_eq!(wollet.utxos().unwrap().len(), 1);
 }

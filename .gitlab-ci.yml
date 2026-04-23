@@ -336,6 +336,28 @@ nix:
     - nix $EXP_FEAT $CACHE develop . -c rust-analyzer analysis-stats . 2>log # prints ERROR if there are cyclic deps with dev-deps
     - (! grep ERROR log)
 
+# AMP0 has a closed source backend, so its tests are unreliable, allow them to fail.
+# Anyway for MRs/PRs that touch AMP0 code, this must pass.
+amp0:
+  stage: test_long
+  needs: [fmt_clippy]
+  extends: .base
+  script:
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    # slow amp0 unit tests
+    - cargo test -p lwk_wollet slow_amp0 -- --include-ignored
+    # bindings
+    - cargo test -p lwk_bindings --features foreign_bindings amp0
+    # wasm
+    - cd lwk_wasm
+    - RUSTFLAGS="--cfg=web_sys_unstable_apis" wasm-pack build --dev --target nodejs --out-dir pkg_node -- --features serial
+    - sed -i 's/"lwk_wasm"/"lwk_node"/g' pkg_node/package.json
+    - cd tests/node
+    - npm install
+    - node amp0-setup.js
+    - node amp0-daily-ops.js
+  allow_failure: true
+
 boltz_chain:
   stage: test_long
   needs: [fmt_clippy]

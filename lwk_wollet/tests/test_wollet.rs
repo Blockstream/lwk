@@ -14,12 +14,12 @@ use lwk_test_util::{
 };
 use lwk_test_util::{generate_mnemonic, generate_slip77};
 use lwk_wollet::clients::blocking::BlockchainBackend;
-use lwk_wollet::Tip;
 use lwk_wollet::{
     AddressResult, Contract, ElectrumUrl, UnvalidatedRecipient, WalletTx, Wollet, WolletBuilder,
     WolletDescriptor,
 };
 use lwk_wollet::{ElementsNetwork, Update};
+use lwk_wollet::{Tip, TxsOpt};
 use tempfile::TempDir;
 
 use crate::{ElectrumClient, WolletTxBuilder};
@@ -48,8 +48,8 @@ pub fn test_client_electrum(url: &str) -> ElectrumClient {
 pub fn wait_for_tx<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S, txid: &Txid) {
     for _ in 0..120 {
         sync(wollet, client);
-        let list = wollet.transactions().unwrap();
-        if list.iter().any(|e| &e.txid == txid) {
+        let list = wollet.txs(&TxsOpt::without_tx()).unwrap();
+        if list.iter().any(|e| &e.txid() == txid) {
             return;
         }
         thread::sleep(Duration::from_millis(500));

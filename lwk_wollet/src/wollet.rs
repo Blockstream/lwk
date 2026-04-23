@@ -624,7 +624,7 @@ impl Wollet {
 
     fn utxos_inner(&self) -> Result<Vec<WalletTxOut>, Error> {
         let mut utxos = vec![];
-        for outpoint in self.cache.unspent().keys() {
+        for (outpoint, script_pubkey) in self.cache.unspent() {
             // Technically all these unwrap and error mapping should not be necessary
             // as all these values should be in the cache, but better be safer here and don't panic
             let unblinded = *self
@@ -636,16 +636,8 @@ impl Wollet {
                 continue;
             }
             let height = self.cache.tx_height(&outpoint.txid).unwrap_or(&None);
-            let tx = self
-                .cache
-                .tx(&outpoint.txid)
-                .ok_or_else(|| Error::Generic("missing tx".into()))?;
-            let txout = tx
-                .output
-                .get(outpoint.vout as usize)
-                .ok_or_else(|| Error::Generic("missing output".into()))?;
             let index = self
-                .index(&txout.script_pubkey)
+                .index(script_pubkey)
                 .ok()
                 .ok_or_else(|| Error::Generic("missing index".into()))?;
             let blinding_pubkey = (!is_explicit(&unblinded))
@@ -657,14 +649,14 @@ impl Wollet {
                 })
                 .flatten();
             let address = Address::from_script(
-                &txout.script_pubkey,
+                script_pubkey,
                 blinding_pubkey,
                 self.network().address_params(),
             )
             .ok_or_else(|| Error::Generic("invalid scriptpubkey".into()))?;
             utxos.push(WalletTxOut {
                 outpoint: *outpoint,
-                script_pubkey: txout.script_pubkey.clone(),
+                script_pubkey: script_pubkey.clone(),
                 height: *height,
                 unblinded,
                 wildcard_index: index.1,

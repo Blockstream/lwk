@@ -1,4 +1,12 @@
+import sys
 from lwk import *
+
+# Skip this test since:
+# * it is dossing boltz production server
+# * it fails frequently
+# Ideally we use a regtest here, but it's not easy so let's skip it for now
+print("skipping lightning.py")
+sys.exit(0)
 
 # Example implementation of the Logging trait
 class MyLogger(Logging):

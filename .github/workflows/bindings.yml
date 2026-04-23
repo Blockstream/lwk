@@ -18,9 +18,9 @@ jobs:
           target: aarch64-unknown-linux-gnu
         - os: ubuntu-22.04
           target: x86_64-unknown-linux-gnu
-        - os: macos-14
+        - os: macos-15
           target: aarch64-apple-darwin
-        - os: macos-14
+        - os: macos-15
           target: x86_64-apple-darwin
         - os: windows-2022
           target: x86_64-pc-windows-msvc
@@ -65,7 +65,7 @@ jobs:
           path: |
             target/${{ matrix.target }}/release/liblwk.dylib
             target/${{ matrix.target }}/release/liblwk.a
-        if:  matrix.os == 'macos-14'
+        if:  matrix.os == 'macos-15'
 
   build-cpp:
     needs: build

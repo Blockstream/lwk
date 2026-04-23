@@ -78,3 +78,36 @@ fn test_stores() {
         .unwrap()
         .is_some());
 }
+
+#[test]
+fn fake_txs_store_full_scan_after_transaction() {
+    // we want to test a full scan with a FakeStore (which don't really store tx) works,
+    // because tx_as_fallback fn use in-memory tx preferably
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let network = ElementsNetwork::default_regtest();
+    let lbtc = network.policy_asset();
+
+    let s = generate_signer();
+    let view_key = generate_view_key();
+    let d = format!("ct({view_key},elwpkh({}/*))", s.xpub());
+    let wd: WolletDescriptor = d.parse().unwrap();
+
+    let mut wollet = WolletBuilder::new(network, wd)
+        .with_txs_store(Arc::new(FakeStore::new()))
+        .build()
+        .unwrap();
+    let mut client = test_client_electrum(&env.electrum_url());
+
+    let address = wollet.address(None).unwrap();
+    assert_eq!(address.index(), 0);
+
+    let satoshi = 10_000;
+    let txid = env.elementsd_sendtoaddress(address.address(), satoshi, Some(lbtc));
+
+    // do apply_update_internally
+    wait_for_tx(&mut wollet, &mut client, &txid);
+
+    assert_eq!(wollet.address(None).unwrap().index(), 1);
+    assert_eq!(wollet.txs(&TxsOpt::without_tx()).unwrap().len(), 1);
+}

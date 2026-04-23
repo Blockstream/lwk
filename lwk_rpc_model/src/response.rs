@@ -449,6 +449,9 @@ pub enum WalletType {
     /// Script hash Witness pay to public key hash (nested segwit)
     ShWpkh,
 
+    /// Taproot
+    Taproot,
+
     /// Witnes script hash, multisig N of M
     WshMulti(usize, usize),
 }
@@ -480,6 +483,7 @@ impl std::fmt::Display for WalletType {
             WalletType::Unknown => write!(f, "unknown"),
             WalletType::Wpkh => write!(f, "wpkh"),
             WalletType::ShWpkh => write!(f, "sh_wpkh"),
+            WalletType::Taproot => write!(f, "taproot"),
             WalletType::WshMulti(threshold, num_pubkeys) => {
                 write!(f, "wsh_multi_{threshold}of{num_pubkeys}")
             }

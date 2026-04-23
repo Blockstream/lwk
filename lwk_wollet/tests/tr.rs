@@ -1,5 +1,6 @@
 use crate::test_wollet::*;
-use lwk_common::Signer;
+use lwk_common::{singlesig_desc, DescriptorBlindingKey, Signer, Singlesig};
+use lwk_signer::{AnySigner, SwSigner};
 use lwk_test_util::*;
 use lwk_wollet::{ElementsNetwork, WolletBuilder, WolletDescriptor};
 
@@ -78,4 +79,38 @@ async fn test_single_address_tr_async() {
     assert!(balance > 0);
     let utxos = wollet.utxos().unwrap();
     assert_eq!(utxos.len(), 1);
+}
+
+#[test]
+fn test_taproot_singlesig_receive_balance_send() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let signer = SwSigner::new(TEST_MNEMONIC, false).unwrap();
+    let desc_str =
+        singlesig_desc(&signer, Singlesig::Taproot, DescriptorBlindingKey::Slip77).unwrap();
+    let client = test_client_electrum(&env.electrum_url());
+    let mut wallet = TestWollet::new(client, &desc_str);
+
+    // 1. Receive
+    let fund_sat = 1_000_000;
+    wallet.fund(
+        &env,
+        fund_sat,
+        Some(wallet.address()),
+        None,
+    );
+
+    // 2. Check balance
+    let balance = wallet.balance_btc();
+    assert_eq!(balance, fund_sat);
+
+    // 3. Send
+    let signers: [&AnySigner; 1] = [&AnySigner::Software(signer)];
+    wallet.send_btc(&signers, None, None);
+
+    // send_btc(None, None) sends 10_000 sat to self, so balance drops by fee only
+    let balance_after = wallet.balance_btc();
+    assert!(balance_after < balance, "balance should decrease by fee");
+    // 1_000 sat is a generous upper bound for a regtest fee
+    assert!(balance_after > balance - 1_000, "fee should be reasonable");
 }

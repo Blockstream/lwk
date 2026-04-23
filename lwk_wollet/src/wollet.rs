@@ -624,7 +624,7 @@ impl Wollet {
 
     fn utxos_inner(&self) -> Result<Vec<WalletTxOut>, Error> {
         let mut utxos = vec![];
-        for outpoint in self.cache.unspent() {
+        for outpoint in self.cache.unspent().keys() {
             // Technically all these unwrap and error mapping should not be necessary
             // as all these values should be in the cache, but better be safer here and don't panic
             let unblinded = *self
@@ -693,7 +693,7 @@ impl Wollet {
                         txid: *tx_id,
                         vout: vout as u32,
                     };
-                    (out_point, output, !unspent.contains(&out_point))
+                    (out_point, output, !unspent.contains_key(&out_point))
                 })
                 .filter_map(|(outpoint, output, is_spent)| {
                     let unblinded = *self.cache.unblinded.get(&outpoint)?;
@@ -760,7 +760,7 @@ impl Wollet {
     /// They can be spent as external utxos using [`crate::TxBuilder::add_external_utxos()`].
     pub fn explicit_utxos(&self) -> Result<Vec<ExternalUtxo>, Error> {
         let mut utxos = vec![];
-        for outpoint in self.cache.unspent() {
+        for outpoint in self.cache.unspent().keys() {
             // Technically all these unwrap and error mapping should not be necessary
             // as all these values should be in the cache, but better be safer here and don't panic
             let unblinded = *self

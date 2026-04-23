@@ -39,8 +39,8 @@ pub struct Cache {
     /// txids sorted by height descending, then txid descending (unconfirmed first)
     sorted_txids: Vec<Txid>,
 
-    /// Wallet unspent outpoints
-    unspent: HashSet<OutPoint>,
+    /// Wallet unspent outpoints and their script pubkeys
+    unspent: HashMap<OutPoint, Script>,
 
     /// unblinded values
     pub unblinded: HashMap<OutPoint, TxOutSecrets>,
@@ -67,7 +67,7 @@ impl Default for Cache {
             scripts: HashMap::default(),
             heights: HashMap::default(),
             sorted_txids: vec![],
-            unspent: HashSet::new(),
+            unspent: HashMap::new(),
             unblinded: HashMap::default(),
             tip: (0, BlockHash::all_zeros()),
             last_unused_internal: 0.into(),
@@ -199,7 +199,7 @@ impl Cache {
         })
     }
 
-    pub fn unspent(&self) -> &HashSet<OutPoint> {
+    pub fn unspent(&self) -> &HashMap<OutPoint, Script> {
         &self.unspent
     }
 
@@ -240,6 +240,12 @@ impl Cache {
             .find(|(candidate, _)| candidate == txid)
             .map(|(_, tx)| tx.clone())
             .or_else(|| self.tx(txid))
+    }
+
+    fn outpoint_script(&self, outpoint: &OutPoint, txs: &[(Txid, Transaction)]) -> Option<Script> {
+        self.tx_as_fallback(&outpoint.txid, txs)
+            .and_then(|tx| tx.output.get(outpoint.vout as usize).cloned())
+            .map(|txout| txout.script_pubkey)
     }
 
     pub fn all_txids(&self) -> &HashSet<Txid> {
@@ -283,12 +289,15 @@ impl Cache {
     ) {
         let txids_new: HashSet<&Txid> = txid_height_new.iter().map(|(txid, _)| txid).collect();
 
-        let outputs_new: Vec<OutPoint> = self
+        let outputs_new: Vec<(OutPoint, Script)> = self
             // we're assuming: in unblinded => belongs to wollet
             .unblinded
             .keys()
             .filter(|op| txids_new.contains(&op.txid))
-            .cloned()
+            .filter_map(|op| {
+                self.outpoint_script(op, new_txs)
+                    .map(|script| (*op, script))
+            })
             .collect();
 
         let inputs_new: HashSet<OutPoint> = txids_new
@@ -297,7 +306,7 @@ impl Cache {
             .flat_map(|tx| tx.input.into_iter().map(|i| i.previous_output))
             .collect();
 
-        let inputs_to_restore: Vec<OutPoint> = deleted_txids
+        let inputs_to_restore: Vec<(OutPoint, Script)> = deleted_txids
             .iter()
             // Merged updates can still carry the full transaction in `new_txs` even
             // when the resulting update marks its txid as deleted.
@@ -305,6 +314,10 @@ impl Cache {
             .flat_map(|tx| tx.input.into_iter().map(|i| i.previous_output))
             // we're assuming: in unblinded => belongs to wollet
             .filter(|op| self.unblinded.contains_key(op))
+            .filter_map(|op| {
+                self.outpoint_script(&op, new_txs)
+                    .map(|script| (op, script))
+            })
             .collect();
 
         // Add outputs of new txs
@@ -312,16 +325,25 @@ impl Cache {
         // Add inputs of deleted txs (they are utxos now)
         self.unspent.extend(inputs_to_restore);
         // Remove inputs of new txs (they are spent now)
-        self.unspent.retain(|o| !inputs_new.contains(o));
+        self.unspent.retain(|o, _| !inputs_new.contains(o));
         // Remove outputs of deleted txs (after adding inputs, so that an output spent
         // by another deleted tx does not remain in unspent)
         self.unspent
-            .retain(|o| deleted_txids.iter().all(|txid| txid != &o.txid));
+            .retain(|o, _| deleted_txids.iter().all(|txid| txid != &o.txid));
     }
 
-    fn update_unspent_utxos_only(&mut self, unspent: Vec<OutPoint>) {
-        self.unspent.clear();
-        self.unspent.extend(unspent);
+    fn update_unspent_utxos_only(&mut self, unspent: Vec<OutPoint>, txs: &[(Txid, Transaction)]) {
+        let unspent = unspent
+            .into_iter()
+            .filter_map(|op| {
+                self.unspent
+                    .get(&op)
+                    .cloned()
+                    .or_else(|| self.outpoint_script(&op, txs))
+                    .map(|script| (op, script))
+            })
+            .collect();
+        self.unspent = unspent;
     }
 
     fn update_heights(&mut self, new: &[(Txid, Option<u32>)], to_delete: &[Txid]) {
@@ -361,7 +383,7 @@ impl Cache {
         self.update_heights(txid_height_new, deleted_txids);
         self.rebuild_sorted_txids();
         if utxo_only {
-            self.update_unspent_utxos_only(unspent);
+            self.update_unspent_utxos_only(unspent, txs);
         } else {
             self.update_unspent(txid_height_new, deleted_txids, txs);
         }

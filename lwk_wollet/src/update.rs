@@ -422,13 +422,13 @@ impl Wollet {
             for input in tx.input.iter() {
                 unspent.remove(&input.previous_output);
             }
-            for vout in 0..tx.output.len() {
+            for (vout, output) in tx.output.iter().enumerate() {
                 let outpoint = OutPoint::new(txid, vout as u32);
                 if unblinds.iter().any(|(op, _)| op == &outpoint) {
-                    unspent.insert(outpoint);
+                    unspent.insert(outpoint, output.script_pubkey.clone());
                 }
             }
-            unspent.into_iter().collect()
+            unspent.into_keys().collect()
         } else {
             vec![]
         };

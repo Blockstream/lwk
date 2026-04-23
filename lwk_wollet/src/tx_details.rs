@@ -6,7 +6,7 @@ use crate::elements::secp256k1_zkp::ZERO_TWEAK;
 use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::{Error, Wollet};
 use lwk_common::SignedBalance;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 
 /// Transaction details
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -172,7 +172,7 @@ impl Wollet {
         &self,
         txid: &Txid,
         height: Option<u32>,
-        unspent: &HashSet<OutPoint>,
+        unspent: &HashMap<OutPoint, Script>,
         without_tx: bool,
     ) -> Result<Option<TxDetails>, Error> {
         let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
@@ -201,7 +201,7 @@ impl Wollet {
             let mut outputs = vec![];
             for (vout, txout) in tx.output.iter().enumerate() {
                 let outpoint = OutPoint::new(*txid, vout as u32);
-                let is_spent = !unspent.contains(&outpoint);
+                let is_spent = !unspent.contains_key(&outpoint);
                 outputs.push(self.txout_details(outpoint, height, Some(txout), is_spent)?);
             }
 

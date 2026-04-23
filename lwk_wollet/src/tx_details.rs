@@ -322,6 +322,16 @@ pub struct TxsOpt {
     pub without_tx: bool,
 }
 
+impl TxsOpt {
+    /// Ask transaction list without the full consensus transactions
+    pub fn without_tx() -> Self {
+        Self {
+            without_tx: true,
+            ..Default::default()
+        }
+    }
+}
+
 // TODO: consider having different types for input and outputs
 
 /// Transaction output details

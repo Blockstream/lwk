@@ -36,7 +36,7 @@ async function runAmp0Setup() {
         // Create watch only entries
         await amp0loggedin.createWatchOnly(username, password);
         // Use watch only credentials to interact with AMP0
-        const amp0 = await new lwk.Amp0(network, username, password, amp_id);
+        const amp0 = await lwk.Amp0.newTestnet(username, password, amp_id);
         // ANCHOR_END: amp0-setup
         process.exit(0); // TODO: expose a way to close the websocket
     } catch (error) {

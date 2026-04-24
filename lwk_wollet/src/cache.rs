@@ -244,8 +244,7 @@ impl Cache {
 
     fn outpoint_script(&self, outpoint: &OutPoint, txs: &[(Txid, Transaction)]) -> Option<Script> {
         self.tx_as_fallback(&outpoint.txid, txs)
-            .and_then(|tx| tx.output.get(outpoint.vout as usize).cloned())
-            .map(|txout| txout.script_pubkey)
+            .and_then(|tx| tx.output.get(outpoint.vout as usize).map(|txout| txout.script_pubkey.clone()))
     }
 
     pub fn all_txids(&self) -> &HashSet<Txid> {

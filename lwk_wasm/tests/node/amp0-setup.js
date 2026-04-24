@@ -1,5 +1,16 @@
 async function runAmp0Setup() {
     try {
+        const gitlabCI = process.env.GITLAB_CI;
+        const ciJobName = process.env.CI_JOB_NAME;
+        const ciBranchName = process.env.CI_COMMIT_BRANCH;
+        if (gitlabCI) {
+            // We are in a CI job
+            if (ciBranchName !== "master" || ciJobName !== "amp0") {
+                console.log("Skipping test");
+                process.exit(0);
+            }
+        }
+
         const WebSocket = require('ws');
         global.WebSocket = WebSocket;
 

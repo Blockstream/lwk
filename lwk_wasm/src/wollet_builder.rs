@@ -63,6 +63,14 @@ impl WolletBuilder {
             .into()
     }
 
+    /// Set encryption for the transactions store.
+    ///
+    /// Default: encrypted if the store is persisted.
+    #[wasm_bindgen(js_name = setEncryptionTxsStore)]
+    pub fn set_encryption_txs_store(self, encrypt: bool) -> Self {
+        self.inner.set_encryption_txs_store(encrypt).into()
+    }
+
     /// Build the wallet from this builder.
     pub fn build(self) -> Result<Wollet, Error> {
         Ok(self.inner.build()?.into())

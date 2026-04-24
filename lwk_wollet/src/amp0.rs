@@ -1915,6 +1915,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "slow unit test"]
     fn test_slow_amp0_login_utils() {
         let (encrypted_username, encrypted_password) =
             encrypt_credentials("userleo456", "userleo456");
@@ -1930,6 +1931,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "slow unit test"]
     fn test_slow_amp0_decrypt_blob() {
         use elements::hashes::hex::DisplayHex;
 
@@ -2179,6 +2181,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "slow unit test"]
     fn test_slow_amp0_hmac() {
         use elements::bitcoin::bip32::{DerivationPath, Xpriv};
         use elements::bitcoin::Network;

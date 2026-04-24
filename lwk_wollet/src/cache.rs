@@ -331,6 +331,7 @@ impl Cache {
             .retain(|o, _| deleted_txids.iter().all(|txid| txid != &o.txid));
     }
 
+    // TODO: might be worth getting the scripts from the previous map before getting them from txs or txs store
     fn update_unspent_utxos_only(&mut self, unspent: Vec<OutPoint>, txs: &[(Txid, Transaction)]) {
         let unspent = unspent
             .into_iter()

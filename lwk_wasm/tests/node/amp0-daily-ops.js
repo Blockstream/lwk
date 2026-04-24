@@ -1,9 +1,11 @@
 async function runAmp0DailyOps() {
     try {
+        const gitlabCI = process.env.GITLAB_CI;
+        const ciJobName = process.env.CI_JOB_NAME;
         const ciBranchName = process.env.CI_COMMIT_BRANCH;
-        if (ciBranchName !== undefined) {
+        if (gitlabCI) {
             // We are in a CI job
-            if (ciBranchName !== "master") {
+            if (ciBranchName !== "master" || ciJobName !== "amp0") {
                 console.log("Skipping test");
                 process.exit(0);
             }

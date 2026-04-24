@@ -166,7 +166,7 @@ If all the AMP0 rules are respected, the transaction is cosigned by AMP0 and can
 <section>
 
 ```rust,ignore
-{{#include ../../lwk_wollet/tests/e2e.rs:amp0-daily-ops:ignore}}
+{{#include ../../lwk_wollet/tests/amp0.rs:amp0-daily-ops:ignore}}
 ```
 </section>
 

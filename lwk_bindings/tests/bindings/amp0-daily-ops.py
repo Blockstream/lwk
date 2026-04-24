@@ -2,10 +2,12 @@ from lwk import *
 import os
 
 
+gitlab_ci = os.environ.get("GITLAB_CI")
+ci_job_name = os.environ.get("CI_JOB_NAME")
 ci_branch_name = os.environ.get("CI_COMMIT_BRANCH")
-if ci_branch_name is not None:
+if gitlab_ci == "true":
     # We are in a CI job
-    if ci_branch_name != "master":
+    if ci_branch_name != "master" or ci_job_name != "amp0":
         print("Skipping test")
         quit()
 

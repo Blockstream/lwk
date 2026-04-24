@@ -209,6 +209,7 @@ pub struct Update {
     /// In general utxos are not returned by the server, and they are computed
     /// by the [`Wollet`] from its transactions. However if the server is
     /// "utxo only" they are returned so we store them here.
+    // TODO: change to `Vec<OutPoint, Script>` we currently "recover it" after, we may want to just keep it
     pub unspent: Vec<OutPoint>,
 }
 

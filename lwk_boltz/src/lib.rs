@@ -40,9 +40,9 @@ use boltz_client::boltz::SwapStatus;
 use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
 use boltz_client::boltz::BOLTZ_REGTEST;
 use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "blocking")]
 use boltz_client::network::electrum::ElectrumBitcoinClient;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "blocking")]
 use boltz_client::network::electrum::DEFAULT_ELECTRUM_TIMEOUT;
 use boltz_client::network::BitcoinChain;
 use boltz_client::network::Chain;

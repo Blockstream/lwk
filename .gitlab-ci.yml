@@ -412,8 +412,8 @@ publish_snapshot_to_maven:
     SIMPLICITY: "1"
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
-      # when: on_success # TODO restore once fixed
-      when: manual
+      when: on_success
+    - when: manual
   script:
     - just kotlin-multiplatform
     - cd lwk_bindings/android_bindings
@@ -429,9 +429,13 @@ publish_snapshot_to_maven:
     - GIT_COMMIT=$(git rev-parse --short=8 HEAD)
     - SNAPSHOT_VERSION="${NEXT_VERSION}-SNAPSHOT"
     - SNAPSHOT_VERSION_COMMIT="${NEXT_VERSION}-${GIT_COMMIT}-SNAPSHOT"
-    - echo "Publishing snapshot versions ${SNAPSHOT_VERSION} and ${SNAPSHOT_VERSION_COMMIT}"
-    - ./gradlew -PlibraryVersion=${SNAPSHOT_VERSION} publish --no-daemon
-    - ./gradlew -PlibraryVersion=${SNAPSHOT_VERSION_COMMIT} publish --no-daemon
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "master" ]; then
+        echo "Publishing snapshot versions ${SNAPSHOT_VERSION}"
+        ./gradlew -PlibraryVersion=${SNAPSHOT_VERSION} publish --no-daemon
+      fi
+      echo "Publishing snapshot version ${SNAPSHOT_VERSION_COMMIT}"
+      ./gradlew -PlibraryVersion=${SNAPSHOT_VERSION_COMMIT} publish --no-daemon
   artifacts:
     paths:
       - lwk_bindings/android_bindings/lib/build/libs

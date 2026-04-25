@@ -1,10 +1,10 @@
 [versions]
 annotation = "1.9.1"
-kotlin = "2.3.20"
-kotlinx-serialization = "1.10.0"
+kotlin = "2.2.21"
+kotlinx-serialization = "1.9.0"
 kotlinx-coroutines = "1.10.2"
-android-gradle-plugin = "8.13.2"
-okio = "3.17.0"
+android-gradle-plugin = "9.2.0"
+okio = "3.16.4"
 espresso = "3.7.0"
 jna = "5.18.1"
 junit = "4.13.2"
@@ -24,7 +24,7 @@ junit-ext = { module = "androidx.test.ext:junit", version.ref = "junit-ext" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]
-androidLibrary = { id = "com.android.library", version.ref = "android-gradle-plugin" }
+androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "android-gradle-plugin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 atomicfu = { id = "org.jetbrains.kotlinx.atomicfu", version.ref = "atomicfu" }

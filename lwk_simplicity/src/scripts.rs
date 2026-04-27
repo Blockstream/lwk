@@ -12,6 +12,22 @@ use crate::error::ProgramError;
 /// Returns error if the program fails to compile.
 pub fn load_program(source: &str, arguments: Arguments) -> Result<CompiledProgram, ProgramError> {
     let compiled =
+        CompiledProgram::new(source, arguments, false).map_err(ProgramError::Compilation)?;
+
+    Ok(compiled)
+}
+
+/// Load program source and compile it to a Simplicity program using debug symbols.
+/// NOTE: **This should not be used in general**, but remains for existing legacy programs
+/// that were previously compiled with debug symbols.
+///
+/// # Errors
+/// Returns error if the program fails to compile.
+pub fn load_program_with_debug_symbols(
+    source: &str,
+    arguments: Arguments,
+) -> Result<CompiledProgram, ProgramError> {
+    let compiled =
         CompiledProgram::new(source, arguments, true).map_err(ProgramError::Compilation)?;
 
     Ok(compiled)

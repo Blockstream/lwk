@@ -4,6 +4,8 @@ use elements::hashes::{sha256, Hash};
 use elements::{AddressParams, AssetId, BlockHash};
 use serde::{Deserialize, Deserializer, Serialize};
 
+use crate::Error;
+
 const LIQUID_TESTNET_POLICY_ASSET: &AssetId = &AssetId::from_inner(sha256::Midstate([
     0x49, 0x9a, 0x81, 0x85, 0x45, 0xf6, 0xba, 0xe3, 0x9f, 0xc0, 0x3b, 0x63, 0x7f, 0x2a, 0x4e, 0x1e,
     0x64, 0xe5, 0x90, 0xca, 0xc1, 0xbc, 0x3a, 0x6f, 0x6d, 0x71, 0xaa, 0x44, 0x43, 0x65, 0x4c, 0x14,
@@ -29,6 +31,51 @@ const GENESIS_LIQUID_REGTEST: [u8; 32] = [
     0xf7, 0x6a, 0xfd, 0x8b, 0xc7, 0xd9, 0xc5, 0x45, 0x33, 0x16, 0xca, 0x69, 0x0b, 0xd4, 0x3f, 0x63,
     0xc1, 0x45, 0x10, 0xd4, 0x2b, 0x90, 0x74, 0xa5, 0x98, 0x34, 0x4a, 0x77, 0xb0, 0x03, 0xaf, 0xc7,
 ];
+
+/// The builder for custom Elements network parameters
+#[derive(Default)]
+pub struct ElementsParamsBuilder {
+    policy_asset: Option<AssetId>,
+    genesis_hash: Option<BlockHash>,
+}
+
+impl ElementsParamsBuilder {
+    /// Create builder for custom Elements network parameters
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Specify policy asset.
+    pub fn with_policy_asset(mut self, policy_asset: AssetId) -> Self {
+        self.policy_asset = Some(policy_asset);
+        self
+    }
+
+    /// Specify genesis hash.
+    pub fn with_genesis_hash(mut self, genesis_hash: BlockHash) -> Self {
+        self.genesis_hash = Some(genesis_hash);
+        self
+    }
+
+    /// Build Elements network parameters.
+    ///
+    /// Unspecified values would defined as default Liquid regtest parameters
+    pub fn build(self) -> Result<ElementsParams, Error> {
+        Ok(ElementsParams {
+            policy_asset: self.policy_asset.unwrap_or(*LIQUID_REGTEST_POLICY_ASSET),
+            genesis_hash: self
+                .genesis_hash
+                .unwrap_or(BlockHash::from_byte_array(GENESIS_LIQUID_REGTEST)),
+        })
+    }
+}
+
+/// Paramaters for custom Elements network.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ElementsParams {
+    policy_asset: AssetId,
+    genesis_hash: BlockHash,
+}
 
 /// The network of the elements blockchain.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

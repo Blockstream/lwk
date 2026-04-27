@@ -226,7 +226,10 @@ impl<S: Stream<Error = Error>> Jade<S> {
     fn check_network(&self, passed: Network) -> Result<()> {
         let init = self.network;
         if passed != init {
-            Err(Error::MismatchingXpub { init, passed })
+            Err(Error::MismatchingXpub {
+                init: init.to_string(),
+                passed: passed.to_string(),
+            })
         } else {
             Ok(())
         }

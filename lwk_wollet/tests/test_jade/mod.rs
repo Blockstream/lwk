@@ -84,6 +84,42 @@ fn emul_roundtrip_multisig(threshold: usize) {
     roundtrip(&env, signers, None, Some(threshold));
 }
 
+fn sign_explicit_jade_input(env: &TestEnv, jade_signer: &AnySigner, before_sign: Option<&str>) {
+    let desc_str = singlesig_desc(
+        jade_signer,
+        Singlesig::Wpkh,
+        lwk_common::DescriptorBlindingKey::Slip77,
+    )
+    .unwrap();
+    let client = test_client_electrum(&env.electrum_url());
+    let mut wallet = TestWollet::new(client, &desc_str);
+
+    wallet.fund_explicit(env, 100_000, None, None);
+    let explicit_utxos = wallet.wollet.explicit_utxos().unwrap();
+    assert_eq!(explicit_utxos.len(), 1);
+    let external_utxo = explicit_utxos[0].clone();
+
+    let node_address = env.elementsd_getnewaddress();
+    let mut pset = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&node_address, 10_000)
+        .unwrap()
+        .add_external_utxos(vec![external_utxo])
+        .unwrap()
+        .finish()
+        .unwrap();
+    assert_eq!(pset.inputs().len(), 1);
+
+    if let Some(message) = before_sign {
+        eprintln!("{message}");
+    }
+    let sigs_added_or_overwritten = jade_signer.sign(&mut pset).unwrap();
+    assert!(sigs_added_or_overwritten > 0);
+
+    let txid = wallet.send(&mut pset);
+    assert!(wallet.wollet.transaction(&txid).unwrap().is_some());
+}
+
 #[test]
 fn emul_roundtrip_wpkh() {
     emul_roundtrip_singlesig(Singlesig::Wpkh);
@@ -110,6 +146,18 @@ fn jade_slip77() {
     let desc_str =
         lwk_common::singlesig_desc(&jade_init.jade, script_variant, blinding_variant).unwrap();
     assert!(desc_str.contains(lwk_test_util::TEST_MNEMONIC_SLIP77))
+}
+
+#[test]
+fn emul_signs_explicit_jade_input() {
+    init_logging();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let docker = Cli::default();
+    let jade = jade_setup(&docker, TEST_MNEMONIC);
+    let id = jade.jade.identifier().unwrap();
+    let jade_signer = AnySigner::Jade(jade.jade, id);
+
+    sign_explicit_jade_input(&env, &jade_signer, None);
 }
 
 fn multi_multisig(env: &TestEnv, jade_signer: &AnySigner) {
@@ -212,6 +260,25 @@ mod serial {
         let id = jade.identifier().unwrap();
         let jade_signer = AnySigner::Jade(jade, id);
         multi_multisig(&env, &jade_signer);
+    }
+
+    #[test]
+    #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial; confirm transaction on device screen"]
+    fn jade_signs_explicit_input() {
+        init_logging();
+        let env = TestEnvBuilder::from_env().with_electrum().build();
+        let network = lwk_common::Network::LocaltestLiquid;
+        let ports = Jade::available_ports_with_jade();
+        let port_name = &ports.first().unwrap().port_name;
+        let jade = Jade::from_serial(network, port_name, None).unwrap();
+        let id = jade.identifier().unwrap();
+        let jade_signer = AnySigner::Jade(jade, id);
+
+        sign_explicit_jade_input(
+            &env,
+            &jade_signer,
+            Some("Confirm the explicit-input Liquid transaction on the Jade screen."),
+        );
     }
 }
 

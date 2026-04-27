@@ -43,10 +43,7 @@ jobs:
         - uses: dtolnay/rust-toolchain@1.85.0
           with:
             targets: x86_64-apple-ios,aarch64-apple-ios,aarch64-apple-ios-sim,aarch64-apple-darwin
-        - uses: extractions/setup-just@v2
-          with:
-            just-version: 1.5.0  # optional semver specification, otherwise latest
-        - run: brew install xcodegen
+        - run: brew install just xcodegen
         - run: just swift
 
   csharp:
@@ -60,10 +57,9 @@ jobs:
       - run: ls target/release/csharp
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '6.0.x'
+          dotnet-version: '8.0.x'
       - run: cd target/release/csharp && dotnet run && cd -
       - uses: actions/upload-artifact@v4
         with:
           name: csharp-windows
           path: target/release/csharp
-

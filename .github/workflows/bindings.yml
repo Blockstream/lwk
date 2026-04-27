@@ -153,6 +153,11 @@ jobs:
 
       - run: cp lwk_bindings/csharp/* csharp
 
+      - name: Patch generated C# code to avoid Finalize conflict
+        run: |
+          sed -i 's/public Transaction Finalize(/public Transaction FinalizePset(/g' csharp/lwk.cs
+          sed -i 's/public Pset Finalize(/public Pset FinalizePset(/g' csharp/lwk.cs
+
       - run: ls -R csharp
 
       - name: Archive the package

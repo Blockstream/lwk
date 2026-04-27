@@ -1,9 +1,8 @@
-import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 
 plugins {
-    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.atomicfu)
@@ -12,9 +11,24 @@ plugins {
 }
 
 kotlin {
-    androidTarget {
-        publishLibraryVariants("release")
+    android {
+        namespace = "com.blockstream.lwk_bindings"
+        compileSdk = 36
+        minSdk = 24
+
         compilerOptions { jvmTarget.set(JvmTarget.JVM_1_8) }
+
+        withHostTestBuilder {}.configure {}
+        withDeviceTestBuilder {
+            sourceSetTreeName = "test"
+        }.configure {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        }
+
+        optimization {
+            consumerKeepRules.publish = true
+            consumerKeepRules.file("consumer-rules.pro")
+        }
     }
 
     jvm()
@@ -40,7 +54,10 @@ kotlin {
         it.compilations["main"].cinterops {
             create("lwkCInterop") {
                 defFile(project.file("src/nativeInterop/cinterop/lwk.def"))
-                includeDirs(project.file("src/nativeInterop/cinterop/headers/lwk/"), project.file("src/libs/$platform"))
+                includeDirs(
+                    project.file("src/nativeInterop/cinterop/headers/lwk/"),
+                    project.file("src/libs/$platform")
+                )
             }
         }
     }
@@ -66,41 +83,15 @@ kotlin {
         jvmMain.dependencies {
             implementation(libs.jna)
         }
-        androidUnitTest.dependencies {
+        getByName("androidHostTest").dependencies {
             implementation(libs.junit)
         }
-        androidInstrumentedTest.dependencies {
+        getByName("androidDeviceTest").dependencies {
             implementation(libs.junit.ext)
             implementation(libs.espresso.core)
         }
     }
 
-}
-
-android {
-    namespace = "com.blockstream.lwk_bindings"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 24
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
 }
 
 val libraryVersion: String by project
@@ -151,6 +142,11 @@ tasks.withType<Sign>().configureEach {
     onlyIf {
         val taskNames = gradle.startParameter.taskNames
         // Skip signing if the build is targeting the local Maven repository
-        taskNames.none { it.contains("publishToMavenLocal", ignoreCase = true) || it.contains("publishToLocalMaven", ignoreCase = true) }
+        taskNames.none {
+            it.contains(
+                "publishToMavenLocal",
+                ignoreCase = true
+            ) || it.contains("publishToLocalMaven", ignoreCase = true)
+        }
     }
 }

@@ -120,6 +120,11 @@ impl Network {
             Network::LocaltestLiquid => &AddressParams::ELEMENTS,
         }
     }
+
+    /// Return Elements network with default parameters
+    pub fn default_regtest() -> Self {
+        Network::LocaltestLiquid
+    }
 }
 
 impl std::fmt::Display for Network {

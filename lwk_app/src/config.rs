@@ -91,7 +91,12 @@ impl Config {
         match self.network {
             ElementsNetwork::Liquid => JadeNetwork::Liquid,
             ElementsNetwork::LiquidTestnet => JadeNetwork::TestnetLiquid,
-            ElementsNetwork::ElementsRegtest { .. } => JadeNetwork::default_regtest(),
+            ElementsNetwork::ElementsRegtest { policy_asset } => JadeNetwork::CustomElements(
+                lwk_common::ElementsParamsBuilder::new()
+                    .with_policy_asset(policy_asset)
+                    .build()
+                    .expect("static"),
+            ),
         }
     }
 

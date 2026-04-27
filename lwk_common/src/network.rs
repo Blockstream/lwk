@@ -84,8 +84,8 @@ pub enum Network {
     Liquid,
     /// Liquid testnet
     TestnetLiquid,
-    /// Liquid regtest
-    LocaltestLiquid,
+    /// Elements network with custom parameters
+    CustomElements(ElementsParams),
 }
 
 impl Network {
@@ -95,11 +95,11 @@ impl Network {
     }
 
     /// Return the policy asset for this network.
-    pub fn policy_asset(&self) -> &'static AssetId {
+    pub fn policy_asset(&self) -> &AssetId {
         match self {
             Network::Liquid => &AssetId::LIQUID_BTC,
             Network::TestnetLiquid => LIQUID_TESTNET_POLICY_ASSET,
-            Network::LocaltestLiquid => LIQUID_REGTEST_POLICY_ASSET,
+            Network::CustomElements(params) => &params.policy_asset,
         }
     }
 
@@ -108,7 +108,7 @@ impl Network {
         match self {
             Network::Liquid => BlockHash::from_byte_array(GENESIS_LIQUID),
             Network::TestnetLiquid => BlockHash::from_byte_array(GENESIS_LIQUID_TESTNET),
-            Network::LocaltestLiquid => BlockHash::from_byte_array(GENESIS_LIQUID_REGTEST),
+            Network::CustomElements(params) => params.genesis_hash,
         }
     }
 
@@ -117,13 +117,17 @@ impl Network {
         match self {
             Network::Liquid => &AddressParams::LIQUID,
             Network::TestnetLiquid => &AddressParams::LIQUID_TESTNET,
-            Network::LocaltestLiquid => &AddressParams::ELEMENTS,
+            Network::CustomElements(_) => &AddressParams::ELEMENTS,
         }
     }
 
     /// Return Elements network with default parameters
     pub fn default_regtest() -> Self {
-        Network::LocaltestLiquid
+        Network::CustomElements(
+            ElementsParamsBuilder::new()
+                .build()
+                .expect("default parameters"),
+        )
     }
 }
 
@@ -132,7 +136,7 @@ impl std::fmt::Display for Network {
         match self {
             Network::Liquid => write!(f, "liquid"),
             Network::TestnetLiquid => write!(f, "testnet-liquid"),
-            Network::LocaltestLiquid => write!(f, "localtest-liquid"),
+            Network::CustomElements(_) => write!(f, "localtest-liquid"),
         }
     }
 }

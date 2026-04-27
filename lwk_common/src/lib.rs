@@ -39,7 +39,7 @@ pub use crate::encrypt::{
 pub use crate::error::Error;
 pub use crate::keyorigin_xpub::{keyorigin_xpub_from_str, InvalidKeyOriginXpub};
 pub use crate::model::*;
-pub use crate::network::Network;
+pub use crate::network::{ElementsParamsBuilder, Network};
 pub use crate::precision::Precision;
 pub use crate::qr::*;
 pub use crate::segwit::is_provably_segwit;

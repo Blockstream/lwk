@@ -326,7 +326,7 @@ impl<S: Stream> Amp0<S> {
         match self.network {
             Network::Liquid => "https://green-liquid-mainnet.blockstream.com",
             Network::TestnetLiquid => "https://green-liquid-testnet.blockstream.com",
-            Network::LocaltestLiquid => "http://127.0.0.1:9908",
+            Network::CustomElements(_) => "http://127.0.0.1:9908",
         }
     }
 
@@ -1221,7 +1221,7 @@ fn server_master_xpub(network: &Network) -> Xpub {
             "c660eec6d9c536f4121854146da22e02d4c91d72af004d41729b9a592f0788e5",
             NetworkKind::Test,
         ),
-        Network::LocaltestLiquid => (
+        Network::CustomElements(_) => (
             "036307e560072ed6ce0aa5465534fb5c258a2ccfbc257f369e8e7a181b16d897b3",
             "b60befcc619bb1c212732770fe181f2f1aa824ab89f8aab49f2e13e3a56f0f04",
             NetworkKind::Test,
@@ -1289,7 +1289,7 @@ pub fn default_url(network: Network) -> Result<&'static str, Error> {
     match network {
         Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),
         Network::TestnetLiquid => Ok("wss://green-liquid-testnet.blockstream.com/v2/ws/"),
-        Network::LocaltestLiquid => Ok("ws://localhost:8080/v2/ws"),
+        Network::CustomElements(_) => Ok("ws://localhost:8080/v2/ws"),
     }
 }
 

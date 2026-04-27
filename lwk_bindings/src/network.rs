@@ -41,8 +41,13 @@ impl From<&Network> for lwk_common::Network {
         match value.inner {
             lwk_wollet::ElementsNetwork::Liquid => lwk_common::Network::Liquid,
             lwk_wollet::ElementsNetwork::LiquidTestnet => lwk_common::Network::TestnetLiquid,
-            lwk_wollet::ElementsNetwork::ElementsRegtest { .. } => {
-                lwk_common::Network::default_regtest()
+            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset } => {
+                lwk_common::Network::CustomElements(
+                    lwk_common::ElementsParamsBuilder::new()
+                        .with_policy_asset(policy_asset)
+                        .build()
+                        .expect("static"),
+                )
             }
         }
     }

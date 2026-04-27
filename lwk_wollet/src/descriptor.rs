@@ -935,7 +935,7 @@ mod test {
                     assert_eq!(desc_str, "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84h/1776h/0h]xpub6CRFzUgHFDaiDAQFNX7VeV9JNPDRabq6NYSpzVZ8zW8ANUCiDdenkb1gBoEZuXNZb3wPc1SVcDXgD2ww5UBtTb8s8ArAbTkoRQ8qn34KgcY/<0;1>/*))#y8jljyxl","1");
                     assert_eq!(abandon_dwid, "d41f-fe12-4da1-28d5-9449-5e49-d3f4-42ca", "1");
                 }
-                lwk_common::Network::LocaltestLiquid => {
+                lwk_common::Network::CustomElements(_) => {
                     assert_eq!(desc_str, "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84h/1h/0h]tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#xte2lx9x","2");
                     assert_eq!(abandon_dwid, "2cb9-6c92-93b8-1f96-0c3f-afc7-9504-afdd", "2");
                 }
@@ -1365,7 +1365,7 @@ fn test_elip_dwid() {
         let network_str = match network {
             Network::Liquid => "Liquid",
             Network::TestnetLiquid => "Liquid Testnet",
-            Network::LocaltestLiquid => "Liquid Regtest",
+            Network::CustomElements(_) => "Liquid Regtest",
         };
         println!("* Test Vector {i}");
         println!("** Description: {description}");

@@ -129,8 +129,13 @@ impl From<ElementsNetwork> for lwk_common::Network {
         match network {
             ElementsNetwork::Liquid => lwk_common::Network::Liquid,
             ElementsNetwork::LiquidTestnet => lwk_common::Network::TestnetLiquid,
-            ElementsNetwork::ElementsRegtest { policy_asset: _ } => {
-                lwk_common::Network::default_regtest()
+            ElementsNetwork::ElementsRegtest { policy_asset } => {
+                lwk_common::Network::CustomElements(
+                    lwk_common::ElementsParamsBuilder::new()
+                        .with_policy_asset(policy_asset)
+                        .build()
+                        .expect("static"),
+                )
             }
         }
     }

@@ -91,7 +91,7 @@ impl Config {
         match self.network {
             ElementsNetwork::Liquid => JadeNetwork::Liquid,
             ElementsNetwork::LiquidTestnet => JadeNetwork::TestnetLiquid,
-            ElementsNetwork::ElementsRegtest { .. } => JadeNetwork::LocaltestLiquid,
+            ElementsNetwork::ElementsRegtest { .. } => JadeNetwork::default_regtest(),
         }
     }
 

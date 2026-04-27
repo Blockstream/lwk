@@ -906,7 +906,7 @@ mod test {
     fn test_dwid() {
         let desc_str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
         let desc: WolletDescriptor = desc_str.parse().unwrap();
-        let dwid = desc.dwid(lwk_common::Network::LocaltestLiquid).unwrap();
+        let dwid = desc.dwid(lwk_common::Network::default_regtest()).unwrap();
         assert_eq!(dwid, "384f-8fef-d726-5584-b6b1-88e5-af2e-ce22");
 
         // Test using SwSigner with the "abandon abandon..." mnemonic
@@ -914,7 +914,7 @@ mod test {
 
         for network in [
             lwk_common::Network::Liquid,
-            lwk_common::Network::LocaltestLiquid,
+            lwk_common::Network::default_regtest(),
             lwk_common::Network::TestnetLiquid,
         ] {
             let signer = lwk_signer::SwSigner::new(mnemonic, network.is_mainnet()).unwrap();
@@ -1326,7 +1326,7 @@ fn test_elip_dwid() {
         (
             format!("ct({view},elwpkh({ko_xpub_test}/0/*))"),
             "Liquid Regtest",
-            Network::LocaltestLiquid,
+            Network::default_regtest(),
         ),
         (
             format!("ct({view},elwpkh({xpub}/0/*))"),

@@ -144,7 +144,7 @@ impl FromStr for Network {
         match s {
             "liquid" => Ok(Network::Liquid),
             "testnet-liquid" => Ok(Network::TestnetLiquid),
-            "localtest-liquid" => Ok(Network::LocaltestLiquid),
+            "localtest-liquid" => Ok(Network::default_regtest()),
             _ => Err(
                 "invalid network, possible value are: 'liquid', 'testnet-liquid', 'localtest-liquid'"
                     .to_string(),
@@ -185,7 +185,7 @@ mod tests {
             "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49"
         );
         assert_eq!(
-            Network::LocaltestLiquid.policy_asset().to_string(),
+            Network::default_regtest().policy_asset().to_string(),
             "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
         );
 
@@ -200,7 +200,7 @@ mod tests {
             "a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1"
         );
         assert_eq!(
-            Network::LocaltestLiquid.genesis_hash().to_string(),
+            Network::default_regtest().genesis_hash().to_string(),
             "c7af03b0774a3498a574902bd41045c1633fd40b69ca163345c5d9c78bfd6af7"
         );
     }

@@ -23,7 +23,7 @@ impl<'a> TestJadeEmulator<'a> {
         let container = docker.run(JadeEmulator);
         let port = container.get_host_port_ipv4(EMULATOR_PORT);
         let stream = std::net::TcpStream::connect(format!("127.0.0.1:{port}")).unwrap();
-        let network = Network::LocaltestLiquid;
+        let network = Network::default_regtest();
         let jade = Jade::new(stream.into(), network);
         Self {
             jade,

@@ -2068,7 +2068,7 @@ mod tests {
 
         let (network, elements_network, url) = if regtest {
             (
-                Network::LocaltestLiquid,
+                Network::default_regtest(),
                 ElementsNetwork::default_regtest(),
                 "tcp://localhost:19002",
             )
@@ -2153,7 +2153,7 @@ mod tests {
         let xpub = server_master_xpub(&Network::TestnetLiquid);
         assert_eq!(xpub.fingerprint().to_string(), AMP0_FINGERPRINT_TESTNET);
 
-        let xpub = server_master_xpub(&Network::LocaltestLiquid);
+        let xpub = server_master_xpub(&Network::default_regtest());
         assert_eq!(xpub.fingerprint().to_string(), AMP0_FINGERPRINT_REGTEST);
     }
 
@@ -2237,7 +2237,7 @@ mod tests {
 
         assert_eq!(derive_gait_path(register_xpub), gait_path_hex);
 
-        let network = lwk_common::Network::LocaltestLiquid;
+        let network = lwk_common::Network::default_regtest();
         assert_eq!(
             signer_data.login_address(&network).to_string(),
             login_address
@@ -2278,7 +2278,7 @@ mod tests {
         use lwk_signer::SwSigner;
 
         let network = if regtest {
-            Network::LocaltestLiquid
+            Network::default_regtest()
         } else {
             Network::TestnetLiquid
         };

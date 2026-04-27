@@ -24,15 +24,14 @@ jobs:
         with:
           distribution: jetbrains
           java-version: 21
-          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: dtolnay/rust-toolchain@1.85.0
         with:
           targets: x86_64-linux-android, aarch64-linux-android, armv7-linux-androideabi, i686-linux-android, aarch64-apple-ios, aarch64-apple-ios-sim, x86_64-apple-ios
 
-      - uses: extractions/setup-just@v2
-        with:
-          just-version: 1.5.0  # optional semver specification, otherwise latest
+      - run: brew install just
 
       - name: "Install NDK"
         run: |
@@ -53,4 +52,3 @@ jobs:
           name: lwk-artifact
           path: lwk_bindings/android_bindings
           retention-days: 1
-

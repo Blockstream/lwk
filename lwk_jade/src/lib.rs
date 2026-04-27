@@ -342,7 +342,7 @@ fn is_multisig(script: &Script) -> bool {
 mod test {
     use std::str::FromStr;
 
-    use elements::Script;
+    use elements::{confidential::Value, encode::serialize, Script};
 
     use crate::{is_multisig, json_to_cbor};
 
@@ -371,5 +371,16 @@ mod test {
             "OP_0 OP_PUSHBYTES_20 14fe45f2c2a2b7c00d0940d694a3b6af6c9bf165"
         );
         assert!(!is_multisig(&not_multisig));
+    }
+
+    #[test]
+    fn explicit_input_value_serializes_to_jade_tx_input_format() {
+        // Upstream Jade has a sign_liquid_tx fixture that passes an explicit
+        // serialized input value as `value_commitment`:
+        // https://github.com/Blockstream/Jade/blob/3edd8f4b03ae65d6ee38fb8620b46aad88ab341e/test_data/liquid_txn_nonconfidential_input.json#L54
+        let explicit_value = serialize(&Value::Explicit(6_800_000));
+        assert_eq!(explicit_value.len(), 9);
+        assert_eq!(explicit_value[0], 1);
+        assert_eq!(explicit_value, vec![1, 0, 0, 0, 0, 0, 103, 194, 128]);
     }
 }

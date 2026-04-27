@@ -68,12 +68,11 @@ impl Jade {
                     let params = TxInputParams {
                         is_witness: true,
                         script_code: script_code.as_bytes().to_vec(),
-                        value_commitment: txout
-                            .value
-                            .commitment()
-                            .ok_or(Error::NonConfidentialInput(i))?
-                            .serialize()
-                            .to_vec(),
+                        // Jade's `value_commitment` input accepts the serialized Elements
+                        // confidential::Value, including explicit 9-byte values. For more info:
+                        // https://github.com/Blockstream/Jade/blob/3edd8f4b03ae65d6ee38fb8620b46aad88ab341e/main/process/sign_tx.c#L612-L622
+                        // (test case) https://github.com/Blockstream/Jade/blob/3edd8f4b03ae65d6ee38fb8620b46aad88ab341e/test_data/liquid_txn_nonconfidential_input.json#L54
+                        value_commitment: elements::encode::serialize(&txout.value),
                         path,
                         sighash: Some(1),
                         ae_host_commitment: vec![1u8; 32], // TODO verify anti-exfil

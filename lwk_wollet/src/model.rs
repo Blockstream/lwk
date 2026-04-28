@@ -189,7 +189,7 @@ impl FromStr for UnvalidatedRecipient {
 impl UnvalidatedRecipient {
     fn validate_asset(&self, network: ElementsNetwork) -> Result<AssetId, Error> {
         if self.asset.is_empty() {
-            Ok(network.policy_asset())
+            Ok(*network.policy_asset())
         } else {
             Ok(AssetId::from_str(&self.asset)?)
         }

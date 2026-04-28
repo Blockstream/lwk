@@ -24,23 +24,6 @@ impl From<lwk_wollet::ElementsNetwork> for Network {
     }
 }
 
-impl From<&Network> for lwk_common::Network {
-    fn from(value: &Network) -> Self {
-        match value.inner {
-            lwk_wollet::ElementsNetwork::Liquid => lwk_common::Network::Liquid,
-            lwk_wollet::ElementsNetwork::TestnetLiquid => lwk_common::Network::TestnetLiquid,
-            lwk_wollet::ElementsNetwork::CustomElements { policy_asset } => {
-                lwk_common::Network::CustomElements(
-                    lwk_common::ElementsParamsBuilder::new()
-                        .with_policy_asset(policy_asset)
-                        .build()
-                        .expect("static"),
-                )
-            }
-        }
-    }
-}
-
 impl From<Network> for lwk_common::Network {
     fn from(value: Network) -> Self {
         (&value).into()
@@ -49,12 +32,6 @@ impl From<Network> for lwk_common::Network {
 
 impl From<&Network> for lwk_wollet::ElementsNetwork {
     fn from(value: &Network) -> Self {
-        value.inner
-    }
-}
-
-impl From<Network> for lwk_wollet::ElementsNetwork {
-    fn from(value: Network) -> Self {
         value.inner
     }
 }
@@ -73,9 +50,12 @@ impl Network {
 
     /// Creates a regtest `Network``
     pub fn regtest(policy_asset: &AssetId) -> Network {
-        lwk_wollet::ElementsNetwork::CustomElements {
-            policy_asset: (*policy_asset).into(),
-        }
+        lwk_wollet::ElementsNetwork::CustomElements(
+            lwk_common::ElementsParamsBuilder::new()
+                .with_policy_asset((*policy_asset).into())
+                .build()
+                .expect("static"),
+        )
         .into()
     }
 
@@ -84,7 +64,13 @@ impl Network {
     pub fn regtest_default() -> Network {
         let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
         let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
-        lwk_wollet::ElementsNetwork::CustomElements { policy_asset }.into()
+        lwk_wollet::ElementsNetwork::CustomElements(
+            lwk_common::ElementsParamsBuilder::new()
+                .with_policy_asset(policy_asset)
+                .build()
+                .expect("static"),
+        )
+        .into()
     }
 
     /// Return the default esplora client for this network
@@ -95,7 +81,7 @@ impl Network {
             lwk_wollet::ElementsNetwork::TestnetLiquid => {
                 "https://blockstream.info/liquidtestnet/api"
             }
-            lwk_wollet::ElementsNetwork::CustomElements { policy_asset: _ } => "127.0.0.1:3000",
+            lwk_wollet::ElementsNetwork::CustomElements(_) => "127.0.0.1:3000",
         };
 
         EsploraClient::new(self, url, false, 1, false).unwrap()
@@ -116,10 +102,7 @@ impl Network {
     /// Return true if the network is a regtest network
     #[wasm_bindgen(js_name = isRegtest)]
     pub fn is_regtest(&self) -> bool {
-        matches!(
-            &self.inner,
-            &lwk_wollet::ElementsNetwork::CustomElements { policy_asset: _ }
-        )
+        matches!(&self.inner, &lwk_wollet::ElementsNetwork::CustomElements(_))
     }
 
     /// Return a string representation of the network, like "liquid", "liquid-testnet" or "liquid-regtest"
@@ -131,7 +114,7 @@ impl Network {
     /// Return the policy asset for this network
     #[wasm_bindgen(js_name = policyAsset)]
     pub fn policy_asset(&self) -> AssetId {
-        self.inner.policy_asset().into()
+        (*self.inner.policy_asset()).into()
     }
 
     /// Return the genesis block hash for this network as hex string.
@@ -152,7 +135,7 @@ impl Network {
         let url = match &self.inner {
             lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/liquid/",
             lwk_wollet::ElementsNetwork::TestnetLiquid => "https://blockstream.info/liquidtestnet/",
-            lwk_wollet::ElementsNetwork::CustomElements { policy_asset: _ } => "127.0.0.1:3000",
+            lwk_wollet::ElementsNetwork::CustomElements(_) => "127.0.0.1:3000",
         };
         url.to_string()
     }

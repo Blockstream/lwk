@@ -505,7 +505,7 @@ impl Wollet {
 
     /// Get the network policy asset
     pub fn policy_asset(&self) -> AssetId {
-        self.network.policy_asset()
+        *self.network.policy_asset()
     }
 
     /// Creates a transaction builder with a reference to this wallet
@@ -585,7 +585,7 @@ impl Wollet {
         let network = match self.network() {
             ElementsNetwork::Liquid => bitcoin::Network::Bitcoin,
             ElementsNetwork::TestnetLiquid => bitcoin::Network::Testnet,
-            ElementsNetwork::CustomElements { policy_asset: _ } => bitcoin::Network::Regtest,
+            ElementsNetwork::CustomElements(_) => bitcoin::Network::Regtest,
         };
 
         let address = self.descriptor.pegin_address(index, network, fed_desc)?;
@@ -1708,9 +1708,7 @@ mod tests {
         for network in [
             ElementsNetwork::Liquid,
             ElementsNetwork::TestnetLiquid,
-            ElementsNetwork::CustomElements {
-                policy_asset: AssetId::default(),
-            },
+            ElementsNetwork::default_regtest(),
         ] {
             let is_mainnet = matches!(network, ElementsNetwork::Liquid);
             let signer = SwSigner::new(mnemonic, is_mainnet).unwrap();

@@ -9,9 +9,7 @@ use std::str::FromStr;
 use crate::contract::{asset_ids, Contract, Entity};
 use crate::elements::{AssetId, OutPoint};
 use crate::error::Error;
-use crate::network::{
-    LIQUID_DEFAULT_REGTEST_ASSET_STR, LIQUID_POLICY_ASSET_STR, LIQUID_TESTNET_POLICY_ASSET_STR,
-};
+
 use crate::ElementsNetwork;
 use elements::hashes::sha256::Midstate;
 use elements::pset::elip100::AssetMetadata;
@@ -245,7 +243,7 @@ fn network_default_url(network: ElementsNetwork) -> Result<&'static str, Error> 
     Ok(match network {
         ElementsNetwork::Liquid => "https://assets.blockstream.info",
         ElementsNetwork::TestnetLiquid => "https://assets-testnet.blockstream.info",
-        ElementsNetwork::CustomElements { policy_asset: _ } => "http://127.0.0.1:3023",
+        ElementsNetwork::CustomElements(_) => "http://127.0.0.1:3023",
     })
 }
 
@@ -399,7 +397,7 @@ impl RegistryData {
 
 /// Create a RegistryData mock for Liquid Bitcoin
 fn lbtc() -> (AssetId, RegistryData) {
-    let asset_id = AssetId::from_str(LIQUID_POLICY_ASSET_STR).expect("static");
+    let asset_id = *ElementsNetwork::Liquid.policy_asset();
     let data = RegistryData {
         contract: Contract {
             entity: Entity::Domain("".to_string()),
@@ -429,7 +427,7 @@ fn lbtc() -> (AssetId, RegistryData) {
 
 /// Create a RegistryData mock for TestnetLiquid Bitcoin
 fn tlbtc() -> (AssetId, RegistryData) {
-    let asset_id = AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR).expect("static");
+    let asset_id = *ElementsNetwork::TestnetLiquid.policy_asset();
     let data = RegistryData {
         contract: Contract {
             entity: Entity::Domain("".to_string()),
@@ -459,7 +457,7 @@ fn tlbtc() -> (AssetId, RegistryData) {
 
 /// Create a RegistryData mock for RegtestLiquid Bitcoin
 fn rlbtc() -> (AssetId, RegistryData) {
-    let asset_id = AssetId::from_str(LIQUID_DEFAULT_REGTEST_ASSET_STR).expect("static");
+    let asset_id = *ElementsNetwork::default_regtest().policy_asset();
     let data = RegistryData {
         contract: Contract {
             entity: Entity::Domain("".to_string()),
@@ -669,9 +667,9 @@ mod tests {
         let registry = Registry::default_for_network(ElementsNetwork::default_regtest()).unwrap();
         let cache = RegistryCache::new_hardcoded(registry);
         // policy assets of regtest(default)/testnet/mainnet network are hard coded
-        let regtest_asset_id = AssetId::from_str(LIQUID_DEFAULT_REGTEST_ASSET_STR).unwrap();
-        let testnet_asset_id = AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR).unwrap();
-        let mainnet_asset_id = AssetId::from_str(LIQUID_POLICY_ASSET_STR).unwrap();
+        let regtest_asset_id = *ElementsNetwork::default_regtest().policy_asset();
+        let testnet_asset_id = *ElementsNetwork::TestnetLiquid.policy_asset();
+        let mainnet_asset_id = *ElementsNetwork::Liquid.policy_asset();
         let usdt_asset_id =
             AssetId::from_str("ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2")
                 .unwrap();

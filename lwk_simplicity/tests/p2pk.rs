@@ -93,8 +93,7 @@ fn test_simplicity_p2pk() {
 
     // Compute message and sign
     let input_index = 0;
-    let message =
-        get_sighash_all(&tx, &program, &xonly, &txouts, input_index, network.into()).unwrap();
+    let message = get_sighash_all(&tx, &program, &xonly, &txouts, input_index, network).unwrap();
 
     let signature = EC.sign_schnorr(&message, &keypair);
 
@@ -114,7 +113,7 @@ fn test_simplicity_p2pk() {
         &txouts,
         input_index,
         witness_values,
-        network.into(),
+        network,
         log_level,
     )
     .unwrap();
@@ -201,7 +200,7 @@ fn test_simplicity_mixed_p2pk() {
     let details = w_w.get_details(&pset).unwrap();
     let fee = details.balance.fee;
     assert_eq!(details.balance.balances.len(), 1);
-    assert_eq!(*details.balance.balances.get(&lbtc).unwrap(), -(fee as i64));
+    assert_eq!(*details.balance.balances.get(lbtc).unwrap(), -(fee as i64));
 
     // Sign the wpkh input and finalize the PSET
     signer_w.sign(&mut pset).unwrap();
@@ -215,8 +214,7 @@ fn test_simplicity_mixed_p2pk() {
         .collect();
 
     let input_idx_s = 0;
-    let message =
-        get_sighash_all(&tx, &program, &xonly, &utxos, input_idx_s, network.into()).unwrap();
+    let message = get_sighash_all(&tx, &program, &xonly, &utxos, input_idx_s, network).unwrap();
 
     let signature = EC.sign_schnorr(&message, &keypair);
 
@@ -235,7 +233,7 @@ fn test_simplicity_mixed_p2pk() {
         &utxos,
         input_idx_s,
         witness_values,
-        network.into(),
+        network,
         log_level,
     )
     .unwrap();
@@ -249,5 +247,5 @@ fn test_simplicity_mixed_p2pk() {
     assert!(w_s.explicit_utxos().unwrap().is_empty());
     assert!(w_s.utxos().unwrap().is_empty());
 
-    assert_eq!(*w_w.balance().unwrap().get(&lbtc).unwrap(), sats_fund - fee);
+    assert_eq!(*w_w.balance().unwrap().get(lbtc).unwrap(), sats_fund - fee);
 }

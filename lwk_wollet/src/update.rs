@@ -524,7 +524,7 @@ impl Wollet {
             cache.tip = (tip.height, tip.block_hash());
         }
 
-        cache.unblinded.extend(new_txs.unblinds);
+        cache.extend_unblinded(new_txs.unblinds);
         // TODO: migrate all cache mutation to this function
         cache.update(
             &txid_height_new,
@@ -560,9 +560,9 @@ impl Wollet {
         for txid in txids_for_last_used {
             if let Some(tx) = cache.tx_as_fallback(&txid, &new_txs.txs) {
                 for (vout, output) in tx.output.iter().enumerate() {
-                    if !cache
-                        .unblinded
-                        .contains_key(&OutPoint::new(txid, vout as u32))
+                    if cache
+                        .get_unblinded(&OutPoint::new(txid, vout as u32))
+                        .is_none()
                     {
                         // Output cannot be unblinded by wallet
                         continue;

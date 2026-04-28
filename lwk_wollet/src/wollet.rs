@@ -629,8 +629,7 @@ impl Wollet {
             // as all these values should be in the cache, but better be safer here and don't panic
             let unblinded = *self
                 .cache
-                .unblinded
-                .get(outpoint)
+                .get_unblinded(outpoint)
                 .ok_or_else(|| Error::Generic("missing unblinded".into()))?;
             if is_explicit(&unblinded) {
                 continue;
@@ -688,7 +687,7 @@ impl Wollet {
                     (out_point, output, !unspent.contains_key(&out_point))
                 })
                 .filter_map(|(outpoint, output, is_spent)| {
-                    let unblinded = *self.cache.unblinded.get(&outpoint)?;
+                    let unblinded = *self.cache.get_unblinded(&outpoint)?;
                     let index = self.index(&output.script_pubkey).ok()?;
                     let blinding_pubkey = (!is_explicit(&unblinded))
                         .then(|| {
@@ -757,8 +756,7 @@ impl Wollet {
             // as all these values should be in the cache, but better be safer here and don't panic
             let unblinded = *self
                 .cache
-                .unblinded
-                .get(outpoint)
+                .get_unblinded(outpoint)
                 .ok_or_else(|| Error::Generic("missing unblinded".into()))?;
             if !is_explicit(&unblinded) {
                 continue;
@@ -832,7 +830,7 @@ impl Wollet {
                 let outpoint = OutPoint::new(txid, vout as u32);
                 if !o.script_pubkey.is_empty()
                     && self.cache.paths.contains_key(&o.script_pubkey)
-                    && !self.cache.unblinded.contains_key(&outpoint)
+                    && self.cache.get_unblinded(&outpoint).is_none()
                 {
                     txos.push(outpoint);
                 }
@@ -854,12 +852,11 @@ impl Wollet {
         blinding_key: bitcoin::secp256k1::SecretKey,
     ) -> Result<Vec<ExternalUtxo>, Error> {
         let mut utxos = vec![];
-        let cache_unblinded = &self.cache.unblinded;
         for (txid, tx) in self.cache.all_txs() {
             for (i, txout) in tx.output.iter().enumerate() {
                 if self.cache.paths.contains_key(&txout.script_pubkey) {
                     let outpoint = OutPoint::new(txid, i as u32);
-                    if !cache_unblinded.contains_key(&outpoint) {
+                    if self.cache.get_unblinded(&outpoint).is_none() {
                         if let Ok(unblinded) = txout.unblind(&EC, blinding_key) {
                             let tx_ = if self.is_segwit() {
                                 None
@@ -893,7 +890,7 @@ impl Wollet {
             for (vout, txout) in tx.output.iter().enumerate() {
                 if self.cache.paths.contains_key(&txout.script_pubkey) {
                     let outpoint = OutPoint::new(txid, vout as u32);
-                    if !self.cache.unblinded.contains_key(&outpoint) {
+                    if self.cache.get_unblinded(&outpoint).is_none() {
                         if let Ok(unblinded) = try_unblind(txout, &self.descriptor) {
                             new.insert(outpoint, unblinded);
                             txos.push(outpoint);
@@ -902,7 +899,7 @@ impl Wollet {
                 }
             }
         }
-        self.cache.unblinded.extend(new);
+        self.cache.extend_unblinded(new);
         Ok(txos)
     }
 

@@ -162,7 +162,7 @@ impl Wollet {
                     ValueBlindingFactor::zero(),
                 ))
             } else {
-                self.cache.unblinded.get(&outpoint).copied()
+                self.cache.get_unblinded(&outpoint).copied()
             };
         }
         Ok(details)

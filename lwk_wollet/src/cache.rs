@@ -43,7 +43,7 @@ pub struct Cache {
     unspent: HashMap<OutPoint, Script>,
 
     /// unblinded values
-    pub unblinded: HashMap<OutPoint, TxOutSecrets>,
+    unblinded: HashMap<OutPoint, TxOutSecrets>,
 
     /// height and hash of tip of the blockchain
     pub tip: (Height, BlockHash),
@@ -390,6 +390,17 @@ impl Cache {
             self.update_unspent(txid_height_new, deleted_txids, txs);
         }
         Ok(())
+    }
+
+    pub fn get_unblinded(&self, outpoint: &OutPoint) -> Option<&TxOutSecrets> {
+        self.unblinded.get(outpoint)
+    }
+
+    pub fn extend_unblinded(
+        &mut self,
+        unblinded: impl IntoIterator<Item = (OutPoint, TxOutSecrets)>,
+    ) {
+        self.unblinded.extend(unblinded);
     }
 }
 

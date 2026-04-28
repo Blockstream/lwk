@@ -87,7 +87,7 @@ impl Wollet {
     /// Return the [ELIP152](https://github.com/ElementsProject/ELIPs/blob/main/elip-0152.mediawiki) deterministic wallet identifier.
     pub fn dwid(&self) -> Result<String, LwkError> {
         let wollet = self.inner.lock()?;
-        Ok(wollet.wollet_descriptor().dwid(wollet.network().into())?)
+        Ok(wollet.wollet_descriptor().dwid(wollet.network())?)
     }
 
     /// Apply an update containing blockchain data

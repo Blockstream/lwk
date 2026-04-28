@@ -5,7 +5,6 @@ use lwk_common::Network;
 use lwk_jade::TIMEOUT;
 use lwk_wollet::amp2::Amp2;
 use lwk_wollet::clients::blocking::EsploraClient;
-use lwk_wollet::ElementsNetwork;
 use lwk_wollet::{amp2, ElectrumClient};
 use std::fs;
 use std::net::SocketAddr;
@@ -19,7 +18,7 @@ pub struct Config {
     pub datadir: PathBuf,
     pub server_url: String,
     pub server_type: String,
-    pub network: ElementsNetwork,
+    pub network: Network,
 
     pub explorer_url: String,
 
@@ -38,7 +37,7 @@ impl Config {
             datadir,
             server_url: format!("ssl://{LIQUID_TESTNET_SOCKET}"),
             server_type: "electrum".into(),
-            network: ElementsNetwork::TestnetLiquid,
+            network: Network::TestnetLiquid,
             explorer_url: "https://blockstream.info/liquidtestnet/".into(),
             registry_url: "https://assets-testnet.blockstream.info/".into(),
             timeout: TIMEOUT,
@@ -54,7 +53,7 @@ impl Config {
             datadir,
             server_url: format!("ssl://{LIQUID_SOCKET}"),
             server_type: "electrum".into(),
-            network: ElementsNetwork::Liquid,
+            network: Network::Liquid,
             explorer_url: "https://blockstream.info/liquid/".into(),
             registry_url: "https://assets.blockstream.info/".into(),
             timeout: TIMEOUT,
@@ -111,7 +110,7 @@ impl Config {
 
     /// True if Liquid mainnet
     pub fn is_mainnet(&self) -> bool {
-        matches!(self.network, ElementsNetwork::Liquid)
+        matches!(self.network, Network::Liquid)
     }
 
     pub fn blockchain_client(&self) -> Result<BlockchainClient, Error> {

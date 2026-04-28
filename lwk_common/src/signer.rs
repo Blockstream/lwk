@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use elements::{
     bitcoin::{
         self,
@@ -12,6 +10,10 @@ use elements::{
 use elements_miniscript::slip77::MasterBlindingKey;
 
 use crate::descriptor::Bip;
+
+fn hardened(index: u32) -> Result<ChildNumber, bitcoin::bip32::Error> {
+    ChildNumber::from_hardened_idx(index)
+}
 
 /// A trait defining methods of signers, providing blanket implementations for some methods.
 pub trait Signer {
@@ -46,15 +48,19 @@ pub trait Signer {
     /// Return keyorigin and xpub, like "[73c5da0a/84h/1h/0h]tpub..."
     fn keyorigin_xpub(&self, bip: Bip, is_mainnet: bool) -> Result<String, Self::Error> {
         let coin_type = if is_mainnet { 1776 } else { 1 };
-        let path = match bip {
-            Bip::Bip84 => format!("84h/{coin_type}h/0h"),
-            Bip::Bip49 => format!("49h/{coin_type}h/0h"),
-            Bip::Bip87 => format!("87h/{coin_type}h/0h"),
+        let purpose = match bip {
+            Bip::Bip84 => 84,
+            Bip::Bip49 => 49,
+            Bip::Bip87 => 87,
         };
+        let account = 0;
+        let path = [purpose, coin_type, account];
+        let derivation_path =
+            DerivationPath::from_iter(path.map(|index| hardened(index).expect("static")));
+        let path = format!("{purpose}h/{coin_type}h/{account}h");
 
         let fingerprint = self.fingerprint()?;
-        let xpub =
-            self.derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).expect("static"))?; // TODO avoid string use ChildNumber directly
+        let xpub = self.derive_xpub(&derivation_path)?;
         let keyorigin_xpub = format!("[{fingerprint}/{path}]{xpub}");
         Ok(keyorigin_xpub)
     }
@@ -65,11 +71,7 @@ pub trait Signer {
             Ok(xpub) => xpub,
             Err(_) => {
                 // We are probably on a Ledger that won't return the master xpub
-                let path = [
-                    ChildNumber::from_hardened_idx(44).expect("static"),
-                    ChildNumber::from_hardened_idx(1).expect("static"), // TODO: work on  mainnet?
-                    ChildNumber::from_hardened_idx(0).expect("static"),
-                ];
+                let path = [44, 1, 0].map(|index| hardened(index).expect("static")); // TODO: work on mainnet?
                 self.derive_xpub(&DerivationPath::from_iter(path))?
             }
         };
@@ -103,6 +105,7 @@ pub mod amp0 {
     use elements::Address;
     use serde::{Deserialize, Serialize};
     use serde_json;
+    use std::str::FromStr;
 
     /// Signer information necessary for full login to AMP0
     ///

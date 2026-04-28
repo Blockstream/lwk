@@ -20,14 +20,14 @@
 //!
 //! ### Generate an address
 //! ```rust
-//! # use lwk_wollet::{WolletBuilder, WolletDescriptor, Wollet, ElementsNetwork};
+//! # use lwk_wollet::{WolletBuilder, WolletDescriptor, Wollet, Network};
 //! # fn main() -> Result<(), lwk_wollet::Error> {
 //! let desc = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
 //!
 //! // Parse the descriptor and create the watch only wallet
 //! let descriptor: WolletDescriptor = desc.parse()?;
 //! let mut wollet = WolletBuilder::new(
-//!    ElementsNetwork::LiquidTestnet,
+//!    Network::TestnetLiquid,
 //!    descriptor,
 //! ).build()?;
 //!
@@ -40,13 +40,13 @@
 //!
 //! ### Sync wallet
 //! ```rust,no_run
-//! # use lwk_wollet::{WolletBuilder, WolletDescriptor, Wollet, ElementsNetwork, ElectrumClient, ElectrumUrl,
+//! # use lwk_wollet::{WolletBuilder, WolletDescriptor, Wollet, Network, ElectrumClient, ElectrumUrl,
 //! full_scan_with_electrum_client};
 //! # fn main() -> Result<(), lwk_wollet::Error> {
 //! # let desc = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
 //! # let descriptor: WolletDescriptor = desc.parse()?;
 //! # let mut wollet = WolletBuilder::new(
-//! #    ElementsNetwork::LiquidTestnet,
+//! #    Network::TestnetLiquid,
 //! #    descriptor,
 //! # ).build()?;
 //! // Use an Electrum server
@@ -64,12 +64,12 @@
 //!
 //! ### Create transaction
 //! ```rust,no_run
-//! # use lwk_wollet::{WolletBuilder, WolletDescriptor, Wollet, ElementsNetwork, UnvalidatedRecipient};
+//! # use lwk_wollet::{WolletBuilder, WolletDescriptor, Wollet, Network, UnvalidatedRecipient};
 //! # fn main() -> Result<(), lwk_wollet::Error> {
 //! # let desc = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
 //! # let descriptor: WolletDescriptor = desc.parse()?;
 //! # let mut wollet = WolletBuilder::new(
-//! #    ElementsNetwork::LiquidTestnet,
+//! #    Network::TestnetLiquid,
 //! #    descriptor,
 //! # ).build()?;
 //! // Create a transaction
@@ -148,6 +148,7 @@ pub use lwk_common::{
     Store,
 };
 
+#[deprecated(since = "0.17.0", note = "please use `Network`")]
 pub use lwk_common::Network as ElementsNetwork;
 
 pub use lwk_common::Network;

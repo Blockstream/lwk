@@ -31,13 +31,12 @@ class Program
         Update update = client.FullScan(wollet)!;
         wollet.ApplyUpdate(update);
 
-        List<WalletTx> txList = wollet.Transactions();
+        WalletTx[] txList = wollet.Transactions();
 
-        Console.WriteLine("Transactions {0}:", txList.Count);
+        Console.WriteLine("Transactions {0}:", txList.Length);
 
         foreach (WalletTx tx in txList) {
             Console.WriteLine(tx.Txid());
         }
     }
 }
-

@@ -102,6 +102,7 @@ jobs:
       - run: |
           cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.10.0+v0.29.4
           uniffi-bindgen-cs --library target/liblwk.so --out-dir target
+      - run: python3 scripts/patch_csharp_finalize.py target/lwk.cs
       - run: ls -l target
       - name: Archive csharp language interface
         uses: actions/upload-artifact@v4
@@ -164,7 +165,7 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '6.0.x'
+          dotnet-version: '8.0.x'
 
       - name: Build the project
         working-directory: csharp

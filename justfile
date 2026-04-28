@@ -134,6 +134,7 @@ swift: ios ios-sim
 csharp-windows: build-bindings-lib
     cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.10.0+v0.29.4
     uniffi-bindgen-cs --library target/release/lwk.dll --out-dir target/release/csharp
+    python scripts/patch_csharp_finalize.py target/release/csharp/lwk.cs
     cp target/release/lwk.dll target/release/csharp
     cp lwk_bindings/tests/test_data/test-dotnet.csproj target/release/csharp
     cp lwk_bindings/tests/bindings/list_transactions.cs target/release/csharp

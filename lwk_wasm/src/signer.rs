@@ -142,7 +142,7 @@ mod tests {
 
     pub fn network_regtest() -> lwk_wollet::ElementsNetwork {
         let policy_asset = regtest_policy_asset();
-        lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset }
+        lwk_wollet::ElementsNetwork::CustomElements { policy_asset }
     }
 
     #[wasm_bindgen_test]

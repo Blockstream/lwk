@@ -41,7 +41,7 @@ impl From<&Network> for lwk_common::Network {
         match value.inner {
             lwk_wollet::ElementsNetwork::Liquid => lwk_common::Network::Liquid,
             lwk_wollet::ElementsNetwork::TestnetLiquid => lwk_common::Network::TestnetLiquid,
-            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset } => {
+            lwk_wollet::ElementsNetwork::CustomElements { policy_asset } => {
                 lwk_common::Network::CustomElements(
                     lwk_common::ElementsParamsBuilder::new()
                         .with_policy_asset(policy_asset)
@@ -71,7 +71,7 @@ impl Network {
     #[uniffi::constructor]
     pub fn regtest(policy_asset: AssetId) -> Arc<Network> {
         Arc::new(
-            lwk_wollet::ElementsNetwork::ElementsRegtest {
+            lwk_wollet::ElementsNetwork::CustomElements {
                 policy_asset: policy_asset.into(),
             }
             .into(),
@@ -83,7 +83,7 @@ impl Network {
     pub fn regtest_default() -> Arc<Network> {
         let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
         let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
-        Arc::new(lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset }.into())
+        Arc::new(lwk_wollet::ElementsNetwork::CustomElements { policy_asset }.into())
     }
 
     /// Return the default electrum client for this network
@@ -91,7 +91,7 @@ impl Network {
         let (url, validate_domain, tls) = match &self.inner {
             lwk_wollet::ElementsNetwork::Liquid => (LIQUID_SOCKET, true, true),
             lwk_wollet::ElementsNetwork::TestnetLiquid => (LIQUID_TESTNET_SOCKET, true, true),
-            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => {
+            lwk_wollet::ElementsNetwork::CustomElements { policy_asset: _ } => {
                 ("127.0.0.1:50002", false, false)
             }
         };
@@ -106,7 +106,7 @@ impl Network {
             lwk_wollet::ElementsNetwork::TestnetLiquid => {
                 "https://blockstream.info/liquidtestnet/api"
             }
-            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:3000",
+            lwk_wollet::ElementsNetwork::CustomElements { policy_asset: _ } => "127.0.0.1:3000",
         };
 
         EsploraClient::new(url, &self.inner.into())

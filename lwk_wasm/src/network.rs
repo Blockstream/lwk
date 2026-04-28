@@ -29,7 +29,7 @@ impl From<&Network> for lwk_common::Network {
         match value.inner {
             lwk_wollet::ElementsNetwork::Liquid => lwk_common::Network::Liquid,
             lwk_wollet::ElementsNetwork::TestnetLiquid => lwk_common::Network::TestnetLiquid,
-            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset } => {
+            lwk_wollet::ElementsNetwork::CustomElements { policy_asset } => {
                 lwk_common::Network::CustomElements(
                     lwk_common::ElementsParamsBuilder::new()
                         .with_policy_asset(policy_asset)
@@ -73,7 +73,7 @@ impl Network {
 
     /// Creates a regtest `Network``
     pub fn regtest(policy_asset: &AssetId) -> Network {
-        lwk_wollet::ElementsNetwork::ElementsRegtest {
+        lwk_wollet::ElementsNetwork::CustomElements {
             policy_asset: (*policy_asset).into(),
         }
         .into()
@@ -84,7 +84,7 @@ impl Network {
     pub fn regtest_default() -> Network {
         let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
         let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
-        lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset }.into()
+        lwk_wollet::ElementsNetwork::CustomElements { policy_asset }.into()
     }
 
     /// Return the default esplora client for this network
@@ -95,7 +95,7 @@ impl Network {
             lwk_wollet::ElementsNetwork::TestnetLiquid => {
                 "https://blockstream.info/liquidtestnet/api"
             }
-            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:3000",
+            lwk_wollet::ElementsNetwork::CustomElements { policy_asset: _ } => "127.0.0.1:3000",
         };
 
         EsploraClient::new(self, url, false, 1, false).unwrap()
@@ -118,7 +118,7 @@ impl Network {
     pub fn is_regtest(&self) -> bool {
         matches!(
             &self.inner,
-            &lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ }
+            &lwk_wollet::ElementsNetwork::CustomElements { policy_asset: _ }
         )
     }
 
@@ -152,7 +152,7 @@ impl Network {
         let url = match &self.inner {
             lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/liquid/",
             lwk_wollet::ElementsNetwork::TestnetLiquid => "https://blockstream.info/liquidtestnet/",
-            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:3000",
+            lwk_wollet::ElementsNetwork::CustomElements { policy_asset: _ } => "127.0.0.1:3000",
         };
         url.to_string()
     }

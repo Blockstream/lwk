@@ -585,7 +585,7 @@ impl Wollet {
         let network = match self.network() {
             ElementsNetwork::Liquid => bitcoin::Network::Bitcoin,
             ElementsNetwork::TestnetLiquid => bitcoin::Network::Testnet,
-            ElementsNetwork::ElementsRegtest { policy_asset: _ } => bitcoin::Network::Regtest,
+            ElementsNetwork::CustomElements { policy_asset: _ } => bitcoin::Network::Regtest,
         };
 
         let address = self.descriptor.pegin_address(index, network, fed_desc)?;
@@ -1708,7 +1708,7 @@ mod tests {
         for network in [
             ElementsNetwork::Liquid,
             ElementsNetwork::TestnetLiquid,
-            ElementsNetwork::ElementsRegtest {
+            ElementsNetwork::CustomElements {
                 policy_asset: AssetId::default(),
             },
         ] {

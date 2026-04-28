@@ -151,7 +151,7 @@ mod tests {
     #[wasm_bindgen_test]
     async fn test_network() {
         assert_eq!(Network::mainnet().to_string(), "Liquid");
-        assert_eq!(Network::testnet().to_string(), "LiquidTestnet");
-        assert_eq!(Network::regtest_default().to_string(), "ElementsRegtest { policy_asset: 5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225 }");
+        assert_eq!(Network::testnet().to_string(), "TestnetLiquid");
+        assert_eq!(Network::regtest_default().to_string(), "CustomElements(ElementsParams { policy_asset: 5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225, genesis_hash: c7af03b0774a3498a574902bd41045c1633fd40b69ca163345c5d9c78bfd6af7 })");
     }
 }

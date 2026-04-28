@@ -165,7 +165,7 @@ fn test_waterfalls_utxo_only_with_dummy() {
     wait_for_tx_confirmation(&mut w.wollet, &mut w.client, &txid3);
 
     let balance = w.wollet.balance().unwrap();
-    assert!(*balance.get(&lbtc).unwrap_or(&0) > 0);
+    assert!(*balance.get(lbtc).unwrap_or(&0) > 0);
     let txs = w.wollet.transactions().unwrap();
     assert_eq!(txs.len(), 4);
     assert!(txs.iter().any(|tx| tx.txid == txid0));

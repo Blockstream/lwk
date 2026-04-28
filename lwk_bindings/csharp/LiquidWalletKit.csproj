@@ -5,6 +5,7 @@
     <Company>Blockstream</Company>
     <Description>C# Liquid Wallet Kit</Description>
     <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

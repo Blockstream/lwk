@@ -60,7 +60,7 @@ use lwk_wollet::bitcoin::bip32::Xpriv;
 use lwk_wollet::bitcoin::bip32::Xpub;
 use lwk_wollet::bitcoin::NetworkKind;
 use lwk_wollet::ElectrumUrl;
-use lwk_wollet::ElementsNetwork;
+use lwk_wollet::Network;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast::error::TryRecvError;
 use tokio::sync::Mutex;
@@ -128,7 +128,7 @@ impl BoltzSession {
     /// and generates a random mnemonic.
     ///
     /// For custom configuration, use [`BoltzSession::builder()`] instead.
-    pub async fn new(network: ElementsNetwork, client: AnyClient) -> Result<Self, Error> {
+    pub async fn new(network: Network, client: AnyClient) -> Result<Self, Error> {
         Self::builder(network, client).build().await
     }
 
@@ -139,10 +139,10 @@ impl BoltzSession {
     /// # Example
     /// ```no_run
     /// # use lwk_boltz::BoltzSession;
-    /// # use lwk_wollet::ElementsNetwork;
+    /// # use lwk_wollet::Network;
     /// # use lwk_boltz::clients::AnyClient;
     /// # use std::time::Duration;
-    /// # async fn example(network: ElementsNetwork, client: AnyClient) -> Result<(), Box<dyn std::error::Error>> {
+    /// # async fn example(network: Network, client: AnyClient) -> Result<(), Box<dyn std::error::Error>> {
     /// let session = BoltzSession::builder(network, client)
     ///     .create_swap_timeout(Duration::from_secs(30))
     ///     .build()
@@ -150,14 +150,14 @@ impl BoltzSession {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn builder(network: ElementsNetwork, client: AnyClient) -> BoltzSessionBuilder {
+    pub fn builder(network: Network, client: AnyClient) -> BoltzSessionBuilder {
         BoltzSessionBuilder::new(network, client)
     }
 
     /// Internal initialization method that connects to the Boltz API and starts a WebSocket connection
     #[allow(clippy::too_many_arguments)] // it's just internal
     async fn initialize(
-        network: ElementsNetwork,
+        network: Network,
         client: AnyClient,
         timeout: Option<Duration>,
         mnemonic: Option<Mnemonic>,
@@ -255,7 +255,7 @@ impl BoltzSession {
         }
     }
 
-    fn network(&self) -> ElementsNetwork {
+    fn network(&self) -> Network {
         liquid_chain_to_elements_network(self.liquid_chain)
     }
 
@@ -506,11 +506,11 @@ async fn fetch_swap_info_concurrently(api: Arc<BoltzApiClientV2>) -> Result<Swap
 }
 
 #[cfg(feature = "blocking")]
-fn bitcoin_chain_from_network(network: ElementsNetwork) -> BitcoinChain {
+fn bitcoin_chain_from_network(network: Network) -> BitcoinChain {
     match network {
-        ElementsNetwork::Liquid => BitcoinChain::Bitcoin,
-        ElementsNetwork::TestnetLiquid => BitcoinChain::BitcoinTestnet,
-        ElementsNetwork::CustomElements { .. } => BitcoinChain::BitcoinRegtest,
+        Network::Liquid => BitcoinChain::Bitcoin,
+        Network::TestnetLiquid => BitcoinChain::BitcoinTestnet,
+        Network::CustomElements { .. } => BitcoinChain::BitcoinRegtest,
     }
 }
 
@@ -531,7 +531,7 @@ pub fn start_ws(ws: Arc<BoltzWsApi>) {
 
 /// Builder for creating a [`BoltzSession`]
 pub struct BoltzSessionBuilder {
-    network: ElementsNetwork,
+    network: Network,
     client: AnyClient,
     create_swap_timeout: Option<Duration>,
     mnemonic: Option<Mnemonic>,
@@ -546,7 +546,7 @@ pub struct BoltzSessionBuilder {
 
 impl BoltzSessionBuilder {
     /// Create a new `BoltzSessionBuilder` with required network and client parameters
-    pub fn new(network: ElementsNetwork, client: AnyClient) -> Self {
+    pub fn new(network: Network, client: AnyClient) -> Self {
         Self {
             network,
             client,
@@ -710,21 +710,21 @@ async fn fetch_next_index_to_use(xpub: &Xpub, client: &BoltzApiClientV2) -> Resu
     Ok(next_index_to_use)
 }
 
-/// Convert an ElementsNetwork to a LiquidChain
-pub fn elements_network_to_liquid_chain(network: ElementsNetwork) -> LiquidChain {
+/// Convert an Network to a LiquidChain
+pub fn elements_network_to_liquid_chain(network: Network) -> LiquidChain {
     match network {
-        ElementsNetwork::Liquid => LiquidChain::Liquid,
-        ElementsNetwork::TestnetLiquid => LiquidChain::LiquidTestnet,
-        ElementsNetwork::CustomElements { .. } => LiquidChain::LiquidRegtest,
+        Network::Liquid => LiquidChain::Liquid,
+        Network::TestnetLiquid => LiquidChain::LiquidTestnet,
+        Network::CustomElements { .. } => LiquidChain::LiquidRegtest,
     }
 }
 
-/// Convert a LiquidChain to an ElementsNetwork
-pub fn liquid_chain_to_elements_network(chain: LiquidChain) -> ElementsNetwork {
+/// Convert a LiquidChain to an Network
+pub fn liquid_chain_to_elements_network(chain: LiquidChain) -> Network {
     match chain {
-        LiquidChain::Liquid => ElementsNetwork::Liquid,
-        LiquidChain::LiquidTestnet => ElementsNetwork::TestnetLiquid,
-        LiquidChain::LiquidRegtest => ElementsNetwork::default_regtest(),
+        LiquidChain::Liquid => Network::Liquid,
+        LiquidChain::LiquidTestnet => Network::TestnetLiquid,
+        LiquidChain::LiquidRegtest => Network::default_regtest(),
     }
 }
 
@@ -740,11 +740,11 @@ fn derive_xpub_from_mnemonic(
     Ok(Xpub::from_priv(&lwk_wollet::EC, &derived))
 }
 
-pub fn boltz_default_url(network: ElementsNetwork) -> &'static str {
+pub fn boltz_default_url(network: Network) -> &'static str {
     match network {
-        ElementsNetwork::Liquid => BOLTZ_MAINNET_URL_V2,
-        ElementsNetwork::TestnetLiquid => BOLTZ_TESTNET_URL_V2,
-        ElementsNetwork::CustomElements { .. } => BOLTZ_REGTEST,
+        Network::Liquid => BOLTZ_MAINNET_URL_V2,
+        Network::TestnetLiquid => BOLTZ_TESTNET_URL_V2,
+        Network::CustomElements { .. } => BOLTZ_REGTEST,
     }
 }
 
@@ -904,9 +904,9 @@ mod tests {
     fn test_elements_network_to_liquid_chain() {
         // Test all networks with roundtrip conversion
         let networks = vec![
-            lwk_wollet::ElementsNetwork::Liquid,
-            lwk_wollet::ElementsNetwork::TestnetLiquid,
-            lwk_wollet::ElementsNetwork::default_regtest(),
+            lwk_wollet::Network::Liquid,
+            lwk_wollet::Network::TestnetLiquid,
+            lwk_wollet::Network::default_regtest(),
         ];
 
         for network in networks {

@@ -272,10 +272,10 @@ mod tests {
         use lwk_common::FileStore;
         use lwk_signer::SwSigner;
         use lwk_wollet::clients::asyncr::EsploraClientBuilder;
-        use lwk_wollet::ElementsNetwork;
+        use lwk_wollet::Network;
         use std::path::PathBuf;
 
-        let network = ElementsNetwork::Liquid;
+        let network = Network::Liquid;
 
         let url = "https://waterfalls.liquidwebwallet.org/liquid/api";
         let client = EsploraClientBuilder::new(url, network)

@@ -7,17 +7,17 @@ use boltz_client::error::Error;
 use boltz_client::network::LiquidChain;
 use boltz_client::ToHex;
 use lwk_wollet::blocking::BlockchainBackend;
-use lwk_wollet::ElementsNetwork;
+use lwk_wollet::Network;
 use tokio::task;
 
 #[derive(Clone)]
 pub struct ElectrumClient {
     inner: Arc<lwk_wollet::ElectrumClient>,
-    network: ElementsNetwork,
+    network: Network,
 }
 
 impl ElectrumClient {
-    pub fn from_client(client: lwk_wollet::ElectrumClient, network: ElementsNetwork) -> Self {
+    pub fn from_client(client: lwk_wollet::ElectrumClient, network: Network) -> Self {
         Self {
             inner: Arc::new(client),
             network,
@@ -28,7 +28,7 @@ impl ElectrumClient {
         url: &str,
         tls: bool,
         validate_domain: bool,
-        network: ElementsNetwork,
+        network: Network,
     ) -> Result<Self, String> {
         let electrum_url =
             lwk_wollet::ElectrumUrl::new(url, tls, validate_domain).map_err(|e| e.to_string())?;
@@ -130,7 +130,7 @@ mod tests {
         network::{LiquidChain, LiquidClient},
         ToHex,
     };
-    use lwk_wollet::{elements, ElementsNetwork};
+    use lwk_wollet::{elements, Network};
 
     use crate::clients::ElectrumClient;
 
@@ -141,7 +141,7 @@ mod tests {
             "elements-mainnet.blockstream.info:50002",
             true,
             true,
-            ElementsNetwork::Liquid,
+            Network::Liquid,
         )
         .unwrap();
         assert_eq!(client.network(), LiquidChain::Liquid);
@@ -170,8 +170,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires regtest env"]
     async fn test_electrum_client_regtest() {
-        let client =
-            ElectrumClient::new("localhost:19002", false, false, ElementsNetwork::Liquid).unwrap();
+        let client = ElectrumClient::new("localhost:19002", false, false, Network::Liquid).unwrap();
         assert_eq!(
             client.get_genesis_hash().await.unwrap().to_hex(),
             "00902a6b70c2ca83b5d9c815d96a0e2f4202179316970d14ea1847dae5b1ca21"

@@ -132,3 +132,28 @@ impl Network {
         Arc::new(TxBuilder::new(self))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Network;
+    use std::str::FromStr;
+
+    use crate::types::AssetId;
+
+    #[test]
+    fn regtest_constructors_keep_standard_elements_genesis() {
+        let expected =
+            "00902a6b70c2ca83b5d9c815d96a0e2f4202179316970d14ea1847dae5b1ca21";
+
+        let default_network = Network::regtest_default();
+        assert_eq!(default_network.genesis_block_hash(), expected);
+
+        let custom_policy_asset: AssetId = elements::AssetId::from_str(
+            "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225",
+        )
+        .expect("static policy asset")
+        .into();
+        let custom_network = Network::regtest(custom_policy_asset);
+        assert_eq!(custom_network.genesis_block_hash(), expected);
+    }
+}

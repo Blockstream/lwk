@@ -29,7 +29,7 @@ use crate::prices::Error;
 pub use super::codes::all;
 
 /// Data for each Currency Code defined by ISO 4217.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CurrencyCode {
     /// 3-letter code of the currency
     pub alpha3: &'static str,

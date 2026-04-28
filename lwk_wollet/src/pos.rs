@@ -10,7 +10,7 @@ use crate::{CurrencyCode, WolletDescriptor};
 
 /// POS configuration structure for encoding/decoding.
 /// This represents the configuration parameters for a Point of Sale setup.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PosConfig {
     /// Descriptor (d field in JSON)
     #[serde(rename = "d")]

@@ -1134,6 +1134,94 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_lbtc_btc_multiple_lockups_confirmed_same_block() {
+        let _ = env_logger::try_init();
+
+        let network = ElementsNetwork::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .build()
+            .await
+            .unwrap();
+
+        let mut responses = Vec::with_capacity(2);
+
+        for amount in [50_000, 50_001] {
+            let refund_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+                .await
+                .unwrap();
+            let claim_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+                .await
+                .unwrap();
+            let refund_address = elements::Address::from_str(&refund_address_str).unwrap();
+            let claim_address = bitcoin::Address::from_str(&claim_address_str)
+                .unwrap()
+                .assume_checked();
+
+            let response = session
+                .lbtc_to_btc(amount, &refund_address, &claim_address, None)
+                .await
+                .unwrap();
+
+            responses.push((response, refund_address_str, claim_address_str));
+        }
+
+        for (response, _, _) in &responses {
+            crate::utils::send_to_address(
+                LBTC_CHAIN.into(),
+                response.lockup_address(),
+                response.expected_amount(),
+            )
+            .await
+            .unwrap();
+        }
+
+        // Confirm both user lockups together before either swap is advanced.
+        crate::utils::mine_blocks(1).await.unwrap();
+
+        let mining_handle = crate::utils::start_block_mining();
+
+        let mut responses = responses.into_iter();
+        let first = responses.next().expect("first swap should exist");
+        let second = responses.next().expect("second swap should exist");
+        assert!(responses.next().is_none(), "expected exactly two swaps");
+
+        let complete_swap = |response: lwk_boltz::LockupResponse,
+                             refund_address_str: String,
+                             claim_address_str: String| async move {
+            let expected_receive = response.data.create_chain_response.claim_details.amount
+                - response.data.claim_fee.expect("claim_fee should be set");
+            let completed = response.complete().await.unwrap();
+            assert!(completed, "LBTC to BTC swap should complete");
+
+            match crate::utils::get_address_balance(BTC_CHAIN.into(), &claim_address_str).await {
+                Ok(claim_balance) => {
+                    assert_eq!(
+                        claim_balance, expected_receive,
+                        "Claim address should receive the expected amount",
+                    );
+                }
+                Err(e) => {
+                    log::warn!("claim address balance failed, check if we perfomed a refund {e:?}");
+                    crate::utils::get_address_balance(LBTC_CHAIN.into(), &refund_address_str)
+                        .await
+                        .expect("refund address empty");
+                }
+            }
+        };
+
+        let first = complete_swap(first.0, first.1, first.2);
+        let second = complete_swap(second.0, second.1, second.2);
+        let (_, _) = tokio::join!(first, second);
+
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_restore_chain_swaps_from_boltz() {
         let _ = env_logger::try_init();
 

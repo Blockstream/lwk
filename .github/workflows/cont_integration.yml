@@ -17,7 +17,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - run: sudo apt-get update && sudo apt-get install -y libudev-dev
         if: ${{ matrix.os == 'ubuntu-22.04' }}
@@ -28,7 +28,7 @@ jobs:
   nix:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: cachix/install-nix-action@v25
         with:
           extra_nix_config: |
@@ -39,7 +39,7 @@ jobs:
   just-swift: # swift framework is built in the lwk-swift repo, here we care `just swift` doesn't brake
       runs-on: macos-15
       steps:
-        - uses: actions/checkout@v4
+        - uses: actions/checkout@v6
         - uses: dtolnay/rust-toolchain@1.85.0
           with:
             targets: x86_64-apple-ios,aarch64-apple-ios,aarch64-apple-ios-sim,aarch64-apple-darwin
@@ -50,16 +50,16 @@ jobs:
     runs-on: windows-2022
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - run: choco install just
       - run: just csharp-windows
       - run: ls target/release/csharp
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.x'
       - run: cd target/release/csharp && dotnet run && cd -
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: csharp-windows
           path: target/release/csharp

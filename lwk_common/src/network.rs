@@ -71,14 +71,14 @@ impl ElementsParamsBuilder {
 }
 
 /// Paramaters for custom Elements network.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ElementsParams {
     policy_asset: AssetId,
     genesis_hash: BlockHash,
 }
 
 /// The network of the elements blockchain.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Network {
     /// Liquid mainnet
     Liquid,

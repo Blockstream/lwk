@@ -23,6 +23,10 @@ fn tx_key(txid: &Txid) -> String {
 pub struct Cache {
     /// Store for all wallet transactions
     txs_store: Arc<dyn DynStore>,
+    
+    /// Store for unblinded values
+    // TODO: should not be a dup of unblinded
+    unblinded_store: Arc<dyn DynStore>,
 
     /// all txids in txs_store
     txids: HashSet<Txid>,
@@ -43,7 +47,8 @@ pub struct Cache {
     unspent: HashMap<OutPoint, Script>,
 
     /// unblinded values
-    pub unblinded: HashMap<OutPoint, TxOutSecrets>,
+    //pub unblinded: HashMap<OutPoint, TxOutSecrets>,
+    unblinded: HashMap<OutPoint, TxOutSecrets>,
 
     /// height and hash of tip of the blockchain
     pub tip: (Height, BlockHash),
@@ -62,6 +67,7 @@ impl Default for Cache {
     fn default() -> Self {
         Self {
             txs_store: Arc::new(MemoryStore::default()),
+            unblinded_store: Arc::new(MemoryStore::default()),
             txids: HashSet::default(),
             paths: HashMap::default(),
             scripts: HashMap::default(),
@@ -124,9 +130,10 @@ pub struct ScriptBatch {
 }
 
 impl Cache {
-    pub fn new(txs_store: Arc<dyn DynStore>) -> Self {
+    pub fn new(txs_store: Arc<dyn DynStore>, unblinded_store: Arc<dyn DynStore>) -> Self {
         Self {
             txs_store,
+            unblinded_store,
             ..Self::default()
         }
     }

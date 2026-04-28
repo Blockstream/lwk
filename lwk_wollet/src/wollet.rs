@@ -68,6 +68,7 @@ pub struct WolletBuilder {
     encrypt_updates_store: Option<bool>,
     txs_store: Arc<dyn DynStore>,
     encrypt_txs_store: Option<bool>,
+    unblinded_store: Arc<dyn DynStore>,
     utxo_only: bool,
 }
 
@@ -82,6 +83,7 @@ impl WolletBuilder {
             encrypt_updates_store: None,
             txs_store: Arc::new(MemoryStore::new()),
             encrypt_txs_store: None,
+            unblinded_store: Arc::new(MemoryStore::new()),
             merge_threshold: None,
             utxo_only: false,
         }
@@ -97,7 +99,8 @@ impl WolletBuilder {
             ));
         }
         self.updates_store = store.clone();
-        self.txs_store = store;
+        self.txs_store = store.clone();
+        self.unblinded_store = store;
         self.merge_threshold = Some(1);
         Ok(self)
     }
@@ -145,6 +148,13 @@ impl WolletBuilder {
     /// Experimental: specify the store used to persist wallet transactions
     pub fn with_txs_store(mut self, store: Arc<dyn DynStore>) -> Self {
         self.txs_store = store;
+        self.with_stores_disallowed = true;
+        self
+    }
+
+    /// Experimental: specify the store used to persist unblinded values (assets, amounts, blinders)
+    pub fn with_unblinded_store(mut self, store: Arc<dyn DynStore>) -> Self {
+        self.unblinded_store = store;
         self.with_stores_disallowed = true;
         self
     }
@@ -218,8 +228,9 @@ impl WolletBuilder {
         } else {
             self.updates_store
         };
+        let unblinded_store = self.unblinded_store;
 
-        let cache = Cache::new(txs_store);
+        let cache = Cache::new(txs_store, unblinded_store);
         let max_weight_to_satisfy = match self.descriptor.definite_descriptor(Chain::External, 0) {
             Ok(d) => d.max_weight_to_satisfy()?,
             Err(_) => 0, // If we don't have the descriptor we don't know this value

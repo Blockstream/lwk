@@ -6,6 +6,7 @@
 * `full_scan` now fails if the `Client` is "utxo only" and the `Wollet` is not "utxo only" (or viceversa)
 * Deprecated `Wollet::apply_update_no_persist()` and `Wollet::apply_transaction_no_persist()`
 * Deprecated `WolletBuilder::with_store()`, use `WolletBuilder::with_stores()` or `WolletBuilder::with_updates_store()`
+* change `lwk_common::Network` regtest option from `LocaltestLiquid` to `CustomElements(ElementsParams)`, where `ElementsParams` contains custom `policy_asset` and `genesis_hash`, and should be constructed with builder
 
 ## 0.16.0
 

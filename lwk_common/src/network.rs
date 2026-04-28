@@ -4,6 +4,8 @@ use elements::hashes::{sha256, Hash};
 use elements::{AddressParams, AssetId, BlockHash};
 use serde::{Deserialize, Deserializer, Serialize};
 
+use crate::Error;
+
 const LIQUID_TESTNET_POLICY_ASSET: &AssetId = &AssetId::from_inner(sha256::Midstate([
     0x49, 0x9a, 0x81, 0x85, 0x45, 0xf6, 0xba, 0xe3, 0x9f, 0xc0, 0x3b, 0x63, 0x7f, 0x2a, 0x4e, 0x1e,
     0x64, 0xe5, 0x90, 0xca, 0xc1, 0xbc, 0x3a, 0x6f, 0x6d, 0x71, 0xaa, 0x44, 0x43, 0x65, 0x4c, 0x14,
@@ -30,6 +32,51 @@ const GENESIS_LIQUID_REGTEST: [u8; 32] = [
     0xc1, 0x45, 0x10, 0xd4, 0x2b, 0x90, 0x74, 0xa5, 0x98, 0x34, 0x4a, 0x77, 0xb0, 0x03, 0xaf, 0xc7,
 ];
 
+/// The builder for custom Elements network parameters
+#[derive(Default)]
+pub struct ElementsParamsBuilder {
+    policy_asset: Option<AssetId>,
+    genesis_hash: Option<BlockHash>,
+}
+
+impl ElementsParamsBuilder {
+    /// Create builder for custom Elements network parameters
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Specify policy asset.
+    pub fn with_policy_asset(mut self, policy_asset: AssetId) -> Self {
+        self.policy_asset = Some(policy_asset);
+        self
+    }
+
+    /// Specify genesis hash.
+    pub fn with_genesis_hash(mut self, genesis_hash: BlockHash) -> Self {
+        self.genesis_hash = Some(genesis_hash);
+        self
+    }
+
+    /// Build Elements network parameters.
+    ///
+    /// Unspecified values would defined as default Liquid regtest parameters
+    pub fn build(self) -> Result<ElementsParams, Error> {
+        Ok(ElementsParams {
+            policy_asset: self.policy_asset.unwrap_or(*LIQUID_REGTEST_POLICY_ASSET),
+            genesis_hash: self
+                .genesis_hash
+                .unwrap_or(BlockHash::from_byte_array(GENESIS_LIQUID_REGTEST)),
+        })
+    }
+}
+
+/// Paramaters for custom Elements network.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ElementsParams {
+    policy_asset: AssetId,
+    genesis_hash: BlockHash,
+}
+
 /// The network of the elements blockchain.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Network {
@@ -37,8 +84,8 @@ pub enum Network {
     Liquid,
     /// Liquid testnet
     TestnetLiquid,
-    /// Liquid regtest
-    LocaltestLiquid,
+    /// Elements network with custom parameters
+    CustomElements(ElementsParams),
 }
 
 impl Network {
@@ -48,11 +95,11 @@ impl Network {
     }
 
     /// Return the policy asset for this network.
-    pub fn policy_asset(&self) -> &'static AssetId {
+    pub fn policy_asset(&self) -> &AssetId {
         match self {
             Network::Liquid => &AssetId::LIQUID_BTC,
             Network::TestnetLiquid => LIQUID_TESTNET_POLICY_ASSET,
-            Network::LocaltestLiquid => LIQUID_REGTEST_POLICY_ASSET,
+            Network::CustomElements(params) => &params.policy_asset,
         }
     }
 
@@ -61,7 +108,7 @@ impl Network {
         match self {
             Network::Liquid => BlockHash::from_byte_array(GENESIS_LIQUID),
             Network::TestnetLiquid => BlockHash::from_byte_array(GENESIS_LIQUID_TESTNET),
-            Network::LocaltestLiquid => BlockHash::from_byte_array(GENESIS_LIQUID_REGTEST),
+            Network::CustomElements(params) => params.genesis_hash,
         }
     }
 
@@ -70,8 +117,17 @@ impl Network {
         match self {
             Network::Liquid => &AddressParams::LIQUID,
             Network::TestnetLiquid => &AddressParams::LIQUID_TESTNET,
-            Network::LocaltestLiquid => &AddressParams::ELEMENTS,
+            Network::CustomElements(_) => &AddressParams::ELEMENTS,
         }
+    }
+
+    /// Return Elements network with default parameters
+    pub fn default_regtest() -> Self {
+        Network::CustomElements(
+            ElementsParamsBuilder::new()
+                .build()
+                .expect("default parameters"),
+        )
     }
 }
 
@@ -80,7 +136,7 @@ impl std::fmt::Display for Network {
         match self {
             Network::Liquid => write!(f, "liquid"),
             Network::TestnetLiquid => write!(f, "testnet-liquid"),
-            Network::LocaltestLiquid => write!(f, "localtest-liquid"),
+            Network::CustomElements(_) => write!(f, "localtest-liquid"),
         }
     }
 }
@@ -92,7 +148,7 @@ impl FromStr for Network {
         match s {
             "liquid" => Ok(Network::Liquid),
             "testnet-liquid" => Ok(Network::TestnetLiquid),
-            "localtest-liquid" => Ok(Network::LocaltestLiquid),
+            "localtest-liquid" => Ok(Network::default_regtest()),
             _ => Err(
                 "invalid network, possible value are: 'liquid', 'testnet-liquid', 'localtest-liquid'"
                     .to_string(),
@@ -133,7 +189,7 @@ mod tests {
             "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49"
         );
         assert_eq!(
-            Network::LocaltestLiquid.policy_asset().to_string(),
+            Network::default_regtest().policy_asset().to_string(),
             "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
         );
 
@@ -148,7 +204,7 @@ mod tests {
             "a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1"
         );
         assert_eq!(
-            Network::LocaltestLiquid.genesis_hash().to_string(),
+            Network::default_regtest().genesis_hash().to_string(),
             "c7af03b0774a3498a574902bd41045c1633fd40b69ca163345c5d9c78bfd6af7"
         );
     }

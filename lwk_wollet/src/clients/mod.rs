@@ -1,7 +1,7 @@
 //! Clients to fetch data from the Blockchain.
 
 #[cfg(feature = "esplora")]
-use crate::ElementsNetwork;
+use crate::Network;
 
 use crate::{
     cache::{Height, Timestamp},
@@ -33,7 +33,7 @@ pub struct EsploraClientBuilder {
     base_url: String,
     waterfalls: bool,
     utxo_only: bool,
-    network: ElementsNetwork,
+    network: Network,
     headers: HashMap<String, String>,
     timeout: Option<u8>,
     concurrency: Option<usize>,
@@ -62,7 +62,7 @@ pub enum TokenProvider {
 #[cfg(feature = "esplora")]
 impl EsploraClientBuilder {
     /// Create a new [`EsploraClientBuilder`]
-    pub fn new(base_url: &str, network: ElementsNetwork) -> Self {
+    pub fn new(base_url: &str, network: Network) -> Self {
         Self {
             base_url: base_url.trim_end_matches('/').to_string(),
             waterfalls: false,
@@ -249,7 +249,7 @@ mod tests {
 
     use crate::{
         clients::esplora_client::EsploraClient, BlockchainBackend, ElectrumClient, ElectrumUrl,
-        ElementsNetwork,
+        Network,
     };
 
     #[test]
@@ -277,7 +277,7 @@ mod tests {
             let tempdir = tempfile::tempdir().unwrap();
             let desc = desc_str.parse().unwrap();
             let mut wollet =
-                crate::Wollet::with_fs_persist(ElementsNetwork::LiquidTestnet, desc, &tempdir)
+                crate::Wollet::with_fs_persist(Network::LiquidTestnet, desc, &tempdir)
                     .unwrap();
 
             let start = Instant::now();

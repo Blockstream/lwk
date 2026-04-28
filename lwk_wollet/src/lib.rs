@@ -150,6 +150,8 @@ pub use lwk_common::{
 
 pub use lwk_common::Network as ElementsNetwork;
 
+pub use lwk_common::Network;
+
 #[cfg(feature = "prices")]
 pub use crate::prices::{
     CurrencyCode, ExchangeRate, ExchangeRates, PricesFetcher, PricesFetcherBuilder,

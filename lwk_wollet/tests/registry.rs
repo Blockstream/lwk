@@ -3,7 +3,7 @@ use lwk_common::Signer;
 use lwk_test_util::*;
 use lwk_wollet::clients::blocking::EsploraClient;
 use lwk_wollet::registry::{blocking::Registry, RegistryPost};
-use lwk_wollet::ElementsNetwork;
+use lwk_wollet::Network;
 use lwk_wollet::{Contract, Entity};
 
 #[test]
@@ -19,7 +19,7 @@ fn test_registry() {
     let view_key = generate_view_key();
     let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
     let url = env.esplora_url();
-    let client = EsploraClient::new(&url, ElementsNetwork::default_regtest()).unwrap();
+    let client = EsploraClient::new(&url, Network::default_regtest()).unwrap();
     let mut w = TestWollet::new(client, &desc);
     w.fund_btc(&env);
 

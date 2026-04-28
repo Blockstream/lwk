@@ -7,7 +7,7 @@ use crate::{
     cache::Height,
     clients::{asyncr, Capability, Data, EsploraClientBuilder, History},
     wollet::WolletState,
-    ElementsNetwork, Error, WolletDescriptor,
+    Error, Network, WolletDescriptor,
 };
 
 use super::BlockchainBackend;
@@ -33,7 +33,7 @@ pub struct EsploraClient {
 
 impl EsploraClient {
     /// Create a new Esplora client
-    pub fn new(url: &str, network: ElementsNetwork) -> Result<Self, Error> {
+    pub fn new(url: &str, network: Network) -> Result<Self, Error> {
         Ok(Self {
             rt: Runtime::new()?,
             client: asyncr::EsploraClient::new(network, url),
@@ -44,7 +44,7 @@ impl EsploraClient {
 /// "Waterfalls" methods
 impl EsploraClient {
     /// Create a new Esplora client using the "waterfalls" endpoint
-    pub fn new_waterfalls(url: &str, network: ElementsNetwork) -> Result<Self, Error> {
+    pub fn new_waterfalls(url: &str, network: Network) -> Result<Self, Error> {
         Ok(Self {
             rt: Runtime::new()?,
             client: EsploraClientBuilder::new(url, network)
@@ -124,7 +124,7 @@ mod tests {
     use std::collections::HashMap;
 
     use super::EsploraClient;
-    use crate::{clients::blocking::BlockchainBackend, ElementsNetwork};
+    use crate::{clients::blocking::BlockchainBackend, Network};
     use elements::{encode::Decodable, BlockHash};
 
     fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
@@ -153,8 +153,7 @@ mod tests {
     fn test_esplora_url(esplora_url: &str) {
         println!("{esplora_url}");
 
-        let mut client =
-            EsploraClient::new(esplora_url, ElementsNetwork::default_regtest()).unwrap();
+        let mut client = EsploraClient::new(esplora_url, Network::default_regtest()).unwrap();
         let header = client.tip().unwrap();
         assert!(header.height > 100);
 

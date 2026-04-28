@@ -18,7 +18,7 @@ use lwk_wollet::{
     AddressResult, Contract, ElectrumUrl, UnvalidatedRecipient, WalletTx, Wollet, WolletBuilder,
     WolletDescriptor,
 };
-use lwk_wollet::{ElementsNetwork, Update};
+use lwk_wollet::{Network, Update};
 use lwk_wollet::{Tip, TxsOpt};
 use tempfile::TempDir;
 
@@ -87,7 +87,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
     pub fn with_opt(mut client: C, desc: &str, opt: &TestWolletOpt) -> Self {
         let db_root_dir = TempDir::new().unwrap();
 
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let descriptor = if desc.starts_with("ct") {
             add_checksum(desc)
         } else {
@@ -676,7 +676,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         let expected_updates = wollet.wollet.updates().unwrap();
         let expected = wollet.wollet.balance().unwrap();
         let db_root_dir = wollet.path();
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
 
         for _ in 0..2 {
             let wollet = WolletBuilder::new(network, descriptor.parse().unwrap())
@@ -771,7 +771,7 @@ pub fn test_wollet_with_many_transactions() -> Wollet {
     let descriptor: WolletDescriptor = descriptor.parse().unwrap();
     let update = Update::deserialize(&update).unwrap();
     assert_eq!(update.version, 1);
-    let mut wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, descriptor)
+    let mut wollet = WolletBuilder::new(Network::TestnetLiquid, descriptor)
         .build()
         .unwrap();
     wollet.apply_update(update).unwrap();

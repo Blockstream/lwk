@@ -1,4 +1,4 @@
-use crate::{clients::try_unblind, Chain, ElementsNetwork, Error, WalletTxOut, WolletDescriptor};
+use crate::{clients::try_unblind, Chain, Error, Network, WalletTxOut, WolletDescriptor};
 
 use std::collections::HashMap;
 
@@ -11,7 +11,7 @@ use elements::{
 pub struct ElementsRpcClient {
     inner: Client,
     #[allow(unused)]
-    network: ElementsNetwork,
+    network: Network,
     #[allow(unused)]
     auth: Auth,
     #[allow(unused)]
@@ -20,7 +20,7 @@ pub struct ElementsRpcClient {
 
 impl ElementsRpcClient {
     /// Create a new Elements RPC client
-    pub fn new(network: ElementsNetwork, url: &str, auth: Auth) -> Result<Self, Error> {
+    pub fn new(network: Network, url: &str, auth: Auth) -> Result<Self, Error> {
         let inner = Client::new(url, auth.clone())?;
         Ok(Self {
             inner,
@@ -32,7 +32,7 @@ impl ElementsRpcClient {
 
     /// Create a new Elements RPC client from credentials
     pub fn new_from_credentials(
-        network: ElementsNetwork,
+        network: Network,
         url: &str,
         user: &str,
         pass: &str,

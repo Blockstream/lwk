@@ -14,7 +14,7 @@ use crate::model::{
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::update::UpdatesPersister;
 use crate::util::EC;
-use crate::ElementsNetwork;
+use crate::Network;
 use crate::{BlindingPublicKey, WolletDescriptor};
 use elements::bitcoin::bip32::ChildNumber;
 use elements::{bitcoin, Address};
@@ -44,7 +44,7 @@ sha256t_hash_newtype! {
 
 /// A watch-only wallet defined by a CT descriptor.
 pub struct Wollet {
-    pub(crate) network: ElementsNetwork,
+    pub(crate) network: Network,
     pub(crate) cache: Cache,
     pub(crate) descriptor: WolletDescriptor,
 
@@ -59,7 +59,7 @@ pub struct Wollet {
 /// A builder for constructing [`Wollet`] instances
 #[derive(Debug)]
 pub struct WolletBuilder {
-    network: ElementsNetwork,
+    network: Network,
     descriptor: WolletDescriptor,
     with_stores_disallowed: bool,
     updates_store: Arc<dyn DynStore>,
@@ -73,7 +73,7 @@ pub struct WolletBuilder {
 
 impl WolletBuilder {
     /// Create a `Wollet` builder
-    pub fn new(network: ElementsNetwork, descriptor: WolletDescriptor) -> Self {
+    pub fn new(network: Network, descriptor: WolletDescriptor) -> Self {
         Self {
             network,
             descriptor,
@@ -432,7 +432,7 @@ impl std::hash::Hash for Wollet {
 impl Wollet {
     /// Create a new wallet
     pub fn new(
-        network: ElementsNetwork,
+        network: Network,
         store: Arc<dyn DynStore>,
         descriptor: WolletDescriptor,
     ) -> Result<Self, Error> {
@@ -485,7 +485,7 @@ impl Wollet {
     /// Create a new wallet persisting on file system
     #[deprecated(since = "0.16.0", note = "please use `WolletBuilder` instead")]
     pub fn with_fs_persist<P: AsRef<Path>>(
-        network: ElementsNetwork,
+        network: Network,
         descriptor: WolletDescriptor,
         datadir: P,
     ) -> Result<Self, Error> {
@@ -496,10 +496,7 @@ impl Wollet {
 
     /// Create a new wallet which does not persist anything
     #[deprecated(since = "0.16.0", note = "please use `WolletBuilder` instead")]
-    pub fn without_persist(
-        network: ElementsNetwork,
-        descriptor: WolletDescriptor,
-    ) -> Result<Self, Error> {
+    pub fn without_persist(network: Network, descriptor: WolletDescriptor) -> Result<Self, Error> {
         Self::new(network, Arc::new(FakeStore::new()), descriptor)
     }
 
@@ -514,7 +511,7 @@ impl Wollet {
     }
 
     /// Get the network
-    pub fn network(&self) -> ElementsNetwork {
+    pub fn network(&self) -> Network {
         self.network
     }
 
@@ -583,9 +580,9 @@ impl Wollet {
     ) -> Result<BitcoinAddressResult, Error> {
         let index = self.unwrap_or_last_unused(index);
         let network = match self.network() {
-            ElementsNetwork::Liquid => bitcoin::Network::Bitcoin,
-            ElementsNetwork::TestnetLiquid => bitcoin::Network::Testnet,
-            ElementsNetwork::CustomElements(_) => bitcoin::Network::Regtest,
+            Network::Liquid => bitcoin::Network::Bitcoin,
+            Network::TestnetLiquid => bitcoin::Network::Testnet,
+            Network::CustomElements(_) => bitcoin::Network::Regtest,
         };
 
         let address = self.descriptor.pegin_address(index, network, fed_desc)?;
@@ -1379,7 +1376,7 @@ impl Wollet {
         let desc = WolletDescriptor::from_str(&desc)?;
         Ok((
             signer,
-            WolletBuilder::new(ElementsNetwork::default_regtest(), desc).build()?,
+            WolletBuilder::new(Network::default_regtest(), desc).build()?,
         ))
     }
 }
@@ -1392,7 +1389,7 @@ mod tests {
 
     use super::*;
     use crate::elements::bitcoin::bip32::{Xpriv, Xpub};
-    use crate::elements::bitcoin::network::Network;
+    use crate::elements::bitcoin::network::Network as BitcoinNetwork;
     use crate::elements::AddressParams;
     use crate::{DownloadTxResult, Update};
     use elements_miniscript::confidential::bare::tweak_private_key;
@@ -1426,7 +1423,7 @@ mod tests {
     fn test_blinding_private() {
         // Get a confidential address from a "view" descriptor
         let seed = [0u8; 16];
-        let xprv = Xpriv::new_master(Network::Regtest, &seed).unwrap();
+        let xprv = Xpriv::new_master(BitcoinNetwork::Regtest, &seed).unwrap();
         let xpub = Xpub::from_priv(&EC, &xprv);
         let checksum = "h0ej28gv";
         let desc_str = format!("ct({xprv},elwpkh({xpub}))#{checksum}");
@@ -1460,7 +1457,7 @@ mod tests {
         let desc: WolletDescriptor = format!("{desc}#{}", desc_checksum(desc).unwrap())
             .parse()
             .unwrap();
-        WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc)
+        WolletBuilder::new(Network::TestnetLiquid, desc)
             .build()
             .unwrap()
     }
@@ -1502,7 +1499,7 @@ mod tests {
             .unwrap();
 
         let tempdir = tempfile::tempdir().unwrap();
-        let mut wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc.clone())
+        let mut wollet = WolletBuilder::new(Network::TestnetLiquid, desc.clone())
             .with_legacy_fs_store(&tempdir)
             .unwrap()
             .build()
@@ -1534,7 +1531,7 @@ mod tests {
         wollet.apply_update(update2).unwrap();
 
         // We restore the wallet and expects the same status
-        let restored_wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc)
+        let restored_wollet = WolletBuilder::new(Network::TestnetLiquid, desc)
             .with_legacy_fs_store(&tempdir)
             .unwrap()
             .build()
@@ -1550,7 +1547,7 @@ mod tests {
 
         let tempdir = tempfile::tempdir().unwrap();
         let mut update_path = tempdir.path().to_path_buf();
-        update_path.push(ElementsNetwork::TestnetLiquid.as_str());
+        update_path.push(Network::TestnetLiquid.as_str());
         update_path.push("enc_cache");
         update_path.push(
             <crate::wollet::DirectoryIdHash as crate::hashes::Hash>::hash(
@@ -1562,7 +1559,7 @@ mod tests {
         update_path.push("000000000000");
         std::fs::write(update_path, &enc_bytes).unwrap();
 
-        let wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc)
+        let wollet = WolletBuilder::new(Network::TestnetLiquid, desc)
             .with_legacy_fs_store(tempdir.path())
             .unwrap()
             .build()
@@ -1618,7 +1615,7 @@ mod tests {
         let update3 = Update::deserialize(&update3_bytes).unwrap();
 
         // Verify updates can be applied sequentially
-        let mut wollet = WolletBuilder::new(ElementsNetwork::default_regtest(), desc.clone())
+        let mut wollet = WolletBuilder::new(Network::default_regtest(), desc.clone())
             .build()
             .unwrap();
 
@@ -1706,11 +1703,11 @@ mod tests {
         let mnemonic = lwk_test_util::TEST_MNEMONIC;
 
         for network in [
-            ElementsNetwork::Liquid,
-            ElementsNetwork::TestnetLiquid,
-            ElementsNetwork::default_regtest(),
+            Network::Liquid,
+            Network::TestnetLiquid,
+            Network::default_regtest(),
         ] {
-            let is_mainnet = matches!(network, ElementsNetwork::Liquid);
+            let is_mainnet = matches!(network, Network::Liquid);
             let signer = SwSigner::new(mnemonic, is_mainnet).unwrap();
             for script_variant in [Singlesig::Wpkh, Singlesig::ShWpkh] {
                 for blinding_variant in [
@@ -1854,7 +1851,7 @@ mod tests {
         let descriptor = lwk_test_util::wollet_descriptor_many_transactions();
         let descriptor: WolletDescriptor = descriptor.parse().unwrap();
         let update = Update::deserialize(&update).unwrap();
-        let network = ElementsNetwork::TestnetLiquid;
+        let network = Network::TestnetLiquid;
         let mut wollet = WolletBuilder::new(network, descriptor).build().unwrap();
         wollet.apply_update(update).unwrap();
         wollet

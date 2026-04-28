@@ -957,11 +957,11 @@ fn wait_status_change(
 async fn test_esplora_wasm_client() {
     let env = TestEnvBuilder::from_env().with_esplora().build();
     let url = env.esplora_url();
-    let mut client = clients::asyncr::EsploraClient::new(ElementsNetwork::default_regtest(), &url);
+    let mut client = clients::asyncr::EsploraClient::new(Network::default_regtest(), &url);
     let signer = generate_signer();
     let view_key = generate_view_key();
     let descriptor = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
 
     let descriptor: WolletDescriptor = descriptor.parse().unwrap();
 
@@ -1012,8 +1012,7 @@ async fn test_esplora_requests_counter() {
     let env = TestEnvBuilder::from_env().with_esplora().build();
     let esplora_url = env.esplora_url();
 
-    let mut client =
-        clients::asyncr::EsploraClient::new(ElementsNetwork::default_regtest(), &esplora_url);
+    let mut client = clients::asyncr::EsploraClient::new(Network::default_regtest(), &esplora_url);
 
     // Initially, no requests should have been made
     assert_eq!(client.requests(), 0);
@@ -1044,7 +1043,7 @@ async fn test_esplora_waterfalls_last_used_index() {
     let desc = "ct(slip77(2411e278affa5c47010eab6d313c1ec66628ec0dd03b6fc98d1a05a0618719e6),elwpkh([a8874235/84'/1776'/0']xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#upsg7h8m";
     let desc = WolletDescriptor::from_str(desc).unwrap();
 
-    let mut client = clients::asyncr::EsploraClientBuilder::new(url, ElementsNetwork::Liquid)
+    let mut client = clients::asyncr::EsploraClientBuilder::new(url, Network::Liquid)
         .waterfalls(true)
         .build()
         .unwrap();
@@ -1094,7 +1093,7 @@ async fn test_esplora_wasm_waterfalls_missing_txs() {
     let electrum_url = ElectrumUrl::new(LIQUID_TESTNET_SOCKET, true, true).unwrap();
     let mut electrum_client = ElectrumClient::new(&electrum_url).unwrap();
     let desc = WolletDescriptor::from_str(desc).unwrap();
-    let mut wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc)
+    let mut wollet = WolletBuilder::new(Network::TestnetLiquid, desc)
         .build()
         .unwrap();
     let update = electrum_client.full_scan(&wollet).unwrap().unwrap();
@@ -1110,7 +1109,7 @@ async fn test_with_fallback_client() -> Result<(), Box<dyn std::error::Error>> {
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let desc = WolletDescriptor::from_str(&desc)?;
-    let mut wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc).build()?;
+    let mut wollet = WolletBuilder::new(Network::TestnetLiquid, desc).build()?;
 
     let primary_url = ElectrumUrl::new(LIQUID_TESTNET_SOCKET, true, true)?;
     // Assumed ot be another fallback electrum url
@@ -1137,9 +1136,9 @@ async fn test_with_fallback_client() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn test_esplora_wasm_waterfalls_desc(desc: &str, url: &str) -> usize {
     let network = if desc.contains("xpub") {
-        ElementsNetwork::Liquid
+        Network::Liquid
     } else {
-        ElementsNetwork::TestnetLiquid
+        Network::TestnetLiquid
     };
 
     init_logging();
@@ -1385,24 +1384,24 @@ fn test_fetch_full_header_regtest() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let client = test_client_electrum(&env.electrum_url());
 
-    test_fetch_last_full_header(client, ElementsNetwork::default_regtest());
+    test_fetch_last_full_header(client, Network::default_regtest());
 }
 
 #[test]
 fn test_fetch_full_header_mainnet() {
     let electrum_url = ElectrumUrl::new(LIQUID_SOCKET, true, true).unwrap();
     let electrum_client = ElectrumClient::new(&electrum_url).unwrap();
-    test_fetch_last_full_header(electrum_client, ElementsNetwork::Liquid);
+    test_fetch_last_full_header(electrum_client, Network::Liquid);
 }
 
 #[test]
 fn test_fetch_full_header_testnet() {
     let electrum_url = ElectrumUrl::new(LIQUID_TESTNET_SOCKET, true, true).unwrap();
     let electrum_client = ElectrumClient::new(&electrum_url).unwrap();
-    test_fetch_last_full_header(electrum_client, ElementsNetwork::TestnetLiquid);
+    test_fetch_last_full_header(electrum_client, Network::TestnetLiquid);
 }
 
-fn test_fetch_last_full_header(mut client: ElectrumClient, network: ElementsNetwork) {
+fn test_fetch_last_full_header(mut client: ElectrumClient, network: Network) {
     let current_tip = client.tip().unwrap().height;
     let header = fetch_last_full_header(&client, network, current_tip).unwrap();
 
@@ -1917,7 +1916,7 @@ fn test_elements_rpc() {
     assert_eq!(env.elementsd_height(), 101);
     let url = env.elements_rpc_url();
     let (user, pass) = env.elements_rpc_credentials();
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let elements_rpc_client =
         ElementsRpcClient::new_from_credentials(network, &url, &user, &pass).unwrap();
     assert_eq!(elements_rpc_client.height().unwrap(), 101);
@@ -1954,18 +1953,16 @@ fn test_clients() {
 
     let electrum_client = test_client_electrum(&env.electrum_url());
 
-    let esplora_client = clients::blocking::EsploraClient::new(
-        &env.esplora_url(),
-        ElementsNetwork::default_regtest(),
-    )
-    .unwrap();
+    let esplora_client =
+        clients::blocking::EsploraClient::new(&env.esplora_url(), Network::default_regtest())
+            .unwrap();
 
     assert_eq!(electrum_client.capabilities().len(), 0);
     assert_eq!(esplora_client.capabilities().len(), 0);
 
     let esplora_waterfalls_client = clients::blocking::EsploraClient::new_waterfalls(
         &env.waterfalls_url(),
-        ElementsNetwork::default_regtest(),
+        Network::default_regtest(),
     )
     .unwrap();
     assert_eq!(esplora_waterfalls_client.capabilities().len(), 1);
@@ -1992,7 +1989,7 @@ fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut client = clients::blocking::EsploraClient::new_waterfalls(
         &env.waterfalls_url(),
-        ElementsNetwork::default_regtest(),
+        Network::default_regtest(),
     )
     .unwrap();
 
@@ -2000,7 +1997,7 @@ fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer.xpub());
     let desc = WolletDescriptor::from_str(&desc).unwrap();
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let mut wollet = WolletBuilder::new(network, desc.clone()).build().unwrap();
     let update = client.full_scan(&wollet).unwrap().unwrap();
     wollet.apply_update(update).unwrap();
@@ -2056,8 +2053,7 @@ fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
 fn test_esplora_client() {
     let env = TestEnvBuilder::from_env().with_esplora().build();
     let url = env.esplora_url();
-    let client =
-        clients::blocking::EsploraClient::new(&url, ElementsNetwork::default_regtest()).unwrap();
+    let client = clients::blocking::EsploraClient::new(&url, Network::default_regtest()).unwrap();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -2093,7 +2089,7 @@ fn test_non_standard_gap_limit() {
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let wollet_desc = WolletDescriptor::from_str(&desc).unwrap();
     let mut client = test_client_electrum(&env.electrum_url());
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let satoshi = 1_000_000;
 
     let mut wollet_std_gap = WolletBuilder::new(network, wollet_desc.clone())
@@ -2144,7 +2140,7 @@ fn test_non_standard_gap_limit() {
 async fn test_non_standard_gap_limit_esplora() {
     let env = TestEnvBuilder::from_env().with_esplora().build();
     let url = env.esplora_url();
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let mut client = clients::asyncr::EsploraClient::new(network, &url);
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -2192,7 +2188,7 @@ fn test_non_standard_gap_limit_waterfalls_esplora() {
 
     let mut client = clients::blocking::EsploraClient::new_waterfalls(
         &env.waterfalls_url(),
-        ElementsNetwork::default_regtest(),
+        Network::default_regtest(),
     )
     .unwrap();
 
@@ -2200,7 +2196,7 @@ fn test_non_standard_gap_limit_waterfalls_esplora() {
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer.xpub());
     let desc = WolletDescriptor::from_str(&desc).unwrap();
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let mut wollet = WolletBuilder::new(network, desc.clone()).build().unwrap();
 
     let i = Some(25);
@@ -2413,11 +2409,11 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
 fn test_liquid_testnet() {
     let desc = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs";
     let wollet_desc = WolletDescriptor::from_str(desc).unwrap();
-    let mut wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, wollet_desc)
+    let mut wollet = WolletBuilder::new(Network::TestnetLiquid, wollet_desc)
         .build()
         .unwrap();
     let url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
-    let mut client = blocking::EsploraClient::new(url, ElementsNetwork::TestnetLiquid).unwrap();
+    let mut client = blocking::EsploraClient::new(url, Network::TestnetLiquid).unwrap();
     let update = client.full_scan(&wollet).unwrap().unwrap();
     let update_serialized = update.serialize().unwrap();
     std::fs::write("update.bin", update_serialized).unwrap();
@@ -2814,7 +2810,7 @@ fn test_no_wildcard() {
     assert_eq!(txs.len(), 2);
 
     // Use esplora client
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let mut esplora_wollet = WolletBuilder::new(network, desc.parse().unwrap())
         .build()
         .unwrap();
@@ -3098,7 +3094,7 @@ fn test_sync_high_index() {
     // TODO: extend to test also with Esplora and Electrum
     // This test was reported as a waterfalls issue, but it actually affects also the other clients
     // (tested locally) ideally we should extend this test to also be run for the other clients.
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
 
     let mut client =
         clients::blocking::EsploraClient::new_waterfalls(&env.waterfalls_url(), network).unwrap();
@@ -3561,7 +3557,7 @@ async fn async_clients() -> Result<(), Box<dyn std::error::Error>> {
     let login_url =
         "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
 
-    let mut client = EsploraClientBuilder::new(base_url, ElementsNetwork::Liquid)
+    let mut client = EsploraClientBuilder::new(base_url, Network::Liquid)
         .token_provider(TokenProvider::Blockstream {
             url: login_url.to_string(),
             client_id: client_id.to_string(),
@@ -3574,7 +3570,7 @@ async fn async_clients() -> Result<(), Box<dyn std::error::Error>> {
 
     // ANCHOR: waterfalls_client
     let waterfalls_url = "https://waterfalls.liquidwebwallet.org/liquid/api";
-    let mut client = EsploraClientBuilder::new(waterfalls_url, ElementsNetwork::Liquid)
+    let mut client = EsploraClientBuilder::new(waterfalls_url, Network::Liquid)
         .waterfalls(true)
         .build()?;
     // ANCHOR_END: waterfalls_client
@@ -3590,7 +3586,7 @@ async fn async_clients() -> Result<(), Box<dyn std::error::Error>> {
     let login_url =
         "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
 
-    let mut client = EsploraClientBuilder::new(base_url, ElementsNetwork::Liquid)
+    let mut client = EsploraClientBuilder::new(base_url, Network::Liquid)
         .waterfalls(true) // <- added
         .token_provider(TokenProvider::Blockstream {
             url: login_url.to_string(),
@@ -3623,7 +3619,7 @@ fn blocking_clients() -> Result<(), Box<dyn std::error::Error>> {
     use lwk_wollet::clients::blocking::EsploraClient;
 
     let esplora_url = "https://blockstream.info/liquid/api";
-    let mut client = EsploraClient::new(esplora_url, ElementsNetwork::Liquid)?;
+    let mut client = EsploraClient::new(esplora_url, Network::Liquid)?;
     // ANCHOR_END: esplora_client
     let tip = client.tip().unwrap();
     assert!(tip.height > 100);
@@ -3651,17 +3647,17 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
     // ANCHOR_END: get-xpub
 
     // ANCHOR: wollet
-    use lwk_wollet::{ElementsNetwork, Wollet, WolletDescriptor};
+    use lwk_wollet::{Network, Wollet, WolletDescriptor};
 
     let desc = signer.wpkh_slip77_descriptor()?;
     let wd = WolletDescriptor::from_str(&desc)?;
-    let network = ElementsNetwork::TestnetLiquid;
+    let network = Network::TestnetLiquid;
     let mut wollet = WolletBuilder::new(network, wd).build()?;
     // ANCHOR_END: wollet
 
     // Override wollet to use regtest
     let wd = WolletDescriptor::from_str(&desc)?;
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let mut wollet = WolletBuilder::new(network, wd).build()?;
 
     // ANCHOR: address
@@ -3729,7 +3725,7 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
 
     use lwk_signer::{bip39::Mnemonic, SwSigner};
     use lwk_wollet::clients::blocking::EsploraClient;
-    use lwk_wollet::{ElementsNetwork, Wollet, WolletDescriptor};
+    use lwk_wollet::{Network, Wollet, WolletDescriptor};
 
     // ANCHOR: multisig-setup
     let is_mainnet = false;
@@ -3768,8 +3764,8 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
 
     // ANCHOR: multisig-receive
     // Carol creates the wollet
-    let network = ElementsNetwork::TestnetLiquid;
-    let network = ElementsNetwork::default_regtest(); // ANCHOR: ignore
+    let network = Network::TestnetLiquid;
+    let network = Network::default_regtest(); // ANCHOR: ignore
     let mut wollet_c = WolletBuilder::new(network, wd).build()?;
 
     // With the wollet, Carol can obtain addresses, transactions and balance
@@ -3894,7 +3890,7 @@ fn test_add_input_rangeproofs() {
 #[test]
 fn test_issue_asset() -> Result<(), Box<dyn std::error::Error>> {
     // Test based on Python bindings test issue_asset.py
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let policy_asset = *network.policy_asset();
     let env = TestEnvBuilder::from_env().with_electrum().build();
 
@@ -4046,7 +4042,7 @@ fn cp_dir_rec(src: &std::path::Path, dst: &std::path::Path) {
 #[test]
 fn test_merge_updates_e2e() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -4244,7 +4240,7 @@ fn test_merge_updates_e2e() {
 fn test_merge_tx_update() {
     // Merge a transaction update
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
 
     let signer = generate_signer();
     let view_key = generate_view_key();

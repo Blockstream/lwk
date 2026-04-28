@@ -124,7 +124,7 @@ impl Network {
 
     /// Return the genesis block hash for this network as hex string.
     pub fn genesis_block_hash(&self) -> String {
-        self.inner.genesis_block_hash().to_hex()
+        self.inner.genesis_hash().to_hex()
     }
 
     /// Return a new `TxBuilder` for this network

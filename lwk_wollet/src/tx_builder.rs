@@ -878,7 +878,7 @@ impl TxBuilder {
         // Init PSET
         let mut pset = PartiallySignedTransaction::new_v2();
 
-        let genesis_block_hash = self.network().genesis_block_hash().to_byte_array().to_vec();
+        let genesis_block_hash = self.network().genesis_hash().to_byte_array().to_vec();
         // Add genesis block hash as defined in ELIP-101 https://github.com/ElementsProject/ELIPs/blob/main/elip-0101.mediawiki
         // TODO: upstream to rust elements
         // TODO: tested with Jade 1.0.37 but does not work. Safe to merge because subtype is unique.
@@ -1575,7 +1575,7 @@ mod tests {
         let pair = elements::pset::raw::Pair {
             key: key.to_key(),
             value: ElementsNetwork::Liquid
-                .genesis_block_hash()
+                .genesis_hash()
                 .to_byte_array()
                 .to_vec(),
         };

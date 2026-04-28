@@ -137,7 +137,7 @@ impl Network {
     /// Return the genesis block hash for this network as hex string.
     #[wasm_bindgen(js_name = genesisBlockHash)]
     pub fn genesis_block_hash(&self) -> String {
-        self.inner.genesis_block_hash().to_hex()
+        self.inner.genesis_hash().to_hex()
     }
 
     /// Return the transaction builder for this network

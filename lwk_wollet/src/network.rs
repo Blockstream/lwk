@@ -60,7 +60,7 @@ impl ElementsNetwork {
     }
 
     /// Return the genesis block hash for this network.
-    pub fn genesis_block_hash(&self) -> BlockHash {
+    pub fn genesis_hash(&self) -> BlockHash {
         match self {
             ElementsNetwork::Liquid => BlockHash::from_byte_array(GENESIS_LIQUID),
             ElementsNetwork::LiquidTestnet => BlockHash::from_byte_array(GENESIS_LIQUID_TESTNET),
@@ -174,7 +174,7 @@ mod test {
     fn test_genesis_block_hash() {
         let network = ElementsNetwork::Liquid;
         assert_eq!(
-            network.genesis_block_hash(),
+            network.genesis_hash(),
             elements::BlockHash::from_str(
                 "1466275836220db2944ca059a3a10ef6fd2ea684b0688d2c379296888a206003"
             )
@@ -183,7 +183,7 @@ mod test {
 
         let network = ElementsNetwork::LiquidTestnet;
         assert_eq!(
-            network.genesis_block_hash(),
+            network.genesis_hash(),
             elements::BlockHash::from_str(
                 "a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1"
             )
@@ -192,7 +192,7 @@ mod test {
 
         let network = ElementsNetwork::default_regtest();
         assert_eq!(
-            network.genesis_block_hash(),
+            network.genesis_hash(),
             elements::BlockHash::from_str(
                 "00902a6b70c2ca83b5d9c815d96a0e2f4202179316970d14ea1847dae5b1ca21"
             )

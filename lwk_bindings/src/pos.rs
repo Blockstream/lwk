@@ -3,8 +3,8 @@ use std::sync::Arc;
 use crate::{CurrencyCode, LwkError, WolletDescriptor};
 
 /// POS (Point of Sale) configuration for encoding/decoding
-#[derive(uniffi::Object, PartialEq, Eq, Debug, Clone)]
-#[uniffi::export(Display, Eq)]
+#[derive(uniffi::Object, PartialEq, Eq, Hash, Debug, Clone)]
+#[uniffi::export(Display, Hash, Eq)]
 pub struct PosConfig {
     pub(crate) inner: lwk_wollet::PosConfig,
 }

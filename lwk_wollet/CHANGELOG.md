@@ -7,6 +7,11 @@
 * Deprecated `Wollet::apply_update_no_persist()` and `Wollet::apply_transaction_no_persist()`
 * Deprecated `WolletBuilder::with_store()`, use `WolletBuilder::with_stores()` or `WolletBuilder::with_updates_store()`
 * change `lwk_common::Network` regtest option from `LocaltestLiquid` to `CustomElements(ElementsParams)`, where `ElementsParams` contains custom `policy_asset` and `genesis_hash`, and should be constructed with builder
+* move `lwk_wollet::ElementsNetwork` implementation in `lwk_common::Network`. `ElementsNetwork` is now alias to `lwk_common::Network` and is deprecated. This changes behavior of `ElementsNetwork` in several ways:
+  * method `genesis_block_hash` is renamed as `genesis_hash`;
+  * method `policy_asset` is returning `&AssetId` instead of `AssetId`;
+  * variant `LiquidTestnet` changed to `TestnetLiquid`;
+  * variant `ElementsRegtest {policy_asset: AssetId}` changed to `CustomElements(ElementsParams)`, where `ElementsParams` contains custom `policy_asset` and `genesis_hash`, and should be constructed with builder;
 
 ## 0.16.0
 

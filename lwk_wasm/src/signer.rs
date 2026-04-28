@@ -140,9 +140,14 @@ mod tests {
         .unwrap()
     }
 
-    pub fn network_regtest() -> lwk_wollet::ElementsNetwork {
+    pub fn network_regtest() -> lwk_wollet::Network {
         let policy_asset = regtest_policy_asset();
-        lwk_wollet::ElementsNetwork::CustomElements { policy_asset }
+        lwk_wollet::Network::CustomElements(
+            lwk_common::ElementsParamsBuilder::new()
+                .with_policy_asset(policy_asset)
+                .build()
+                .expect("static"),
+        )
     }
 
     #[wasm_bindgen_test]

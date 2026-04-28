@@ -85,7 +85,7 @@ impl TxOut {
     /// Get the unconfidential address for this output
     #[wasm_bindgen(js_name = unconfidentialAddress)]
     pub fn unconfidential_address(&self, network: &Network) -> Option<Address> {
-        let params = lwk_wollet::ElementsNetwork::from(network).address_params();
+        let params = lwk_wollet::Network::from(network).address_params();
         elements::Address::from_script(&self.inner.script_pubkey, None, params).map(|a| a.into())
     }
 

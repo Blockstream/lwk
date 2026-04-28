@@ -9,7 +9,7 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Network {
-    inner: lwk_wollet::ElementsNetwork,
+    inner: lwk_wollet::Network,
 }
 
 impl std::fmt::Display for Network {
@@ -18,8 +18,8 @@ impl std::fmt::Display for Network {
     }
 }
 
-impl From<lwk_wollet::ElementsNetwork> for Network {
-    fn from(inner: lwk_wollet::ElementsNetwork) -> Self {
+impl From<lwk_wollet::Network> for Network {
+    fn from(inner: lwk_wollet::Network) -> Self {
         Self { inner }
     }
 }
@@ -30,7 +30,7 @@ impl From<Network> for lwk_common::Network {
     }
 }
 
-impl From<&Network> for lwk_wollet::ElementsNetwork {
+impl From<&Network> for lwk_wollet::Network {
     fn from(value: &Network) -> Self {
         value.inner
     }
@@ -40,17 +40,17 @@ impl From<&Network> for lwk_wollet::ElementsNetwork {
 impl Network {
     /// Creates a mainnet `Network``
     pub fn mainnet() -> Network {
-        lwk_wollet::ElementsNetwork::Liquid.into()
+        lwk_wollet::Network::Liquid.into()
     }
 
     /// Creates a testnet `Network``
     pub fn testnet() -> Network {
-        lwk_wollet::ElementsNetwork::TestnetLiquid.into()
+        lwk_wollet::Network::TestnetLiquid.into()
     }
 
     /// Creates a regtest `Network``
     pub fn regtest(policy_asset: &AssetId) -> Network {
-        lwk_wollet::ElementsNetwork::CustomElements(
+        lwk_wollet::Network::CustomElements(
             lwk_common::ElementsParamsBuilder::new()
                 .with_policy_asset((*policy_asset).into())
                 .build()
@@ -64,7 +64,7 @@ impl Network {
     pub fn regtest_default() -> Network {
         let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
         let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
-        lwk_wollet::ElementsNetwork::CustomElements(
+        lwk_wollet::Network::CustomElements(
             lwk_common::ElementsParamsBuilder::new()
                 .with_policy_asset(policy_asset)
                 .build()
@@ -77,11 +77,9 @@ impl Network {
     #[wasm_bindgen(js_name = defaultEsploraClient)]
     pub fn default_esplora_client(&self) -> EsploraClient {
         let url = match &self.inner {
-            lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/liquid/api",
-            lwk_wollet::ElementsNetwork::TestnetLiquid => {
-                "https://blockstream.info/liquidtestnet/api"
-            }
-            lwk_wollet::ElementsNetwork::CustomElements(_) => "127.0.0.1:3000",
+            lwk_wollet::Network::Liquid => "https://blockstream.info/liquid/api",
+            lwk_wollet::Network::TestnetLiquid => "https://blockstream.info/liquidtestnet/api",
+            lwk_wollet::Network::CustomElements(_) => "127.0.0.1:3000",
         };
 
         EsploraClient::new(self, url, false, 1, false).unwrap()
@@ -90,19 +88,19 @@ impl Network {
     /// Return true if the network is a mainnet network
     #[wasm_bindgen(js_name = isMainnet)]
     pub fn is_mainnet(&self) -> bool {
-        matches!(&self.inner, &lwk_wollet::ElementsNetwork::Liquid)
+        matches!(&self.inner, &lwk_wollet::Network::Liquid)
     }
 
     /// Return true if the network is a testnet network
     #[wasm_bindgen(js_name = isTestnet)]
     pub fn is_testnet(&self) -> bool {
-        matches!(&self.inner, &lwk_wollet::ElementsNetwork::TestnetLiquid)
+        matches!(&self.inner, &lwk_wollet::Network::TestnetLiquid)
     }
 
     /// Return true if the network is a regtest network
     #[wasm_bindgen(js_name = isRegtest)]
     pub fn is_regtest(&self) -> bool {
-        matches!(&self.inner, &lwk_wollet::ElementsNetwork::CustomElements(_))
+        matches!(&self.inner, &lwk_wollet::Network::CustomElements(_))
     }
 
     /// Return a string representation of the network, like "liquid", "liquid-testnet" or "liquid-regtest"
@@ -133,9 +131,9 @@ impl Network {
     #[wasm_bindgen(js_name = defaultExplorerUrl)]
     pub fn default_explorer_url(&self) -> String {
         let url = match &self.inner {
-            lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/liquid/",
-            lwk_wollet::ElementsNetwork::TestnetLiquid => "https://blockstream.info/liquidtestnet/",
-            lwk_wollet::ElementsNetwork::CustomElements(_) => "127.0.0.1:3000",
+            lwk_wollet::Network::Liquid => "https://blockstream.info/liquid/",
+            lwk_wollet::Network::TestnetLiquid => "https://blockstream.info/liquidtestnet/",
+            lwk_wollet::Network::CustomElements(_) => "127.0.0.1:3000",
         };
         url.to_string()
     }

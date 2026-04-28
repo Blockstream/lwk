@@ -129,6 +129,39 @@ impl Network {
                 .expect("default parameters"),
         )
     }
+
+    /// Return the dynamic epoch length of this network
+    pub fn dynamic_epoch_length(&self) -> u32 {
+        // taken from elements chainparams.cpp
+        // TODO upstream to rust elements
+        match self {
+            Network::Liquid => 20160,
+            Network::TestnetLiquid => 1000,
+            Network::CustomElements(_) => 10,
+        }
+    }
+
+    /// Return the dynamic epoch length of this network
+    pub fn total_valid_epochs(&self) -> u32 {
+        // taken from elements chainparams.cpp
+        // TODO upstream to rust elements
+        match self {
+            Network::Liquid => 2,
+            Network::TestnetLiquid => 0,
+            Network::CustomElements(_) => 0,
+        }
+    }
+
+    /// Return the string representation of this network.
+    ///
+    /// TODO: consider to remove in favor of Display implementation
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Network::Liquid => "liquid",
+            Network::TestnetLiquid => "liquid-testnet",
+            Network::CustomElements(_) => "liquid-regtest",
+        }
+    }
 }
 
 impl std::fmt::Display for Network {

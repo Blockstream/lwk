@@ -1048,9 +1048,14 @@ mod tests {
             Err(e) => {
                 // sometimes the CI return transaction.failed, and in that case we do a refund
                 log::warn!("claim address balance failed, check if we perfomed a refund {e:?}");
-                crate::utils::get_address_balance(LBTC_CHAIN.into(), &refund_address_str)
-                    .await
-                    .expect("refund address empty");
+                let refund_balance =
+                    crate::utils::get_address_balance(LBTC_CHAIN.into(), &refund_address_str)
+                        .await
+                        .expect("Failed to get refund address balance");
+                assert!(
+                    refund_balance > 0,
+                    "Expected refund address to receive funds, got {refund_balance} sats"
+                );
             }
         }
 
@@ -1206,9 +1211,14 @@ mod tests {
                 }
                 Err(e) => {
                     log::warn!("claim address balance failed, check if we perfomed a refund {e:?}");
-                    crate::utils::get_address_balance(LBTC_CHAIN.into(), &refund_address_str)
-                        .await
-                        .expect("refund address empty");
+                    let refund_balance =
+                        crate::utils::get_address_balance(LBTC_CHAIN.into(), &refund_address_str)
+                            .await
+                            .expect("Failed to get refund address balance");
+                    assert!(
+                        refund_balance > 0,
+                        "Expected refund address to receive funds, got {refund_balance} sats"
+                    );
                 }
             }
         };

@@ -38,7 +38,7 @@ use elements::{
 };
 pub use error::Error;
 use get_receive_address::{SingleOrMulti, Variant};
-use lwk_common::{burn_script, Network};
+use lwk_common::Network;
 
 use register_multisig::RegisteredMultisigDetails;
 use sign_liquid_tx::{AssetInfo, Change, Commitment, Contract, Prevout, SignLiquidTxParams};
@@ -122,7 +122,6 @@ fn create_jade_sign_req(
 ) -> Result<SignLiquidTxParams> {
     let tx = pset.extract_tx()?;
     let txn = serialize(&tx);
-    let burn_script = burn_script();
     let mut asset_ids_in_tx = HashSet::new();
     let mut trusted_commitments = vec![];
     let mut changes = vec![];
@@ -131,9 +130,13 @@ fn create_jade_sign_req(
         asset_ids_in_tx.insert(asset_id);
         let mut asset_id = serialize(&asset_id);
         asset_id.reverse(); // Jade want it reversed
-        let unblinded = output.script_pubkey.is_empty() || output.script_pubkey == burn_script;
-        let trusted_commitment = if unblinded {
-            // fee output or burn output
+        let trusted_commitment = if !output.is_partially_blinded() {
+            // This can be a fee output, burn output, or explicit normal output.
+            // Jade requires trusted commitments for blinded outputs, but allows null
+            // entries for unblinded outputs. When no commitment data is present and
+            // the tx output asset/value are explicit, Jade reads the asset/value
+            // directly from the transaction output.
+            // https://github.com/Blockstream/Jade/blob/3edd8f4b03ae65d6ee38fb8620b46aad88ab341e/docs/index.rst#sign_liquid_tx-request-legacy (see bullets section)
             None
         } else {
             Some(Commitment {
@@ -342,9 +345,16 @@ fn is_multisig(script: &Script) -> bool {
 mod test {
     use std::str::FromStr;
 
-    use elements::{confidential::Value, encode::serialize, Script};
+    use elements::{
+        bitcoin::bip32::Fingerprint,
+        confidential::Value,
+        encode::serialize,
+        pset::{Output, PartiallySignedTransaction},
+        Script,
+    };
+    use lwk_common::Network;
 
-    use crate::{is_multisig, json_to_cbor};
+    use crate::{create_jade_sign_req, is_multisig, json_to_cbor};
 
     fn cbor_to_json(value: serde_cbor::Value) -> Result<serde_json::Value, crate::Error> {
         Ok(serde_json::to_value(value)?)
@@ -371,6 +381,28 @@ mod test {
             "OP_0 OP_PUSHBYTES_20 14fe45f2c2a2b7c00d0940d694a3b6af6c9bf165"
         );
         assert!(!is_multisig(&not_multisig));
+    }
+
+    #[test]
+    fn create_jade_sign_req_skips_explicit_output_commitment() {
+        let mut pset = PartiallySignedTransaction::new_v2();
+        pset.add_output(Output::new_explicit(
+            Script::from_str("001414fe45f2c2a2b7c00d0940d694a3b6af6c9bf165").unwrap(),
+            1_000,
+            *Network::default_regtest().policy_asset(),
+            None,
+        ));
+
+        let params = create_jade_sign_req(
+            &mut pset,
+            Fingerprint::from([0u8; 4]),
+            vec![],
+            Network::default_regtest(),
+        )
+        .unwrap();
+
+        assert_eq!(params.trusted_commitments.len(), 1);
+        assert!(params.trusted_commitments[0].is_none());
     }
 
     #[test]

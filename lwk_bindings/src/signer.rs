@@ -168,7 +168,7 @@ impl Signer {
 
 #[cfg(test)]
 mod tests {
-    use lwk_wollet::ElementsNetwork;
+    use lwk_wollet::Network;
 
     use crate::{Bip, Mnemonic, Pset, Signer};
 
@@ -176,7 +176,7 @@ mod tests {
     fn signer() {
         let mnemonic_str = lwk_test_util::TEST_MNEMONIC;
         let mnemonic = Mnemonic::new(mnemonic_str).unwrap();
-        let network: crate::Network = ElementsNetwork::default_regtest().into();
+        let network: crate::Network = Network::default_regtest().into();
 
         let signer = Signer::new(&mnemonic, &network).unwrap();
 
@@ -209,7 +209,7 @@ mod tests {
     fn test_bip85_derivation() {
         let mnemonic_str = lwk_test_util::TEST_MNEMONIC;
         let mnemonic = Mnemonic::new(mnemonic_str).unwrap();
-        let network: crate::Network = ElementsNetwork::default_regtest().into();
+        let network: crate::Network = Network::default_regtest().into();
 
         let signer = Signer::new(&mnemonic, &network).unwrap();
 

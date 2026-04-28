@@ -1,12 +1,11 @@
 use lwk::{Address, ElectrumClient, Mnemonic, Network, Signer, Txid, Wollet};
-use lwk_wollet::ElementsNetwork;
 use std::str::FromStr;
 
 // TODO move in e2e tests
 #[test]
 fn test_lwk_flow() {
     let mnemonic = lwk_test_util::TEST_MNEMONIC;
-    let network: Network = ElementsNetwork::default_regtest().into();
+    let network: Network = lwk_wollet::Network::default_regtest().into();
     let signer = Signer::new(&Mnemonic::new(mnemonic).unwrap(), &network).unwrap();
 
     let env = lwk_test_util::TestEnvBuilder::from_env()

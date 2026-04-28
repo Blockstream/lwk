@@ -10,7 +10,7 @@ use crate::{types::AssetId, ElectrumClient, EsploraClient, LwkError, TxBuilder};
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 #[uniffi::export(Display, Eq)]
 pub struct Network {
-    pub(crate) inner: lwk_wollet::ElementsNetwork,
+    pub(crate) inner: lwk_wollet::Network,
 }
 
 impl Display for Network {
@@ -18,19 +18,19 @@ impl Display for Network {
         write!(f, "{:?}", self.inner)
     }
 }
-impl From<lwk_wollet::ElementsNetwork> for Network {
-    fn from(inner: lwk_wollet::ElementsNetwork) -> Self {
+impl From<lwk_wollet::Network> for Network {
+    fn from(inner: lwk_wollet::Network) -> Self {
         Self { inner }
     }
 }
 
-impl From<Network> for lwk_wollet::ElementsNetwork {
+impl From<Network> for lwk_wollet::Network {
     fn from(value: Network) -> Self {
         value.inner
     }
 }
 
-impl From<&Network> for lwk_wollet::ElementsNetwork {
+impl From<&Network> for lwk_wollet::Network {
     fn from(value: &Network) -> Self {
         value.inner
     }
@@ -41,20 +41,20 @@ impl Network {
     /// Return the mainnet network
     #[uniffi::constructor]
     pub fn mainnet() -> Arc<Network> {
-        Arc::new(lwk_wollet::ElementsNetwork::Liquid.into())
+        Arc::new(lwk_wollet::Network::Liquid.into())
     }
 
     /// Return the testnet network
     #[uniffi::constructor]
     pub fn testnet() -> Arc<Network> {
-        Arc::new(lwk_wollet::ElementsNetwork::TestnetLiquid.into())
+        Arc::new(lwk_wollet::Network::TestnetLiquid.into())
     }
 
     /// Return the regtest network with the given policy asset
     #[uniffi::constructor]
     pub fn regtest(policy_asset: AssetId) -> Arc<Network> {
         Arc::new(
-            lwk_wollet::ElementsNetwork::CustomElements(
+            lwk_wollet::Network::CustomElements(
                 lwk_common::ElementsParamsBuilder::new()
                     .with_policy_asset(policy_asset.into())
                     .build()
@@ -70,7 +70,7 @@ impl Network {
         let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
         let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
         Arc::new(
-            lwk_wollet::ElementsNetwork::CustomElements(
+            lwk_wollet::Network::CustomElements(
                 lwk_common::ElementsParamsBuilder::new()
                     .with_policy_asset(policy_asset)
                     .build()
@@ -83,9 +83,9 @@ impl Network {
     /// Return the default electrum client for this network
     pub fn default_electrum_client(&self) -> Result<Arc<ElectrumClient>, LwkError> {
         let (url, validate_domain, tls) = match &self.inner {
-            lwk_wollet::ElementsNetwork::Liquid => (LIQUID_SOCKET, true, true),
-            lwk_wollet::ElementsNetwork::TestnetLiquid => (LIQUID_TESTNET_SOCKET, true, true),
-            lwk_wollet::ElementsNetwork::CustomElements(_) => ("127.0.0.1:50002", false, false),
+            lwk_wollet::Network::Liquid => (LIQUID_SOCKET, true, true),
+            lwk_wollet::Network::TestnetLiquid => (LIQUID_TESTNET_SOCKET, true, true),
+            lwk_wollet::Network::CustomElements(_) => ("127.0.0.1:50002", false, false),
         };
 
         ElectrumClient::new(url, tls, validate_domain)
@@ -94,11 +94,9 @@ impl Network {
     /// Return the default esplora client for this network
     pub fn default_esplora_client(&self) -> Result<Arc<EsploraClient>, LwkError> {
         let url = match &self.inner {
-            lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/liquid/api",
-            lwk_wollet::ElementsNetwork::TestnetLiquid => {
-                "https://blockstream.info/liquidtestnet/api"
-            }
-            lwk_wollet::ElementsNetwork::CustomElements(_) => "127.0.0.1:3000",
+            lwk_wollet::Network::Liquid => "https://blockstream.info/liquid/api",
+            lwk_wollet::Network::TestnetLiquid => "https://blockstream.info/liquidtestnet/api",
+            lwk_wollet::Network::CustomElements(_) => "127.0.0.1:3000",
         };
 
         EsploraClient::new(url, &self.inner.into())
@@ -106,7 +104,7 @@ impl Network {
 
     /// Return true if the network is the mainnet network
     pub fn is_mainnet(&self) -> bool {
-        matches!(&self.inner, &lwk_wollet::ElementsNetwork::Liquid)
+        matches!(&self.inner, &lwk_wollet::Network::Liquid)
     }
 
     /// Return the policy asset (eg LBTC for mainnet) for this network

@@ -22,9 +22,8 @@ jobs:
       - name: "Set up JDK"
         uses: actions/setup-java@v5
         with:
-          distribution: jetbrains
+          distribution: temurin
           java-version: 21
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: dtolnay/rust-toolchain@1.85.0
         with:
@@ -51,4 +50,3 @@ jobs:
           name: lwk-artifact
           path: lwk_bindings/android_bindings
           retention-days: 1
-

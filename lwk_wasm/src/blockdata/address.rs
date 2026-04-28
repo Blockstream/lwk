@@ -173,7 +173,7 @@ mod tests {
 
         let address_network_check = Address::parse(
             address_str,
-            &lwk_wollet::ElementsNetwork::LiquidTestnet.into(),
+            &lwk_wollet::ElementsNetwork::TestnetLiquid.into(),
         )
         .unwrap();
         assert_eq!(address_network_check.to_string(), address_str);

@@ -2077,7 +2077,7 @@ mod tests {
         } else {
             (
                 Network::TestnetLiquid,
-                ElementsNetwork::LiquidTestnet,
+                ElementsNetwork::TestnetLiquid,
                 "ssl://elements-testnet.blockstream.info:50002",
             )
         };

@@ -199,7 +199,7 @@ async fn test_esplora_waterfalls_balance_comparison(
     init_logging();
 
     let desc = WolletDescriptor::from_str(descriptor)?;
-    let network = ElementsNetwork::LiquidTestnet;
+    let network = ElementsNetwork::TestnetLiquid;
 
     let mut wollet = WolletBuilder::new(network, desc.clone()).build()?;
     let mut client = EsploraClientBuilder::new(esplora_url, network)
@@ -392,7 +392,7 @@ async fn test_incompatible_utxo_only_async() {
     let waterfalls_url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
     let esplora_url = "https://blockstream.info/liquidtestnet/api";
 
-    let network = ElementsNetwork::LiquidTestnet;
+    let network = ElementsNetwork::TestnetLiquid;
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());

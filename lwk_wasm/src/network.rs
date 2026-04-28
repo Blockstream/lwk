@@ -28,7 +28,7 @@ impl From<&Network> for lwk_common::Network {
     fn from(value: &Network) -> Self {
         match value.inner {
             lwk_wollet::ElementsNetwork::Liquid => lwk_common::Network::Liquid,
-            lwk_wollet::ElementsNetwork::LiquidTestnet => lwk_common::Network::TestnetLiquid,
+            lwk_wollet::ElementsNetwork::TestnetLiquid => lwk_common::Network::TestnetLiquid,
             lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset } => {
                 lwk_common::Network::CustomElements(
                     lwk_common::ElementsParamsBuilder::new()
@@ -68,7 +68,7 @@ impl Network {
 
     /// Creates a testnet `Network``
     pub fn testnet() -> Network {
-        lwk_wollet::ElementsNetwork::LiquidTestnet.into()
+        lwk_wollet::ElementsNetwork::TestnetLiquid.into()
     }
 
     /// Creates a regtest `Network``
@@ -92,7 +92,7 @@ impl Network {
     pub fn default_esplora_client(&self) -> EsploraClient {
         let url = match &self.inner {
             lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/liquid/api",
-            lwk_wollet::ElementsNetwork::LiquidTestnet => {
+            lwk_wollet::ElementsNetwork::TestnetLiquid => {
                 "https://blockstream.info/liquidtestnet/api"
             }
             lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:3000",
@@ -110,7 +110,7 @@ impl Network {
     /// Return true if the network is a testnet network
     #[wasm_bindgen(js_name = isTestnet)]
     pub fn is_testnet(&self) -> bool {
-        matches!(&self.inner, &lwk_wollet::ElementsNetwork::LiquidTestnet)
+        matches!(&self.inner, &lwk_wollet::ElementsNetwork::TestnetLiquid)
     }
 
     /// Return true if the network is a regtest network
@@ -151,7 +151,7 @@ impl Network {
     pub fn default_explorer_url(&self) -> String {
         let url = match &self.inner {
             lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/liquid/",
-            lwk_wollet::ElementsNetwork::LiquidTestnet => "https://blockstream.info/liquidtestnet/",
+            lwk_wollet::ElementsNetwork::TestnetLiquid => "https://blockstream.info/liquidtestnet/",
             lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:3000",
         };
         url.to_string()

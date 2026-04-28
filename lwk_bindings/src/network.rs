@@ -40,7 +40,7 @@ impl From<&Network> for lwk_common::Network {
     fn from(value: &Network) -> Self {
         match value.inner {
             lwk_wollet::ElementsNetwork::Liquid => lwk_common::Network::Liquid,
-            lwk_wollet::ElementsNetwork::LiquidTestnet => lwk_common::Network::TestnetLiquid,
+            lwk_wollet::ElementsNetwork::TestnetLiquid => lwk_common::Network::TestnetLiquid,
             lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset } => {
                 lwk_common::Network::CustomElements(
                     lwk_common::ElementsParamsBuilder::new()
@@ -64,7 +64,7 @@ impl Network {
     /// Return the testnet network
     #[uniffi::constructor]
     pub fn testnet() -> Arc<Network> {
-        Arc::new(lwk_wollet::ElementsNetwork::LiquidTestnet.into())
+        Arc::new(lwk_wollet::ElementsNetwork::TestnetLiquid.into())
     }
 
     /// Return the regtest network with the given policy asset
@@ -90,7 +90,7 @@ impl Network {
     pub fn default_electrum_client(&self) -> Result<Arc<ElectrumClient>, LwkError> {
         let (url, validate_domain, tls) = match &self.inner {
             lwk_wollet::ElementsNetwork::Liquid => (LIQUID_SOCKET, true, true),
-            lwk_wollet::ElementsNetwork::LiquidTestnet => (LIQUID_TESTNET_SOCKET, true, true),
+            lwk_wollet::ElementsNetwork::TestnetLiquid => (LIQUID_TESTNET_SOCKET, true, true),
             lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => {
                 ("127.0.0.1:50002", false, false)
             }
@@ -103,7 +103,7 @@ impl Network {
     pub fn default_esplora_client(&self) -> Result<Arc<EsploraClient>, LwkError> {
         let url = match &self.inner {
             lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/liquid/api",
-            lwk_wollet::ElementsNetwork::LiquidTestnet => {
+            lwk_wollet::ElementsNetwork::TestnetLiquid => {
                 "https://blockstream.info/liquidtestnet/api"
             }
             lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:3000",

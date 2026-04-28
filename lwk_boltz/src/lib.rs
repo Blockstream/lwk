@@ -509,7 +509,7 @@ async fn fetch_swap_info_concurrently(api: Arc<BoltzApiClientV2>) -> Result<Swap
 fn bitcoin_chain_from_network(network: ElementsNetwork) -> BitcoinChain {
     match network {
         ElementsNetwork::Liquid => BitcoinChain::Bitcoin,
-        ElementsNetwork::LiquidTestnet => BitcoinChain::BitcoinTestnet,
+        ElementsNetwork::TestnetLiquid => BitcoinChain::BitcoinTestnet,
         ElementsNetwork::ElementsRegtest { .. } => BitcoinChain::BitcoinRegtest,
     }
 }
@@ -714,7 +714,7 @@ async fn fetch_next_index_to_use(xpub: &Xpub, client: &BoltzApiClientV2) -> Resu
 pub fn elements_network_to_liquid_chain(network: ElementsNetwork) -> LiquidChain {
     match network {
         ElementsNetwork::Liquid => LiquidChain::Liquid,
-        ElementsNetwork::LiquidTestnet => LiquidChain::LiquidTestnet,
+        ElementsNetwork::TestnetLiquid => LiquidChain::LiquidTestnet,
         ElementsNetwork::ElementsRegtest { .. } => LiquidChain::LiquidRegtest,
     }
 }
@@ -723,7 +723,7 @@ pub fn elements_network_to_liquid_chain(network: ElementsNetwork) -> LiquidChain
 pub fn liquid_chain_to_elements_network(chain: LiquidChain) -> ElementsNetwork {
     match chain {
         LiquidChain::Liquid => ElementsNetwork::Liquid,
-        LiquidChain::LiquidTestnet => ElementsNetwork::LiquidTestnet,
+        LiquidChain::LiquidTestnet => ElementsNetwork::TestnetLiquid,
         LiquidChain::LiquidRegtest => ElementsNetwork::default_regtest(),
     }
 }
@@ -743,7 +743,7 @@ fn derive_xpub_from_mnemonic(
 pub fn boltz_default_url(network: ElementsNetwork) -> &'static str {
     match network {
         ElementsNetwork::Liquid => BOLTZ_MAINNET_URL_V2,
-        ElementsNetwork::LiquidTestnet => BOLTZ_TESTNET_URL_V2,
+        ElementsNetwork::TestnetLiquid => BOLTZ_TESTNET_URL_V2,
         ElementsNetwork::ElementsRegtest { .. } => BOLTZ_REGTEST,
     }
 }
@@ -905,7 +905,7 @@ mod tests {
         // Test all networks with roundtrip conversion
         let networks = vec![
             lwk_wollet::ElementsNetwork::Liquid,
-            lwk_wollet::ElementsNetwork::LiquidTestnet,
+            lwk_wollet::ElementsNetwork::TestnetLiquid,
             lwk_wollet::ElementsNetwork::default_regtest(),
         ];
 

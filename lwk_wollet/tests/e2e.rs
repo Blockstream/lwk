@@ -1094,7 +1094,7 @@ async fn test_esplora_wasm_waterfalls_missing_txs() {
     let electrum_url = ElectrumUrl::new(LIQUID_TESTNET_SOCKET, true, true).unwrap();
     let mut electrum_client = ElectrumClient::new(&electrum_url).unwrap();
     let desc = WolletDescriptor::from_str(desc).unwrap();
-    let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc)
+    let mut wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc)
         .build()
         .unwrap();
     let update = electrum_client.full_scan(&wollet).unwrap().unwrap();
@@ -1110,7 +1110,7 @@ async fn test_with_fallback_client() -> Result<(), Box<dyn std::error::Error>> {
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let desc = WolletDescriptor::from_str(&desc)?;
-    let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc).build()?;
+    let mut wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc).build()?;
 
     let primary_url = ElectrumUrl::new(LIQUID_TESTNET_SOCKET, true, true)?;
     // Assumed ot be another fallback electrum url
@@ -1139,7 +1139,7 @@ async fn test_esplora_wasm_waterfalls_desc(desc: &str, url: &str) -> usize {
     let network = if desc.contains("xpub") {
         ElementsNetwork::Liquid
     } else {
-        ElementsNetwork::LiquidTestnet
+        ElementsNetwork::TestnetLiquid
     };
 
     init_logging();
@@ -1399,7 +1399,7 @@ fn test_fetch_full_header_mainnet() {
 fn test_fetch_full_header_testnet() {
     let electrum_url = ElectrumUrl::new(LIQUID_TESTNET_SOCKET, true, true).unwrap();
     let electrum_client = ElectrumClient::new(&electrum_url).unwrap();
-    test_fetch_last_full_header(electrum_client, ElementsNetwork::LiquidTestnet);
+    test_fetch_last_full_header(electrum_client, ElementsNetwork::TestnetLiquid);
 }
 
 fn test_fetch_last_full_header(mut client: ElectrumClient, network: ElementsNetwork) {
@@ -2413,11 +2413,11 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
 fn test_liquid_testnet() {
     let desc = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs";
     let wollet_desc = WolletDescriptor::from_str(desc).unwrap();
-    let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, wollet_desc)
+    let mut wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, wollet_desc)
         .build()
         .unwrap();
     let url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
-    let mut client = blocking::EsploraClient::new(url, ElementsNetwork::LiquidTestnet).unwrap();
+    let mut client = blocking::EsploraClient::new(url, ElementsNetwork::TestnetLiquid).unwrap();
     let update = client.full_scan(&wollet).unwrap().unwrap();
     let update_serialized = update.serialize().unwrap();
     std::fs::write("update.bin", update_serialized).unwrap();
@@ -3655,7 +3655,7 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
 
     let desc = signer.wpkh_slip77_descriptor()?;
     let wd = WolletDescriptor::from_str(&desc)?;
-    let network = ElementsNetwork::LiquidTestnet;
+    let network = ElementsNetwork::TestnetLiquid;
     let mut wollet = WolletBuilder::new(network, wd).build()?;
     // ANCHOR_END: wollet
 
@@ -3768,7 +3768,7 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
 
     // ANCHOR: multisig-receive
     // Carol creates the wollet
-    let network = ElementsNetwork::LiquidTestnet;
+    let network = ElementsNetwork::TestnetLiquid;
     let network = ElementsNetwork::default_regtest(); // ANCHOR: ignore
     let mut wollet_c = WolletBuilder::new(network, wd).build()?;
 

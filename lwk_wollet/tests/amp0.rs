@@ -115,17 +115,17 @@ fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create AMP0 Wollet
     let wd = amp0.wollet_descriptor();
-    let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, wd).build()?;
+    let mut wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, wd).build()?;
 
     // Get a new address
     let addr = amp0.address(None);
 
     // Update the wallet with (new) blockchain data
     let url = "https://blockstream.info/liquidtestnet/api";
-    let mut client = EsploraClient::new(url, ElementsNetwork::LiquidTestnet)?;
+    let mut client = EsploraClient::new(url, ElementsNetwork::TestnetLiquid)?;
     // esplora is too slow // ANCHOR: ignore
     let url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"; // ANCHOR: ignore
-    let mut client = EsploraClient::new_waterfalls(url, ElementsNetwork::LiquidTestnet)?; // ANCHOR: ignore
+    let mut client = EsploraClient::new_waterfalls(url, ElementsNetwork::TestnetLiquid)?; // ANCHOR: ignore
     if let Some(update) = client.full_scan_to_index(&wollet, amp0.last_index())? {
         wollet.apply_update(update)?;
     }

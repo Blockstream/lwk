@@ -584,7 +584,7 @@ impl Wollet {
         let index = self.unwrap_or_last_unused(index);
         let network = match self.network() {
             ElementsNetwork::Liquid => bitcoin::Network::Bitcoin,
-            ElementsNetwork::LiquidTestnet => bitcoin::Network::Testnet,
+            ElementsNetwork::TestnetLiquid => bitcoin::Network::Testnet,
             ElementsNetwork::ElementsRegtest { policy_asset: _ } => bitcoin::Network::Regtest,
         };
 
@@ -1460,7 +1460,7 @@ mod tests {
         let desc: WolletDescriptor = format!("{desc}#{}", desc_checksum(desc).unwrap())
             .parse()
             .unwrap();
-        WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc)
+        WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc)
             .build()
             .unwrap()
     }
@@ -1502,7 +1502,7 @@ mod tests {
             .unwrap();
 
         let tempdir = tempfile::tempdir().unwrap();
-        let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc.clone())
+        let mut wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc.clone())
             .with_legacy_fs_store(&tempdir)
             .unwrap()
             .build()
@@ -1534,7 +1534,7 @@ mod tests {
         wollet.apply_update(update2).unwrap();
 
         // We restore the wallet and expects the same status
-        let restored_wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc)
+        let restored_wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc)
             .with_legacy_fs_store(&tempdir)
             .unwrap()
             .build()
@@ -1550,7 +1550,7 @@ mod tests {
 
         let tempdir = tempfile::tempdir().unwrap();
         let mut update_path = tempdir.path().to_path_buf();
-        update_path.push(ElementsNetwork::LiquidTestnet.as_str());
+        update_path.push(ElementsNetwork::TestnetLiquid.as_str());
         update_path.push("enc_cache");
         update_path.push(
             <crate::wollet::DirectoryIdHash as crate::hashes::Hash>::hash(
@@ -1562,7 +1562,7 @@ mod tests {
         update_path.push("000000000000");
         std::fs::write(update_path, &enc_bytes).unwrap();
 
-        let wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc)
+        let wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc)
             .with_legacy_fs_store(tempdir.path())
             .unwrap()
             .build()
@@ -1707,7 +1707,7 @@ mod tests {
 
         for network in [
             ElementsNetwork::Liquid,
-            ElementsNetwork::LiquidTestnet,
+            ElementsNetwork::TestnetLiquid,
             ElementsNetwork::ElementsRegtest {
                 policy_asset: AssetId::default(),
             },
@@ -1856,7 +1856,7 @@ mod tests {
         let descriptor = lwk_test_util::wollet_descriptor_many_transactions();
         let descriptor: WolletDescriptor = descriptor.parse().unwrap();
         let update = Update::deserialize(&update).unwrap();
-        let network = ElementsNetwork::LiquidTestnet;
+        let network = ElementsNetwork::TestnetLiquid;
         let mut wollet = WolletBuilder::new(network, descriptor).build().unwrap();
         wollet.apply_update(update).unwrap();
         wollet

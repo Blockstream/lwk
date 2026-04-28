@@ -1128,7 +1128,7 @@ mod tests {
     async fn test_esplora_url(esplora_url: &str) {
         let (network, txid) = if esplora_url.contains("liquidtestnet") {
             (
-                ElementsNetwork::LiquidTestnet,
+                ElementsNetwork::TestnetLiquid,
                 "0471d2f856b3fdbc4397af272bee1660b77aaf9a4aeb86fdd96110ce00f2b158",
             )
         } else if esplora_url.contains("liquid") {

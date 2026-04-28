@@ -40,7 +40,7 @@ impl Config {
             datadir,
             server_url: format!("ssl://{LIQUID_TESTNET_SOCKET}"),
             server_type: "electrum".into(),
-            network: ElementsNetwork::LiquidTestnet,
+            network: ElementsNetwork::TestnetLiquid,
             explorer_url: "https://blockstream.info/liquidtestnet/".into(),
             registry_url: "https://assets-testnet.blockstream.info/".into(),
             timeout: TIMEOUT,
@@ -90,7 +90,7 @@ impl Config {
     pub fn jade_network(&self) -> JadeNetwork {
         match self.network {
             ElementsNetwork::Liquid => JadeNetwork::Liquid,
-            ElementsNetwork::LiquidTestnet => JadeNetwork::TestnetLiquid,
+            ElementsNetwork::TestnetLiquid => JadeNetwork::TestnetLiquid,
             ElementsNetwork::ElementsRegtest { policy_asset } => JadeNetwork::CustomElements(
                 lwk_common::ElementsParamsBuilder::new()
                     .with_policy_asset(policy_asset)

@@ -116,6 +116,34 @@ fn sign_explicit_jade_input(env: &TestEnv, signer: &AnySigner) {
     assert!(wallet.wollet.transaction(&txid).unwrap().is_some());
 }
 
+fn sign_explicit_jade_output(env: &TestEnv, signer: &AnySigner) {
+    let desc_str = singlesig_desc(
+        signer,
+        Singlesig::Wpkh,
+        lwk_common::DescriptorBlindingKey::Slip77,
+    )
+    .unwrap();
+    let client = test_client_electrum(&env.electrum_url());
+    let mut wallet = TestWollet::new(client, &desc_str);
+
+    wallet.fund_btc(env);
+
+    let mut explicit_address = env.elementsd_getnewaddress();
+    explicit_address.blinding_pubkey = None;
+    let mut pset = wallet
+        .tx_builder()
+        .add_explicit_recipient(&explicit_address, 10_000, wallet.policy_asset())
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let sigs_added_or_overwritten = signer.sign(&mut pset).unwrap();
+    assert!(sigs_added_or_overwritten > 0);
+
+    let txid = wallet.send(&mut pset);
+    assert!(wallet.wollet.transaction(&txid).unwrap().is_some());
+}
+
 #[test]
 fn emul_roundtrip_wpkh() {
     emul_roundtrip_singlesig(Singlesig::Wpkh);
@@ -154,6 +182,7 @@ fn emul_explicit() {
     let jade_signer = AnySigner::Jade(jade.jade, id);
 
     sign_explicit_jade_input(&env, &jade_signer);
+    sign_explicit_jade_output(&env, &jade_signer);
 }
 
 fn multi_multisig(env: &TestEnv, jade_signer: &AnySigner) {
@@ -263,7 +292,7 @@ mod serial {
     fn jade_explicit() {
         init_logging();
         let env = TestEnvBuilder::from_env().with_electrum().build();
-        let network = lwk_common::Network::LocaltestLiquid;
+        let network = lwk_common::Network::default_regtest();
         let ports = Jade::available_ports_with_jade();
         let port_name = &ports.first().unwrap().port_name;
         let jade = Jade::from_serial(network, port_name, None).unwrap();
@@ -271,6 +300,7 @@ mod serial {
         let jade_signer = AnySigner::Jade(jade, id);
 
         sign_explicit_jade_input(&env, &jade_signer);
+        sign_explicit_jade_output(&env, &jade_signer);
     }
 }
 

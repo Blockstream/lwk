@@ -42,3 +42,27 @@ const balanceObject = Object.fromEntries(balance.entries());
 Use the annotation `#[wasm_bindgen(getter = someData)]` make user code more idiomatic javascript.
 That allows to expose `object.someData`.
 If instead we use `#[wasm_bindgen(js_name = someData)]` we would expose `object.someData()`.
+
+### Mutation
+
+When a method conceptually enriches or updates a JS wrapper object, prefer mutating that object in place.
+
+Avoid:
+- accepting borrowed object and returning a new modified object. Caller may expect the parameter to be mutated.
+- consuming object as parameter, this is not expected in the destination language.
+
+This makes the API less ambiguous for JS users.
+
+Example:
+
+```rust
+impl Pset {
+    pub fn add_details(&mut self, wollet: &Wollet) -> Result<(), Error>
+}
+```
+
+This should be used from JS as:
+
+```js
+pset.addDetails(wollet);
+```

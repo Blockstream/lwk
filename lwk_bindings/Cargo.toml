@@ -39,6 +39,7 @@ name = "lwk"
 default = ["lightning"]
 foreign_bindings = []
 lightning = ["lwk_boltz", "tokio", "log"]
+# Experimental: API behind this feature is unstable and may change without notice.
 simplicity = ["lwk_simplicity"]
 
 [package.metadata.docs.rs]

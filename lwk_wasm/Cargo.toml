@@ -13,6 +13,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = ["console_error_panic_hook"]
 serial = ["web-sys"]
+# Experimental: API behind this feature is unstable and may change without notice.
 simplicity = ["lwk_simplicity"]
 
 # this feature is needed when running test requiring active boltz regtest

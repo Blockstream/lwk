@@ -26,6 +26,8 @@ impl WolletBuilder {
 
     /// Set the threshold used to merge persisted updates during build.
     ///
+    /// **Experimental**: This API may change without notice.
+    ///
     /// `None` disables merging (default behavior).
     #[wasm_bindgen(js_name = withMergeThreshold)]
     pub fn with_merge_threshold(self, merge_threshold: Option<u32>) -> Self {
@@ -34,13 +36,17 @@ impl WolletBuilder {
             .into()
     }
 
-    /// Experimental: set the wallet as "utxo only".
+    /// Set the wallet as "utxo only".
+    ///
+    /// **Experimental**: This API may change without notice.
     #[wasm_bindgen(js_name = utxoOnly)]
     pub fn utxo_only(self, utxo_only: bool) -> Self {
         self.inner.utxo_only(utxo_only).into()
     }
 
-    /// Experimental: Persist wallet updates in the given JavaScript storage object.
+    /// Persist wallet updates in the given JavaScript storage object.
+    ///
+    /// **Experimental**: This API may change without notice.
     ///
     /// Wallet data is persisted in clear.
     ///
@@ -52,8 +58,10 @@ impl WolletBuilder {
             .into()
     }
 
-    /// Experimental: persist wallet transactions in the given JavaScript
+    /// Persist wallet transactions in the given JavaScript
     /// storage object.
+    ///
+    /// **Experimental**: This API may change without notice.
     ///
     /// The JS object must have `get(key)`, `put(key, value)`, and `remove(key)` methods.
     #[wasm_bindgen(js_name = withTxsStore)]
@@ -64,6 +72,8 @@ impl WolletBuilder {
     }
 
     /// Set encryption for the transactions store.
+    ///
+    /// **Experimental**: This API may change without notice.
     ///
     /// Default: encrypted if the store is persisted.
     #[wasm_bindgen(js_name = setEncryptionTxsStore)]

@@ -1,4 +1,4 @@
-use crate::{AssetId, Error, Issuance, Script, Transaction, Txid};
+use crate::{AssetId, Error, Issuance, Script, Transaction, Txid, Wollet};
 #[cfg(feature = "simplicity")]
 use crate::{ContractHash, LockTime, OutPoint, PublicKey, Tweak, TxOut, TxOutSecrets, TxSequence};
 
@@ -95,6 +95,13 @@ impl Pset {
     /// Return a copy of the outputs of this PSET
     pub fn outputs(&self) -> Vec<PsetOutput> {
         self.inner.outputs().iter().map(Into::into).collect()
+    }
+
+    /// Add wallet details to this PSET in place
+    #[wasm_bindgen(js_name = addDetails)]
+    pub fn add_details(&mut self, wollet: &Wollet) -> Result<(), Error> {
+        wollet.inner().add_details(&mut self.inner)?;
+        Ok(())
     }
 }
 

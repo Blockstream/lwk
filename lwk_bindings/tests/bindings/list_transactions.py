@@ -2,7 +2,7 @@ from lwk import *
 
 mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
 network = Network.testnet()
-assert(str(network) == "LiquidTestnet")
+assert(str(network) == "TestnetLiquid")
 
 client = network.default_electrum_client()
 client.ping()

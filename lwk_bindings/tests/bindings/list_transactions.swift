@@ -3,7 +3,7 @@ import lwk
 let mnemonic = try Mnemonic(s: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
 let network = Network.testnet()
 
-assert("\(network)" == "LiquidTestnet", "wrong network")
+assert("\(network)" == "TestnetLiquid", "wrong network")
 
 let client = try network.defaultElectrumClient()
 

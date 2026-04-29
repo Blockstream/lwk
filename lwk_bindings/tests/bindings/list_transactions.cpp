@@ -4,7 +4,7 @@
 int main() {
     auto network = lwk::Network::testnet();
     std::cout << "Network: " << network->to_string() << std::endl;
-    assert(network->to_string() == "LiquidTestnet");
+    assert(network->to_string() == "TestnetLiquid");
 
     auto mnemonic = lwk::Mnemonic::init("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
     std::cout << "Mnemonic: " << mnemonic->to_string() << std::endl;

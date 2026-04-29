@@ -17,7 +17,7 @@ class PythonStore(ForeignStore):
 desc = WolletDescriptor("ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp");
 
 network = Network.testnet()
-assert(str(network) == "LiquidTestnet")
+assert(str(network) == "TestnetLiquid")
 
 client = network.default_electrum_client()
 

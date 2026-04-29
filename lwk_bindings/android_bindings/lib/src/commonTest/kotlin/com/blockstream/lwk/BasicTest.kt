@@ -21,7 +21,7 @@ class BasicTest {
 
         val network = Network.testnet()
 
-        assertTrue { network.toString() == "LiquidTestnet" }
+        assertTrue { network.toString() == "TestnetLiquid" }
 
         val client = network.defaultElectrumClient()
 

@@ -7,6 +7,9 @@
 * deprecated `Script::new()`, replacement `Script::from_string()`
 * deprecated `Script::bytes()`, replacement `Script:to_bytes()`
 * removed `Hex` (struct): functions returning it will return `String` instead, and functions accepting it will accept `&str` instead. This should not affect end user languages.
+* `Network` `toString` method changed output for different enum variants:
+  * Testnet variant is "TestnetLiquid" instead of "LiquidTestnet";
+  * Regtest variant is in format "CustomElements(ElementsParams { policy_asset: <32 byte hex>, genesis_hash: <32 byte hex>})" instead of "ElementsRegtest { policy_asset: <32 byte hex>}".
 
 ## 0.16.0
 

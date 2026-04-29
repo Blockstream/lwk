@@ -2,7 +2,7 @@ import lwk.*
 
 val network = Network.testnet()
 
-assert(network.toString() == "LiquidTestnet")
+assert(network.toString() == "TestnetLiquid")
 
 val client = network.defaultElectrumClient()
 

@@ -4,7 +4,7 @@ version = "0.17.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Test utilities"
 license = "MIT OR BSD-2-Clause"
-exclude = ["test_data/", "wasm_test_env.sh"]
+exclude = ["wasm_test_env.sh"] # avoid excluding test_data, here it's needed
 documentation = "https://docs.rs/lwk_test_util"
 
 [dependencies]

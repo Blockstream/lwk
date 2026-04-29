@@ -277,7 +277,7 @@ impl Wollet {
 
     /// Get the details of a transaction
     ///
-    /// **Unstable**: This API may change without notice.
+    /// **Experimental**: This API may change without notice.
     #[doc(hidden)]
     pub fn tx_details(&self, txid: &Txid, _opt: &TxOpt) -> Result<Option<TxDetails>, Error> {
         let unspent = self.cache.unspent();
@@ -287,7 +287,7 @@ impl Wollet {
 
     /// Get the transaction list
     ///
-    /// **Unstable**: This API may change without notice.
+    /// **Experimental**: This API may change without notice.
     #[doc(hidden)]
     pub fn txs(&self, opt: &TxsOpt) -> Result<Vec<TxDetails>, Error> {
         let unspent = self.cache.unspent();

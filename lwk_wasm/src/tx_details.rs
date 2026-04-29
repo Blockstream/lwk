@@ -187,7 +187,7 @@ impl TxOpt {
 impl Wollet {
     /// Get the transaction list
     ///
-    /// **Unstable**: This API may change without notice.
+    /// **Experimental**: This API may change without notice.
     pub fn txs(&self, opt: &TxsOpt) -> Result<Vec<TxDetails>, Error> {
         Ok(self
             .inner()
@@ -209,7 +209,7 @@ impl Wollet {
 
     /// Get the details of a transaction
     ///
-    /// **Unstable**: This API may change without notice.
+    /// **Experimental**: This API may change without notice.
     #[wasm_bindgen(js_name = txDetails)]
     pub fn tx_details(&self, txid: &Txid, opt: &TxOpt) -> Result<Option<TxDetails>, Error> {
         Ok(self

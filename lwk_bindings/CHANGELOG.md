@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.17.0
+
 * deprecated `Txid::new()`, replacement `Txid::from_string()`
 * deprecated `Txid::bytes()`, replacement `Txid:to_bytes()`
 * deprecated `Script::new()`, replacement `Script::from_string()`

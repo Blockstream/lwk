@@ -151,20 +151,37 @@ pub struct Entity {
     pub domain: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct TxInputParams {
-    pub is_witness: bool,
+    // Jade distinguishes an omitted field from an explicit false or empty
+    // value here: signed inputs require `is_witness`, unsigned placeholder
+    // inputs omit the signing fields, and `path: []` is an explicit root path.
+    // https://github.com/Blockstream/Jade/blob/3edd8f4b03ae65d6ee38fb8620b46aad88ab341e/main/process/process_utils.c#L332-L345
+    // https://github.com/Blockstream/Jade/blob/3edd8f4b03ae65d6ee38fb8620b46aad88ab341e/docs/index.rst#sign_tx-input-request-legacy (see first point in bullet section)
+    // https://github.com/Blockstream/Jade/blob/3edd8f4b03ae65d6ee38fb8620b46aad88ab341e/docs/index.rst#sign_liquid_tx-input-request-legacy (see second point in bullet section)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_witness: Option<bool>,
 
-    #[serde(with = "serde_bytes", rename = "script")]
+    #[serde(
+        with = "serde_bytes",
+        rename = "script",
+        skip_serializing_if = "Vec::is_empty"
+    )]
     pub script_code: Vec<u8>,
 
+    // Not listed here: https://github.com/Blockstream/Jade/blob/3edd8f4b03ae65d6ee38fb8620b46aad88ab341e/docs/index.rst#sign_tx-input-request-legacy (see first point in bullet section),
+    // so we do not skip serialization for it.
     #[serde(with = "serde_bytes")]
     pub value_commitment: Vec<u8>,
 
-    pub path: Vec<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<Vec<u32>>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sighash: Option<u32>,
 
+    // Not listed here: https://github.com/Blockstream/Jade/blob/3edd8f4b03ae65d6ee38fb8620b46aad88ab341e/docs/index.rst#sign_tx-input-request-legacy (see first point in bullet section),
+    // so we do not skip serialization for it.
     /// 32 bytes anti-exfiltration commitment (random data not verified for now). TODO verify
     #[serde(with = "serde_bytes")]
     pub ae_host_commitment: Vec<u8>,
@@ -190,7 +207,7 @@ mod test {
 
     use crate::get_receive_address::{SingleOrMulti, Variant};
 
-    use super::Change;
+    use super::{Change, TxInputParams};
 
     #[test]
     fn parse_change() {
@@ -211,5 +228,42 @@ mod test {
         };
 
         assert_eq!(&serde_json::to_value(expected).unwrap(), change);
+    }
+
+    #[test]
+    fn tx_input_params_path_serialization() {
+        let value = serde_json::to_value(TxInputParams::default()).unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({"ae_host_commitment": [], "value_commitment": []})
+        );
+
+        let value = serde_json::to_value(TxInputParams {
+            is_witness: Some(true),
+            script_code: vec![1],
+            value_commitment: vec![1],
+            path: Some(vec![2]),
+            sighash: Some(1),
+            ae_host_commitment: vec![3; 32],
+        })
+        .unwrap();
+
+        assert_eq!(value.get("is_witness").unwrap(), &serde_json::json!(true));
+        assert_eq!(value.get("path").unwrap(), &serde_json::json!([2]));
+
+        let value = serde_json::to_value(TxInputParams {
+            is_witness: Some(false),
+            script_code: vec![1],
+            value_commitment: vec![],
+            path: Some(vec![]),
+            sighash: None,
+            ae_host_commitment: vec![],
+        })
+        .unwrap();
+
+        assert_eq!(value.get("is_witness").unwrap(), &serde_json::json!(false));
+        assert_eq!(value.get("path").unwrap(), &serde_json::json!([]));
+        assert!(value.get("sighash").is_none());
+        assert!(value.get("ae_host_commitment").is_some());
     }
 }

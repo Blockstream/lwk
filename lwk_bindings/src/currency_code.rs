@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 /// Currency code as defined by ISO 4217
-#[derive(uniffi::Object, PartialEq, Eq, Debug, Clone)]
-#[uniffi::export(Display, Eq)]
+#[derive(uniffi::Object, PartialEq, Eq, Hash, Debug, Clone)]
+#[uniffi::export(Display, Hash, Eq)]
 pub struct CurrencyCode {
     pub(crate) inner: lwk_wollet::CurrencyCode,
 }

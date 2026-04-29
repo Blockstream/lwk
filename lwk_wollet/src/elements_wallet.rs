@@ -7,9 +7,9 @@ use std::path::Path;
 impl WolletDescriptor {
     /// Construct a WolletDescriptor from the output of Elements RPC `dumpwallet`
     ///
-    /// This does not guarantee to map all addresses.
+    /// **Experimental**: This API may change without notice.
     ///
-    /// **Unstable**: This API may change without notice.
+    /// This does not guarantee to map all addresses.
     #[doc(hidden)]
     pub fn from_dumpwallet<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let content = std::fs::read_to_string(path)?;

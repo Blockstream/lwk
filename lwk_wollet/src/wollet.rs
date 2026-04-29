@@ -87,7 +87,9 @@ impl WolletBuilder {
         }
     }
 
-    /// Experimental: Set all key-value stores for peristence
+    /// Set all key-value stores for peristence
+    ///
+    /// **Experimental**: this API might change without notice.
     ///
     /// Use `store` for all key-value stores used by the `Wollet`.
     pub fn with_stores(mut self, store: Arc<dyn DynStore>) -> Result<Self, Error> {
@@ -104,6 +106,8 @@ impl WolletBuilder {
 
     /// Set a threshold to merge updates
     ///
+    /// **Experimental**: this API might change without notice.
+    ///
     /// When the number of updates exceeds the threshold, they are merged into one.
     /// Set to None to disable merging (default).
     pub fn with_merge_threshold(mut self, threshold: Option<usize>) -> Self {
@@ -112,7 +116,9 @@ impl WolletBuilder {
         self
     }
 
-    /// Experimental: allow the `Wollet` to work with `utxo_only` clients
+    /// Allow the `Wollet` to work with `utxo_only` clients
+    ///
+    /// **Experimental**: this API might change without notice.
     ///
     /// [`crate::clients::EsploraClientBuilder`] allows to create clients will only fetch transactions with
     /// unspent outputs to minimize the network and memory usage.
@@ -124,7 +130,9 @@ impl WolletBuilder {
         self
     }
 
-    /// Experimental: specify the store used to persist `Update`s
+    /// Specify the store used to persist `Update`s
+    ///
+    /// **Experimental**: this API might change without notice.
     pub fn with_updates_store(mut self, store: Arc<dyn DynStore>) -> Self {
         self.updates_store = store;
         self.with_stores_disallowed = true;
@@ -142,7 +150,9 @@ impl WolletBuilder {
         self
     }
 
-    /// Experimental: specify the store used to persist wallet transactions
+    /// Specify the store used to persist wallet transactions
+    ///
+    /// **Experimental**: this API might change without notice.
     pub fn with_txs_store(mut self, store: Arc<dyn DynStore>) -> Self {
         self.txs_store = store;
         self.with_stores_disallowed = true;
@@ -151,6 +161,8 @@ impl WolletBuilder {
 
     /// Set encryption for txs store
     ///
+    /// **Experimental**: this API might change without notice.
+    ///
     /// Default: encrypted if store is persisted
     pub fn set_encryption_txs_store(mut self, encrypt: bool) -> Self {
         self.encrypt_txs_store = Some(encrypt);
@@ -158,6 +170,8 @@ impl WolletBuilder {
     }
 
     /// Set encryption for updates store
+    ///
+    /// **Experimental**: this API might change without notice.
     ///
     /// Default: encrypted if store is persisted
     pub fn set_encryption_updates_store(mut self, encrypt: bool) -> Self {

@@ -25,10 +25,17 @@ impl Jade {
             Vec::with_capacity(pset.inputs().len());
 
         for (i, input) in pset.inputs().iter().enumerate() {
-            let jade_derivation = input
+            let mut jade_derivations = input
                 .bip32_derivation
                 .iter()
-                .find(|(_, (fingerprint, _))| &my_fingerprint == fingerprint);
+                .filter(|(_, (fingerprint, _))| &my_fingerprint == fingerprint);
+            let jade_derivation = jade_derivations.next();
+            if jade_derivations.next().is_some() {
+                // Jade signs at most one path per tx_input message. Failing here is
+                // safer than silently signing the first matching key and leaving the
+                // remaining Jade-owned keys unsigned.
+                return Err(Error::MultipleBip32DerivationsInput(i));
+            }
 
             if let Some((want_public_key, (_, derivation_path))) = jade_derivation {
                 let path: Vec<u32> = derivation_path_to_vec(derivation_path);

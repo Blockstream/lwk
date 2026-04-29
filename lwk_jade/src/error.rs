@@ -89,6 +89,9 @@ pub enum Error {
     #[error("Expecting bip 32 derivation for input {0}")]
     MissingBip32DerivInput(usize),
 
+    #[error("Multiple bip 32 derivations for Jade in input {0}")]
+    MultipleBip32DerivationsInput(usize),
+
     #[error("Previous script pubkey is wsh but witness script is missing in input {0}")]
     MissingWitnessScript(usize),
 

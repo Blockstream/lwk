@@ -1,11 +1,15 @@
-use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
+use std::str::FromStr;
+
+use elements_miniscript::{
+    bitcoin::bip32::DerivationPath, ConfidentialDescriptor, DescriptorPublicKey,
+};
 use lwk_common::{singlesig_desc, Signer, Singlesig};
 use lwk_containers::testcontainers::clients::Cli;
 use lwk_jade::{
     register_multisig::{GetRegisteredMultisigParams, JadeDescriptor, RegisterMultisigParams},
     TestJadeEmulator,
 };
-use lwk_signer::AnySigner;
+use lwk_signer::{AnySigner, SignerError};
 use lwk_test_util::{init_logging, TestEnv, TestEnvBuilder, TEST_MNEMONIC};
 use lwk_wollet::WolletDescriptor;
 
@@ -197,6 +201,45 @@ fn sign_mixed_jade_input(env: &TestEnv, signer: &AnySigner) {
     assert!(jade_wallet.wollet.transaction(&txid).unwrap().is_some());
 }
 
+fn reject_duplicate_jade_derivations(env: &TestEnv, signer: &AnySigner) {
+    let fingerprint = signer.fingerprint().unwrap();
+    let xpubs = ["48h/1h/0h/2h", "48h/1h/1h/2h"]
+        .into_iter()
+        .map(|path_str| {
+            let path = DerivationPath::from_str(&format!("m/{path_str}")).unwrap();
+            let xpub = signer.derive_xpub(&path).unwrap();
+            (Some((fingerprint, path)), xpub)
+        })
+        .collect();
+
+    let desc = lwk_common::multisig_desc(
+        2,
+        xpubs,
+        lwk_common::Multisig::Wsh,
+        lwk_common::DescriptorBlindingKey::Slip77Rand,
+    )
+    .unwrap();
+
+    register_multisig(&[signer], "dupejade", &desc);
+    let client = test_client_electrum(&env.electrum_url());
+    let mut wallet = TestWollet::new(client, &desc);
+
+    wallet.fund_btc(env);
+    let node_address = env.elementsd_getnewaddress();
+    let mut pset = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&node_address, 10_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let err = signer.sign(&mut pset).unwrap_err();
+    assert!(matches!(
+        err,
+        SignerError::JadeError(lwk_jade::Error::MultipleBip32DerivationsInput(0))
+    ));
+}
+
 #[test]
 fn emul_roundtrip_wpkh() {
     emul_roundtrip_singlesig(Singlesig::Wpkh);
@@ -237,6 +280,7 @@ fn emul_explicit() {
     sign_explicit_jade_input(&env, &jade_signer);
     sign_explicit_jade_output(&env, &jade_signer);
     sign_mixed_jade_input(&env, &jade_signer);
+    reject_duplicate_jade_derivations(&env, &jade_signer);
 }
 
 fn multi_multisig(env: &TestEnv, jade_signer: &AnySigner) {

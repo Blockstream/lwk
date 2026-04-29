@@ -144,6 +144,59 @@ fn sign_explicit_jade_output(env: &TestEnv, signer: &AnySigner) {
     assert!(wallet.wollet.transaction(&txid).unwrap().is_some());
 }
 
+fn sign_mixed_jade_input(env: &TestEnv, signer: &AnySigner) {
+    let jade_desc_str = singlesig_desc(
+        signer,
+        Singlesig::Wpkh,
+        lwk_common::DescriptorBlindingKey::Slip77,
+    )
+    .unwrap();
+    let sw_signer = AnySigner::Software(generate_signer());
+    let sw_desc_str = singlesig_desc(
+        &sw_signer,
+        Singlesig::Wpkh,
+        lwk_common::DescriptorBlindingKey::Slip77,
+    )
+    .unwrap();
+    let client = test_client_electrum(&env.electrum_url());
+    let mut jade_wallet = TestWollet::new(client, &jade_desc_str);
+    let client = test_client_electrum(&env.electrum_url());
+    let mut sw_wallet = TestWollet::new(client, &sw_desc_str);
+
+    jade_wallet.fund_btc(env);
+    sw_wallet.fund_btc(env);
+    let utxo = sw_wallet.wollet.utxos().unwrap()[0].clone();
+    let external_utxo = sw_wallet.make_external(&utxo);
+
+    let node_address = env.elementsd_getnewaddress();
+    let mut pset = jade_wallet
+        .tx_builder()
+        .add_lbtc_recipient(&node_address, 110_000)
+        .unwrap()
+        .add_external_utxos(vec![external_utxo])
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    sw_wallet.wollet.add_details(&mut pset).unwrap();
+
+    let sw_fingerprint = sw_signer.fingerprint().unwrap();
+    let jade_sigs = signer.sign(&mut pset).unwrap();
+    assert!(jade_sigs > 0);
+    assert!(pset.inputs().iter().all(|input| {
+        !input
+            .bip32_derivation
+            .values()
+            .any(|(fingerprint, _)| fingerprint == &sw_fingerprint)
+            || input.partial_sigs.is_empty()
+    }));
+    let sw_sigs = sw_signer.sign(&mut pset).unwrap();
+    assert!(sw_sigs > 0);
+
+    let txid = jade_wallet.send(&mut pset);
+    assert!(jade_wallet.wollet.transaction(&txid).unwrap().is_some());
+}
+
 #[test]
 fn emul_roundtrip_wpkh() {
     emul_roundtrip_singlesig(Singlesig::Wpkh);
@@ -183,6 +236,7 @@ fn emul_explicit() {
 
     sign_explicit_jade_input(&env, &jade_signer);
     sign_explicit_jade_output(&env, &jade_signer);
+    sign_mixed_jade_input(&env, &jade_signer);
 }
 
 fn multi_multisig(env: &TestEnv, jade_signer: &AnySigner) {
@@ -301,6 +355,7 @@ mod serial {
 
         sign_explicit_jade_input(&env, &jade_signer);
         sign_explicit_jade_output(&env, &jade_signer);
+        sign_mixed_jade_input(&env, &jade_signer);
     }
 }
 

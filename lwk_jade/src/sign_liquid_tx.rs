@@ -174,6 +174,8 @@ pub struct TxInputParams {
     #[serde(with = "serde_bytes")]
     pub value_commitment: Vec<u8>,
 
+    // Jade rejects signing when path_len == 0, for more details see this:
+    // https://github.com/Blockstream/Jade/issues/295
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<Vec<u32>>,
 

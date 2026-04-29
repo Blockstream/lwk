@@ -309,6 +309,8 @@ impl WolletBuilder {
 
     /// Set the threshold used to merge persisted updates during build.
     ///
+    /// **Experimental**: This API may change without notice.
+    ///
     /// `None` disables merging (default behavior).
     pub fn with_merge_threshold(&self, merge_threshold: Option<u32>) -> Result<(), LwkError> {
         let mut inner = self.inner.lock()?;
@@ -318,6 +320,8 @@ impl WolletBuilder {
     }
 
     /// Set the wallet as "utxo only"
+    ///
+    /// **Experimental**: This API may change without notice.
     pub fn utxo_only(&self, utxo_only: bool) -> Result<(), LwkError> {
         let mut inner = self.inner.lock()?;
         let builder = inner.take().ok_or(LwkError::ObjectConsumed)?;

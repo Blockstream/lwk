@@ -28,6 +28,7 @@ use common::*;
 #[test]
 fn test_simplicity_p2pk() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
+    let common_network = env.elementsd_network();
     let network = ElementsNetwork::default_regtest();
     let params = network.address_params();
     let signer = generate_signer();
@@ -94,7 +95,7 @@ fn test_simplicity_p2pk() {
     // Compute message and sign
     let input_index = 0;
     let message =
-        get_sighash_all(&tx, &program, &xonly, &txouts, input_index, network.into()).unwrap();
+        get_sighash_all(&tx, &program, &xonly, &txouts, input_index, common_network).unwrap();
 
     let signature = EC.sign_schnorr(&message, &keypair);
 
@@ -114,7 +115,7 @@ fn test_simplicity_p2pk() {
         &txouts,
         input_index,
         witness_values,
-        network.into(),
+        common_network,
         log_level,
     )
     .unwrap();
@@ -134,6 +135,7 @@ fn test_simplicity_mixed_p2pk() {
     // Store an asset in a "simplicty P2PK" output
     // Pay fees in LBTC from a wpkh wollet
     let env = TestEnvBuilder::from_env().with_electrum().build();
+    let common_network = env.elementsd_network();
     let network = ElementsNetwork::default_regtest();
     let params = network.address_params();
     let mut client = electrum_client(&env);
@@ -216,7 +218,7 @@ fn test_simplicity_mixed_p2pk() {
 
     let input_idx_s = 0;
     let message =
-        get_sighash_all(&tx, &program, &xonly, &utxos, input_idx_s, network.into()).unwrap();
+        get_sighash_all(&tx, &program, &xonly, &utxos, input_idx_s, common_network).unwrap();
 
     let signature = EC.sign_schnorr(&message, &keypair);
 
@@ -235,7 +237,7 @@ fn test_simplicity_mixed_p2pk() {
         &utxos,
         input_idx_s,
         witness_values,
-        network.into(),
+        common_network,
         log_level,
     )
     .unwrap();

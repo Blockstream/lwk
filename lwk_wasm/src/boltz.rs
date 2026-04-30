@@ -104,6 +104,12 @@ impl BoltzSessionBuilder {
         self.inner.referral_id(referral_id.to_string()).into()
     }
 
+    /// Set the Boltz API base URL
+    #[wasm_bindgen(js_name = apiUrl)]
+    pub fn api_url(self, api_url: &str) -> BoltzSessionBuilder {
+        self.inner.api_url(api_url.to_string()).into()
+    }
+
     /// Set the url of the bitcoin electrum client
     #[wasm_bindgen(js_name = bitcoinElectrumClient)]
     pub fn bitcoin_electrum_client(

@@ -165,6 +165,7 @@ impl BoltzSession {
         timeout_advance: Option<Duration>,
         next_index_to_use: Option<u32>,
         referral_id: Option<String>,
+        api_url: Option<String>,
         _bitcoin_electrum_client: Option<ElectrumUrl>,
         random_preimages: bool,
         store: Option<Arc<dyn DynStore>>,
@@ -201,8 +202,8 @@ impl BoltzSession {
         #[cfg(not(feature = "blocking"))]
         let chain_client = Arc::new(ChainClient::new().with_liquid(client));
 
-        let url = boltz_default_url(network);
-        let api = Arc::new(BoltzApiClientV2::new(url.to_string(), timeout));
+        let api_url = api_url.unwrap_or_else(|| boltz_default_url(network).to_string());
+        let api = Arc::new(BoltzApiClientV2::new(api_url.clone(), timeout));
         let config = BoltzWsConfig::default();
         let ws_url = boltz_ws_url(&api_url);
         let ws = Arc::new(BoltzWsApi::new(ws_url, config));
@@ -539,6 +540,7 @@ pub struct BoltzSessionBuilder {
     timeout_advance: Option<Duration>,
     next_index_to_use: Option<u32>,
     referral_id: Option<String>,
+    api_url: Option<String>,
     bitcoin_electrum_client: Option<ElectrumUrl>,
     random_preimages: bool,
     store: Option<Arc<dyn DynStore>>,
@@ -556,6 +558,7 @@ impl BoltzSessionBuilder {
             timeout_advance: None,
             next_index_to_use: None,
             referral_id: None,
+            api_url: None,
             bitcoin_electrum_client: None,
             random_preimages: false,
             store: None,
@@ -613,6 +616,15 @@ impl BoltzSessionBuilder {
         self
     }
 
+    /// Set the Boltz API base URL
+    ///
+    /// This should be the provider API base, for example `https://api.middle-way.space/v2`.
+    /// The websocket URL is derived from this base.
+    pub fn api_url(mut self, api_url: String) -> Self {
+        self.api_url = Some(api_url);
+        self
+    }
+
     /// Set the url of the bitcoin electrum client
     pub fn bitcoin_electrum_client(mut self, bitcoin_electrum_client: &str) -> Result<Self, Error> {
         let url = bitcoin_electrum_client.parse::<ElectrumUrl>()?;
@@ -656,6 +668,7 @@ impl BoltzSessionBuilder {
             self.timeout_advance,
             self.next_index_to_use,
             self.referral_id,
+            self.api_url,
             self.bitcoin_electrum_client,
             self.random_preimages,
             self.store,

@@ -1224,7 +1224,7 @@ impl TxBuilder {
 
         // TODO: use the next line once we can use elements26 only
         // let blind_secrets = pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-        let (blind_secrets, mut pset) = if for_amp0 {
+        let mut built_tx = if for_amp0 {
             use elements26::confidential::{
                 AssetBlindingFactor as Abf26, ValueBlindingFactor as Vbf26,
             };
@@ -1259,15 +1259,54 @@ impl TxBuilder {
             }
             let pset25 = elements::pset::PartiallySignedTransaction::from_str(&pset26.to_string())
                 .expect("from elements25");
-            (blind_secrets, pset25)
+            BuiltTx {
+                pset: pset25,
+                blind_secrets,
+            }
         } else {
             let blind_secrets = std::collections::BTreeMap::new();
             pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-            (blind_secrets, pset)
+            BuiltTx {
+                pset,
+                blind_secrets,
+            }
         };
 
+        // Add details to the pset from our descriptor, like bip32derivation and keyorigin
+        wollet.add_details(&mut built_tx.pset)?;
+
+        let blinding_nonces = built_tx.blinding_nonces()?;
+        let BuiltTx { pset, .. } = built_tx;
+        Ok((pset, blinding_nonces))
+    }
+}
+
+/// Transaction with metadata
+///
+/// A PSET and other data that cannot be in the PSET
+struct BuiltTx {
+    pset: PartiallySignedTransaction,
+    blind_secrets: std::collections::BTreeMap<
+        elements26::CtLocation,
+        (
+            elements26::confidential::AssetBlindingFactor,
+            elements26::confidential::ValueBlindingFactor,
+            elements::secp256k1_zkp::SecretKey,
+        ),
+    >,
+}
+
+impl BuiltTx {
+    /// Pset
+    #[allow(unused)]
+    pub fn pset(&self) -> &PartiallySignedTransaction {
+        &self.pset
+    }
+
+    /// Blinding nonces
+    pub fn blinding_nonces(&self) -> Result<Vec<String>, Error> {
         let mut m = HashMap::new();
-        for (ct_location, (_abf, _vbf, eph_sk)) in blind_secrets.iter() {
+        for (ct_location, (_abf, _vbf, eph_sk)) in self.blind_secrets.iter() {
             // these are outputs not inputs...
             if let elements26::CtLocation {
                 input_index,
@@ -1279,9 +1318,9 @@ impl TxBuilder {
         }
 
         let mut blinding_nonces = vec![];
-        for idx in 0..pset.n_outputs() {
+        for idx in 0..self.pset.n_outputs() {
             let bn = if let Some(eph_sk) = m.get(&idx) {
-                let blinding_pubkey = pset.outputs()[idx]
+                let blinding_pubkey = self.pset.outputs()[idx]
                     .blinding_key
                     .ok_or_else(|| Error::Generic("Missing blinding key".into()))?;
                 let (_nonce, shared_secret) = elements::confidential::Nonce::with_ephemeral_sk(
@@ -1295,11 +1334,7 @@ impl TxBuilder {
             };
             blinding_nonces.push(bn);
         }
-
-        // Add details to the pset from our descriptor, like bip32derivation and keyorigin
-        wollet.add_details(&mut pset)?;
-
-        Ok((pset, blinding_nonces))
+        Ok(blinding_nonces)
     }
 }
 

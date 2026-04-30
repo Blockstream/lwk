@@ -355,7 +355,7 @@ impl Update {
     }
 }
 
-fn default_blockheader() -> BlockHeader {
+pub(crate) fn default_blockheader() -> BlockHeader {
     BlockHeader {
         version: 0,
         prev_blockhash: BlockHash::all_zeros(),

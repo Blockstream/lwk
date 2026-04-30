@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::{
     hashes::Hash,
@@ -478,10 +478,7 @@ impl TxBuilder {
     }
 
     /// Finish building a transaction that can be converted to a LiquiDEX proposal
-    fn finish_liquidex_make(
-        self,
-        wollet: &Wollet,
-    ) -> Result<(PartiallySignedTransaction, Vec<String>), Error> {
+    fn finish_liquidex_make(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
         // Create PSET
         let mut pset = PartiallySignedTransaction::new_v2();
         let mut inp_txout_sec = HashMap::new();
@@ -623,14 +620,14 @@ impl TxBuilder {
         wollet.add_details(&mut pset)?;
 
         // TODO: blinding nonces
-        Ok((pset, vec![]))
+        Ok(BuiltTx {
+            pset,
+            blind_secrets: BTreeMap::new(),
+        })
     }
 
     /// Finish building a transaction that takes LiquiDEX proposals
-    fn finish_liquidex_take(
-        self,
-        wollet: &Wollet,
-    ) -> Result<(PartiallySignedTransaction, Vec<String>), Error> {
+    fn finish_liquidex_take(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
         let [proposal] = self.liquidex_proposals.as_slice() else {
             return Err(Error::LiquidexError(LiquidexError::TakerInvalidParams));
         };
@@ -849,26 +846,26 @@ impl TxBuilder {
         wollet.add_details(&mut pset)?;
 
         // TODO: blinding nonces
-        Ok((pset, vec![]))
+        Ok(BuiltTx {
+            pset,
+            blind_secrets: BTreeMap::new(),
+        })
     }
 
     /// Finish building the transaction for AMP0
     #[cfg(feature = "amp0")]
     pub fn finish_for_amp0(self, wollet: &Wollet) -> Result<crate::amp0::Amp0Pset, Error> {
-        let (pset, blinding_nonces) = self.finish_inner(wollet)?;
-        crate::amp0::Amp0Pset::new(pset, blinding_nonces)
+        let built_tx = self.finish_inner(wollet)?;
+        built_tx.to_amp0()
     }
 
     /// Finish building the transaction
     pub fn finish(self, wollet: &Wollet) -> Result<PartiallySignedTransaction, Error> {
-        let (pset, _blinding_nonces) = self.finish_inner(wollet)?;
+        let BuiltTx { pset, .. } = self.finish_inner(wollet)?;
         Ok(pset)
     }
 
-    fn finish_inner(
-        self,
-        wollet: &Wollet,
-    ) -> Result<(PartiallySignedTransaction, Vec<String>), Error> {
+    fn finish_inner(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
         if self.is_liquidex_make {
             return self.finish_liquidex_make(wollet);
         } else if !self.liquidex_proposals.is_empty() {
@@ -1265,9 +1262,7 @@ impl TxBuilder {
         // Add details to the pset from our descriptor, like bip32derivation and keyorigin
         wollet.add_details(&mut built_tx.pset)?;
 
-        let blinding_nonces = built_tx.blinding_nonces()?;
-        let BuiltTx { pset, .. } = built_tx;
-        Ok((pset, blinding_nonces))
+        Ok(built_tx)
     }
 }
 
@@ -1276,7 +1271,7 @@ impl TxBuilder {
 /// A PSET and other data that cannot be in the PSET
 struct BuiltTx {
     pset: PartiallySignedTransaction,
-    blind_secrets: std::collections::BTreeMap<
+    blind_secrets: BTreeMap<
         elements26::CtLocation,
         (
             elements26::confidential::AssetBlindingFactor,
@@ -1325,6 +1320,14 @@ impl BuiltTx {
             blinding_nonces.push(bn);
         }
         Ok(blinding_nonces)
+    }
+
+    /// Convert to `Amp0Pset`
+    #[cfg(feature = "amp0")]
+    pub fn to_amp0(self) -> Result<crate::amp0::Amp0Pset, Error> {
+        let blinding_nonces = self.blinding_nonces()?;
+        let BuiltTx { pset, .. } = self;
+        crate::amp0::Amp0Pset::new(pset, blinding_nonces)
     }
 }
 

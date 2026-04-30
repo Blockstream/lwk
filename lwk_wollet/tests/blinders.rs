@@ -23,6 +23,11 @@ fn test_build_tx() {
         .unwrap()
         .build()
         .unwrap();
+
+    // Generate an update that allows us to persist the blinders
+    let update = buildtx.update(&w.wollet).unwrap();
+    w.wollet.apply_update(update).unwrap();
+
     let mut pset = buildtx.pset().clone();
     w.sign(&s, &mut pset);
     let txid = w.send(&mut pset);
@@ -32,7 +37,7 @@ fn test_build_tx() {
         .unwrap()
         .unwrap();
     // sent output
-    assert!(tx.outputs()[0].unblinded().is_none());
+    assert!(tx.outputs()[0].unblinded().is_some());
     assert!(!tx.outputs()[0].is_explicit());
     // change
     assert!(tx.outputs()[1].unblinded().is_some());

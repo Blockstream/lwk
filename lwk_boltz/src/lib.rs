@@ -204,7 +204,7 @@ impl BoltzSession {
         let url = boltz_default_url(network);
         let api = Arc::new(BoltzApiClientV2::new(url.to_string(), timeout));
         let config = BoltzWsConfig::default();
-        let ws_url = url.replace("http", "ws") + "/ws"; // api.get_ws_url() is private
+        let ws_url = boltz_ws_url(&api_url);
         let ws = Arc::new(BoltzWsApi::new(ws_url, config));
 
         start_ws(ws.clone());
@@ -748,6 +748,17 @@ pub fn boltz_default_url(network: ElementsNetwork) -> &'static str {
     }
 }
 
+fn boltz_ws_url(api_url: &str) -> String {
+    let api_url = api_url.trim_end_matches('/');
+    if let Some(rest) = api_url.strip_prefix("https://") {
+        format!("wss://{rest}/ws")
+    } else if let Some(rest) = api_url.strip_prefix("http://") {
+        format!("ws://{rest}/ws")
+    } else {
+        format!("{api_url}/ws")
+    }
+}
+
 /// Wait for one of the expected swap status updates from a broadcast receiver with timeout
 ///
 /// Note if there are concurrent swaps the broadcast receiver will receive updates for ALL swaps and
@@ -970,6 +981,18 @@ mod tests {
 
         // Verify roundtrip - should get back the same string
         assert_eq!(invoice_str, displayed);
+    }
+
+    #[test]
+    fn test_boltz_ws_url_from_custom_api_url() {
+        assert_eq!(
+            crate::boltz_ws_url("https://api.middle-way.space/v2"),
+            "wss://api.middle-way.space/v2/ws"
+        );
+        assert_eq!(
+            crate::boltz_ws_url("http://localhost:9001/v2/"),
+            "ws://localhost:9001/v2/ws"
+        );
     }
 
     #[test]

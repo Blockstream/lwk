@@ -359,6 +359,9 @@ impl BoltzSession {
         if let Some(referral_id) = builder.referral_id {
             lwk_builder = lwk_builder.referral_id(referral_id);
         }
+        if let Some(bitcoin_electrum_client_url) = builder.bitcoin_electrum_client_url {
+            lwk_builder = lwk_builder.bitcoin_electrum_client(&bitcoin_electrum_client_url)?;
+        }
         lwk_builder = lwk_builder.random_preimages(builder.random_preimages);
 
         if let Some(store) = builder.store.clone() {

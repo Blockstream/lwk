@@ -105,6 +105,9 @@ impl BoltzSessionBuilder {
     }
 
     /// Set the Boltz API base URL
+    ///
+    /// The caller is responsible for ensuring the provider behind this URL matches the session
+    /// network passed to the builder.
     #[wasm_bindgen(js_name = apiUrl)]
     pub fn api_url(self, api_url: &str) -> BoltzSessionBuilder {
         self.inner.api_url(api_url.to_string()).into()

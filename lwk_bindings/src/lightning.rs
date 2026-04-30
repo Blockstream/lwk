@@ -99,6 +99,9 @@ pub struct BoltzSessionBuilder {
     next_index_to_use: Option<u32>,
     #[uniffi(default = None)]
     referral_id: Option<String>,
+    /// Optional Boltz API base URL override.
+    ///
+    /// The caller is responsible for ensuring the provider behind this URL matches `network`.
     #[uniffi(default = None)]
     api_url: Option<String>,
     #[uniffi(default = None)]

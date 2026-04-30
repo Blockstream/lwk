@@ -620,6 +620,8 @@ impl BoltzSessionBuilder {
     ///
     /// This should be the provider API base, for example `https://api.middle-way.space/v2`.
     /// The websocket URL is derived from this base.
+    /// It is the caller responsibility to ensure the provider behind this URL matches the
+    /// [`ElementsNetwork`] used to build the session.
     pub fn api_url(mut self, api_url: String) -> Self {
         self.api_url = Some(api_url);
         self

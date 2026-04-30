@@ -57,7 +57,7 @@ EXPIRY_TIME = 2
 
 # Step 1: Setup
 node = LwkTestEnv()
-network = Network.regtest_default()
+network = node.network()
 policy_asset = network.policy_asset()
 client = ElectrumClient.from_url(node.electrum_url())
 

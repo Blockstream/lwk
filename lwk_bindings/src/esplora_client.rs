@@ -38,7 +38,7 @@ impl From<EsploraClientBuilder> for lwk_wollet::clients::EsploraClientBuilder {
     fn from(builder: EsploraClientBuilder) -> Self {
         let mut result = lwk_wollet::clients::EsploraClientBuilder::new(
             &builder.base_url,
-            (*builder.network.as_ref()).into(),
+            (builder.network.as_ref()).into(),
         );
         if builder.waterfalls {
             result = result.waterfalls(true);

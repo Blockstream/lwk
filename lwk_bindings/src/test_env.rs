@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{store::ForeignStoreLink, types::AssetId, Address, LwkError, Txid};
+use crate::{store::ForeignStoreLink, types::AssetId, Address, LwkError, Network, Txid};
 use lwk_common::Store;
 
 /// Test environment
@@ -76,6 +76,11 @@ impl LwkTestEnv {
     /// Get the genesis block hash from the running node.
     pub fn genesis_block_hash(&self) -> String {
         self.inner.elementsd_genesis_block_hash().to_string()
+    }
+
+    /// Get the network of the test environment.
+    pub fn network(&self) -> Network {
+        self.inner.elementsd_network().into()
     }
 }
 

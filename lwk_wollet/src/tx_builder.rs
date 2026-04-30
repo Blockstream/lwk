@@ -5,7 +5,8 @@ use crate::{
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
     pset_create::{validate_address, IssuanceRequest, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS},
-    Contract, Error, LiquidexProposal, Network, UnvalidatedRecipient, Wollet, EC,
+    Contract, DownloadTxResult, Network, Error, LiquidexProposal, UnvalidatedRecipient,
+    Update, Wollet, EC,
 };
 use elements::{
     confidential::{AssetBlindingFactor, Nonce, Value, ValueBlindingFactor},
@@ -1336,6 +1337,60 @@ impl BuiltTx {
         let blinding_nonces = self.blinding_nonces()?;
         let BuiltTx { pset, .. } = self;
         crate::amp0::Amp0Pset::new(pset, blinding_nonces)
+    }
+
+    fn unblinded(&self) -> Result<Vec<(OutPoint, TxOutSecrets)>, Error> {
+        let txid = self.pset.extract_tx()?.txid();
+        let mut unblinded = vec![];
+        for (ct_location, (abf, vbf, _eph_sk)) in self.blind_secrets.iter() {
+            // these are outputs not inputs...
+            if let elements26::CtLocation {
+                input_index: vout,
+                ty: elements26::CtLocationType::Input,
+            } = ct_location
+            {
+                let abf = AssetBlindingFactor::from_slice(abf.into_inner().as_ref())
+                    .expect("from elements26");
+                let vbf = ValueBlindingFactor::from_slice(vbf.into_inner().as_ref())
+                    .expect("from elements26");
+                let outpoint = OutPoint::new(txid, *vout as u32);
+                let output = self
+                    .pset
+                    .outputs()
+                    .get(*vout)
+                    .ok_or_else(|| Error::Generic("Missing output".into()))?;
+                let asset = output
+                    .asset
+                    .ok_or_else(|| Error::Generic("Missing asset".into()))?;
+                let value = output
+                    .amount
+                    .ok_or_else(|| Error::Generic("Missing amount".into()))?;
+                let txoutsecrets = TxOutSecrets::new(asset, abf, value, vbf);
+                unblinded.push((outpoint, txoutsecrets));
+            }
+        }
+        Ok(unblinded)
+    }
+
+    /// Update to persist the blinder
+    pub fn update(&self, wollet: &Wollet) -> Result<Update, Error> {
+        let unblinds = self.unblinded()?;
+        let update = Update {
+            version: 3,
+            wollet_status: wollet.status(),
+            new_txs: DownloadTxResult {
+                // Add the tx here?
+                txs: vec![],
+                unblinds,
+            },
+            txid_height_new: vec![],
+            txid_height_delete: vec![],
+            timestamps: vec![],
+            scripts_with_blinding_pubkey: vec![],
+            tip: crate::update::default_blockheader(),
+            unspent: vec![],
+        };
+        Ok(update)
     }
 }
 

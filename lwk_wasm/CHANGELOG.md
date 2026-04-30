@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* `Network::to_string()` changed output for regtest variant from "ElementsRegtest { policy_asset: <32 byte hex>}" to "CustomElements(ElementsParams { policy_asset: <32 byte hex>, genesis_hash: <32 byte hex> })".
+
 ## 0.17.0
 
 * Async constructors for `Jade`, `JadeWebSocket`, and `Amp0Connected` where deprecated due to [wasm-bindgen/wasm-bindgen#4402](https://github.com/wasm-bindgen/wasm-bindgen/pull/4402)

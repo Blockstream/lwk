@@ -174,6 +174,59 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_reverse_with_api_url() {
+        let _ = env_logger::try_init();
+
+        let _mining_handle = utils::start_block_mining();
+        let network = ElementsNetwork::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client))
+            .create_swap_timeout(TIMEOUT)
+            .api_url(BOLTZ_REGTEST.to_string())
+            .build()
+            .await
+            .unwrap();
+
+        let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let claim_address = elements::Address::from_str(&claim_address).unwrap();
+
+        let invoice_amount = 100000u64;
+        let quote = session
+            .quote(invoice_amount)
+            .await
+            .send(SwapAsset::Lightning)
+            .receive(SwapAsset::Liquid)
+            .build()
+            .unwrap();
+
+        let invoice = session
+            .invoice(invoice_amount, None, &claim_address, None)
+            .await
+            .unwrap();
+
+        let claim_fee = invoice.claim_fee().expect("claim_fee should be set");
+        let onchain_amount = invoice.onchain_amount();
+        let expected_receive = onchain_amount - claim_fee - lwk_boltz::LIQUID_UNCOOPERATIVE_EXTRA;
+        assert_eq!(expected_receive, quote.receive_amount);
+
+        utils::start_pay_invoice_lnd(invoice.bolt11_invoice().to_string());
+        invoice.complete_pay().await.unwrap();
+
+        let actual_balance = utils::get_address_balance(
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+            &claim_address.to_string(),
+        )
+        .await
+        .expect("Failed to get address balance");
+        assert_eq!(actual_balance, quote.receive_amount);
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_reverse_pay_invoice_twice() {
         let _ = env_logger::try_init();
 

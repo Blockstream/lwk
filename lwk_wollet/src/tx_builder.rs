@@ -865,6 +865,15 @@ impl TxBuilder {
         Ok(pset)
     }
 
+    /// Build the transaction
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// Alternative to `finish()` that returns more than a PSET.
+    pub fn build(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
+        self.finish_inner(wollet)
+    }
+
     fn finish_inner(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
         if self.is_liquidex_make {
             return self.finish_liquidex_make(wollet);
@@ -1269,7 +1278,7 @@ impl TxBuilder {
 /// Transaction with metadata
 ///
 /// A PSET and other data that cannot be in the PSET
-struct BuiltTx {
+pub struct BuiltTx {
     pset: PartiallySignedTransaction,
     blind_secrets: BTreeMap<
         elements26::CtLocation,
@@ -1283,7 +1292,6 @@ struct BuiltTx {
 
 impl BuiltTx {
     /// Pset
-    #[allow(unused)]
     pub fn pset(&self) -> &PartiallySignedTransaction {
         &self.pset
     }
@@ -1356,6 +1364,15 @@ impl<'a> WolletTxBuilder<'a> {
     #[cfg(feature = "amp0")]
     pub fn finish_for_amp0(self) -> Result<crate::amp0::Amp0Pset, Error> {
         self.inner.finish_for_amp0(self.wollet)
+    }
+
+    /// Build the transaction
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// Alternative to `finish()` that returns more than a PSET.
+    pub fn build(self) -> Result<BuiltTx, Error> {
+        self.inner.build(self.wollet)
     }
 
     /// Wrapper of [`TxBuilder::add_recipient()`]

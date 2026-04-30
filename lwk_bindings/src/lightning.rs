@@ -100,6 +100,8 @@ pub struct BoltzSessionBuilder {
     #[uniffi(default = None)]
     referral_id: Option<String>,
     #[uniffi(default = None)]
+    api_url: Option<String>,
+    #[uniffi(default = None)]
     bitcoin_electrum_client_url: Option<String>,
     #[uniffi(default = false)]
     random_preimages: bool,
@@ -291,6 +293,7 @@ impl BoltzSession {
             timeout_advance: None,
             next_index_to_use: None,
             referral_id: None,
+            api_url: None,
             bitcoin_electrum_client_url: None,
             random_preimages: false,
             store: None,
@@ -358,6 +361,9 @@ impl BoltzSession {
         }
         if let Some(referral_id) = builder.referral_id {
             lwk_builder = lwk_builder.referral_id(referral_id);
+        }
+        if let Some(api_url) = builder.api_url {
+            lwk_builder = lwk_builder.api_url(api_url);
         }
         if let Some(bitcoin_electrum_client_url) = builder.bitcoin_electrum_client_url {
             lwk_builder = lwk_builder.bitcoin_electrum_client(&bitcoin_electrum_client_url)?;

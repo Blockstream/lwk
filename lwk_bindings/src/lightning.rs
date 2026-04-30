@@ -102,6 +102,10 @@ pub struct BoltzSessionBuilder {
     /// Optional Boltz API base URL override.
     ///
     /// The caller is responsible for ensuring the provider behind this URL matches `network`.
+    ///
+    /// If this is used together with `store`, the caller must use a different store per provider.
+    /// Persisted swap data is not namespaced by provider, so reusing the same store across
+    /// different `api_url` values can mix swaps from different providers.
     #[uniffi(default = None)]
     api_url: Option<String>,
     #[uniffi(default = None)]
@@ -112,6 +116,10 @@ pub struct BoltzSessionBuilder {
     ///
     /// When set, swap data will be automatically persisted to the store after creation
     /// and on each state change. This enables automatic restoration of pending swaps.
+    ///
+    /// The store is not namespaced by provider, so if different `api_url` values are used the
+    /// caller must use a different store per provider to avoid mixing swaps from different
+    /// providers.
     #[uniffi(default = None)]
     store: Option<Arc<ForeignStoreLink>>,
 }

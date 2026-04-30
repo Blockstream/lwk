@@ -108,6 +108,11 @@ impl BoltzSessionBuilder {
     ///
     /// The caller is responsible for ensuring the provider behind this URL matches the session
     /// network passed to the builder.
+    ///
+    /// If this is used together with a persistent store on the Rust side, the caller must use a
+    /// different store per provider. Persisted swap data is not namespaced by provider, so
+    /// reusing the same store across different `apiUrl` values can mix swaps from different
+    /// providers.
     #[wasm_bindgen(js_name = apiUrl)]
     pub fn api_url(self, api_url: &str) -> BoltzSessionBuilder {
         self.inner.api_url(api_url.to_string()).into()

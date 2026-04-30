@@ -622,6 +622,11 @@ impl BoltzSessionBuilder {
     /// The websocket URL is derived from this base.
     /// It is the caller responsibility to ensure the provider behind this URL matches the
     /// [`ElementsNetwork`] used to build the session.
+    ///
+    /// If a custom provider URL is used together with [`BoltzSessionBuilder::store`], the caller
+    /// must use a different store per provider. Persisted swap data is not namespaced by provider,
+    /// so reusing the same store across different `api_url` values can mix swaps from different
+    /// providers.
     pub fn api_url(mut self, api_url: String) -> Self {
         self.api_url = Some(api_url);
         self
@@ -653,6 +658,10 @@ impl BoltzSessionBuilder {
     /// and on each state change. This enables automatic restoration of pending swaps.
     ///
     /// The store uses keys prefixed with `boltz:` to avoid collisions with other users.
+    /// The store is not namespaced by provider, so if different `api_url` values are used the
+    /// caller must use a different store per provider to avoid mixing swaps from different
+    /// providers.
+    ///
     /// See [`store_keys`] for the key format.
     pub fn store(mut self, store: Arc<dyn DynStore>) -> Self {
         self.store = Some(store);

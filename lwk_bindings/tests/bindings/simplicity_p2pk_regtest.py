@@ -7,7 +7,7 @@ P2PK_SOURCE = open(os.path.join(_SIMF_DIR, "p2pk.simf")).read()
 
 # 1. Set up regtest environment
 node = LwkTestEnv()
-network = Network.regtest_default()
+network = node.network()
 policy_asset = network.policy_asset()
 client = ElectrumClient.from_url(node.electrum_url())
 

@@ -936,6 +936,11 @@ def main():
 
     # Use blockstream electrum instance for bitcoin, without specifying this, bull bitcoin electrum instances will be used
     bitcoin_electrum_url = "ssl://bitcoin-mainnet.blockstream.info:50002"
+    boltz_api_url = os.getenv("BOLTZ_API_URL")
+    if boltz_api_url:
+        print(f"Using custom Boltz API base URL: {boltz_api_url}")
+    else:
+        print("Using default Boltz API base URL for the selected network")
 
     builder = BoltzSessionBuilder(
         network=network,
@@ -945,6 +950,7 @@ def main():
         logging=logger,
         polling=polling,
         referral_id="LWK python example",
+        api_url=boltz_api_url,
         bitcoin_electrum_client_url=bitcoin_electrum_url,
         random_preimages=True,
         store=store_link,  # Pass the store for automatic swap persistence

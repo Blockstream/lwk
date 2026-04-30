@@ -15,6 +15,7 @@ use elements_miniscript::elements;
 use elements::hex::FromHex;
 use elements::{Address, AssetId, BlockHash, Txid};
 
+use lwk_common::Network;
 use serde_json::Value;
 use std::net::TcpListener;
 use std::str::FromStr;
@@ -525,6 +526,26 @@ impl TestEnv {
             .unwrap()
             .as_bool()
             .unwrap()
+    }
+
+    /// Get the policy_asset from the running elementsd node.
+    pub fn elementsd_policy_asset(&self) -> AssetId {
+        let value: serde_json::Value = self.elementsd.client.call("getsidechaininfo", &[]).unwrap();
+        AssetId::from_str(value.get("pegged_asset").unwrap().as_str().unwrap()).unwrap()
+    }
+
+    /// Get the network from the running elementsd node.
+    pub fn elementsd_network(&self) -> Network {
+        let genesis_hash = self.elementsd_genesis_block_hash();
+        let policy_asset = self.elementsd_policy_asset();
+
+        Network::CustomElements(
+            lwk_common::ElementsParamsBuilder::new()
+                .with_genesis_hash(genesis_hash)
+                .with_policy_asset(policy_asset)
+                .build()
+                .expect("static"),
+        )
     }
 
     // methods on bitcoind

@@ -11,6 +11,12 @@
     crane = {
       url = "github:ipetkov/crane";
     };
+    waterfalls-nixpkgs.url = "github:NixOS/nixpkgs/c5296fdd05cfa2c187990dd909864da9658df755";
+    waterfalls-crane.url = "github:ipetkov/crane/0314e365877a85c9e5758f9ea77a9972afbb4c21";
+    waterfalls-rust-overlay = {
+      url = "github:oxalica/rust-overlay/e9bcd12156a577ac4e47d131c14dc0293cc9c8c2";
+      inputs.nixpkgs.follows = "waterfalls-nixpkgs";
+    };
     electrs-flake = {
       url = "github:blockstream/electrs";
       inputs = {
@@ -22,10 +28,10 @@
     };
     waterfalls-flake = {
       url = "github:RCasatta/waterfalls";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "waterfalls-nixpkgs";
+      inputs.crane.follows = "waterfalls-crane";
+      inputs.rust-overlay.follows = "waterfalls-rust-overlay";
       inputs.flake-utils.follows = "flake-utils";
-      inputs.rust-overlay.follows = "rust-overlay";
-      inputs.crane.follows = "crane";
     };
 
     registry-flake = {
@@ -47,7 +53,7 @@
     # TODO: Remove nixpkgs-mdbook once MSRV reach 1.88+ and we can upgrade mdbook dependency in docs/snippets/processor
     nixpkgs-mdbook.url = "github:NixOS/nixpkgs/566e53c2ad750c84f6d31f9ccb9d00f823165550";
   };
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, crane, electrs-flake, waterfalls-flake, registry-flake, nexus_relay, nixpkgs-mdbook }:
+  outputs = { self, nixpkgs, flake-utils, rust-overlay, crane, electrs-flake, waterfalls-flake, registry-flake, nexus_relay, nixpkgs-mdbook, ... }:
     flake-utils.lib.eachDefaultSystem
       (system:
         let

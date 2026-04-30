@@ -18,20 +18,23 @@
             inherit system;
             overlays = [ rust-overlay.overlays.default ];
           };
+          inherit (pkgs) lib;
           rustToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ../rust-toolchain.toml;
+          clang = pkgs.llvmPackages_21.clang-unwrapped;
         in
         (({ pkgs, ... }:
           pkgs.mkShell {
             buildInputs = with pkgs; [
               cargo
               wasm-pack
-              clang_15
               nodejs_22
               rustToolchain
+              clang
             ];
 
-            CC_wasm32_unknown_unknown = "clang-15";
-            CFLAGS_wasm32_unknown_unknown = "-I${pkgs.clang_15}/resource-root/include";
+            CC_wasm32_unknown_unknown = "${lib.getExe clang}";
+            CFLAGS_wasm32_unknown_unknown =
+              "-I${clang.lib}/lib/clang/${lib.versions.major clang.version}/include";
             RUSTFLAGS = "--cfg=web_sys_unstable_apis";
 
           }) { pkgs = pkgs; });

@@ -36,7 +36,7 @@ pub enum ElementsNetwork {
     /// Liquid mainnet.
     Liquid,
     /// Liquid testnet.
-    LiquidTestnet,
+    TestnetLiquid,
     /// Liquid regtest with a custom policy asset.
     ElementsRegtest {
         /// The policy asset to use for this regtest network.
@@ -52,7 +52,7 @@ impl ElementsNetwork {
             ElementsNetwork::Liquid => {
                 AssetId::from_str(LIQUID_POLICY_ASSET_STR).expect("can't fail on const")
             }
-            ElementsNetwork::LiquidTestnet => {
+            ElementsNetwork::TestnetLiquid => {
                 AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR).expect("can't fail on const")
             }
             ElementsNetwork::ElementsRegtest { policy_asset } => *policy_asset,
@@ -63,7 +63,7 @@ impl ElementsNetwork {
     pub fn genesis_block_hash(&self) -> BlockHash {
         match self {
             ElementsNetwork::Liquid => BlockHash::from_byte_array(GENESIS_LIQUID),
-            ElementsNetwork::LiquidTestnet => BlockHash::from_byte_array(GENESIS_LIQUID_TESTNET),
+            ElementsNetwork::TestnetLiquid => BlockHash::from_byte_array(GENESIS_LIQUID_TESTNET),
             ElementsNetwork::ElementsRegtest { .. } => {
                 BlockHash::from_byte_array(GENESIS_LIQUID_REGTEST)
             }
@@ -74,7 +74,7 @@ impl ElementsNetwork {
     pub fn as_str(&self) -> &'static str {
         match self {
             ElementsNetwork::Liquid => "liquid",
-            ElementsNetwork::LiquidTestnet => "liquid-testnet",
+            ElementsNetwork::TestnetLiquid => "liquid-testnet",
             ElementsNetwork::ElementsRegtest { .. } => "liquid-regtest",
         }
     }
@@ -83,7 +83,7 @@ impl ElementsNetwork {
     pub fn address_params(&self) -> &'static AddressParams {
         match self {
             ElementsNetwork::Liquid => &AddressParams::LIQUID,
-            ElementsNetwork::LiquidTestnet => &AddressParams::LIQUID_TESTNET,
+            ElementsNetwork::TestnetLiquid => &AddressParams::LIQUID_TESTNET,
             ElementsNetwork::ElementsRegtest { .. } => &AddressParams::ELEMENTS,
         }
     }
@@ -101,7 +101,7 @@ impl ElementsNetwork {
         // TODO upstream to rust elements
         match self {
             ElementsNetwork::Liquid => 20160,
-            ElementsNetwork::LiquidTestnet => 1000,
+            ElementsNetwork::TestnetLiquid => 1000,
             ElementsNetwork::ElementsRegtest { policy_asset: _ } => 10,
         }
     }
@@ -112,7 +112,7 @@ impl ElementsNetwork {
         // TODO upstream to rust elements
         match self {
             ElementsNetwork::Liquid => 2,
-            ElementsNetwork::LiquidTestnet => 0,
+            ElementsNetwork::TestnetLiquid => 0,
             ElementsNetwork::ElementsRegtest { policy_asset: _ } => 0,
         }
     }
@@ -128,7 +128,7 @@ impl From<ElementsNetwork> for lwk_common::Network {
     fn from(network: ElementsNetwork) -> Self {
         match network {
             ElementsNetwork::Liquid => lwk_common::Network::Liquid,
-            ElementsNetwork::LiquidTestnet => lwk_common::Network::TestnetLiquid,
+            ElementsNetwork::TestnetLiquid => lwk_common::Network::TestnetLiquid,
             ElementsNetwork::ElementsRegtest { policy_asset } => {
                 lwk_common::Network::CustomElements(
                     lwk_common::ElementsParamsBuilder::new()
@@ -181,7 +181,7 @@ mod test {
             .unwrap()
         );
 
-        let network = ElementsNetwork::LiquidTestnet;
+        let network = ElementsNetwork::TestnetLiquid;
         assert_eq!(
             network.genesis_block_hash(),
             elements::BlockHash::from_str(

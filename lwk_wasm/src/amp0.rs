@@ -365,7 +365,7 @@ mod tests {
         let balance = wollet.balance().unwrap();
         let balance: HashMap<lwk_wollet::elements::AssetId, u64> =
             serde_wasm_bindgen::from_value(balance.entries().unwrap()).unwrap();
-        let lbtc = lwk_wollet::ElementsNetwork::LiquidTestnet.policy_asset();
+        let lbtc = lwk_wollet::ElementsNetwork::TestnetLiquid.policy_asset();
         let lbtc_balance = balance.get(&lbtc).unwrap_or(&0);
         if *lbtc_balance < 500 {
             println!(

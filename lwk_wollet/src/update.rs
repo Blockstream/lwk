@@ -1116,7 +1116,7 @@ mod test {
         let update_bytes = lwk_test_util::update_test_vector_2_bytes();
         let update = Update::deserialize(&update_bytes).unwrap();
         let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();
-        let wollet = WolletBuilder::new(crate::ElementsNetwork::LiquidTestnet, desc)
+        let wollet = WolletBuilder::new(crate::ElementsNetwork::TestnetLiquid, desc)
             .build()
             .unwrap();
         assert_eq!(update_bytes.len(), 18436);

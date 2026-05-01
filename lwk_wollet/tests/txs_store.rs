@@ -117,7 +117,7 @@ async fn test_txs_store_huge() {
     // let desc = "ct(e350a44c4dad493e7b1faf4ef6a96c1ad13a6fb8d03d61fcec561afb8c3bae18,elwpkh([a8874235/84'/1776'/0']xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#3axrmm5c";
     let url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
 
-    let network = ElementsNetwork::LiquidTestnet;
+    let network = ElementsNetwork::TestnetLiquid;
 
     let txs_dir = TempDir::new().unwrap();
     let txs_store = Arc::new(FileStore::new(txs_dir.path().to_path_buf()).unwrap());

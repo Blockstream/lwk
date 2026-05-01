@@ -771,7 +771,7 @@ pub fn test_wollet_with_many_transactions() -> Wollet {
     let descriptor: WolletDescriptor = descriptor.parse().unwrap();
     let update = Update::deserialize(&update).unwrap();
     assert_eq!(update.version, 1);
-    let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, descriptor)
+    let mut wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, descriptor)
         .build()
         .unwrap();
     wollet.apply_update(update).unwrap();

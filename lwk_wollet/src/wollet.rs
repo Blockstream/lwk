@@ -598,7 +598,7 @@ impl Wollet {
         let index = self.unwrap_or_last_unused(index);
         let network = match self.network() {
             ElementsNetwork::Liquid => bitcoin::Network::Bitcoin,
-            ElementsNetwork::LiquidTestnet => bitcoin::Network::Testnet,
+            ElementsNetwork::TestnetLiquid => bitcoin::Network::Testnet,
             ElementsNetwork::ElementsRegtest { policy_asset: _ } => bitcoin::Network::Regtest,
         };
 
@@ -1474,7 +1474,7 @@ mod tests {
         let desc: WolletDescriptor = format!("{desc}#{}", desc_checksum(desc).unwrap())
             .parse()
             .unwrap();
-        WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc)
+        WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc)
             .build()
             .unwrap()
     }
@@ -1516,7 +1516,7 @@ mod tests {
             .unwrap();
 
         let tempdir = tempfile::tempdir().unwrap();
-        let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc.clone())
+        let mut wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc.clone())
             .with_legacy_fs_store(&tempdir)
             .unwrap()
             .build()
@@ -1548,7 +1548,7 @@ mod tests {
         wollet.apply_update(update2).unwrap();
 
         // We restore the wallet and expects the same status
-        let restored_wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc)
+        let restored_wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc)
             .with_legacy_fs_store(&tempdir)
             .unwrap()
             .build()
@@ -1564,7 +1564,7 @@ mod tests {
 
         let tempdir = tempfile::tempdir().unwrap();
         let mut update_path = tempdir.path().to_path_buf();
-        update_path.push(ElementsNetwork::LiquidTestnet.as_str());
+        update_path.push(ElementsNetwork::TestnetLiquid.as_str());
         update_path.push("enc_cache");
         update_path.push(
             <crate::wollet::DirectoryIdHash as crate::hashes::Hash>::hash(
@@ -1576,7 +1576,7 @@ mod tests {
         update_path.push("000000000000");
         std::fs::write(update_path, &enc_bytes).unwrap();
 
-        let wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, desc)
+        let wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, desc)
             .with_legacy_fs_store(tempdir.path())
             .unwrap()
             .build()
@@ -1707,10 +1707,10 @@ mod tests {
             "lq1qqtmf5e3g4ats3yexwdfn6kfhp9sl68kdl47g75k58rvw2w33zuarwfe0247rp5h4yzmdftsahhw64uy8pzfe7k9s63c7cku58", // network: Liquid variant: Wpkh blinding_variant: Elip151
             "VJLCQwwG8s7qUGhpJkQpkf7wLoK785TcK2cPqka8675FeJB7NEHLto5MUJyhJURGJCbFHA6sb6rgTwbh", // network: Liquid variant: ShWpkh blinding_variant: Slip77
             "VJLD3sfRNBrKyQkJp9KpLqSVtD9YWswXctqzdFhsctaDCwLoUcSato1DfspVSGMbk28avytesWFhiv37", // network: Liquid variant: ShWpkh blinding_variant: Elip151
-            "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn", // network: LiquidTestnet variant: Wpkh blinding_variant: Slip77
-            "tlq1qqv74shw44vxlpdhtmwqc2zfr5365hm8p6rg8cjnu77w57000dmuc05xy50hsn6vhkm5euwt72x878eq6zxx2z4zm4jus26k72", // network: LiquidTestnet variant: Wpkh blinding_variant: Elip151 i:5
-            "vjTwLVioiKrDJ7zZZn9iQQrxP6RPpcvpHBhzZrbdZKKVZE29FuXSnkXdKcxK3qD5t1rYsdxcm9KYRMji", // network: LiquidTestnet variant: ShWpkh blinding_variant: Slip77
-            "vjU3guCqyPrnKFXsUhpKPhUyduT6Zjr3b2ukPhE9BpiW4LpehTRvw4FHKxkMw7TRAzE7KhtsnkZ4rPth", // network: LiquidTestnet variant: ShWpkh blinding_variant: Elip151 i:7
+            "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn", // network: TestnetLiquid variant: Wpkh blinding_variant: Slip77
+            "tlq1qqv74shw44vxlpdhtmwqc2zfr5365hm8p6rg8cjnu77w57000dmuc05xy50hsn6vhkm5euwt72x878eq6zxx2z4zm4jus26k72", // network: TestnetLiquid variant: Wpkh blinding_variant: Elip151 i:5
+            "vjTwLVioiKrDJ7zZZn9iQQrxP6RPpcvpHBhzZrbdZKKVZE29FuXSnkXdKcxK3qD5t1rYsdxcm9KYRMji", // network: TestnetLiquid variant: ShWpkh blinding_variant: Slip77
+            "vjU3guCqyPrnKFXsUhpKPhUyduT6Zjr3b2ukPhE9BpiW4LpehTRvw4FHKxkMw7TRAzE7KhtsnkZ4rPth", // network: TestnetLiquid variant: ShWpkh blinding_variant: Elip151 i:7
             "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq", // network: ElementsRegtest { policy_asset: 0000000000000000000000000000000000000000000000000000000000000000 } variant: Wpkh blinding_variant: Slip77
             "el1qqv74shw44vxlpdhtmwqc2zfr5365hm8p6rg8cjnu77w57000dmuc05xy50hsn6vhkm5euwt72x878eq6zxx2zw8kxk9q8g9ne", // network: ElementsRegtest { policy_asset: 0000000000000000000000000000000000000000000000000000000000000000 } variant: Wpkh blinding_variant: Elip151 i:9
             "AzpmUtw4GMrEsfz6GKx5SKT1DV3qLS3xtSGdKG351rMjGxoUwS6Vsbu3zu2opBiPtjWs1GnE48uMFFnb", // network: ElementsRegtest { policy_asset: 0000000000000000000000000000000000000000000000000000000000000000 } variant: ShWpkh blinding_variant: Slip77
@@ -1721,7 +1721,7 @@ mod tests {
 
         for network in [
             ElementsNetwork::Liquid,
-            ElementsNetwork::LiquidTestnet,
+            ElementsNetwork::TestnetLiquid,
             ElementsNetwork::ElementsRegtest {
                 policy_asset: AssetId::default(),
             },
@@ -1870,7 +1870,7 @@ mod tests {
         let descriptor = lwk_test_util::wollet_descriptor_many_transactions();
         let descriptor: WolletDescriptor = descriptor.parse().unwrap();
         let update = Update::deserialize(&update).unwrap();
-        let network = ElementsNetwork::LiquidTestnet;
+        let network = ElementsNetwork::TestnetLiquid;
         let mut wollet = WolletBuilder::new(network, descriptor).build().unwrap();
         wollet.apply_update(update).unwrap();
         wollet

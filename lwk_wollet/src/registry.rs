@@ -244,7 +244,7 @@ impl Registry {
 fn network_default_url(network: ElementsNetwork) -> Result<&'static str, Error> {
     Ok(match network {
         ElementsNetwork::Liquid => "https://assets.blockstream.info",
-        ElementsNetwork::LiquidTestnet => "https://assets-testnet.blockstream.info",
+        ElementsNetwork::TestnetLiquid => "https://assets-testnet.blockstream.info",
         ElementsNetwork::ElementsRegtest { policy_asset: _ } => "http://127.0.0.1:3023",
     })
 }

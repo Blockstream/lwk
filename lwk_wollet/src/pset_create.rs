@@ -230,7 +230,7 @@ mod test {
     #[test]
     fn test_validate() {
         let testnet_address = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
-        let network = ElementsNetwork::LiquidTestnet;
+        let network = ElementsNetwork::TestnetLiquid;
         let addr = validate_address(testnet_address, network).unwrap();
         assert_eq!(addr.to_string(), testnet_address);
 
@@ -278,7 +278,7 @@ mod test {
         let descriptor = lwk_test_util::wollet_descriptor_many_transactions();
         let descriptor: WolletDescriptor = descriptor.parse().unwrap();
         let update = Update::deserialize(&update).unwrap();
-        let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, descriptor)
+        let mut wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, descriptor)
             .build()
             .unwrap();
         wollet.apply_update(update).unwrap();

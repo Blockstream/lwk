@@ -27,7 +27,7 @@
 //! // Parse the descriptor and create the watch only wallet
 //! let descriptor: WolletDescriptor = desc.parse()?;
 //! let mut wollet = WolletBuilder::new(
-//!    ElementsNetwork::LiquidTestnet,
+//!    ElementsNetwork::TestnetLiquid,
 //!    descriptor,
 //! ).build()?;
 //!
@@ -46,7 +46,7 @@
 //! # let desc = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
 //! # let descriptor: WolletDescriptor = desc.parse()?;
 //! # let mut wollet = WolletBuilder::new(
-//! #    ElementsNetwork::LiquidTestnet,
+//! #    ElementsNetwork::TestnetLiquid,
 //! #    descriptor,
 //! # ).build()?;
 //! // Use an Electrum server
@@ -69,7 +69,7 @@
 //! # let desc = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
 //! # let descriptor: WolletDescriptor = desc.parse()?;
 //! # let mut wollet = WolletBuilder::new(
-//! #    ElementsNetwork::LiquidTestnet,
+//! #    ElementsNetwork::TestnetLiquid,
 //! #    descriptor,
 //! # ).build()?;
 //! // Create a transaction

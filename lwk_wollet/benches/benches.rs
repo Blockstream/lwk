@@ -49,7 +49,7 @@ pub fn address(c: &mut Criterion) {
 
             b.iter(|| {
                 let address = d
-                    .address(0, ElementsNetwork::LiquidTestnet.address_params())
+                    .address(0, ElementsNetwork::TestnetLiquid.address_params())
                     .unwrap();
                 black_box(address);
             });
@@ -70,7 +70,7 @@ pub fn address(c: &mut Criterion) {
                 let address = d
                     .at_derivation_index(0)
                     .unwrap()
-                    .address(ElementsNetwork::LiquidTestnet.address_params())
+                    .address(ElementsNetwork::TestnetLiquid.address_params())
                     .unwrap();
                 black_box(address);
             });
@@ -82,7 +82,7 @@ pub fn address(c: &mut Criterion) {
                 let address = Address::from_script(
                     &addr.script_pubkey(),
                     addr.blinding_pubkey,
-                    ElementsNetwork::LiquidTestnet.address_params(),
+                    ElementsNetwork::TestnetLiquid.address_params(),
                 );
                 black_box(address);
             });
@@ -115,7 +115,7 @@ pub fn test_wollet_with_many_transactions() -> Wollet {
     let descriptor = lwk_test_util::wollet_descriptor_many_transactions();
     let descriptor: WolletDescriptor = descriptor.parse().unwrap();
     let update = Update::deserialize(&update).unwrap();
-    let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, descriptor)
+    let mut wollet = WolletBuilder::new(ElementsNetwork::TestnetLiquid, descriptor)
         .build()
         .unwrap();
     wollet.apply_update(update).unwrap();

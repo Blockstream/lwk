@@ -90,7 +90,7 @@ impl Address {
         if self.inner.params == &AddressParams::LIQUID {
             lwk_wollet::ElementsNetwork::Liquid.into()
         } else if self.inner.params == &AddressParams::LIQUID_TESTNET {
-            lwk_wollet::ElementsNetwork::LiquidTestnet.into()
+            lwk_wollet::ElementsNetwork::TestnetLiquid.into()
         } else {
             lwk_wollet::ElementsNetwork::default_regtest().into()
         }

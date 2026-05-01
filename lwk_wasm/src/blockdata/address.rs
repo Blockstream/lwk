@@ -171,15 +171,12 @@ mod tests {
 
         assert_eq!(address.qr_code_uri(None).unwrap(), "data:image/bmp;base64,Qk2GAQAAAAAAAD4AAAAoAAAAKQAAACkAAAABAAEAAAAAAEgBAAAAAgAAAAIAAAIAAAACAAAA////AAAAAAD+rtsVLwAAAIJnIiVDgAAAuk9JGoeAAAC6U1QO0AAAALqGM/j4gAAAghPrII2AAAD+hUGKrAAAAACdlV+PgAAA25WVyv2AAAAcfcT/9gAAAD62KlcnAAAAqV5aRQcAAADLSsXvkAAAAAmloRT9AAAA0tHx8G0AAAA4qEMaVAAAAOIoSs2LgAAAQHSHbAKAAAB2Hxvu2oAAAMS476hGgAAA2ueBU1MAAACYAQzPZYAAAL6ot+xlgAAAoPxBqruAAACHYQbxQAAAAOgn3wI9AAAAdmvTjNQAAABhUNCr54AAANceWkNNAAAAxKM3VqUAAACnB0+6iIAAAFiioJQIAAAAi6B7NXyAAAAA3g4mAAAAAP6qqqq/gAAAgrAuJ6CAAAC6vAzSLoAAALrgXA4ugAAAuiJqsa6AAACCIz/toIAAAP7clm2/gAAA");
 
-        let address_network_check = Address::parse(
-            address_str,
-            &lwk_wollet::ElementsNetwork::TestnetLiquid.into(),
-        )
-        .unwrap();
+        let address_network_check =
+            Address::parse(address_str, &lwk_common::Network::TestnetLiquid.into()).unwrap();
         assert_eq!(address_network_check.to_string(), address_str);
 
         let address_network_check_fail =
-            Address::parse(address_str, &lwk_wollet::ElementsNetwork::Liquid.into()).unwrap_err();
+            Address::parse(address_str, &lwk_common::Network::Liquid.into()).unwrap_err();
         assert_eq!(
             address_network_check_fail.to_string(),
             "Expected a mainnet address but got a testnet one"

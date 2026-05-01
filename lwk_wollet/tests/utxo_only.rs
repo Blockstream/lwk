@@ -17,7 +17,7 @@ fn test_esplora_waterfalls_utxo_only() {
 
     let desc = WolletDescriptor::from_str(&desc).unwrap();
 
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let mut wollet = WolletBuilder::new(network, desc.clone()).build().unwrap();
     let mut client = EsploraClientBuilder::new(&env.waterfalls_url(), network)
         .waterfalls(true)
@@ -121,7 +121,7 @@ fn test_waterfalls_utxo_only_with_dummy() {
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer.xpub());
     let signers = [&AnySigner::Software(signer)];
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let lbtc = network.policy_asset();
 
     let client = EsploraClientBuilder::new(&env.waterfalls_url(), network)
@@ -199,7 +199,7 @@ async fn test_esplora_waterfalls_balance_comparison(
     init_logging();
 
     let desc = WolletDescriptor::from_str(descriptor)?;
-    let network = ElementsNetwork::TestnetLiquid;
+    let network = Network::TestnetLiquid;
 
     let mut wollet = WolletBuilder::new(network, desc.clone()).build()?;
     let mut client = EsploraClientBuilder::new(esplora_url, network)
@@ -266,7 +266,7 @@ async fn test_esplora_waterfalls_testnet_utxo_only_2() {
 fn test_faucet() {
     // Simulate a couple of errors that we see with the testnet faucet
     let env = TestEnvBuilder::from_env().with_waterfalls().build();
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -340,7 +340,7 @@ fn test_incompatible_utxo_only() {
         .with_waterfalls()
         .build();
 
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
@@ -392,7 +392,7 @@ async fn test_incompatible_utxo_only_async() {
     let waterfalls_url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
     let esplora_url = "https://blockstream.info/liquidtestnet/api";
 
-    let network = ElementsNetwork::TestnetLiquid;
+    let network = Network::TestnetLiquid;
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
@@ -428,7 +428,7 @@ async fn test_incompatible_utxo_only_async() {
 #[test]
 fn test_waterfalls_utxo_only_persisted() {
     let env = TestEnvBuilder::from_env().with_waterfalls().build();
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
 
     let signer = generate_signer();
     let view_key = generate_view_key();

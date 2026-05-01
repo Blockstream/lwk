@@ -5,7 +5,7 @@ use crate::{
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
     pset_create::{validate_address, IssuanceRequest, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS},
-    Contract, ElementsNetwork, Error, LiquidexProposal, UnvalidatedRecipient, Wollet, EC,
+    Contract, Error, LiquidexProposal, Network, UnvalidatedRecipient, Wollet, EC,
 };
 use elements::{
     confidential::{AssetBlindingFactor, Nonce, Value, ValueBlindingFactor},
@@ -166,7 +166,7 @@ pub(crate) fn add_input_inner(
 /// * We are consuming and returning self to build the tx with method chaining
 #[derive(Debug)]
 pub struct TxBuilder {
-    network: ElementsNetwork,
+    network: Network,
     recipients: Vec<Recipient>,
     fee_rate: f32,
     ct_discount: bool,
@@ -186,7 +186,7 @@ pub struct TxBuilder {
 
 impl TxBuilder {
     /// Creates a transaction builder for bindings code. From rust use [`WolletTxBuilder`]
-    pub fn new(network: ElementsNetwork) -> Self {
+    pub fn new(network: Network) -> Self {
         TxBuilder {
             network,
             recipients: vec![],
@@ -203,7 +203,7 @@ impl TxBuilder {
         }
     }
 
-    fn network(&self) -> ElementsNetwork {
+    fn network(&self) -> Network {
         self.network
     }
 
@@ -1574,10 +1574,7 @@ mod tests {
         assert_eq!(buf, vec![4, 112, 115, 101, 116, 2]);
         let pair = elements::pset::raw::Pair {
             key: key.to_key(),
-            value: ElementsNetwork::Liquid
-                .genesis_hash()
-                .to_byte_array()
-                .to_vec(),
+            value: Network::Liquid.genesis_hash().to_byte_array().to_vec(),
         };
         let mut buf = vec![];
         pair.consensus_encode(&mut buf).unwrap();

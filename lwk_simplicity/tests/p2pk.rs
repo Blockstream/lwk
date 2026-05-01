@@ -29,7 +29,7 @@ use common::*;
 fn test_simplicity_p2pk() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let common_network = env.elementsd_network();
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let params = network.address_params();
     let signer = generate_signer();
     let mut client = electrum_client(&env);
@@ -136,7 +136,7 @@ fn test_simplicity_mixed_p2pk() {
     // Pay fees in LBTC from a wpkh wollet
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let common_network = env.elementsd_network();
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let params = network.address_params();
     let mut client = electrum_client(&env);
     let lbtc = network.policy_asset();

@@ -88,11 +88,11 @@ impl Address {
     /// Returns the network of the address
     pub fn network(&self) -> Network {
         if self.inner.params == &AddressParams::LIQUID {
-            lwk_wollet::ElementsNetwork::Liquid.into()
+            lwk_common::Network::Liquid.into()
         } else if self.inner.params == &AddressParams::LIQUID_TESTNET {
-            lwk_wollet::ElementsNetwork::TestnetLiquid.into()
+            lwk_common::Network::TestnetLiquid.into()
         } else {
-            lwk_wollet::ElementsNetwork::default_regtest().into()
+            lwk_common::Network::default_regtest().into()
         }
     }
 }

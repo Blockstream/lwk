@@ -11,7 +11,7 @@ use crate::{
     clients::Data,
     update::DownloadTxResult,
     wollet::WolletState,
-    Chain, ElementsNetwork, Error, Update, Wollet, WolletDescriptor,
+    Chain, Error, Network, Update, Wollet, WolletDescriptor,
 };
 use age::x25519::Recipient;
 use base64::Engine;
@@ -66,7 +66,7 @@ pub struct EsploraClient {
     /// Avoid encrypting the descriptor field
     pub(crate) waterfalls_avoid_encryption: bool,
 
-    network: ElementsNetwork,
+    network: Network,
 
     /// Number of network requests made by this client
     requests: AtomicUsize,
@@ -83,7 +83,7 @@ impl EsploraClient {
     /// Creates a new esplora client with default options using the given `url` as endpoint.
     ///
     /// To specify different options use the [`EsploraClientBuilder`]
-    pub fn new(network: ElementsNetwork, url: &str) -> Self {
+    pub fn new(network: Network, url: &str) -> Self {
         EsploraClientBuilder::new(url, network)
             .build()
             .expect("cannot fail with this configuration")
@@ -1083,7 +1083,7 @@ mod tests {
     use crate::{
         asyncr::{esplora::fetch_oauth_token, EsploraClientBuilder},
         clients::{asyncr::async_sleep, TokenProvider},
-        ElementsNetwork, WolletBuilder, WolletDescriptor,
+        Network, WolletBuilder, WolletDescriptor,
     };
 
     use super::EsploraClient;
@@ -1092,7 +1092,7 @@ mod tests {
 
     async fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
         let url = format!("{base_url}/block/{hash}/raw");
-        let client = EsploraClient::new(ElementsNetwork::Liquid, base_url);
+        let client = EsploraClient::new(Network::Liquid, base_url);
         let response = client.get_with_retry(&url).await.unwrap();
         elements::Block::consensus_decode(&response.bytes().await.unwrap()[..]).unwrap()
     }
@@ -1128,17 +1128,17 @@ mod tests {
     async fn test_esplora_url(esplora_url: &str) {
         let (network, txid) = if esplora_url.contains("liquidtestnet") {
             (
-                ElementsNetwork::TestnetLiquid,
+                Network::TestnetLiquid,
                 "0471d2f856b3fdbc4397af272bee1660b77aaf9a4aeb86fdd96110ce00f2b158",
             )
         } else if esplora_url.contains("liquid") {
             (
-                ElementsNetwork::Liquid,
+                Network::Liquid,
                 "efb331fb5051a3b638ddbe719482dcb5232096448bd0a73550408c84bc2269ea",
             )
         } else {
             (
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
                 "0000000000000000000000000000000000000000000000000000000000000000",
             )
         };
@@ -1177,7 +1177,7 @@ mod tests {
 
     #[test]
     fn test_esplora_client_builder_error() {
-        let client = crate::asyncr::EsploraClientBuilder::new("", ElementsNetwork::Liquid)
+        let client = crate::asyncr::EsploraClientBuilder::new("", Network::Liquid)
             .waterfalls(false)
             .utxo_only(true)
             .build();
@@ -1202,7 +1202,7 @@ mod tests {
 
         let mut client = EsploraClientBuilder::new(
             "https://enterprise.staging.blockstream.info/liquid/api",
-            ElementsNetwork::Liquid,
+            Network::Liquid,
         )
         .token_provider(TokenProvider::Static(token_id))
         .build()
@@ -1213,7 +1213,7 @@ mod tests {
 
         let mut client = EsploraClientBuilder::new(
             "https://enterprise.staging.blockstream.info/liquid/api",
-            ElementsNetwork::Liquid,
+            Network::Liquid,
         )
         .token_provider(TokenProvider::Blockstream {
             url: staging_login.to_string(),
@@ -1258,7 +1258,7 @@ mod tests {
             } else {
                 format!("https://enterprise{env}blockstream.info/liquid/api")
             };
-            let mut client = EsploraClientBuilder::new(&base_url, ElementsNetwork::Liquid)
+            let mut client = EsploraClientBuilder::new(&base_url, Network::Liquid)
                 .token_provider(TokenProvider::Blockstream {
                     url: staging_login.to_string(),
                     client_id: client_id.clone(),
@@ -1274,7 +1274,7 @@ mod tests {
             let descriptor: WolletDescriptor = descriptor_str.parse().unwrap();
 
             // Create wallet
-            let mut wollet = WolletBuilder::new(ElementsNetwork::Liquid, descriptor)
+            let mut wollet = WolletBuilder::new(Network::Liquid, descriptor)
                 .build()
                 .unwrap();
 
@@ -1298,7 +1298,7 @@ mod tests {
 
         let mut client = EsploraClientBuilder::new(
             "https://enterprise.staging.blockstream.info/liquid/api",
-            ElementsNetwork::Liquid,
+            Network::Liquid,
         )
         .token_provider(TokenProvider::Blockstream {
             url: staging_login.to_string(),

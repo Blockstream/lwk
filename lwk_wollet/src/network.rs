@@ -32,7 +32,7 @@ pub const GENESIS_LIQUID_REGTEST: [u8; 32] = [
 
 /// The network of the elements blockchain.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Copy, Hash)]
-pub enum ElementsNetwork {
+pub enum Network {
     /// Liquid mainnet.
     Liquid,
     /// Liquid testnet.
@@ -40,59 +40,57 @@ pub enum ElementsNetwork {
     /// Liquid regtest with a custom policy asset.
     CustomElements {
         /// The policy asset to use for this regtest network.
-        /// You can use the default one using [`ElementsNetwork::default_regtest()`].
+        /// You can use the default one using [`Network::default_regtest()`].
         policy_asset: AssetId,
     },
 }
 
-impl ElementsNetwork {
+impl Network {
     /// Return the policy asset for this network.
     pub fn policy_asset(&self) -> AssetId {
         match self {
-            ElementsNetwork::Liquid => {
+            Network::Liquid => {
                 AssetId::from_str(LIQUID_POLICY_ASSET_STR).expect("can't fail on const")
             }
-            ElementsNetwork::TestnetLiquid => {
+            Network::TestnetLiquid => {
                 AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR).expect("can't fail on const")
             }
-            ElementsNetwork::CustomElements { policy_asset } => *policy_asset,
+            Network::CustomElements { policy_asset } => *policy_asset,
         }
     }
 
     /// Return the genesis block hash for this network.
     pub fn genesis_hash(&self) -> BlockHash {
         match self {
-            ElementsNetwork::Liquid => BlockHash::from_byte_array(GENESIS_LIQUID),
-            ElementsNetwork::TestnetLiquid => BlockHash::from_byte_array(GENESIS_LIQUID_TESTNET),
-            ElementsNetwork::CustomElements { .. } => {
-                BlockHash::from_byte_array(GENESIS_LIQUID_REGTEST)
-            }
+            Network::Liquid => BlockHash::from_byte_array(GENESIS_LIQUID),
+            Network::TestnetLiquid => BlockHash::from_byte_array(GENESIS_LIQUID_TESTNET),
+            Network::CustomElements { .. } => BlockHash::from_byte_array(GENESIS_LIQUID_REGTEST),
         }
     }
 
     /// Return the string representation of this network.
     pub fn as_str(&self) -> &'static str {
         match self {
-            ElementsNetwork::Liquid => "liquid",
-            ElementsNetwork::TestnetLiquid => "liquid-testnet",
-            ElementsNetwork::CustomElements { .. } => "liquid-regtest",
+            Network::Liquid => "liquid",
+            Network::TestnetLiquid => "liquid-testnet",
+            Network::CustomElements { .. } => "liquid-regtest",
         }
     }
 
     /// Return the address parameters for this network to generate addresses compatible for this network.
     pub fn address_params(&self) -> &'static AddressParams {
         match self {
-            ElementsNetwork::Liquid => &AddressParams::LIQUID,
-            ElementsNetwork::TestnetLiquid => &AddressParams::LIQUID_TESTNET,
-            ElementsNetwork::CustomElements { .. } => &AddressParams::ELEMENTS,
+            Network::Liquid => &AddressParams::LIQUID,
+            Network::TestnetLiquid => &AddressParams::LIQUID_TESTNET,
+            Network::CustomElements { .. } => &AddressParams::ELEMENTS,
         }
     }
 
     /// Return the default regtest network using the default regtest policy asset.
-    pub fn default_regtest() -> ElementsNetwork {
+    pub fn default_regtest() -> Network {
         let policy_asset = AssetId::from_str(LIQUID_DEFAULT_REGTEST_ASSET_STR).expect("static");
 
-        ElementsNetwork::CustomElements { policy_asset }
+        Network::CustomElements { policy_asset }
     }
 
     /// Return the dynamic epoch length of this network
@@ -100,9 +98,9 @@ impl ElementsNetwork {
         // taken from elements chainparams.cpp
         // TODO upstream to rust elements
         match self {
-            ElementsNetwork::Liquid => 20160,
-            ElementsNetwork::TestnetLiquid => 1000,
-            ElementsNetwork::CustomElements { policy_asset: _ } => 10,
+            Network::Liquid => 20160,
+            Network::TestnetLiquid => 1000,
+            Network::CustomElements { policy_asset: _ } => 10,
         }
     }
 
@@ -111,9 +109,9 @@ impl ElementsNetwork {
         // taken from elements chainparams.cpp
         // TODO upstream to rust elements
         match self {
-            ElementsNetwork::Liquid => 2,
-            ElementsNetwork::TestnetLiquid => 0,
-            ElementsNetwork::CustomElements { policy_asset: _ } => 0,
+            Network::Liquid => 2,
+            Network::TestnetLiquid => 0,
+            Network::CustomElements { policy_asset: _ } => 0,
         }
     }
 
@@ -124,19 +122,17 @@ impl ElementsNetwork {
     }
 }
 
-impl From<ElementsNetwork> for lwk_common::Network {
-    fn from(network: ElementsNetwork) -> Self {
+impl From<Network> for lwk_common::Network {
+    fn from(network: Network) -> Self {
         match network {
-            ElementsNetwork::Liquid => lwk_common::Network::Liquid,
-            ElementsNetwork::TestnetLiquid => lwk_common::Network::TestnetLiquid,
-            ElementsNetwork::CustomElements { policy_asset } => {
-                lwk_common::Network::CustomElements(
-                    lwk_common::ElementsParamsBuilder::new()
-                        .with_policy_asset(policy_asset)
-                        .build()
-                        .expect("static"),
-                )
-            }
+            Network::Liquid => lwk_common::Network::Liquid,
+            Network::TestnetLiquid => lwk_common::Network::TestnetLiquid,
+            Network::CustomElements { policy_asset } => lwk_common::Network::CustomElements(
+                lwk_common::ElementsParamsBuilder::new()
+                    .with_policy_asset(policy_asset)
+                    .build()
+                    .expect("static"),
+            ),
         }
     }
 }
@@ -149,7 +145,7 @@ mod test {
         str::FromStr,
     };
 
-    use super::ElementsNetwork;
+    use super::Network;
 
     #[test]
     fn test_config_hash() {
@@ -157,9 +153,9 @@ mod test {
         // so its hash is the same as the field hash
         #[derive(Hash)]
         struct Config {
-            network: ElementsNetwork,
+            network: Network,
         }
-        let network = ElementsNetwork::Liquid;
+        let network = Network::Liquid;
         let config = Config { network };
         let mut hasher = DefaultHasher::new();
         config.hash(&mut hasher);
@@ -172,7 +168,7 @@ mod test {
 
     #[test]
     fn test_genesis_block_hash() {
-        let network = ElementsNetwork::Liquid;
+        let network = Network::Liquid;
         assert_eq!(
             network.genesis_hash(),
             elements::BlockHash::from_str(
@@ -181,7 +177,7 @@ mod test {
             .unwrap()
         );
 
-        let network = ElementsNetwork::TestnetLiquid;
+        let network = Network::TestnetLiquid;
         assert_eq!(
             network.genesis_hash(),
             elements::BlockHash::from_str(
@@ -190,7 +186,7 @@ mod test {
             .unwrap()
         );
 
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         assert_eq!(
             network.genesis_hash(),
             elements::BlockHash::from_str(

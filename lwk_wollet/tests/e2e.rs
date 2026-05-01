@@ -2009,7 +2009,7 @@ fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
     let update = wait_esplora_tx_update(&mut client, &wollet);
     wollet.apply_update(update).unwrap();
     let balance = wollet.balance().unwrap();
-    assert_eq!(sats, *balance.get(&network.policy_asset()).unwrap());
+    assert_eq!(sats, *balance.get(network.policy_asset()).unwrap());
 
     // ANCHOR: drain_lbtc_wallet
     let address = env.elementsd_getnewaddress();
@@ -2029,7 +2029,7 @@ fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
     let update = wait_esplora_tx_update(&mut client, &wollet);
     wollet.apply_update(update).unwrap();
     let balance = wollet.balance().unwrap();
-    assert_eq!(0, *balance.get(&network.policy_asset()).unwrap());
+    assert_eq!(0, *balance.get(network.policy_asset()).unwrap());
 
     let elip151_desc = "ct(elip151,elwpkh(tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))";
     let elip151_desc = WolletDescriptor::from_str(elip151_desc).unwrap();
@@ -2123,16 +2123,16 @@ fn test_non_standard_gap_limit() {
     }
 
     let balance = wollet_longer_gap.balance().unwrap();
-    assert_eq!(balance.get(&network.policy_asset()).unwrap(), &satoshi);
+    assert_eq!(balance.get(network.policy_asset()).unwrap(), &satoshi);
 
     // a normal sync on the wollet_long_gap should not lose the tx
     full_scan_with_electrum_client(&mut wollet_longer_gap, &mut client).unwrap();
-    assert_eq!(balance.get(&network.policy_asset()).unwrap(), &satoshi);
+    assert_eq!(balance.get(network.policy_asset()).unwrap(), &satoshi);
 
     // a normal sync on the wollet_std_gap doesn't see the tx
     full_scan_with_electrum_client(&mut wollet_std_gap, &mut client).unwrap();
     let balance = wollet_std_gap.balance().unwrap();
-    assert_eq!(balance.get(&network.policy_asset()).unwrap(), &0);
+    assert_eq!(balance.get(network.policy_asset()).unwrap(), &0);
 }
 
 #[tokio::test]
@@ -2177,7 +2177,7 @@ async fn test_non_standard_gap_limit_esplora() {
     }
 
     let balance = wollet.balance().unwrap();
-    assert_eq!(balance.get(&network.policy_asset()).unwrap(), &satoshi);
+    assert_eq!(balance.get(network.policy_asset()).unwrap(), &satoshi);
 }
 
 #[test]
@@ -2227,7 +2227,7 @@ fn test_non_standard_gap_limit_waterfalls_esplora() {
     }
 
     let balance = wollet.balance().unwrap();
-    assert_eq!(balance.get(&network.policy_asset()).unwrap(), &satoshi);
+    assert_eq!(balance.get(network.policy_asset()).unwrap(), &satoshi);
 }
 
 #[test]

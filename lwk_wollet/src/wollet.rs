@@ -1406,7 +1406,7 @@ mod tests {
 
     use super::*;
     use crate::elements::bitcoin::bip32::{Xpriv, Xpub};
-    use crate::elements::bitcoin::network::Network;
+    use crate::elements::bitcoin::network::Network as BitcoinNetwork;
     use crate::elements::AddressParams;
     use crate::{DownloadTxResult, Update};
     use elements_miniscript::confidential::bare::tweak_private_key;
@@ -1440,7 +1440,7 @@ mod tests {
     fn test_blinding_private() {
         // Get a confidential address from a "view" descriptor
         let seed = [0u8; 16];
-        let xprv = Xpriv::new_master(Network::Regtest, &seed).unwrap();
+        let xprv = Xpriv::new_master(BitcoinNetwork::Regtest, &seed).unwrap();
         let xpub = Xpub::from_priv(&EC, &xprv);
         let checksum = "h0ej28gv";
         let desc_str = format!("ct({xprv},elwpkh({xpub}))#{checksum}");

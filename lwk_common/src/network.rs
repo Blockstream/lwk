@@ -77,7 +77,7 @@ pub struct ElementsParams {
 }
 
 /// The network of the elements blockchain.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Network {
     /// Liquid mainnet
     Liquid,
@@ -178,6 +178,15 @@ impl<'de> Deserialize<'de> for Network {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let string = String::deserialize(d)?;
         string.parse().map_err(serde::de::Error::custom)
+    }
+}
+
+impl core::hash::Hash for Network {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
+        if let Network::CustomElements(params) = self {
+            params.policy_asset.hash(state);
+        }
     }
 }
 

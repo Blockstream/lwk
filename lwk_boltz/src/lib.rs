@@ -511,7 +511,7 @@ fn bitcoin_chain_from_network(network: ElementsNetwork) -> BitcoinChain {
     match network {
         ElementsNetwork::Liquid => BitcoinChain::Bitcoin,
         ElementsNetwork::TestnetLiquid => BitcoinChain::BitcoinTestnet,
-        ElementsNetwork::ElementsRegtest { .. } => BitcoinChain::BitcoinRegtest,
+        ElementsNetwork::CustomElements { .. } => BitcoinChain::BitcoinRegtest,
     }
 }
 
@@ -739,7 +739,7 @@ pub fn elements_network_to_liquid_chain(network: ElementsNetwork) -> LiquidChain
     match network {
         ElementsNetwork::Liquid => LiquidChain::Liquid,
         ElementsNetwork::TestnetLiquid => LiquidChain::LiquidTestnet,
-        ElementsNetwork::ElementsRegtest { .. } => LiquidChain::LiquidRegtest,
+        ElementsNetwork::CustomElements { .. } => LiquidChain::LiquidRegtest,
     }
 }
 
@@ -768,7 +768,7 @@ pub fn boltz_default_url(network: ElementsNetwork) -> &'static str {
     match network {
         ElementsNetwork::Liquid => BOLTZ_MAINNET_URL_V2,
         ElementsNetwork::TestnetLiquid => BOLTZ_TESTNET_URL_V2,
-        ElementsNetwork::ElementsRegtest { .. } => BOLTZ_REGTEST,
+        ElementsNetwork::CustomElements { .. } => BOLTZ_REGTEST,
     }
 }
 

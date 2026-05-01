@@ -76,7 +76,7 @@ impl Config {
             datadir,
             server_url: "".into(),
             server_type: "electrum".into(),
-            network: ElementsNetwork::ElementsRegtest { policy_asset },
+            network: ElementsNetwork::CustomElements { policy_asset },
             explorer_url: "".into(),
             registry_url: "".into(),
             timeout: TIMEOUT,
@@ -91,7 +91,7 @@ impl Config {
         match self.network {
             ElementsNetwork::Liquid => JadeNetwork::Liquid,
             ElementsNetwork::TestnetLiquid => JadeNetwork::TestnetLiquid,
-            ElementsNetwork::ElementsRegtest { policy_asset } => JadeNetwork::CustomElements(
+            ElementsNetwork::CustomElements { policy_asset } => JadeNetwork::CustomElements(
                 lwk_common::ElementsParamsBuilder::new()
                     .with_policy_asset(policy_asset)
                     .build()

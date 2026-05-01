@@ -245,7 +245,7 @@ fn network_default_url(network: ElementsNetwork) -> Result<&'static str, Error> 
     Ok(match network {
         ElementsNetwork::Liquid => "https://assets.blockstream.info",
         ElementsNetwork::TestnetLiquid => "https://assets-testnet.blockstream.info",
-        ElementsNetwork::ElementsRegtest { policy_asset: _ } => "http://127.0.0.1:3023",
+        ElementsNetwork::CustomElements { policy_asset: _ } => "http://127.0.0.1:3023",
     })
 }
 

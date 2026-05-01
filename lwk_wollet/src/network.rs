@@ -38,7 +38,7 @@ pub enum ElementsNetwork {
     /// Liquid testnet.
     TestnetLiquid,
     /// Liquid regtest with a custom policy asset.
-    ElementsRegtest {
+    CustomElements {
         /// The policy asset to use for this regtest network.
         /// You can use the default one using [`ElementsNetwork::default_regtest()`].
         policy_asset: AssetId,
@@ -55,7 +55,7 @@ impl ElementsNetwork {
             ElementsNetwork::TestnetLiquid => {
                 AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR).expect("can't fail on const")
             }
-            ElementsNetwork::ElementsRegtest { policy_asset } => *policy_asset,
+            ElementsNetwork::CustomElements { policy_asset } => *policy_asset,
         }
     }
 
@@ -64,7 +64,7 @@ impl ElementsNetwork {
         match self {
             ElementsNetwork::Liquid => BlockHash::from_byte_array(GENESIS_LIQUID),
             ElementsNetwork::TestnetLiquid => BlockHash::from_byte_array(GENESIS_LIQUID_TESTNET),
-            ElementsNetwork::ElementsRegtest { .. } => {
+            ElementsNetwork::CustomElements { .. } => {
                 BlockHash::from_byte_array(GENESIS_LIQUID_REGTEST)
             }
         }
@@ -75,7 +75,7 @@ impl ElementsNetwork {
         match self {
             ElementsNetwork::Liquid => "liquid",
             ElementsNetwork::TestnetLiquid => "liquid-testnet",
-            ElementsNetwork::ElementsRegtest { .. } => "liquid-regtest",
+            ElementsNetwork::CustomElements { .. } => "liquid-regtest",
         }
     }
 
@@ -84,7 +84,7 @@ impl ElementsNetwork {
         match self {
             ElementsNetwork::Liquid => &AddressParams::LIQUID,
             ElementsNetwork::TestnetLiquid => &AddressParams::LIQUID_TESTNET,
-            ElementsNetwork::ElementsRegtest { .. } => &AddressParams::ELEMENTS,
+            ElementsNetwork::CustomElements { .. } => &AddressParams::ELEMENTS,
         }
     }
 
@@ -92,7 +92,7 @@ impl ElementsNetwork {
     pub fn default_regtest() -> ElementsNetwork {
         let policy_asset = AssetId::from_str(LIQUID_DEFAULT_REGTEST_ASSET_STR).expect("static");
 
-        ElementsNetwork::ElementsRegtest { policy_asset }
+        ElementsNetwork::CustomElements { policy_asset }
     }
 
     /// Return the dynamic epoch length of this network
@@ -102,7 +102,7 @@ impl ElementsNetwork {
         match self {
             ElementsNetwork::Liquid => 20160,
             ElementsNetwork::TestnetLiquid => 1000,
-            ElementsNetwork::ElementsRegtest { policy_asset: _ } => 10,
+            ElementsNetwork::CustomElements { policy_asset: _ } => 10,
         }
     }
 
@@ -113,7 +113,7 @@ impl ElementsNetwork {
         match self {
             ElementsNetwork::Liquid => 2,
             ElementsNetwork::TestnetLiquid => 0,
-            ElementsNetwork::ElementsRegtest { policy_asset: _ } => 0,
+            ElementsNetwork::CustomElements { policy_asset: _ } => 0,
         }
     }
 
@@ -129,7 +129,7 @@ impl From<ElementsNetwork> for lwk_common::Network {
         match network {
             ElementsNetwork::Liquid => lwk_common::Network::Liquid,
             ElementsNetwork::TestnetLiquid => lwk_common::Network::TestnetLiquid,
-            ElementsNetwork::ElementsRegtest { policy_asset } => {
+            ElementsNetwork::CustomElements { policy_asset } => {
                 lwk_common::Network::CustomElements(
                     lwk_common::ElementsParamsBuilder::new()
                         .with_policy_asset(policy_asset)

@@ -137,6 +137,28 @@ impl Network {
             Network::CustomElements(_) => "liquid-regtest",
         }
     }
+
+    /// Return the dynamic epoch length of this network
+    pub fn dynamic_epoch_length(&self) -> u32 {
+        // taken from elements chainparams.cpp
+        // TODO upstream to rust elements
+        match self {
+            Network::Liquid => 20160,
+            Network::TestnetLiquid => 1000,
+            Network::CustomElements(_) => 10,
+        }
+    }
+
+    /// Return the dynamic epoch length of this network
+    pub fn total_valid_epochs(&self) -> u32 {
+        // taken from elements chainparams.cpp
+        // TODO upstream to rust elements
+        match self {
+            Network::Liquid => 2,
+            Network::TestnetLiquid => 0,
+            Network::CustomElements(_) => 0,
+        }
+    }
 }
 
 impl std::fmt::Display for Network {

@@ -1,7 +1,6 @@
 use crate::{blockchain_client::BlockchainClient, consts, Error};
 use lwk_common::electrum_ssl::LIQUID_SOCKET;
 use lwk_common::electrum_ssl::LIQUID_TESTNET_SOCKET;
-use lwk_common::Network as JadeNetwork;
 use lwk_jade::TIMEOUT;
 use lwk_wollet::amp2::Amp2;
 use lwk_wollet::clients::blocking::EsploraClient;
@@ -76,7 +75,12 @@ impl Config {
             datadir,
             server_url: "".into(),
             server_type: "electrum".into(),
-            network: ElementsNetwork::CustomElements { policy_asset },
+            network: ElementsNetwork::CustomElements(
+                lwk_common::ElementsParamsBuilder::new()
+                    .with_policy_asset(policy_asset)
+                    .build()
+                    .expect("static"),
+            ),
             explorer_url: "".into(),
             registry_url: "".into(),
             timeout: TIMEOUT,
@@ -87,17 +91,8 @@ impl Config {
         }
     }
 
-    pub fn jade_network(&self) -> JadeNetwork {
-        match self.network {
-            ElementsNetwork::Liquid => JadeNetwork::Liquid,
-            ElementsNetwork::TestnetLiquid => JadeNetwork::TestnetLiquid,
-            ElementsNetwork::CustomElements { policy_asset } => JadeNetwork::CustomElements(
-                lwk_common::ElementsParamsBuilder::new()
-                    .with_policy_asset(policy_asset)
-                    .build()
-                    .expect("static"),
-            ),
-        }
+    pub fn jade_network(&self) -> ElementsNetwork {
+        self.network
     }
 
     pub fn default_home() -> Result<PathBuf, Error> {

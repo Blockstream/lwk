@@ -14,7 +14,7 @@ fn test_txs_store() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let network = ElementsNetwork::default_regtest();
-    let lbtc = network.policy_asset();
+    let lbtc = *network.policy_asset();
 
     let dir = TempDir::new().unwrap();
     let store = Arc::new(FileStore::new(dir.path().to_path_buf()).unwrap());

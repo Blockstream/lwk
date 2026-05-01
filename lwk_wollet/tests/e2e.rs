@@ -3693,7 +3693,7 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
 
     let address = env.elementsd_getnewaddress();
     let sats = 1000;
-    let lbtc = network.policy_asset();
+    let lbtc = *network.policy_asset();
 
     // ANCHOR: tx
     let mut pset = wollet
@@ -3796,7 +3796,7 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     let address = "<address>";
     let address = env.elementsd_getnewaddress(); // ANCHOR: ingore
     let sats = 1000;
-    let lbtc = network.policy_asset();
+    let lbtc = *network.policy_asset();
 
     let mut pset = wollet_c
         .tx_builder()
@@ -3895,7 +3895,7 @@ fn test_add_input_rangeproofs() {
 fn test_issue_asset() -> Result<(), Box<dyn std::error::Error>> {
     // Test based on Python bindings test issue_asset.py
     let network = ElementsNetwork::default_regtest();
-    let policy_asset = network.policy_asset();
+    let policy_asset = *network.policy_asset();
     let env = TestEnvBuilder::from_env().with_electrum().build();
 
     // ANCHOR: test_issue_asset

@@ -895,7 +895,7 @@ impl TxBuilder {
 
         let utxos = wollet.utxos_map()?;
 
-        let policy_asset = self.network().policy_asset();
+        let policy_asset = *self.network().policy_asset();
         let (addressees_lbtc, addressees_asset): (Vec<_>, Vec<_>) = self
             .recipients
             .into_iter()

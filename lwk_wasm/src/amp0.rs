@@ -330,7 +330,7 @@ mod tests {
             serde_wasm_bindgen::from_value(balance.entries().unwrap()).unwrap();
         let lbtc = lwk_wollet::ElementsNetwork::Liquid.policy_asset();
         let mut expected = HashMap::new();
-        expected.insert(lbtc, 1000);
+        expected.insert(*lbtc, 1000);
         assert_eq!(balance, expected);
     }
 

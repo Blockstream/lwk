@@ -1341,6 +1341,7 @@ impl BuiltTx {
     }
 
     fn unblinded(&self) -> Result<Vec<(OutPoint, TxOutSecrets)>, Error> {
+        // consider getting txid from global.unsigned_tx if extract_tx errors
         let txid = self.pset.extract_tx()?.txid();
         let mut unblinded = vec![];
         for (ct_location, (abf, vbf, _eph_sk)) in self.blind_secrets.iter() {

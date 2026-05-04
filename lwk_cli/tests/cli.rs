@@ -1727,3 +1727,35 @@ fn test_esplora_waterfalls_backend() {
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }
+
+#[test]
+fn test_sent_outputs() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let (t, _tmp, cli, _params, env) = setup_cli(env);
+
+    sw_signer(&cli, "sw");
+    singlesig_wallet(&cli, "w", "sw", "slip77", "wpkh");
+    let signers = &["sw"];
+
+    let _ = fund(&env, &cli, "w", 1_000_000);
+
+    let node_address = env.elementsd_getnewaddress();
+    let sats = 1234;
+    let r = sh(&format!(
+        "{cli} wallet send -w w --recipient {node_address}:{sats}"
+    ));
+    let txid = complete(&cli, "w", get_str(&r, "pset"), signers);
+
+    // Here we want to check that we have blinders for all outputs
+    let tx = tx(&cli, "w", &txid).unwrap();
+    // Currently the only way to check if the wallet has blinders is from the unblinded url
+    // TODO: make it easier for the caller
+    let url = tx.get("unblinded_url").unwrap().as_str().unwrap();
+    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+    assert!(!url.contains(&format!("{sats},{policy_asset}")));
+
+    // TODO: check blinders also for drain, issue, reissue
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}

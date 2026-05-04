@@ -113,3 +113,53 @@ fn fake_txs_store_full_scan_after_transaction() {
 
     assert_eq!(wollet.utxos().unwrap().len(), 1);
 }
+
+#[test]
+fn fake_persisted_txs_store_restore_breaks_reload() {
+    // This test shows that we need the txs store when applying an Update without new txs,
+    // which happens when you have a persisted txs store and reload the Update
+
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let network = ElementsNetwork::default_regtest();
+    let lbtc = network.policy_asset();
+
+    let updates_dir = TempDir::new().unwrap();
+    let updates_store = Arc::new(FileStore::new(updates_dir.path().to_path_buf()).unwrap());
+
+    let s = generate_signer();
+    let view_key = generate_view_key();
+    let d = format!("ct({view_key},elwpkh({}/*))", s.xpub());
+    let wd: WolletDescriptor = d.parse().unwrap();
+
+    let txs_store = Arc::new(FakeStore::persisted());
+    let mut wollet = WolletBuilder::new(network, wd.clone())
+        .with_updates_store(updates_store.clone())
+        .with_txs_store(txs_store.clone())
+        .with_merge_threshold(Some(1))
+        .build()
+        .unwrap();
+    let mut client = test_client_electrum(&env.electrum_url());
+
+    let address = wollet.address(None).unwrap();
+    assert_eq!(address.index(), 0);
+
+    let satoshi = 10_000;
+    let txid = env.elementsd_sendtoaddress(address.address(), satoshi, Some(lbtc));
+    wait_for_tx(&mut wollet, &mut client, &txid);
+
+    assert_eq!(wollet.address(None).unwrap().index(), 1);
+
+    let _wollet2 = WolletBuilder::new(network, wd)
+        .with_updates_store(updates_store)
+        .with_txs_store(txs_store)
+        .with_merge_threshold(Some(1))
+        .build()
+        .unwrap();
+
+    // TODO: fixme, reloaded test should compute the same Last unused address
+    // assert_eq!(
+    //     wollet.address(None).unwrap().index(),
+    //     wollet2.address(None).unwrap().index(),
+    // );
+}

@@ -71,17 +71,7 @@ impl Network {
     /// Return the default regtest network with the default policy asset
     #[uniffi::constructor]
     pub fn regtest_default() -> Arc<Network> {
-        let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-        let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
-        Arc::new(
-            lwk_common::Network::CustomElements(
-                lwk_common::ElementsParamsBuilder::new()
-                    .with_policy_asset(policy_asset)
-                    .build()
-                    .expect("static"),
-            )
-            .into(),
-        )
+        Arc::new(lwk_common::Network::default_regtest().into())
     }
 
     /// Return the default electrum client for this network

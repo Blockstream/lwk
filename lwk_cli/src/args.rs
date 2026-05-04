@@ -989,6 +989,10 @@ pub enum ServerCommand {
         /// AMP2 key origin xpub, if not specified a reasonable default is used according to the network
         #[arg(long, env)]
         amp2_keyorigin_xpub: Option<String>,
+
+        /// Persist blinders for sent outputs (experimental)
+        #[arg(long)]
+        with_experimental_blinders: bool,
     },
 
     /// Wait until an entire blockchain scan has been completed

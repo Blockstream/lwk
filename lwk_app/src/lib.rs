@@ -43,6 +43,7 @@ use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use lwk_wollet::registry::add_contracts;
 use lwk_wollet::LiquidexProposal;
+use lwk_wollet::TxsOpt;
 use lwk_wollet::WolletDescriptor;
 use lwk_wollet::{Wollet, WolletBuilder};
 use serde_json::Value;
@@ -904,12 +905,15 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::WalletTxs = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let explorer_url = s.config.explorer_url.clone();
+            let policy_asset = *s.config.network.policy_asset();
             let memos = s.tx_memos.for_wollet(&r.name);
             let wollet = s.wollets.get_mut(&r.name)?;
+            // TODO: we should allow to get a portion of the txs
+            let opt = TxsOpt::default();
             let mut txs: Vec<response::Tx> = wollet
-                .transactions()?
+                .txs(&opt)?
                 .iter()
-                .map(|tx| convert_tx(tx, &explorer_url, &memos))
+                .map(|tx| convert_tx(tx, &explorer_url, &memos, &policy_asset))
                 .collect();
             if r.with_tickers {
                 for tx in &mut txs {
@@ -1347,23 +1351,25 @@ fn convert_utxo(u: &lwk_wollet::WalletTxOut) -> response::Utxo {
 }
 
 fn convert_tx(
-    tx: &lwk_wollet::WalletTx,
+    tx: &lwk_wollet::TxDetails,
     explorer_url: &str,
     memos: &HashMap<Txid, String>,
+    policy_asset: &AssetId,
 ) -> response::Tx {
+    let txid = tx.txid();
     let unblinded_url = tx.unblinded_url(explorer_url);
-    let memo = memos.get(&tx.txid).cloned().unwrap_or_default();
+    let memo = memos.get(&txid).cloned().unwrap_or_default();
     response::Tx {
-        txid: tx.txid.to_string(),
-        height: tx.height,
+        txid: txid.to_string(),
+        height: tx.height(),
         balance: tx
-            .balance
+            .balance()
             .iter()
             .map(|(k, v)| (k.to_string(), *v))
             .collect(),
-        fee: tx.fee,
-        timestamp: tx.timestamp,
-        type_: tx.type_.clone(),
+        fee: tx.fees_asset(policy_asset),
+        timestamp: tx.timestamp(),
+        type_: tx.tx_type().to_string(),
         unblinded_url,
         memo,
     }

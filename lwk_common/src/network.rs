@@ -203,6 +203,8 @@ impl<'de> Deserialize<'de> for Network {
     }
 }
 
+// A custom implementation of `Hash` is used here because we want the same
+// hash values as in the old `lwk_wollet::ElementsNetwork`.
 impl core::hash::Hash for Network {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         core::mem::discriminant(self).hash(state);

@@ -1278,6 +1278,8 @@ impl TxBuilder {
 
 /// Transaction with metadata
 ///
+/// **Experimental**: this API might change without notice.
+///
 /// A PSET and other data that cannot be in the PSET
 pub struct BuiltTx {
     pset: PartiallySignedTransaction,

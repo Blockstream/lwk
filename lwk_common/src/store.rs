@@ -202,12 +202,19 @@ impl Store for MemoryStore {
 ///
 /// All reads return `None` and writes/removals are acknowledged but discarded.
 #[derive(Debug, Default, Clone, Copy)]
-pub struct FakeStore;
+pub struct FakeStore {
+    persisted: bool,
+}
 
 impl FakeStore {
     /// Create a new `FakeStore`.
     pub fn new() -> Self {
-        Self
+        Self { persisted: false }
+    }
+
+    /// Create a `FakeStore` that reports itself as persisted while still discarding data.
+    pub fn persisted() -> Self {
+        Self { persisted: true }
     }
 }
 
@@ -224,6 +231,10 @@ impl Store for FakeStore {
 
     fn remove<K: AsRef<[u8]>>(&self, _key: K) -> Result<(), Self::Error> {
         Ok(())
+    }
+
+    fn is_persisted(&self) -> bool {
+        self.persisted
     }
 }
 

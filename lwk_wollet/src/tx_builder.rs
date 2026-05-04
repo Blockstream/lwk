@@ -5,8 +5,8 @@ use crate::{
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
     pset_create::{validate_address, IssuanceRequest, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS},
-    Contract, DownloadTxResult, Network, Error, LiquidexProposal, UnvalidatedRecipient,
-    Update, Wollet, EC,
+    Contract, DownloadTxResult, Error, LiquidexProposal, Network, UnvalidatedRecipient, Update,
+    Wollet, EC,
 };
 use elements::{
     confidential::{AssetBlindingFactor, Nonce, Value, ValueBlindingFactor},

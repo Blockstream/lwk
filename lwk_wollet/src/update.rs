@@ -559,14 +559,7 @@ impl Wollet {
             .collect();
         for txid in txids_for_last_used {
             if let Some(tx) = cache.tx_as_fallback(&txid, &new_txs.txs) {
-                for (vout, output) in tx.output.iter().enumerate() {
-                    if cache
-                        .get_unblinded(&OutPoint::new(txid, vout as u32))
-                        .is_none()
-                    {
-                        // Output cannot be unblinded by wallet
-                        continue;
-                    }
+                for output in tx.output.iter() {
                     if let Some((ext_int, ChildNumber::Normal { index })) =
                         cache.paths.get(&output.script_pubkey)
                     {

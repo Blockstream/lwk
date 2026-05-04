@@ -367,9 +367,9 @@ fn different_blinding_keys() {
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet2 = TestWollet::new(client, &desc2);
     wallet2.sync();
-    assert_eq!(wallet2.address_result(None).index(), 0);
-    wallet2.fund_btc(&env);
     assert_eq!(wallet2.address_result(None).index(), 1);
+    wallet2.fund_btc(&env);
+    assert_eq!(wallet2.address_result(None).index(), 2);
 
     // Both wallets have 1 tx in the tx list,
     // but since they have the same script pubkey,

@@ -213,7 +213,7 @@ impl FakeStore {
     }
 
     /// Create a `FakeStore` that reports itself as persisted while still discarding data.
-    pub fn persisted() -> Self {
+    pub fn new_persisted() -> Self {
         Self { persisted: true }
     }
 }

@@ -132,7 +132,7 @@ fn fake_persisted_txs_store_restore_breaks_reload() {
     let d = format!("ct({view_key},elwpkh({}/*))", s.xpub());
     let wd: WolletDescriptor = d.parse().unwrap();
 
-    let txs_store = Arc::new(FakeStore::persisted());
+    let txs_store = Arc::new(FakeStore::new_persisted());
     let mut wollet = WolletBuilder::new(network, wd.clone())
         .with_updates_store(updates_store.clone())
         .with_txs_store(txs_store.clone())
@@ -150,7 +150,7 @@ fn fake_persisted_txs_store_restore_breaks_reload() {
 
     assert_eq!(wollet.address(None).unwrap().index(), 1);
 
-    let _wollet2 = WolletBuilder::new(network, wd)
+    let wollet2 = WolletBuilder::new(network, wd)
         .with_updates_store(updates_store)
         .with_txs_store(txs_store)
         .with_merge_threshold(Some(1))
@@ -158,8 +158,8 @@ fn fake_persisted_txs_store_restore_breaks_reload() {
         .unwrap();
 
     // TODO: fixme, reloaded test should compute the same Last unused address
-    // assert_eq!(
-    //     wollet.address(None).unwrap().index(),
-    //     wollet2.address(None).unwrap().index(),
-    // );
+    assert_ne!(
+        wollet.address(None).unwrap().index(),
+        wollet2.address(None).unwrap().index(),
+    );
 }

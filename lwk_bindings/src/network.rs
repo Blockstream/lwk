@@ -40,38 +40,6 @@ impl From<&Network> for lwk_common::Network {
     }
 }
 
-impl From<&Network> for lwk_wollet::ElementsNetwork {
-    fn from(value: &Network) -> Self {
-        match value.inner {
-            lwk_common::Network::Liquid => lwk_wollet::ElementsNetwork::Liquid,
-            lwk_common::Network::TestnetLiquid => lwk_wollet::ElementsNetwork::LiquidTestnet,
-            lwk_common::Network::CustomElements(_) => {
-                lwk_wollet::ElementsNetwork::ElementsRegtest {
-                    policy_asset: *value.inner.policy_asset(),
-                }
-            }
-        }
-    }
-}
-
-impl From<lwk_wollet::ElementsNetwork> for Network {
-    fn from(value: lwk_wollet::ElementsNetwork) -> Self {
-        match value {
-            lwk_wollet::ElementsNetwork::Liquid => lwk_common::Network::Liquid.into(),
-            lwk_wollet::ElementsNetwork::LiquidTestnet => lwk_common::Network::TestnetLiquid.into(),
-            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset } => {
-                lwk_common::Network::CustomElements(
-                    lwk_common::ElementsParamsBuilder::new()
-                        .with_policy_asset(policy_asset)
-                        .build()
-                        .expect("static"),
-                )
-                .into()
-            }
-        }
-    }
-}
-
 #[uniffi::export]
 impl Network {
     /// Return the mainnet network
@@ -103,17 +71,7 @@ impl Network {
     /// Return the default regtest network with the default policy asset
     #[uniffi::constructor]
     pub fn regtest_default() -> Arc<Network> {
-        let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-        let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
-        Arc::new(
-            lwk_common::Network::CustomElements(
-                lwk_common::ElementsParamsBuilder::new()
-                    .with_policy_asset(policy_asset)
-                    .build()
-                    .expect("static"),
-            )
-            .into(),
-        )
+        Arc::new(lwk_common::Network::default_regtest().into())
     }
 
     /// Return the default electrum client for this network

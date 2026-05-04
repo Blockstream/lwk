@@ -3,7 +3,7 @@ use crate::descriptor::Chain;
 use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::pset_create::validate_address;
 use crate::secp256k1::PublicKey;
-use crate::{ElementsNetwork, Error};
+use crate::{Error, Network};
 use elements::bitcoin;
 
 use lwk_common::{burn_script, SignedBalance};
@@ -187,9 +187,9 @@ impl FromStr for UnvalidatedRecipient {
 }
 
 impl UnvalidatedRecipient {
-    fn validate_asset(&self, network: ElementsNetwork) -> Result<AssetId, Error> {
+    fn validate_asset(&self, network: Network) -> Result<AssetId, Error> {
         if self.asset.is_empty() {
-            Ok(network.policy_asset())
+            Ok(*network.policy_asset())
         } else {
             Ok(AssetId::from_str(&self.asset)?)
         }
@@ -207,7 +207,7 @@ impl UnvalidatedRecipient {
     /// * non zero amount
     /// * valid asset id (64 hex characters)
     /// * valid address for the given `network` (or translate "burn" to a burn script)
-    pub fn validate(&self, network: ElementsNetwork) -> Result<Recipient, Error> {
+    pub fn validate(&self, network: Network) -> Result<Recipient, Error> {
         let satoshi = self.validate_satoshi()?;
         let asset = self.validate_asset(network)?;
         if self.address == "burn" {
@@ -385,7 +385,7 @@ mod tests {
         let blinding_key = "028cc0e189e069238a18901f4e29c634b04cbade2f8a98ef62a7fdc75020d9b464";
         let satoshi = 1000;
         let asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"; // regtest policy asset
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
 
         let case = format!("{address}:{satoshi}:{asset}");
         let unvalidated: UnvalidatedRecipient = case.parse().unwrap();

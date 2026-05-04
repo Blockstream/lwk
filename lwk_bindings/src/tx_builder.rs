@@ -20,7 +20,7 @@ pub struct TxBuilder {
     inner: Mutex<Option<lwk_wollet::TxBuilder>>,
 
     /// We are keeping a copy of the network here so that we can read it without lockig the mutex
-    network: lwk_wollet::ElementsNetwork,
+    network: lwk_common::Network,
 }
 
 impl Display for TxBuilder {

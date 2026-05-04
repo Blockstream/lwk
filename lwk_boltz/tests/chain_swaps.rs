@@ -26,10 +26,10 @@ mod tests {
         BoltzSession, SwapAsset, LIQUID_UNCOOPERATIVE_EXTRA,
     };
     use lwk_boltz::{SwapPersistence, SwapState};
+    use lwk_common::Network;
     use lwk_wollet::bitcoin;
     use lwk_wollet::elements;
     use lwk_wollet::secp256k1::rand::thread_rng;
-    use lwk_wollet::ElementsNetwork;
     use std::ops::ControlFlow;
     use std::str::FromStr;
     use std::sync::Arc;
@@ -43,7 +43,7 @@ mod tests {
             DEFAULT_REGTEST_NODE,
             false,
             false,
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
         )
         .unwrap();
         ChainClient::new()
@@ -269,7 +269,7 @@ mod tests {
         // Start concurrent block mining task
         let mining_handle = crate::utils::start_block_mining();
 
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
@@ -352,7 +352,7 @@ mod tests {
         // Start concurrent block mining task
         let mining_handle = crate::utils::start_block_mining();
 
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
@@ -462,7 +462,7 @@ mod tests {
         // Start concurrent block mining task
         let mining_handle = crate::utils::start_block_mining();
 
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
@@ -574,7 +574,7 @@ mod tests {
         // Start concurrent block mining task
         let mining_handle = crate::utils::start_block_mining();
 
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
@@ -662,7 +662,7 @@ mod tests {
         // Start concurrent block mining task
         let mining_handle = crate::utils::start_block_mining();
 
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
@@ -827,7 +827,7 @@ mod tests {
         // Start concurrent block mining task
         let _mining_handle = crate::utils::start_block_mining();
 
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
@@ -1142,7 +1142,7 @@ mod tests {
     async fn test_session_lbtc_btc_multiple_lockups_confirmed_same_block() {
         let _ = env_logger::try_init();
 
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
@@ -1238,7 +1238,7 @@ mod tests {
         // Start concurrent block mining task
         let mining_handle = crate::utils::start_block_mining();
 
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
@@ -1341,7 +1341,7 @@ mod tests {
         )
         .unwrap();
 
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
@@ -1440,7 +1440,7 @@ mod tests {
         )
         .unwrap();
 
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 

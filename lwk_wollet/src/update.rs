@@ -968,7 +968,7 @@ mod test {
     };
 
     use crate::{
-        update::DownloadTxResult, Chain, ElementsNetwork, Update, WolletBuilder, WolletDescriptor,
+        update::DownloadTxResult, Chain, Network, Update, WolletBuilder, WolletDescriptor,
     };
 
     use super::{update_key, EncodableTxOutSecrets};
@@ -1116,7 +1116,7 @@ mod test {
         let update_bytes = lwk_test_util::update_test_vector_2_bytes();
         let update = Update::deserialize(&update_bytes).unwrap();
         let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();
-        let wollet = WolletBuilder::new(crate::ElementsNetwork::LiquidTestnet, desc)
+        let wollet = WolletBuilder::new(crate::Network::TestnetLiquid, desc)
             .build()
             .unwrap();
         assert_eq!(update_bytes.len(), 18436);
@@ -1169,7 +1169,7 @@ mod test {
             .expect("Failed to store update 2");
 
         // Build with merge_threshold=Some(2) (should trigger merge since we have 3 updates)
-        let wollet = WolletBuilder::new(ElementsNetwork::default_regtest(), desc.clone())
+        let wollet = WolletBuilder::new(Network::default_regtest(), desc.clone())
             .with_updates_store(store.clone())
             .with_merge_threshold(Some(2))
             .build()
@@ -1218,7 +1218,7 @@ mod test {
             Update::deserialize(&merged_bytes).expect("Failed to deserialize merged update");
 
         // Apply merged update to a fresh wallet
-        let mut fresh_wollet = WolletBuilder::new(ElementsNetwork::default_regtest(), desc.clone())
+        let mut fresh_wollet = WolletBuilder::new(Network::default_regtest(), desc.clone())
             .build()
             .unwrap();
         fresh_wollet

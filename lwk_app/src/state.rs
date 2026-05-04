@@ -481,7 +481,7 @@ impl AddrMemos {
 
 impl State {
     pub fn insert_policy_asset(&mut self) {
-        let asset_id = self.config.network.policy_asset();
+        let asset_id = *self.config.network.policy_asset();
         self.assets
             .0
             .insert(asset_id, AppAsset::PolicyAsset(asset_id));

@@ -24,7 +24,7 @@ mod tests {
         parse_bolt12_invoice, verify_invoice_from_offer, BoltzSession, LightningPayment,
         PreparePayDataSerializable, SwapPersistence,
     };
-    use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
+    use lwk_wollet::{elements, secp256k1::rand::thread_rng, Network};
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
@@ -73,12 +73,12 @@ mod tests {
                 DEFAULT_REGTEST_NODE,
                 false,
                 false,
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
             )
             .unwrap(),
         );
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .build()
@@ -180,13 +180,13 @@ mod tests {
                 DEFAULT_REGTEST_NODE,
                 false,
                 false,
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
             )
             .unwrap(),
         );
 
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -275,7 +275,7 @@ mod tests {
 
         // test polling
         let session_polling = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .polling(true)
@@ -328,13 +328,13 @@ mod tests {
                 DEFAULT_REGTEST_NODE,
                 false,
                 false,
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
             )
             .unwrap(),
         );
 
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -355,7 +355,7 @@ mod tests {
         drop(prepare_pay_response);
         drop(session);
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -404,14 +404,14 @@ mod tests {
                 DEFAULT_REGTEST_NODE,
                 false,
                 false,
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
             )
             .unwrap(),
         );
 
         let session_fn = || {
             BoltzSession::builder(
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
                 AnyClient::Electrum(client.clone()),
             )
             .create_swap_timeout(TIMEOUT)
@@ -498,19 +498,17 @@ mod tests {
                 DEFAULT_REGTEST_NODE,
                 false,
                 false,
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
             )
             .unwrap(),
         );
 
-        let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
-            AnyClient::Electrum(client),
-        )
-        .create_swap_timeout(TIMEOUT)
-        .build()
-        .await
-        .unwrap();
+        let session =
+            BoltzSession::builder(Network::default_regtest(), AnyClient::Electrum(client))
+                .create_swap_timeout(TIMEOUT)
+                .build()
+                .await
+                .unwrap();
 
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
@@ -554,13 +552,13 @@ mod tests {
                 DEFAULT_REGTEST_NODE,
                 false,
                 false,
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
             )
             .unwrap(),
         );
 
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -608,7 +606,7 @@ mod tests {
 
         // Create a new session with the same mnemonic
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -668,7 +666,7 @@ mod tests {
                 DEFAULT_REGTEST_NODE,
                 false,
                 false,
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
             )
             .unwrap(),
         );
@@ -677,7 +675,7 @@ mod tests {
         let store = Arc::new(lwk_common::MemoryStore::new());
 
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -698,7 +696,7 @@ mod tests {
         )
         .unwrap();
         let session2 = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -754,7 +752,7 @@ mod tests {
 
         // Create a new session with the same store
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -828,7 +826,7 @@ mod tests {
                 DEFAULT_REGTEST_NODE,
                 false,
                 false,
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
             )
             .unwrap(),
         );

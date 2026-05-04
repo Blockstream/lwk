@@ -2058,8 +2058,7 @@ mod tests {
     fn amp0_sign(regtest: bool) {
         use super::*;
         use crate::clients::blocking::BlockchainBackend;
-        use crate::{ElectrumClient, ElementsNetwork, Wollet, WolletBuilder};
-        use lwk_common::Network;
+        use crate::{ElectrumClient, Network, Wollet, WolletBuilder};
         use lwk_common::Signer;
         use lwk_signer::SwSigner;
 
@@ -2071,13 +2070,13 @@ mod tests {
         let (network, elements_network, url) = if regtest {
             (
                 Network::default_regtest(),
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
                 "tcp://localhost:19002",
             )
         } else {
             (
                 Network::TestnetLiquid,
-                ElementsNetwork::LiquidTestnet,
+                Network::TestnetLiquid,
                 "ssl://elements-testnet.blockstream.info:50002",
             )
         };

@@ -1,7 +1,7 @@
 use crate::test_wollet::*;
 use lwk_common::Signer;
 use lwk_test_util::*;
-use lwk_wollet::{ElementsNetwork, WolletBuilder, WolletDescriptor};
+use lwk_wollet::{Network, WolletBuilder, WolletDescriptor};
 
 #[test]
 fn test_single_address_tr() {
@@ -50,11 +50,9 @@ async fn test_single_address_tr_async() {
     let pk = "0202020202020202020202020202020202020202020202020202020202020202";
 
     let desc = format!("ct({view_key},eltr({pk}))");
-    let mut client = lwk_wollet::asyncr::EsploraClient::new(
-        ElementsNetwork::default_regtest(),
-        &env.esplora_url(),
-    );
-    let network = ElementsNetwork::default_regtest();
+    let mut client =
+        lwk_wollet::asyncr::EsploraClient::new(Network::default_regtest(), &env.esplora_url());
+    let network = Network::default_regtest();
     let descriptor: WolletDescriptor = desc.parse().unwrap();
     let mut wollet = WolletBuilder::new(network, descriptor).build().unwrap();
 

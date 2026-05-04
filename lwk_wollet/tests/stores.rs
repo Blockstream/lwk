@@ -9,8 +9,8 @@ use tempfile::TempDir;
 fn test_stores() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
 
-    let network = ElementsNetwork::default_regtest();
-    let lbtc = network.policy_asset();
+    let network = Network::default_regtest();
+    let lbtc = *network.policy_asset();
 
     let dir = TempDir::new().unwrap();
     let store = Arc::new(FileStore::new(dir.path().to_path_buf()).unwrap());
@@ -85,8 +85,8 @@ fn fake_txs_store_full_scan_after_transaction() {
     // because tx_as_fallback fn use in-memory tx preferably
     let env = TestEnvBuilder::from_env().with_electrum().build();
 
-    let network = ElementsNetwork::default_regtest();
-    let lbtc = network.policy_asset();
+    let network = Network::default_regtest();
+    let lbtc = *network.policy_asset();
 
     let s = generate_signer();
     let view_key = generate_view_key();

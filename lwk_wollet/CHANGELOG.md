@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+* Remove `lwk_wollet::ElementsNetwork`, replaced with `lwk_common::Network`. Notes for migration:
+  * `lwk_wollet::ElementsNetwork::genesis_block_hash()` replaced by `lwk_common::Network::genesis_hash()`;
+  * `lwk_wollet::ElementsNetwork::policy_asset()` returned `AssetId`, `lwk_common::Network::policy_asset()` returns `&AssetId`;
+  * `lwk_wollet::ElementsNetwork::LiquidTestnet` replaced by `lwk_common::Network::TestnetLiquid`;
+  * `lwk_wollet::ElementsNetwork::ElementsRegtest {policy_asset: AssetId}` replaced by `lwk_common::Network::CustomElements(ElementsParams)`, where `ElementsParams` contains custom `policy_asset` and `genesis_hash`, and should be constructed with builder;
+
 ## 0.17.0
 
 * Add `WolletBuilder::utxo_only()`

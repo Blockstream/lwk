@@ -9,10 +9,8 @@ use std::str::FromStr;
 use crate::contract::{asset_ids, Contract, Entity};
 use crate::elements::{AssetId, OutPoint};
 use crate::error::Error;
-use crate::network::{
-    LIQUID_DEFAULT_REGTEST_ASSET_STR, LIQUID_POLICY_ASSET_STR, LIQUID_TESTNET_POLICY_ASSET_STR,
-};
-use crate::ElementsNetwork;
+
+use crate::Network;
 use elements::hashes::sha256::Midstate;
 use elements::pset::elip100::AssetMetadata;
 use elements::pset::elip100::TokenMetadata;
@@ -201,7 +199,7 @@ impl Registry {
     }
 
     /// Return the default registry for the given network, use [`Self::new()`] to specify a custom URL
-    pub fn default_for_network(network: ElementsNetwork) -> Result<Self, Error> {
+    pub fn default_for_network(network: Network) -> Result<Self, Error> {
         Ok(Self::new(network_default_url(network)?))
     }
 
@@ -241,11 +239,11 @@ impl Registry {
     }
 }
 
-fn network_default_url(network: ElementsNetwork) -> Result<&'static str, Error> {
+fn network_default_url(network: Network) -> Result<&'static str, Error> {
     Ok(match network {
-        ElementsNetwork::Liquid => "https://assets.blockstream.info",
-        ElementsNetwork::LiquidTestnet => "https://assets-testnet.blockstream.info",
-        ElementsNetwork::ElementsRegtest { policy_asset: _ } => "http://127.0.0.1:3023",
+        Network::Liquid => "https://assets.blockstream.info",
+        Network::TestnetLiquid => "https://assets-testnet.blockstream.info",
+        Network::CustomElements(_) => "http://127.0.0.1:3023",
     })
 }
 
@@ -257,7 +255,7 @@ pub mod blocking {
     use elements::{AssetId, Transaction};
     use tokio::runtime::Runtime;
 
-    use crate::{ElementsNetwork, Error};
+    use crate::{Error, Network};
 
     use super::RegistryPost;
 
@@ -277,7 +275,7 @@ pub mod blocking {
         }
 
         /// Return the default registry for the given network, use [`Self::new()`] to specify a custom URL
-        pub fn default_for_network(network: ElementsNetwork) -> Result<Self, Error> {
+        pub fn default_for_network(network: Network) -> Result<Self, Error> {
             Ok(Self {
                 inner: super::Registry::new(super::network_default_url(network)?),
                 rt: Runtime::new()?,
@@ -399,7 +397,7 @@ impl RegistryData {
 
 /// Create a RegistryData mock for Liquid Bitcoin
 fn lbtc() -> (AssetId, RegistryData) {
-    let asset_id = AssetId::from_str(LIQUID_POLICY_ASSET_STR).expect("static");
+    let asset_id = *lwk_common::Network::Liquid.policy_asset();
     let data = RegistryData {
         contract: Contract {
             entity: Entity::Domain("".to_string()),
@@ -429,7 +427,7 @@ fn lbtc() -> (AssetId, RegistryData) {
 
 /// Create a RegistryData mock for TestnetLiquid Bitcoin
 fn tlbtc() -> (AssetId, RegistryData) {
-    let asset_id = AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR).expect("static");
+    let asset_id = *lwk_common::Network::TestnetLiquid.policy_asset();
     let data = RegistryData {
         contract: Contract {
             entity: Entity::Domain("".to_string()),
@@ -459,7 +457,7 @@ fn tlbtc() -> (AssetId, RegistryData) {
 
 /// Create a RegistryData mock for RegtestLiquid Bitcoin
 fn rlbtc() -> (AssetId, RegistryData) {
-    let asset_id = AssetId::from_str(LIQUID_DEFAULT_REGTEST_ASSET_STR).expect("static");
+    let asset_id = *lwk_common::Network::default_regtest().policy_asset();
     let data = RegistryData {
         contract: Contract {
             entity: Entity::Domain("".to_string()),
@@ -655,7 +653,7 @@ mod tests {
         let tether_asset_id =
             AssetId::from_str("ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2")
                 .unwrap();
-        let registry = blocking::Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
+        let registry = blocking::Registry::default_for_network(Network::Liquid).unwrap();
         let registry_data = registry.fetch(tether_asset_id).unwrap();
         assert_eq!(registry_data.contract.ticker, "USDt");
 
@@ -666,12 +664,12 @@ mod tests {
 
     #[test]
     fn test_registry_cache_hardcoded() {
-        let registry = Registry::default_for_network(ElementsNetwork::default_regtest()).unwrap();
+        let registry = Registry::default_for_network(Network::default_regtest()).unwrap();
         let cache = RegistryCache::new_hardcoded(registry);
         // policy assets of regtest(default)/testnet/mainnet network are hard coded
-        let regtest_asset_id = AssetId::from_str(LIQUID_DEFAULT_REGTEST_ASSET_STR).unwrap();
-        let testnet_asset_id = AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR).unwrap();
-        let mainnet_asset_id = AssetId::from_str(LIQUID_POLICY_ASSET_STR).unwrap();
+        let regtest_asset_id = *lwk_common::Network::default_regtest().policy_asset();
+        let testnet_asset_id = *lwk_common::Network::TestnetLiquid.policy_asset();
+        let mainnet_asset_id = *lwk_common::Network::Liquid.policy_asset();
         let usdt_asset_id =
             AssetId::from_str("ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2")
                 .unwrap();
@@ -690,7 +688,7 @@ mod tests {
     #[ignore = "require internet connection"]
     #[tokio::test]
     async fn test_registry_cache() {
-        let registry = Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
+        let registry = Registry::default_for_network(Network::Liquid).unwrap();
         let asset_id =
             AssetId::from_str("18729918ab4bca843656f08d4dd877bed6641fbd596a0a963abbf199cfeb3cec")
                 .unwrap();
@@ -719,14 +717,14 @@ mod tests {
             "e7bf681db0ea93c31cfb4d9d540295ef43d9148835a46d5b286d756852803ff4"
         );
 
-        let registry = Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
+        let registry = Registry::default_for_network(Network::Liquid).unwrap();
         let cache_2 = RegistryCache::new(registry, &[], 1).await;
         assert!(cache_2.get(asset_id).is_none());
     }
 
     #[test]
     fn test_registry_cache_getters() {
-        let registry = Registry::default_for_network(ElementsNetwork::default_regtest()).unwrap();
+        let registry = Registry::default_for_network(Network::default_regtest()).unwrap();
         let cache = RegistryCache::new_hardcoded(registry);
         let usdt_asset_id =
             AssetId::from_str("ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2")
@@ -744,7 +742,7 @@ mod tests {
         let usdt_token_id = data.token_id().unwrap();
         let mut pset =
             PartiallySignedTransaction::from_str(lwk_test_util::pset_usdt_no_contracts()).unwrap();
-        let registry = Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
+        let registry = Registry::default_for_network(Network::Liquid).unwrap();
         let cache = RegistryCache::new_hardcoded(registry);
         let assets = cache.registry_asset_data();
         assert!(cache.get(usdt_asset_id).is_some());

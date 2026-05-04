@@ -1,17 +1,14 @@
 use crate::{blockchain_client::BlockchainClient, consts, Error};
 use lwk_common::electrum_ssl::LIQUID_SOCKET;
 use lwk_common::electrum_ssl::LIQUID_TESTNET_SOCKET;
-use lwk_common::Network as JadeNetwork;
+use lwk_common::Network;
 use lwk_jade::TIMEOUT;
 use lwk_wollet::amp2::Amp2;
 use lwk_wollet::clients::blocking::EsploraClient;
-use lwk_wollet::elements::AssetId;
-use lwk_wollet::ElementsNetwork;
 use lwk_wollet::{amp2, ElectrumClient};
 use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::time::Duration;
 
 #[derive(Clone, Debug)]
@@ -21,7 +18,7 @@ pub struct Config {
     pub datadir: PathBuf,
     pub server_url: String,
     pub server_type: String,
-    pub network: ElementsNetwork,
+    pub network: Network,
 
     pub explorer_url: String,
 
@@ -40,7 +37,7 @@ impl Config {
             datadir,
             server_url: format!("ssl://{LIQUID_TESTNET_SOCKET}"),
             server_type: "electrum".into(),
-            network: ElementsNetwork::LiquidTestnet,
+            network: Network::TestnetLiquid,
             explorer_url: "https://blockstream.info/liquidtestnet/".into(),
             registry_url: "https://assets-testnet.blockstream.info/".into(),
             timeout: TIMEOUT,
@@ -56,7 +53,7 @@ impl Config {
             datadir,
             server_url: format!("ssl://{LIQUID_SOCKET}"),
             server_type: "electrum".into(),
-            network: ElementsNetwork::Liquid,
+            network: Network::Liquid,
             explorer_url: "https://blockstream.info/liquid/".into(),
             registry_url: "https://assets.blockstream.info/".into(),
             timeout: TIMEOUT,
@@ -69,14 +66,12 @@ impl Config {
     /// For regtest there are no reasonable default for `electrum_url`, `explorer_url`, `registry_url`, `amp2_url` and `amp2_keyorigin_xpub`
     /// It will be caller responsability to mutate them according to regtest env
     pub fn default_regtest(datadir: PathBuf) -> Self {
-        let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-        let policy_asset = AssetId::from_str(policy_asset).expect("static");
         Self {
             addr: consts::DEFAULT_ADDR.into(),
             datadir,
             server_url: "".into(),
             server_type: "electrum".into(),
-            network: ElementsNetwork::ElementsRegtest { policy_asset },
+            network: Network::default_regtest(),
             explorer_url: "".into(),
             registry_url: "".into(),
             timeout: TIMEOUT,
@@ -87,17 +82,8 @@ impl Config {
         }
     }
 
-    pub fn jade_network(&self) -> JadeNetwork {
-        match self.network {
-            ElementsNetwork::Liquid => JadeNetwork::Liquid,
-            ElementsNetwork::LiquidTestnet => JadeNetwork::TestnetLiquid,
-            ElementsNetwork::ElementsRegtest { policy_asset } => JadeNetwork::CustomElements(
-                lwk_common::ElementsParamsBuilder::new()
-                    .with_policy_asset(policy_asset)
-                    .build()
-                    .expect("static"),
-            ),
-        }
+    pub fn jade_network(&self) -> Network {
+        self.network
     }
 
     pub fn default_home() -> Result<PathBuf, Error> {
@@ -124,7 +110,7 @@ impl Config {
 
     /// True if Liquid mainnet
     pub fn is_mainnet(&self) -> bool {
-        matches!(self.network, ElementsNetwork::Liquid)
+        matches!(self.network, Network::Liquid)
     }
 
     pub fn blockchain_client(&self) -> Result<BlockchainClient, Error> {

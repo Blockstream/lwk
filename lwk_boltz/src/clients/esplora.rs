@@ -6,25 +6,22 @@ use boltz_client::elements;
 use boltz_client::error::Error;
 use boltz_client::network::LiquidChain;
 use boltz_client::ToHex;
-use lwk_wollet::ElementsNetwork;
+use lwk_common::Network;
 
 pub struct EsploraClient {
     inner: Arc<lwk_wollet::asyncr::EsploraClient>,
-    network: ElementsNetwork,
+    network: Network,
 }
 
 impl EsploraClient {
-    pub fn from_client(
-        client: Arc<lwk_wollet::asyncr::EsploraClient>,
-        network: ElementsNetwork,
-    ) -> Self {
+    pub fn from_client(client: Arc<lwk_wollet::asyncr::EsploraClient>, network: Network) -> Self {
         Self {
             inner: client,
             network,
         }
     }
 
-    pub fn new(url: &str, network: ElementsNetwork) -> Self {
+    pub fn new(url: &str, network: Network) -> Self {
         Self {
             inner: Arc::new(lwk_wollet::asyncr::EsploraClient::new(network, url)),
             network,
@@ -118,7 +115,7 @@ mod tests {
     };
     use lwk_wollet::{
         asyncr::{self, EsploraClientBuilder},
-        elements, ElementsNetwork,
+        elements, Network,
     };
 
     use crate::clients::EsploraClient;
@@ -126,10 +123,8 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires internet connection"]
     async fn test_esplora_client() {
-        let client = asyncr::EsploraClient::new(
-            ElementsNetwork::Liquid,
-            "https://blockstream.info/liquid/api",
-        );
+        let client =
+            asyncr::EsploraClient::new(Network::Liquid, "https://blockstream.info/liquid/api");
 
         test_esplora_client_liquid(client).await;
     }
@@ -139,7 +134,7 @@ mod tests {
     async fn test_waterfalls_client() {
         let client = EsploraClientBuilder::new(
             "https://waterfalls.liquidwebwallet.org/liquid/api",
-            ElementsNetwork::Liquid,
+            Network::Liquid,
         )
         .waterfalls(true)
         .build()
@@ -148,7 +143,7 @@ mod tests {
     }
 
     async fn test_esplora_client_liquid(raw_client: asyncr::EsploraClient) {
-        let client = EsploraClient::from_client(Arc::new(raw_client), ElementsNetwork::Liquid);
+        let client = EsploraClient::from_client(Arc::new(raw_client), Network::Liquid);
         assert_eq!(client.network(), LiquidChain::Liquid);
 
         assert_eq!(

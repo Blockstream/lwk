@@ -77,7 +77,7 @@ pub struct ElementsParams {
 }
 
 /// The network of the elements blockchain.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Network {
     /// Liquid mainnet
     Liquid,
@@ -137,6 +137,28 @@ impl Network {
             Network::CustomElements(_) => "liquid-regtest",
         }
     }
+
+    /// Return the dynamic epoch length of this network
+    pub fn dynamic_epoch_length(&self) -> u32 {
+        // taken from elements chainparams.cpp
+        // TODO upstream to rust elements
+        match self {
+            Network::Liquid => 20160,
+            Network::TestnetLiquid => 1000,
+            Network::CustomElements(_) => 10,
+        }
+    }
+
+    /// Return the dynamic epoch length of this network
+    pub fn total_valid_epochs(&self) -> u32 {
+        // taken from elements chainparams.cpp
+        // TODO upstream to rust elements
+        match self {
+            Network::Liquid => 2,
+            Network::TestnetLiquid => 0,
+            Network::CustomElements(_) => 0,
+        }
+    }
 }
 
 impl std::fmt::Display for Network {
@@ -181,8 +203,24 @@ impl<'de> Deserialize<'de> for Network {
     }
 }
 
+// A custom implementation of `Hash` is used here because we want the same
+// hash values as in the old `lwk_wollet::ElementsNetwork`.
+impl core::hash::Hash for Network {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
+        if let Network::CustomElements(params) = self {
+            params.policy_asset.hash(state);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::{
+        collections::hash_map::DefaultHasher,
+        hash::{Hash, Hasher},
+    };
+
     use super::*;
 
     #[test]
@@ -215,5 +253,56 @@ mod tests {
             Network::default_regtest().genesis_hash().to_string(),
             "00902a6b70c2ca83b5d9c815d96a0e2f4202179316970d14ea1847dae5b1ca21"
         );
+    }
+
+    #[test]
+    fn test_hash_regression() {
+        #[derive(Hash)]
+        pub enum ElementsNetwork {
+            Liquid,
+            LiquidTestnet,
+            ElementsRegtest { policy_asset: AssetId },
+        }
+
+        impl ElementsNetwork {
+            fn default_regtest() -> Self {
+                Self::ElementsRegtest {
+                    policy_asset: *LIQUID_REGTEST_POLICY_ASSET,
+                }
+            }
+        }
+
+        // Mainnet hash
+        let mut hasher = DefaultHasher::new();
+        let network = Network::Liquid;
+        network.hash(&mut hasher);
+        assert_eq!(13646096770106105413, hasher.finish());
+
+        let mut hasher = DefaultHasher::new();
+        let network = ElementsNetwork::Liquid;
+        network.hash(&mut hasher);
+        assert_eq!(13646096770106105413, hasher.finish());
+
+        // Testnet hash
+        let mut hasher = DefaultHasher::new();
+        let network = Network::TestnetLiquid;
+        network.hash(&mut hasher);
+        assert_eq!(2206609067086327257, hasher.finish());
+
+        let mut hasher = DefaultHasher::new();
+        let network = ElementsNetwork::LiquidTestnet;
+        network.hash(&mut hasher);
+        assert_eq!(2206609067086327257, hasher.finish());
+
+        // Default regtest hash
+        let mut hasher = DefaultHasher::new();
+        let network = Network::default_regtest();
+        network.hash(&mut hasher);
+        assert_eq!(16314752282728042941, hasher.finish());
+
+        let mut hasher = DefaultHasher::new();
+        let network = ElementsNetwork::default_regtest();
+        network.hash(&mut hasher);
+        assert_eq!(16314752282728042941, hasher.finish());
     }
 }

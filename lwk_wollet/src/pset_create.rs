@@ -9,7 +9,7 @@ use crate::hashes::Hash;
 use crate::model::{Recipient, WalletTxOut};
 use crate::tx_builder::add_input_inner;
 use crate::wollet::Wollet;
-use crate::ElementsNetwork;
+use crate::Network;
 use elements::pset::elip100::{AssetMetadata, TokenMetadata};
 use std::collections::HashMap;
 
@@ -211,7 +211,7 @@ fn convert_pubkey(pk: crate::elements::secp256k1_zkp::PublicKey) -> BitcoinPubli
     BitcoinPublicKey::new(pk)
 }
 
-pub(crate) fn validate_address(address: &str, network: ElementsNetwork) -> Result<Address, Error> {
+pub(crate) fn validate_address(address: &str, network: Network) -> Result<Address, Error> {
     let params = network.address_params();
     let address = Address::parse_with_params(address, params)?;
     if address.blinding_pubkey.is_none() {
@@ -222,19 +222,17 @@ pub(crate) fn validate_address(address: &str, network: ElementsNetwork) -> Resul
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        pset_create::validate_address, ElementsNetwork, Update, WolletBuilder, WolletDescriptor,
-    };
+    use crate::{pset_create::validate_address, Network, Update, WolletBuilder, WolletDescriptor};
 
     use super::*;
     #[test]
     fn test_validate() {
         let testnet_address = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
-        let network = ElementsNetwork::LiquidTestnet;
+        let network = Network::TestnetLiquid;
         let addr = validate_address(testnet_address, network).unwrap();
         assert_eq!(addr.to_string(), testnet_address);
 
-        let network = ElementsNetwork::Liquid;
+        let network = Network::Liquid;
         assert!(validate_address(testnet_address, network).is_err())
     }
 
@@ -278,7 +276,7 @@ mod test {
         let descriptor = lwk_test_util::wollet_descriptor_many_transactions();
         let descriptor: WolletDescriptor = descriptor.parse().unwrap();
         let update = Update::deserialize(&update).unwrap();
-        let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, descriptor)
+        let mut wollet = WolletBuilder::new(Network::TestnetLiquid, descriptor)
             .build()
             .unwrap();
         wollet.apply_update(update).unwrap();

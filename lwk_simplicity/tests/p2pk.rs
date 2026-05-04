@@ -29,7 +29,7 @@ use common::*;
 fn test_simplicity_p2pk() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let common_network = env.elementsd_network();
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let params = network.address_params();
     let signer = generate_signer();
     let mut client = electrum_client(&env);
@@ -136,7 +136,7 @@ fn test_simplicity_mixed_p2pk() {
     // Pay fees in LBTC from a wpkh wollet
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let common_network = env.elementsd_network();
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let params = network.address_params();
     let mut client = electrum_client(&env);
     let lbtc = network.policy_asset();
@@ -203,7 +203,7 @@ fn test_simplicity_mixed_p2pk() {
     let details = w_w.get_details(&pset).unwrap();
     let fee = details.balance.fee;
     assert_eq!(details.balance.balances.len(), 1);
-    assert_eq!(*details.balance.balances.get(&lbtc).unwrap(), -(fee as i64));
+    assert_eq!(*details.balance.balances.get(lbtc).unwrap(), -(fee as i64));
 
     // Sign the wpkh input and finalize the PSET
     signer_w.sign(&mut pset).unwrap();
@@ -251,5 +251,5 @@ fn test_simplicity_mixed_p2pk() {
     assert!(w_s.explicit_utxos().unwrap().is_empty());
     assert!(w_s.utxos().unwrap().is_empty());
 
-    assert_eq!(*w_w.balance().unwrap().get(&lbtc).unwrap(), sats_fund - fee);
+    assert_eq!(*w_w.balance().unwrap().get(lbtc).unwrap(), sats_fund - fee);
 }

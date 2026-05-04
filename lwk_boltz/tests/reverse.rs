@@ -23,7 +23,7 @@ mod tests {
         clients::{AnyClient, ElectrumClient},
         BoltzSession, InvoiceDataSerializable, SwapAsset, SwapPersistence,
     };
-    use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
+    use lwk_wollet::{elements, secp256k1::rand::thread_rng, Network};
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
@@ -34,7 +34,7 @@ mod tests {
                 DEFAULT_REGTEST_NODE,
                 false,
                 false,
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
             )
             .unwrap(),
         );
@@ -50,7 +50,7 @@ mod tests {
 
         // Start concurrent block mining task
         let _mining_handle = utils::start_block_mining();
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
@@ -178,7 +178,7 @@ mod tests {
         let _ = env_logger::try_init();
 
         let _mining_handle = utils::start_block_mining();
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
@@ -232,7 +232,7 @@ mod tests {
 
         // Start concurrent block mining task
         let mining_handle = utils::start_block_mining();
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
@@ -297,7 +297,7 @@ mod tests {
                 DEFAULT_REGTEST_NODE,
                 false,
                 false,
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
             )
             .unwrap(),
         );
@@ -307,7 +307,7 @@ mod tests {
         .unwrap();
 
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -326,7 +326,7 @@ mod tests {
         drop(invoice_response);
         drop(session);
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -361,7 +361,7 @@ mod tests {
                 DEFAULT_REGTEST_NODE,
                 false,
                 false,
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
             )
             .unwrap(),
         );
@@ -371,7 +371,7 @@ mod tests {
         .unwrap();
 
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -397,7 +397,7 @@ mod tests {
         drop(session);
 
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -441,7 +441,7 @@ mod tests {
                 DEFAULT_REGTEST_NODE,
                 false,
                 false,
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
             )
             .unwrap(),
         );
@@ -452,7 +452,7 @@ mod tests {
 
         let session_fn = || {
             BoltzSession::builder(
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
                 AnyClient::Electrum(client.clone()),
             )
             .create_swap_timeout(TIMEOUT)
@@ -510,7 +510,7 @@ mod tests {
                 DEFAULT_REGTEST_NODE,
                 false,
                 false,
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
             )
             .unwrap(),
         );
@@ -520,7 +520,7 @@ mod tests {
         .unwrap();
 
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -540,7 +540,7 @@ mod tests {
         drop(invoice_response);
         drop(session);
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -576,7 +576,7 @@ mod tests {
                 DEFAULT_REGTEST_NODE,
                 false,
                 false,
-                ElementsNetwork::default_regtest(),
+                Network::default_regtest(),
             )
             .unwrap(),
         );
@@ -589,7 +589,7 @@ mod tests {
         let store = Arc::new(lwk_common::MemoryStore::new());
 
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -610,7 +610,7 @@ mod tests {
         )
         .unwrap();
         let session2 = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -664,7 +664,7 @@ mod tests {
 
         // Create a new session with the same store
         let session = BoltzSession::builder(
-            ElementsNetwork::default_regtest(),
+            Network::default_regtest(),
             AnyClient::Electrum(client.clone()),
         )
         .create_swap_timeout(TIMEOUT)
@@ -730,7 +730,7 @@ mod tests {
 
         // Start concurrent block mining task
         let _mining_handle = utils::start_block_mining();
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client = ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
 
         let session = BoltzSession::builder(network, AnyClient::Electrum(Arc::new(client)))

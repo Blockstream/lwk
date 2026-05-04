@@ -14,7 +14,7 @@ mod tests {
         clients::{AnyClient, ElectrumClient},
         BoltzSession, Error,
     };
-    use lwk_wollet::{elements, ElementsNetwork};
+    use lwk_wollet::{elements, Network};
 
     /// Test Magic Routing Hints: A Boltz wallet pays another Boltz wallet's invoice
     /// directly on-chain without performing a swap
@@ -25,7 +25,7 @@ mod tests {
 
         // Start concurrent block mining task
         let _mining_handle = utils::start_block_mining();
-        let network = ElementsNetwork::default_regtest();
+        let network = Network::default_regtest();
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 

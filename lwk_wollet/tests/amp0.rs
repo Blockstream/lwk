@@ -92,10 +92,10 @@ fn test_amp0_setup() -> Result<(), Box<dyn std::error::Error>> {
 #[rustfmt::skip] // our priority here is that generated docs renders nicely
 fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
     // ANCHOR: amp0-daily-ops
-    use lwk_common::{Network, Signer};
+    use lwk_common::Signer;
     use lwk_signer::SwSigner;
     use lwk_wollet::amp0::{blocking::Amp0, Amp0Pset};
-    use lwk_wollet::{clients::blocking::EsploraClient, ElementsNetwork, WolletBuilder};
+    use lwk_wollet::{clients::blocking::EsploraClient, Network, WolletBuilder};
 
     // Signer
     let mnemonic = "<mnemonic>";
@@ -115,17 +115,17 @@ fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create AMP0 Wollet
     let wd = amp0.wollet_descriptor();
-    let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, wd).build()?;
+    let mut wollet = WolletBuilder::new(Network::TestnetLiquid, wd).build()?;
 
     // Get a new address
     let addr = amp0.address(None);
 
     // Update the wallet with (new) blockchain data
     let url = "https://blockstream.info/liquidtestnet/api";
-    let mut client = EsploraClient::new(url, ElementsNetwork::LiquidTestnet)?;
+    let mut client = EsploraClient::new(url, Network::TestnetLiquid)?;
     // esplora is too slow // ANCHOR: ignore
     let url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"; // ANCHOR: ignore
-    let mut client = EsploraClient::new_waterfalls(url, ElementsNetwork::LiquidTestnet)?; // ANCHOR: ignore
+    let mut client = EsploraClient::new_waterfalls(url, Network::TestnetLiquid)?; // ANCHOR: ignore
     if let Some(update) = client.full_scan_to_index(&wollet, amp0.last_index())? {
         wollet.apply_update(update)?;
     }

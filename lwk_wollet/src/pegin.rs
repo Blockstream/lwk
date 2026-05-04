@@ -8,7 +8,7 @@ use elements::{bitcoin, BlockHeader};
 ///
 /// For example in liquid only headers with `(height % 20160) == 0` contains full parameters
 #[cfg(not(target_arch = "wasm32"))]
-fn height_with_fed_peg_script(network: crate::ElementsNetwork, current_tip: u32) -> u32 {
+fn height_with_fed_peg_script(network: crate::Network, current_tip: u32) -> u32 {
     // GetValidFedpegScripts # function in elements codebase for valid pegin scripts
 
     (current_tip / network.dynamic_epoch_length()) * network.dynamic_epoch_length()
@@ -29,7 +29,7 @@ pub fn fed_peg_script(header: &BlockHeader) -> Option<bitcoin::ScriptBuf> {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn fetch_last_full_header<B: crate::clients::blocking::BlockchainBackend>(
     client: &B,
-    network: crate::ElementsNetwork,
+    network: crate::Network,
     current_tip: u32,
 ) -> Result<BlockHeader, crate::Error> {
     let height = height_with_fed_peg_script(network, current_tip);
@@ -41,7 +41,7 @@ pub fn fetch_last_full_header<B: crate::clients::blocking::BlockchainBackend>(
 
 #[cfg(test)]
 mod test {
-    use crate::ElementsNetwork;
+    use crate::Network;
 
     use super::{fed_peg_script, height_with_fed_peg_script};
 
@@ -51,7 +51,7 @@ mod test {
     #[test]
     fn test_height_with_fed_peg_script() {
         assert_eq!(
-            height_with_fed_peg_script(ElementsNetwork::Liquid, 2_963_521),
+            height_with_fed_peg_script(Network::Liquid, 2_963_521),
             2_963_520
         );
     }

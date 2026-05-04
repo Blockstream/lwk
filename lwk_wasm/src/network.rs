@@ -1,6 +1,5 @@
 use crate::{AssetId, EsploraClient, TxBuilder};
 
-use lwk_wollet::elements;
 use lwk_wollet::elements::hex::ToHex;
 
 use wasm_bindgen::prelude::*;
@@ -25,44 +24,6 @@ impl std::fmt::Display for Network {
 impl From<lwk_common::Network> for Network {
     fn from(inner: lwk_common::Network) -> Self {
         Self { inner }
-    }
-}
-
-impl From<&Network> for lwk_wollet::ElementsNetwork {
-    fn from(value: &Network) -> Self {
-        match value.inner {
-            lwk_common::Network::Liquid => lwk_wollet::ElementsNetwork::Liquid,
-            lwk_common::Network::TestnetLiquid => lwk_wollet::ElementsNetwork::LiquidTestnet,
-            lwk_common::Network::CustomElements(_) => {
-                lwk_wollet::ElementsNetwork::ElementsRegtest {
-                    policy_asset: *value.inner.policy_asset(),
-                }
-            }
-        }
-    }
-}
-
-impl From<lwk_wollet::ElementsNetwork> for Network {
-    fn from(value: lwk_wollet::ElementsNetwork) -> Self {
-        match value {
-            lwk_wollet::ElementsNetwork::Liquid => lwk_common::Network::Liquid.into(),
-            lwk_wollet::ElementsNetwork::LiquidTestnet => lwk_common::Network::TestnetLiquid.into(),
-            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset } => {
-                lwk_common::Network::CustomElements(
-                    lwk_common::ElementsParamsBuilder::new()
-                        .with_policy_asset(policy_asset)
-                        .build()
-                        .expect("static"),
-                )
-                .into()
-            }
-        }
-    }
-}
-
-impl From<Network> for lwk_wollet::ElementsNetwork {
-    fn from(value: Network) -> Self {
-        (&value).into()
     }
 }
 
@@ -104,15 +65,7 @@ impl Network {
     /// Creates the default regtest `Network` with the policy asset `5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225`
     #[wasm_bindgen(js_name = regtestDefault)]
     pub fn regtest_default() -> Network {
-        let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-        let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
-        lwk_common::Network::CustomElements(
-            lwk_common::ElementsParamsBuilder::new()
-                .with_policy_asset(policy_asset)
-                .build()
-                .expect("static"),
-        )
-        .into()
+        lwk_common::Network::default_regtest().into()
     }
 
     /// Return the default esplora client for this network

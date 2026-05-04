@@ -64,7 +64,7 @@ fn test_prune() {
     let mut client = test_client_electrum(&env.electrum_url());
     let tmp_dir = tempfile::TempDir::new().unwrap();
 
-    let network = ElementsNetwork::default_regtest();
+    let network = Network::default_regtest();
     let wd: WolletDescriptor = desc.parse().unwrap();
     let mut w_prune_wit = WolletBuilder::new(network, wd)
         .with_legacy_fs_store(&tmp_dir)

@@ -270,12 +270,12 @@ mod tests {
     fn test_boltz_store_fs() {
         use crate::{clients::EsploraClient, AnyClient, BoltzSessionBuilder};
         use lwk_common::FileStore;
+        use lwk_common::Network;
         use lwk_signer::SwSigner;
         use lwk_wollet::clients::asyncr::EsploraClientBuilder;
-        use lwk_wollet::ElementsNetwork;
         use std::path::PathBuf;
 
-        let network = ElementsNetwork::Liquid;
+        let network = Network::Liquid;
 
         let url = "https://waterfalls.liquidwebwallet.org/liquid/api";
         let client = EsploraClientBuilder::new(url, network)

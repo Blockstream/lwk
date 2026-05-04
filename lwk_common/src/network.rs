@@ -214,6 +214,11 @@ impl core::hash::Hash for Network {
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        collections::hash_map::DefaultHasher,
+        hash::{Hash, Hasher},
+    };
+
     use super::*;
 
     #[test]
@@ -246,5 +251,56 @@ mod tests {
             Network::default_regtest().genesis_hash().to_string(),
             "00902a6b70c2ca83b5d9c815d96a0e2f4202179316970d14ea1847dae5b1ca21"
         );
+    }
+
+    #[test]
+    fn test_hash_regression() {
+        #[derive(Hash)]
+        pub enum ElementsNetwork {
+            Liquid,
+            LiquidTestnet,
+            ElementsRegtest { policy_asset: AssetId },
+        }
+
+        impl ElementsNetwork {
+            fn default_regtest() -> Self {
+                Self::ElementsRegtest {
+                    policy_asset: *LIQUID_REGTEST_POLICY_ASSET,
+                }
+            }
+        }
+
+        // Mainnet hash
+        let mut hasher = DefaultHasher::new();
+        let network = Network::Liquid;
+        network.hash(&mut hasher);
+        assert_eq!(13646096770106105413, hasher.finish());
+
+        let mut hasher = DefaultHasher::new();
+        let network = ElementsNetwork::Liquid;
+        network.hash(&mut hasher);
+        assert_eq!(13646096770106105413, hasher.finish());
+
+        // Testnet hash
+        let mut hasher = DefaultHasher::new();
+        let network = Network::TestnetLiquid;
+        network.hash(&mut hasher);
+        assert_eq!(2206609067086327257, hasher.finish());
+
+        let mut hasher = DefaultHasher::new();
+        let network = ElementsNetwork::LiquidTestnet;
+        network.hash(&mut hasher);
+        assert_eq!(2206609067086327257, hasher.finish());
+
+        // Default regtest hash
+        let mut hasher = DefaultHasher::new();
+        let network = Network::default_regtest();
+        network.hash(&mut hasher);
+        assert_eq!(16314752282728042941, hasher.finish());
+
+        let mut hasher = DefaultHasher::new();
+        let network = ElementsNetwork::default_regtest();
+        network.hash(&mut hasher);
+        assert_eq!(16314752282728042941, hasher.finish());
     }
 }

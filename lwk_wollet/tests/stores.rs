@@ -121,8 +121,8 @@ fn fake_persisted_txs_store_restore_breaks_reload() {
 
     let env = TestEnvBuilder::from_env().with_electrum().build();
 
-    let network = ElementsNetwork::default_regtest();
-    let lbtc = network.policy_asset();
+    let network = Network::default_regtest();
+    let lbtc = *network.policy_asset();
 
     let updates_dir = TempDir::new().unwrap();
     let updates_store = Arc::new(FileStore::new(updates_dir.path().to_path_buf()).unwrap());

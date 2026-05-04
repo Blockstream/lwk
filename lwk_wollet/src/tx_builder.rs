@@ -1281,6 +1281,7 @@ impl TxBuilder {
 /// A PSET and other data that cannot be in the PSET
 pub struct BuiltTx {
     pset: PartiallySignedTransaction,
+    // type is what PartiallySignedTransaction.blind_last() returns
     blind_secrets: BTreeMap<
         elements26::CtLocation,
         (

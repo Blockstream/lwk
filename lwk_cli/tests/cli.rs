@@ -1752,7 +1752,7 @@ fn test_sent_outputs() {
     // TODO: make it easier for the caller
     let url = tx.get("unblinded_url").unwrap().as_str().unwrap();
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-    assert!(!url.contains(&format!("{sats},{policy_asset}")));
+    assert!(url.contains(&format!("{sats},{policy_asset}")));
 
     // TODO: check blinders also for drain, issue, reissue
 

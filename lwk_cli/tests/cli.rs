@@ -1795,7 +1795,7 @@ fn test_sent_outputs() {
     let (asset, token) = asset_ids_from_issuance_pset(&cli, "w", pset);
     let (asset, _token) = (&asset, &token);
     let txid = complete(&cli, "w", pset, signers);
-    check_blinders(&cli, "w", &txid, sats, asset, false);
+    check_blinders(&cli, "w", &txid, sats, asset, true);
 
     // Reissue
     let sats = 1003;

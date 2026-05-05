@@ -1,11 +1,12 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::{
     hashes::Hash,
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
     pset_create::{validate_address, IssuanceRequest, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS},
-    Contract, Error, LiquidexProposal, Network, UnvalidatedRecipient, Wollet, EC,
+    Contract, DownloadTxResult, Error, LiquidexProposal, Network, UnvalidatedRecipient, Update,
+    Wollet, EC,
 };
 use elements::{
     confidential::{AssetBlindingFactor, Nonce, Value, ValueBlindingFactor},
@@ -478,10 +479,7 @@ impl TxBuilder {
     }
 
     /// Finish building a transaction that can be converted to a LiquiDEX proposal
-    fn finish_liquidex_make(
-        self,
-        wollet: &Wollet,
-    ) -> Result<(PartiallySignedTransaction, Vec<String>), Error> {
+    fn finish_liquidex_make(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
         // Create PSET
         let mut pset = PartiallySignedTransaction::new_v2();
         let mut inp_txout_sec = HashMap::new();
@@ -623,14 +621,14 @@ impl TxBuilder {
         wollet.add_details(&mut pset)?;
 
         // TODO: blinding nonces
-        Ok((pset, vec![]))
+        Ok(BuiltTx {
+            pset,
+            blind_secrets: BTreeMap::new(),
+        })
     }
 
     /// Finish building a transaction that takes LiquiDEX proposals
-    fn finish_liquidex_take(
-        self,
-        wollet: &Wollet,
-    ) -> Result<(PartiallySignedTransaction, Vec<String>), Error> {
+    fn finish_liquidex_take(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
         let [proposal] = self.liquidex_proposals.as_slice() else {
             return Err(Error::LiquidexError(LiquidexError::TakerInvalidParams));
         };
@@ -849,27 +847,35 @@ impl TxBuilder {
         wollet.add_details(&mut pset)?;
 
         // TODO: blinding nonces
-        Ok((pset, vec![]))
+        Ok(BuiltTx {
+            pset,
+            blind_secrets: BTreeMap::new(),
+        })
     }
 
     /// Finish building the transaction for AMP0
     #[cfg(feature = "amp0")]
     pub fn finish_for_amp0(self, wollet: &Wollet) -> Result<crate::amp0::Amp0Pset, Error> {
-        let (pset, blinding_nonces) = self.finish_inner(wollet, true)?;
-        crate::amp0::Amp0Pset::new(pset, blinding_nonces)
+        let built_tx = self.finish_inner(wollet)?;
+        built_tx.to_amp0()
     }
 
     /// Finish building the transaction
     pub fn finish(self, wollet: &Wollet) -> Result<PartiallySignedTransaction, Error> {
-        let (pset, _blinding_nonces) = self.finish_inner(wollet, false)?;
+        let BuiltTx { pset, .. } = self.finish_inner(wollet)?;
         Ok(pset)
     }
 
-    fn finish_inner(
-        self,
-        wollet: &Wollet,
-        for_amp0: bool,
-    ) -> Result<(PartiallySignedTransaction, Vec<String>), Error> {
+    /// Build the transaction
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// Alternative to `finish()` that returns more than a PSET.
+    pub fn build(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
+        self.finish_inner(wollet)
+    }
+
+    fn finish_inner(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
         if self.is_liquidex_make {
             return self.finish_liquidex_make(wollet);
         } else if !self.liquidex_proposals.is_empty() {
@@ -1224,50 +1230,80 @@ impl TxBuilder {
 
         // TODO: use the next line once we can use elements26 only
         // let blind_secrets = pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-        let (blind_secrets, mut pset) = if for_amp0 {
-            use elements26::confidential::{
-                AssetBlindingFactor as Abf26, ValueBlindingFactor as Vbf26,
-            };
-            use elements26::pset::PartiallySignedTransaction as Pset26;
-            use std::str::FromStr;
-            let mut pset26 = Pset26::from_str(&pset.to_string()).expect("from elements25");
-            let inp_txout_sec: HashMap<usize, elements26::TxOutSecrets> = inp_txout_sec
-                .iter()
-                .map(|(i, s)| {
-                    let asset = elements26::AssetId::from_slice(s.asset.into_inner().as_ref())
-                        .expect("from elements25");
-                    let abf = Abf26::from_slice(s.asset_bf.into_inner().as_ref())
-                        .expect("from elements25");
-                    let vbf = Vbf26::from_slice(s.value_bf.into_inner().as_ref())
-                        .expect("from elements25");
-                    let value = s.value;
-                    let s = elements26::TxOutSecrets::new(asset, abf, value, vbf);
-                    (*i, s)
-                })
-                .collect();
-            let blind_secrets = pset26
-                .blind_last(&mut rng, &EC, &inp_txout_sec)
-                .map_err(|e| Error::Generic(format!("elements26 blind error: {e}")))?;
-            // erase all non witness utxo surjection and range proofs
-            // this appears to be necessary for pre-segwit inputs
-            for input in pset26.inputs_mut() {
-                if let Some(ref mut tx) = &mut input.non_witness_utxo {
-                    for output in &mut tx.output {
-                        output.witness = Default::default();
-                    }
+        use elements26::confidential::{
+            AssetBlindingFactor as Abf26, ValueBlindingFactor as Vbf26,
+        };
+        use elements26::pset::PartiallySignedTransaction as Pset26;
+        use std::str::FromStr;
+        let mut pset26 = Pset26::from_str(&pset.to_string()).expect("from elements25");
+        let inp_txout_sec: HashMap<usize, elements26::TxOutSecrets> = inp_txout_sec
+            .iter()
+            .map(|(i, s)| {
+                let asset = elements26::AssetId::from_slice(s.asset.into_inner().as_ref())
+                    .expect("from elements25");
+                let abf =
+                    Abf26::from_slice(s.asset_bf.into_inner().as_ref()).expect("from elements25");
+                let vbf =
+                    Vbf26::from_slice(s.value_bf.into_inner().as_ref()).expect("from elements25");
+                let value = s.value;
+                let s = elements26::TxOutSecrets::new(asset, abf, value, vbf);
+                (*i, s)
+            })
+            .collect();
+        let blind_secrets = pset26
+            .blind_last(&mut rng, &EC, &inp_txout_sec)
+            .map_err(|e| Error::Generic(format!("elements26 blind error: {e}")))?;
+        // erase all non witness utxo surjection and range proofs
+        // this appears to be necessary for pre-segwit inputs
+        for input in pset26.inputs_mut() {
+            if let Some(ref mut tx) = &mut input.non_witness_utxo {
+                for output in &mut tx.output {
+                    output.witness = Default::default();
                 }
             }
-            let pset25 = elements::pset::PartiallySignedTransaction::from_str(&pset26.to_string())
-                .expect("from elements25");
-            (blind_secrets, pset25)
-        } else {
-            let blind_secrets = std::collections::BTreeMap::new();
-            pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-            (blind_secrets, pset)
+        }
+        let pset25 = elements::pset::PartiallySignedTransaction::from_str(&pset26.to_string())
+            .expect("from elements25");
+        let mut built_tx = BuiltTx {
+            pset: pset25,
+            blind_secrets,
         };
 
+        // Add details to the pset from our descriptor, like bip32derivation and keyorigin
+        wollet.add_details(&mut built_tx.pset)?;
+
+        Ok(built_tx)
+    }
+}
+
+/// Transaction with metadata
+///
+/// **Experimental**: this API might change without notice.
+///
+/// A PSET and other data that cannot be in the PSET
+pub struct BuiltTx {
+    pset: PartiallySignedTransaction,
+    // type is what PartiallySignedTransaction.blind_last() returns
+    blind_secrets: BTreeMap<
+        elements26::CtLocation,
+        (
+            elements26::confidential::AssetBlindingFactor,
+            elements26::confidential::ValueBlindingFactor,
+            elements::secp256k1_zkp::SecretKey,
+        ),
+    >,
+}
+
+impl BuiltTx {
+    /// Pset
+    pub fn pset(&self) -> &PartiallySignedTransaction {
+        &self.pset
+    }
+
+    /// Blinding nonces
+    pub fn blinding_nonces(&self) -> Result<Vec<String>, Error> {
         let mut m = HashMap::new();
-        for (ct_location, (_abf, _vbf, eph_sk)) in blind_secrets.iter() {
+        for (ct_location, (_abf, _vbf, eph_sk)) in self.blind_secrets.iter() {
             // these are outputs not inputs...
             if let elements26::CtLocation {
                 input_index,
@@ -1279,9 +1315,9 @@ impl TxBuilder {
         }
 
         let mut blinding_nonces = vec![];
-        for idx in 0..pset.n_outputs() {
+        for idx in 0..self.pset.n_outputs() {
             let bn = if let Some(eph_sk) = m.get(&idx) {
-                let blinding_pubkey = pset.outputs()[idx]
+                let blinding_pubkey = self.pset.outputs()[idx]
                     .blinding_key
                     .ok_or_else(|| Error::Generic("Missing blinding key".into()))?;
                 let (_nonce, shared_secret) = elements::confidential::Nonce::with_ephemeral_sk(
@@ -1295,11 +1331,69 @@ impl TxBuilder {
             };
             blinding_nonces.push(bn);
         }
+        Ok(blinding_nonces)
+    }
 
-        // Add details to the pset from our descriptor, like bip32derivation and keyorigin
-        wollet.add_details(&mut pset)?;
+    /// Convert to `Amp0Pset`
+    #[cfg(feature = "amp0")]
+    pub fn to_amp0(self) -> Result<crate::amp0::Amp0Pset, Error> {
+        let blinding_nonces = self.blinding_nonces()?;
+        let BuiltTx { pset, .. } = self;
+        crate::amp0::Amp0Pset::new(pset, blinding_nonces)
+    }
 
-        Ok((pset, blinding_nonces))
+    fn unblinded(&self) -> Result<Vec<(OutPoint, TxOutSecrets)>, Error> {
+        // consider getting txid from global.unsigned_tx if extract_tx errors
+        let txid = self.pset.extract_tx()?.txid();
+        let mut unblinded = vec![];
+        for (ct_location, (abf, vbf, _eph_sk)) in self.blind_secrets.iter() {
+            // these are outputs not inputs...
+            if let elements26::CtLocation {
+                input_index: vout,
+                ty: elements26::CtLocationType::Input,
+            } = ct_location
+            {
+                let abf = AssetBlindingFactor::from_slice(abf.into_inner().as_ref())
+                    .expect("from elements26");
+                let vbf = ValueBlindingFactor::from_slice(vbf.into_inner().as_ref())
+                    .expect("from elements26");
+                let outpoint = OutPoint::new(txid, *vout as u32);
+                let output = self
+                    .pset
+                    .outputs()
+                    .get(*vout)
+                    .ok_or_else(|| Error::Generic("Missing output".into()))?;
+                let asset = output
+                    .asset
+                    .ok_or_else(|| Error::Generic("Missing asset".into()))?;
+                let value = output
+                    .amount
+                    .ok_or_else(|| Error::Generic("Missing amount".into()))?;
+                let txoutsecrets = TxOutSecrets::new(asset, abf, value, vbf);
+                unblinded.push((outpoint, txoutsecrets));
+            }
+        }
+        Ok(unblinded)
+    }
+
+    /// Update to persist the blinder
+    pub fn update(&self, wollet: &Wollet) -> Result<Update, Error> {
+        let unblinds = self.unblinded()?;
+        let update = Update {
+            version: 3,
+            wollet_status: wollet.status(),
+            new_txs: DownloadTxResult {
+                txs: vec![],
+                unblinds,
+            },
+            txid_height_new: vec![],
+            txid_height_delete: vec![],
+            timestamps: vec![],
+            scripts_with_blinding_pubkey: vec![],
+            tip: crate::update::default_blockheader(),
+            unspent: vec![],
+        };
+        Ok(update)
     }
 }
 
@@ -1328,6 +1422,15 @@ impl<'a> WolletTxBuilder<'a> {
     #[cfg(feature = "amp0")]
     pub fn finish_for_amp0(self) -> Result<crate::amp0::Amp0Pset, Error> {
         self.inner.finish_for_amp0(self.wollet)
+    }
+
+    /// Build the transaction
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// Alternative to `finish()` that returns more than a PSET.
+    pub fn build(self) -> Result<BuiltTx, Error> {
+        self.inner.build(self.wollet)
     }
 
     /// Wrapper of [`TxBuilder::add_recipient()`]

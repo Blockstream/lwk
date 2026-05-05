@@ -28,6 +28,8 @@ pub struct Config {
 
     pub amp2_url: String,
     pub amp2_keyorigin_xpub: String,
+
+    pub with_experimental_blinders: bool,
 }
 
 impl Config {
@@ -44,6 +46,7 @@ impl Config {
             scanning_interval: consts::SCANNING_INTERVAL,
             amp2_url: amp2::URL_TESTNET.into(),
             amp2_keyorigin_xpub: amp2::KEYORIGIN_XPUB_TESTNET.into(),
+            with_experimental_blinders: false,
         }
     }
 
@@ -60,6 +63,7 @@ impl Config {
             scanning_interval: consts::SCANNING_INTERVAL,
             amp2_url: "".into(),
             amp2_keyorigin_xpub: "".into(),
+            with_experimental_blinders: false,
         }
     }
 
@@ -79,6 +83,7 @@ impl Config {
             scanning_interval: Duration::from_secs(1),
             amp2_url: "".into(),
             amp2_keyorigin_xpub: "".into(),
+            with_experimental_blinders: false,
         }
     }
 

@@ -1,4 +1,5 @@
 mod amp0;
+mod blinders;
 mod elements_wallet;
 mod fees;
 mod prune;

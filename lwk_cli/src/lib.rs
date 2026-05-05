@@ -82,6 +82,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     scanning_interval,
                     amp2_url,
                     amp2_keyorigin_xpub,
+                    with_experimental_blinders,
                 } => {
                     let (tx, rx) = std::sync::mpsc::channel();
                     let _ = ctrlc::try_set_handler(move || {
@@ -123,6 +124,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     }
 
                     config.addr = addr;
+                    config.with_experimental_blinders = with_experimental_blinders;
                     let mut app = lwk_app::App::new(config)?;
 
                     app.run()?;

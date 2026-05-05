@@ -525,15 +525,6 @@ impl Wollet {
         }
 
         cache.extend_unblinded(new_txs.unblinds);
-        // TODO: migrate all cache mutation to this function
-        cache.update(
-            &txid_height_new,
-            &txid_height_delete,
-            &new_txs.txs,
-            utxo_only,
-            unspent,
-        )?;
-        cache.timestamps.extend(timestamps);
         cache.scripts.extend(
             scripts_with_blinding_pubkey
                 .clone()
@@ -546,6 +537,15 @@ impl Wollet {
                 .into_iter()
                 .map(|(a, b, c, _d)| (c, (a, b))),
         );
+        // TODO: migrate all cache mutation to this function
+        cache.update(
+            &txid_height_new,
+            &txid_height_delete,
+            &new_txs.txs,
+            utxo_only,
+            unspent,
+        )?;
+        cache.timestamps.extend(timestamps);
         let mut last_used_internal = None;
         let mut last_used_external = None;
         // Also include deleted txids: a tx that was seen and then deleted (e.g. a phantom tx

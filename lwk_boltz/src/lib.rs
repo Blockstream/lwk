@@ -873,7 +873,9 @@ pub async fn broadcast_tx_with_retry(
             }
         }
     }
-    Err(Error::RetryBroadcastFailed)
+    Err(Error::RetryBroadcastFailed {
+        swap_id: swap_id.to_string(),
+    })
 }
 
 pub fn verify_invoice_from_offer(invoice: &Bolt12Invoice, offer: &Offer) -> bool {

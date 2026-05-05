@@ -94,8 +94,8 @@ pub enum Error {
     #[error("Swap restoration error: {0}")]
     SwapRestoration(String),
 
-    #[error("Broadcast failed after retrying")]
-    RetryBroadcastFailed,
+    #[error("Broadcast failed after retrying for swap {swap_id}")]
+    RetryBroadcastFailed { swap_id: String },
 
     #[error("Bolt12 (offers) are not yet supported")]
     Bolt12Unsupported,

@@ -292,7 +292,6 @@ impl Cache {
         let txids_new: HashSet<&Txid> = txid_height_new.iter().map(|(txid, _)| txid).collect();
 
         let outputs_new: Vec<(OutPoint, Script)> = self
-            // we're assuming: in unblinded => belongs to wollet
             .unblinded
             .keys()
             .filter(|op| txids_new.contains(&op.txid))
@@ -300,6 +299,7 @@ impl Cache {
                 self.outpoint_script(op, new_txs)
                     .map(|script| (*op, script))
             })
+            .filter(|(_, script)| self.paths.contains_key(script))
             .collect();
 
         let inputs_new: HashSet<OutPoint> = txids_new
@@ -314,12 +314,12 @@ impl Cache {
             // when the resulting update marks its txid as deleted.
             .filter_map(|txid| self.tx_as_fallback(txid, new_txs))
             .flat_map(|tx| tx.input.into_iter().map(|i| i.previous_output))
-            // we're assuming: in unblinded => belongs to wollet
             .filter(|op| self.unblinded.contains_key(op))
             .filter_map(|op| {
                 self.outpoint_script(&op, new_txs)
                     .map(|script| (op, script))
             })
+            .filter(|(_, script)| self.paths.contains_key(script))
             .collect();
 
         // Add outputs of new txs

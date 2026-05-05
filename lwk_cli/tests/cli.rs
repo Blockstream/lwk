@@ -1734,7 +1734,7 @@ fn check_blinders(cli: &str, wallet: &str, txid: &str, sats: u64, asset: &str, c
     // As a temporary workaround we check that the unblinded url contains "sats,asset_id".
     // Ofc this makes sense only if the output we're checking for it's the only one in the tx with that couple.
     // TODO: add a way to get the blinders
-    let tx = tx(cli, wallet, &txid).unwrap();
+    let tx = tx(cli, wallet, txid).unwrap();
     let url = tx.get("unblinded_url").unwrap().as_str().unwrap();
     if contains {
         assert!(url.contains(&format!("{sats},{asset}")));

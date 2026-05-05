@@ -1812,7 +1812,7 @@ fn test_sent_outputs() {
     let r = sh(&format!("{cli} wallet pset-details -w w -p {pset}"));
     let fee = r.get("fee").unwrap().as_u64().unwrap();
     let txid = complete(&cli, "w", pset, signers);
-    check_blinders(&cli, "w", &txid, sats - fee, policy_asset, false);
+    check_blinders(&cli, "w", &txid, sats - fee, policy_asset, true);
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

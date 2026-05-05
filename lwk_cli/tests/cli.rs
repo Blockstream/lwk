@@ -1728,10 +1728,26 @@ fn test_esplora_waterfalls_backend() {
     t.join().unwrap();
 }
 
+fn check_blinders(cli: &str, wallet: &str, txid: &str, sats: u64, asset: &str, contains: bool) {
+    // Here we want to check if we have the blinders for an output.
+    // ATM for sent outputs, there is no easy/clean way.
+    // As a temporary workaround we check that the unblinded url contains "sats,asset_id".
+    // Ofc this makes sense only if the output we're checking for it's the only one in the tx with that couple.
+    // TODO: add a way to get the blinders
+    let tx = tx(cli, wallet, &txid).unwrap();
+    let url = tx.get("unblinded_url").unwrap().as_str().unwrap();
+    if contains {
+        assert!(url.contains(&format!("{sats},{asset}")));
+    } else {
+        assert!(!url.contains(&format!("{sats},{asset}")));
+    }
+}
+
 #[test]
 fn test_sent_outputs() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let (t, _tmp, cli, params, env) = setup_cli(env);
+    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
 
     sw_signer(&cli, "sw");
     singlesig_wallet(&cli, "w", "sw", "slip77", "wpkh");
@@ -1745,14 +1761,7 @@ fn test_sent_outputs() {
         "{cli} wallet send -w w --recipient {node_address}:{sats}"
     ));
     let txid = complete(&cli, "w", get_str(&r, "pset"), signers);
-
-    // Here we want to check that we have blinders for all outputs
-    let tx_ = tx(&cli, "w", &txid).unwrap();
-    // Currently the only way to check if the wallet has blinders is from the unblinded url
-    // TODO: make it easier for the caller
-    let url = tx_.get("unblinded_url").unwrap().as_str().unwrap();
-    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-    assert!(!url.contains(&format!("{sats},{policy_asset}")));
+    check_blinders(&cli, "w", &txid, sats, policy_asset, false);
 
     // TODO: check blinders also for drain, issue, reissue
 
@@ -1775,14 +1784,7 @@ fn test_sent_outputs() {
         "{cli} wallet send -w w --recipient {node_address}:{sats}"
     ));
     let txid = complete(&cli, "w", get_str(&r, "pset"), signers);
-
-    // Here we want to check that we have blinders for all outputs
-    let tx_ = tx(&cli, "w", &txid).unwrap();
-    // Currently the only way to check if the wallet has blinders is from the unblinded url
-    // TODO: make it easier for the caller
-    let url = tx_.get("unblinded_url").unwrap().as_str().unwrap();
-    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-    assert!(url.contains(&format!("{sats},{policy_asset}")));
+    check_blinders(&cli, "w", &txid, sats, policy_asset, true);
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

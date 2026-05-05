@@ -10,6 +10,9 @@ pub enum LwkError {
     #[error("{msg}")]
     Generic { msg: String },
 
+    #[error("[swap:{swap_id}] {msg}")]
+    GenericWithSwapId { msg: String, swap_id: String },
+
     #[error("Poison error: {msg}")]
     PoisonError { msg: String },
 
@@ -331,6 +334,7 @@ impl From<elements::hashes::FromSliceError> for LwkError {
 #[cfg(feature = "lightning")]
 impl From<lwk_boltz::Error> for LwkError {
     fn from(value: lwk_boltz::Error) -> Self {
+        let msg = format!("{value:?}");
         match value {
             lwk_boltz::Error::MagicRoutingHint {
                 address,
@@ -344,13 +348,48 @@ impl From<lwk_boltz::Error> for LwkError {
             lwk_boltz::Error::Expired { swap_id, status } => {
                 LwkError::SwapExpired { swap_id, status }
             }
+            lwk_boltz::Error::UnexpectedUpdate { ref swap_id, .. } => LwkError::GenericWithSwapId {
+                msg,
+                swap_id: swap_id.clone(),
+            },
+            lwk_boltz::Error::MissingInvoiceInResponse(ref swap_id) => {
+                LwkError::GenericWithSwapId {
+                    msg,
+                    swap_id: swap_id.clone(),
+                }
+            }
+            lwk_boltz::Error::InvoiceWithoutMagicRoutingHint(ref swap_id) => {
+                LwkError::GenericWithSwapId {
+                    msg,
+                    swap_id: swap_id.clone(),
+                }
+            }
+            lwk_boltz::Error::Timeout(ref swap_id) => LwkError::GenericWithSwapId {
+                msg,
+                swap_id: swap_id.clone(),
+            },
+            lwk_boltz::Error::SwapRestoration {
+                swap_id: Some(ref swap_id),
+                ..
+            } => LwkError::GenericWithSwapId {
+                msg,
+                swap_id: swap_id.clone(),
+            },
+            lwk_boltz::Error::RetryBroadcastFailed { ref swap_id } => LwkError::GenericWithSwapId {
+                msg,
+                swap_id: swap_id.clone(),
+            },
+            lwk_boltz::Error::FailBuildingRefundTransaction { ref swap_id } => {
+                LwkError::GenericWithSwapId {
+                    msg,
+                    swap_id: swap_id.clone(),
+                }
+            }
             lwk_boltz::Error::NoBoltzUpdate => LwkError::NoBoltzUpdate,
             lwk_boltz::Error::BoltzBackendHttpError { status, error } => {
                 LwkError::BoltzBackendHttpError { status, error }
             }
-            _ => LwkError::Generic {
-                msg: format!("{value:?}"),
-            },
+            _ => LwkError::Generic { msg },
         }
     }
 }

@@ -558,7 +558,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .fee_rate(r.fee_rate);
             let built_tx = builder.build()?;
             if with_experimental_blinders {
-                let update = built_tx.update(&wollet)?;
+                let update = built_tx.update(wollet)?;
                 // this is not a clean approach, we might get a UpdateOnDifferentStatus error...
                 wollet.apply_update(update)?;
             }

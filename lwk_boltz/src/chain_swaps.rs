@@ -353,18 +353,13 @@ async fn fetch_lockup_txid(api: &BoltzApiClientV2, swap_id: &str) -> Option<Stri
             Some(lockup) => Some(lockup.transaction.id),
             None => {
                 log::warn!(
-                    "failed to fetch chain lockup txid for swap {}: server_lock is missing",
-                    swap_id
+                    "[swap:{swap_id}] failed to fetch chain lockup txid: server_lock is missing"
                 );
                 None
             }
         },
         Err(err) => {
-            log::warn!(
-                "failed to fetch chain lockup txid for swap {}: {}",
-                swap_id,
-                err
-            );
+            log::warn!("[swap:{swap_id}] failed to fetch chain lockup txid: {err}");
             None
         }
     }
@@ -580,6 +575,7 @@ impl LockupResponse {
     }
 
     async fn build_and_broadcast_refund(&mut self) -> Result<(), Error> {
+        let swap_id = self.swap_id().to_string();
         sleep(WAIT_TIME).await;
         let tx = self
             .lockup_script
@@ -587,7 +583,7 @@ impl LockupResponse {
                 keys: self.data.refund_keys,
                 output_address: self.data.refund_address.clone(),
                 fee: Fee::Relative(1.0),
-                swap_id: self.swap_id().to_string(),
+                swap_id: swap_id.clone(),
                 chain_client: &self.chain_client,
                 boltz_client: &self.api,
                 options: None,
@@ -595,11 +591,12 @@ impl LockupResponse {
             .await?;
         let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
         self.data.refund_txid = Some(txid.clone());
-        log::info!("Refund transaction broadcasted: {txid}");
+        log::info!("[swap:{swap_id}] Refund transaction broadcasted: {txid}");
         Ok(())
     }
 
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
+        let swap_id = self.swap_id().to_string();
         let update = self.next_status().await?;
         let update_status = update.swap_state()?;
 
@@ -607,20 +604,22 @@ impl LockupResponse {
             SwapState::SwapCreated => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionMempool => {
                 let lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
-                log::info!("User lockup in mempool {lockup_txid:?}");
+                log::info!("[swap:{swap_id}] User lockup in mempool {lockup_txid:?}");
                 self.data.lockup_txid = lockup_txid;
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::TransactionConfirmed => {
                 let lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
-                log::info!("User lockup confirmed {lockup_txid:?}, waiting for server lockup");
+                log::info!(
+                    "[swap:{swap_id}] User lockup confirmed {lockup_txid:?}, waiting for server lockup"
+                );
                 if self.data.lockup_txid.is_none() {
                     self.data.lockup_txid = lockup_txid;
                 }
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::ServerTransactionMempool => {
-                log::info!("Server lockup in mempool");
+                log::info!("[swap:{swap_id}] Server lockup in mempool");
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::ServerTransactionConfirmed => {
@@ -630,17 +629,21 @@ impl LockupResponse {
                 let lockup_tx = if let Some(tx_info) = &update.transaction {
                     match self.claim_script.parse_lockup_transaction(tx_info).await {
                         Ok(tx) => {
-                            log::debug!("Parsed server lockup tx from status update");
+                            log::debug!(
+                                "[swap:{swap_id}] Parsed server lockup tx from status update"
+                            );
                             Some(tx)
                         }
                         Err(e) => {
-                            log::warn!("Failed to parse server lockup tx from status update: {e}, will fetch from chain client");
+                            log::warn!(
+                                "[swap:{swap_id}] Failed to parse server lockup tx from status update: {e}, will fetch from chain client"
+                            );
                             None
                         }
                     }
                 } else {
                     log::debug!(
-                        "No transaction info in status update, will fetch from chain client"
+                        "[swap:{swap_id}] No transaction info in status update, will fetch from chain client"
                     );
                     None
                 };
@@ -657,20 +660,24 @@ impl LockupResponse {
             SwapState::TransactionClaimed => {
                 // Boltz has claimed the user's lockup, but we still need to claim from Boltz's lockup
                 if self.data.lockup_txid.is_none() {
-                    log::warn!("transaction.claimed but lockup_txid is not set, fetching it");
+                    log::warn!(
+                        "[swap:{swap_id}] transaction.claimed but lockup_txid is not set, fetching it"
+                    );
                     self.data.lockup_txid =
                         fetch_lockup_txid(self.api.as_ref(), self.swap_id()).await;
                 }
 
                 // Check if we've already claimed our funds
                 if self.data.claim_txid.is_some() {
-                    log::info!("User already claimed their funds, swap completed successfully");
+                    log::info!(
+                        "[swap:{swap_id}] User already claimed their funds, swap completed successfully"
+                    );
                     Ok(ControlFlow::Break(true))
                 } else {
                     // Boltz has already claimed, so we can't use cooperative claiming
                     // We need to claim via script path instead
                     log::warn!(
-                        "Boltz has already claimed (transaction.claimed), attempting non-cooperative claim via script path"
+                        "[swap:{swap_id}] Boltz has already claimed (transaction.claimed), attempting non-cooperative claim via script path"
                     );
 
                     // Attempt non-cooperative (script path) claim
@@ -680,14 +687,14 @@ impl LockupResponse {
                 }
             }
             SwapState::TransactionLockupFailed => {
-                log::warn!("User lockup failed, performing refund");
+                log::warn!("[swap:{swap_id}] User lockup failed, performing refund");
 
                 self.build_and_broadcast_refund().await?;
                 Ok(ControlFlow::Break(true))
             }
             SwapState::TransactionFailed => {
                 log::warn!(
-                    "Boltz failed server lockup, performing refund. reason: {:?}, details: {:?}",
+                    "[swap:{swap_id}] Boltz failed server lockup, performing refund. reason: {:?}, details: {:?}",
                     update.failure_reason,
                     update.failure_details
                 );
@@ -695,18 +702,18 @@ impl LockupResponse {
                 Ok(ControlFlow::Break(true))
             }
             SwapState::TransactionRefunded => {
-                log::info!("Boltz refunded their stash, we do the same with ours");
+                log::info!("[swap:{swap_id}] Boltz refunded their stash, we do the same with ours");
 
                 self.build_and_broadcast_refund().await?;
                 Ok(ControlFlow::Break(true))
             }
             SwapState::SwapExpired => {
-                log::warn!("Chain swap expired");
+                log::warn!("[swap:{swap_id}] Chain swap expired");
                 // TODO: non-cooperative refund if possible
                 Ok(ControlFlow::Break(false))
             }
             ref e => Err(Error::UnexpectedUpdate {
-                swap_id: self.swap_id().to_string(),
+                swap_id,
                 status: e.to_string(),
                 last_state: self.data.last_state,
             }),
@@ -748,8 +755,9 @@ impl LockupResponse {
         cooperative: bool,
         lockup_tx: Option<BtcLikeTransaction>,
     ) -> Result<String, Error> {
+        let swap_id = self.swap_id().to_string();
         log::info!(
-            "Claiming on {} chain (cooperative: {})",
+            "[swap:{swap_id}] Claiming on {} chain (cooperative: {})",
             self.chain_to(),
             cooperative
         );
@@ -789,7 +797,7 @@ impl LockupResponse {
                     keys: self.data.claim_keys,
                     output_address: self.data.claim_address.clone(),
                     fee,
-                    swap_id: self.swap_id().to_string(),
+                    swap_id: swap_id.clone(),
                     chain_client: &self.chain_client,
                     boltz_client: &self.api,
                     options: Some(options),
@@ -803,7 +811,9 @@ impl LockupResponse {
             // but BEFORE broadcast_tx (user never gets funds)
             // Only compiled in debug builds, excluded from release builds
             if std::env::var("LWKBOLTZ_TEST_CRASH_AFTER_CONSTRUCT").is_ok() {
-                log::warn!("TEST: Simulating crash AFTER construct_claim, BEFORE broadcast");
+                log::warn!(
+                    "[swap:{swap_id}] TEST: Simulating crash AFTER construct_claim, BEFORE broadcast"
+                );
 
                 return Err(Error::Generic(
                     "Simulated crash after construct_claim for testing".to_string(),
@@ -813,15 +823,19 @@ impl LockupResponse {
 
         let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
         self.data.claim_txid = Some(txid.clone());
-        log::info!("Claim transaction broadcasted successfully: {}", txid);
+        log::info!(
+            "[swap:{swap_id}] Claim transaction broadcasted successfully: {}",
+            txid
+        );
         Ok(txid)
     }
 
     pub async fn complete(mut self) -> Result<bool, Error> {
+        let swap_id = self.swap_id().to_string();
         loop {
             match self.advance().await? {
                 ControlFlow::Continue(update) => {
-                    log::info!("Received update: {}", update.status);
+                    log::info!("[swap:{swap_id}] Received update: {}", update.status);
                 }
                 ControlFlow::Break(success) => {
                     return Ok(success);

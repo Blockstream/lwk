@@ -135,18 +135,21 @@ impl BoltzSession {
             Error::InvoiceWithoutMagicRoutingHint(reverse_resp.id.clone()),
         )?;
 
-        log::debug!("Got Reverse swap response: {reverse_resp:?}");
+        let swap_id = reverse_resp.id.clone();
+        log::debug!("[swap:{swap_id}] Got Reverse swap response: {reverse_resp:?}");
 
         let swap_script =
             SwapScript::reverse_from_swap_resp(chain, &reverse_resp, claim_public_key)?;
-        let swap_id = reverse_resp.id.clone();
-        log::info!("subscribing to swap: {swap_id} webhook:{webhook_str}");
+        log::info!("[swap:{swap_id}] subscribing to swap webhook:{webhook_str}");
         self.ws.subscribe_swap(&swap_id).await?;
         let mut rx = self.ws.updates();
 
         let update = next_status(&mut rx, self.timeout, &swap_id, false).await?;
         let last_state = update.swap_state()?;
-        log::debug!("Waiting for Invoice to be paid: {}", &invoice);
+        log::debug!(
+            "[swap:{swap_id}] Waiting for Invoice to be paid: {}",
+            &invoice
+        );
 
         let store = self.clone_store();
         let response = InvoiceResponse {
@@ -327,11 +330,12 @@ impl InvoiceResponse {
         &mut self,
         update: SwapStatus,
     ) -> Result<ControlFlow<bool, SwapStatus>, Error> {
+        let swap_id = self.swap_id().to_string();
         if self.data.claim_broadcasted {
             return Ok(ControlFlow::Continue(update));
         }
 
-        log::info!("transaction.mempool/confirmed Boltz broadcasted funding tx");
+        log::info!("[swap:{swap_id}] transaction.mempool/confirmed Boltz broadcasted funding tx");
 
         // Parse the lockup transaction from the status update if available.
         // This avoids waiting for the transaction to propagate to the chain client's mempool,
@@ -339,16 +343,20 @@ impl InvoiceResponse {
         let lockup_tx = if let Some(tx_info) = &update.transaction {
             match self.swap_script.parse_lockup_transaction(tx_info).await {
                 Ok(tx) => {
-                    log::debug!("Parsed lockup tx from status update");
+                    log::debug!("[swap:{swap_id}] Parsed lockup tx from status update");
                     Some(tx)
                 }
                 Err(e) => {
-                    log::warn!("Failed to parse lockup tx from status update: {e}, will fetch from chain client");
+                    log::warn!(
+                        "[swap:{swap_id}] Failed to parse lockup tx from status update: {e}, will fetch from chain client"
+                    );
                     None
                 }
             }
         } else {
-            log::debug!("No transaction info in status update, will fetch from chain client");
+            log::debug!(
+                "[swap:{swap_id}] No transaction info in status update, will fetch from chain client"
+            );
             None
         };
 
@@ -376,7 +384,7 @@ impl InvoiceResponse {
                     keys: self.data.our_keys,
                     output_address: self.data.claim_address.to_string(),
                     fee,
-                    swap_id: self.swap_id().to_string(),
+                    swap_id: swap_id.clone(),
                     options: Some(options),
                     chain_client: &self.chain_client,
                     boltz_client: &self.api,
@@ -388,8 +396,8 @@ impl InvoiceResponse {
         self.data.claim_txid = Some(txid);
         self.data.claim_broadcasted = true;
 
-        log::info!("Successfully broadcasted claim tx!");
-        log::debug!("Claim Tx {tx:?}");
+        log::info!("[swap:{swap_id}] Successfully broadcasted claim tx!");
+        log::debug!("[swap:{swap_id}] Claim Tx {tx:?}");
         Ok(ControlFlow::Continue(update))
     }
 
@@ -436,43 +444,46 @@ impl InvoiceResponse {
     }
 
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
+        let swap_id = self.swap_id().to_string();
         let update = self.next_status().await?;
         let update_status = update.swap_state()?;
 
         let flow = match update_status {
             SwapState::SwapCreated => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionDirect => {
-                log::info!("transaction.direct Payer used magic routing hint");
+                log::info!("[swap:{swap_id}] transaction.direct Payer used magic routing hint");
                 Ok(ControlFlow::Break(true))
             }
             SwapState::TransactionMempool => {
                 let lockup_txid = update.transaction.as_ref().map(|e| e.id.clone());
-                log::info!("transaction.mempool Boltz funding tx {lockup_txid:?}");
+                log::info!("[swap:{swap_id}] transaction.mempool Boltz funding tx {lockup_txid:?}");
                 self.data.lockup_txid = lockup_txid;
                 self.handle_claim_transaction_if_necessary(update).await
             }
             SwapState::TransactionConfirmed => {
                 let lockup_txid = update.transaction.as_ref().map(|e| e.id.clone());
-                log::info!("transaction.confirmed Boltz funding tx {lockup_txid:?}");
+                log::info!(
+                    "[swap:{swap_id}] transaction.confirmed Boltz funding tx {lockup_txid:?}"
+                );
                 if self.data.lockup_txid.is_none() {
                     self.data.lockup_txid = lockup_txid;
                 }
                 self.handle_claim_transaction_if_necessary(update).await
             }
             SwapState::InvoiceSettled => {
-                log::info!("invoice.settled Reverse Swap Successful!");
+                log::info!("[swap:{swap_id}] invoice.settled Reverse Swap Successful!");
                 Ok(ControlFlow::Break(true))
             }
             SwapState::SwapExpired => {
-                log::warn!("swap.expired Boltz swap expired");
+                log::warn!("[swap:{swap_id}] swap.expired Boltz swap expired");
                 Ok(ControlFlow::Break(false))
             }
             SwapState::InvoiceExpired => {
-                log::warn!("invoice.expired Boltz invoice expired");
+                log::warn!("[swap:{swap_id}] invoice.expired Boltz invoice expired");
                 Ok(ControlFlow::Break(false))
             }
             ref e => Err(Error::UnexpectedUpdate {
-                swap_id: self.swap_id().to_string(),
+                swap_id,
                 status: e.to_string(),
                 last_state: self.data.last_state,
             }),
@@ -504,10 +515,11 @@ impl InvoiceResponse {
     }
 
     pub async fn complete_pay(mut self) -> Result<bool, Error> {
+        let swap_id = self.swap_id().to_string();
         loop {
             match self.advance().await? {
                 ControlFlow::Continue(update) => {
-                    log::info!("Received update. status:{}", update.status);
+                    log::info!("[swap:{swap_id}] Received update. status:{}", update.status);
                 }
                 ControlFlow::Break(e) => {
                     break Ok(e);

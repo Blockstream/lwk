@@ -130,8 +130,9 @@ impl BoltzSession {
         };
 
         let create_swap_response = self.api.post_swap_req(&create_swap_req).await?;
+        let swap_id = create_swap_response.id.clone();
         log::info!(
-            "accept zero conf: {}",
+            "[swap:{swap_id}] accept zero conf: {}",
             create_swap_response.accept_zero_conf
         );
         let bolt11_amount = invoice.amount_sats()?;
@@ -151,17 +152,16 @@ impl BoltzSession {
             .get_lbtc_to_btc_pair()
             .map(|pair| pair.fees.boltz(bolt11_amount));
 
-        log::info!("Got Swap Response from Boltz server {create_swap_response:?}");
+        log::info!("[swap:{swap_id}] Got Swap Response from Boltz server {create_swap_response:?}");
 
         // Validate for both BOLT11 and BOLT12 (BOLT12 only supported for Liquid)
         validate_submarine_swap(&invoice, &create_swap_response, &refund_public_key, chain)?;
-        log::info!("VALIDATED RESPONSE!");
+        log::info!("[swap:{swap_id}] Validated response!");
 
         let swap_script =
             SwapScript::submarine_from_swap_resp(chain, &create_swap_response, refund_public_key)?;
-        let swap_id = create_swap_response.id.clone();
         log::info!(
-            "Created Swap Script id:{swap_id} swap_script:{swap_script:?} webhook:{webhook_str}"
+            "[swap:{swap_id}] Created Swap Script swap_script:{swap_script:?} webhook:{webhook_str}"
         );
 
         let mut rx = self.ws.updates();
@@ -170,7 +170,7 @@ impl BoltzSession {
         let _update = next_status(&mut rx, self.timeout, &swap_id, false).await?;
 
         log::info!(
-            "Send {} sats to {} address {} or use uri {}",
+            "[swap:{swap_id}] Send {} sats to {} address {} or use uri {}",
             create_swap_response.expected_amount,
             chain,
             create_swap_response.address,
@@ -281,11 +281,7 @@ async fn fetch_lockup_txid(api: &BoltzApiClientV2, swap_id: &str) -> Option<Stri
     match api.get_submarine_tx(swap_id).await {
         Ok(tx) => Some(tx.id),
         Err(err) => {
-            log::warn!(
-                "failed to fetch submarine txid for swap {}: {}",
-                swap_id,
-                err
-            );
+            log::warn!("[swap:{swap_id}] failed to fetch submarine txid: {err}");
             None
         }
     }
@@ -430,7 +426,8 @@ impl PreparePayResponse {
         &self,
         update: SwapStatus,
     ) -> Result<ControlFlow<bool, SwapStatus>, Error> {
-        log::info!("submarine_cooperative_claim");
+        let swap_id = self.swap_id().to_string();
+        log::info!("[swap:{swap_id}] submarine_cooperative_claim");
 
         let invoice_str = if let Some(bolt11) = &self.data.bolt11_invoice {
             Some(bolt11.to_string())
@@ -442,7 +439,6 @@ impl PreparePayResponse {
         };
 
         if let Some(invoice_str) = invoice_str {
-            let swap_id = self.swap_id().to_string();
             let response = self
                 .swap_script
                 .submarine_cooperative_claim(&swap_id, &self.data.our_keys, &invoice_str, &self.api)
@@ -450,14 +446,18 @@ impl PreparePayResponse {
 
             match response {
                 Ok(val) => {
-                    log::info!("succesfully sent submarine cooperative claim, response: {val:?}");
+                    log::info!(
+                        "[swap:{swap_id}] succesfully sent submarine cooperative claim, response: {val:?}"
+                    );
                     Ok(ControlFlow::Continue(update))
                 }
                 Err(e) => {
                     if e.to_string()
                         .contains("swap not eligible for a cooperative claim")
                     {
-                        log::info!("swap not eligible for a cooperative claim, too small, boltz decision, we did our best");
+                        log::info!(
+                            "[swap:{swap_id}] swap not eligible for a cooperative claim, too small, boltz decision, we did our best"
+                        );
                         Ok(ControlFlow::Break(true))
                     } else {
                         Err(e.into())
@@ -472,6 +472,7 @@ impl PreparePayResponse {
     }
 
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
+        let swap_id = self.swap_id().to_string();
         let update = self.next_status().await?;
         let update_status = update.swap_state()?;
 
@@ -479,12 +480,14 @@ impl PreparePayResponse {
             SwapState::InvoiceSet => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionMempool => {
                 let lockup_txid = update.transaction.as_ref().map(|tx| tx.id.clone());
-                log::info!("transaction.mempool Boltz broadcasted funding tx {lockup_txid:?}");
+                log::info!(
+                    "[swap:{swap_id}] transaction.mempool Boltz broadcasted funding tx {lockup_txid:?}"
+                );
                 self.data.lockup_txid = lockup_txid;
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::InvoiceFailedToPay => {
-                log::warn!("invoice.failedToPay Boltz failed to pay the invoice");
+                log::warn!("[swap:{swap_id}] invoice.failedToPay Boltz failed to pay the invoice");
                 let addr = self.uri_address()?;
                 let utxo = self
                     .chain_client
@@ -499,23 +502,29 @@ impl PreparePayResponse {
                         let tx = self.make_refund_tx_with_retry().await?;
                         let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
                         self.data.refund_txid = Some(txid.clone());
-                        log::info!("Cooperative Refund Successfully broadcasted: {txid}");
+                        log::info!(
+                            "[swap:{swap_id}] Cooperative Refund Successfully broadcasted: {txid}"
+                        );
                         Ok(ControlFlow::Break(true))
                     }
                     None => {
                         // No UTXO found, funds were not sent, consider the swap failed but completed
-                        log::warn!("No UTXO found at address, invoice payment failed without funds being sent");
+                        log::warn!(
+                            "[swap:{swap_id}] No UTXO found at address, invoice payment failed without funds being sent"
+                        );
                         Ok(ControlFlow::Break(false))
                     }
                 }
             }
             SwapState::TransactionLockupFailed => {
-                log::warn!("transaction.lockupFailed Boltz failed to lockup funding tx");
+                log::warn!(
+                    "[swap:{swap_id}] transaction.lockupFailed Boltz failed to lockup funding tx"
+                );
                 let tx = self.make_refund_tx_with_retry().await?;
 
                 let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
                 self.data.refund_txid = Some(txid.clone());
-                log::info!("Cooperative Refund Successfully broadcasted: {txid}");
+                log::info!("[swap:{swap_id}] Cooperative Refund Successfully broadcasted: {txid}");
 
                 Ok(ControlFlow::Break(true))
             }
@@ -525,22 +534,24 @@ impl PreparePayResponse {
             SwapState::InvoicePaid => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionClaimed => {
                 if self.data.lockup_txid.is_none() {
-                    log::warn!("transaction.claimed Boltz claimed funding tx but lockup_txid is not set, fetching it");
+                    log::warn!(
+                        "[swap:{swap_id}] transaction.claimed Boltz claimed funding tx but lockup_txid is not set, fetching it"
+                    );
                     self.data.lockup_txid =
                         fetch_lockup_txid(self.api.as_ref(), self.swap_id()).await;
                 }
-                log::info!("transaction.claimed Boltz claimed funding tx");
+                log::info!("[swap:{swap_id}] transaction.claimed Boltz claimed funding tx");
                 Ok(ControlFlow::Break(true))
             }
             SwapState::SwapExpired => {
-                log::warn!("swap.expired Boltz swap expired");
+                log::warn!("[swap:{swap_id}] swap.expired Boltz swap expired");
 
                 // TODO: Non cooperative refund if needed
 
                 Ok(ControlFlow::Break(false))
             }
             ref e => Err(Error::UnexpectedUpdate {
-                swap_id: self.swap_id().to_string(),
+                swap_id,
                 status: e.to_string(),
                 last_state: self.data.last_state,
             }),
@@ -574,13 +585,14 @@ impl PreparePayResponse {
     async fn make_refund_tx_with_retry(
         &mut self,
     ) -> Result<boltz_client::swaps::BtcLikeTransaction, Error> {
+        let swap_id = self.swap_id().to_string();
         for _ in 0..5 {
             match self.make_refund_tx().await {
                 Ok(tx) => {
                     return Ok(tx);
                 }
                 Err(e) => {
-                    log::warn!("Failed to make refund tx {e:?}, retrying...");
+                    log::warn!("[swap:{swap_id}] Failed to make refund tx {e:?}, retrying...");
                     sleep(Duration::from_secs(1)).await;
                 }
             }
@@ -604,10 +616,11 @@ impl PreparePayResponse {
     }
 
     pub async fn complete_pay(mut self) -> Result<bool, Error> {
+        let swap_id = self.swap_id().to_string();
         loop {
             match self.advance().await? {
                 ControlFlow::Continue(update) => {
-                    log::info!("Received update. status:{}", update.status);
+                    log::info!("[swap:{swap_id}] Received update. status:{}", update.status);
                 }
                 ControlFlow::Break(e) => {
                     break Ok(e);

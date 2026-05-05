@@ -179,6 +179,16 @@ pub enum PaymentState {
     Failed,
 }
 
+fn with_swap_context(err: lwk_boltz::Error, swap_id: &str) -> LwkError {
+    match LwkError::from(err) {
+        LwkError::Generic { msg } => LwkError::GenericWithSwapId {
+            msg,
+            swap_id: swap_id.to_string(),
+        },
+        other => other,
+    }
+}
+
 /// Asset type for swap quotes
 #[derive(uniffi::Enum, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SwapAsset {
@@ -776,7 +786,10 @@ impl PreparePayResponse {
     pub fn complete_pay(&self) -> Result<bool, LwkError> {
         let mut lock = self.inner.lock()?;
         let response = lock.take().ok_or(LwkError::ObjectConsumed)?;
-        Ok(response.complete_pay()?)
+        let swap_id = response.swap_id().to_string();
+        response
+            .complete_pay()
+            .map_err(|err| with_swap_context(err, &swap_id))
     }
 
     pub fn swap_id(&self) -> Result<String, LwkError> {
@@ -892,6 +905,7 @@ impl PreparePayResponse {
     pub fn advance(&self) -> Result<PaymentState, LwkError> {
         let mut lock = self.inner.lock()?;
         let mut response = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        let swap_id = response.swap_id().to_string();
         Ok(match response.advance() {
             Ok(ControlFlow::Continue(_update)) => {
                 *lock = Some(response);
@@ -909,7 +923,7 @@ impl PreparePayResponse {
                 *lock = Some(response);
                 return Err(LwkError::NoBoltzUpdate);
             }
-            Err(e) => return Err(e.into()),
+            Err(e) => return Err(with_swap_context(e, &swap_id)),
         })
     }
 }
@@ -998,12 +1012,16 @@ impl InvoiceResponse {
     pub fn complete_pay(&self) -> Result<bool, LwkError> {
         let mut lock = self.inner.lock()?;
         let response = lock.take().ok_or(LwkError::ObjectConsumed)?;
-        Ok(response.complete_pay()?)
+        let swap_id = response.swap_id().to_string();
+        response
+            .complete_pay()
+            .map_err(|err| with_swap_context(err, &swap_id))
     }
 
     pub fn advance(&self) -> Result<PaymentState, LwkError> {
         let mut lock = self.inner.lock()?;
         let mut response = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        let swap_id = response.swap_id().to_string();
         Ok(match response.advance() {
             Ok(ControlFlow::Continue(_update)) => {
                 *lock = Some(response);
@@ -1021,7 +1039,7 @@ impl InvoiceResponse {
                 *lock = Some(response);
                 return Err(LwkError::NoBoltzUpdate);
             }
-            Err(e) => return Err(e.into()),
+            Err(e) => return Err(with_swap_context(e, &swap_id)),
         })
     }
 }
@@ -1172,6 +1190,7 @@ impl LockupResponse {
     pub fn advance(&self) -> Result<PaymentState, LwkError> {
         let mut lock = self.inner.lock()?;
         let mut response = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        let swap_id = response.swap_id().to_string();
         Ok(match response.advance() {
             Ok(ControlFlow::Continue(_update)) => {
                 *lock = Some(response);
@@ -1188,14 +1207,17 @@ impl LockupResponse {
                 *lock = Some(response);
                 return Err(LwkError::NoBoltzUpdate);
             }
-            Err(e) => return Err(e.into()),
+            Err(e) => return Err(with_swap_context(e, &swap_id)),
         })
     }
 
     pub fn complete(&self) -> Result<bool, LwkError> {
         let mut lock = self.inner.lock()?;
         let response = lock.take().ok_or(LwkError::ObjectConsumed)?;
-        Ok(response.complete()?)
+        let swap_id = response.swap_id().to_string();
+        response
+            .complete()
+            .map_err(|err| with_swap_context(err, &swap_id))
     }
 
     pub fn serialize(&self) -> Result<String, LwkError> {

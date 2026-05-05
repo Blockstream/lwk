@@ -91,8 +91,11 @@ pub enum Error {
     #[error("Swap {swap_id} has expired with status {status}")]
     Expired { swap_id: String, status: String },
 
-    #[error("Swap restoration error: {0}")]
-    SwapRestoration(String),
+    #[error("Swap restoration error for swap {swap_id:?}: {msg}")]
+    SwapRestoration {
+        swap_id: Option<String>,
+        msg: String,
+    },
 
     #[error("Broadcast failed after retrying for swap {swap_id}")]
     RetryBroadcastFailed { swap_id: String },

@@ -97,12 +97,15 @@ impl From<ChainSwapData> for ChainSwapDataSerializable {
     }
 }
 
-pub(crate) fn chain_from_str(chain: &str) -> Result<Chain, Error> {
+pub(crate) fn chain_from_str(chain: &str, swap_id: Option<&str>) -> Result<Chain, Error> {
     // Display format of the chain is "BTC" or "L-BTC" for regtest/testnet/mainnet
     match chain {
         "BTC" => Ok(Chain::Bitcoin(BitcoinChain::BitcoinRegtest)),
         "L-BTC" => Ok(Chain::Liquid(LiquidChain::LiquidRegtest)),
-        s => Err(Error::SwapRestoration(format!("Unknown chain: {s}"))),
+        s => Err(Error::SwapRestoration {
+            swap_id: swap_id.map(str::to_owned),
+            msg: format!("Unknown chain: {s}"),
+        }),
     }
 }
 
@@ -124,8 +127,8 @@ pub fn to_chain_data(
             data.mnemonic_identifier,
         ));
     }
-    let from_chain: Chain = chain_from_str(&data.from_chain)?;
-    let to_chain: Chain = chain_from_str(&data.to_chain)?;
+    let from_chain: Chain = chain_from_str(&data.from_chain, Some(&data.create_chain_response.id))?;
+    let to_chain: Chain = chain_from_str(&data.to_chain, Some(&data.create_chain_response.id))?;
     Ok(ChainSwapData {
         last_state: data.last_state,
         swap_type: data.swap_type,

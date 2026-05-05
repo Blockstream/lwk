@@ -254,17 +254,24 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
     match e.swap_type {
         SwapRestoreType::Reverse => {}
         _ => {
-            return Err(Error::SwapRestoration(format!(
-                "Only reverse swaps are supported for restoration, got: {:?}",
-                e.swap_type
-            )))
+            return Err(Error::SwapRestoration {
+                swap_id: Some(e.id.clone()),
+                msg: format!(
+                    "Only reverse swaps are supported for restoration, got: {:?}",
+                    e.swap_type
+                ),
+            })
         }
     }
 
     // Extract claim details (required for reverse swaps)
-    let claim_details: &ClaimDetails = e.claim_details.as_ref().ok_or_else(|| {
-        Error::SwapRestoration(format!("Reverse swap {} is missing claim_details", e.id))
-    })?;
+    let claim_details: &ClaimDetails =
+        e.claim_details
+            .as_ref()
+            .ok_or_else(|| Error::SwapRestoration {
+                swap_id: Some(e.id.clone()),
+                msg: "Reverse swap is missing claim_details".to_string(),
+            })?;
 
     // Derive the keypair from the mnemonic at the key_index
     let our_keys = derive_keypair(claim_details.key_index, mnemonic)?;
@@ -275,7 +282,10 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
     let refund_public_key_bitcoin = lwk_wollet::bitcoin::PublicKey::from_str(
         &claim_details.server_public_key,
     )
-    .map_err(|e| Error::SwapRestoration(format!("Failed to parse server public key: {e}")))?;
+    .map_err(|err| Error::SwapRestoration {
+        swap_id: Some(e.id.clone()),
+        msg: format!("Failed to parse server public key: {err}"),
+    })?;
     let refund_public_key = PublicKey {
         inner: refund_public_key_bitcoin.inner,
         compressed: refund_public_key_bitcoin.compressed,
@@ -294,12 +304,13 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
     };
 
     // Parse the status to SwapState
-    let last_state = e.status.parse::<SwapState>().map_err(|err| {
-        Error::SwapRestoration(format!(
-            "Failed to parse status '{}' as SwapState: {err}",
-            e.status
-        ))
-    })?;
+    let last_state = e
+        .status
+        .parse::<SwapState>()
+        .map_err(|err| Error::SwapRestoration {
+            swap_id: Some(e.id.clone()),
+            msg: format!("Failed to parse status '{}' as SwapState: {err}", e.status),
+        })?;
 
     Ok(InvoiceData {
         last_state,

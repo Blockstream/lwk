@@ -381,22 +381,33 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
     match e.swap_type {
         SwapRestoreType::Chain => {}
         _ => {
-            return Err(Error::SwapRestoration(format!(
-                "Only chain swaps are supported for restoration, got: {:?}",
-                e.swap_type
-            )))
+            return Err(Error::SwapRestoration {
+                swap_id: Some(e.id.clone()),
+                msg: format!(
+                    "Only chain swaps are supported for restoration, got: {:?}",
+                    e.swap_type
+                ),
+            })
         }
     }
 
     // Extract claim details (required for chain swaps - this is boltz's lockup that we claim from)
-    let claim_details = e.claim_details.as_ref().ok_or_else(|| {
-        Error::SwapRestoration(format!("Chain swap {} is missing claim_details", e.id))
-    })?;
+    let claim_details = e
+        .claim_details
+        .as_ref()
+        .ok_or_else(|| Error::SwapRestoration {
+            swap_id: Some(e.id.clone()),
+            msg: "Chain swap is missing claim_details".to_string(),
+        })?;
 
     // Extract refund details (required for chain swaps - this is our lockup)
-    let refund_details = e.refund_details.as_ref().ok_or_else(|| {
-        Error::SwapRestoration(format!("Chain swap {} is missing refund_details", e.id))
-    })?;
+    let refund_details = e
+        .refund_details
+        .as_ref()
+        .ok_or_else(|| Error::SwapRestoration {
+            swap_id: Some(e.id.clone()),
+            msg: "Chain swap is missing refund_details".to_string(),
+        })?;
 
     // Derive the keypairs from the mnemonic at the key indices
     let claim_keys = derive_keypair(claim_details.key_index, mnemonic)?;
@@ -406,13 +417,14 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
     let preimage = preimage_from_keypair(&claim_keys);
 
     // Parse chains from the response
-    let from_chain = chain_from_str(&e.from)?;
-    let to_chain = chain_from_str(&e.to)?;
+    let from_chain = chain_from_str(&e.from, Some(&e.id))?;
+    let to_chain = chain_from_str(&e.to, Some(&e.id))?;
 
     // Parse server public keys
     let claim_server_pubkey_bitcoin = BitcoinPublicKey::from_str(&claim_details.server_public_key)
-        .map_err(|err| {
-            Error::SwapRestoration(format!("Failed to parse claim server public key: {err}"))
+        .map_err(|err| Error::SwapRestoration {
+            swap_id: Some(e.id.clone()),
+            msg: format!("Failed to parse claim server public key: {err}"),
         })?;
     let claim_server_pubkey = PublicKey {
         inner: claim_server_pubkey_bitcoin.inner,
@@ -421,7 +433,10 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
 
     let refund_server_pubkey_bitcoin =
         BitcoinPublicKey::from_str(&refund_details.server_public_key).map_err(|err| {
-            Error::SwapRestoration(format!("Failed to parse refund server public key: {err}"))
+            Error::SwapRestoration {
+                swap_id: Some(e.id.clone()),
+                msg: format!("Failed to parse refund server public key: {err}"),
+            }
         })?;
     let refund_server_pubkey = PublicKey {
         inner: refund_server_pubkey_bitcoin.inner,
@@ -467,12 +482,16 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
     let expected_lockup_amount = create_chain_response.lockup_details.amount;
 
     // Parse the status to SwapState
-    let last_state = e.status.parse::<SwapState>().map_err(|err| {
-        Error::SwapRestoration(format!(
-            "Failed to parse status '{}' as SwapState: {}",
-            e.status, err
-        ))
-    })?;
+    let last_state = e
+        .status
+        .parse::<SwapState>()
+        .map_err(|err| Error::SwapRestoration {
+            swap_id: Some(e.id.clone()),
+            msg: format!(
+                "Failed to parse status '{}' as SwapState: {}",
+                e.status, err
+            ),
+        })?;
 
     Ok(ChainSwapData {
         last_state,

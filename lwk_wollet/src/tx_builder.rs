@@ -1383,7 +1383,6 @@ impl BuiltTx {
             version: 3,
             wollet_status: wollet.status(),
             new_txs: DownloadTxResult {
-                // Add the tx here?
                 txs: vec![],
                 unblinds,
             },

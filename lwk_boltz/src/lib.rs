@@ -862,12 +862,13 @@ pub(crate) fn derive_keypair(index: u32, mnemonic: &Mnemonic) -> Result<Keypair,
 pub async fn broadcast_tx_with_retry(
     chain_client: &ChainClient,
     tx: &boltz_client::swaps::BtcLikeTransaction,
+    swap_id: &str,
 ) -> Result<String, Error> {
     for _ in 0..30 {
         match chain_client.broadcast_tx(tx).await {
             Ok(txid) => return Ok(txid),
             Err(e) => {
-                log::info!("Failed broadcast {e}, retrying in 1 second");
+                log::info!("[swap:{swap_id}] Failed broadcast {e}, retrying in 1 second");
                 sleep(Duration::from_secs(1)).await;
             }
         }

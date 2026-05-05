@@ -589,7 +589,7 @@ impl LockupResponse {
                 options: None,
             })
             .await?;
-        let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
+        let txid = broadcast_tx_with_retry(&self.chain_client, &tx, &swap_id).await?;
         self.data.refund_txid = Some(txid.clone());
         log::info!("[swap:{swap_id}] Refund transaction broadcasted: {txid}");
         Ok(())
@@ -821,7 +821,7 @@ impl LockupResponse {
             }
         }
 
-        let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
+        let txid = broadcast_tx_with_retry(&self.chain_client, &tx, &swap_id).await?;
         self.data.claim_txid = Some(txid.clone());
         log::info!(
             "[swap:{swap_id}] Claim transaction broadcasted successfully: {}",

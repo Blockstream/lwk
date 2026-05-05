@@ -500,7 +500,8 @@ impl PreparePayResponse {
                     Some(_) => {
                         // UTXO exists, make refund transaction
                         let tx = self.make_refund_tx_with_retry().await?;
-                        let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
+                        let txid =
+                            broadcast_tx_with_retry(&self.chain_client, &tx, &swap_id).await?;
                         self.data.refund_txid = Some(txid.clone());
                         log::info!(
                             "[swap:{swap_id}] Cooperative Refund Successfully broadcasted: {txid}"
@@ -522,7 +523,7 @@ impl PreparePayResponse {
                 );
                 let tx = self.make_refund_tx_with_retry().await?;
 
-                let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
+                let txid = broadcast_tx_with_retry(&self.chain_client, &tx, &swap_id).await?;
                 self.data.refund_txid = Some(txid.clone());
                 log::info!("[swap:{swap_id}] Cooperative Refund Successfully broadcasted: {txid}");
 

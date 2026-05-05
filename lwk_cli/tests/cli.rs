@@ -1803,7 +1803,7 @@ fn test_sent_outputs() {
         "{cli} wallet reissue -w w --asset {asset} --satoshi-asset {sats} --address-asset {node_address}"
     ));
     let txid = complete(&cli, "w", get_str(&r, "pset"), signers);
-    check_blinders(&cli, "w", &txid, sats, asset, false);
+    check_blinders(&cli, "w", &txid, sats, asset, true);
 
     // Drain
     let sats = get_balance(&cli, "w", policy_asset);

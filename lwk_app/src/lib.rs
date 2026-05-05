@@ -1071,11 +1071,12 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::WalletReissue => {
             let r: request::WalletReissue = serde_json::from_value(params)?;
             let mut s = state.lock()?;
+            let with_experimental_blinders = s.config.with_experimental_blinders;
             let asset_id = AssetId::from_str(&r.asset)?;
             let issuance_tx = s.get_issuance_tx(&asset_id);
             let wollet = s.wollets.get_mut(&r.name)?;
 
-            let mut pset = wollet
+            let built_tx = wollet
                 .tx_builder()
                 .reissue_asset(
                     asset_id,
@@ -1084,7 +1085,13 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     issuance_tx,
                 )?
                 .fee_rate(r.fee_rate)
-                .finish()?;
+                .build()?;
+            if with_experimental_blinders {
+                let update = built_tx.update(wollet)?;
+                // this is not a clean approach, we might get a UpdateOnDifferentStatus error...
+                wollet.apply_update(update)?;
+            }
+            let mut pset = built_tx.pset().clone();
 
             add_contracts(&mut pset, s.registry_asset_data());
             Response::result(

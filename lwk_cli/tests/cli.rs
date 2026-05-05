@@ -1763,8 +1763,6 @@ fn test_sent_outputs() {
     let txid = complete(&cli, "w", get_str(&r, "pset"), signers);
     check_blinders(&cli, "w", &txid, sats, policy_asset, false);
 
-    // TODO: check blinders also for drain, issue, reissue
-
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 
@@ -1780,11 +1778,41 @@ fn test_sent_outputs() {
     };
     std::thread::sleep(std::time::Duration::from_millis(1000));
 
+    // Send
+    let sats = 1001;
     let r = sh(&format!(
         "{cli} wallet send -w w --recipient {node_address}:{sats}"
     ));
     let txid = complete(&cli, "w", get_str(&r, "pset"), signers);
     check_blinders(&cli, "w", &txid, sats, policy_asset, true);
+
+    // Issue
+    let sats = 1002;
+    let r = sh(&format!(
+        "{cli} wallet issue -w w --satoshi-asset {sats} --address-asset {node_address} --satoshi-token 1"
+    ));
+    let pset = get_str(&r, "pset");
+    let (asset, token) = asset_ids_from_issuance_pset(&cli, "w", pset);
+    let (asset, _token) = (&asset, &token);
+    let txid = complete(&cli, "w", pset, signers);
+    check_blinders(&cli, "w", &txid, sats, asset, false);
+
+    // Reissue
+    let sats = 1003;
+    let r = sh(&format!(
+        "{cli} wallet reissue -w w --asset {asset} --satoshi-asset {sats} --address-asset {node_address}"
+    ));
+    let txid = complete(&cli, "w", get_str(&r, "pset"), signers);
+    check_blinders(&cli, "w", &txid, sats, asset, false);
+
+    // Drain
+    let sats = get_balance(&cli, "w", policy_asset);
+    let r = sh(&format!("{cli} wallet drain -w w --address {node_address}"));
+    let pset = get_str(&r, "pset");
+    let r = sh(&format!("{cli} wallet pset-details -w w -p {pset}"));
+    let fee = r.get("fee").unwrap().as_u64().unwrap();
+    let txid = complete(&cli, "w", pset, signers);
+    check_blinders(&cli, "w", &txid, sats - fee, policy_asset, false);
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

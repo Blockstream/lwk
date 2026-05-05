@@ -8,8 +8,8 @@ use lightning::offers::parse::Bolt12ParseError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("Failed to build refund transaction")]
-    FailBuildingRefundTransaction,
+    #[error("Failed to build refund transaction for swap {swap_id}")]
+    FailBuildingRefundTransaction { swap_id: String },
 
     #[error("Invalid electrum url: {0}")]
     InvalidElectrumUrl(#[from] lwk_wollet::UrlError),

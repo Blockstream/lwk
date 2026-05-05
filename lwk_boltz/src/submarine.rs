@@ -598,7 +598,7 @@ impl PreparePayResponse {
                 }
             }
         }
-        Err(Error::FailBuildingRefundTransaction)
+        Err(Error::FailBuildingRefundTransaction { swap_id })
     }
 
     async fn make_refund_tx(&mut self) -> Result<boltz_client::swaps::BtcLikeTransaction, Error> {

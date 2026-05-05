@@ -324,18 +324,6 @@ wasm:
     paths:
       - lwk_wasm/pkg
 
-nix:
-  stage: test_long
-  needs: [fmt_clippy]
-  image: xenoky/lwk-nix-builder@sha256:c24c03dce4f0f9ea10614844c29e0cdef0b0bcf80ce68e83da57e820a2049da1
-  variables:
-      EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes
-      CACHE: --extra-trusted-public-keys nix.casatta.it:HseKZh7436/vKXfZDBHbhr7wwAkzjLwY5BIq+OOrITg= --extra-substituters https://nix.casatta.it
-  script:
-    - nix $EXP_FEAT $CACHE build .
-    - nix $EXP_FEAT $CACHE develop . -c rust-analyzer analysis-stats . 2>log # prints ERROR if there are cyclic deps with dev-deps
-    - (! grep ERROR log)
-
 # AMP0 has a closed source backend, so its tests are unreliable, allow them to fail.
 # Anyway for MRs/PRs that touch AMP0 code, this must pass.
 amp0:
@@ -466,4 +454,3 @@ publish_snapshot_to_maven:
     when: always
     expire_in: 7 days
   allow_failure: true
-

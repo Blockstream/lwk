@@ -143,3 +143,24 @@ mdbook:
 # Serve the mdbook documentation locally for development
 mdbook-serve: mdbook
     cd docs && mdbook serve
+
+# Generate a local Cobertura and HTML coverage report with nextest
+coverage-local:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    host_triple="$(rustc -vV | sed -n 's/^host: //p')"
+    llvm_path="$(rustc --print sysroot)/lib/rustlib/${host_triple}/bin"
+
+    mkdir -p target/coverage-profraw
+    find target/coverage-profraw -name '*.profraw' -delete
+    rm -rf target/coverage
+
+    export RUSTFLAGS='-C instrument-coverage'
+    export LLVM_PROFILE_FILE='target/coverage-profraw/coverage-%p-%m.profraw'
+
+    cargo nextest run --workspace --exclude lwk_boltz
+
+    grcov . -s . --binary-path ./target/debug/ --llvm-path "${llvm_path}" -t html --branch \
+        --ignore-not-existing --ignore "*cargo*" --ignore "lwk_boltz/tests/**" \
+        -o ./target/coverage/ -p "$(pwd)"

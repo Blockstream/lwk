@@ -393,7 +393,9 @@ pub struct WalletTx {
     pub tx: String,
 }
 
-/// TransactionDetails
+/// Transaction details
+///
+/// **Experimental**: this API might change without notice.
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WalletTxDetails {
     /// Transction ID

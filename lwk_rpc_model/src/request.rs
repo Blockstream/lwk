@@ -400,6 +400,8 @@ pub struct WalletTx {
 }
 
 /// Request to get a transaction details
+///
+/// **Experimental**: this API might change without notice.
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WalletTxDetails {
     /// The wallet name

@@ -154,6 +154,10 @@ fn tx(cli: &str, wallet: &str, txid: &str) -> Option<Value> {
         .find(|tx| get_str(tx, "txid") == txid)
 }
 
+fn tx_details(cli: &str, wallet: &str, txid: &str) -> Value {
+    sh(&format!("{cli} wallet tx-details -w {wallet} -t {txid}"))
+}
+
 fn tx_memo(cli: &str, wallet: &str, txid: &str) -> String {
     get_str(&tx(cli, wallet, txid).unwrap(), "memo").to_string()
 }
@@ -1728,18 +1732,20 @@ fn test_esplora_waterfalls_backend() {
     t.join().unwrap();
 }
 
-fn check_blinders(cli: &str, wallet: &str, txid: &str, sats: u64, asset: &str, contains: bool) {
-    // Here we want to check if we have the blinders for an output.
-    // ATM for sent outputs, there is no easy/clean way.
-    // As a temporary workaround we check that the unblinded url contains "sats,asset_id".
-    // Ofc this makes sense only if the output we're checking for it's the only one in the tx with that couple.
-    // TODO: add a way to get the blinders
-    let tx = tx(cli, wallet, txid).unwrap();
-    let url = tx.get("unblinded_url").unwrap().as_str().unwrap();
+fn check_blinders(cli: &str, wallet: &str, txid: &str, address: &str, contains: bool) {
+    let tx = tx_details(cli, wallet, txid);
+    let outputs = tx.get("outputs").unwrap().as_array().unwrap().to_vec();
+    let output = outputs
+        .iter()
+        .find(|o| o.get("address").unwrap().as_str().unwrap() == address)
+        .unwrap();
+    println!("{}", output);
     if contains {
-        assert!(url.contains(&format!("{sats},{asset}")));
+        assert!(!output.get("abf").unwrap().as_str().unwrap().is_empty());
+        assert!(!output.get("vbf").unwrap().as_str().unwrap().is_empty());
     } else {
-        assert!(!url.contains(&format!("{sats},{asset}")));
+        assert!(output.get("abf").is_none());
+        assert!(output.get("vbf").is_none());
     }
 }
 
@@ -1747,7 +1753,6 @@ fn check_blinders(cli: &str, wallet: &str, txid: &str, sats: u64, asset: &str, c
 fn test_sent_outputs() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let (t, _tmp, cli, params, env) = setup_cli(env);
-    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
 
     sw_signer(&cli, "sw");
     singlesig_wallet(&cli, "w", "sw", "slip77", "wpkh");
@@ -1756,12 +1761,15 @@ fn test_sent_outputs() {
     let _ = fund(&env, &cli, "w", 1_000_000);
 
     let node_address = env.elementsd_getnewaddress();
+    let mut node_addr_unconf = node_address.clone();
+    node_addr_unconf.blinding_pubkey = None;
+    let node_addr_unconf = node_addr_unconf.to_string();
     let sats = 1234;
     let r = sh(&format!(
         "{cli} wallet send -w w --recipient {node_address}:{sats}"
     ));
     let txid = complete(&cli, "w", get_str(&r, "pset"), signers);
-    check_blinders(&cli, "w", &txid, sats, policy_asset, false);
+    check_blinders(&cli, "w", &txid, &node_addr_unconf, false);
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
@@ -1784,7 +1792,7 @@ fn test_sent_outputs() {
         "{cli} wallet send -w w --recipient {node_address}:{sats}"
     ));
     let txid = complete(&cli, "w", get_str(&r, "pset"), signers);
-    check_blinders(&cli, "w", &txid, sats, policy_asset, true);
+    check_blinders(&cli, "w", &txid, &node_addr_unconf, true);
 
     // Issue
     let sats = 1002;
@@ -1795,7 +1803,7 @@ fn test_sent_outputs() {
     let (asset, token) = asset_ids_from_issuance_pset(&cli, "w", pset);
     let (asset, _token) = (&asset, &token);
     let txid = complete(&cli, "w", pset, signers);
-    check_blinders(&cli, "w", &txid, sats, asset, true);
+    check_blinders(&cli, "w", &txid, &node_addr_unconf, true);
 
     // Reissue
     let sats = 1003;
@@ -1803,16 +1811,12 @@ fn test_sent_outputs() {
         "{cli} wallet reissue -w w --asset {asset} --satoshi-asset {sats} --address-asset {node_address}"
     ));
     let txid = complete(&cli, "w", get_str(&r, "pset"), signers);
-    check_blinders(&cli, "w", &txid, sats, asset, true);
+    check_blinders(&cli, "w", &txid, &node_addr_unconf, true);
 
     // Drain
-    let sats = get_balance(&cli, "w", policy_asset);
     let r = sh(&format!("{cli} wallet drain -w w --address {node_address}"));
-    let pset = get_str(&r, "pset");
-    let r = sh(&format!("{cli} wallet pset-details -w w -p {pset}"));
-    let fee = r.get("fee").unwrap().as_u64().unwrap();
-    let txid = complete(&cli, "w", pset, signers);
-    check_blinders(&cli, "w", &txid, sats - fee, policy_asset, true);
+    let txid = complete(&cli, "w", get_str(&r, "pset"), signers);
+    check_blinders(&cli, "w", &txid, &node_addr_unconf, true);
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

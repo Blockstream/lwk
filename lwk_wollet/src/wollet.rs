@@ -1530,6 +1530,7 @@ mod tests {
             scripts_with_blinding_pubkey: Vec::new(),
             tip,
             unspent: Vec::new(),
+            last_unused: Default::default(),
         };
 
         wollet.apply_update(update.clone()).unwrap();

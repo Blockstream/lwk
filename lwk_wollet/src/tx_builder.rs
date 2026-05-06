@@ -1380,7 +1380,7 @@ impl BuiltTx {
     pub fn update(&self, wollet: &Wollet) -> Result<Update, Error> {
         let unblinds = self.unblinded()?;
         let update = Update {
-            version: 3,
+            version: 4,
             wollet_status: wollet.status(),
             new_txs: DownloadTxResult {
                 txs: vec![],
@@ -1392,6 +1392,7 @@ impl BuiltTx {
             scripts_with_blinding_pubkey: vec![],
             tip: crate::update::default_blockheader(),
             unspent: vec![],
+            last_unused: Default::default(),
         };
         Ok(update)
     }

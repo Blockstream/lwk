@@ -253,7 +253,7 @@ pub trait BlockchainBackend {
                 .collect();
 
             let update = Update {
-                version: 3,
+                version: 4,
                 wollet_status,
                 new_txs,
                 txid_height_new,
@@ -262,6 +262,7 @@ pub trait BlockchainBackend {
                 scripts_with_blinding_pubkey,
                 tip,
                 unspent,
+                last_unused,
             };
             Ok(Some(update))
         } else {

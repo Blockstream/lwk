@@ -1,5 +1,6 @@
 use crate::cache::{Height, Timestamp};
 use crate::clients::try_unblind;
+use crate::clients::LastUnused;
 use crate::descriptor::Chain;
 use crate::elements::{OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
@@ -211,6 +212,12 @@ pub struct Update {
     /// "utxo only" they are returned so we store them here.
     // TODO: change to `Vec<OutPoint, Script>` we currently "recover it" after, we may want to just keep it
     pub unspent: Vec<OutPoint>,
+
+    /// The next unused derivation index for each chain, as known when the update was created.
+    ///
+    /// This lets wallet restore advance address indexes without reloading transactions from the
+    /// tx store just to recompute them.
+    pub last_unused: LastUnused,
 }
 
 impl Update {
@@ -351,6 +358,15 @@ impl Update {
         // Update unspent to latest
         self.unspent = following.unspent;
 
+        self.last_unused.external = self
+            .last_unused
+            .external
+            .max(following.last_unused.external);
+        self.last_unused.internal = self
+            .last_unused
+            .internal
+            .max(following.last_unused.internal);
+
         // We don't need to update the wollet status, it's right to keep the status of the first update
     }
 }
@@ -435,7 +451,7 @@ impl Wollet {
         };
 
         let update = Update {
-            version: 3,
+            version: 4,
             wollet_status: self.status(),
             new_txs: DownloadTxResult {
                 txs: vec![(txid, tx)],
@@ -447,6 +463,7 @@ impl Wollet {
             scripts_with_blinding_pubkey: vec![],
             tip: default_blockheader(),
             unspent,
+            last_unused: self.last_unused(),
         };
 
         self.apply_update_inner(update.clone())?;
@@ -498,7 +515,7 @@ impl Wollet {
         let utxo_only = self.utxo_only();
         let cache = &mut self.cache;
         let Update {
-            version: _,
+            version,
             wollet_status: _,
             new_txs,
             txid_height_new,
@@ -507,6 +524,7 @@ impl Wollet {
             scripts_with_blinding_pubkey,
             tip,
             unspent,
+            last_unused,
         } = update;
 
         let scripts_with_blinding_pubkey =
@@ -546,48 +564,57 @@ impl Wollet {
             unspent,
         )?;
         cache.timestamps.extend(timestamps);
-        let mut last_used_internal = None;
-        let mut last_used_external = None;
-        // Also include deleted txids: a tx that was seen and then deleted (e.g. a phantom tx
-        // applied locally but not confirmed on-chain) should still count as having used its
-        // addresses so those addresses are not reused. This matters for merged updates where
-        // phantom txids are removed from txid_height_new but still appear in txid_height_delete.
-        let txids_for_last_used: Vec<Txid> = txid_height_new
-            .into_iter()
-            .map(|(t, _)| t)
-            .chain(txid_height_delete.iter().copied())
-            .collect();
-        for txid in txids_for_last_used {
-            if let Some(tx) = cache.tx_as_fallback(&txid, &new_txs.txs) {
-                for output in tx.output.iter() {
-                    if let Some((ext_int, ChildNumber::Normal { index })) =
-                        cache.paths.get(&output.script_pubkey)
-                    {
-                        match ext_int {
-                            Chain::External => match last_used_external {
-                                None => last_used_external = Some(index),
-                                Some(last) if index > last => last_used_external = Some(index),
-                                _ => {}
-                            },
-                            Chain::Internal => match last_used_internal {
-                                None => last_used_internal = Some(index),
-                                Some(last) if index > last => last_used_internal = Some(index),
-                                _ => {}
-                            },
+        if version >= 4 {
+            cache
+                .last_unused_external
+                .fetch_max(last_unused.external, atomic::Ordering::Relaxed);
+            cache
+                .last_unused_internal
+                .fetch_max(last_unused.internal, atomic::Ordering::Relaxed);
+        } else {
+            let mut last_used_internal = None;
+            let mut last_used_external = None;
+            // Also include deleted txids: a tx that was seen and then deleted (e.g. a phantom tx
+            // applied locally but not confirmed on-chain) should still count as having used its
+            // addresses so those addresses are not reused. This matters for merged updates where
+            // phantom txids are removed from txid_height_new but still appear in txid_height_delete.
+            let txids_for_last_used: Vec<Txid> = txid_height_new
+                .into_iter()
+                .map(|(t, _)| t)
+                .chain(txid_height_delete.iter().copied())
+                .collect();
+            for txid in txids_for_last_used {
+                if let Some(tx) = cache.tx_as_fallback(&txid, &new_txs.txs) {
+                    for output in tx.output.iter() {
+                        if let Some((ext_int, ChildNumber::Normal { index })) =
+                            cache.paths.get(&output.script_pubkey)
+                        {
+                            match ext_int {
+                                Chain::External => match last_used_external {
+                                    None => last_used_external = Some(index),
+                                    Some(last) if index > last => last_used_external = Some(index),
+                                    _ => {}
+                                },
+                                Chain::Internal => match last_used_internal {
+                                    None => last_used_internal = Some(index),
+                                    Some(last) if index > last => last_used_internal = Some(index),
+                                    _ => {}
+                                },
+                            }
                         }
                     }
                 }
             }
-        }
-        if let Some(last_used_external) = last_used_external {
-            cache
-                .last_unused_external
-                .fetch_max(last_used_external + 1, atomic::Ordering::Relaxed);
-        }
-        if let Some(last_used_internal) = last_used_internal {
-            cache
-                .last_unused_internal
-                .fetch_max(last_used_internal + 1, atomic::Ordering::Relaxed);
+            if let Some(last_used_external) = last_used_external {
+                cache
+                    .last_unused_external
+                    .fetch_max(last_used_external + 1, atomic::Ordering::Relaxed);
+            }
+            if let Some(last_used_internal) = last_used_internal {
+                cache
+                    .last_unused_internal
+                    .fetch_max(last_used_internal + 1, atomic::Ordering::Relaxed);
+            }
         }
 
         Ok(())
@@ -839,6 +866,10 @@ impl Encodable for Update {
                 bytes_written += op.consensus_encode(&mut w)?;
             }
         }
+        if self.version >= 4 {
+            bytes_written += self.last_unused.external.consensus_encode(&mut w)?;
+            bytes_written += self.last_unused.internal.consensus_encode(&mut w)?;
+        }
 
         Ok(bytes_written)
     }
@@ -852,7 +883,7 @@ impl Decodable for Update {
         }
 
         let version = u8::consensus_decode(&mut d)?;
-        if version > 3 {
+        if version > 4 {
             return Err(elements::encode::Error::ParseFailed("Unsupported version"));
         }
         let wollet_status = if version >= 1 {
@@ -936,6 +967,15 @@ impl Decodable for Update {
             vec![]
         };
 
+        let last_unused = if version >= 4 {
+            LastUnused {
+                external: u32::consensus_decode(&mut d)?,
+                internal: u32::consensus_decode(&mut d)?,
+            }
+        } else {
+            LastUnused::default()
+        };
+
         Ok(Self {
             version,
             wollet_status,
@@ -946,6 +986,7 @@ impl Decodable for Update {
             scripts_with_blinding_pubkey,
             tip,
             unspent,
+            last_unused,
         })
     }
 }
@@ -992,6 +1033,7 @@ mod test {
             tip,
             wollet_status: 1,
             unspent: Default::default(),
+            last_unused: Default::default(),
         };
         assert!(update.only_tip());
         update
@@ -1047,6 +1089,7 @@ mod test {
             tip,
             wollet_status: 1,
             unspent: vec![],
+            last_unused: Default::default(),
         };
 
         let mut vec = vec![];

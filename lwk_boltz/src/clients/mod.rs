@@ -20,6 +20,14 @@ pub enum AnyClient {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl boltz_client::network::LiquidClient for AnyClient {
+    async fn get_tx(&self, txid: elements::Txid) -> Result<elements::Transaction, Error> {
+        match self {
+            #[cfg(feature = "blocking")]
+            AnyClient::Electrum(client) => client.get_tx(txid).await,
+            AnyClient::Esplora(client) => client.get_tx(txid).await,
+        }
+    }
+
     async fn get_address_utxo(
         &self,
         address: &elements::Address,

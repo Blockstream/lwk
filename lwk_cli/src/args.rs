@@ -171,6 +171,7 @@ pub enum WalletSubCommandsEnum {
     PsetDetails,
     Utxos,
     Txs,
+    Tx,
     SetTxMemo,
     SetAddrMemo,
 }

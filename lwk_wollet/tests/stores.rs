@@ -115,7 +115,7 @@ fn fake_txs_store_full_scan_after_transaction() {
 }
 
 #[test]
-fn fake_persisted_txs_store_restore_breaks_reload() {
+fn fake_persisted_txs_store_restore_reloads_last_unused() {
     // This test shows that we need the txs store when applying an Update without new txs,
     // which happens when you have a persisted txs store and reload the Update
 
@@ -157,8 +157,7 @@ fn fake_persisted_txs_store_restore_breaks_reload() {
         .build()
         .unwrap();
 
-    // TODO: fixme, reloaded test should compute the same Last unused address
-    assert_ne!(
+    assert_eq!(
         wollet.address(None).unwrap().index(),
         wollet2.address(None).unwrap().index(),
     );

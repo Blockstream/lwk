@@ -716,6 +716,8 @@ pub enum WalletCommand {
     },
 
     /// Get a transaction details
+    ///
+    /// **Experimental**: this API might change without notice.
     TxDetails {
         /// Wallet name
         #[arg(short, long, env)]

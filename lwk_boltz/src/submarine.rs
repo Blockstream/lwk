@@ -498,7 +498,9 @@ impl PreparePayResponse {
                     "[swap:{swap_id}] transaction.mempool Boltz broadcasted funding tx {lockup_txid:?}"
                 );
                 if let Some(txid) = lockup_txid {
-                    log::debug!("[swap:{swap_id}] Waiting for Liquid index to see lockup tx {txid}");
+                    log::debug!(
+                        "[swap:{swap_id}] Waiting for Liquid index to see lockup tx {txid}"
+                    );
                     wait_for_liquid_tx(&self.chain_client, &txid, self.timeout_advance).await?;
                     self.data.lockup_txid = Some(txid);
                 }
@@ -560,8 +562,7 @@ impl PreparePayResponse {
                         log::debug!(
                             "[swap:{swap_id}] Waiting for Liquid index to see fetched lockup tx {txid}"
                         );
-                        wait_for_liquid_tx(&self.chain_client, &txid, self.timeout_advance)
-                            .await?;
+                        wait_for_liquid_tx(&self.chain_client, &txid, self.timeout_advance).await?;
                         self.data.lockup_txid = Some(txid);
                     }
                 }

@@ -182,10 +182,7 @@ mod tests {
             }
         }
 
-        async fn broadcast_tx(
-            &self,
-            _signed_tx: &elements::Transaction,
-        ) -> Result<String, Error> {
+        async fn broadcast_tx(&self, _signed_tx: &elements::Transaction) -> Result<String, Error> {
             unimplemented!()
         }
 
@@ -253,8 +250,10 @@ mod tests {
             .unwrap();
         let deadline = async_now().await + 50;
 
-        let result =
-            wait_for_tx(txid, deadline, Duration::from_millis(1), || client.get_tx(txid)).await;
+        let result = wait_for_tx(txid, deadline, Duration::from_millis(1), || {
+            client.get_tx(txid)
+        })
+        .await;
 
         assert!(result.is_ok());
         assert_eq!(client.attempts.load(Ordering::SeqCst), 3);
@@ -271,8 +270,10 @@ mod tests {
             .unwrap();
         let deadline = async_now().await + 5;
 
-        let result =
-            wait_for_tx(txid, deadline, Duration::from_millis(1), || client.get_tx(txid)).await;
+        let result = wait_for_tx(txid, deadline, Duration::from_millis(1), || {
+            client.get_tx(txid)
+        })
+        .await;
 
         assert!(matches!(result, Err(Error::Protocol(_))));
         assert!(client.attempts.load(Ordering::SeqCst) >= 1);

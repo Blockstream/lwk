@@ -968,6 +968,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let tx = wollet
                 .tx_details(&txid, &opt)?
                 .ok_or_else(|| Error::WalletTxNotFound(r.txid, r.name))?;
+            let inputs = tx.inputs().iter().map(convert_txoutdetails).collect();
+            let outputs = tx.outputs().iter().map(convert_txoutdetails).collect();
             let tx = response::WalletTxDetails {
                 txid: tx.txid().to_string(),
                 height: tx.height(),
@@ -980,6 +982,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 type_: tx.tx_type().to_string(),
                 unblinded_url: tx.unblinded_url(&explorer_url),
                 memo,
+                inputs,
+                outputs,
             };
 
             // TODO with_tickers
@@ -1429,6 +1433,17 @@ fn convert_tx(
         type_: tx.tx_type().to_string(),
         unblinded_url,
         memo,
+    }
+}
+
+fn convert_txoutdetails(txoutdetails: &lwk_wollet::TxOutDetails) -> response::TxOutDetails {
+    let unblinded = txoutdetails.unblinded();
+    response::TxOutDetails {
+        address: txoutdetails.address().map(|a| a.to_string()),
+        asset_id: unblinded.map(|u| u.asset.to_string()),
+        satoshi: unblinded.map(|u| u.value),
+        abf: unblinded.map(|u| u.asset_bf.to_string()),
+        vbf: unblinded.map(|u| u.value_bf.to_string()),
     }
 }
 

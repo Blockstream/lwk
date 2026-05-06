@@ -422,6 +422,38 @@ pub struct WalletTxDetails {
 
     /// Memo
     pub memo: String,
+
+    /// Inputs
+    pub inputs: Vec<TxOutDetails>,
+
+    /// Outputs
+    pub outputs: Vec<TxOutDetails>,
+}
+
+/// Tx output details
+///
+/// **Experimental**: this API might change without notice.
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct TxOutDetails {
+    /// Address
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<String>,
+
+    /// Asset
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub asset_id: Option<String>,
+
+    /// Satoshi
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub satoshi: Option<u64>,
+
+    /// Asset blinding factor
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub abf: Option<String>,
+
+    /// Value blinding factor
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vbf: Option<String>,
 }
 
 /// Details of an asset

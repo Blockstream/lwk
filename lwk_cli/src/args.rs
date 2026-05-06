@@ -172,6 +172,7 @@ pub enum WalletSubCommandsEnum {
     Utxos,
     Txs,
     Tx,
+    TxDetails,
     SetTxMemo,
     SetAddrMemo,
 }
@@ -712,6 +713,17 @@ pub enum WalletCommand {
         /// Attempt to fetch the transaction if not available locally
         #[arg(long, action)]
         fetch: bool,
+    },
+
+    /// Get a transaction details
+    TxDetails {
+        /// Wallet name
+        #[arg(short, long, env)]
+        wallet: String,
+
+        /// Transaction ID
+        #[arg(short, long)]
+        txid: String,
     },
 
     /// Set a wallet tx memo

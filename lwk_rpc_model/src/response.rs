@@ -393,6 +393,35 @@ pub struct WalletTx {
     pub tx: String,
 }
 
+/// TransactionDetails
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletTxDetails {
+    /// Transction ID
+    pub txid: String,
+
+    /// Height of the block containing the transaction
+    pub height: Option<u32>,
+
+    /// Timestamp of the block containing the transaction
+    pub timestamp: Option<u32>,
+
+    /// Net balance for the transaction
+    pub balance: HashMap<String, i64>,
+
+    // TODO: handle asset fees
+    // Fee
+    //pub fee: u64,
+    /// Type
+    #[serde(rename = "type")]
+    pub type_: String,
+
+    /// Unblinded url
+    pub unblinded_url: String,
+
+    /// Memo
+    pub memo: String,
+}
+
 /// Details of an asset
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AssetDetails {

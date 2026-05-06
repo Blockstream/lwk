@@ -399,6 +399,16 @@ pub struct WalletTx {
     pub fetch: bool,
 }
 
+/// Request to get a transaction details
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletTxDetails {
+    /// The wallet name
+    pub name: String,
+
+    /// Transaction ID
+    pub txid: String,
+}
+
 /// Request to have details of an asset
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AssetDetails {

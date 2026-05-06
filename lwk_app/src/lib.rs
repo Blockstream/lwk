@@ -43,8 +43,8 @@ use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use lwk_wollet::registry::add_contracts;
 use lwk_wollet::LiquidexProposal;
-use lwk_wollet::TxsOpt;
 use lwk_wollet::WolletDescriptor;
+use lwk_wollet::{TxOpt, TxsOpt};
 use lwk_wollet::{Wollet, WolletBuilder};
 use serde_json::Value;
 
@@ -955,6 +955,35 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             };
             let tx = serialize(&tx).to_hex();
             Response::result(request.id, serde_json::to_value(response::WalletTx { tx })?)
+        }
+        Method::WalletTxDetails => {
+            let r: request::WalletTxDetails = serde_json::from_value(params)?;
+            let mut s = state.lock()?;
+            let explorer_url = s.config.explorer_url.clone();
+            let txid = Txid::from_str(&r.txid)?;
+            let memos = s.tx_memos.for_wollet(&r.name);
+            let memo = memos.get(&txid).cloned().unwrap_or_default();
+            let wollet = s.wollets.get_mut(&r.name)?;
+            let opt = TxOpt::default();
+            let tx = wollet
+                .tx_details(&txid, &opt)?
+                .ok_or_else(|| Error::WalletTxNotFound(r.txid, r.name))?;
+            let tx = response::WalletTxDetails {
+                txid: tx.txid().to_string(),
+                height: tx.height(),
+                timestamp: tx.timestamp(),
+                balance: tx
+                    .balance()
+                    .iter()
+                    .map(|(k, v)| (k.to_string(), *v))
+                    .collect(),
+                type_: tx.tx_type().to_string(),
+                unblinded_url: tx.unblinded_url(&explorer_url),
+                memo,
+            };
+
+            // TODO with_tickers
+            Response::result(request.id, serde_json::to_value(tx)?)
         }
         Method::WalletSetTxMemo => {
             let r: request::WalletSetTxMemo = serde_json::from_value(params)?;

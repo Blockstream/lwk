@@ -36,7 +36,7 @@ use crate::DynStore;
 use crate::SwapPersistence;
 use crate::SwapType;
 use crate::LIQUID_UNCOOPERATIVE_EXTRA;
-use crate::{broadcast_tx_with_retry, next_status, BoltzSession, SwapState};
+use crate::{broadcast_tx_with_retry, next_status, wait_for_liquid_tx, BoltzSession, SwapState};
 
 pub struct InvoiceResponse {
     pub data: InvoiceData,
@@ -348,26 +348,14 @@ impl InvoiceResponse {
 
         log::info!("[swap:{swap_id}] transaction.mempool/confirmed Boltz broadcasted funding tx");
 
-        // Parse the lockup transaction from the status update if available.
-        // This avoids waiting for the transaction to propagate to the chain client's mempool,
-        // significantly improving claim speed.
-        let lockup_tx = if let Some(tx_info) = &update.transaction {
-            match self.swap_script.parse_lockup_transaction(tx_info).await {
-                Ok(tx) => {
-                    log::debug!("[swap:{swap_id}] Parsed lockup tx from status update");
-                    Some(tx)
-                }
-                Err(e) => {
-                    log::warn!(
-                        "[swap:{swap_id}] Failed to parse lockup tx from status update: {e}, will fetch from chain client"
-                    );
-                    None
-                }
+        let lockup_tx = if let Some(txid) = update.transaction.as_ref().map(|e| e.id.clone()) {
+            log::debug!("[swap:{swap_id}] Waiting for Liquid index to see lockup tx {txid}");
+            let tx = wait_for_liquid_tx(&self.chain_client, &txid, self.timeout_advance).await?;
+            if self.data.lockup_txid.is_none() {
+                self.data.lockup_txid = Some(txid);
             }
+            Some(tx)
         } else {
-            log::debug!(
-                "[swap:{swap_id}] No transaction info in status update, will fetch from chain client"
-            );
             None
         };
 
@@ -375,7 +363,7 @@ impl InvoiceResponse {
         let options = match lockup_tx {
             Some(tx) => TransactionOptions::default()
                 .with_cooperative(true)
-                .with_lockup_tx(tx),
+                .with_lockup_tx(boltz_client::swaps::BtcLikeTransaction::Liquid(tx)),
             None => TransactionOptions::default().with_cooperative(true),
         };
 
@@ -468,7 +456,6 @@ impl InvoiceResponse {
             SwapState::TransactionMempool => {
                 let lockup_txid = update.transaction.as_ref().map(|e| e.id.clone());
                 log::info!("[swap:{swap_id}] transaction.mempool Boltz funding tx {lockup_txid:?}");
-                self.data.lockup_txid = lockup_txid;
                 self.handle_claim_transaction_if_necessary(update).await
             }
             SwapState::TransactionConfirmed => {
@@ -476,9 +463,6 @@ impl InvoiceResponse {
                 log::info!(
                     "[swap:{swap_id}] transaction.confirmed Boltz funding tx {lockup_txid:?}"
                 );
-                if self.data.lockup_txid.is_none() {
-                    self.data.lockup_txid = lockup_txid;
-                }
                 self.handle_claim_transaction_if_necessary(update).await
             }
             SwapState::InvoiceSettled => {

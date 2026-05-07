@@ -46,11 +46,19 @@ pub fn test_client_electrum(url: &str) -> ElectrumClient {
 }
 
 pub fn wait_for_tx<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S, txid: &Txid) {
+    let mut seen_once = false;
     for _ in 0..120 {
         sync(wollet, client);
         let list = wollet.txs(&TxsOpt::without_tx()).unwrap();
         if list.iter().any(|e| &e.txid() == txid) {
-            return;
+            // With waterfalls a txid can briefly appear before the wallet view is stable.
+            // Require two consecutive sightings to avoid returning on that transient state.
+            if seen_once {
+                return;
+            }
+            seen_once = true;
+        } else {
+            seen_once = false;
         }
         thread::sleep(Duration::from_millis(500));
     }

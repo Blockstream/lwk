@@ -43,6 +43,18 @@ impl ElectrumClient {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl boltz_client::network::LiquidClient for ElectrumClient {
+    async fn get_tx(&self, txid: elements::Txid) -> Result<elements::Transaction, Error> {
+        let inner = Arc::clone(&self.inner);
+        let tx = task::spawn_blocking(move || inner.get_transactions(&[txid]))
+            .await
+            .map_err(|e| Error::Protocol(e.to_string()))?
+            .map_err(|e| Error::Protocol(e.to_string()))?
+            .into_iter()
+            .next()
+            .ok_or_else(|| Error::Protocol(format!("transaction {txid} not found")))?;
+        Ok(tx)
+    }
+
     async fn get_address_utxo(
         &self,
         address: &elements::Address,

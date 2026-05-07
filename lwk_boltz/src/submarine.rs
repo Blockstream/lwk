@@ -23,8 +23,8 @@ use crate::prepare_pay_data::{to_prepare_pay_data, PreparePayData, PreparePayDat
 use crate::swap_state::SwapStateTrait;
 use crate::SwapPersistence;
 use crate::{
-    broadcast_tx_with_retry, mnemonic_identifier, next_status, BoltzSession, DynStore, Invoice,
-    LightningPayment, SwapState, SwapType,
+    broadcast_tx_with_retry, mnemonic_identifier, next_status, wait_for_liquid_tx, BoltzSession,
+    DynStore, Invoice, LightningPayment, SwapState, SwapType,
 };
 
 pub struct PreparePayResponse {
@@ -497,7 +497,13 @@ impl PreparePayResponse {
                 log::info!(
                     "[swap:{swap_id}] transaction.mempool Boltz broadcasted funding tx {lockup_txid:?}"
                 );
-                self.data.lockup_txid = lockup_txid;
+                if let Some(txid) = lockup_txid {
+                    log::debug!(
+                        "[swap:{swap_id}] Waiting for Liquid index to see lockup tx {txid}"
+                    );
+                    wait_for_liquid_tx(&self.chain_client, &txid, self.timeout_advance).await?;
+                    self.data.lockup_txid = Some(txid);
+                }
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::InvoiceFailedToPay => {
@@ -552,8 +558,13 @@ impl PreparePayResponse {
                     log::warn!(
                         "[swap:{swap_id}] transaction.claimed Boltz claimed funding tx but lockup_txid is not set, fetching it"
                     );
-                    self.data.lockup_txid =
-                        fetch_lockup_txid(self.api.as_ref(), self.swap_id()).await;
+                    if let Some(txid) = fetch_lockup_txid(self.api.as_ref(), self.swap_id()).await {
+                        log::debug!(
+                            "[swap:{swap_id}] Waiting for Liquid index to see fetched lockup tx {txid}"
+                        );
+                        wait_for_liquid_tx(&self.chain_client, &txid, self.timeout_advance).await?;
+                        self.data.lockup_txid = Some(txid);
+                    }
                 }
                 log::info!("[swap:{swap_id}] transaction.claimed Boltz claimed funding tx");
                 Ok(ControlFlow::Break(true))

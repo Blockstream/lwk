@@ -17,6 +17,7 @@ mod submarine;
 mod swap_state;
 
 use bech32::FromBase32;
+use boltz_client::swaps::BtcLikeTransaction;
 use lightning::offers::invoice::Bolt12Invoice;
 use lightning::offers::offer::Offer;
 // Re-export store module contents for public API
@@ -60,6 +61,7 @@ use lwk_wollet::bitcoin::bip32::DerivationPath;
 use lwk_wollet::bitcoin::bip32::Xpriv;
 use lwk_wollet::bitcoin::bip32::Xpub;
 use lwk_wollet::bitcoin::NetworkKind;
+use lwk_wollet::elements;
 use lwk_wollet::ElectrumUrl;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast::error::TryRecvError;
@@ -67,7 +69,7 @@ use tokio::sync::Mutex;
 
 pub use crate::chain_data::{to_chain_data, ChainSwapData, ChainSwapDataSerializable};
 pub use crate::chain_swaps::LockupResponse;
-use crate::clients::AnyClient;
+use crate::clients::{AnyClient, BitcoinClientExt, LiquidClientExt};
 pub use crate::error::Error;
 pub use crate::invoice_data::to_invoice_data;
 pub use crate::invoice_data::InvoiceData;
@@ -861,7 +863,7 @@ pub(crate) fn derive_keypair(index: u32, mnemonic: &Mnemonic) -> Result<Keypair,
 /// Attempts to broadcast the transaction up to 30 times, sleeping 1 second between retries on failure.
 pub async fn broadcast_tx_with_retry(
     chain_client: &ChainClient,
-    tx: &boltz_client::swaps::BtcLikeTransaction,
+    tx: &BtcLikeTransaction,
     swap_id: &str,
 ) -> Result<String, Error> {
     for _ in 0..30 {
@@ -876,6 +878,51 @@ pub async fn broadcast_tx_with_retry(
     Err(Error::RetryBroadcastFailed {
         swap_id: swap_id.to_string(),
     })
+}
+
+pub(crate) async fn wait_for_liquid_tx(
+    chain_client: &ChainClient,
+    txid: &str,
+    timeout: Duration,
+) -> Result<elements::Transaction, Error> {
+    let c = Chain::Liquid(LiquidChain::Liquid);
+    match wait_for_chain_tx(chain_client, c, txid, timeout).await? {
+        BtcLikeTransaction::Liquid(tx) => Ok(tx),
+        BtcLikeTransaction::Bitcoin(_) => unreachable!(),
+    }
+}
+
+pub(crate) async fn wait_for_chain_tx(
+    chain_client: &ChainClient,
+    chain: Chain,
+    txid: &str,
+    timeout: Duration,
+) -> Result<BtcLikeTransaction, Error> {
+    let deadline = async_now().await + timeout.as_millis() as u64;
+    match chain {
+        Chain::Bitcoin(_) => {
+            let txid = txid
+                .parse()
+                .map_err(|e| Error::Generic(format!("Invalid Bitcoin txid {txid}: {e}")))?;
+            let client = chain_client
+                .bitcoin_client()
+                .ok_or_else(|| Error::Generic("Expected Bitcoin client".to_string()))?;
+            Ok(BtcLikeTransaction::Bitcoin(
+                client.wait_for_tx(txid, deadline).await?,
+            ))
+        }
+        Chain::Liquid(_) => {
+            let txid = txid
+                .parse()
+                .map_err(|e| Error::Generic(format!("Invalid Liquid txid {txid}: {e}")))?;
+            let client = chain_client
+                .liquid_client()
+                .ok_or(Error::MissingLiquidClient)?;
+            Ok(BtcLikeTransaction::Liquid(
+                client.wait_for_tx(txid, deadline).await?,
+            ))
+        }
+    }
 }
 
 pub fn verify_invoice_from_offer(invoice: &Bolt12Invoice, offer: &Offer) -> bool {

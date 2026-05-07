@@ -32,6 +32,13 @@ impl EsploraClient {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl boltz_client::network::LiquidClient for EsploraClient {
+    async fn get_tx(&self, txid: elements::Txid) -> Result<elements::Transaction, Error> {
+        self.inner
+            .get_transaction(txid)
+            .await
+            .map_err(|e| Error::Protocol(e.to_string()))
+    }
+
     async fn get_address_utxo(
         &self,
         address: &elements::Address,

@@ -29,7 +29,7 @@ use crate::{
     broadcast_tx_with_retry, derive_keypair, mnemonic_identifier, next_status,
     preimage_from_keypair, WAIT_TIME,
 };
-use crate::{BoltzSession, SwapState, SwapType};
+use crate::{wait_for_chain_tx, BoltzSession, SwapState, SwapType};
 
 pub struct LockupResponse {
     pub data: ChainSwapData,
@@ -642,24 +642,24 @@ impl LockupResponse {
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::ServerTransactionConfirmed => {
-                // Parse the server's lockup transaction from the status update if available.
-                // This avoids waiting for the transaction to propagate to the chain client's mempool,
-                // significantly improving claim speed.
                 let lockup_tx = if let Some(tx_info) = &update.transaction {
-                    match self.claim_script.parse_lockup_transaction(tx_info).await {
-                        Ok(tx) => {
-                            log::debug!(
-                                "[swap:{swap_id}] Parsed server lockup tx from status update"
-                            );
-                            Some(tx)
-                        }
-                        Err(e) => {
-                            log::warn!(
-                                "[swap:{swap_id}] Failed to parse server lockup tx from status update: {e}, will fetch from chain client"
-                            );
-                            None
-                        }
-                    }
+                    // Keep the original sanity check on Boltz's payload, but use our own
+                    // chain client as the authoritative source before claiming.
+                    self.claim_script.parse_lockup_transaction(tx_info).await?;
+                    log::debug!(
+                        "[swap:{swap_id}] Waiting for {} index to see server lockup tx {}",
+                        self.chain_to(),
+                        tx_info.id
+                    );
+                    Some(
+                        wait_for_chain_tx(
+                            &self.chain_client,
+                            self.chain_to(),
+                            &tx_info.id,
+                            self.timeout_advance,
+                        )
+                        .await?,
+                    )
                 } else {
                     log::debug!(
                         "[swap:{swap_id}] No transaction info in status update, will fetch from chain client"
@@ -682,8 +682,21 @@ impl LockupResponse {
                     log::warn!(
                         "[swap:{swap_id}] transaction.claimed but lockup_txid is not set, fetching it"
                     );
-                    self.data.lockup_txid =
-                        fetch_lockup_txid(self.api.as_ref(), self.swap_id()).await;
+                    if let Some(txid) = fetch_lockup_txid(self.api.as_ref(), self.swap_id()).await {
+                        log::debug!(
+                            "[swap:{swap_id}] Waiting for {} index to see fetched user lockup tx {}",
+                            self.chain_from(),
+                            txid
+                        );
+                        wait_for_chain_tx(
+                            &self.chain_client,
+                            self.chain_from(),
+                            &txid,
+                            self.timeout_advance,
+                        )
+                        .await?;
+                        self.data.lockup_txid = Some(txid);
+                    }
                 }
 
                 // Check if we've already claimed our funds

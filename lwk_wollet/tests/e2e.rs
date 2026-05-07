@@ -4061,7 +4061,7 @@ fn test_merge_updates_e2e() {
     let balance = wallet.wollet.balance().unwrap();
     let txs = wallet.wollet.transactions().unwrap().len();
     let utxos = wallet.wollet.utxos().unwrap().len();
-    assert_eq!(wallet.wollet.updates().unwrap().len(), 6);
+    assert_eq!(wallet.wollet.updates().unwrap().len(), 4);
 
     {
         // Simulate a restart from the state produced by wallet.wollet
@@ -4138,8 +4138,8 @@ fn test_merge_updates_e2e() {
     assert_eq!(txs, wallet.wollet.transactions().unwrap().len());
     assert_eq!(utxos, wallet.wollet.utxos().unwrap().len());
 
-    // With 4 extra updates: one that adds the tx, one that removes it, and two tip-only updates
-    assert_eq!(wallet.wollet.updates().unwrap().len(), 8);
+    // With 2 extra updates: one that adds the tx, one that removes it
+    assert_eq!(wallet.wollet.updates().unwrap().len(), 6);
 
     {
         let dir = tempfile::TempDir::new().unwrap();

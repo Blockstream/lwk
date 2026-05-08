@@ -840,6 +840,7 @@ fn test_issue() {
     let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
 
     let r = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
+    let txid = r.get("txid").unwrap().as_str().unwrap();
     assert!(get_str(&r, "warnings").is_empty());
     assert!(r.get("fee").unwrap().as_u64().unwrap() > 0);
     assert_eq!(get_len(&r, "reissuances"), 0);
@@ -876,6 +877,7 @@ fn test_issue() {
         "{cli} wallet broadcast --wallet w1 --pset {pset_signed}"
     ));
     let issuance_txid = get_str(&r, "txid");
+    assert_eq!(issuance_txid, txid);
     sh(&format!("{cli} server scan"));
 
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";

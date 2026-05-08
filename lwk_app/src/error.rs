@@ -32,6 +32,9 @@ pub enum Error {
     #[error("PSET Parse Error: {0}")]
     ParseError(#[from] lwk_wollet::elements::pset::ParseError),
 
+    #[error("PSET Error: {0}")]
+    PsetError(#[from] lwk_wollet::elements::pset::Error),
+
     #[error("Reqwest Error: {0}")]
     Reqwest(#[from] reqwest::Error),
 

@@ -834,6 +834,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let wollet = s.wollets.get_mut(&r.name)?;
 
             let pset = PartiallySignedTransaction::from_str(&r.pset)?;
+            let txid = pset.extract_tx()?.txid().to_string();
             let details = wollet.get_details(&pset)?;
             let mut warnings = vec![];
             let has_signatures_from = details
@@ -895,6 +896,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             Response::result(
                 request.id,
                 serde_json::to_value(response::WalletPsetDetails {
+                    txid,
                     has_signatures_from,
                     missing_signatures_from,
                     balance,

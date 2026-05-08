@@ -296,6 +296,9 @@ pub struct Reissuance {
 /// Details of a PSET
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WalletPsetDetails {
+    /// Transaction ID
+    pub txid: String,
+
     /// Signatures contained in the PSET
     pub has_signatures_from: Vec<SignerShortDetails>,
 

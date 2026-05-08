@@ -150,6 +150,19 @@ fn fake_persisted_txs_store_restore_reloads_last_unused() {
 
     assert_eq!(wollet.address(None).unwrap().index(), 1);
 
+    let enc_updates_store = EncryptedStore::new(
+        updates_store.clone() as Arc<dyn DynStore>,
+        wd.encryption_key_bytes(),
+    );
+    let persisted_bytes = lwk_common::Store::get(&enc_updates_store, "000000000000")
+        .unwrap()
+        .unwrap();
+    let persisted_update = Update::deserialize(&persisted_bytes).unwrap();
+    assert_eq!(persisted_update.version, 4);
+    assert!(persisted_update.new_txs.txs.is_empty());
+    assert_eq!(persisted_update.last_unused.external, 1);
+    assert_eq!(persisted_update.last_unused.internal, 0);
+
     let wollet2 = WolletBuilder::new(network, wd)
         .with_updates_store(updates_store)
         .with_txs_store(txs_store)

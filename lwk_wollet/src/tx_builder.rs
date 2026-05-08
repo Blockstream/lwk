@@ -1640,6 +1640,7 @@ mod tests {
     use elements::encode::Decodable;
 
     use super::*;
+    use crate::{clients::LastUnused, update::default_blockheader, DownloadTxResult, WolletBuilder};
 
     #[test]
     fn test_extract_issuances() {
@@ -1686,5 +1687,43 @@ mod tests {
             buf.to_hex(),
             "07fc047073657402200360208a889692372c8d68b084a62efdf60ea1a359a04c94b20d223658276614",
         );
+    }
+
+    #[test]
+    fn test_builttx_update_keeps_wollet_last_unused() {
+        let desc: crate::WolletDescriptor = lwk_test_util::wollet_descriptor_string()
+            .parse()
+            .unwrap();
+        let mut wollet = WolletBuilder::new(Network::default_regtest(), desc)
+            .build()
+            .unwrap();
+
+        wollet
+            .apply_update(Update {
+                version: 4,
+                wollet_status: wollet.status(),
+                new_txs: DownloadTxResult::default(),
+                txid_height_new: vec![],
+                txid_height_delete: vec![],
+                timestamps: vec![],
+                scripts_with_blinding_pubkey: vec![],
+                tip: default_blockheader(),
+                unspent: vec![],
+                last_unused: LastUnused {
+                    external: 7,
+                    internal: 11,
+                },
+            })
+            .unwrap();
+
+        let built = BuiltTx {
+            pset: PartiallySignedTransaction::new_v2(),
+            blind_secrets: BTreeMap::new(),
+        };
+
+        let update = built.update(&wollet).unwrap();
+
+        assert_eq!(update.last_unused.external, 7);
+        assert_eq!(update.last_unused.internal, 11);
     }
 }

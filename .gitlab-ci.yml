@@ -24,7 +24,7 @@ stages:
   - deploy
 
 .base:
-  image: xenoky/lwk-builder@sha256:2ae964fa1de82046cd86f4a9997a624a00b91c7374f9ffdc4d23ce117da115a3
+  image: xenoky/lwk-builder@sha256:4a7fc684f084f41ab32110eeb80eec073fd2813fc5bf88afff8637fc1b4207e4
   tags:
     - cloud
   retry:
@@ -401,6 +401,7 @@ publish_to_maven:
       when: manual
   needs: []
   script:
+    - command -v just >/dev/null 2>&1 || { export PATH="/opt/homebrew/bin:$PATH"; brew install just; }
     - just kotlin-multiplatform
     - cd lwk_bindings/android_bindings
     - ./gradlew publish --no-daemon
@@ -425,6 +426,7 @@ publish_snapshot_to_maven:
       when: on_success
     - when: manual
   script:
+    - command -v just >/dev/null 2>&1 || { export PATH="/opt/homebrew/bin:$PATH"; brew install just; }
     - just kotlin-multiplatform
     - cd lwk_bindings/android_bindings
     - RAW_VERSION=$(grep '^libraryVersion=' gradle.properties | cut -d'=' -f2)

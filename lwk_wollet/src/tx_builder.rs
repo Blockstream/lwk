@@ -1392,7 +1392,7 @@ impl BuiltTx {
             scripts_with_blinding_pubkey: vec![],
             tip: crate::update::default_blockheader(),
             unspent: vec![],
-            last_unused: Default::default(),
+            last_unused: crate::wollet::WolletState::last_unused(wollet),
         };
         Ok(update)
     }

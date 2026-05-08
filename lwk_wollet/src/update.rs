@@ -1205,7 +1205,10 @@ mod test {
     fn test_merge_v3_then_v4_preserves_following_last_unused_on_restore() {
         let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();
         let network = Network::default_regtest();
-        let wollet_status = WolletBuilder::new(network, desc.clone()).build().unwrap().status();
+        let wollet_status = WolletBuilder::new(network, desc.clone())
+            .build()
+            .unwrap()
+            .status();
         let mut update = Update {
             version: 3,
             wollet_status,

@@ -1002,7 +1002,8 @@ mod test {
     };
 
     use crate::{
-        update::DownloadTxResult, Chain, Network, Update, WolletBuilder, WolletDescriptor,
+        clients::LastUnused, update::DownloadTxResult, Chain, Network, Update, WolletBuilder,
+        WolletDescriptor,
     };
 
     use super::{update_key, EncodableTxOutSecrets};
@@ -1104,6 +1105,43 @@ mod test {
 
         let back = Update::consensus_decode(&vec[..]).unwrap();
         assert_eq!(update, back)
+    }
+
+    #[test]
+    fn test_update_roundtrip_v4() {
+        let txid = lwk_test_util::txid_test_vector();
+        let new_txs = download_tx_result_test_vector();
+        let scripts_with_blinding_pubkey =
+            vec![(Chain::Internal, 3u32.into(), Script::default(), None)];
+
+        let tip = lwk_test_util::liquid_block_1().header;
+        let update = Update {
+            version: 4,
+            new_txs,
+            txid_height_new: vec![(txid, None), (txid, Some(12))],
+            txid_height_delete: vec![txid],
+            timestamps: vec![(12, 44), (12, 44)],
+            scripts_with_blinding_pubkey,
+            tip,
+            wollet_status: 1,
+            unspent: vec![],
+            last_unused: LastUnused {
+                external: 7,
+                internal: 11,
+            },
+        };
+
+        let mut vec = vec![];
+        let len = update.consensus_encode(&mut vec).unwrap();
+        let exp_vec = lwk_test_util::update_test_vector_v4_bytes();
+
+        assert_eq!(vec.len(), exp_vec.len());
+        assert_eq!(vec, exp_vec);
+        assert_eq!(len, 2892);
+        assert_eq!(vec.len(), len);
+
+        let back = Update::consensus_decode(&vec[..]).unwrap();
+        assert_eq!(update, back);
     }
 
     #[test]

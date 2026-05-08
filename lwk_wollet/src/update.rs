@@ -1160,6 +1160,48 @@ mod test {
     }
 
     #[test]
+    fn test_merge_keeps_max_last_unused() {
+        let tip = lwk_test_util::liquid_block_1().header;
+        let mut update = Update {
+            version: 4,
+            new_txs: DownloadTxResult::default(),
+            txid_height_new: vec![],
+            txid_height_delete: vec![],
+            timestamps: vec![(tip.height, tip.time)],
+            scripts_with_blinding_pubkey: vec![],
+            tip,
+            wollet_status: 11,
+            unspent: vec![],
+            last_unused: LastUnused {
+                external: 2,
+                internal: 8,
+            },
+        };
+
+        let following_tip = lwk_test_util::liquid_block_header_2_963_520();
+        let following = Update {
+            version: 4,
+            new_txs: DownloadTxResult::default(),
+            txid_height_new: vec![],
+            txid_height_delete: vec![],
+            timestamps: vec![(following_tip.height, following_tip.time)],
+            scripts_with_blinding_pubkey: vec![],
+            tip: following_tip,
+            wollet_status: 99,
+            unspent: vec![],
+            last_unused: LastUnused {
+                external: 7,
+                internal: 3,
+            },
+        };
+
+        update.merge(following);
+
+        assert_eq!(update.last_unused.external, 7);
+        assert_eq!(update.last_unused.internal, 8);
+    }
+
+    #[test]
     fn test_update_decription() {
         let update = Update::deserialize(&lwk_test_util::update_test_vector_bytes()).unwrap();
         let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();

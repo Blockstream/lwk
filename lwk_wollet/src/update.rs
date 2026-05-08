@@ -1215,6 +1215,13 @@ mod test {
     }
 
     #[test]
+    fn test_update_v4_requires_last_unused_bytes() {
+        let mut bytes = lwk_test_util::update_test_vector_v1_bytes();
+        bytes[4] = 4; // the fifth byte (after the 4 bytes magic) is the version
+        assert!(Update::deserialize(&bytes).is_err());
+    }
+
+    #[test]
     fn test_update_base64() {
         let base64 = lwk_test_util::update_test_vector_encrypted_base64();
         let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();

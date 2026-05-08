@@ -1202,6 +1202,50 @@ mod test {
     }
 
     #[test]
+    fn test_merge_v3_then_v4_preserves_following_last_unused_on_restore() {
+        let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();
+        let network = Network::default_regtest();
+        let wollet_status = WolletBuilder::new(network, desc.clone()).build().unwrap().status();
+        let mut update = Update {
+            version: 3,
+            wollet_status,
+            new_txs: DownloadTxResult::default(),
+            txid_height_new: vec![],
+            txid_height_delete: vec![],
+            timestamps: vec![],
+            scripts_with_blinding_pubkey: vec![],
+            tip: super::default_blockheader(),
+            unspent: vec![],
+            last_unused: LastUnused::default(),
+        };
+
+        let following = Update {
+            version: 4,
+            wollet_status: wollet_status + 1,
+            new_txs: DownloadTxResult::default(),
+            txid_height_new: vec![],
+            txid_height_delete: vec![],
+            timestamps: vec![],
+            scripts_with_blinding_pubkey: vec![],
+            tip: super::default_blockheader(),
+            unspent: vec![],
+            last_unused: LastUnused {
+                external: 7,
+                internal: 11,
+            },
+        };
+
+        update.merge(following);
+        assert_eq!(update.version, 4);
+
+        let merged = Update::deserialize(&update.serialize().unwrap()).unwrap();
+        let mut wollet = WolletBuilder::new(network, desc).build().unwrap();
+        wollet.apply_update(merged).unwrap();
+
+        assert_eq!(wollet.address(None).unwrap().index(), 7);
+    }
+
+    #[test]
     fn test_apply_v4_update_fetch_max_semantics() {
         let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();
         let network = Network::default_regtest();

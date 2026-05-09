@@ -1,4 +1,4 @@
-use crate::{Error, Network, Script};
+use crate::{Error, Network, PublicKey, Script};
 use lwk_wollet::elements::{self, AddressParams};
 use wasm_bindgen::prelude::*;
 
@@ -75,6 +75,14 @@ impl Address {
     #[wasm_bindgen(js_name = isBlinded)]
     pub fn is_blinded(&self) -> bool {
         self.inner.is_blinded()
+    }
+
+    /// Return the blinding public key, if the address is confidential.
+    #[wasm_bindgen(js_name = blindingPubkey)]
+    pub fn blinding_pubkey(&self) -> Option<PublicKey> {
+        self.inner
+            .blinding_pubkey
+            .map(|pk| lwk_wollet::elements::bitcoin::PublicKey::new(pk).into())
     }
 
     /// Return true if the address is for mainnet.
@@ -158,6 +166,11 @@ mod tests {
         assert_eq!(address.to_string(), address_str);
 
         assert!(address.is_blinded());
+
+        let blinding_pk = address.blinding_pubkey().expect("confidential address");
+        assert_eq!(blinding_pk.to_bytes().len(), 33);
+
+        assert!(address.to_unconfidential().blinding_pubkey().is_none());
 
         assert_eq!(
             address.to_unconfidential().to_string(),

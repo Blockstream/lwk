@@ -1,6 +1,6 @@
 //! Liquid transaction output
 
-use crate::{Address, AssetId, Error, Network, Script, SecretKey, TxOutSecrets};
+use crate::{Address, AssetId, Error, Network, Script, SecretKey, Transaction, TxOutSecrets};
 
 use lwk_wollet::elements::{self, confidential, TxOutWitness};
 
@@ -39,6 +39,44 @@ impl AsRef<elements::TxOut> for TxOut {
 
 #[wasm_bindgen]
 impl TxOut {
+    /// Extract a TxOut from a transaction at the given output index.
+    ///
+    /// Returns the TxOut with its witness data stripped: PSET carries the rangeproof
+    /// in a dedicated input field (`in_utxo_rangeproof`), and the surjection proof is
+    /// consumed during prior-tx verification and not re-carried.
+    ///
+    /// Use this to get the real (possibly confidential) `witness_utxo` for PSET
+    /// construction. The returned TxOut is NOT suitable for unblinding because the
+    /// rangeproof is stripped — to unblind, take the output directly from the source
+    /// transaction.
+    #[wasm_bindgen(js_name = fromTransaction)]
+    pub fn from_transaction(tx: &Transaction, vout: u32) -> Result<TxOut, Error> {
+        let tx_ref: &elements::Transaction = tx.as_ref();
+        let txout = tx_ref.output.get(vout as usize).ok_or_else(|| {
+            Error::Generic(format!(
+                "vout {} out of range (tx has {} outputs)",
+                vout,
+                tx_ref.output.len()
+            ))
+        })?;
+        // Strip witness data — PSET stores rangeproof in a separate field.
+        let mut clean = txout.clone();
+        clean.witness = TxOutWitness::default();
+        Ok(Self { inner: clean })
+    }
+
+    /// Extract the rangeproof bytes from a transaction output's witness.
+    ///
+    /// Returns the rangeproof bytes, or `None` if the vout is out of range or the
+    /// output is explicit (no rangeproof). Use with
+    /// `PsetInputBuilder.inUtxoRangeproof()`.
+    #[wasm_bindgen(js_name = rangeproofFromTransaction)]
+    pub fn rangeproof_from_transaction(tx: &Transaction, vout: u32) -> Option<Vec<u8>> {
+        let tx_ref: &elements::Transaction = tx.as_ref();
+        let txout = tx_ref.output.get(vout as usize)?;
+        txout.witness.rangeproof.as_ref().map(|rp| rp.serialize())
+    }
+
     /// Create a TxOut with explicit asset and value from script pubkey and asset ID.
     ///
     /// This is useful for constructing UTXOs for Simplicity transaction signing.
@@ -132,5 +170,38 @@ mod tests {
         let fee_tx_out: TxOut = fee_output.into();
         assert!(fee_tx_out.is_fee());
         assert_eq!(fee_tx_out.value(), Some(250));
+    }
+
+    #[wasm_bindgen_test]
+    fn test_from_transaction() {
+        use crate::Transaction;
+
+        let tx_hex = include_str!("../../../lwk_jade/test_data/pset_to_be_signed_transaction.hex")
+            .trim_end();
+        let tx = Transaction::new(tx_hex).unwrap();
+        let tx_ref: &elements::Transaction = tx.as_ref();
+        let outputs_len = tx_ref.output.len() as u32;
+        assert!(outputs_len > 0, "fixture has at least one output");
+
+        // First output is confidential in the fixture; witness must be stripped.
+        let extracted = TxOut::from_transaction(&tx, 0).unwrap();
+        let inner: elements::TxOut = (&extracted).into();
+        assert_eq!(inner.witness, elements::TxOutWitness::default());
+
+        // Out-of-range vout returns an error.
+        assert!(TxOut::from_transaction(&tx, outputs_len).is_err());
+
+        // rangeproof_from_transaction returns Some for confidential outputs.
+        let rp = TxOut::rangeproof_from_transaction(&tx, 0);
+        assert!(rp.is_some(), "confidential output should have a rangeproof");
+
+        // The last output of a Liquid tx is the explicit fee — no rangeproof.
+        assert!(
+            TxOut::rangeproof_from_transaction(&tx, outputs_len - 1).is_none(),
+            "fee output is explicit and should have no rangeproof"
+        );
+
+        // Out-of-range silently returns None.
+        assert!(TxOut::rangeproof_from_transaction(&tx, outputs_len).is_none());
     }
 }

@@ -584,6 +584,8 @@ impl EsploraClient {
 
         let mut page = 0;
         let mut data = Data::default();
+        let mut scripts_by_address = HashMap::new();
+        let mut has_more = HashSet::new();
         let mut retry_count = 0;
         const MAX_RETRIES: usize = 1;
 
@@ -629,6 +631,9 @@ impl EsploraClient {
             }
 
             let waterfalls_result: WaterfallsResult = serde_json::from_str(&body)?;
+            if let Some(addresses) = &waterfalls_result.has_more {
+                has_more.extend(addresses.iter().cloned());
+            }
 
             if self.utxo_only {
                 let unspent = waterfalls_result
@@ -662,7 +667,16 @@ impl EsploraClient {
                     );
                     let (script, blinding_pubkey, cached) = cache.get_or_derive(chain, child)?;
                     if !cached {
-                        data.scripts.insert(script, (chain, child, blinding_pubkey));
+                        data.scripts
+                            .insert(script.clone(), (chain, child, blinding_pubkey));
+                    }
+                    if let Some(address) =
+                        Address::from_script(&script, None, self.network.address_params())
+                    {
+                        scripts_by_address.insert(
+                            address.to_string(),
+                            (script.clone(), chain, child, blinding_pubkey),
+                        );
                     }
 
                     for tx_seen in script_history {
@@ -682,6 +696,27 @@ impl EsploraClient {
 
             if total < WATERFALLS_MAX_ADDRESSES {
                 break;
+            }
+        }
+
+        for address in has_more {
+            let Some((script, chain, child, blinding_pubkey)) =
+                scripts_by_address.get(&address).cloned()
+            else {
+                return Err(Error::Generic(format!(
+                    "Waterfalls returned has_more for unsupported script: {address}"
+                )));
+            };
+            data.scripts.insert(script, (chain, child, blinding_pubkey));
+            for tx_seen in self
+                .get_address_history_waterfalls_from_page(&address, 1)
+                .await?
+            {
+                if self.utxo_only {
+                    data.unspent
+                        .push(OutPoint::new(tx_seen.txid, (tx_seen.v - 1) as u32));
+                }
+                merge_waterfalls_history(&mut data, &tx_seen);
             }
         }
 

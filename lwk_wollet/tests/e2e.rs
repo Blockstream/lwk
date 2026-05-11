@@ -2127,11 +2127,10 @@ fn test_waterfalls_has_more_reused_address_balance() {
     let policy_balance = wallet.balance(&network.policy_asset());
     let expected_balance = receive_amount * receive_count;
 
-    // TODO "LWK should not silently report a truncated balance when Waterfalls returns has_more"
-    // this should be assert_eq!
-    assert_ne!(
+    assert_eq!(
         (txs, policy_balance),
         (receive_count as usize, expected_balance),
+        "LWK should not silently report a truncated balance when Waterfalls returns has_more"
     );
 }
 

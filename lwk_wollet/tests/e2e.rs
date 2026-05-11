@@ -166,7 +166,7 @@ fn origin() {
 }
 
 #[test]
-fn roundtrip() {
+fn roundtrip_e2e() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let signer1 = generate_signer();

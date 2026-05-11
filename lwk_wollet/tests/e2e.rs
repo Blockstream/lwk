@@ -2124,7 +2124,7 @@ fn test_waterfalls_has_more_reused_address_balance() {
     wallet.sync();
 
     let txs = wallet.wollet.transactions().unwrap().len();
-    let policy_balance = wallet.balance(&network.policy_asset());
+    let policy_balance = wallet.balance(network.policy_asset());
     let expected_balance = receive_amount * receive_count;
 
     assert_eq!(

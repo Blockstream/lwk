@@ -1012,6 +1012,7 @@ struct WaterfallsResult {
     pub txs_seen: HashMap<String, Vec<Vec<History>>>,
     pub page: u16,
     pub tip: Option<BlockHash>,
+    pub has_more: Option<Vec<String>>,
 }
 
 /// Response from the last_used_index endpoint

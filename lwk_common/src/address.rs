@@ -204,6 +204,18 @@ mod tests {
     }
 
     #[test]
+    fn test_address_from_conversions() {
+        let addr = "lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0";
+        let inner: elements::Address = addr.parse().unwrap();
+
+        let address = Address::from(inner.clone());
+        assert_eq!(address.to_string(), addr);
+
+        let roundtrip = elements::Address::from(address);
+        assert_eq!(roundtrip, inner);
+    }
+
+    #[test]
     fn test_parse_localtest_liquid_network() {
         // Test with LocaltestLiquid network (regtest)
         let addr = "lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0";

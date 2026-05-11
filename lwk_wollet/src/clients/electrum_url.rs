@@ -71,3 +71,14 @@ impl ElectrumUrl {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_url_without_domain_fails() {
+        let err = "tcp://[::1]:50001".parse::<ElectrumUrl>().unwrap_err();
+        assert!(matches!(err, crate::UrlError::MissingDomain));
+    }
+}

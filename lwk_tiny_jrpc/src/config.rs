@@ -108,7 +108,10 @@ mod tests {
             .build();
 
         assert_eq!(config.headers.len(), 2);
-        assert_eq!(config.headers[0].to_string(), "Access-Control-Allow-Origin: *");
+        assert_eq!(
+            config.headers[0].to_string(),
+            "Access-Control-Allow-Origin: *"
+        );
         assert_eq!(config.headers[1].to_string(), "X-Test-Header: lwk");
         assert_eq!(config.num_threads, num_threads);
         assert_eq!(config.serve_dir, serve_dir);

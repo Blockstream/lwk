@@ -82,3 +82,14 @@ impl<'de> serde::Deserialize<'de> for CurrencyCode {
         s.parse().map_err(serde::de::Error::custom)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn display_uses_alpha3_code() {
+        let currency = alpha3("EUR").unwrap();
+        assert_eq!(currency.to_string(), "EUR");
+    }
+}

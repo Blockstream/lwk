@@ -245,4 +245,10 @@ mod tests {
         contract.version = 1;
         assert!(asset_ids(&tx.input[0], &contract).is_err());
     }
+
+    #[test]
+    fn entity_domain_returns_inner_domain() {
+        let entity = Entity::Domain("example.com".to_string());
+        assert_eq!(entity.domain(), "example.com");
+    }
 }

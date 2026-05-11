@@ -54,8 +54,10 @@ mod tests {
     #[test]
     fn test_domain() {
         assert!(verify_domain_name("foo.com").is_ok());
+        assert!(verify_domain_name("foo.com.").is_ok());
         assert!(verify_domain_name("foO.com").is_err());
         assert!(verify_domain_name(">foo.com").is_err());
+        assert!(verify_domain_name("com").is_err());
         assert!(verify_domain_name("δοκιμή.com").is_err());
         assert!(verify_domain_name("xn--jxalpdlp.com").is_ok());
     }

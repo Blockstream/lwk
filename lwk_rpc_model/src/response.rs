@@ -552,3 +552,16 @@ impl std::fmt::Display for WalletType {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn display_wallet_type() {
+        assert_eq!(WalletType::Unknown.to_string(), "unknown");
+        assert_eq!(WalletType::Wpkh.to_string(), "wpkh");
+        assert_eq!(WalletType::ShWpkh.to_string(), "sh_wpkh");
+        assert_eq!(WalletType::WshMulti(2, 3).to_string(), "wsh_multi_2of3");
+    }
+}

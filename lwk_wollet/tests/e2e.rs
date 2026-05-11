@@ -2061,6 +2061,82 @@ fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(feature = "esplora")]
 #[test]
+fn test_waterfalls_has_more_reused_address_balance() {
+    let env = TestEnvBuilder::from_env()
+        .with_waterfalls_max_txs_seen(3)
+        .build();
+    let network = Network::default_regtest();
+
+    let client =
+        clients::blocking::EsploraClient::new_waterfalls(&env.waterfalls_url(), network).unwrap();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer.xpub());
+    let mut wallet = TestWollet::new(client, &desc);
+    let waterfalls_descriptor = wallet
+        .wollet
+        .wollet_descriptor()
+        .bitcoin_descriptor_without_key_origin()
+        .unwrap()
+        .to_string();
+
+    let address = wallet.address();
+    let unconfidential_address = address.to_unconfidential().to_string();
+    let receive_amount = 10_000;
+    let receive_count = 5;
+    for _ in 0..receive_count {
+        env.elementsd_sendtoaddress(&address, receive_amount, None);
+        env.elementsd_generate(1);
+    }
+
+    for i in 0..50 {
+        let response: serde_json::Value = reqwest::blocking::Client::new()
+            .get(format!("{}/v2/waterfalls", env.waterfalls_url()))
+            .query(&[
+                ("descriptor", waterfalls_descriptor.as_str()),
+                ("page", "0"),
+                ("to_index", "0"),
+                ("utxo_only", "false"),
+            ])
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        if response
+            .get("has_more")
+            .and_then(|has_more| has_more.as_array())
+            .is_some_and(|has_more| {
+                has_more
+                    .iter()
+                    .any(|addr| addr.as_str() == Some(unconfidential_address.as_str()))
+            })
+        {
+            break;
+        }
+        assert!(
+            i < 49,
+            "Waterfalls did not return has_more for reused address"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+
+    wallet.sync();
+
+    let txs = wallet.wollet.transactions().unwrap().len();
+    let policy_balance = wallet.balance(&network.policy_asset());
+    let expected_balance = receive_amount * receive_count;
+
+    // TODO "LWK should not silently report a truncated balance when Waterfalls returns has_more"
+    // this should be assert_eq!
+    assert_ne!(
+        (txs, policy_balance),
+        (receive_count as usize, expected_balance),
+    );
+}
+
+#[cfg(feature = "esplora")]
+#[test]
 fn test_esplora_client() {
     let env = TestEnvBuilder::from_env().with_esplora().build();
     let url = env.esplora_url();

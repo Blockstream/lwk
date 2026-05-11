@@ -164,3 +164,6 @@ coverage-local:
     grcov . -s . --binary-path ./target/debug/ --llvm-path "${llvm_path}" -t html --branch \
         --ignore-not-existing --ignore "*cargo*" --ignore "lwk_boltz/tests/**" \
         -o ./target/coverage/ -p "$(pwd)"
+
+    coverage_index="$(pwd)/target/coverage/index.html"
+    printf '\nCoverage HTML report: file://%s\n' "${coverage_index}"

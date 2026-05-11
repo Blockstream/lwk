@@ -615,21 +615,7 @@ impl EsploraClient {
                     }
 
                     for tx_seen in script_history {
-                        let height = if tx_seen.height > 0 {
-                            Some(tx_seen.height as u32)
-                        } else {
-                            None
-                        };
-                        if let Some(height) = height.as_ref() {
-                            if let Some(block_hash) = tx_seen.block_hash.as_ref() {
-                                data.height_blockhash.insert(*height, *block_hash);
-                            }
-                            if let Some(ts) = tx_seen.block_timestamp.as_ref() {
-                                data.height_timestamp.insert(*height, *ts);
-                            }
-                        }
-
-                        data.txid_height.insert(tx_seen.txid, height);
+                        merge_waterfalls_history(&mut data, tx_seen);
                     }
                 }
             }

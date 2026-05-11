@@ -151,18 +151,20 @@ coverage-local:
 
     host_triple="$(rustc -vV | sed -n 's/^host: //p')"
     llvm_path="$(rustc --print sysroot)/lib/rustlib/${host_triple}/bin"
+    coverage_profraw_dir="$(pwd)/target/coverage-profraw"
 
-    mkdir -p target/coverage-profraw
-    find target/coverage-profraw -name '*.profraw' -delete
+    mkdir -p "${coverage_profraw_dir}"
+    find "${coverage_profraw_dir}" -name '*.profraw' -delete
     rm -rf target/coverage
 
     export RUSTFLAGS='-C instrument-coverage'
-    export LLVM_PROFILE_FILE='target/coverage-profraw/coverage-%p-%m.profraw'
+    export LLVM_PROFILE_FILE="${coverage_profraw_dir}/coverage-%p-%m.profraw"
 
-    cargo nextest run --workspace --exclude lwk_boltz
+    cargo nextest run
 
-    grcov . -s . --binary-path ./target/debug/ --llvm-path "${llvm_path}" -t html --branch \
+    grcov "${coverage_profraw_dir}" -s . --binary-path ./target/debug/ --llvm-path "${llvm_path}" -t html --branch \
         --ignore-not-existing --ignore "*cargo*" --ignore "lwk_boltz/tests/**" \
+        --ignore "lwk_boltz/regtest/data/**" \
         -o ./target/coverage/ -p "$(pwd)"
 
     coverage_index="$(pwd)/target/coverage/index.html"

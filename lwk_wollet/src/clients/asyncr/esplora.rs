@@ -264,9 +264,22 @@ impl EsploraClient {
         Ok(result)
     }
 
-    async fn get_address_history_waterfalls(&self, address: &str) -> Result<Vec<History>, Error> {
+    /// Fetch all Waterfalls history pages for one address.
+    pub async fn get_address_history_waterfalls(
+        &self,
+        address: &str,
+    ) -> Result<Vec<History>, Error> {
+        self.get_address_history_waterfalls_from_page(address, 0)
+            .await
+    }
+
+    async fn get_address_history_waterfalls_from_page(
+        &self,
+        address: &str,
+        start_page: u16,
+    ) -> Result<Vec<History>, Error> {
         let mut result = vec![];
-        let mut page = 1;
+        let mut page = start_page;
 
         loop {
             let url = format!(

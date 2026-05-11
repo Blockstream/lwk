@@ -166,7 +166,7 @@ fn origin() {
     wallet.send_btc(&signers, None, Some((address, 10_000)));
 }
 
-fn roundtrip_e2e_inner<const N: usize>(
+fn wallet_flow_e2e_inner<const N: usize>(
     signers: [SwSigner; N],
     desc: impl FnOnce(&[SwSigner; N]) -> String,
 ) {
@@ -180,45 +180,45 @@ fn roundtrip_e2e_inner<const N: usize>(
         .collect::<Vec<_>>();
     let signers = signers.iter().collect::<Vec<_>>();
 
-    roundtrip_inner(wallet, &env, &signers);
+    run_wallet_flow(wallet, &env, &signers);
 }
 
 #[test]
-fn roundtrip_e2e_slip77_wpkh() {
+fn wallet_flow_e2e_slip77_wpkh() {
     let slip77_key = generate_slip77();
-    roundtrip_e2e_inner([generate_signer()], |signers| {
+    wallet_flow_e2e_inner([generate_signer()], |signers| {
         format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signers[0].xpub())
     });
 }
 
 #[test]
-fn roundtrip_e2e_view_wpkh() {
+fn wallet_flow_e2e_view_wpkh() {
     let view_key = generate_view_key();
-    roundtrip_e2e_inner([generate_signer()], |signers| {
+    wallet_flow_e2e_inner([generate_signer()], |signers| {
         format!("ct({},elwpkh({}/*))", view_key, signers[0].xpub())
     });
 }
 
 #[test]
-fn roundtrip_e2e_sh_wpkh() {
+fn wallet_flow_e2e_sh_wpkh() {
     let view_key = generate_view_key();
-    roundtrip_e2e_inner([generate_signer()], |signers| {
+    wallet_flow_e2e_inner([generate_signer()], |signers| {
         format!("ct({},elsh(wpkh({}/*)))", view_key, signers[0].xpub())
     });
 }
 
 #[test]
-fn roundtrip_e2e_wpkh_subpath() {
+fn wallet_flow_e2e_wpkh_subpath() {
     let view_key = generate_view_key();
-    roundtrip_e2e_inner([generate_signer()], |signers| {
+    wallet_flow_e2e_inner([generate_signer()], |signers| {
         format!("ct({},elwpkh({}/9/*))", view_key, signers[0].xpub())
     });
 }
 
 #[test]
-fn roundtrip_e2e_wsh_multi() {
+fn wallet_flow_e2e_wsh_multi() {
     let view_key = generate_view_key();
-    roundtrip_e2e_inner([generate_signer(), generate_signer()], |signers| {
+    wallet_flow_e2e_inner([generate_signer(), generate_signer()], |signers| {
         let xpub1: Xpub = signers[0].xpub();
         let xpub2: Xpub = signers[1].xpub();
         format!("ct({view_key},elwsh(multi(2,{xpub1}/*,{xpub2}/*)))")
@@ -226,22 +226,22 @@ fn roundtrip_e2e_wsh_multi() {
 }
 
 #[test]
-fn roundtrip_e2e_slip77_wpkh_multipath() {
+fn wallet_flow_e2e_slip77_wpkh_multipath() {
     let slip77_key = generate_slip77();
-    roundtrip_e2e_inner([generate_signer()], |signers| {
+    wallet_flow_e2e_inner([generate_signer()], |signers| {
         let xpub: Xpub = signers[0].xpub();
         format!("ct(slip77({slip77_key}),elwpkh({xpub}/<0;1>/*))")
     });
 }
 
 #[test]
-fn roundtrip_e2e_elip151_wpkh() {
-    roundtrip_e2e_inner([generate_signer()], |signers| {
+fn wallet_flow_e2e_elip151_wpkh() {
+    wallet_flow_e2e_inner([generate_signer()], |signers| {
         format!("ct(elip151,elwpkh({}/*))", signers[0].xpub())
     });
 }
 
-fn roundtrip_inner<C: BlockchainBackend>(
+fn run_wallet_flow<C: BlockchainBackend>(
     mut wallet: TestWollet<C>,
     env: &TestEnv,
     signers: &[&AnySigner],
@@ -2072,7 +2072,7 @@ fn test_esplora_client() {
     let signers = &[&AnySigner::Software(signer)];
 
     let wallet = TestWollet::new(client, &desc);
-    roundtrip_inner(wallet, &env, signers);
+    run_wallet_flow(wallet, &env, signers);
 }
 
 #[test]

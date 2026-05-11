@@ -1030,6 +1030,25 @@ pub struct LastUsedIndexResponse {
     pub tip: Option<BlockHash>,
 }
 
+/// Merge one Waterfalls history entry into scan data, preserving confirmation metadata.
+fn merge_waterfalls_history(data: &mut Data, tx_seen: &History) {
+    let height = if tx_seen.height > 0 {
+        Some(tx_seen.height as u32)
+    } else {
+        None
+    };
+    if let Some(height) = height.as_ref() {
+        if let Some(block_hash) = tx_seen.block_hash.as_ref() {
+            data.height_blockhash.insert(*height, *block_hash);
+        }
+        if let Some(ts) = tx_seen.block_timestamp.as_ref() {
+            data.height_timestamp.insert(*height, *ts);
+        }
+    }
+
+    data.txid_height.insert(tx_seen.txid, height);
+}
+
 /// Encrypt a plaintext using a recipient key
 ///
 /// This can be used to encrypt a descriptor to share with a "waterfalls" server
@@ -1084,11 +1103,11 @@ mod tests {
 
     use crate::{
         asyncr::{esplora::fetch_oauth_token, EsploraClientBuilder},
-        clients::{asyncr::async_sleep, TokenProvider},
+        clients::{asyncr::async_sleep, Data, History, TokenProvider},
         Network, WolletBuilder, WolletDescriptor,
     };
 
-    use super::EsploraClient;
+    use super::{merge_waterfalls_history, EsploraClient};
     use elements::{encode::Decodable, BlockHash};
     use tokio::time::sleep;
 
@@ -1113,6 +1132,48 @@ mod tests {
     async fn sleep_test() {
         // TODO this doesn't last a second when run, is it right?
         async_sleep(1).await.unwrap();
+    }
+
+    #[test]
+    fn test_merge_waterfalls_history() {
+        let txid = elements::Txid::from_str(
+            "6ac214c3833ee06f7a30636dac66f0e5c025ece2693cc3f85a8c22fb2dcb2fa1",
+        )
+        .unwrap();
+        let block_hash =
+            BlockHash::from_str("2f7499435ae332f8a94e330ad1a28914e560eab5acee430bd50e446a66d89e1a")
+                .unwrap();
+        let mut data = Data::default();
+
+        merge_waterfalls_history(
+            &mut data,
+            &History {
+                txid,
+                height: 123,
+                block_hash: Some(block_hash),
+                block_timestamp: Some(456),
+                v: 0,
+            },
+        );
+
+        assert_eq!(data.txid_height.get(&txid), Some(&Some(123)));
+        assert_eq!(data.height_blockhash.get(&123), Some(&block_hash));
+        assert_eq!(data.height_timestamp.get(&123), Some(&456));
+
+        merge_waterfalls_history(
+            &mut data,
+            &History {
+                txid,
+                height: 0,
+                block_hash: None,
+                block_timestamp: None,
+                v: 0,
+            },
+        );
+
+        assert_eq!(data.txid_height.get(&txid), Some(&None));
+        assert_eq!(data.height_blockhash.get(&123), Some(&block_hash));
+        assert_eq!(data.height_timestamp.get(&123), Some(&456));
     }
 
     #[ignore]

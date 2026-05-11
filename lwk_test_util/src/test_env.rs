@@ -32,6 +32,7 @@ pub struct TestEnvBuilder {
     with_esplora: bool,
     with_bitcoind: bool,
     with_waterfalls: bool,
+    waterfalls_max_txs_seen: Option<usize>,
     with_registry: bool,
     with_zmq: bool,
 }
@@ -61,6 +62,7 @@ impl TestEnvBuilder {
             with_esplora: false,
             with_bitcoind: false,
             with_waterfalls: false,
+            waterfalls_max_txs_seen: None,
             with_registry: false,
             with_zmq: false,
         }
@@ -87,6 +89,13 @@ impl TestEnvBuilder {
     /// Start a Waterfalls server
     pub fn with_waterfalls(mut self) -> Self {
         self.with_waterfalls = true;
+        self
+    }
+
+    /// Start a Waterfalls server with a custom per-script history truncation limit
+    pub fn with_waterfalls_max_txs_seen(mut self, max_txs_seen: usize) -> Self {
+        self.with_waterfalls = true;
+        self.waterfalls_max_txs_seen = Some(max_txs_seen);
         self
     }
 
@@ -246,6 +255,7 @@ impl TestEnvBuilder {
                 &rpc,
                 &cookie_values.user,
                 &cookie_values.password,
+                self.waterfalls_max_txs_seen,
             );
             Some(waterfallsd)
         } else {

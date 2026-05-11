@@ -700,6 +700,13 @@ impl EsploraClient {
             }
         }
 
+        if self.utxo_only && !has_more.is_empty() {
+            return Err(Error::Generic(
+                "Waterfalls does not support paginated reused-address history in utxo_only mode"
+                    .to_string(),
+            ));
+        }
+
         for address in has_more {
             let Some((script, chain, child, blinding_pubkey)) =
                 scripts_by_address.get(&address).cloned()

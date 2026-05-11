@@ -19,6 +19,7 @@ mod utxo_only;
 use crate::test_jade::jade_setup;
 use clients::blocking::{self, BlockchainBackend};
 use electrum_client::ScriptStatus;
+use elements::bitcoin::bip32::Xpub;
 use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
 use elements::encode::{deserialize, serialize};
 use elements::hex::{FromHex, ToHex};
@@ -218,8 +219,8 @@ fn roundtrip_e2e_wpkh_subpath() {
 fn roundtrip_e2e_wsh_multi() {
     let view_key = generate_view_key();
     roundtrip_e2e_inner([generate_signer(), generate_signer()], |signers| {
-        let xpub1: bitcoin::bip32::Xpub = signers[0].xpub();
-        let xpub2: bitcoin::bip32::Xpub = signers[1].xpub();
+        let xpub1: Xpub = signers[0].xpub();
+        let xpub2: Xpub = signers[1].xpub();
         format!("ct({view_key},elwsh(multi(2,{xpub1}/*,{xpub2}/*)))")
     });
 }
@@ -228,7 +229,7 @@ fn roundtrip_e2e_wsh_multi() {
 fn roundtrip_e2e_slip77_wpkh_multipath() {
     let slip77_key = generate_slip77();
     roundtrip_e2e_inner([generate_signer()], |signers| {
-        let xpub: bitcoin::bip32::Xpub = signers[0].xpub();
+        let xpub: Xpub = signers[0].xpub();
         format!("ct(slip77({slip77_key}),elwpkh({xpub}/<0;1>/*))")
     });
 }

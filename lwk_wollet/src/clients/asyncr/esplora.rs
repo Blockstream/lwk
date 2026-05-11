@@ -641,7 +641,8 @@ impl EsploraClient {
                     .values()
                     .flatten()
                     .flatten()
-                    .map(|h| OutPoint::new(h.txid, (h.v - 1) as u32)); // TODO
+                    .map(waterfalls_outpoint)
+                    .collect::<Result<Vec<_>, _>>()?;
                 data.unspent.extend(unspent);
             }
 
@@ -713,8 +714,7 @@ impl EsploraClient {
                 .await?
             {
                 if self.utxo_only {
-                    data.unspent
-                        .push(OutPoint::new(tx_seen.txid, (tx_seen.v - 1) as u32));
+                    data.unspent.push(waterfalls_outpoint(&tx_seen)?);
                 }
                 merge_waterfalls_history(&mut data, &tx_seen);
             }
@@ -1121,6 +1121,22 @@ fn merge_waterfalls_history(data: &mut Data, tx_seen: &History) {
     data.txid_height.insert(tx_seen.txid, height);
 }
 
+fn waterfalls_outpoint(tx_seen: &History) -> Result<OutPoint, Error> {
+    // Waterfalls serializes output positions as vout + 1; 0 is undefined and negative values
+    // refer to inputs, neither of which can identify an unspent output.
+    let vout = tx_seen
+        .v
+        .checked_sub(1)
+        .and_then(|vout| u32::try_from(vout).ok())
+        .ok_or_else(|| {
+            Error::Generic(format!(
+                "Waterfalls UTXO entry has invalid output index {} for txid {}",
+                tx_seen.v, tx_seen.txid
+            ))
+        })?;
+    Ok(OutPoint::new(tx_seen.txid, vout))
+}
+
 /// Encrypt a plaintext using a recipient key
 ///
 /// This can be used to encrypt a descriptor to share with a "waterfalls" server
@@ -1179,7 +1195,7 @@ mod tests {
         Network, WolletBuilder, WolletDescriptor,
     };
 
-    use super::{merge_waterfalls_history, EsploraClient};
+    use super::{merge_waterfalls_history, waterfalls_outpoint, EsploraClient};
     use elements::{encode::Decodable, BlockHash};
     use tokio::time::sleep;
 
@@ -1246,6 +1262,29 @@ mod tests {
         assert_eq!(data.txid_height.get(&txid), Some(&None));
         assert_eq!(data.height_blockhash.get(&123), Some(&block_hash));
         assert_eq!(data.height_timestamp.get(&123), Some(&456));
+    }
+
+    #[test]
+    fn test_waterfalls_outpoint_uses_one_based_vout() {
+        let txid = elements::Txid::from_str(
+            "6ac214c3833ee06f7a30636dac66f0e5c025ece2693cc3f85a8c22fb2dcb2fa1",
+        )
+        .unwrap();
+        let history = History {
+            txid,
+            height: 1,
+            block_hash: None,
+            block_timestamp: None,
+            v: 1,
+        };
+
+        assert_eq!(waterfalls_outpoint(&history).unwrap().vout, 0);
+
+        let history = History { v: 0, ..history };
+        assert!(waterfalls_outpoint(&history).is_err());
+
+        let history = History { v: -1, ..history };
+        assert!(waterfalls_outpoint(&history).is_err());
     }
 
     #[ignore]

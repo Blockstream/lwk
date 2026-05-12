@@ -39,7 +39,7 @@ mod invoice;
 #[cfg(feature = "lightning")]
 mod lightning;
 #[cfg(feature = "lightning")]
-pub use invoice::{Bolt11Invoice, LightningPayment};
+pub use invoice::{Bolt11Invoice, Invoice, LightningPayment};
 #[cfg(feature = "lightning")]
 pub use lightning::{BoltzSession, LogLevel, Logging, LoggingLink};
 

@@ -349,6 +349,19 @@ impl BoltzSession {
         Ok(r.into())
     }
 
+    /// Fetch a BOLT12 invoice without creating or starting a swap
+    #[wasm_bindgen(js_name = fetchBolt12Invoice)]
+    pub async fn fetch_bolt12_invoice(
+        &self,
+        lightning_payment: &LightningPayment,
+    ) -> Result<Invoice, Error> {
+        let r = self
+            .inner
+            .fetch_bolt12_invoice(&lightning_payment.inner)
+            .await?;
+        Ok(r.into())
+    }
+
     /// Create a lightning invoice for receiving payment
     pub async fn invoice(
         &self,

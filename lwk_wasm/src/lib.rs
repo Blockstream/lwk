@@ -96,7 +96,7 @@ pub use blockdata::tx_sequence::TxSequence;
 pub use blockdata::wallet_tx::WalletTx;
 pub use blockdata::wallet_tx_out::{OptionWalletTxOut, WalletTxOut};
 pub use boltz::LightningPayment;
-pub use boltz::{BoltzSession, BoltzSessionBuilder};
+pub use boltz::{BoltzSession, BoltzSessionBuilder, Invoice};
 pub use contract::Contract;
 #[cfg(feature = "simplicity")]
 pub use control_block::ControlBlock;

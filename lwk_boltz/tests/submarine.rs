@@ -106,6 +106,10 @@ mod tests {
             sat_amount
         );
 
+        let invoice = session.fetch_bolt12_invoice(&payment).await.unwrap();
+        assert!(invoice.is_bolt12());
+        assert_eq!(invoice.amount_sats().unwrap(), sat_amount);
+
         let prepare_pay = session
             .prepare_pay(&payment, &refund_address, None)
             .await

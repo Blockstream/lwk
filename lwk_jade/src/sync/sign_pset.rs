@@ -112,7 +112,11 @@ impl Jade {
 
             if let Some(public_key) = public_key {
                 if !sig.is_empty() {
-                    pset.inputs_mut()[i].partial_sigs.insert(public_key, sig);
+                    let input = pset.inputs_mut().get_mut(i).ok_or(Error::Generic(
+                        "expected signable_inputs to have same length as pset.inputs()".to_string(),
+                    ))?;
+
+                    input.partial_sigs.insert(public_key, sig);
                     sigs_added_or_overwritten += 1;
                 }
             }

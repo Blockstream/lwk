@@ -263,6 +263,7 @@ impl<T: Transport> LiquidClient<T> {
         let purpose = match variant {
             lwk_common::Singlesig::Wpkh => 84,
             lwk_common::Singlesig::ShWpkh => 49,
+            lwk_common::Singlesig::Taproot => 86,
         };
         let path = format!("m/{purpose}h/{coin_type}h/0h")
             .parse()
@@ -281,7 +282,17 @@ impl<T: Transport> LiquidClient<T> {
             .map_err(|e| map_str_err(e, "Failed to get master blinding key"))?;
         let wpk0 = WalletPubKey::from(((fingerprint, path), xpub));
         let ss_keys = vec![wpk0];
-        let desc = format!("ct(slip77({master_blinding_key}),wpkh(@0/**))");
+        let desc = match variant {
+            lwk_common::Singlesig::Wpkh => {
+                format!("ct(slip77({master_blinding_key}),wpkh(@0/**))")
+            }
+            lwk_common::Singlesig::ShWpkh => {
+                format!("ct(slip77({master_blinding_key}),sh(wpkh(@0/**)))")
+            }
+            lwk_common::Singlesig::Taproot => {
+                format!("ct(slip77({master_blinding_key}),tr(@0/**))")
+            }
+        };
         let ss = WalletPolicy::new("".to_string(), version, desc, ss_keys.clone());
         let address = self
             .get_wallet_address(

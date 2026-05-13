@@ -310,6 +310,42 @@ impl BoltzSession {
         Ok(result)
     }
 
+    /// Fetch a BOLT12 invoice from a lightning payment using the Boltz API.
+    ///
+    /// This converts a [`LightningPayment::Bolt12`] offer into an [`Invoice::Bolt12`]
+    /// without creating or starting a swap.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - `lightning_payment` is not a [`LightningPayment::Bolt12`]
+    /// - the BOLT12 payment has no invoice amount set
+    /// - the API request fails
+    /// - the returned invoice cannot be parsed
+    /// - the invoice doesn't match the offer (signature verification fails)
+    pub async fn fetch_bolt12_invoice(
+        &self,
+        lightning_payment: &LightningPayment,
+    ) -> Result<Invoice, Error> {
+        match lightning_payment {
+            LightningPayment::Bolt12 {
+                offer,
+                invoice_amount: Some(invoice_amount_msats),
+            } => {
+                let amount_sats = invoice_amount_msats / 1000;
+                let bolt12_invoice = self
+                    .fetch_bolt12_invoice_from_offer(offer, amount_sats)
+                    .await?;
+                Ok(Invoice::Bolt12(Box::new(bolt12_invoice)))
+            }
+            LightningPayment::Bolt12 {
+                invoice_amount: None,
+                ..
+            } => Err(Error::Generic("Amount is required".to_string())),
+            _ => Err(Error::ExpectedBolt12Variant),
+        }
+    }
+
     /// Fetch a BOLT12 invoice from an offer using the Boltz API
     ///
     /// This method takes a BOLT12 offer and an amount, fetches the corresponding
@@ -330,8 +366,7 @@ impl BoltzSession {
     /// - The API request fails
     /// - The returned invoice cannot be parsed
     /// - The invoice doesn't match the offer (signature verification fails)
-    #[allow(dead_code)]
-    async fn fetch_bolt12_invoice(
+    async fn fetch_bolt12_invoice_from_offer(
         &self,
         offer: &Offer,
         amount: u64,

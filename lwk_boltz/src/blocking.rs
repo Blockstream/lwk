@@ -13,7 +13,7 @@ use lwk_wollet::elements;
 
 use crate::{
     prepare_pay_data::PreparePayDataSerializable, ChainSwapData, ChainSwapDataSerializable, Error,
-    InvoiceData, InvoiceDataSerializable, LightningPayment, PreparePayData, QuoteBuilder,
+    Invoice, InvoiceData, InvoiceDataSerializable, LightningPayment, PreparePayData, QuoteBuilder,
     RescueFile, SwapPersistence, SwapStatus,
 };
 
@@ -61,6 +61,15 @@ impl BoltzSession {
             inner,
             runtime: self.runtime.clone(),
         })
+    }
+
+    /// Blocking version of [`crate::BoltzSession::fetch_bolt12_invoice`].
+    pub fn fetch_bolt12_invoice(
+        &self,
+        lightning_payment: &LightningPayment,
+    ) -> Result<Invoice, Error> {
+        self.runtime
+            .block_on(self.inner.fetch_bolt12_invoice(lightning_payment))
     }
 
     pub fn restore_prepare_pay(

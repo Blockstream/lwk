@@ -98,6 +98,55 @@ impl Bolt11Invoice {
     }
 }
 
+/// Represents a lightning invoice (BOLT11 or BOLT12).
+#[derive(uniffi::Object, Debug, Clone)]
+#[uniffi::export(Display)]
+pub struct Invoice {
+    inner: lwk_boltz::Invoice,
+}
+
+impl From<lwk_boltz::Invoice> for Invoice {
+    fn from(inner: lwk_boltz::Invoice) -> Self {
+        Self { inner }
+    }
+}
+
+impl Display for Invoice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
+    }
+}
+
+#[uniffi::export]
+impl Invoice {
+    /// Returns the amount in whole satoshis.
+    pub fn amount_sats(&self) -> Result<u64, LwkError> {
+        self.inner.amount_sats().map_err(Into::into)
+    }
+
+    /// Returns true if this is a BOLT11 invoice.
+    pub fn is_bolt11(&self) -> bool {
+        self.inner.is_bolt11()
+    }
+
+    /// Returns true if this is a BOLT12 invoice.
+    pub fn is_bolt12(&self) -> bool {
+        self.inner.is_bolt12()
+    }
+
+    /// Returns the BOLT11 invoice if this is a BOLT11 invoice.
+    pub fn bolt11_invoice(&self) -> Option<Arc<Bolt11Invoice>> {
+        self.inner
+            .bolt11()
+            .map(|invoice| Arc::new(Bolt11Invoice::from(invoice.clone())))
+    }
+
+    /// Returns the BOLT12 invoice string if this is a BOLT12 invoice.
+    pub fn bolt12_invoice(&self) -> Option<String> {
+        self.inner.bolt12().map(lwk_boltz::display_bolt12_invoice)
+    }
+}
+
 /// Represents a lightning payment (bolt11 invoice or bolt12 offer)
 #[derive(uniffi::Object)]
 pub struct LightningPayment {

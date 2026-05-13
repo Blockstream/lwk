@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     blockdata::address::BitcoinAddress, store::ForeignStoreLink, Address, Bolt11Invoice,
-    ElectrumClient, EsploraClient, LightningPayment, LwkError, Mnemonic, Network,
+    ElectrumClient, EsploraClient, Invoice, LightningPayment, LwkError, Mnemonic, Network,
 };
 use log::{Level, Metadata, Record};
 use lwk_boltz::{
@@ -442,6 +442,17 @@ impl BoltzSession {
         Ok(PreparePayResponse {
             inner: Mutex::new(Some(response)),
         })
+    }
+
+    /// Fetch a BOLT12 invoice without creating or starting a swap
+    pub fn fetch_bolt12_invoice(
+        &self,
+        lightning_payment: &LightningPayment,
+    ) -> Result<Arc<Invoice>, LwkError> {
+        let invoice = self
+            .inner
+            .fetch_bolt12_invoice(&lightning_payment.clone()?)?;
+        Ok(Arc::new(Invoice::from(invoice)))
     }
 
     /// Restore a payment from its serialized data see `PreparePayResponse::serialize`

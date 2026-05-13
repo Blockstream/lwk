@@ -209,6 +209,70 @@ impl PreparePayResponse {
     }
 }
 
+/// Wrapper over [`lwk_boltz::Invoice`]
+#[wasm_bindgen]
+#[derive(Debug)]
+pub struct Invoice {
+    inner: lwk_boltz::Invoice,
+}
+
+impl fmt::Display for Invoice {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.inner)
+    }
+}
+
+impl From<lwk_boltz::Invoice> for Invoice {
+    fn from(inner: lwk_boltz::Invoice) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<Invoice> for lwk_boltz::Invoice {
+    fn from(wrapper: Invoice) -> Self {
+        wrapper.inner
+    }
+}
+
+#[wasm_bindgen]
+impl Invoice {
+    /// Return a string representation of the invoice
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{self}")
+    }
+
+    /// Return the invoice amount in whole satoshis
+    #[wasm_bindgen(js_name = amountSats)]
+    pub fn amount_sats(&self) -> Result<u64, Error> {
+        Ok(self.inner.amount_sats()?)
+    }
+
+    /// Return true if this is a BOLT11 invoice
+    #[wasm_bindgen(js_name = isBolt11)]
+    pub fn is_bolt11(&self) -> bool {
+        self.inner.is_bolt11()
+    }
+
+    /// Return true if this is a BOLT12 invoice
+    #[wasm_bindgen(js_name = isBolt12)]
+    pub fn is_bolt12(&self) -> bool {
+        self.inner.is_bolt12()
+    }
+
+    /// Return the BOLT11 invoice string if this is a BOLT11 invoice
+    #[wasm_bindgen(js_name = bolt11Invoice)]
+    pub fn bolt11_invoice(&self) -> Option<String> {
+        self.inner.bolt11().map(ToString::to_string)
+    }
+
+    /// Return the BOLT12 invoice string if this is a BOLT12 invoice
+    #[wasm_bindgen(js_name = bolt12Invoice)]
+    pub fn bolt12_invoice(&self) -> Option<String> {
+        self.inner.bolt12().map(lwk_boltz::display_bolt12_invoice)
+    }
+}
+
 /// Wrapper over [`lwk_boltz::InvoiceResponse`]
 #[wasm_bindgen]
 #[derive(Debug)]
@@ -281,6 +345,19 @@ impl BoltzSession {
         let r = self
             .inner
             .prepare_pay(&lightning_payment.inner, refund_address.as_ref(), None)
+            .await?;
+        Ok(r.into())
+    }
+
+    /// Fetch a BOLT12 invoice without creating or starting a swap
+    #[wasm_bindgen(js_name = fetchBolt12Invoice)]
+    pub async fn fetch_bolt12_invoice(
+        &self,
+        lightning_payment: &LightningPayment,
+    ) -> Result<Invoice, Error> {
+        let r = self
+            .inner
+            .fetch_bolt12_invoice(&lightning_payment.inner)
             .await?;
         Ok(r.into())
     }

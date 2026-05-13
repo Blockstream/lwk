@@ -31,6 +31,7 @@ use lwk_signer::*;
 use lwk_test_util::*;
 use lwk_wollet::pegin::fetch_last_full_header;
 use lwk_wollet::*;
+use rand::{thread_rng, Rng};
 use std::{collections::HashSet, str::FromStr};
 use test_wollet::*;
 
@@ -4381,4 +4382,119 @@ fn test_removed_tx() {
     let utxos = w.wollet.utxos().unwrap();
     assert_eq!(utxos.len(), 1);
     assert_eq!(utxos[0].outpoint.txid, txid0);
+}
+
+#[test]
+#[allow(unused)]
+fn snippet_multisig_tr() -> Result<(), Box<dyn std::error::Error>> {
+    let env = TestEnvBuilder::from_env().with_esplora().build();
+    let client = test_client_electrum(&env.electrum_url());
+
+    use lwk_signer::{bip39::Mnemonic, SwSigner};
+    use lwk_wollet::clients::blocking::EsploraClient;
+    use lwk_wollet::WolletDescriptor;
+
+    // ANCHOR: multisig-setup
+    let is_mainnet = false;
+    // Derivation for multisig
+    let bip = lwk_common::Bip::Bip87;
+    let network = env.elementsd_network();
+
+    // Alice creates their signer and gets the xpub
+    let mnemonic_a = Mnemonic::generate(12)?;
+    let signer_a = SwSigner::new(&mnemonic_a.to_string(), is_mainnet)?.with_network(network);
+    let xpub_a = dbg!(signer_a.keyorigin_xpub(bip, is_mainnet)?);
+
+    // Bob creates their signer and gets the xpub
+    let mnemonic_b = Mnemonic::generate(12)?;
+    let signer_b = SwSigner::new(&mnemonic_b.to_string(), is_mainnet)?.with_network(network);
+    let xpub_b = signer_b.keyorigin_xpub(bip, is_mainnet)?;
+
+    // Carol, who acts as a coordinator, creates their signer and gets the xpub
+    // let mnemonic_c = Mnemonic::generate(12)?;
+    // let signer_c = SwSigner::new(&mnemonic_c.to_string(), is_mainnet)?;
+    // let xpub_c = signer_c.keyorigin_xpub(bip, is_mainnet)?;
+
+    // Carol generates a random SLIP77 descriptor blinding key
+    let mut slip77_rand_key = [0u8; 32];
+    thread_rng().fill(&mut slip77_rand_key);
+    let slip77_rand_key = slip77_rand_key.to_hex();
+    let desc_blinding_key = format!("slip77({slip77_rand_key})");
+
+    // Carol uses the collected xpubs and the descriptor blinding key to create
+    // the 2of3 descriptor
+    let threshold = 2;
+    let desc1 = dbg!(format!("ct({desc_blinding_key},eltr({xpub_a}/<0;1>/*))"));
+    let desc2 = dbg!(format!("ct({desc_blinding_key},eltr({xpub_b}/<0;1>/*))"));
+    // Validate the descriptor string
+
+    let wd1 = WolletDescriptor::from_str(&desc1)?;
+    let wd2 = WolletDescriptor::from_str(&desc2)?;
+    // ANCHOR_END: multisig-setup
+
+    // Carol creates the wollet
+    let mut wallet_a = WolletBuilder::new(network, wd1).build()?;
+    let mut wallet_b = WolletBuilder::new(network, wd2).build()?;
+
+    // With the wollet, Carol can obtain addresses, transactions and balance
+    let addr_a = wallet_a.address(None)?;
+    let addr_b = wallet_b.address(None)?;
+
+    let txs_a = wallet_a.transactions()?;
+    let balance_a = wallet_a.balance()?;
+    let txs_b = wallet_b.transactions()?;
+    let balance_b = wallet_b.balance()?;
+
+    // Update the wollet state
+    let url = env.esplora_url(); // ANCHOR: ignore
+    let mut client = EsploraClient::new(&url, network)?;
+
+    let fund_signer = generate_signer();
+    let fp = fund_signer.fingerprint();
+    let view_key = generate_view_key();
+    let fund_desc = format!("ct({},elwpkh({}/*))", view_key, fund_signer.xpub());
+    let fund_wd = WolletDescriptor::from_str(&fund_desc)?;
+    let mut fund_wallet = WolletBuilder::new(network, fund_wd).build()?;
+    let fund_addr = fund_wallet.address(None)?;
+
+    if let Some(update) = client.full_scan(&fund_wallet)? {
+        fund_wallet.apply_update(update)?;
+    }
+    if let Some(update) = client.full_scan(&wallet_a)? {
+        wallet_a.apply_update(update)?;
+    }
+    if let Some(update) = client.full_scan(&wallet_b)? {
+        wallet_b.apply_update(update)?;
+    }
+    // ANCHOR_END: multisig-receive
+
+    // Receive some funds
+    let txid = env.elementsd_sendtoaddress(fund_addr.address(), 10_000, None);
+    wait_for_tx(&mut fund_wallet, &mut client, &txid);
+    let txid = env.elementsd_sendtoaddress(addr_a.address(), 10_000, None);
+    wait_for_tx(&mut wallet_a, &mut client, &txid);
+
+    let balance = dbg!(fund_wallet.balance()?);
+    let balance = dbg!(wallet_a.balance()?);
+
+    // ANCHOR: multisig-send
+    // Carol creates a transaction send few sats to a certain address
+    let address = env.elementsd_getnewaddress(); // ANCHOR: ingore
+
+    let sats = 1000;
+    let lbtc = *network.policy_asset();
+
+    let mut pset = wallet_a
+        .tx_builder()
+        .add_recipient(&address, sats, lbtc)?
+        .finish()?;
+
+    let sigs_added = signer_a.sign(&mut pset)?;
+    assert_eq!(sigs_added, 1); // 0 signers
+
+    let tx = wallet_a.finalize(&mut pset)?;
+    let txid = client.broadcast(&tx)?;
+
+    let tx = client.get_transaction(txid)?;
+    Ok(())
 }

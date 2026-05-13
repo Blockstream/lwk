@@ -39,7 +39,7 @@ fn test_single_address_tr() {
 
     let signer = generate_signer();
     let sigs_added = signer.sign(&mut pset).unwrap();
-    assert_eq!(sigs_added, 0);
+    assert_eq!(sigs_added, 1);
 }
 
 #[tokio::test(flavor = "multi_thread")]

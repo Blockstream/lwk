@@ -1171,8 +1171,7 @@ impl Wollet {
             }
         }
 
-        // genesis_hash is only used for BIP341 (taproot) sighash computation
-        let result = pset.finalize_mut(&EC, BlockHash::all_zeros());
+        let result = pset.finalize_mut(&EC, self.network.genesis_hash());
 
         // Replace the original sighashes in the finalized signatures
         for original_sig in original_sigs {
@@ -1194,6 +1193,8 @@ impl Wollet {
                 // In some case "finalize" finalizes all inputs but return some error
                 let seems_finalized = |i: &elements::pset::Input| -> bool {
                     i.partial_sigs.is_empty()
+                        && i.tap_key_sig.is_none()
+                        && i.tap_script_sigs.is_empty()
                         && (!i
                             .final_script_witness
                             .as_ref()

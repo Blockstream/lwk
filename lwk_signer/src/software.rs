@@ -408,19 +408,15 @@ impl Signer for SwSigner {
             }
 
             for (_xonly, (leaf_hashes, (fp, _path))) in inp.tap_key_origins.iter() {
-                if fp == &signer_fingerprint {
-                    if leaf_hashes.is_empty() {
-                        if let Ok(PsbtSighashMsg::TapSighash(m)) =
-                            pset.sighash_msg(i, &mut sighash_cache, None, genesis_hash)
-                        {
-                            sign_data.tap_key_msg = Some(
-                                Message::from_digest_slice(&m.to_byte_array())
-                                    .expect("valid length"),
-                            );
-                        }
-                    } else {
-                        unreachable!("Script Path Spend isn't available by now...");
+                if fp == &signer_fingerprint && leaf_hashes.is_empty() {
+                    if let Ok(PsbtSighashMsg::TapSighash(m)) =
+                        pset.sighash_msg(i, &mut sighash_cache, None, genesis_hash)
+                    {
+                        sign_data.tap_key_msg = Some(
+                            Message::from_digest_slice(&m.to_byte_array()).expect("valid length"),
+                        );
                     }
+                    // TODO: Script Path Spend isn't available by now...
                 }
             }
             messages.push(sign_data);
@@ -478,9 +474,8 @@ impl Signer for SwSigner {
                                 signature_added += 1;
                             }
                         }
-                    } else {
-                        unreachable!("Script Path Spend isn't available for signing by now...");
                     }
+                    // TODO: Script Path Spend isn't available for signing by now...
                 }
             }
         }

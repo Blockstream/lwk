@@ -701,6 +701,8 @@ impl EsploraClient {
         }
 
         if self.utxo_only && !has_more.is_empty() {
+            // This is non-hittable because waterfalls return an error in this case, however we keep this
+            // as defensive measure
             return Err(Error::Generic(
                 "Waterfalls does not support paginated reused-address history in utxo_only mode"
                     .to_string(),
@@ -711,6 +713,7 @@ impl EsploraClient {
             let Some((script, chain, child, blinding_pubkey)) =
                 scripts_by_address.get(&address).cloned()
             else {
+                // Test are not covering here because LWK doesn't support descriptor generating script not rendering to addresses
                 return Err(Error::Generic(format!(
                     "Waterfalls returned has_more for unsupported script: {address}"
                 )));

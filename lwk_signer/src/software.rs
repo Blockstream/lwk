@@ -4,26 +4,25 @@ use elements_miniscript::{
         self,
         bip32::DerivationPath,
         hashes::{sha512, HashEngine, Hmac, HmacEngine},
-        secp256k1::Message,
+        secp256k1::{self, Keypair, Message, Secp256k1, SecretKey, XOnlyPublicKey},
         sign_message::{MessageSignature, MessageSignatureError},
-        PrivateKey,
+        PublicKey,
     },
     elements::{
-        bitcoin::{
-            bip32::{self, Fingerprint, Xpriv, Xpub},
-            Network,
-        },
+        bitcoin::bip32::{self, Fingerprint, Xpriv, Xpub},
         hashes::Hash,
-        pset::PartiallySignedTransaction,
-        secp256k1_zkp::{All, Secp256k1},
-        sighash::SighashCache,
-        EcdsaSighashType,
+        pset::{Input as PsetInput, PartiallySignedTransaction},
+        schnorr::TapTweak,
+        secp256k1_zkp::All,
+        sighash::{SchnorrSighashType, SighashCache},
+        taproot::TapLeafHash,
+        EcdsaSighashType, SchnorrSig,
     },
     elementssig_to_rawsig,
-    psbt::PsbtExt,
+    psbt::{PsbtExt, PsbtSighashMsg},
     slip77::MasterBlindingKey,
 };
-use lwk_common::Signer;
+use lwk_common::{Network, Signer};
 
 /// Possible errors when signing with the software signer [`SwSigner`]
 #[derive(thiserror::Error, Debug)]
@@ -84,11 +83,74 @@ pub struct SwSigner {
     pub(crate) secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
     pub(crate) mnemonic: Option<Mnemonic>,
     ecdsa_sign_opt: EcdsaSignOpt,
+    network: Network,
 }
 
 impl core::fmt::Debug for SwSigner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Signer({})", self.fingerprint())
+    }
+}
+
+#[derive(Default)]
+struct InputSignData {
+    ecdsa_msg: Option<Message>,
+    tap_key_msg: Option<Message>,
+}
+
+fn sign_pset_ecdsa<C: secp256k1::Signing + secp256k1::Verification>(
+    secp: &Secp256k1<C>,
+    secret_key: &SecretKey,
+    pubkey: PublicKey,
+    pset_input: &mut PsetInput,
+    msg: &Message,
+    hash_ty: EcdsaSighashType,
+    sign_opt: &EcdsaSignOpt,
+) -> bool {
+    let signature = match sign_opt {
+        EcdsaSignOpt::LowR => secp.sign_ecdsa_low_r(msg, secret_key),
+        EcdsaSignOpt::NoGrind => secp.sign_ecdsa(msg, secret_key),
+    };
+
+    let raw_sig = elementssig_to_rawsig(&(signature, hash_ty));
+    pset_input.partial_sigs.insert(pubkey, raw_sig).is_none()
+}
+
+fn sign_pset_schnorr<C: secp256k1::Signing + secp256k1::Verification>(
+    secp: &Secp256k1<C>,
+    secret_key: &SecretKey,
+    xonly_pubkey: XOnlyPublicKey,
+    leaf_hash: Option<TapLeafHash>,
+    pset_input: &mut PsetInput,
+    msg: &Message,
+    hash_ty: SchnorrSighashType,
+) -> bool {
+    let base_keypair = Keypair::from_secret_key(secp, secret_key);
+
+    let signing_keypair = match leaf_hash {
+        None => {
+            let merkle_root = pset_input.tap_merkle_root;
+            base_keypair.tap_tweak(secp, merkle_root).to_inner()
+        }
+        Some(_) => base_keypair,
+    };
+
+    let signature = secp.sign_schnorr(msg, &signing_keypair);
+    let tap_sig = SchnorrSig {
+        sig: signature,
+        hash_ty,
+    };
+
+    if let Some(lh) = leaf_hash {
+        pset_input
+            .tap_script_sigs
+            .insert((xonly_pubkey, lh), tap_sig)
+            .is_none()
+    } else if pset_input.tap_key_sig.is_none() {
+        pset_input.tap_key_sig = Some(tap_sig);
+        true
+    } else {
+        false
     }
 }
 
@@ -108,6 +170,12 @@ impl SwSigner {
             bitcoin::Network::Testnet
         };
 
+        let elements_network = if is_mainnet {
+            Network::Liquid
+        } else {
+            Network::TestnetLiquid
+        };
+
         let xprv = Xpriv::new_master(network, &seed)?;
 
         Ok(Self {
@@ -115,7 +183,14 @@ impl SwSigner {
             secp,
             mnemonic: Some(mnemonic),
             ecdsa_sign_opt: EcdsaSignOpt::default(),
+            network: elements_network,
         })
+    }
+
+    /// Set a specific network for signer.
+    pub fn with_network(mut self, network: Network) -> Self {
+        self.network = network;
+        self
     }
 
     /// Return true if the signer is for mainnet. There is no need to discriminate between regtest and testnet.
@@ -136,6 +211,7 @@ impl SwSigner {
             secp: Secp256k1::new(),
             mnemonic: None,
             ecdsa_sign_opt: EcdsaSignOpt::default(),
+            network: Network::Liquid,
         }
     }
 
@@ -314,60 +390,100 @@ impl Signer for SwSigner {
         let mut signature_added = 0;
 
         let signer_fingerprint = self.fingerprint();
-        // genesis hash is not used at all for sighash calculation
-        let genesis_hash = elements_miniscript::elements::BlockHash::all_zeros();
+        let genesis_hash = self.network.genesis_hash();
         let mut messages = vec![];
         for (i, inp) in pset.inputs().iter().enumerate() {
-            // computing all the messages to sign
-            // since the pset is borrowed, we can't do this action in a inputs_mut() for loop
-            let msg = if inp
+            let mut sign_data = InputSignData::default();
+            if inp
                 .bip32_derivation
                 .values()
                 .any(|(fp, _)| fp == &signer_fingerprint)
             {
-                Some(
-                    pset.sighash_msg(i, &mut sighash_cache, None, genesis_hash)?
-                        .to_secp_msg(),
-                )
-            } else {
-                None
-            };
-            messages.push(msg);
+                if let Ok(PsbtSighashMsg::EcdsaSighash(m)) =
+                    pset.sighash_msg(i, &mut sighash_cache, None, genesis_hash)
+                {
+                    sign_data.ecdsa_msg =
+                        Some(Message::from_digest_slice(&m.to_byte_array()).expect("valid length"));
+                }
+            }
+
+            for (_xonly, (leaf_hashes, (fp, _path))) in inp.tap_key_origins.iter() {
+                if fp == &signer_fingerprint {
+                    if leaf_hashes.is_empty() {
+                        if let Ok(PsbtSighashMsg::TapSighash(m)) =
+                            pset.sighash_msg(i, &mut sighash_cache, None, genesis_hash)
+                        {
+                            sign_data.tap_key_msg = Some(
+                                Message::from_digest_slice(&m.to_byte_array())
+                                    .expect("valid length"),
+                            );
+                        }
+                    } else {
+                        unreachable!("Script Path Spend isn't available by now...");
+                    }
+                }
+            }
+            messages.push(sign_data);
         }
 
-        for (input, msg) in pset.inputs_mut().iter_mut().zip(messages) {
-            if msg.is_none() {
-                continue;
-            }
-            let msg = msg.expect("just checked");
-            let hash_ty = input
-                .sighash_type
-                .map(|h| h.ecdsa_hash_ty().unwrap_or(EcdsaSighashType::All))
-                .unwrap_or(EcdsaSighashType::All);
-            for (want_public_key, (fingerprint, derivation_path)) in input.bip32_derivation.iter() {
-                if &signer_fingerprint == fingerprint {
-                    let ext_derived = self.xprv.derive_priv(&self.secp, derivation_path)?;
-                    let private_key = PrivateKey::new(ext_derived.private_key, Network::Bitcoin);
-                    let public_key = private_key.public_key(&self.secp);
-                    if want_public_key == &public_key {
-                        // fixme: for taproot use schnorr
-                        let sig = match self.ecdsa_sign_opt {
-                            EcdsaSignOpt::LowR => {
-                                self.secp.sign_ecdsa_low_r(&msg, &private_key.inner)
-                            }
-                            EcdsaSignOpt::NoGrind => self.secp.sign_ecdsa(&msg, &private_key.inner),
-                        };
-                        let sig = elementssig_to_rawsig(&(sig, hash_ty));
+        for (input, sign_data) in pset.inputs_mut().iter_mut().zip(messages) {
+            if let Some(msg) = sign_data.ecdsa_msg {
+                let hash_ty = input
+                    .sighash_type
+                    .and_then(|h| h.ecdsa_hash_ty())
+                    .unwrap_or(EcdsaSighashType::All);
 
-                        let inserted = input.partial_sigs.insert(public_key, sig);
-                        if inserted.is_none() {
+                for (pubkey, (fp, derivation_path)) in input.bip32_derivation.clone().iter() {
+                    if fp == &signer_fingerprint {
+                        let ext_derived = self.xprv.derive_priv(&self.secp, derivation_path)?;
+
+                        if sign_pset_ecdsa(
+                            &self.secp,
+                            &ext_derived.private_key,
+                            *pubkey,
+                            input,
+                            &msg,
+                            hash_ty,
+                            &self.ecdsa_sign_opt,
+                        ) {
                             signature_added += 1;
                         }
                     }
                 }
             }
-        }
 
+            let schnorr_hash_ty = input
+                .sighash_type
+                .and_then(|h| h.schnorr_hash_ty())
+                .unwrap_or(SchnorrSighashType::Default);
+
+            for (xonly, (leaf_hashes, (fp, derivation_path))) in
+                input.tap_key_origins.clone().iter()
+            {
+                if fp == &signer_fingerprint {
+                    let ext_derived = self.xprv.derive_priv(&self.secp, derivation_path)?;
+                    let secret_key = &ext_derived.private_key;
+
+                    if leaf_hashes.is_empty() {
+                        if let Some(msg) = sign_data.tap_key_msg.as_ref() {
+                            if sign_pset_schnorr(
+                                &self.secp,
+                                secret_key,
+                                *xonly,
+                                None,
+                                input,
+                                msg,
+                                schnorr_hash_ty,
+                            ) {
+                                signature_added += 1;
+                            }
+                        }
+                    } else {
+                        unreachable!("Script Path Spend isn't available for signing by now...");
+                    }
+                }
+            }
+        }
         Ok(signature_added)
     }
 

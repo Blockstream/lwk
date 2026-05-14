@@ -181,6 +181,8 @@ pub enum Bip {
     Bip49,
     /// For multisig wallets
     Bip87,
+    /// For taproot wallets
+    Bip86,
 }
 
 impl std::fmt::Display for Bip {
@@ -189,6 +191,7 @@ impl std::fmt::Display for Bip {
             Bip::Bip84 => write!(f, "bip84"),
             Bip::Bip49 => write!(f, "bip49"),
             Bip::Bip87 => write!(f, "bip87"),
+            Bip::Bip86 => write!(f, "bip86"),
         }
     }
 }
@@ -206,6 +209,7 @@ impl FromStr for Bip {
             "bip84" => Bip::Bip84,
             "bip49" => Bip::Bip49,
             "bip87" => Bip::Bip87,
+            "bip86" => Bip::Bip86,
             v => return Err(InvalidBipVariant(v.to_string())),
         })
     }
@@ -241,7 +245,7 @@ mod test {
 
     #[test]
     fn roundtrip_bip() {
-        for el in ["bip49", "bip84", "bip87"] {
+        for el in ["bip49", "bip84", "bip87", "bip86"] {
             let bip = Bip::from_str(el).unwrap();
             let bip_str = bip.to_string();
             assert_eq!(el, bip_str);

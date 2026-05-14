@@ -36,7 +36,7 @@ stages:
   services:
     - docker:27-dind
   before_script:
-    - cp /usr/local/cargo/bin/waterfalls /bin/waterfalls_b8818e1
+    - cp /usr/local/cargo/bin/waterfalls /bin/waterfalls_c09b914
 
 
 sast:

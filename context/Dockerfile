@@ -20,7 +20,7 @@ RUN rustup install nightly # for docs building
 
 RUN cargo install cargo-audit@0.22.0 --locked
 RUN cargo install cargo-nextest@0.9.100 --locked
-RUN cargo install grcov --locked
+RUN cargo install grcov@0.10.5 --locked
 RUN cargo install just --locked
 
 # we don't need this, but it downloads and cache most of our dependency tree

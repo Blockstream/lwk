@@ -9,6 +9,8 @@ RUN apt upgrade --no-install-recommends -yqq
 # libtinfo5 libncurses5 for swift
 # chromium-driver for wasm tests
 RUN apt install -y libudev-dev libxml2-utils clang libtinfo5 libncurses5 chromium-driver
+RUN wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
+RUN apt update -qq && apt install -y dotnet-sdk-10.0
 
 RUN rustup component add rustfmt
 RUN rustup component add clippy
@@ -18,7 +20,7 @@ RUN rustup install nightly # for docs building
 
 RUN cargo install cargo-audit@0.22.0 --locked
 RUN cargo install cargo-nextest@0.9.100 --locked
-RUN cargo install grcov --locked
+RUN cargo install grcov@0.10.5 --locked
 RUN cargo install just --locked
 
 # we don't need this, but it downloads and cache most of our dependency tree
@@ -31,16 +33,9 @@ RUN ./download_bins.sh
 COPY get-docker.sh /get-docker.sh
 RUN sh ./get-docker.sh
 
-# move following layers up once upper layers needs modification
-
-RUN wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
-RUN apt update -qq && apt install -y dotnet-sdk-10.0
-
 RUN cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.10.0+v0.29.4
 
 # Install Node.js LTS using official binaries
 RUN curl -fsSL https://nodejs.org/dist/v20.18.0/node-v20.18.0-linux-x64.tar.xz | tar -xJ -C /usr/local --strip-components=1
 
 RUN cargo install uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --tag v0.8.1+v0.29.4
-
-RUN cargo install waterfalls --locked

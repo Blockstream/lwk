@@ -18,6 +18,7 @@ impl WaterfallsD {
         elements_url: &str,
         rpcuser: &str,
         rpcpassword: &str,
+        max_txs_seen: Option<usize>,
     ) -> WaterfallsD {
         // 0 means the OS choose a free port
         let addr = TcpListener::bind(("0.0.0.0", 0))
@@ -27,6 +28,7 @@ impl WaterfallsD {
             .to_string();
         let user_pass = format!("{rpcuser}:{rpcpassword}");
 
+        let max_txs_seen = max_txs_seen.unwrap_or(100).to_string();
         let args = vec![
             "--network",
             "elements-regtest",
@@ -36,6 +38,8 @@ impl WaterfallsD {
             &user_pass,
             "--listen",
             &addr,
+            "--max-txs-seen",
+            &max_txs_seen,
         ];
         let waterfalls_url = format!("http://{addr}");
 

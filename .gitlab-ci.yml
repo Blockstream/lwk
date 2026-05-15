@@ -31,7 +31,7 @@ stages:
   - deploy
 
 .base:
-  image: xenoky/lwk-builder@sha256:2ae964fa1de82046cd86f4a9997a624a00b91c7374f9ffdc4d23ce117da115a3
+  image: xenoky/lwk-builder@sha256:9c49840a50edde26b262980af26906e3f6fb2f2d49263cbae0c073b95a35c848
   tags:
     - cloud
   retry:
@@ -42,8 +42,6 @@ stages:
       - stuck_or_timeout_failure
   services:
     - docker:27-dind
-  before_script:
-    - cp /usr/local/cargo/bin/waterfalls /bin/waterfalls_b8818e1
 
 
 sast:
@@ -318,8 +316,8 @@ wasm:
     - cargo check --target wasm32-unknown-unknown -p lwk_jade --no-default-features --features asyncr --features serial
     - cargo check --target wasm32-unknown-unknown -p lwk_ledger --no-default-features
     - cargo check --target wasm32-unknown-unknown -p lwk_boltz --no-default-features
-    - cd lwk_wasm && CHROMEDRIVER_ARGS="--allowed-ips=127.0.0.1" WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --chrome --headless --features serial && cd -
-    - cd lwk_wasm && RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --features serial && cd -
+    - (cd lwk_wasm && CHROMEDRIVER_ARGS="--allowed-ips=127.0.0.1" WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --chrome --headless --features serial)
+    - (cd lwk_wasm && RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --features serial)
     # testing nodejs package
     - cd lwk_wasm
     - RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --target nodejs --out-dir pkg_node -- --features serial,simplicity

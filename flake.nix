@@ -53,59 +53,82 @@
     # TODO: Remove nixpkgs-mdbook once MSRV reach 1.88+ and we can upgrade mdbook dependency in docs/snippets/processor
     nixpkgs-mdbook.url = "github:NixOS/nixpkgs/566e53c2ad750c84f6d31f9ccb9d00f823165550";
   };
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, crane, electrs-flake, waterfalls-flake, registry-flake, nexus_relay, nixpkgs-mdbook, ... }:
-    flake-utils.lib.eachDefaultSystem
-      (system:
-        let
-          overlays = [ (import rust-overlay) ];
-          pkgs = import nixpkgs {
-            inherit system overlays;
-          };
-          pkgs-mdbook = import nixpkgs-mdbook {
-            inherit system;
-          };
-          inherit (pkgs) lib;
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+      rust-overlay,
+      crane,
+      electrs-flake,
+      waterfalls-flake,
+      registry-flake,
+      nexus_relay,
+      nixpkgs-mdbook,
+      ...
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
+      let
+        overlays = [ (import rust-overlay) ];
+        pkgs = import nixpkgs {
+          inherit system overlays;
+        };
+        pkgs-mdbook = import nixpkgs-mdbook {
+          inherit system;
+        };
+        inherit (pkgs) lib;
 
-          rustToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+        rustToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
-          craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
+        craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
 
-          electrs = electrs-flake.apps.${system}.blockstream-electrs-liquid;
-          registry = registry-flake.packages.${system};
-          waterfalls = waterfalls-flake.packages.${system}.default;
+        electrs = electrs-flake.apps.${system}.blockstream-electrs-liquid;
+        registry = registry-flake.packages.${system};
+        waterfalls = waterfalls-flake.packages.${system}.default;
 
-          # When filtering sources, we want to allow assets other than .rs files
-          src = lib.cleanSourceWith {
-            src = ./.; # The original, unfiltered source
-            filter = path: type:
-              (lib.hasSuffix "\.elf" path) ||
-              (lib.hasSuffix "\.json" path) ||
-              (lib.hasSuffix "\.md" path) ||
-              (lib.hasInfix "/test_data/" path) ||
-              (lib.hasInfix "/test/data/" path) ||
-              (lib.hasInfix "/tests/data/" path) || # TODO unify these dir names
+        # When filtering sources, we want to allow assets other than .rs files
+        src = lib.cleanSourceWith {
+          src = ./.; # The original, unfiltered source
+          filter =
+            path: type:
+            (lib.hasSuffix "\.elf" path)
+            || (lib.hasSuffix "\.json" path)
+            || (lib.hasSuffix "\.md" path)
+            || (lib.hasInfix "/test_data/" path)
+            || (lib.hasInfix "/test/data/" path)
+            || (lib.hasInfix "/tests/data/" path)
+            # TODO unify these dir names
+            ||
 
               # Default filter from crane (allow .rs files)
-              (craneLib.filterCargoSources path type)
-            ;
-          };
+              (craneLib.filterCargoSources path type);
+        };
 
-          nativeBuildInputs = with pkgs; [ rustToolchain pkg-config ]; # required only at build time
-          buildInputs = [ pkgs.openssl pkgs.udev ]; # also required at runtime
+        nativeBuildInputs = with pkgs; [
+          rustToolchain
+          pkg-config
+        ]; # required only at build time
+        buildInputs = [
+          pkgs.openssl
+          pkgs.udev
+        ]; # also required at runtime
 
-          commonArgs = {
-            inherit src buildInputs nativeBuildInputs;
+        commonArgs = {
+          inherit src buildInputs nativeBuildInputs;
 
-            # the following must be kept in sync with the ones in ./lwk_cli/Cargo.toml
-            # note there should be a way to read those from there with
-            # craneLib.crateNameFromCargoToml { cargoToml = ./path/to/Cargo.toml; }
-            # but I can't make it work
-            pname = "lwk_cli";
-            version = "0.17.0";
-          };
-          cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-          # remember, `set1 // set2` does a shallow merge:
-          bin = craneLib.buildPackage (commonArgs // {
+          # the following must be kept in sync with the ones in ./lwk_cli/Cargo.toml
+          # note there should be a way to read those from there with
+          # craneLib.crateNameFromCargoToml { cargoToml = ./path/to/Cargo.toml; }
+          # but I can't make it work
+          pname = "lwk_cli";
+          version = "0.17.0";
+        };
+        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+        # remember, `set1 // set2` does a shallow merge:
+        bin = craneLib.buildPackage (
+          commonArgs
+          // {
             inherit cargoArtifacts;
             cargoTestExtraArgs = "--lib"; # only unit testing, integration testing has more requirements (docker and other executables)
 
@@ -114,43 +137,56 @@
             postInstall = ''
               rm -r $out/lib
             '';
-          });
+          }
+        );
 
-          # Build mdbook-snippets from local source
-          mdbook-snippets = craneLib.buildPackage {
-            src = lib.cleanSource ./docs/snippets/processor;
-            inherit nativeBuildInputs;
-            buildInputs = [  ];
-            
-            pname = "mdbook-snippets";
-            version = "0.1.0";
-          };
+        # Build mdbook-snippets from local source
+        mdbook-snippets = craneLib.buildPackage {
+          src = lib.cleanSource ./docs/snippets/processor;
+          inherit nativeBuildInputs;
+          buildInputs = [ ];
 
-        in
-        {
-          packages =
-            {
-              # that way we can build `bin` specifically,
-              # but it's also the default.
-              inherit bin;
-              default = bin;
-              inherit mdbook-snippets;
-            };
+          pname = "mdbook-snippets";
+          version = "0.1.0";
+        };
 
-          devShells.default = pkgs.mkShell {
-            inputsFrom = [ bin ];
+      in
+      {
+        packages = {
+          # that way we can build `bin` specifically,
+          # but it's also the default.
+          inherit bin;
+          default = bin;
+          inherit mdbook-snippets;
+        };
 
-            buildInputs = [ registry.bin rustToolchain pkgs.websocat pkgs.heaptrack pkgs-mdbook.mdbook pkgs-mdbook.mdbook-mermaid mdbook-snippets pkgs.cargo-depgraph pkgs.cargo-bloat pkgs.cargo-nextest pkgs.grcov ];
+        devShells.default = pkgs.mkShell {
+          inputsFrom = [ bin ];
 
-            ELEMENTSD_EXEC = "${pkgs.elementsd}/bin/elementsd";
-            BITCOIND_EXEC = "${pkgs.bitcoind}/bin/bitcoind";
-            ELECTRS_LIQUID_EXEC = electrs.program;
-            WATERFALLS_EXEC = "${waterfalls}/bin/waterfalls";
-            ASSET_REGISTRY_EXEC = "${registry.default}/bin/server";
-            NEXUS_RELAY_EXEC = "${nexus_relay.packages.${system}.default}/bin/nexus_relay";
-            WEBSOCAT_EXEC = "${pkgs.websocat}/bin/websocat";
-            SKIP_VERIFY_DOMAIN_LINK = "1"; # the registry server skips validation
-          };
-        }
-      );
+          buildInputs = [
+            registry.bin
+            rustToolchain
+            pkgs.websocat
+            pkgs.heaptrack
+            pkgs-mdbook.mdbook
+            pkgs-mdbook.mdbook-mermaid
+            mdbook-snippets
+            pkgs.cargo-depgraph
+            pkgs.cargo-bloat
+            pkgs.cargo-nextest
+            pkgs.grcov
+            pkgs.nixfmt-rfc-style
+          ];
+
+          ELEMENTSD_EXEC = "${pkgs.elementsd}/bin/elementsd";
+          BITCOIND_EXEC = "${pkgs.bitcoind}/bin/bitcoind";
+          ELECTRS_LIQUID_EXEC = electrs.program;
+          WATERFALLS_EXEC = "${waterfalls}/bin/waterfalls";
+          ASSET_REGISTRY_EXEC = "${registry.default}/bin/server";
+          NEXUS_RELAY_EXEC = "${nexus_relay.packages.${system}.default}/bin/nexus_relay";
+          WEBSOCAT_EXEC = "${pkgs.websocat}/bin/websocat";
+          SKIP_VERIFY_DOMAIN_LINK = "1"; # the registry server skips validation
+        };
+      }
+    );
 }

@@ -179,21 +179,20 @@ test_coverage:
     - docker pull xenoky/local-jade-emulator:1.0.27
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo nextest run --features foreign_bindings,asyncr --profile ci
-    - grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing --ignore "*cargo*" --ignore "lwk_boltz/tests/**" -o ./target/coverage.xml -p $(pwd)
+    - mkdir -p target/coverage
+    - grcov . -s . --binary-path ./target/debug/ -t cobertura,html --branch --ignore-not-existing --ignore "*cargo*" --ignore "lwk_boltz/tests/**" -o ./target/coverage/ -p $(pwd)
     - |
-      coverage=$(xmllint --xpath "100 * string(//coverage/@line-rate)" target/coverage.xml)
+      coverage=$(xmllint --xpath "100 * string(//coverage/@line-rate)" target/coverage/cobertura.xml)
       printf 'Coverage: %s%%\n' "${coverage}"
-    - grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing --ignore "*cargo*" --ignore "lwk_boltz/tests/**" -o ./target/coverage/ -p $(pwd)
   coverage: '/Coverage: \d+(?:\.\d+)?%/'
   artifacts:
     paths:
-      - target/coverage.xml
       - target/coverage/
       - target/nextest/ci/junit.xml
     reports:
       coverage_report:
         coverage_format: cobertura
-        path: target/coverage.xml
+        path: target/coverage/cobertura.xml
       junit: target/nextest/ci/junit.xml
 
 build_cli:

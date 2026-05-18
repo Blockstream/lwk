@@ -28,6 +28,7 @@ stages:
   - build
   - test
   - test_long
+  - coverage
   - deploy
 
 .base:
@@ -43,6 +44,35 @@ stages:
   services:
     - docker:27-dind
 
+.coverage_mixin:
+  variables:
+    RUSTFLAGS: "-C instrument-coverage"
+    LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
+  after_script:
+    - mkdir -p target/coverage
+    - PROFRAW_FILES=$(find . -name "*.profraw")
+    - |
+      if [ -n "$PROFRAW_FILES" ]; then
+        llvm-profdata merge --sparse $PROFRAW_FILES -o target/coverage/${CI_JOB_NAME}.profdata
+      else
+        echo "No profile raw files found to process."
+      fi
+  artifacts:
+    paths:
+      - target/coverage/${CI_JOB_NAME}.profdata
+      - target/debug/
+    exclude:
+      - target/debug/.fingerprint/**/*
+      - target/debug/build/**/*
+      - target/debug/deps/**/*.d
+      - target/debug/deps/**/*.rlib
+      - target/debug/deps/**/*.rmeta
+    expire_in: 1 day
+
+.junit_mixin:
+  artifacts:
+    reports:
+      junit: target/nextest/ci/junit.xml
 
 sast:
  stage: security
@@ -164,23 +194,31 @@ unit_tests:
   script:
     - cargo nextest run --lib --profile unit # ensure unit tests don't take more than a sec each
 
-test_coverage:
+test_coverage_run:
   stage: test_long
   needs: [fmt_clippy]
-  extends: .base
+  extends:
+    - .base
+    - .coverage_mixin
+    - .junit_mixin
   variables:
-    RUSTFLAGS: "-C instrument-coverage"
-    LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
-    TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
+    TMPDIR: ${CI_PROJECT_DIR}
     JAVA_OPTS: "-Xmx2g"
-
   script:
     - docker pull tulipan81/blind_pin_server:v0.0.7
     - docker pull xenoky/local-jade-emulator:1.0.27
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo nextest run --features foreign_bindings,asyncr --profile ci
+
+coverage_report:
+  stage: coverage
+  needs:
+    - job: test_coverage_run
+      artifacts: true
+  extends: .base
+  script:
     - mkdir -p target/coverage
-    - grcov . -s . --binary-path ./target/debug/ -t cobertura,html --branch --ignore-not-existing --ignore "*cargo*" --ignore "lwk_boltz/tests/**" -o ./target/coverage/ -p $(pwd)
+    - grcov target/coverage/ -s . --binary-path ./target/debug/ -t cobertura,html --branch --ignore-not-existing --ignore "*cargo*" --ignore "lwk_boltz/tests/**" -o ./target/coverage/ -p $(pwd)
     - |
       coverage=$(xmllint --xpath "100 * string(//coverage/@line-rate)" target/coverage/cobertura.xml)
       printf 'Coverage: %s%%\n' "${coverage}"
@@ -188,12 +226,10 @@ test_coverage:
   artifacts:
     paths:
       - target/coverage/
-      - target/nextest/ci/junit.xml
     reports:
       coverage_report:
         coverage_format: cobertura
         path: target/coverage/cobertura.xml
-      junit: target/nextest/ci/junit.xml
 
 build_cli:
   stage: test

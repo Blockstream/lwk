@@ -150,6 +150,8 @@
           version = "0.1.0";
         };
 
+        mcp-language-server = pkgs.mcp-language-server;
+
       in
       {
         packages = {
@@ -158,12 +160,14 @@
           inherit bin;
           default = bin;
           inherit mdbook-snippets;
+          inherit mcp-language-server;
         };
 
         devShells.default = pkgs.mkShell {
           inputsFrom = [ bin ];
 
           buildInputs = [
+            mcp-language-server
             registry.bin
             rustToolchain
             pkgs.websocat

@@ -16,6 +16,7 @@ venv/
 node_modules/
 docs/book/
 lwk_boltz/Cargo.lock
+lwk_boltz/regtest/data/
 lwk_bindings/examples/swaps/
 .cursor/
 .cursorrules

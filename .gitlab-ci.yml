@@ -71,6 +71,7 @@ stages:
       - target/debug/deps/**/*.rmeta
       - target/debug/incremental/**/*
       - target/debug/deps/**/*.so
+      - target/debug/deps/**/*.a
       - target/debug/examples/**/*
     expire_in: 1 day
 

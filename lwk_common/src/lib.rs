@@ -1,4 +1,5 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(missing_docs)]
 
 //! A crate containing common code used in multiple other crate in the workspace, such as:
@@ -23,6 +24,8 @@ pub mod precision;
 mod qr;
 mod segwit;
 mod signer;
+#[cfg(feature = "sqlite")]
+pub mod sqlite;
 mod store;
 
 pub use crate::address::{Address, AddressParseError};
@@ -46,6 +49,8 @@ pub use crate::segwit::is_provably_segwit;
 #[cfg(feature = "amp0")]
 pub use crate::signer::amp0::{Amp0Signer, Amp0SignerData};
 pub use crate::signer::Signer;
+#[cfg(feature = "sqlite")]
+pub use crate::sqlite::{SqliteStore, SqliteStoreError};
 pub use crate::store::{
     ArcDynStoreError, BoxError, DynStore, EncryptedStore, EncryptedStoreError, FakeStore,
     FileStore, MemoryStore, Store,

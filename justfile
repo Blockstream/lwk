@@ -144,13 +144,27 @@ mdbook:
 mdbook-serve: mdbook
     cd docs && mdbook serve
 
-# Generate a local Cobertura and HTML coverage report with nextest
-coverage-local:
+# Generate Cobertura and HTML coverage reports from profraw/profdata files
+coverage-report input_dir="target/coverage":
     #!/usr/bin/env bash
     set -euo pipefail
 
     host_triple="$(rustc -vV | sed -n 's/^host: //p')"
     llvm_path="$(rustc --print sysroot)/lib/rustlib/${host_triple}/bin"
+
+    grcov "{{input_dir}}" -s . --binary-path ./target/debug/ --llvm-path "${llvm_path}" -t cobertura,html --branch \
+        --ignore-not-existing --ignore "*cargo*" --ignore "lwk_boltz/tests/**" \
+        --ignore "lwk_boltz/regtest/data/**" \
+        -o ./target/coverage/ -p "$(pwd)"
+
+    coverage_index="$(pwd)/target/coverage/index.html"
+    printf '\nCoverage HTML report: file://%s\n' "${coverage_index}"
+
+# Generate a local Cobertura and HTML coverage report with nextest
+coverage-local:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
     coverage_profraw_dir="$(pwd)/target/coverage-profraw"
 
     mkdir -p "${coverage_profraw_dir}"
@@ -162,10 +176,4 @@ coverage-local:
 
     cargo nextest run
 
-    grcov "${coverage_profraw_dir}" -s . --binary-path ./target/debug/ --llvm-path "${llvm_path}" -t cobertura,html --branch \
-        --ignore-not-existing --ignore "*cargo*" --ignore "lwk_boltz/tests/**" \
-        --ignore "lwk_boltz/regtest/data/**" \
-        -o ./target/coverage/ -p "$(pwd)"
-
-    coverage_index="$(pwd)/target/coverage/index.html"
-    printf '\nCoverage HTML report: file://%s\n' "${coverage_index}"
+    just coverage-report "${coverage_profraw_dir}"

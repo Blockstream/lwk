@@ -175,3 +175,43 @@ fn fake_persisted_txs_store_restore_reloads_last_unused() {
         wollet2.address(None).unwrap().index(),
     );
 }
+
+#[test]
+fn test_sqlite_store() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let network = Network::default_regtest();
+    let lbtc = *network.policy_asset();
+
+    let dir = TempDir::new().unwrap();
+    let store = Arc::new(SqliteStore::new(&dir.path().join("store.db")).unwrap());
+
+    let s = generate_signer();
+    let view_key = generate_view_key();
+    let d = format!("ct({view_key},elwpkh({}/*))", s.xpub());
+    let wd: WolletDescriptor = d.parse().unwrap();
+
+    let mut wollet = WolletBuilder::new(network, wd.clone())
+        .with_stores(store.clone())
+        .unwrap()
+        .build()
+        .unwrap();
+    let mut client = test_client_electrum(&env.electrum_url());
+
+    let address = wollet.address(None).unwrap();
+    let satoshi = 10_000;
+    let txid = env.elementsd_sendtoaddress(address.address(), satoshi, Some(lbtc));
+    wait_for_tx(&mut wollet, &mut client, &txid);
+
+    // Check updates
+    assert!(lwk_common::Store::get(store.as_ref(), "000000000000")
+        .unwrap()
+        .is_some());
+    // Check txs
+    let key_bytes = wd.encryption_key_bytes();
+    let enc_store =
+        EncryptedStore::new_with_key_encryption(store.clone() as Arc<dyn DynStore>, key_bytes);
+    assert!(lwk_common::Store::get(&enc_store, "wollet:txids")
+        .unwrap()
+        .is_some());
+}

@@ -24,7 +24,7 @@ pub mod precision;
 mod qr;
 mod segwit;
 mod signer;
-#[cfg(feature = "sqlite")]
+#[cfg(all(feature = "sqlite", not(target_arch = "wasm32")))]
 pub mod sqlite;
 mod store;
 
@@ -49,7 +49,7 @@ pub use crate::segwit::is_provably_segwit;
 #[cfg(feature = "amp0")]
 pub use crate::signer::amp0::{Amp0Signer, Amp0SignerData};
 pub use crate::signer::Signer;
-#[cfg(feature = "sqlite")]
+#[cfg(all(feature = "sqlite", not(target_arch = "wasm32")))]
 pub use crate::sqlite::{SqliteStore, SqliteStoreError};
 pub use crate::store::{
     ArcDynStoreError, BoxError, DynStore, EncryptedStore, EncryptedStoreError, FakeStore,

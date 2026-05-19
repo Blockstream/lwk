@@ -46,7 +46,7 @@ stages:
 
 .coverage_mixin:
   variables:
-    RUSTFLAGS: "-C instrument-coverage"
+    RUSTFLAGS: "-C instrument-coverage -C debuginfo=0"
     LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
   after_script:
     - |

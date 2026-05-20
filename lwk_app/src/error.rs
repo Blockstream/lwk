@@ -68,6 +68,9 @@ pub enum Error {
     #[error(transparent)]
     QrError(#[from] lwk_common::QrError),
 
+    #[error(transparent)]
+    SqliteStore(#[from] lwk_common::SqliteStoreError),
+
     #[error("Wallet '{0}' does not exist")]
     WalletNotExist(String),
 

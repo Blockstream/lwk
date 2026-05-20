@@ -160,17 +160,19 @@ impl LightningPayment {
 
 #[cfg(test)]
 mod tests {
+
+    const INVOICE: &str = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl";
+
     use super::*;
 
     #[test]
     fn test_from_str() {
-        let invoice = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl";
         let offer = "lno1zcss9sy46p548rukhu2vt7g0dsy9r00n2jswepsrngjt7w988ac94hpv";
         let lnurl =
             "lnurl1dp68gurn8ghj7mn0wd68yene9e3k7mf0d3h82unvwqhkzurf9amrztmvde6hymp0xge7pp36";
-        let payment = LightningPayment::from_str(invoice).unwrap();
+        let payment = LightningPayment::from_str(INVOICE).unwrap();
         assert!(matches!(payment, LightningPayment::Bolt11(_)));
-        assert_eq!(payment.to_string(), invoice);
+        assert_eq!(payment.to_string(), INVOICE);
         let payment = LightningPayment::from_str(offer).unwrap();
         assert!(matches!(payment, LightningPayment::Bolt12 { .. }));
         assert_eq!(payment.to_string(), offer);
@@ -208,8 +210,7 @@ mod tests {
             Some(5000)
         );
 
-        let invoice = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl";
-        let mut payment_bolt11 = LightningPayment::from_str(invoice).unwrap();
+        let mut payment_bolt11 = LightningPayment::from_str(INVOICE).unwrap();
         assert!(payment_bolt11.bolt12().is_none());
         assert!(payment_bolt11.set_bolt12_invoice_amount(5000).is_err());
         let offer_no_amount = payment_without_amount.bolt12().unwrap();
@@ -239,12 +240,11 @@ mod tests {
         assert!(amount.is_some());
 
         // Test that bolt12() returns None for non-Bolt12 variants
-        let invoice = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl";
-        let payment_bolt11 = LightningPayment::from_str(invoice).unwrap();
+        let payment_bolt11 = LightningPayment::from_str(INVOICE).unwrap();
         assert!(payment_bolt11.bolt12().is_none());
 
         // Test that set_bolt12_invoice_amount() fails on non-Bolt12 variants
-        let mut payment_bolt11 = LightningPayment::from_str(invoice).unwrap();
+        let mut payment_bolt11 = LightningPayment::from_str(INVOICE).unwrap();
         assert!(payment_bolt11.set_bolt12_invoice_amount(5000).is_err());
     }
 }

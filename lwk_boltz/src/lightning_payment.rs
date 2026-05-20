@@ -58,6 +58,17 @@ impl From<Bolt11Invoice> for LightningPayment {
 }
 
 impl LightningPayment {
+    /// Returns the payment description if present.
+    pub fn description(&self) -> Option<String> {
+        match self {
+            LightningPayment::Bolt11(invoice) => Some(invoice.description().to_string()),
+            LightningPayment::Bolt12 { offer, .. } => offer
+                .description()
+                .map(|description| description.to_string()),
+            LightningPayment::LnUrl(_) => None,
+        }
+    }
+
     /// Returns the offer if this is a BOLT12 payment, None otherwise
     pub fn bolt12(&self) -> Option<&Offer> {
         match self {

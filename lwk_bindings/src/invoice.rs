@@ -210,6 +210,12 @@ impl LightningPayment {
         })
     }
 
+    /// Returns the payment description if present
+    pub fn description(&self) -> Result<Option<String>, LwkError> {
+        let inner = self.inner.lock()?;
+        Ok(inner.description())
+    }
+
     /// Returns true if this is a BOLT12 offer
     pub fn is_bolt12(&self) -> Result<bool, LwkError> {
         let inner = self.inner.lock()?;

@@ -77,6 +77,7 @@ assert pay.lightning_offer() is None
 # Test lightning_payment() returns a LightningPayment for invoices
 lp = pay.lightning_payment()
 assert lp is not None
+assert lp.description() == invoice.invoice_description()
 
 # Test Lightning invoice with schema
 pay = Payment(f"lightning:{lightning_invoice}")
@@ -90,7 +91,12 @@ assert pay.kind() == PaymentKind.LIGHTNING_OFFER
 assert pay.lightning_offer() is not None
 assert pay.lightning_invoice() is None
 # Test lightning_payment() returns a LightningPayment for offers
-assert pay.lightning_payment() is not None
+lp = pay.lightning_payment()
+assert lp is not None
+assert lp.description() is None
+bolt12_with_desc = "lno1pgrxxmmxvejk293pqdd7t628sgykwj5kuc837qmlv9m9gr7sq8ap6erfgacv26nhp8zzc"
+pay = Payment(bolt12_with_desc)
+assert pay.lightning_payment().description() == "coffee"
 
 # Test Bolt12 offer with schema
 pay = Payment(f"lightning:{bolt12}")
@@ -103,7 +109,9 @@ pay = Payment(lnurl)
 assert pay.kind() == PaymentKind.LN_URL
 assert pay.lnurl() is not None
 # Test lightning_payment() returns a LightningPayment for lnurl
-assert pay.lightning_payment() is not None
+lp = pay.lightning_payment()
+assert lp is not None
+assert lp.description() is None
 
 # Test LNURL with lightning schema
 pay = Payment(f"lightning:{lnurl}")
@@ -277,4 +285,3 @@ assert pay.lnurl() == lnurl_str
 # Note: we don't call resolve_lnurl_info() here to avoid network dependency in tests.
 
 print("All payment instructions tests passed!")
-

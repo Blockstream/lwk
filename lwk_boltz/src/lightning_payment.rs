@@ -58,6 +58,17 @@ impl From<Bolt11Invoice> for LightningPayment {
 }
 
 impl LightningPayment {
+    /// Returns the payment description if present.
+    pub fn description(&self) -> Option<String> {
+        match self {
+            LightningPayment::Bolt11(invoice) => Some(invoice.description().to_string()),
+            LightningPayment::Bolt12 { offer, .. } => offer
+                .description()
+                .map(|description| description.to_string()),
+            LightningPayment::LnUrl(_) => None,
+        }
+    }
+
     /// Returns the offer if this is a BOLT12 payment, None otherwise
     pub fn bolt12(&self) -> Option<&Offer> {
         match self {
@@ -160,17 +171,20 @@ impl LightningPayment {
 
 #[cfg(test)]
 mod tests {
+
+    const INVOICE: &str = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl";
+
     use super::*;
+    use lightning::{bitcoin::secp256k1::PublicKey, offers::offer::OfferBuilder};
 
     #[test]
     fn test_from_str() {
-        let invoice = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl";
         let offer = "lno1zcss9sy46p548rukhu2vt7g0dsy9r00n2jswepsrngjt7w988ac94hpv";
         let lnurl =
             "lnurl1dp68gurn8ghj7mn0wd68yene9e3k7mf0d3h82unvwqhkzurf9amrztmvde6hymp0xge7pp36";
-        let payment = LightningPayment::from_str(invoice).unwrap();
+        let payment = LightningPayment::from_str(INVOICE).unwrap();
         assert!(matches!(payment, LightningPayment::Bolt11(_)));
-        assert_eq!(payment.to_string(), invoice);
+        assert_eq!(payment.to_string(), INVOICE);
         let payment = LightningPayment::from_str(offer).unwrap();
         assert!(matches!(payment, LightningPayment::Bolt12 { .. }));
         assert_eq!(payment.to_string(), offer);
@@ -208,8 +222,7 @@ mod tests {
             Some(5000)
         );
 
-        let invoice = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl";
-        let mut payment_bolt11 = LightningPayment::from_str(invoice).unwrap();
+        let mut payment_bolt11 = LightningPayment::from_str(INVOICE).unwrap();
         assert!(payment_bolt11.bolt12().is_none());
         assert!(payment_bolt11.set_bolt12_invoice_amount(5000).is_err());
         let offer_no_amount = payment_without_amount.bolt12().unwrap();
@@ -239,12 +252,43 @@ mod tests {
         assert!(amount.is_some());
 
         // Test that bolt12() returns None for non-Bolt12 variants
-        let invoice = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl";
-        let payment_bolt11 = LightningPayment::from_str(invoice).unwrap();
+        let payment_bolt11 = LightningPayment::from_str(INVOICE).unwrap();
         assert!(payment_bolt11.bolt12().is_none());
 
         // Test that set_bolt12_invoice_amount() fails on non-Bolt12 variants
-        let mut payment_bolt11 = LightningPayment::from_str(invoice).unwrap();
+        let mut payment_bolt11 = LightningPayment::from_str(INVOICE).unwrap();
         assert!(payment_bolt11.set_bolt12_invoice_amount(5000).is_err());
+    }
+
+    #[test]
+    fn test_description() {
+        let invoice = Bolt11Invoice::from_str(INVOICE).unwrap();
+        let payment = LightningPayment::from_str(INVOICE).unwrap();
+        assert_eq!(
+            payment.description(),
+            Some(invoice.description().to_string())
+        );
+
+        let p = "035be5e9478209674a96e60f1f037f6176540fd001fa1d64694770c56a7709c42c"; // pubkey from secret_key = 42;
+        let p = PublicKey::from_str(p).unwrap();
+        let offer = OfferBuilder::new(p)
+            .description("coffee".to_string())
+            .build()
+            .unwrap();
+        assert_eq!(
+            offer.to_string(),
+            "lno1pgrxxmmxvejk293pqdd7t628sgykwj5kuc837qmlv9m9gr7sq8ap6erfgacv26nhp8zzc"
+        );
+        let payment = LightningPayment::from_str(&offer.to_string()).unwrap();
+        assert_eq!(payment.description().as_deref(), Some("coffee"));
+
+        let offer = OfferBuilder::new(p).build().unwrap();
+        let payment = LightningPayment::from_str(&offer.to_string()).unwrap();
+        assert_eq!(payment.description(), None);
+
+        let lnurl =
+            "lnurl1dp68gurn8ghj7mn0wd68yene9e3k7mf0d3h82unvwqhkzurf9amrztmvde6hymp0xge7pp36";
+        let payment = LightningPayment::from_str(lnurl).unwrap();
+        assert_eq!(payment.description(), None);
     }
 }

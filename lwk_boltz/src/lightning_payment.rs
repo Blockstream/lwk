@@ -271,7 +271,7 @@ mod tests {
 
         let p = "035be5e9478209674a96e60f1f037f6176540fd001fa1d64694770c56a7709c42c"; // pubkey from secret_key = 42;
         let p = PublicKey::from_str(p).unwrap();
-        let offer = OfferBuilder::new(p.clone())
+        let offer = OfferBuilder::new(p)
             .description("coffee".to_string())
             .build()
             .unwrap();

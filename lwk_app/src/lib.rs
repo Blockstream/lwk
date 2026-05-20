@@ -22,8 +22,8 @@ use std::time::Duration;
 
 use lwk_common::{
     address_to_qr, address_to_text_qr, keyorigin_xpub_from_str, multisig_desc, singlesig_desc,
-    InvalidBipVariant, InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant,
-    Signer,
+    DynStore, EncryptedStore, InvalidBipVariant, InvalidBlindingKeyVariant, InvalidMultisigVariant,
+    InvalidSinglesigVariant, Signer, SqliteStore,
 };
 use lwk_jade::derivation_path_to_vec;
 use lwk_jade::get_receive_address::Variant;
@@ -320,9 +320,29 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             if desc.is_mainnet() != s.config.is_mainnet() {
                 return Err(Error::Generic("Descriptor is for the wrong network".into()));
             }
-            let wollet = WolletBuilder::new(s.config.network, desc)
-                .with_legacy_fs_store(&s.config.datadir)?
-                .build()?;
+            let wollet = if s.config.with_experimental_blinders {
+                let path = s.config.sqlite_path()?;
+                let raw_store = Arc::new(SqliteStore::new(&path)?);
+                raw_store.put("lwk_app:version", b"1")?;
+                // Updates have unencrypted keys "00..00" for backward compatibility reasons.
+                // If we want to use the same sqlite file, we need to have them encrypted,
+                // otherwise each wallet overrides the others updates.
+                let key_bytes = desc.encryption_key_bytes();
+                let enc_store = Arc::new(EncryptedStore::new_with_key_encryption(
+                    raw_store.clone() as Arc<dyn DynStore>,
+                    key_bytes,
+                )) as Arc<dyn DynStore>;
+                WolletBuilder::new(s.config.network, desc)
+                    .with_stores(raw_store)?
+                    .with_updates_store(enc_store)
+                    // updates store is already encrypted
+                    .set_encryption_updates_store(false)
+                    .build()?
+            } else {
+                WolletBuilder::new(s.config.network, desc)
+                    .with_legacy_fs_store(&s.config.datadir)?
+                    .build()?
+            };
             s.wollets.insert(&r.name, wollet)?;
 
             s.persist(&request)?;

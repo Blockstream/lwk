@@ -175,6 +175,7 @@ mod tests {
     const INVOICE: &str = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl";
 
     use super::*;
+    use lightning::{bitcoin::secp256k1::PublicKey, offers::offer::OfferBuilder};
 
     #[test]
     fn test_from_str() {
@@ -257,5 +258,37 @@ mod tests {
         // Test that set_bolt12_invoice_amount() fails on non-Bolt12 variants
         let mut payment_bolt11 = LightningPayment::from_str(INVOICE).unwrap();
         assert!(payment_bolt11.set_bolt12_invoice_amount(5000).is_err());
+    }
+
+    #[test]
+    fn test_description() {
+        let invoice = Bolt11Invoice::from_str(INVOICE).unwrap();
+        let payment = LightningPayment::from_str(INVOICE).unwrap();
+        assert_eq!(
+            payment.description(),
+            Some(invoice.description().to_string())
+        );
+
+        let p = "035be5e9478209674a96e60f1f037f6176540fd001fa1d64694770c56a7709c42c"; // pubkey from secret_key = 42;
+        let p = PublicKey::from_str(p).unwrap();
+        let offer = OfferBuilder::new(p.clone())
+            .description("coffee".to_string())
+            .build()
+            .unwrap();
+        assert_eq!(
+            offer.to_string(),
+            "lno1pgrxxmmxvejk293pqdd7t628sgykwj5kuc837qmlv9m9gr7sq8ap6erfgacv26nhp8zzc"
+        );
+        let payment = LightningPayment::from_str(&offer.to_string()).unwrap();
+        assert_eq!(payment.description().as_deref(), Some("coffee"));
+
+        let offer = OfferBuilder::new(p).build().unwrap();
+        let payment = LightningPayment::from_str(&offer.to_string()).unwrap();
+        assert_eq!(payment.description(), None);
+
+        let lnurl =
+            "lnurl1dp68gurn8ghj7mn0wd68yene9e3k7mf0d3h82unvwqhkzurf9amrztmvde6hymp0xge7pp36";
+        let payment = LightningPayment::from_str(lnurl).unwrap();
+        assert_eq!(payment.description(), None);
     }
 }

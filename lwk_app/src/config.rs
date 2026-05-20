@@ -106,6 +106,13 @@ impl Config {
         Ok(path)
     }
 
+    /// Returns the path of the SQLite store file under datadir
+    pub fn sqlite_path(&self) -> Result<PathBuf, Error> {
+        let mut path = self.datadir()?;
+        path.push("lwk.sqlite");
+        Ok(path)
+    }
+
     /// Returns the path of the state file under datadir
     pub fn state_path(&self) -> Result<PathBuf, Error> {
         let mut path = self.datadir()?;

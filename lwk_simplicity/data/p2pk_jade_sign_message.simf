@@ -1,0 +1,280 @@
+// ECDSA scalar guard.
+//
+// A Simplicity Scalar is represented as u256. For ECDSA r/s we need:
+//   1. canonical scalar representative, i.e. reject values >= group order n;
+//   2. nonzero, i.e. reject 0 because r = 0 is invalid and s^-1 is undefined.
+fn checked_ecdsa_scalar(scalar: Scalar) -> Scalar {
+    // CANON: scalar_norm = scalar mod n in canonical representation.
+    let scalar_norm: Scalar = jet::scalar_normalize(scalar);
+
+    // REJECT: non-canonical encodings such as n, n + 1, ...
+    assert!(jet::eq_256(<u256>::into(scalar_norm), <u256>::into(scalar)));
+
+    // REJECT: scalar == 0.
+    assert!(jet::eq_1(<bool>::into(jet::scalar_is_zero(scalar_norm)), 0));
+
+    // PASS: scalar is now guaranteed to be in [1, n - 1].
+    scalar_norm
+}
+
+// Field-element guard for compressed point x-coordinates.
+//
+// A Point is (y_is_odd, x). The x field is also represented as u256, so require
+// the canonical field representative when accepting a witness point.
+fn checked_fe(fe: Fe) -> Fe {
+    // CANON: fe_norm = fe mod p in canonical field representation.
+    let fe_norm: Fe = jet::fe_normalize(fe);
+
+    // REJECT: non-canonical field encodings.
+    assert!(jet::eq_256(<u256>::into(fe_norm), <u256>::into(fe)));
+
+    // PASS: fe is now canonical.
+    fe_norm
+}
+
+// Bind the supplied ECDSA nonce point to r.
+//
+// Standard ECDSA verification is not only:
+//     nonce == (r / s) * pubkey + (z / s) * G
+//
+// It also requires:
+//     r == x(nonce) mod n
+//
+// Without this check, the witness can provide an arbitrary nonce point matching
+// the linear combination for attacker-chosen r/s.
+fn ensure_nonce_x_matches_r(nonce: Point, r: Scalar) {
+    // LOAD: compressed nonce point = (y parity, affine x).
+    let (nonce_y_is_odd, nonce_x): (u1, Fe) = nonce;
+
+    // CANON: reject non-canonical x-coordinate encodings.
+    let nonce_x_norm: Fe = checked_fe(nonce_x);
+
+    // REDUCE: ECDSA compares r against x(R) reduced modulo group order n.
+    // This matters for rare x-coordinates where canonical field x >= n.
+    let nonce_x_as_scalar: Scalar = nonce_x_norm;
+    let nonce_x_mod_n: Scalar = jet::scalar_normalize(nonce_x_as_scalar);
+
+    // REJECT: supplied r does not match x(nonce) mod n.
+    assert!(jet::eq_256(<u256>::into(nonce_x_mod_n), <u256>::into(r)));
+}
+
+// SHA256 of exactly 32 bytes.
+//
+// Block layout:
+//   high 256 bits: input bytes
+//   low  256 bits: 0x80 || zero padding || 0x000...000100
+//
+// 0x0100 = 256 bits = 32 bytes * 8.
+fn sha256_u256(bytes: u256) -> u256 {
+    jet::sha_256_block(
+        jet::sha_256_iv(),
+        bytes,
+        0x8000000000000000000000000000000000000000000000000000000000000100
+    )
+}
+
+// Select one byte from two constants.
+//
+// Kept as a branch/select helper instead of arithmetic hex conversion. The
+// arithmetic form is shorter source-wise, but adds arithmetic/logic jets per
+// nibble and is not obviously cheaper.
+fn select_u8(bit: u1, if_false: u8, if_true: u8) -> u8 {
+    match <u1>::into(bit) {
+        false => if_false,
+        true => if_true,
+    }
+}
+
+// Convert a 4-bit nibble into lowercase ASCII hex.
+//
+// Input bits:
+//   b3 b2 b1 b0
+//
+// Output:
+//   0..9  -> '0'..'9'
+//   10..15 -> 'a'..'f'
+fn hex_nibble(nibble: u4) -> u8 {
+    let ((b3, b2), (b1, b0)): ((u1, u1), (u1, u1)) = <u4>::into(nibble);
+
+    match <u1>::into(b3) {
+        false => match <u1>::into(b2) {
+            false => match <u1>::into(b1) {
+                false => select_u8(b0, 0x30, 0x31), // 0, 1
+                true => select_u8(b0, 0x32, 0x33),  // 2, 3
+            },
+            true => match <u1>::into(b1) {
+                false => select_u8(b0, 0x34, 0x35), // 4, 5
+                true => select_u8(b0, 0x36, 0x37),  // 6, 7
+            },
+        },
+        true => match <u1>::into(b2) {
+            false => match <u1>::into(b1) {
+                false => select_u8(b0, 0x38, 0x39), // 8, 9
+                true => select_u8(b0, 0x61, 0x62),  // a, b
+            },
+            true => match <u1>::into(b1) {
+                false => select_u8(b0, 0x63, 0x64), // c, d
+                true => select_u8(b0, 0x65, 0x66),  // e, f
+            },
+        },
+    }
+}
+
+// First SHA256 of the Bitcoin signed-message payload.
+//
+// Message being hashed:
+//   0x18 || "Bitcoin Signed Message:\n" || 0x40 || lowercase_hex(sig_all_hash)
+//
+// Sizes:
+//   0x18 prefix length byte                         = 1 byte
+//   "Bitcoin Signed Message:\n"                     = 24 bytes
+//   0x40 message length byte for 64 hex chars       = 1 byte
+//   lowercase hex of 32-byte sighash                = 64 bytes
+//                                                   = 90 bytes total
+//
+// SHA256 padding length:
+//   90 * 8 = 720 = 0x02d0 bits
+fn first_bitcoin_message_hash(sighash: u256) -> u256 {
+    // SPLIT: 256-bit sighash -> 64 nibbles, big-endian hex order.
+    let nibbles: [u4; 64] = <u256>::into(sighash);
+
+    let [
+        n0, n1, n2, n3, n4, n5, n6, n7,
+        n8, n9, n10, n11, n12, n13, n14, n15,
+        n16, n17, n18, n19, n20, n21, n22, n23,
+        n24, n25, n26, n27, n28, n29, n30, n31,
+        n32, n33, n34, n35, n36, n37, n38, n39,
+        n40, n41, n42, n43, n44, n45, n46, n47,
+        n48, n49, n50, n51, n52, n53, n54, n55,
+        n56, n57, n58, n59, n60, n61, n62, n63
+    ]: [u4; 64] = nibbles;
+
+    // BLOCK 0, high half:
+    //   0x18
+    //   "Bitcoin Signed Message:\n"
+    //   0x40
+    //   first 6 hex chars
+    let block0_hi: u256 = <[u8; 32]>::into([
+        0x18, 0x42, 0x69, 0x74, 0x63, 0x6f, 0x69, 0x6e,
+        0x20, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x20,
+        0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x3a,
+        0x0a, 0x40,
+        hex_nibble(n0), hex_nibble(n1), hex_nibble(n2),
+        hex_nibble(n3), hex_nibble(n4), hex_nibble(n5)
+    ]);
+
+    // BLOCK 0, low half:
+    //   next 32 hex chars
+    //
+    // Total block 0 payload:
+    //   26 fixed prefix/length bytes + 38 hex bytes = 64 bytes.
+    let block0_lo: u256 = <[u8; 32]>::into([
+        hex_nibble(n6), hex_nibble(n7), hex_nibble(n8), hex_nibble(n9),
+        hex_nibble(n10), hex_nibble(n11), hex_nibble(n12), hex_nibble(n13),
+        hex_nibble(n14), hex_nibble(n15), hex_nibble(n16), hex_nibble(n17),
+        hex_nibble(n18), hex_nibble(n19), hex_nibble(n20), hex_nibble(n21),
+        hex_nibble(n22), hex_nibble(n23), hex_nibble(n24), hex_nibble(n25),
+        hex_nibble(n26), hex_nibble(n27), hex_nibble(n28), hex_nibble(n29),
+        hex_nibble(n30), hex_nibble(n31), hex_nibble(n32), hex_nibble(n33),
+        hex_nibble(n34), hex_nibble(n35), hex_nibble(n36), hex_nibble(n37)
+    ]);
+
+    // COMPRESS: first 512-bit SHA block.
+    let ctx: u256 = jet::sha_256_block(jet::sha_256_iv(), block0_hi, block0_lo);
+
+    // BLOCK 1, high half:
+    //   remaining 26 hex chars
+    //   0x80 padding byte
+    //   5 zero bytes
+    let block1_hi: u256 = <[u8; 32]>::into([
+        hex_nibble(n38), hex_nibble(n39), hex_nibble(n40), hex_nibble(n41),
+        hex_nibble(n42), hex_nibble(n43), hex_nibble(n44), hex_nibble(n45),
+        hex_nibble(n46), hex_nibble(n47), hex_nibble(n48), hex_nibble(n49),
+        hex_nibble(n50), hex_nibble(n51), hex_nibble(n52), hex_nibble(n53),
+        hex_nibble(n54), hex_nibble(n55), hex_nibble(n56), hex_nibble(n57),
+        hex_nibble(n58), hex_nibble(n59), hex_nibble(n60), hex_nibble(n61),
+        hex_nibble(n62), hex_nibble(n63),
+        0x80, 0, 0, 0, 0, 0
+    ]);
+
+    // BLOCK 1, low half:
+    //   zero padding
+    //   64-bit big-endian message bit length = 0x00000000000002d0
+    jet::sha_256_block(
+        ctx,
+        block1_hi,
+        0x00000000000000000000000000000000000000000000000000000000000002d0
+    )
+}
+
+// Bitcoin signed-message hash:
+//
+//   SHA256(SHA256(
+//       0x18 || "Bitcoin Signed Message:\n" || 0x40 || hex(sig_all_hash)
+//   ))
+//
+// The final SHA256 input is exactly 32 bytes, so sha256_u256 does one padded
+// compression block.
+fn bitcoin_message_hash() -> Scalar {
+    sha256_u256(first_bitcoin_message_hash(jet::sig_all_hash()))
+}
+
+// ECDSA verification with supplied nonce point.
+//
+// ECDSA equation:
+//   s * R = z * G + r * Q
+//
+// Rearranged for point_verify_1:
+//   R = (r / s) * Q + (z / s) * G
+//
+// Required checks:
+//   1. r is canonical and nonzero;
+//   2. s is canonical and nonzero;
+//   3. supplied R has x(R) mod n == r;
+//   4. supplied R equals the ECDSA linear combination.
+//
+// point_verify_1 also decompresses/checks the supplied points.
+fn verify_jade_ecdsa_signature(
+    message_hash: Scalar,
+    pubkey: Point,
+    nonce: Point,
+    r: Scalar,
+    s: Scalar
+) {
+    // CHECK: ECDSA r in [1, n - 1].
+    let r_checked: Scalar = checked_ecdsa_scalar(r);
+
+    // CHECK: ECDSA s in [1, n - 1].
+    let s_checked: Scalar = checked_ecdsa_scalar(s);
+
+    // CHECK: witness nonce point is actually bound to r.
+    ensure_nonce_x_matches_r(nonce, r_checked);
+
+    // INV: inv_s = s^-1 mod n.
+    let inv_s: Scalar = jet::scalar_invert(s_checked);
+
+    // MUL: u1 = z / s mod n.
+    let z_by_s: Scalar = jet::scalar_multiply(message_hash, inv_s);
+
+    // MUL: u2 = r / s mod n.
+    let r_by_s: Scalar = jet::scalar_multiply(r_checked, inv_s);
+
+    // VERIFY:
+    //   nonce == r_by_s * pubkey + z_by_s * G
+    jet::point_verify_1(((r_by_s, pubkey), z_by_s), nonce);
+}
+
+fn main() {
+    // HASH: bind signature to the current Elements sighash through Bitcoin
+    // signed-message hashing of lowercase hex(sig_all_hash).
+    let message_hash: Scalar = bitcoin_message_hash();
+
+    // VERIFY: Jade ECDSA signature witness.
+    verify_jade_ecdsa_signature(
+        message_hash,
+        param::PUBLIC_KEY,
+        witness::NONCE_POINT,
+        witness::R,
+        witness::S
+    )
+}

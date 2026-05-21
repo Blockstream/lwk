@@ -25,6 +25,30 @@ use elements::hex::ToHex;
 mod common;
 use common::*;
 
+fn point_value(y_is_odd: u8, x: [u8; 32]) -> Value {
+    Value::tuple([Value::u1(y_is_odd), Value::u256(U256::from_byte_array(x))])
+}
+
+#[test]
+fn test_simplicity_p2pk_jade_sign_message_contract_compiles() {
+    let generator_x = [
+        0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b,
+        0x07, 0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9, 0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8,
+        0x17, 0x98,
+    ];
+    let mut args = HashMap::new();
+    args.insert(
+        WitnessName::from_str_unchecked("PUBLIC_KEY"),
+        point_value(0, generator_x),
+    );
+
+    let _program = load_program(
+        include_str!("../data/p2pk_jade_sign_message.simf"),
+        Arguments::from(args),
+    )
+    .unwrap();
+}
+
 #[test]
 fn test_simplicity_p2pk() {
     let env = TestEnvBuilder::from_env().with_electrum().build();

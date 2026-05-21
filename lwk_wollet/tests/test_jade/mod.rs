@@ -1,8 +1,14 @@
 use std::{collections::HashMap, str::FromStr};
 
 use elements::{
-    bitcoin::secp256k1::{Keypair, XOnlyPublicKey},
-    hex::ToHex,
+    bitcoin::{
+        base64::prelude::{Engine as _, BASE64_STANDARD},
+        consensus::{encode::VarInt, Encodable},
+        secp256k1::{ecdsa::Signature, Keypair, Message, PublicKey, XOnlyPublicKey},
+        sign_message::BITCOIN_SIGNED_MSG_PREFIX,
+    },
+    hashes::{sha256d, Hash, HashEngine},
+    hex::{FromHex, ToHex},
 };
 use elements_miniscript::{
     bitcoin::bip32::DerivationPath, ConfidentialDescriptor, DescriptorPublicKey,
@@ -10,8 +16,10 @@ use elements_miniscript::{
 use lwk_common::{singlesig_desc, Signer, Singlesig};
 use lwk_containers::testcontainers::clients::Cli;
 use lwk_jade::{
+    derivation_path_to_vec,
+    protocol::{GetSignatureParams, GetXpubParams, SignMessageParams},
     register_multisig::{GetRegisteredMultisigParams, JadeDescriptor, RegisterMultisigParams},
-    TestJadeEmulator,
+    Jade, TestJadeEmulator,
 };
 use lwk_signer::{AnySigner, SignerError};
 use lwk_simplicity::{
@@ -23,9 +31,15 @@ use lwk_simplicity::{
     },
 };
 use lwk_test_util::{init_logging, TestEnv, TestEnvBuilder, TEST_MNEMONIC};
-use lwk_wollet::{blocking::BlockchainBackend, Network, WolletDescriptor, EC};
+use lwk_wollet::{
+    blocking::BlockchainBackend,
+    secp256k1::{rand::thread_rng, SecretKey},
+    Network, WolletBuilder, WolletDescriptor, EC,
+};
 
-use crate::test_wollet::{generate_signer, multisig_desc, test_client_electrum, TestWollet};
+use crate::test_wollet::{
+    generate_signer, multisig_desc, test_client_electrum, wait_for_tx, TestWollet,
+};
 
 pub fn jade_setup<'a>(docker: &'a Cli, mnemonic: &'a str) -> TestJadeEmulator<'a> {
     let mut test_jade_emul = TestJadeEmulator::new(docker);
@@ -323,6 +337,174 @@ fn sign_mixed_input_with_simplicity(env: &TestEnv, signer: &AnySigner) {
     simplicity_wallet.wait_for_tx_outside_list(&txid);
 }
 
+fn signed_msg_hash_bytes(message: &[u8]) -> sha256d::Hash {
+    let mut engine = sha256d::Hash::engine();
+    engine.input(BITCOIN_SIGNED_MSG_PREFIX);
+    VarInt::from(message.len())
+        .consensus_encode(&mut engine)
+        .unwrap();
+    engine.input(message);
+    sha256d::Hash::from_engine(engine)
+}
+
+fn jade_sign_message_compact_signature(
+    jade: &Jade,
+    message: String,
+    path: &DerivationPath,
+) -> Vec<u8> {
+    // Fixed Anti-Exfil values are acceptable only for this PoC. Production callers
+    // must generate and verify a fresh host commitment for each signature.
+    let ae_host_commitment =
+        Vec::<u8>::from_hex("7b61fad27ce2d95abca09f76bd7226e50212a8542f3ca274ee546cec4bc5c3bb")
+            .unwrap();
+    let ae_host_entropy =
+        Vec::<u8>::from_hex("3f5540b9336af9bdd50a5b7f69fc2045a12e3b3e0740f7461902d882bf8a8820")
+            .unwrap();
+
+    let signer_commitment = jade
+        .sign_message_inner(SignMessageParams {
+            message,
+            path: derivation_path_to_vec(path),
+            ae_host_commitment,
+        })
+        .unwrap();
+    assert!(!signer_commitment.is_empty());
+
+    let signature = jade
+        .get_signature_for_msg(GetSignatureParams { ae_host_entropy })
+        .unwrap();
+    let mut signature = BASE64_STANDARD.decode(signature).unwrap();
+    if signature.len() == 65 {
+        signature.remove(0);
+    }
+    assert_eq!(signature.len(), 64);
+    signature
+}
+
+fn point_value(y_is_odd: u8, x: [u8; 32]) -> Value {
+    Value::tuple([Value::u1(y_is_odd), Value::u256(U256::from_byte_array(x))])
+}
+
+fn public_key_point(public_key: &elements::bitcoin::secp256k1::PublicKey) -> Value {
+    let serialized = public_key.serialize();
+    point_value(serialized[0] & 1, serialized[1..].try_into().unwrap())
+}
+
+fn spend_modified_p2pk_with_jade_sign_message(
+    env: &TestEnv,
+    jade: &Jade,
+    jade_public_key: PublicKey,
+) {
+    let common_network = env.elementsd_network();
+
+    let path = DerivationPath::from_str("m/0").unwrap();
+    let mut args = HashMap::new();
+    args.insert(
+        WitnessName::from_str_unchecked("PUBLIC_KEY"),
+        public_key_point(&jade_public_key),
+    );
+    let program = load_program(
+        include_str!("../../../lwk_simplicity/data/p2pk_jade_sign_message.simf"),
+        Arguments::from(args),
+    )
+    .unwrap();
+
+    let nums_internal_key = XOnlyPublicKey::from_str(
+        "50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+    )
+    .unwrap();
+    let simplicity_address = create_p2tr_address(
+        program.commit().cmr(),
+        &nums_internal_key,
+        common_network.address_params(),
+    );
+    let simplicity_script = simplicity_address.script_pubkey();
+    let blinder_sk = SecretKey::new(&mut thread_rng());
+    let simplicity_desc = format!(
+        "{}:{}",
+        blinder_sk.secret_bytes().to_hex(),
+        simplicity_script.to_hex()
+    );
+    let wd = WolletDescriptor::from_str(&simplicity_desc).unwrap();
+    let mut wollet = WolletBuilder::new(common_network.clone(), wd)
+        .build()
+        .unwrap();
+    let mut client = test_client_electrum(&env.electrum_url());
+
+    let wollet_address = wollet.address(Some(0)).unwrap();
+    let conf_address = wollet_address.address();
+    assert_eq!(&conf_address.to_unconfidential(), &simplicity_address);
+
+    let txid = env.elementsd_sendtoaddress(conf_address, 500_000, None);
+    env.elementsd_generate(1);
+    wait_for_tx(&mut wollet, &mut client, &txid);
+
+    let node_address = env.elementsd_getnewaddress();
+    let pset = wollet
+        .tx_builder()
+        .add_lbtc_recipient(&node_address, 50_000)
+        .unwrap()
+        .fee_rate(Some(1.0))
+        .finish()
+        .unwrap();
+    let txouts = vec![pset.inputs()[0].witness_utxo.clone().unwrap()];
+    let tx = pset.extract_tx().unwrap();
+
+    let sighash_all = get_sighash_all(
+        &tx,
+        &program,
+        &nums_internal_key,
+        &txouts,
+        0,
+        common_network.clone(),
+    )
+    .unwrap();
+    let message = sighash_all.to_hex();
+    let message_hash = signed_msg_hash_bytes(message.as_bytes());
+    let signature = jade_sign_message_compact_signature(jade, message, &path);
+    let message = Message::from_digest_slice(message_hash.as_byte_array()).unwrap();
+    let ecdsa_signature = Signature::from_compact(&signature).unwrap();
+    EC.verify_ecdsa(&message, &ecdsa_signature, &jade_public_key)
+        .unwrap();
+
+    let r: [u8; 32] = signature[0..32].try_into().unwrap();
+    let s: [u8; 32] = signature[32..64].try_into().unwrap();
+    let tx = [0, 1]
+        .into_iter()
+        .find_map(|nonce_y| {
+            let mut witness_map = HashMap::new();
+            witness_map.insert(
+                WitnessName::from_str_unchecked("NONCE_POINT"),
+                point_value(nonce_y, r),
+            );
+            witness_map.insert(
+                WitnessName::from_str_unchecked("R"),
+                Value::u256(U256::from_byte_array(r)),
+            );
+            witness_map.insert(
+                WitnessName::from_str_unchecked("S"),
+                Value::u256(U256::from_byte_array(s)),
+            );
+
+            finalize_transaction(
+                tx.clone(),
+                &program,
+                &nums_internal_key,
+                &txouts,
+                0,
+                WitnessValues::from(witness_map),
+                common_network.clone(),
+                TrackerLogLevel::None,
+            )
+            .ok()
+        })
+        .expect("Jade sign_message signature must satisfy the ECDSA point equation");
+
+    let txid = client.broadcast(&tx).unwrap();
+    env.elementsd_generate(1);
+    wait_for_tx(&mut wollet, &mut client, &txid);
+}
+
 fn reject_duplicate_jade_derivations(env: &TestEnv, signer: &AnySigner) {
     let fingerprint = signer.fingerprint().unwrap();
     let xpubs = ["48h/1h/0h/2h", "48h/1h/1h/2h"]
@@ -404,6 +586,25 @@ fn emul_explicit() {
     sign_mixed_jade_input(&env, &jade_signer);
     sign_mixed_input_with_simplicity(&env, &jade_signer);
     reject_duplicate_jade_derivations(&env, &jade_signer);
+}
+
+#[test]
+fn emul_simplicity_jade_sign_message_poc() {
+    init_logging();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let docker = Cli::default();
+    let jade = jade_setup(&docker, TEST_MNEMONIC);
+
+    let path = DerivationPath::from_str("m/0").unwrap();
+    let xpub = jade
+        .jade
+        .get_cached_xpub(GetXpubParams {
+            network: Network::default_regtest(),
+            path: derivation_path_to_vec(&path),
+        })
+        .unwrap();
+
+    spend_modified_p2pk_with_jade_sign_message(&env, &jade.jade, xpub.public_key);
 }
 
 fn multi_multisig(env: &TestEnv, jade_signer: &AnySigner) {
@@ -524,6 +725,29 @@ mod serial {
         sign_explicit_jade_output(&env, &jade_signer);
         sign_mixed_jade_input(&env, &jade_signer);
         sign_mixed_input_with_simplicity(&env, &jade_signer);
+    }
+
+    #[test]
+    #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial; unlock with PIN and confirm sign_message on device screen"]
+    fn jade_simplicity_sign_message_poc() {
+        init_logging();
+        let env = TestEnvBuilder::from_env().with_electrum().build();
+        let network = lwk_common::Network::default_regtest();
+        let ports = Jade::available_ports_with_jade();
+        let port_name = &ports.first().unwrap().port_name;
+        let jade = Jade::from_serial(network, port_name, None).unwrap();
+        jade.unlock()
+            .expect("connected Jade must be initialized and unlocked");
+
+        let path = DerivationPath::from_str("m/0").unwrap();
+        let xpub = jade
+            .get_cached_xpub(GetXpubParams {
+                network: Network::default_regtest(),
+                path: derivation_path_to_vec(&path),
+            })
+            .unwrap();
+
+        spend_modified_p2pk_with_jade_sign_message(&env, &jade, xpub.public_key);
     }
 }
 

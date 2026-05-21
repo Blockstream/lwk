@@ -36,6 +36,14 @@ python-test-bindings-simplicity: python-build-bindings-simplicity
     PYTHONPATH=target/release/bindings/ python3 lwk_bindings/tests/bindings/simplicity_p2pk_regtest.py
     PYTHONPATH=target/release/bindings/ python3 lwk_bindings/tests/bindings/simplicity_options_regtest.py
 
+# Run the Jade sign_message Simplicity P2PK PoC.
+test-jade-sign-message-simplicity-poc:
+    cargo test -p lwk_wollet --test e2e emul_simplicity_jade_sign_message_poc -- --nocapture
+
+# Run the Jade sign_message Simplicity P2PK PoC against a physical Jade over serial.
+test-jade-sign-message-simplicity-poc-serial:
+    cargo test -p lwk_wollet --features serial --test e2e serial::jade_simplicity_sign_message_poc -- --ignored --nocapture --test-threads 1
+
 # build the python bindings and start a python env with them
 python-env-bindings: python-build-bindings
     PYTHONPATH=target/release/bindings/ python3

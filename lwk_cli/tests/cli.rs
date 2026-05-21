@@ -1741,7 +1741,6 @@ fn check_blinders(cli: &str, wallet: &str, txid: &str, address: &str, contains: 
         .iter()
         .find(|o| o.get("address").unwrap().as_str().unwrap() == address)
         .unwrap();
-    println!("{}", output);
     if contains {
         assert!(!output.get("abf").unwrap().as_str().unwrap().is_empty());
         assert!(!output.get("vbf").unwrap().as_str().unwrap().is_empty());

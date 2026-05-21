@@ -1772,6 +1772,10 @@ fn test_sent_outputs() {
     let txid = complete(&cli, "w", get_str(&r, "pset"), signers);
     check_blinders(&cli, "w", &txid, &node_addr_unconf, false);
 
+    let err = sh_err(&format!("{cli} wallet dump-unblinded -w w"));
+    assert!(err
+        .contains("feature not available, start with flag --with-experimental-blinders to enable"));
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 
@@ -1787,12 +1791,20 @@ fn test_sent_outputs() {
     };
     std::thread::sleep(std::time::Duration::from_millis(1000));
 
+    // received, change
+    let r = sh(&format!("{cli} wallet dump-unblinded -w w"));
+    assert_eq!(get_len(&r, "unblinded"), 2);
+
     // Send
     let sats = 1001;
     let r = sh(&format!(
         "{cli} wallet send -w w --recipient {node_address}:{sats}"
     ));
-    let txid = complete(&cli, "w", get_str(&r, "pset"), signers);
+    let pset = get_str(&r, "pset");
+    let r = sh(&format!("{cli} wallet dump-unblinded -w w"));
+    // received, change, sent, change
+    assert_eq!(get_len(&r, "unblinded"), 4);
+    let txid = complete(&cli, "w", pset, signers);
     check_blinders(&cli, "w", &txid, &node_addr_unconf, true);
 
     // Issue

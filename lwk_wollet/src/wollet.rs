@@ -914,6 +914,13 @@ impl Wollet {
         Ok(txos)
     }
 
+    /// Get all unblinded values
+    ///
+    /// **Experimental**: this API might change without notice.
+    pub fn all_unblinded(&self) -> HashMap<OutPoint, TxOutSecrets> {
+        self.cache.all_unblinded().clone()
+    }
+
     pub(crate) fn balance_from_utxos(&self, utxos: &[WalletTxOut]) -> Result<Balance, Error> {
         let mut r = BTreeMap::new();
         r.entry(self.policy_asset()).or_insert(0);

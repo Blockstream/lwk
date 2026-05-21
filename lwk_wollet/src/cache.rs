@@ -396,6 +396,10 @@ impl Cache {
         self.unblinded.get(outpoint)
     }
 
+    pub fn all_unblinded(&self) -> &HashMap<OutPoint, TxOutSecrets> {
+        &self.unblinded
+    }
+
     pub fn extend_unblinded(
         &mut self,
         unblinded: impl IntoIterator<Item = (OutPoint, TxOutSecrets)>,

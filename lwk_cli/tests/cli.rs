@@ -1753,7 +1753,7 @@ fn check_blinders(cli: &str, wallet: &str, txid: &str, address: &str, contains: 
 #[test]
 fn test_sent_outputs() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, params, env) = setup_cli(env);
+    let (t, tmp, cli, params, env) = setup_cli(env);
 
     sw_signer(&cli, "sw");
     singlesig_wallet(&cli, "w", "sw", "slip77", "wpkh");
@@ -1818,6 +1818,39 @@ fn test_sent_outputs() {
     let r = sh(&format!("{cli} wallet drain -w w --address {node_address}"));
     let txid = complete(&cli, "w", get_str(&r, "pset"), signers);
     check_blinders(&cli, "w", &txid, &node_addr_unconf, true);
+
+    // Multiple wallets use the same sqlite db file
+    singlesig_wallet(&cli, "shw", "sw", "slip77", "shwpkh");
+    let r = sh(&format!("{cli} wallet list"));
+    assert_eq!(get_len(&r, "wallets"), 2);
+    assert_eq!(txs(&cli, "w").len(), 6);
+    assert_eq!(txs(&cli, "shw").len(), 0);
+
+    // lwk_cli/app datadir:
+    // └── liquid-testnet
+    //     ├── enc_cache             // legacy
+    //     │   └── <WALLET "w" HASH>
+    //     │       ├── 000000000000  // legacy updates
+    //     │       └── 000000000001
+    //     ├── state.json            // jsonrpc commands to replay on restart (untouched)
+    //     └── lwk.sqlite            // sqlite store, for all wallets ("w" and "shw")
+
+    // legacy (no, --with-experimental-blinders)
+    let enc_cache = tmp.path().join("liquid-regtest").join("enc_cache");
+    let subdirs: Vec<_> = std::fs::read_dir(&enc_cache)
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().is_dir())
+        .collect();
+    // Only wallet "w"
+    assert_eq!(subdirs.len(), 1);
+
+    // Both wallet "w" and "shw" use the sqlite file
+    assert!(tmp
+        .path()
+        .join("liquid-regtest")
+        .join("lwk.sqlite")
+        .exists());
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

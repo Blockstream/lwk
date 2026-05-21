@@ -153,6 +153,35 @@ pub struct WalletBroadcast {
     pub txid: String,
 }
 
+/// Unblinded values
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Unblinded {
+    /// Transction ID
+    pub txid: String,
+
+    /// Output index
+    pub vout: u32,
+
+    /// Asset
+    pub asset_id: String,
+
+    /// Satoshi
+    pub satoshi: u64,
+
+    /// Asset blinding factor
+    pub abf: String,
+
+    /// Value blinding factor
+    pub vbf: String,
+}
+
+/// Response containing all unblinded values
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletDumpUnblinded {
+    /// All unblined values
+    pub unblinded: Vec<Unblinded>,
+}
+
 /// A response of a JSON contract containing asset metadata and validated according to the contract rules
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AssetContract {

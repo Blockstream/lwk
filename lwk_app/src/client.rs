@@ -339,6 +339,14 @@ impl Client {
         self.make_request(Method::WalletSetAddrMemo, Some(req))
     }
 
+    pub fn wallet_dump_unblinded(
+        &self,
+        name: String,
+    ) -> Result<response::WalletDumpUnblinded, Error> {
+        let req = request::WalletDumpUnblinded { name };
+        self.make_request(Method::WalletDumpUnblinded, Some(req))
+    }
+
     pub fn liquidex_make(
         &self,
         name: String,

@@ -485,6 +485,13 @@ pub struct WalletSetAddrMemo {
     pub memo: String,
 }
 
+/// Request to dump all unblinded values
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletDumpUnblinded {
+    /// The wallet name
+    pub name: String,
+}
+
 /// Request to make a Liquidex proposal
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct LiquidexMake {

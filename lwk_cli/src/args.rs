@@ -757,6 +757,15 @@ pub enum WalletCommand {
         #[arg(long)]
         memo: String,
     },
+
+    /// Dump all unblinded values (asset, satoshi, blinders)
+    ///
+    /// **Experimental**: this API might change without notice.
+    DumpUnblinded {
+        /// Wallet name
+        #[arg(short, long, env)]
+        wallet: String,
+    },
 }
 
 #[derive(Debug, Args)]

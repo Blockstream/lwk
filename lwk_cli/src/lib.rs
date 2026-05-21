@@ -402,6 +402,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.wallet_set_addr_memo(wallet, address, memo)?;
                 serde_json::to_value(r)?
             }
+            WalletCommand::DumpUnblinded { wallet } => {
+                let r = client.wallet_dump_unblinded(wallet)?;
+                serde_json::to_value(r)?
+            }
         },
         CliCommand::Liquidex(a) => match a.command {
             LiquidexCommand::Make {

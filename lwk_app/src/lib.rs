@@ -1032,6 +1032,33 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             s.persist(&request)?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
+        Method::WalletDumpUnblinded => {
+            let r: request::WalletDumpUnblinded = serde_json::from_value(params)?;
+            let s = state.lock()?;
+            if !s.config.with_experimental_blinders {
+                return Err(Error::Generic(
+                    "feature not available, start with flag --with-experimental-blinders to enable"
+                        .to_string(),
+                ));
+            };
+            let wollet = s.wollets.get(&r.name)?;
+            let unblinded: Vec<response::Unblinded> = wollet
+                .all_unblinded()
+                .iter()
+                .map(|(outpoint, txoutsecrets)| response::Unblinded {
+                    txid: outpoint.txid.to_string(),
+                    vout: outpoint.vout,
+                    asset_id: txoutsecrets.asset.to_string(),
+                    satoshi: txoutsecrets.value,
+                    abf: txoutsecrets.asset_bf.to_string(),
+                    vbf: txoutsecrets.value_bf.to_string(),
+                })
+                .collect();
+            Response::result(
+                request.id,
+                serde_json::to_value(response::WalletDumpUnblinded { unblinded })?,
+            )
+        }
         Method::LiquidexMake => {
             let r: request::LiquidexMake = serde_json::from_value(params)?;
             let txid = Txid::from_str(&r.txid)?;

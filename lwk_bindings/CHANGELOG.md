@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.17.2
+
 * `Network::to_string()` changed output for regtest variant from "ElementsRegtest { policy_asset: <32 byte hex>}" to "CustomElements(ElementsParams { policy_asset: <32 byte hex>, genesis_hash: <32 byte hex> })".
 
 ## 0.17.0

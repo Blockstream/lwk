@@ -2493,7 +2493,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_bindings"
-version = "0.17.0"
+version = "0.17.2"
 dependencies = [
  "elements 0.25.2",
  "log",
@@ -2721,7 +2721,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wasm"
-version = "0.17.1"
+version = "0.17.2"
 dependencies = [
  "byteorder",
  "console_error_panic_hook",

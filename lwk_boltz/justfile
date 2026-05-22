@@ -61,13 +61,6 @@ test-chain: regtest-env-start
     source .env
     RUST_LOG=info cargo nextest run --profile boltz --test chain_swaps --run-ignored all --nocapture
 
-# Run submarine swap test with magic routing hints
-test-mrh: regtest-env-start
-    #!/usr/bin/env bash
-    set -ea
-    source .env
-    RUST_LOG=info cargo nextest run --profile boltz --test mrh --run-ignored all --nocapture
-
 # Run reverse swap test
 test-reverse: regtest-env-start
     #!/usr/bin/env bash
@@ -90,4 +83,4 @@ test-single ARGUMENT: regtest-env-start
     RUST_LOG=info cargo test -- --include-ignored --nocapture {{ARGUMENT}}
     
 # Run all boltz tests
-test-boltz-all: test-chain test-mrh test-reverse test-submarine
+test-boltz-all: test-chain test-reverse test-submarine

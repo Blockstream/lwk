@@ -214,8 +214,6 @@ coverage_report:
       artifacts: true
     - job: boltz_chain
       artifacts: true
-    - job: boltz_mrh
-      artifacts: true
     - job: boltz_reverse
       artifacts: true
     - job: boltz_submarine
@@ -409,19 +407,6 @@ boltz_chain:
     - git submodule update --init --recursive
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-chain
-  allow_failure: true
-
-boltz_mrh:
-  stage: test_long
-  needs: [fmt_clippy]
-  extends:
-    - .base
-    - .coverage_mixin
-  script:
-    - cd lwk_boltz
-    - git submodule update --init --recursive
-    - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
-    - just test-mrh
   allow_failure: true
 
 boltz_reverse:

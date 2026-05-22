@@ -20,8 +20,8 @@ mod tests {
         Keypair, PublicKey, Secp256k1,
     };
     use lwk_boltz::{
-        clients::{AnyClient, ElectrumClient},
-        BoltzSession, InvoiceDataSerializable, SwapAsset, SwapPersistence,
+        clients::{AnyClient, ElectrumClient, EsploraClient},
+        BoltzSession, Error, InvoiceDataSerializable, SwapAsset, SwapPersistence,
     };
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, Network};
 
@@ -170,6 +170,123 @@ mod tests {
 
         // Poll for updates until payment is complete
         advance_until_complete_polling!(invoice_polling, true);
+    }
+
+    /// Test Magic Routing Hints: a Boltz wallet pays another Boltz wallet's invoice
+    /// directly on-chain without performing a swap.
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_session_mrh_electrum() {
+        test_session_mrh_with_client(|network| {
+            AnyClient::Electrum(Arc::new(
+                ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap(),
+            ))
+        })
+        .await;
+    }
+
+    /// Test Magic Routing Hints using the Esplora client backend.
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_session_mrh_esplora() {
+        test_session_mrh_with_client(|network| {
+            AnyClient::Esplora(Arc::new(EsploraClient::new(
+                "http://localhost:3003",
+                network,
+            )))
+        })
+        .await;
+    }
+
+    async fn test_session_mrh_with_client(make_client: impl Fn(Network) -> AnyClient) {
+        let _ = env_logger::try_init();
+
+        let _mining_handle = utils::start_block_mining();
+        let network = Network::default_regtest();
+
+        // Receiver: Create a BoltzSession and generate an invoice with MRH.
+        let receiver_session = BoltzSession::builder(network, make_client(network))
+            .create_swap_timeout(TIMEOUT)
+            .build()
+            .await
+            .unwrap();
+        let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let claim_address = elements::Address::from_str(&claim_address).unwrap();
+
+        let invoice_amount = 100_000;
+        let invoice = receiver_session
+            .invoice(
+                invoice_amount,
+                Some("MRH test".to_string()),
+                &claim_address,
+                None,
+            )
+            .await
+            .unwrap();
+        log::info!("claim_address: {claim_address}");
+        log::info!("Receiver created invoice: {}", invoice.bolt11_invoice());
+        log::info!("Invoice fee: {:?}", invoice.data.fee);
+
+        let boltz_api = BoltzApiClientV2::new(BOLTZ_REGTEST.to_string(), Some(TIMEOUT));
+        let mrh_result = check_for_mrh(
+            &boltz_api,
+            &invoice.bolt11_invoice().to_string(),
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+        )
+        .await
+        .unwrap();
+
+        assert!(
+            mrh_result.is_some(),
+            "Magic routing hint should be present in the invoice"
+        );
+
+        let (mrh_address, mrh_amount) = mrh_result.unwrap();
+        log::info!("Found MRH - Address: {mrh_address}, Amount: {mrh_amount}");
+
+        assert!(
+            mrh_amount.to_sat() < invoice_amount,
+            "MRH amount {} should be less than invoice amount {} due to fees",
+            mrh_amount.to_sat(),
+            invoice_amount
+        );
+
+        let fee_diff = invoice_amount - mrh_amount.to_sat();
+        log::info!(
+            "Fee difference: {} sats (invoice.fee was {:?})",
+            fee_diff,
+            invoice.data.fee
+        );
+        assert!(
+            fee_diff > 0 && fee_diff < invoice_amount / 10,
+            "Fee should be positive and reasonable"
+        );
+
+        // Sender: Detect MRH in the invoice and pay directly on-chain.
+        let sender_session = BoltzSession::builder(network, make_client(network))
+            .create_swap_timeout(TIMEOUT)
+            .build()
+            .await
+            .unwrap();
+        let bolt11_parsed = invoice.bolt11_invoice();
+        let prepare_pay_response = sender_session
+            .prepare_pay(&bolt11_parsed.into(), &claim_address, None)
+            .await;
+        if let Err(Error::MagicRoutingHint {
+            address,
+            amount,
+            uri,
+        }) = prepare_pay_response
+        {
+            utils::send_to_address(Chain::Liquid(LiquidChain::LiquidRegtest), &address, amount)
+                .await
+                .unwrap();
+            log::info!("Sent {amount} sats to {address} or use uri {uri}");
+        }
+
+        invoice.complete_pay().await.unwrap();
     }
 
     #[tokio::test]

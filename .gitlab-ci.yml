@@ -56,11 +56,12 @@ stages:
       find . -name "*.profraw" -print > target/coverage/profraw-files.txt
       if [ -s target/coverage/profraw-files.txt ]; then
         "${llvm_path}/llvm-profdata" merge --sparse -f target/coverage/profraw-files.txt -o target/coverage/${CI_JOB_ID}.profdata
-        grcov target/coverage/${CI_JOB_ID}.profdata -s . --binary-path ./target/debug/ --llvm-path "${llvm_path}" -t lcov --branch --ignore-not-existing --ignore "*cargo*" --ignore "lwk_boltz/tests/**" -o target/coverage/${CI_JOB_ID}.lcov.info -p "$(pwd)"
+        grcov target/coverage/${CI_JOB_ID}.profdata -s . --binary-path ./target/debug/ --llvm-path "${llvm_path}" -t lcov --branch --ignore-not-existing --ignore "*cargo*" -o target/coverage/${CI_JOB_ID}.lcov.info -p "$(pwd)"
       else
         echo "No profile raw files found to process."
       fi
   artifacts:
+    when: always
     paths:
       - target/coverage/${CI_JOB_ID}.lcov.info
     expire_in: 1 day
@@ -211,6 +212,14 @@ coverage_report:
   needs:
     - job: test_coverage_run
       artifacts: true
+    - job: boltz_chain
+      artifacts: true
+    - job: boltz_mrh
+      artifacts: true
+    - job: boltz_reverse
+      artifacts: true
+    - job: boltz_submarine
+      artifacts: true
   extends: .base
   script:
     - |
@@ -219,7 +228,7 @@ coverage_report:
         echo "No LCOV coverage files found in target/coverage."
         exit 1
       fi
-      grcov target/coverage/ -s . -t cobertura,html --branch --ignore-not-existing --ignore "*cargo*" --ignore "lwk_boltz/tests/**" -o ./target/coverage/ -p "$(pwd)"
+      grcov target/coverage/ -s . -t cobertura,html --branch --ignore-not-existing --ignore "*cargo*" -o ./target/coverage/ -p "$(pwd)"
     - |
       coverage=$(xmllint --xpath "100 * string(//coverage/@line-rate)" target/coverage/cobertura.xml)
       printf 'Coverage: %s%%\n' "${coverage}"
@@ -392,7 +401,9 @@ amp0:
 boltz_chain:
   stage: test_long
   needs: [fmt_clippy]
-  extends: .base
+  extends:
+    - .base
+    - .coverage_mixin
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
@@ -403,7 +414,9 @@ boltz_chain:
 boltz_mrh:
   stage: test_long
   needs: [fmt_clippy]
-  extends: .base
+  extends:
+    - .base
+    - .coverage_mixin
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
@@ -414,7 +427,9 @@ boltz_mrh:
 boltz_reverse:
   stage: test_long
   needs: [fmt_clippy]
-  extends: .base
+  extends:
+    - .base
+    - .coverage_mixin
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
@@ -425,7 +440,9 @@ boltz_reverse:
 boltz_submarine:
   stage: test_long
   needs: [fmt_clippy]
-  extends: .base
+  extends:
+    - .base
+    - .coverage_mixin
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive

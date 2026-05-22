@@ -127,7 +127,9 @@ test_no_default_features:
 test_wollet:
   stage: test
   needs: []
-  extends: .base
+  extends:
+    - .base
+    - .coverage_mixin
   script:
     - docker pull xenoky/local-jade-emulator:1.0.27
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
@@ -136,18 +138,22 @@ test_wollet:
 test_jade:
   stage: test
   needs: []
-  extends: .base
+  extends:
+    - .base
+    - .coverage_mixin
   variables:
       TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
   script:
     - docker pull tulipan81/blind_pin_server:v0.0.7
     - docker pull xenoky/local-jade-emulator:1.0.27
-    - cargo test -p lwk_jade
+    - cargo test -p lwk_jade --features asyncr
 
 test_ledger:
   stage: test
   needs: []
-  extends: .base
+  extends:
+    - .base
+    - .coverage_mixin
   script:
     - cargo test -p lwk_ledger --features asyncr
 
@@ -164,14 +170,18 @@ test_serial:
 test_minor:
   stage: test
   needs: []
-  extends: .base
+  extends:
+    - .base
+    - .coverage_mixin
   script:
     - cargo test -p lwk_tiny_jrpc -p lwk_app -p lwk_containers -p lwk_common -p lwk_hwi -p lwk_rpc_model -p lwk_signer
 
 test_cli:
   stage: test
   needs: []
-  extends: .base
+  extends:
+    - .base
+    - .coverage_mixin
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_cli
@@ -179,7 +189,9 @@ test_cli:
 test_simplicity:
   stage: test
   needs: []
-  extends: .base
+  extends:
+    - .base
+    - .coverage_mixin
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_simplicity
@@ -191,26 +203,24 @@ unit_tests:
   script:
     - cargo nextest run --lib --profile unit # ensure unit tests don't take more than a sec each
 
-test_coverage_run:
-  stage: test_long
-  needs: [fmt_clippy]
-  extends:
-    - .base
-    - .coverage_mixin
-    - .junit_mixin
-  variables:
-    TMPDIR: ${CI_PROJECT_DIR}
-    JAVA_OPTS: "-Xmx2g"
-  script:
-    - docker pull tulipan81/blind_pin_server:v0.0.7
-    - docker pull xenoky/local-jade-emulator:1.0.27
-    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo nextest run --features foreign_bindings,asyncr --profile ci
-
 coverage_report:
   stage: coverage
   needs:
-    - job: test_coverage_run
+    - job: test_wollet
+      artifacts: true
+    - job: test_jade
+      artifacts: true
+    - job: test_ledger
+      artifacts: true
+    - job: test_minor
+      artifacts: true
+    - job: test_cli
+      artifacts: true
+    - job: test_simplicity
+      artifacts: true
+    - job: bindings
+      artifacts: true
+    - job: amp0
       artifacts: true
     - job: boltz_chain
       artifacts: true
@@ -294,7 +304,9 @@ examples:
 bindings:
   stage: test
   needs: []
-  extends: .base
+  extends:
+    - .base
+    - .coverage_mixin
   variables:
     JAVA_OPTS: "-Xmx2g"
   script:
@@ -379,7 +391,9 @@ wasm:
 amp0:
   stage: test_long
   needs: [fmt_clippy]
-  extends: .base
+  extends:
+    - .base
+    - .coverage_mixin
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     # slow amp0 unit tests
@@ -407,7 +421,6 @@ boltz_chain:
     - git submodule update --init --recursive
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-chain
-  allow_failure: true
 
 boltz_reverse:
   stage: test_long
@@ -420,7 +433,6 @@ boltz_reverse:
     - git submodule update --init --recursive
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-reverse
-  allow_failure: true
 
 boltz_submarine:
   stage: test_long
@@ -433,7 +445,6 @@ boltz_submarine:
     - git submodule update --init --recursive
     - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-submarine
-  allow_failure: true
 
 # maven credentials and gpg settings
 # in runner's ~/.gradle/gradle.properties

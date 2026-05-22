@@ -34,7 +34,7 @@ stages:
 .base:
   image: xenoky/lwk-builder@sha256:9c49840a50edde26b262980af26906e3f6fb2f2d49263cbae0c073b95a35c848
   tags:
-    - cloud
+    - liquid
   retry:
     max: 2
     when:

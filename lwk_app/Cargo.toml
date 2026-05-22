@@ -8,7 +8,7 @@ exclude = ["test_data/"]
 documentation = "https://docs.rs/lwk_app"
 
 [dependencies]
-lwk_common = { version = "0.17.0" }
+lwk_common = { version = "0.17.0", features = ["sqlite"] }
 lwk_jade = { version = "0.17.0" }
 lwk_signer = { version = "0.17.0" }
 lwk_wollet = { version = "0.17.0" }

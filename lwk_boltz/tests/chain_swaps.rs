@@ -22,7 +22,7 @@ mod tests {
     use boltz_client::Secp256k1;
     use boltz_client::{Amount, Keypair};
     use lwk_boltz::{
-        clients::{AnyClient, ElectrumClient},
+        clients::{AnyClient, ElectrumClient, EsploraClient},
         BoltzSession, SwapAsset, LIQUID_UNCOOPERATIVE_EXTRA,
     };
     use lwk_boltz::{SwapPersistence, SwapState};
@@ -821,17 +821,36 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
-    async fn test_session_onchain() {
+    async fn test_session_onchain_electrum() {
+        test_session_onchain_with_client(|network| {
+            AnyClient::Electrum(Arc::new(
+                ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap(),
+            ))
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_session_onchain_esplora() {
+        test_session_onchain_with_client(|network| {
+            AnyClient::Esplora(Arc::new(EsploraClient::new(
+                "http://localhost:3003",
+                network,
+            )))
+        })
+        .await;
+    }
+
+    async fn test_session_onchain_with_client(make_client: impl Fn(Network) -> AnyClient) {
         let _ = env_logger::try_init();
 
         // Start concurrent block mining task
         let _mining_handle = crate::utils::start_block_mining();
 
         let network = Network::default_regtest();
-        let client =
-            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
-        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+        let session = BoltzSession::builder(network, make_client(network))
             .create_swap_timeout(TIMEOUT)
             .build()
             .await
@@ -1098,7 +1117,7 @@ mod tests {
         }
 
         // Test polling mode
-        let session_polling = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+        let session_polling = BoltzSession::builder(network, make_client(network))
             .polling(true)
             .bitcoin_electrum_client(&format!("tcp://{DEFAULT_REGTEST_NODE}")) // it's the same endpoint, just testing the builder setting
             .unwrap()

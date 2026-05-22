@@ -163,7 +163,7 @@ coverage-local:
     cargo nextest run
 
     grcov "${coverage_profraw_dir}" -s . --binary-path ./target/debug/ --llvm-path "${llvm_path}" -t cobertura,html --branch \
-        --ignore-not-existing --ignore "*cargo*" --ignore "lwk_boltz/tests/**" \
+        --ignore-not-existing --ignore "*cargo*" \
         --ignore "lwk_boltz/regtest/data/**" \
         -o ./target/coverage/ -p "$(pwd)"
 

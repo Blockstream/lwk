@@ -103,6 +103,7 @@ lwk_simplicity = { version = "0.17.0" }
 lwk_signer = { version = "0.17.0", features = ["jade", "ledger"] }
 lwk_containers = { version = "0.14.0" }
 lwk_test_util = { version = "0.17.0" }
+lwk_common = { version = "0.17.0", features = ["sqlite"]}
 
 tempfile = "3.8.0"
 zmq = "0.10.0"

@@ -20,7 +20,7 @@ mod tests {
     };
     use lightning::offers::offer::Offer;
     use lwk_boltz::{
-        clients::{AnyClient, ElectrumClient},
+        clients::{AnyClient, ElectrumClient, EsploraClient},
         parse_bolt12_invoice, verify_invoice_from_offer, BoltzSession, LightningPayment,
         PreparePayDataSerializable, SwapPersistence,
     };
@@ -825,7 +825,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
-    async fn test_submarine() {
+    async fn test_submarine_electrum() {
         let _ = env_logger::try_init();
         let chain_client = ChainClient::new().with_liquid(
             ElectrumClient::new(
@@ -836,9 +836,24 @@ mod tests {
             )
             .unwrap(),
         );
+        test_submarine_with_chain_client(&chain_client).await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_submarine_esplora() {
+        let _ = env_logger::try_init();
+        let chain_client = ChainClient::new().with_liquid(EsploraClient::new(
+            "http://localhost:3003",
+            Network::default_regtest(),
+        ));
+        test_submarine_with_chain_client(&chain_client).await;
+    }
+
+    async fn test_submarine_with_chain_client(chain_client: &ChainClient) {
         let chain = Chain::Liquid(LiquidChain::LiquidRegtest);
-        v2_submarine(&chain_client, false, chain).await;
-        v2_submarine(&chain_client, true, chain).await;
+        v2_submarine(chain_client, false, chain).await;
+        v2_submarine(chain_client, true, chain).await;
     }
 
     async fn v2_submarine(chain_client: &ChainClient, underpay: bool, chain: Chain) {

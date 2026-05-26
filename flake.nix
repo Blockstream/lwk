@@ -179,6 +179,7 @@
             pkgs.cargo-bloat
             pkgs.cargo-nextest
             pkgs.grcov
+            pkgs.go
             pkgs.nixfmt
             pkgs.yq # to validate yml
             pkgs.jq

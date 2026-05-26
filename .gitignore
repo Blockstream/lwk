@@ -5,6 +5,7 @@ bin/
 .vscode
 debug.log
 lwk_bindings.kt
+lwk_bindings/go/lwk
 .idea
 flash_image.bin
 qemu_efuse.bin

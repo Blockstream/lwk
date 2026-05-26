@@ -144,6 +144,30 @@ C++ bindings are generated in CI artifacts:
 * LWK library in `bindings_<platfrom>` (for ex. `bindings-x86_64-unknown-linux-gnu`)
 * Source and header files `bindings_interface_cpp`
 
+## Go
+
+### Example
+
+* [List transactions](./go/list_transactions.go) of a wpkh/slip77 wallet
+
+### Build
+
+Check that Go is installed
+```shell
+go version
+```
+
+Build (this installs uniffi-bindgen-go):
+```shell
+just go-build-bindings
+```
+This installs uniffi-bindgen-go, generates `lwk.go` and `lwk.h`.
+
+Run Go tests:
+```shell
+just go-test-bindings
+```
+
 ## Guidelines
 
 If you're changing the interface, adding a new object, method or function, follow our [guidelines](GUIDE.md).

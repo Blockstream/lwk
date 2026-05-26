@@ -123,6 +123,17 @@ swift: ios ios-sim
     xcodebuild archive -project lwk_bindings/swift/LwkBindings.xcodeproj -scheme lwkFFI -archivePath "./target/ios_sim.xcarchive" -sdk iphonesimulator -destination "generic/platform=iOS Simulator"
     xcodebuild -create-xcframework -framework "./target/ios.xcarchive/Products/Library/Frameworks/lwkFFI.framework" -framework "./target/ios_sim.xcarchive/Products/Library/Frameworks/lwkFFI.framework" -output "./target/lwkFFI.xcframework"
 
+# build the Go interface "lwk/lwk.go"
+go-build-bindings: build-bindings-lib
+    which uniffi-bindgen-go || cargo install uniffi-bindgen-go --git https://github.com/NordSecurity/uniffi-bindgen-go --tag v0.5.0+v0.29.5
+    mkdir -p lwk_bindings/go/lwk
+    cp target/release/liblwk.{{LIB_EXTENSION}} lwk_bindings/go/lwk
+    uniffi-bindgen-go --library lwk_bindings/go/lwk/liblwk.{{LIB_EXTENSION}} --out-dir lwk_bindings/go
+
+# smoke test the Go bindings
+go-test-bindings: go-build-bindings
+    cd lwk_bindings/go && CGO_LDFLAGS="-L./lwk -llwk" LD_LIBRARY_PATH=./lwk go run list_transactions.go
+
 csharp-windows: build-bindings-lib
     cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.10.0+v0.29.4
     uniffi-bindgen-cs --library target/release/lwk.dll --out-dir target/release/csharp

@@ -1489,6 +1489,7 @@ fn convert_txoutdetails(txoutdetails: &lwk_wollet::TxOutDetails) -> response::Tx
     let unblinded = txoutdetails.unblinded();
     response::TxOutDetails {
         address: txoutdetails.address().map(|a| a.to_string()),
+        script_pubkey: txoutdetails.script_pubkey().map(|a| a.to_hex()),
         asset_id: unblinded.map(|u| u.asset.to_string()),
         satoshi: unblinded.map(|u| u.value),
         abf: unblinded.map(|u| u.asset_bf.to_string()),

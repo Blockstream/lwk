@@ -1776,6 +1776,11 @@ fn test_sent_outputs() {
     assert!(err
         .contains("feature not available, start with flag --with-experimental-blinders to enable"));
 
+    // Check last output (fee) script pubkey
+    let tx = tx_details(&cli, "w", &txid);
+    let outputs = tx.get("outputs").unwrap().as_array().unwrap().to_vec();
+    assert_eq!(get_str(outputs.last().unwrap(), "script_pubkey"), "");
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 

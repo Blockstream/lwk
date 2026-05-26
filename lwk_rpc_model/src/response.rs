@@ -471,6 +471,10 @@ pub struct TxOutDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub address: Option<String>,
 
+    /// Script pubkey
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub script_pubkey: Option<String>,
+
     /// Asset
     #[serde(skip_serializing_if = "Option::is_none")]
     pub asset_id: Option<String>,

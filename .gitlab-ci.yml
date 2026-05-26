@@ -358,6 +358,7 @@ just:
     - just python-test-bindings
     - just python-test-bindings-simplicity
     - just kotlin # kotlin-android would require cargo-ndk and various targets, tested on github which produce the kotlin package
+    - just go-test-bindings
 
 wasm:
   stage: test_long

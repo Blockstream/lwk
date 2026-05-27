@@ -68,6 +68,16 @@ def page_title(path: Path, fallback: str) -> str:
     return fallback
 
 
+def page_has_body(path: Path) -> bool:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    for index, line in enumerate(lines):
+        if index == 0 and line.startswith("# "):
+            continue
+        if line.strip():
+            return True
+    return False
+
+
 def include_file(current_page: Path, include: str) -> str:
     parts = include.strip().split(":")
     path = (current_page.parent / parts[0]).resolve()
@@ -200,6 +210,7 @@ def demote_headings(text: str, title: str) -> str:
 
 
 def render_index(pages: list[tuple[str, Path]]) -> str:
+    pages = [(fallback, path) for fallback, path in pages if page_has_body(path)]
     titles = {path: page_title(path, fallback) for fallback, path in pages}
     slug_by_file = {path.name: slugify(title) for path, title in titles.items()}
 

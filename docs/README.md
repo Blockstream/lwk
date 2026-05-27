@@ -15,6 +15,19 @@ mdbook build
 mdbook serve
 ```
 
+## LLM-friendly docs
+
+Generate the `llms.txt` entrypoint and the merged Markdown page:
+```
+just llms
+```
+
+The generated files are published at:
+* https://blockstream.github.io/lwk/book/llms.txt
+* https://blockstream.github.io/lwk/book/index.md
+
+`just mdbook` also runs this step after building the HTML book.
+
 ## Publish
 
 To publish the book at https://blockstream.github.io/lwk/book/

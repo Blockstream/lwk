@@ -150,6 +150,11 @@ bench filter="":
 # Build the mdbook documentation
 mdbook:
     cd docs && mdbook build
+    cd docs && python3 generate_llms.py
+
+# Build LLM-friendly docs artifacts
+llms:
+    cd docs && python3 generate_llms.py
 
 # Serve the mdbook documentation locally for development
 mdbook-serve: mdbook

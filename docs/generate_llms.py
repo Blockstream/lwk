@@ -118,8 +118,6 @@ def clean_tabs(text: str) -> str:
         title = TAB_TITLE_RE.fullmatch(line)
         if title:
             keep_tab = title.group(1) == "Rust"
-            if keep_tab:
-                cleaned.append(f"#### {title.group(1)}")
             continue
 
         if in_tabs:

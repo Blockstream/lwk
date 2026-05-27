@@ -22,6 +22,7 @@ INCLUDE_RE = re.compile(r"\{\{#include\s+([^}]+)\}\}")
 TAB_TITLE_RE = re.compile(r'<div slot="title">(.+)</div>')
 MARKDOWN_LINK_RE = re.compile(r"(!?)\[([^\]]*)\]\(([^)]+)\)")
 HEADING_RE = re.compile(r"^(#{1,6})(\s+.+)$")
+IGNORE_FENCE_RE = re.compile(r"^(```[A-Za-z0-9_#+-]+),ignore$", re.MULTILINE)
 
 
 def slugify(text: str) -> str:
@@ -169,6 +170,10 @@ def rewrite_links(text: str, current_page: Path, slug_by_file: dict[str, str]) -
     return MARKDOWN_LINK_RE.sub(replace, text)
 
 
+def clean_code_fences(text: str) -> str:
+    return IGNORE_FENCE_RE.sub(r"\1", text)
+
+
 def demote_headings(text: str, title: str) -> str:
     lines = text.splitlines()
     output: list[str] = []
@@ -222,6 +227,7 @@ def render_index(pages: list[tuple[str, Path]]) -> str:
         text = expand_includes(text, path)
         text = clean_tabs(text)
         text = rewrite_links(text, path, slug_by_file)
+        text = clean_code_fences(text)
         text = demote_headings(text, title)
 
         lines.extend(["", "---", "", f"## {title}", ""])

@@ -11,8 +11,22 @@ use crate::error::ProgramError;
 /// # Errors
 /// Returns error if the program fails to compile.
 pub fn load_program(source: &str, arguments: Arguments) -> Result<CompiledProgram, ProgramError> {
-    let compiled =
-        CompiledProgram::new(source, arguments, true).map_err(ProgramError::Compilation)?;
+    load_program_with_debug_symbols(source, arguments, false)
+}
+
+/// Load program source and compile it to a Simplicity program, optionally including debug symbols.
+///
+/// Debug symbols can be included to provide more detailed error messages during program execution, at the cost of a larger program size.
+/// Note that including debug symbols will change the CMR of the program, so it should only be used for testing and debugging purposes.
+/// # Errors
+/// Returns error if the program fails to compile.
+pub fn load_program_with_debug_symbols(
+    source: &str,
+    arguments: Arguments,
+    include_debug_symbols: bool,
+) -> Result<CompiledProgram, ProgramError> {
+    let compiled = CompiledProgram::new(source, arguments, include_debug_symbols)
+        .map_err(ProgramError::Compilation)?;
 
     Ok(compiled)
 }

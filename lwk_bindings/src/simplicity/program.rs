@@ -30,6 +30,22 @@ impl SimplicityProgram {
         Ok(Arc::new(SimplicityProgram { inner: compiled }))
     }
 
+    /// Load and compile a Simplicity program from source, with optional debug information included.
+    /// Note that including debug information will change the CMR and thus the resulting address.
+    #[uniffi::constructor]
+    pub fn load_with_debug_symbols(
+        source: &str,
+        arguments: &SimplicityArguments,
+        include_debug_info: bool,
+    ) -> Result<Arc<Self>, LwkError> {
+        let compiled = scripts::load_program_with_debug_symbols(
+            source,
+            arguments.to_inner()?,
+            include_debug_info,
+        )?;
+        Ok(Arc::new(SimplicityProgram { inner: compiled }))
+    }
+
     /// Get the Commitment Merkle Root (CMR) of the program.
     pub fn cmr(&self) -> Arc<Cmr> {
         Arc::new(self.inner.commit().cmr().into())

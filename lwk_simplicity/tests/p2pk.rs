@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 use lwk_common::Signer;
 
+use lwk_simplicity::scripts::load_program_with_debug_symbols;
 use lwk_wollet::blocking::BlockchainBackend;
 use lwk_wollet::secp256k1::rand::thread_rng;
 use lwk_wollet::secp256k1::SecretKey;
@@ -13,7 +14,7 @@ use lwk_simplicity::simplicityhl::{
     Value, WitnessValues,
 };
 use lwk_simplicity::{
-    scripts::{create_p2tr_address, load_program},
+    scripts::create_p2tr_address,
     signer::{finalize_transaction, get_sighash_all},
 };
 
@@ -49,7 +50,8 @@ fn test_simplicity_p2pk() {
         Value::u256(U256::from_byte_array(xonly.serialize())),
     );
     let arguments = Arguments::from(args);
-    let program = load_program(source, arguments).unwrap();
+    // In future we will remove support for debug symbols.
+    let program = load_program_with_debug_symbols(source, arguments, true).unwrap();
 
     // Create p2tr address
     let cmr = program.commit().cmr();
@@ -153,7 +155,8 @@ fn test_simplicity_mixed_p2pk() {
     );
     let arguments = Arguments::from(args);
     let source = include_str!("../data/p2pk.simf");
-    let program = load_program(source, arguments).unwrap();
+    // In future we will remove support for debug symbols.
+    let program = load_program_with_debug_symbols(source, arguments, true).unwrap();
     let cmr = program.commit().cmr();
     let address = create_p2tr_address(cmr, &xonly, params);
     let spk = address.script_pubkey();

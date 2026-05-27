@@ -25,7 +25,7 @@ assert len(genesis_hash) == 64
 args = SimplicityArguments()
 args = args.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(bytes.fromhex(TEST_X_ONLY_PUBLIC_KEY)))
 
-program = SimplicityProgram.load(P2PK_SOURCE, args)
+program = SimplicityProgram.load_with_debug_symbols(P2PK_SOURCE, args, True)
 cmr_from_program = program.cmr()
 assert str(cmr_from_program) == TEST_CMR
 
@@ -98,7 +98,7 @@ witness2 = witness2.add_value("MY_WITNESS", v_left)
 # Verify add_value works for loading a program (regression)
 args3 = SimplicityArguments()
 args3 = args3.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(bytes.fromhex(TEST_X_ONLY_PUBLIC_KEY)))
-program2 = SimplicityProgram.load(P2PK_SOURCE, args3)
+program2 = SimplicityProgram.load_with_debug_symbols(P2PK_SOURCE, args3, True)
 assert str(program2.cmr()) == TEST_CMR
 
 TEST_CONTRACT_HASH_HEX = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"

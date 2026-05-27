@@ -100,15 +100,34 @@ def expand_includes(text: str, current_page: Path) -> str:
 
 def clean_tabs(text: str) -> str:
     cleaned: list[str] = []
+    in_tabs = False
+    keep_tab = False
+
     for line in text.splitlines():
         if line.startswith("<custom-tabs"):
+            in_tabs = True
+            keep_tab = False
             continue
-        if line in {"<section>", "</section>", "</custom-tabs>"}:
+
+        if line == "</custom-tabs>":
+            in_tabs = False
+            keep_tab = False
             continue
 
         title = TAB_TITLE_RE.fullmatch(line)
         if title:
-            cleaned.append(f"#### {title.group(1)}")
+            keep_tab = title.group(1) == "Rust"
+            if keep_tab:
+                cleaned.append(f"#### {title.group(1)}")
+            continue
+
+        if in_tabs:
+            if line in {"<section>", "</section>"}:
+                continue
+            if keep_tab:
+                cleaned.append(line)
+        elif line in {"<section>", "</section>"}:
+            continue
         else:
             cleaned.append(line)
 

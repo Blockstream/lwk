@@ -57,6 +57,14 @@ for instance more transactions can be returned and balance can increase (or decr
 {{#include ../../lwk_wasm/tests/node/basics.js:client:ignore}}
 ```
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/basics.go:client:ignore}}
+```
+</section>
 </custom-tabs>
 
 ----

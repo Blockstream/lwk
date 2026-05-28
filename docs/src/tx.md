@@ -57,6 +57,14 @@ a transaction encoded in a format that facilitates sharing the transaction with 
 {{#include ../../lwk_wasm/tests/node/basics.js:tx:ignore}}
 ```
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/basics.go:tx:ignore}}
+```
+</section>
 </custom-tabs>
 
 ----

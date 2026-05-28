@@ -43,6 +43,14 @@ Then you can create a software signer with `SwSigner::new()`.
 {{#include ../../lwk_wasm/tests/node/basics.js:generate-signer:ignore}}
 ```
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/basics.go:generate-signer:ignore}}
+```
+</section>
 </custom-tabs>
 
 ## Get Xpub
@@ -73,6 +81,14 @@ The xpub is obtained with `Signer::keyorigin_xpub()`, which also includes the ke
 
 ```typescript
 {{#include ../../lwk_wasm/tests/node/basics.js:get-xpub:ignore}}
+```
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/basics.go:get-xpub:ignore}}
 ```
 </section>
 </custom-tabs>

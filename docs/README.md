@@ -35,11 +35,12 @@ To publish the book at https://blockstream.github.io/lwk/book/
 The site root at https://blockstream.github.io/lwk/ is handled by `docs/index.html`, which redirects to the book.
 
 ```
-git checkout gh-pages
-git reset --hard HEAD~10
-git rebase master
+git fetch github gh-pages master
+git switch gh-pages
+git reset --hard github/master
 just mdbook
 git add -f docs/book
 git commit -m "docs: add book"
-git push --force-with-lease
+git push --force-with-lease github gh-pages
 ```
+

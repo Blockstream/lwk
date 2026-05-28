@@ -133,6 +133,7 @@ go-build-bindings: build-bindings-lib
 # smoke test the Go bindings
 go-test-bindings: go-build-bindings
     cd lwk_bindings/go && CGO_LDFLAGS="-L./lwk -llwk" LD_LIBRARY_PATH=./lwk go run list_transactions.go
+    cd lwk_bindings/go && CGO_LDFLAGS="-L./lwk -llwk" LD_LIBRARY_PATH=./lwk go run basics.go
 
 csharp-windows: build-bindings-lib
     cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.10.0+v0.29.4

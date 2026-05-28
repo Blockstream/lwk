@@ -1,0 +1,14 @@
+# LWK Documentation
+
+> Liquid Wallet Kit (LWK) is a Rust workspace with libraries and bindings for building Liquid Network wallets and applications.
+
+This file follows the llms.txt proposal and points to the LLM-friendly Markdown version of the LWK documentation.
+
+## Docs
+
+- [LWK documentation](https://blockstream.github.io/lwk/book/index.md): All mdBook documentation merged into a single Markdown page, with mdBook snippets expanded.
+
+## Optional
+
+- [LWK HTML book](https://blockstream.github.io/lwk/book/): The human-readable mdBook version of the same documentation.
+- [LWK source repository](https://github.com/blockstream/lwk): Source code for the Liquid Wallet Kit workspace.

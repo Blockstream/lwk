@@ -228,6 +228,13 @@ When a primary request fails, manually evaluate the error to determine if a retr
 {{#include ../../lwk_wasm/tests/node/fallback_client.js:fallback_client}}
 ```
 </section>
-</custom-tabs>
 
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/fallback_client.go:fallback_client}}
+```
+</section>
+</custom-tabs>
 

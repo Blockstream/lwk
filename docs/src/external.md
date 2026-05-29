@@ -25,6 +25,15 @@ To use external UTXOs, you need to create an `ExternalUtxo` object with the nece
 ```
 
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/external_utxos.go:external_utxo_create}}
+```
+
+</section>
 </custom-tabs>
 
 ## Create PSET with external UTXOs
@@ -49,6 +58,15 @@ The external wallet must later add its signature details to the PSET and sign it
 ```
 
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/external_utxos.go:external_utxo_add}}
+```
+
+</section>
 </custom-tabs>
 
 ## Signing with External Wallets
@@ -69,6 +87,15 @@ When you include external UTXOs in a transaction, the external wallet must add i
 
 ```python
 {{#include ../../lwk_bindings/tests/bindings/external_utxos.py:external_utxo_sign}}
+```
+
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/external_utxos.go:external_utxo_sign}}
 ```
 
 </section>

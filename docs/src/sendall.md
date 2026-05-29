@@ -32,6 +32,15 @@ The methods take the following arguments:
 ```
 
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/drain_lbtc.go:drain_lbtc_wallet}}
+```
+
+</section>
 </custom-tabs>
 
 ## Next Steps

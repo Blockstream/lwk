@@ -1812,6 +1812,10 @@ fn test_sent_outputs() {
     let txid = complete(&cli, "w", pset, signers);
     check_blinders(&cli, "w", &txid, &node_addr_unconf, true);
 
+    let r = sh(&format!("{cli} wallet dump-unblinded -w w -t {txid}"));
+    // sent, change
+    assert_eq!(get_len(&r, "unblinded"), 2);
+
     // Issue
     let sats = 1002;
     let r = sh(&format!(

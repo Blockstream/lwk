@@ -101,6 +101,14 @@ Now that you have mnemonic/seed (or Jade), AMP ID and Watch-Only credentials (us
 {{#include ../../lwk_wasm/tests/node/amp0-setup.js:amp0-setup:ignore}}
 ```
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/amp0-setup.go:amp0-setup:ignore}}
+```
+</section>
 </custom-tabs>
 
 ### Alternative setup
@@ -183,6 +191,14 @@ If all the AMP0 rules are respected, the transaction is cosigned by AMP0 and can
 
 ```typescript
 {{#include ../../lwk_wasm/tests/node/amp0-daily-ops.js:amp0-daily-ops:ignore}}
+```
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/amp0-daily-ops.go:amp0-daily-ops:ignore}}
 ```
 </section>
 </custom-tabs>

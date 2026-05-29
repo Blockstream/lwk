@@ -30,6 +30,15 @@ The `reissue_asset()` method takes the following arguments:
 ```
 
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/issue_asset.go:reissue_asset}}
+```
+
+</section>
 </custom-tabs>
 
 ## Next Steps

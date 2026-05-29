@@ -58,6 +58,15 @@ Amounts expressed in satoshi are always whole numbers without any decimal places
 ```
 
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/issue_asset.go:contract}}
+```
+
+</section>
 </custom-tabs>
 
 ## Issuing an Asset
@@ -79,6 +88,15 @@ To issue an asset, use `TxBuilder::issue_asset()` before calling `finish()`. You
 
 ```python
 {{#include ../../lwk_bindings/tests/bindings/issue_asset.py:issue_asset}}
+```
+
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/issue_asset.go:issue_asset}}
 ```
 
 </section>
@@ -106,6 +124,15 @@ After creating the issuance PSET, you can extract the asset ID and reissuance to
 ```
 
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/issue_asset.go:issuance_ids}}
+```
+
+</section>
 </custom-tabs>
 
 ## Complete Example
@@ -127,6 +154,15 @@ Here's a complete example that issues an asset, signs it, and broadcasts it:
 
 ```python
 {{#include ../../lwk_bindings/tests/bindings/issue_asset.py:test_issue_asset}}
+```
+
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/issue_asset.go:test_issue_asset}}
 ```
 
 </section>

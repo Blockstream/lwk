@@ -28,6 +28,15 @@ The `add_burn()` method takes the following arguments:
 ```
 
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/issue_asset.go:burn_asset}}
+```
+
+</section>
 </custom-tabs>
 
 ## Next Steps

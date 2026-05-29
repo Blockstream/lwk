@@ -30,6 +30,15 @@ To derive a BIP85 mnemonic, you need a software signer initialized with a mnemon
 {{#include ../../lwk_wasm/tests/node/bip85.js:bip85}}
 ```
 </section>
+
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/bip85.go:bip85}}
+```
+</section>
 </custom-tabs>
 
 ----

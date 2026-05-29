@@ -52,6 +52,15 @@ The maker creates a swap proposal by building a transaction with `liquidex_make(
 ```
 
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/liquidex.go:liquidex_make}}
+```
+
+</section>
 </custom-tabs>
 
 ## Validating a Proposal (Taker)
@@ -73,6 +82,15 @@ Before accepting a proposal, the taker must validate it by fetching the previous
 
 ```python
 {{#include ../../lwk_bindings/tests/bindings/liquidex.py:liquidex_validate}}
+```
+
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/liquidex.go:liquidex_validate}}
 ```
 
 </section>
@@ -98,6 +116,15 @@ Once validated, the taker can accept the proposal by using `liquidex_take()` to 
 
 ```python
 {{#include ../../lwk_bindings/tests/bindings/liquidex.py:liquidex_take}}
+```
+
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/liquidex.go:liquidex_take}}
 ```
 
 </section>

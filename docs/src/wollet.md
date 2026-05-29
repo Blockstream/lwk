@@ -54,6 +54,14 @@ Once you have a `WolletDescriptor` you can create a `Wollet`.
 {{#include ../../lwk_wasm/tests/node/basics.js:wollet:ignore}}
 ```
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/basics.go:wollet:ignore}}
+```
+</section>
 </custom-tabs>
 
 ## Generate Addresses
@@ -83,6 +91,14 @@ This address can receive any Liquid asset or amount.
 
 ```typescript
 {{#include ../../lwk_wasm/tests/node/basics.js:address:ignore}}
+```
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/basics.go:address:ignore}}
 ```
 </section>
 </custom-tabs>
@@ -118,6 +134,14 @@ In the next section we explain how (new) blockchain data can be obtained and add
 
 ```typescript
 {{#include ../../lwk_wasm/tests/node/basics.js:txs:ignore}}
+```
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/basics.go:txs:ignore}}
 ```
 </section>
 </custom-tabs>

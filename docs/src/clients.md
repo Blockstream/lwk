@@ -52,6 +52,14 @@ This client is recommended for desktop, mobile, and server applications where in
 {{#include ../../lwk_bindings/tests/bindings/basics.py:electrum_client}}
 ```
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/basics.go:electrum_client}}
+```
+</section>
 </custom-tabs>
 
 ## Esplora
@@ -89,6 +97,14 @@ This client is ideal for web applications and scenarios where HTTP-based communi
 
 ```typescript
 {{#include ../../lwk_wasm/tests/node/basics.js:esplora_client}}
+```
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/basics.go:esplora_client}}
 ```
 </section>
 </custom-tabs>
@@ -147,6 +163,14 @@ Use authenticated clients when:
 
 ```typescript
 {{#include ../../lwk_wasm/tests/node/basics.js:waterfalls_client}}
+```
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/basics.go:waterfalls_client}}
 ```
 </section>
 </custom-tabs>

@@ -39,3 +39,8 @@ RUN cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi
 RUN curl -fsSL https://nodejs.org/dist/v20.18.0/node-v20.18.0-linux-x64.tar.xz | tar -xJ -C /usr/local --strip-components=1
 
 RUN cargo install uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --tag v0.8.1+v0.29.4
+
+# Install Go
+RUN wget -qO- https://go.dev/dl/go1.24.3.linux-amd64.tar.gz | tar -C /usr/local -xz && ln -s /usr/local/go/bin/go /usr/local/bin/go
+
+RUN cargo install uniffi-bindgen-go --git https://github.com/NordSecurity/uniffi-bindgen-go --tag v0.5.0+v0.29.5

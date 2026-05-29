@@ -39,6 +39,14 @@ you can call `Wollet::apply_tx()`.
 {{#include ../../lwk_wasm/tests/node/basics.js:broadcast:ignore}}
 ```
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/basics.go:broadcast:ignore}}
+```
+</section>
 </custom-tabs>
 
 ----

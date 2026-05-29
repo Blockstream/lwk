@@ -59,6 +59,14 @@ sequenceDiagram
 {{#include ../../lwk_wasm/tests/node/multisig.js:multisig-setup:ignore}}
 ```
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/multisig.go:multisig-setup:ignore}}
+```
+</section>
 </custom-tabs>
 
 In this example Carol creates the SLIP77 key at random, however this is not mandatory and valid alternatives are:
@@ -96,6 +104,14 @@ With the wallet CT descriptor you can:
 
 ```typescript
 {{#include ../../lwk_wasm/tests/node/multisig.js:multisig-receive:ignore}}
+```
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/multisig.go:multisig-receive:ignore}}
 ```
 </section>
 </custom-tabs>
@@ -148,6 +164,14 @@ sequenceDiagram
 
 ```typescript
 {{#include ../../lwk_wasm/tests/node/multisig.js:multisig-send:ignore}}
+```
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/multisig.go:multisig-send:ignore}}
 ```
 </section>
 </custom-tabs>

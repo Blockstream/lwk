@@ -4,8 +4,8 @@ use lwk_wollet::{elements, UnvalidatedRecipient, Validated};
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    liquidex::ValidatedLiquidexProposal, Address, AssetId, Contract, Error, Network, OutPoint,
-    Pset, Transaction, Wollet,
+    liquidex::ValidatedLiquidexProposal, Address, AssetId, Contract, Error, ExternalUtxo, Network,
+    OutPoint, Pset, Transaction, Wollet,
 };
 
 /// A transaction builder
@@ -203,6 +203,16 @@ impl TxBuilder {
     pub fn set_wallet_utxos(self, outpoints: Vec<OutPoint>) -> TxBuilder {
         let outpoints: Vec<elements::OutPoint> = outpoints.into_iter().map(Into::into).collect();
         self.inner.set_wallet_utxos(outpoints).into()
+    }
+
+    /// Adds external UTXOs
+    ///
+    /// Note: unblinded UTXOs with the same scriptpubkeys as the wallet, are considered external.
+    #[wasm_bindgen(js_name = addExternalUtxos)]
+    pub fn add_external_utxos(self, utxos: Vec<ExternalUtxo>) -> Result<TxBuilder, Error> {
+        let utxos: Vec<lwk_wollet::ExternalUtxo> =
+            utxos.iter().map(lwk_wollet::ExternalUtxo::from).collect();
+        Ok(self.inner.add_external_utxos(utxos)?.into())
     }
 
     /// Return a string representation of the transaction builder (mostly for debugging)

@@ -945,6 +945,11 @@ impl EsploraClient {
                 let mut cached_token = self.token.lock().await;
                 *cached_token = None;
                 attempt += 1;
+            } else if !response.status().is_success() {
+                // Surface the server's status and message instead of letting
+                // callers misparse an error body (e.g. a JSON `{"error": ...}`)
+                // as the expected success payload.
+                return Err(error_for_status(url, response).await);
             } else {
                 return Ok(response);
             }
@@ -1014,6 +1019,11 @@ impl EsploraClient {
                 let mut cached_token = self.token.lock().await;
                 *cached_token = None;
                 attempt += 1;
+            } else if !response.status().is_success() {
+                // Surface the server's status and message instead of letting
+                // callers misparse an error body (e.g. a JSON `{"error": ...}`)
+                // as the expected success payload.
+                return Err(error_for_status(url, response).await);
             } else {
                 return Ok(response);
             }
@@ -1164,6 +1174,21 @@ fn encrypt(plaintext: &str, recipient: Recipient) -> Result<String, Error> {
     writer.finish()?;
     let result = base64::prelude::BASE64_STANDARD_NO_PAD.encode(encrypted);
     Ok(result)
+}
+
+/// Builds an [`Error`] describing an unsuccessful HTTP response, including the
+/// status code and (a bounded prefix of) the response body so failures like an
+/// authenticated backend returning `402 Insufficient credits` are reported
+/// clearly rather than as a downstream JSON parsing error.
+async fn error_for_status(url: &str, response: Response) -> Error {
+    let status = response.status();
+    let body = response.text().await.unwrap_or_default();
+    let snippet: String = body.trim().chars().take(500).collect();
+    if snippet.is_empty() {
+        Error::Generic(format!("{url} returned HTTP {status}"))
+    } else {
+        Error::Generic(format!("{url} returned HTTP {status}: {snippet}"))
+    }
 }
 
 /// Fetches an OAuth2 access token using client credentials flow

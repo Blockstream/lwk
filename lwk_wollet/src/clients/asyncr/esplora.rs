@@ -1198,7 +1198,7 @@ async fn fetch_oauth_token(
     client_id: &str,
     client_secret: &str,
 ) -> Result<String, Error> {
-    let token_response: serde_json::Value = client
+    let response = client
         .post(url)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .form(&[
@@ -1208,9 +1208,16 @@ async fn fetch_oauth_token(
             ("scope", "openid"),
         ])
         .send()
-        .await?
-        .json()
         .await?;
+
+    // Surface OAuth/HTTP errors from the token endpoint (e.g. a 401 with
+    // `{"error":"invalid_client"}` for bad credentials) instead of falling
+    // through to a generic "missing access_token" message below.
+    if !response.status().is_success() {
+        return Err(error_for_status(url, response).await);
+    }
+
+    let token_response: serde_json::Value = response.json().await?;
 
     let token = token_response["access_token"]
         .as_str()

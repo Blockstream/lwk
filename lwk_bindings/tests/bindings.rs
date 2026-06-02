@@ -29,6 +29,9 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/payment_instructions.py",
     "tests/bindings/fallback_client.py",
     "tests/bindings/serde_roundtrip.py",
+    "tests/bindings/watch_only_wallet.py",
+    "tests/bindings/liquid_change.py",
+    "tests/bindings/authenticated_esplora_client.py",
 );
 
 #[cfg(all(feature = "foreign_bindings", feature = "simplicity"))]

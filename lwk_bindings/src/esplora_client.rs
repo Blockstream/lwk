@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use lwk_wollet::{
@@ -19,6 +20,69 @@ pub struct EsploraClient {
     pub(crate) builder: lwk_wollet::clients::EsploraClientBuilder,
 }
 
+/// Provider of a token for authenticated Esplora and Waterfalls backends.
+///
+/// Some Esplora servers, particularly enterprise deployments like
+/// [Blockstream Enterprise](https://blockstream.info/explorer-api), require authentication for
+/// access.
+#[derive(uniffi::Enum, Clone)]
+pub enum TokenProvider {
+    /// No token is needed
+    None,
+    /// A static token is used as-is for every request
+    Static {
+        /// The token value
+        token: String,
+    },
+    /// An OAuth2 token is obtained from the Blockstream API and refreshed automatically
+    Blockstream {
+        /// The url to get the token from
+        url: String,
+        /// The client ID
+        client_id: String,
+        /// The client secret
+        client_secret: String,
+    },
+}
+
+// Manual `Debug` that redacts secret material (the static token and the
+// OAuth client secret) so credentials never leak into logs or error output.
+impl std::fmt::Debug for TokenProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TokenProvider::None => f.write_str("None"),
+            TokenProvider::Static { .. } => f
+                .debug_struct("Static")
+                .field("token", &"<redacted>")
+                .finish(),
+            TokenProvider::Blockstream { url, client_id, .. } => f
+                .debug_struct("Blockstream")
+                .field("url", url)
+                .field("client_id", client_id)
+                .field("client_secret", &"<redacted>")
+                .finish(),
+        }
+    }
+}
+
+impl From<TokenProvider> for lwk_wollet::clients::TokenProvider {
+    fn from(value: TokenProvider) -> Self {
+        match value {
+            TokenProvider::None => lwk_wollet::clients::TokenProvider::None,
+            TokenProvider::Static { token } => lwk_wollet::clients::TokenProvider::Static(token),
+            TokenProvider::Blockstream {
+                url,
+                client_id,
+                client_secret,
+            } => lwk_wollet::clients::TokenProvider::Blockstream {
+                url,
+                client_id,
+                client_secret,
+            },
+        }
+    }
+}
+
 /// A builder for the `EsploraClient`
 #[derive(uniffi::Record)]
 pub struct EsploraClientBuilder {
@@ -32,6 +96,12 @@ pub struct EsploraClientBuilder {
     timeout: Option<u8>,
     #[uniffi(default = false)]
     utxo_only: bool,
+    /// HTTP headers to set on each request, for example to authenticate with a backend
+    #[uniffi(default = None)]
+    headers: Option<HashMap<String, String>>,
+    /// Token provider for authenticated Esplora and Waterfalls backends
+    #[uniffi(default = None)]
+    token_provider: Option<TokenProvider>,
 }
 
 impl From<EsploraClientBuilder> for lwk_wollet::clients::EsploraClientBuilder {
@@ -51,6 +121,12 @@ impl From<EsploraClientBuilder> for lwk_wollet::clients::EsploraClientBuilder {
         }
         if builder.utxo_only {
             result = result.utxo_only(true);
+        }
+        if let Some(headers) = builder.headers {
+            result = result.headers(headers);
+        }
+        if let Some(token_provider) = builder.token_provider {
+            result = result.token_provider(token_provider.into());
         }
         result
     }
@@ -154,5 +230,85 @@ impl EsploraClient {
     #[allow(unused)] // TODO remove once lwk_boltz is integrated
     pub(crate) fn clone_async_client(&self) -> Result<asyncr::EsploraClient, LwkError> {
         Ok(self.builder.clone().build()?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lwk_wollet::clients::TokenProvider as CoreTokenProvider;
+
+    // These tests exercise the binding-side authentication wiring offline: building a client
+    // never performs network I/O because the OAuth token is fetched lazily on the first request.
+
+    #[test]
+    fn token_provider_conversion() {
+        assert!(matches!(
+            CoreTokenProvider::from(TokenProvider::None),
+            CoreTokenProvider::None
+        ));
+
+        match CoreTokenProvider::from(TokenProvider::Static {
+            token: "abc".to_string(),
+        }) {
+            CoreTokenProvider::Static(token) => assert_eq!(token, "abc"),
+            other => panic!("expected Static, got {other:?}"),
+        }
+
+        match CoreTokenProvider::from(TokenProvider::Blockstream {
+            url: "https://login".to_string(),
+            client_id: "id".to_string(),
+            client_secret: "secret".to_string(),
+        }) {
+            CoreTokenProvider::Blockstream {
+                url,
+                client_id,
+                client_secret,
+            } => {
+                assert_eq!(url, "https://login");
+                assert_eq!(client_id, "id");
+                assert_eq!(client_secret, "secret");
+            }
+            other => panic!("expected Blockstream, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn builder_with_auth_builds_offline() {
+        let base_url = "https://enterprise.blockstream.info/liquid/api".to_string();
+
+        // Blockstream OAuth2 provider
+        let builder = EsploraClientBuilder {
+            base_url: base_url.clone(),
+            network: Network::mainnet(),
+            waterfalls: false,
+            concurrency: None,
+            timeout: None,
+            utxo_only: false,
+            headers: None,
+            token_provider: Some(TokenProvider::Blockstream {
+                url: "https://login".to_string(),
+                client_id: "id".to_string(),
+                client_secret: "secret".to_string(),
+            }),
+        };
+        assert!(EsploraClient::from_builder(builder).is_ok());
+
+        // Static token plus custom headers
+        let mut headers = HashMap::new();
+        headers.insert("X-Custom".to_string(), "value".to_string());
+        let builder = EsploraClientBuilder {
+            base_url,
+            network: Network::mainnet(),
+            waterfalls: false,
+            concurrency: None,
+            timeout: None,
+            utxo_only: false,
+            headers: Some(headers),
+            token_provider: Some(TokenProvider::Static {
+                token: "tok".to_string(),
+            }),
+        };
+        assert!(EsploraClient::from_builder(builder).is_ok());
     }
 }

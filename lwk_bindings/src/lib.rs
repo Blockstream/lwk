@@ -84,7 +84,7 @@ pub use currency_code::CurrencyCode;
 pub use desc::WolletDescriptor;
 pub use electrum_client::ElectrumClient;
 pub use error::LwkError;
-pub use esplora_client::{EsploraClient, EsploraClientBuilder};
+pub use esplora_client::{EsploraClient, EsploraClientBuilder, TokenProvider};
 pub use liquidex::{AssetAmount, UnvalidatedLiquidexProposal, ValidatedLiquidexProposal};
 pub use mnemonic::Mnemonic;
 pub use network::Network;

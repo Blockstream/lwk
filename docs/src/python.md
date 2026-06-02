@@ -45,3 +45,4 @@ str(lwk.Network.mainnet())
 * [Manual coin selection](../lwk_bindings/tests/bindings/manual_coin_selection.py) shows how to manually select coins for transactions
 * [Multisig](../lwk_bindings/tests/bindings/multisig.py) demonstrates multisignature wallet setup and usage
 * [PSET details](../lwk_bindings/tests/bindings/pset_details.py) shows how to inspect and work with Partially Signed Elements Transactions
+* [Authenticated Esplora](../lwk_bindings/tests/bindings/authenticated_esplora_client.py) connects to an authenticated Esplora/Waterfalls backend using OAuth2, a static token, or custom headers

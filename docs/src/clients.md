@@ -126,6 +126,14 @@ Use authenticated clients when:
 {{#include ../../lwk_wollet/tests/e2e.rs:authenticated_esplora_client}}
 ```
 </section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+{{#include ../../lwk_bindings/tests/bindings/authenticated_esplora_client.py:authenticated_esplora_client}}
+```
+</section>
 </custom-tabs>
 
 ## Waterfalls

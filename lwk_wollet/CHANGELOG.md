@@ -7,6 +7,7 @@
   * `lwk_wollet::ElementsNetwork::policy_asset()` returned `AssetId`, `lwk_common::Network::policy_asset()` returns `&AssetId`;
   * `lwk_wollet::ElementsNetwork::LiquidTestnet` replaced by `lwk_common::Network::TestnetLiquid`;
   * `lwk_wollet::ElementsNetwork::ElementsRegtest {policy_asset: AssetId}` replaced by `lwk_common::Network::CustomElements(ElementsParams)`, where `ElementsParams` contains custom `policy_asset` and `genesis_hash`, and should be constructed with builder;
+* Remove `lwk_common::PsetBalance::fee`, replaced with `lwk_common::PsetBalance::fees` as `HashMap<AssetId, u64>` and method `lwk_common::PsetBalance::fees_in(asset_id)` ([ELIP-0204](https://github.com/ElementsProject/ELIPs/blob/main/elip-0204.mediawiki))
 
 ## 0.17.0
 

@@ -7,6 +7,13 @@ pub enum Error {
     #[error("{0}")]
     Generic(String),
 
+    #[error("{url} returned HTTP {status}{}", .body.as_deref().map(|b| format!(": {b}")).unwrap_or_default())]
+    EsploraHttpError {
+        url: String,
+        status: u16,
+        body: Option<String>,
+    },
+
     #[error("Aes {0}")]
     Aes(String),
 

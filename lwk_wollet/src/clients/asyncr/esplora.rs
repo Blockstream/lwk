@@ -945,6 +945,17 @@ impl EsploraClient {
                 let mut cached_token = self.token.lock().await;
                 *cached_token = None;
                 attempt += 1;
+            } else if response.status() != 422 && !response.status().is_success() {
+                // Surface the server's status and message instead of letting
+                // callers misparse an error body (e.g. a JSON `{"error": ...}`)
+                // as the expected success payload.
+                //
+                // 422 Unprocessable Entity is passed through untouched: the
+                // Waterfalls history path (`get_history_waterfalls`) treats it
+                // as a signal that the server recipient rotated and recovers by
+                // clearing its caches and retrying. Erroring here would make
+                // that recovery unreachable.
+                return Err(error_for_status(url, response).await);
             } else {
                 return Ok(response);
             }
@@ -1014,6 +1025,11 @@ impl EsploraClient {
                 let mut cached_token = self.token.lock().await;
                 *cached_token = None;
                 attempt += 1;
+            } else if !response.status().is_success() {
+                // Surface the server's status and message instead of letting
+                // callers misparse an error body (e.g. a JSON `{"error": ...}`)
+                // as the expected success payload.
+                return Err(error_for_status(url, response).await);
             } else {
                 return Ok(response);
             }
@@ -1164,6 +1180,21 @@ fn encrypt(plaintext: &str, recipient: Recipient) -> Result<String, Error> {
     writer.finish()?;
     let result = base64::prelude::BASE64_STANDARD_NO_PAD.encode(encrypted);
     Ok(result)
+}
+
+/// Builds an [`Error`] describing an unsuccessful HTTP response, including the
+/// status code and (a bounded prefix of) the response body so failures like an
+/// authenticated backend returning `402 Insufficient credits` are reported
+/// clearly rather than as a downstream JSON parsing error.
+async fn error_for_status(url: &str, response: Response) -> Error {
+    let status = response.status().as_u16();
+    let body = response.text().await.unwrap_or_default();
+    let snippet: String = body.trim().chars().take(500).collect();
+    Error::EsploraHttpError {
+        url: url.to_string(),
+        status,
+        body: (!snippet.is_empty()).then_some(snippet),
+    }
 }
 
 /// Fetches an OAuth2 access token using client credentials flow
@@ -1366,6 +1397,49 @@ mod tests {
             .utxo_only(true)
             .build();
         assert!(client.is_err());
+    }
+
+    /// Regression test for the 422 carve-out in `get_with_retry`.
+    ///
+    /// A 422 must be surfaced as `Ok(response)`, not turned into an error: the
+    /// Waterfalls history path relies on receiving the 422 to detect a decryption
+    /// failure (e.g. a rotated server recipient key) and recover by clearing its
+    /// caches and retrying. Erroring here would make that recovery unreachable.
+    /// Other non-success statuses must still become errors.
+    #[tokio::test]
+    async fn get_with_retry_passes_422_through() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
+
+        // Tiny local server that replies with the given status for each request.
+        async fn serve(status_line: &'static str, body: &'static str) -> String {
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let addr = listener.local_addr().unwrap();
+            tokio::spawn(async move {
+                loop {
+                    let (mut sock, _) = listener.accept().await.unwrap();
+                    let mut buf = [0u8; 1024];
+                    let _ = sock.read(&mut buf).await;
+                    let resp = format!(
+                        "HTTP/1.1 {status_line}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    );
+                    let _ = sock.write_all(resp.as_bytes()).await;
+                }
+            });
+            format!("http://{addr}")
+        }
+
+        // 422 is passed through so the caller can run its recovery.
+        let base = serve("422 Unprocessable Entity", "CannotDecrypt").await;
+        let client = EsploraClient::new(Network::Liquid, &base);
+        let response = client.get_with_retry(&base).await.unwrap();
+        assert_eq!(response.status().as_u16(), 422);
+
+        // A genuine server error is still surfaced as an Err.
+        let base = serve("500 Internal Server Error", "boom").await;
+        let client = EsploraClient::new(Network::Liquid, &base);
+        assert!(client.get_with_retry(&base).await.is_err());
     }
 
     #[ignore = "requires internet connection and env vars"]

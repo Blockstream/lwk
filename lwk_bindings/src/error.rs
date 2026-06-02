@@ -34,12 +34,24 @@ pub enum LwkError {
 
     #[error("Boltz Backend HTTP Error: {status} {error:?}")]
     BoltzBackendHttpError { status: u16, error: Option<String> },
+
+    #[error("{url} returned HTTP {status}{}", .body.as_deref().map(|b| format!(": {b}")).unwrap_or_default())]
+    EsploraHttpError {
+        url: String,
+        status: u16,
+        body: Option<String>,
+    },
 }
 
 impl From<lwk_wollet::Error> for LwkError {
     fn from(value: lwk_wollet::Error) -> Self {
-        LwkError::Generic {
-            msg: format!("{value:?}"),
+        match value {
+            lwk_wollet::Error::EsploraHttpError { url, status, body } => {
+                LwkError::EsploraHttpError { url, status, body }
+            }
+            other => LwkError::Generic {
+                msg: format!("{other:?}"),
+            },
         }
     }
 }

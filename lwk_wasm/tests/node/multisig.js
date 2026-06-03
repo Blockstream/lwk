@@ -106,7 +106,7 @@ async function runMultisigTest() {
 	// Then Bob uses the wollet to analyze the PSET
 	const details = wollet_b.psetDetails(pset);
 	// PSET has a reasonable fee
-	console.assert(details.balance().fee() < 100);
+	console.assert(details.balance().feesIn(network.policyAsset()) < 100);
 	// PSET has a signature from Carol
 	console.assert(details.fingerprintsHas().length === 1);
 	console.assert(details.fingerprintsHas().includes(signer_c.fingerprint()));

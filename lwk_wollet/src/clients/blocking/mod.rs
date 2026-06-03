@@ -347,4 +347,23 @@ pub trait BlockchainBackend {
             .ok_or(Error::MissingTransaction)?
             .clone())
     }
+
+    /// Returns true if the wallet has any tx using the first gap_limit addresses (default 20)
+    fn has_txs(
+        &self,
+        descriptor: &WolletDescriptor,
+        gap_limit: Option<u32>,
+    ) -> Result<bool, Error> {
+        let limit = gap_limit.unwrap_or(20);
+
+        let scripts = descriptor.derive_scripts_to_gap_limit(limit)?;
+        if scripts.is_empty() {
+            return Ok(false);
+        }
+
+        let histories = self.get_scripts_history(&scripts.iter().collect::<Vec<_>>())?;
+        let has_any_tx = histories.into_iter().any(|history| !history.is_empty());
+
+        Ok(has_any_tx)
+    }
 }

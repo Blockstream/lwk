@@ -101,8 +101,10 @@ impl PsetDetails {
 
 #[wasm_bindgen]
 impl PsetBalance {
-    pub fn fee(&self) -> u64 {
-        self.inner.fee
+    /// The amount of fee with given asset id
+    #[wasm_bindgen(js_name = feesIn)]
+    pub fn fees_in(&self, asset: AssetId) -> u64 {
+        self.inner.fees_in(&asset.into())
     }
 
     /// The net balance for every asset with respect of the wallet asking the pset details
@@ -283,7 +285,7 @@ mod tests {
         let wollet = Wollet::new(&network, &descriptor).unwrap();
 
         let details = wollet.pset_details(&pset).unwrap();
-        assert_eq!(details.balance().fee(), 254);
+        assert_eq!(details.balance().fees_in(network.policy_asset()), 254);
         let balance: HashMap<lwk_wollet::elements::AssetId, i64> =
             serde_wasm_bindgen::from_value(details.balance().balances().entries().unwrap())
                 .unwrap();

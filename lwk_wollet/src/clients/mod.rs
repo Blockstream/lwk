@@ -42,7 +42,7 @@ pub struct EsploraClientBuilder {
 
 /// Provider of a token for authenticated services backend of Esplora and Waterfalls
 #[cfg(feature = "esplora")]
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum TokenProvider {
     /// No token is needed
     None,
@@ -57,6 +57,24 @@ pub enum TokenProvider {
         /// The client secret
         client_secret: String,
     },
+}
+
+// Manual `Debug` that redacts secret material (the static token and the
+// OAuth client secret) so credentials never leak into logs or error output.
+#[cfg(feature = "esplora")]
+impl std::fmt::Debug for TokenProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TokenProvider::None => f.write_str("None"),
+            TokenProvider::Static(_) => f.debug_tuple("Static").field(&"<redacted>").finish(),
+            TokenProvider::Blockstream { url, client_id, .. } => f
+                .debug_struct("Blockstream")
+                .field("url", url)
+                .field("client_id", client_id)
+                .field("client_secret", &"<redacted>")
+                .finish(),
+        }
+    }
 }
 
 #[cfg(feature = "esplora")]

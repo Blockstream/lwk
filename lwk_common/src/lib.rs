@@ -84,6 +84,7 @@ use elements_miniscript::elements::{
 };
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use std::collections::btree_map::BTreeMap;
+use std::collections::HashMap;
 
 /// The sockets of the Blockstream Liquid Electrum servers.
 pub mod electrum_ssl {
@@ -175,7 +176,7 @@ pub fn pset_balance(
 ) -> Result<PsetBalance, Error> {
     let secp = Secp256k1::new();
     let mut balances: BTreeMap<AssetId, i64> = BTreeMap::new();
-    let mut fee: Option<u64> = None;
+    let mut fees: HashMap<AssetId, u64> = HashMap::new();
     for (idx, input) in pset.inputs().iter().enumerate() {
         match input.witness_utxo.as_ref() {
             None => {
@@ -262,9 +263,6 @@ pub fn pset_balance(
     for (idx, output) in pset.outputs().iter().enumerate() {
         if output.script_pubkey.is_empty() {
             // Candidate fee output
-            if fee.is_some() {
-                return Err(Error::MultipleFee);
-            }
             if output.asset.is_none()
                 || output.asset_comm.is_some()
                 || output.amount.is_none()
@@ -272,7 +270,9 @@ pub fn pset_balance(
             {
                 return Err(Error::BlindedFee);
             }
-            fee = Some(output.amount.expect("previous if prevent this to be none"));
+            let asset = output.asset.expect("previous if prevent this to be none");
+            let entry = fees.entry(asset).or_insert(0);
+            *entry += output.amount.expect("previous if prevent this to be none");
             continue;
         }
 
@@ -341,14 +341,13 @@ pub fn pset_balance(
             _ => return Err(Error::OutputNotBlinded { idx }),
         }
     }
-    let fee = fee.unwrap_or(0);
 
     // Remove assets with 0 balance which are not changing the net balance.
     // For example it happens with reissuance tokens.
     balances.retain(|_, v| *v != 0);
 
     Ok(PsetBalance {
-        fee,
+        fees,
         balances: balances.into(),
         recipients,
     })

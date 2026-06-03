@@ -5,21 +5,28 @@ use elements_miniscript::elements::bitcoin::{
 use elements_miniscript::elements::pset::Input;
 use elements_miniscript::elements::secp256k1_zkp::ZERO_TWEAK;
 use elements_miniscript::elements::{AssetId, AssetIssuance, OutPoint, Txid};
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
 use crate::SignedBalance;
 
 /// The details regarding balance and amounts in a PSET
 #[derive(Debug, Clone)]
 pub struct PsetBalance {
-    /// The fee of the transaction in the PSET
-    pub fee: u64,
+    /// The fees of the transaction in the PSET
+    pub fees: HashMap<AssetId, u64>,
 
     /// The net balance of the assets in the PSET from the point of view of the wallet
     pub balances: SignedBalance,
 
     /// Outputs going out of the wallet
     pub recipients: Vec<Recipient>,
+}
+
+impl PsetBalance {
+    /// Return the amount of fee with given asset id
+    pub fn fees_in(&self, asset: &AssetId) -> u64 {
+        *self.fees.get(asset).unwrap_or(&0)
+    }
 }
 
 /// The recipient (an output not belonging to the wallet) in a PSET

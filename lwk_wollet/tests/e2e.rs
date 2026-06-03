@@ -1288,6 +1288,7 @@ fn ct_discount() {
 
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
+    let policy_asset = wallet.policy_asset();
 
     wallet.fund_btc(&env);
     let node_address = env.elementsd_getnewaddress();
@@ -1303,7 +1304,7 @@ fn ct_discount() {
 
     wallet.sign(&signer, &mut pset);
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee_no_discount = details.balance.fee;
+    let fee_no_discount = details.balance.fees_in(&policy_asset);
     wallet.send(&mut pset);
     assert_fee_rate(compute_fee_rate_without_discount_ct(&pset), None);
 
@@ -1318,7 +1319,7 @@ fn ct_discount() {
 
     wallet.sign(&signer, &mut pset);
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee_with_discount = details.balance.fee;
+    let fee_with_discount = details.balance.fees_in(&policy_asset);
     wallet.send(&mut pset);
     assert_fee_rate(compute_fee_rate(&pset), None);
 
@@ -1346,7 +1347,7 @@ fn ct_discount() {
 
     wallet.sign(&signer, &mut pset);
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee_default = details.balance.fee;
+    let fee_default = details.balance.fees_in(&policy_asset);
     assert_eq!(fee_with_discount, fee_default);
 }
 
@@ -1533,7 +1534,7 @@ fn test_external_utxo() {
     }
 
     let details = w1.wollet.get_details(&pset).unwrap();
-    let fee = details.balance.fee;
+    let fee = details.balance.fees_in(&policy_asset);
 
     w1.send(&mut pset);
 
@@ -1915,7 +1916,7 @@ fn test_spend_blinded_utxo_with_custom_blinding_key() {
     let balance = w.balance(&policy_asset);
 
     let details = w.wollet.get_details(&pset).unwrap();
-    let fee = details.balance.fee;
+    let fee = details.balance.fees_in(&policy_asset);
 
     assert_eq!(balance, amount - fee);
 }
@@ -2645,7 +2646,7 @@ fn liquidex<C: BlockchainBackend>(
         .unwrap();
 
     let details = wallet_maker.wollet.get_details(&pset).unwrap();
-    assert_eq!(details.balance.fee, 0); // ANCHOR: ignore
+    assert_eq!(details.balance.fees.len(), 0); // ANCHOR: ignore
     let asset_send = pset.inputs()[0].asset.unwrap(); // ANCHOR: ignore
     let sats_send = pset.inputs()[0].amount.unwrap(); // ANCHOR: ignore
     let from_details_send = *details.balance.balances.get(&asset_send).unwrap(); // ANCHOR: ignore
@@ -2689,7 +2690,7 @@ fn liquidex<C: BlockchainBackend>(
     // ANCHOR_END: liquidex_take
 
     let details = wallet_taker.wollet.get_details(&pset).unwrap();
-    let fee = details.balance.fee as i64;
+    let fee = details.balance.fees_in(&wallet_taker.policy_asset()) as i64;
     assert!(fee > 0);
     // "send" and "recv" are from the maker perspective
     let mut from_details_send = *details.balance.balances.get(&asset_send).unwrap();
@@ -2877,7 +2878,7 @@ fn test_no_wildcard() {
     pset = pset_rt(&pset);
 
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee = details.balance.fee as i64;
+    let fee = details.balance.fees_in(&wallet.policy_asset()) as i64;
     assert!(fee > 0);
     // TODO: fix balance computation for this case, then use send_btc in this test
     assert!(!details
@@ -2959,7 +2960,7 @@ fn test_sh_multi() {
     pset = pset_rt(&pset);
 
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee = details.balance.fee as i64;
+    let fee = details.balance.fees_in(&wallet.policy_asset()) as i64;
     assert!(fee > 0);
     // TODO: fee rate estimation is off, fix it and use send_btc in this test
     assert!(compute_fee_rate(&pset) > 100.0);
@@ -3592,7 +3593,7 @@ fn test_fee_service() {
     // Fee Service checks that the PSET is reasonable for it
 
     // From a Fee Service perspective, transaction only spends the exact fee amount
-    let fee = &details.balance.fee;
+    let fee = &details.balance.fees_in(&w.policy_asset());
     let balances = &details.balance.balances;
     assert_eq!(balances.len(), 1);
     assert_eq!(balances.get(&lbtc).unwrap() + (*fee as i64), 0);
@@ -3899,7 +3900,7 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     // Then Bob uses the wollet to analyze the PSET
     let details = wollet_b.get_details(&pset)?;
     // PSET has a reasonable fee
-    assert!(details.balance.fee < 100);
+    assert!(*details.balance.fees.values().last().unwrap() < 100);
     // PSET has a signature from Carol
     let fingerprints_has = details.fingerprints_has();
     assert_eq!(fingerprints_has.len(), 1);
@@ -3921,7 +3922,7 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(sigs_added, 1);
 
     // Bob sends the PSET back to Carol
-    // Carol checks that the PSET has enough signatures
+    // Carol checks hat the PSET has enough signatures
     let details = wollet_c.get_details(&pset)?;
     assert_eq!(details.fingerprints_has().len(), 2);
 

@@ -91,7 +91,7 @@ fn test_esplora_waterfalls_utxo_only() {
         format!("{:?}", *wollet.balance().unwrap()),
         format!(
             "{{5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: {}}}",
-            1_000_000 - pset_details.balance.fee - 100_000
+            1_000_000 - pset_details.balance.fees_in(&wollet.policy_asset()) - 100_000
         )
     );
     assert_eq!(

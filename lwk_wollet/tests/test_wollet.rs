@@ -279,7 +279,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         pset = pset_rt(&pset);
 
         let details = self.wollet.get_details(&pset).unwrap();
-        let fee = details.balance.fee as i64;
+        let fee = details.balance.fees_in(&self.policy_asset()) as i64;
         assert!(fee > 0);
         let balance = match &external {
             Some((_a, v)) => -fee - *v as i64,
@@ -340,7 +340,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
             .unwrap();
 
         let details = self.wollet.get_details(&pset).unwrap();
-        let fee = details.balance.fee as i64;
+        let fee = details.balance.fees_in(&self.policy_asset()) as i64;
         assert!(fee > 0);
         assert_eq!(
             *details.balance.balances.get(&self.policy_asset()).unwrap(),
@@ -375,7 +375,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         pset = pset_rt(&pset);
 
         let details = self.wollet.get_details(&pset).unwrap();
-        let fee = details.balance.fee as i64;
+        let fee = details.balance.fees_in(&self.policy_asset()) as i64;
         assert!(fee > 0);
         assert_eq!(
             *details.balance.balances.get(&self.policy_asset()).unwrap(),
@@ -437,7 +437,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         pset = pset_rt(&pset);
 
         let details = self.wollet.get_details(&pset).unwrap();
-        let fee = details.balance.fee as i64;
+        let fee = details.balance.fees_in(&self.policy_asset()) as i64;
         assert!(fee > 0);
         // Checking the balance here has a bit too many cases:
         // asset1,2 are btc, asset1,2 are equal, addr1,2 belong to the wallet
@@ -490,7 +490,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         assert_eq!(token, issuance.token().unwrap());
         assert_eq!(satoshi_asset, issuance.asset_satoshi().unwrap_or(0));
         assert_eq!(satoshi_token, issuance.token_satoshi().unwrap());
-        let fee = details.balance.fee as i64;
+        let fee = details.balance.fees_in(&self.policy_asset()) as i64;
         assert!(fee > 0);
         assert_eq!(
             *details.balance.balances.get(&self.policy_asset()).unwrap(),
@@ -565,7 +565,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         assert_eq!(issuance.token, reissuance.token().unwrap());
         assert_eq!(satoshi_asset, reissuance.asset_satoshi().unwrap());
         assert!(reissuance.token_satoshi().is_none());
-        let fee = details.balance.fee as i64;
+        let fee = details.balance.fees_in(&self.policy_asset()) as i64;
         assert!(fee > 0);
         assert_eq!(
             *details.balance.balances.get(&self.policy_asset()).unwrap(),
@@ -616,7 +616,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         pset = pset_rt(&pset);
 
         let details = self.wollet.get_details(&pset).unwrap();
-        let fee = details.balance.fee as i64;
+        let fee = details.balance.fees_in(&self.policy_asset()) as i64;
         assert!(fee > 0);
         let btc = self.policy_asset();
         let (expected_asset, expected_btc) = if asset == &btc {

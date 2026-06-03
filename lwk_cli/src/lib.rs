@@ -402,8 +402,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.wallet_set_addr_memo(wallet, address, memo)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::DumpUnblinded { wallet } => {
-                let r = client.wallet_dump_unblinded(wallet)?;
+            WalletCommand::DumpUnblinded { wallet, txid } => {
+                let r = client.wallet_dump_unblinded(wallet, txid)?;
                 serde_json::to_value(r)?
             }
         },

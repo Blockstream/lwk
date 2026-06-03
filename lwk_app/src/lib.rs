@@ -1045,6 +1045,11 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let unblinded: Vec<response::Unblinded> = wollet
                 .all_unblinded()
                 .iter()
+                .filter(|(outpoint, _)| {
+                    r.txid
+                        .as_ref()
+                        .is_none_or(|txid| outpoint.txid.to_string() == *txid)
+                })
                 .map(|(outpoint, txoutsecrets)| response::Unblinded {
                     txid: outpoint.txid.to_string(),
                     vout: outpoint.vout,

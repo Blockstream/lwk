@@ -490,6 +490,9 @@ pub struct WalletSetAddrMemo {
 pub struct WalletDumpUnblinded {
     /// The wallet name
     pub name: String,
+
+    /// Transaction ID to filter for
+    pub txid: Option<String>,
 }
 
 /// Request to make a Liquidex proposal

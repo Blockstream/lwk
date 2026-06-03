@@ -765,6 +765,10 @@ pub enum WalletCommand {
         /// Wallet name
         #[arg(short, long, env)]
         wallet: String,
+
+        /// Transaction ID to filter for
+        #[arg(short, long)]
+        txid: Option<String>,
     },
 }
 

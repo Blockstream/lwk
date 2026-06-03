@@ -342,8 +342,9 @@ impl Client {
     pub fn wallet_dump_unblinded(
         &self,
         name: String,
+        txid: Option<String>,
     ) -> Result<response::WalletDumpUnblinded, Error> {
-        let req = request::WalletDumpUnblinded { name };
+        let req = request::WalletDumpUnblinded { name, txid };
         self.make_request(Method::WalletDumpUnblinded, Some(req))
     }
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Change output of `lwk_cli wallet pset-details`: `fee : u64` replaced with `fees: {asset_id : u64}` ([ELIP-204](https://github.com/ElementsProject/ELIPs/blob/main/elip-0204.mediawiki))
+
 ## 0.13.0
 
 * Rename `lwk_cli asset from-explorer` to `lwk_cli asset from-registry`

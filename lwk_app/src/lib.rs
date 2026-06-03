@@ -913,6 +913,13 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })
                 .collect();
 
+            let fees = details
+                .balance
+                .fees
+                .iter()
+                .map(|(&k, &v)| (k.to_string(), v))
+                .collect();
+
             Response::result(
                 request.id,
                 serde_json::to_value(response::WalletPsetDetails {
@@ -920,7 +927,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     has_signatures_from,
                     missing_signatures_from,
                     balance,
-                    fee: details.balance.fee,
+                    fees,
                     issuances,
                     reissuances,
                     warnings: warnings.join(", "),

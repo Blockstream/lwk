@@ -337,8 +337,8 @@ pub struct WalletPsetDetails {
     /// Net balance of the assets for the point of view of the given wallet
     pub balance: HashMap<String, i64>,
 
-    /// Fee of the transaction
-    pub fee: u64,
+    /// Fees of the transaction
+    pub fees: HashMap<String, u64>,
 
     /// Issuances contained in the PSET
     pub issuances: Vec<Issuance>,

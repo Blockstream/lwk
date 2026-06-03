@@ -827,6 +827,8 @@ fn test_issue() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let (t, _tmp, cli, _params, env) = setup_cli(env);
 
+    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+
     sw_signer(&cli, "s1");
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
     let _ = fund(&env, &cli, "w1", 1_000_000);
@@ -842,7 +844,16 @@ fn test_issue() {
     let r = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
     let txid = r.get("txid").unwrap().as_str().unwrap();
     assert!(get_str(&r, "warnings").is_empty());
-    assert!(r.get("fee").unwrap().as_u64().unwrap() > 0);
+    let fee = r
+        .get("fees")
+        .unwrap()
+        .as_object()
+        .unwrap()
+        .get(policy_asset)
+        .unwrap()
+        .as_u64()
+        .unwrap();
+    assert!(fee > 0);
     assert_eq!(get_len(&r, "reissuances"), 0);
     let issuances = r.get("issuances").unwrap().as_array().unwrap();
     assert_eq!(issuances.len(), 1);
@@ -880,7 +891,6 @@ fn test_issue() {
     assert_eq!(issuance_txid, txid);
     sh(&format!("{cli} server scan"));
 
-    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     assert_eq!(get_balance(&cli, "w1", asset), 1000);
 
     let r = sh(&format!("{cli} wallet balance --wallet w1 --with-tickers"));
@@ -1207,7 +1217,16 @@ fn test_multisig() {
     ));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
     assert!(!r.get("balance").unwrap().as_object().unwrap().is_empty());
-    assert!(r.get("fee").unwrap().as_u64().unwrap() > 0);
+    let fee = r
+        .get("fees")
+        .unwrap()
+        .as_object()
+        .unwrap()
+        .get(policy_asset)
+        .unwrap()
+        .as_u64()
+        .unwrap();
+    assert!(fee > 0);
     assert!(r.get("issuances").unwrap().as_array().unwrap().is_empty());
     assert!(r.get("reissuances").unwrap().as_array().unwrap().is_empty());
     let has_sigs = r.get("has_signatures_from").unwrap().as_array().unwrap();
@@ -1228,7 +1247,16 @@ fn test_multisig() {
     ));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
     assert!(!r.get("balance").unwrap().as_object().unwrap().is_empty());
-    assert!(r.get("fee").unwrap().as_u64().unwrap() > 0);
+    let fee = r
+        .get("fees")
+        .unwrap()
+        .as_object()
+        .unwrap()
+        .get(policy_asset)
+        .unwrap()
+        .as_u64()
+        .unwrap();
+    assert!(fee > 0);
     assert!(r.get("issuances").unwrap().as_array().unwrap().is_empty());
     assert!(r.get("reissuances").unwrap().as_array().unwrap().is_empty());
     let has_sigs = r.get("has_signatures_from").unwrap().as_array().unwrap();
@@ -1247,7 +1275,16 @@ fn test_multisig() {
     ));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
     assert!(!r.get("balance").unwrap().as_object().unwrap().is_empty());
-    assert!(r.get("fee").unwrap().as_u64().unwrap() > 0);
+    let fee = r
+        .get("fees")
+        .unwrap()
+        .as_object()
+        .unwrap()
+        .get(policy_asset)
+        .unwrap()
+        .as_u64()
+        .unwrap();
+    assert!(fee > 0);
     assert!(r.get("issuances").unwrap().as_array().unwrap().is_empty());
     assert!(r.get("reissuances").unwrap().as_array().unwrap().is_empty());
     let has_sigs = r.get("has_signatures_from").unwrap().as_array().unwrap();
@@ -1545,13 +1582,22 @@ fn test_ct_discount() {
     let address = env.elementsd_getnewaddress();
     let sats = 1_000;
     let recipient = format!(" --recipient {address}:{sats}");
+    let policy_asset_id = env.elementsd_policy_asset().to_string();
 
     // Default (with CT discount)
     let r = sh(&format!("{cli} wallet send -w w1 {recipient}"));
     let pset = get_str(&r, "pset");
     complete(&cli, "w1", pset, signers);
     let r = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
-    let fee_default = r.get("fee").unwrap().as_u64().unwrap();
+    let fee_default = r
+        .get("fees")
+        .unwrap()
+        .as_object()
+        .unwrap()
+        .get(&policy_asset_id)
+        .unwrap()
+        .as_u64()
+        .unwrap();
 
     assert_eq!(fee_default, 26);
 

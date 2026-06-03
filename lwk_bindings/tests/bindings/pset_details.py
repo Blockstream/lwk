@@ -13,7 +13,7 @@ wollet = Wollet(network, desc, datadir=None)
 details = wollet.pset_details(pset)
 balance = details.balance()
 
-assert(balance.fee() == 254)
+assert(details.balance().fees_in(network.policy_asset()) == 254)
 
 balances = balance.balances()
 assert(len(balances) == 1)

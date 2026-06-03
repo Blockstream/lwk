@@ -78,7 +78,7 @@ wollet_b.apply_update(update)
 # Then Bob uses the wollet to analyze the PSET
 details = wollet_b.pset_details(pset)
 # PSET has a reasonable fee
-assert details.balance().fee() < 100
+assert details.balance().fees_in(lbtc) < 100
 # PSET has a signature from Carol
 fingerprints_has = details.fingerprints_has()
 assert len(fingerprints_has) == 1

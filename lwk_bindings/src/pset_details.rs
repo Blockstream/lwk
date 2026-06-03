@@ -83,8 +83,16 @@ impl From<lwk_common::PsetBalance> for PsetBalance {
 
 #[uniffi::export]
 impl PsetBalance {
-    pub fn fee(&self) -> u64 {
-        self.inner.fee
+    pub fn fees(&self) -> HashMap<AssetId, u64> {
+        self.inner
+            .fees
+            .iter()
+            .map(|(k, v)| ((*k).into(), *v))
+            .collect()
+    }
+
+    pub fn fees_in(&self, asset: &AssetId) -> u64 {
+        self.inner.fees_in(&(*asset).into())
     }
 
     pub fn balances(&self) -> HashMap<AssetId, i64> {
@@ -272,7 +280,7 @@ mod tests {
         let wollet = Wollet::new(&network, &descriptor, None).unwrap();
 
         let details = wollet.pset_details(&pset).unwrap();
-        assert_eq!(details.balance().fee(), 254);
+        assert_eq!(details.balance().fees().into_values().next().unwrap(), 254);
 
         let balances = details.balance().balances();
         assert_eq!(balances.len(), 1);

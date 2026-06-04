@@ -153,29 +153,14 @@ impl QuoteBuilder {
                     .ok_or(Error::PairNotAvailable)?;
                 let network_fee =
                     pair.fees.claim_estimate() + pair.fees.lockup() + LIQUID_UNCOOPERATIVE_EXTRA;
-                let percentage = pair.fees.percentage;
 
-                let (send_amount, receive_amount, boltz_fee) = match self.mode {
-                    QuoteMode::BySendAmount(send) => {
-                        let bf = pair.fees.boltz(send);
-                        let recv = send.saturating_sub(bf + network_fee);
-                        (send, recv, bf)
-                    }
-                    QuoteMode::ByReceiveAmount(recv) => {
-                        let send = calculate_send_amount(recv, network_fee, percentage);
-                        let bf = pair.fees.boltz(send);
-                        (send, recv, bf)
-                    }
-                };
-
-                Ok(Quote {
-                    send_amount,
-                    receive_amount,
+                Ok(build_quote(
+                    self.mode,
                     network_fee,
-                    boltz_fee,
-                    min: pair.limits.minimal,
-                    max: pair.limits.maximal,
-                })
+                    pair.fees.percentage,
+                    pair.limits.minimal,
+                    pair.limits.maximal,
+                ))
             }
             (SwapAsset::Lightning, SwapAsset::Onchain) => {
                 // Reverse swap: Lightning -> Bitcoin
@@ -185,29 +170,14 @@ impl QuoteBuilder {
                     .get_btc_to_btc_pair()
                     .ok_or(Error::PairNotAvailable)?;
                 let network_fee = pair.fees.claim_estimate() + pair.fees.lockup();
-                let percentage = pair.fees.percentage;
 
-                let (send_amount, receive_amount, boltz_fee) = match self.mode {
-                    QuoteMode::BySendAmount(send) => {
-                        let bf = pair.fees.boltz(send);
-                        let recv = send.saturating_sub(bf + network_fee);
-                        (send, recv, bf)
-                    }
-                    QuoteMode::ByReceiveAmount(recv) => {
-                        let send = calculate_send_amount(recv, network_fee, percentage);
-                        let bf = pair.fees.boltz(send);
-                        (send, recv, bf)
-                    }
-                };
-
-                Ok(Quote {
-                    send_amount,
-                    receive_amount,
+                Ok(build_quote(
+                    self.mode,
                     network_fee,
-                    boltz_fee,
-                    min: pair.limits.minimal,
-                    max: pair.limits.maximal,
-                })
+                    pair.fees.percentage,
+                    pair.limits.minimal,
+                    pair.limits.maximal,
+                ))
             }
             (SwapAsset::Liquid, SwapAsset::Lightning) => {
                 // Submarine swap: Liquid -> Lightning
@@ -217,29 +187,14 @@ impl QuoteBuilder {
                     .get_lbtc_to_btc_pair()
                     .ok_or(Error::PairNotAvailable)?;
                 let network_fee = pair.fees.network();
-                let percentage = pair.fees.percentage;
 
-                let (send_amount, receive_amount, boltz_fee) = match self.mode {
-                    QuoteMode::BySendAmount(send) => {
-                        let bf = pair.fees.boltz(send);
-                        let recv = send.saturating_sub(bf + network_fee);
-                        (send, recv, bf)
-                    }
-                    QuoteMode::ByReceiveAmount(recv) => {
-                        let send = calculate_send_amount(recv, network_fee, percentage);
-                        let bf = pair.fees.boltz(send);
-                        (send, recv, bf)
-                    }
-                };
-
-                Ok(Quote {
-                    send_amount,
-                    receive_amount,
+                Ok(build_quote(
+                    self.mode,
                     network_fee,
-                    boltz_fee,
-                    min: pair.limits.minimal,
-                    max: pair.limits.maximal,
-                })
+                    pair.fees.percentage,
+                    pair.limits.minimal,
+                    pair.limits.maximal,
+                ))
             }
             (SwapAsset::Onchain, SwapAsset::Lightning) => {
                 // Submarine swap: Bitcoin -> Lightning
@@ -249,29 +204,14 @@ impl QuoteBuilder {
                     .get_btc_to_btc_pair()
                     .ok_or(Error::PairNotAvailable)?;
                 let network_fee = pair.fees.network();
-                let percentage = pair.fees.percentage;
 
-                let (send_amount, receive_amount, boltz_fee) = match self.mode {
-                    QuoteMode::BySendAmount(send) => {
-                        let bf = pair.fees.boltz(send);
-                        let recv = send.saturating_sub(bf + network_fee);
-                        (send, recv, bf)
-                    }
-                    QuoteMode::ByReceiveAmount(recv) => {
-                        let send = calculate_send_amount(recv, network_fee, percentage);
-                        let bf = pair.fees.boltz(send);
-                        (send, recv, bf)
-                    }
-                };
-
-                Ok(Quote {
-                    send_amount,
-                    receive_amount,
+                Ok(build_quote(
+                    self.mode,
                     network_fee,
-                    boltz_fee,
-                    min: pair.limits.minimal,
-                    max: pair.limits.maximal,
-                })
+                    pair.fees.percentage,
+                    pair.limits.minimal,
+                    pair.limits.maximal,
+                ))
             }
             (SwapAsset::Onchain, SwapAsset::Liquid) => {
                 // Chain swap: BTC -> L-BTC
@@ -283,29 +223,14 @@ impl QuoteBuilder {
                     .ok_or(Error::PairNotAvailable)?;
                 let network_fee =
                     pair.fees.server() + pair.fees.claim_estimate() + LIQUID_UNCOOPERATIVE_EXTRA;
-                let percentage = pair.fees.percentage;
 
-                let (send_amount, receive_amount, boltz_fee) = match self.mode {
-                    QuoteMode::BySendAmount(send) => {
-                        let bf = pair.fees.boltz(send);
-                        let recv = send.saturating_sub(bf + network_fee);
-                        (send, recv, bf)
-                    }
-                    QuoteMode::ByReceiveAmount(recv) => {
-                        let send = calculate_send_amount(recv, network_fee, percentage);
-                        let bf = pair.fees.boltz(send);
-                        (send, recv, bf)
-                    }
-                };
-
-                Ok(Quote {
-                    send_amount,
-                    receive_amount,
+                Ok(build_quote(
+                    self.mode,
                     network_fee,
-                    boltz_fee,
-                    min: pair.limits.minimal,
-                    max: pair.limits.maximal,
-                })
+                    pair.fees.percentage,
+                    pair.limits.minimal,
+                    pair.limits.maximal,
+                ))
             }
             (SwapAsset::Liquid, SwapAsset::Onchain) => {
                 // Chain swap: L-BTC -> BTC
@@ -316,33 +241,46 @@ impl QuoteBuilder {
                     .get_lbtc_to_btc_pair()
                     .ok_or(Error::PairNotAvailable)?;
                 let network_fee = pair.fees.server() + pair.fees.claim_estimate();
-                let percentage = pair.fees.percentage;
 
-                let (send_amount, receive_amount, boltz_fee) = match self.mode {
-                    QuoteMode::BySendAmount(send) => {
-                        let bf = pair.fees.boltz(send);
-                        let recv = send.saturating_sub(bf + network_fee);
-                        (send, recv, bf)
-                    }
-                    QuoteMode::ByReceiveAmount(recv) => {
-                        let send = calculate_send_amount(recv, network_fee, percentage);
-                        let bf = pair.fees.boltz(send);
-                        (send, recv, bf)
-                    }
-                };
-
-                Ok(Quote {
-                    send_amount,
-                    receive_amount,
+                Ok(build_quote(
+                    self.mode,
                     network_fee,
-                    boltz_fee,
-                    min: pair.limits.minimal,
-                    max: pair.limits.maximal,
-                })
+                    pair.fees.percentage,
+                    pair.limits.minimal,
+                    pair.limits.maximal,
+                ))
             }
             _ => Err(Error::InvalidSwapPair { from, to }),
         }
     }
+}
+
+fn build_quote(mode: QuoteMode, network_fee: u64, percentage: f64, min: u64, max: u64) -> Quote {
+    let (send_amount, receive_amount, boltz_fee) = match mode {
+        QuoteMode::BySendAmount(send) => {
+            let bf = calculate_boltz_fee(send, percentage);
+            let recv = send.saturating_sub(bf + network_fee);
+            (send, recv, bf)
+        }
+        QuoteMode::ByReceiveAmount(recv) => {
+            let send = calculate_send_amount(recv, network_fee, percentage);
+            let bf = calculate_boltz_fee(send, percentage);
+            (send, recv, bf)
+        }
+    };
+
+    Quote {
+        send_amount,
+        receive_amount,
+        network_fee,
+        boltz_fee,
+        min,
+        max,
+    }
+}
+
+fn calculate_boltz_fee(amount: u64, percentage: f64) -> u64 {
+    ((percentage / 100.0) * amount as f64).ceil() as u64
 }
 
 /// Calculate the send amount from a desired receive amount

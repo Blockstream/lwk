@@ -1,5 +1,6 @@
 mod amp0;
 mod blinders;
+mod blockchain_backend;
 mod elements_wallet;
 mod fees;
 mod prune;
@@ -1043,6 +1044,39 @@ async fn test_esplora_requests_counter() {
     assert!(client.requests() > requests_after_headers);
 
     println!("Total requests made: {}", client.requests());
+}
+
+#[cfg(feature = "esplora")]
+#[tokio::test]
+async fn test_has_txs_before_and_after_funding_esplora_async() {
+    let env = TestEnvBuilder::from_env().with_esplora().build();
+    let mut client =
+        clients::asyncr::EsploraClient::new(Network::default_regtest(), &env.esplora_url());
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc_str = format!("ct({view_key},elwpkh({}/<0;1>/*))", signer.xpub());
+    let wd: WolletDescriptor = desc_str.parse().unwrap();
+
+    let mut wollet = WolletBuilder::new(env.elementsd_network(), wd.clone())
+        .build()
+        .unwrap();
+
+    let update = client.full_scan(&wollet).await.unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
+
+    assert!(!client.has_txs(&wd, None).await.unwrap());
+    assert!(!client.has_txs(&wd, Some(100)).await.unwrap());
+
+    let address = wollet.address(Some(15)).unwrap();
+    let _ = env.elementsd_sendtoaddress(address.address(), 10000, None);
+
+    let update = wait_update_with_txs(&mut client, &wollet).await;
+    wollet.apply_update(update).unwrap();
+
+    assert!(client.has_txs(&wd, None).await.unwrap());
+    assert!(client.has_txs(&wd, Some(16)).await.unwrap());
+    assert!(!client.has_txs(&wd, Some(15)).await.unwrap());
 }
 
 // TODO: add a regtest test for last_used_index when there is a waterfalls release published on crates

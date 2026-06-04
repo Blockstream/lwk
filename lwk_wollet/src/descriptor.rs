@@ -734,6 +734,23 @@ impl WolletDescriptor {
     pub fn dangerous_this_wallet_is_not_amp0(&mut self) {
         self.is_amp0 = false;
     }
+
+    /// Derives scripts for all chains in the descriptor up to a gap limit.
+    pub fn derive_scripts_to_gap_limit(&self, gap_limit: u32) -> Result<Vec<Script>, Error> {
+        let mut scripts = Vec::with_capacity(gap_limit as usize * 2);
+
+        for descriptor in self.as_single_descriptors()? {
+            let chain = (&descriptor)
+                .try_into()
+                .map_err(|_| Error::Generic("Descriptor to Chain conversion failed".to_string()))?;
+            for index in 0..gap_limit {
+                let script = descriptor.script_pubkey(chain, index)?;
+                scripts.push(script);
+            }
+        }
+
+        Ok(scripts)
+    }
 }
 
 // try to parse as multiline descriptor as exported in green

@@ -421,6 +421,50 @@ mod tests {
     }
 
     #[test]
+    fn test_quote_builder_reverse_btc() {
+        // Test reverse swap: Lightning -> Bitcoin (50000 sats)
+        let quote = QuoteBuilder::new_send(50000, load_test_pairs())
+            .send(SwapAsset::Lightning)
+            .receive(SwapAsset::Onchain)
+            .build()
+            .unwrap();
+
+        // From swap-reverse.json BTC -> BTC pair:
+        // percentage: 0.5, claim: 333, lockup: 462
+        // boltz_fee = ceil(0.5 / 100 * 50000) = ceil(250) = 250
+        // network_fee = claim + lockup = 333 + 462 = 795
+        // receive_amount = 50000 - 250 - 795 = 48955
+        assert_eq!(quote.send_amount, 50000);
+        assert_eq!(quote.boltz_fee, 250);
+        assert_eq!(quote.network_fee, 795);
+        assert_eq!(quote.receive_amount, 48955);
+        assert_eq!(quote.min, 25000);
+        assert_eq!(quote.max, 25_000_000);
+    }
+
+    #[test]
+    fn test_quote_builder_submarine_btc() {
+        // Test submarine swap: Bitcoin -> Lightning (50000 sats)
+        let quote = QuoteBuilder::new_send(50000, load_test_pairs())
+            .send(SwapAsset::Onchain)
+            .receive(SwapAsset::Lightning)
+            .build()
+            .unwrap();
+
+        // From swap-submarine.json BTC -> BTC pair:
+        // percentage: 0.1, minerFees: 453
+        // boltz_fee = ceil(0.1 / 100 * 50000) = ceil(50) = 50
+        // network_fee = 453
+        // receive_amount = 50000 - 50 - 453 = 49497
+        assert_eq!(quote.send_amount, 50000);
+        assert_eq!(quote.boltz_fee, 50);
+        assert_eq!(quote.network_fee, 453);
+        assert_eq!(quote.receive_amount, 49497);
+        assert_eq!(quote.min, 25000);
+        assert_eq!(quote.max, 25_000_000);
+    }
+
+    #[test]
     fn test_quote_builder_chain_lbtc_to_btc() {
         // Test chain swap: L-BTC -> BTC (25000 sats) to match screenshot
         let quote = QuoteBuilder::new_send(25000, load_test_pairs())
@@ -540,6 +584,40 @@ mod tests {
     }
 
     #[test]
+    fn test_quote_receive_reverse_btc() {
+        // Inverse of test_quote_builder_reverse_btc
+        // quote(50000) -> receive_amount = 48955
+        // quote_receive(48955) -> send_amount should be 50000
+        let quote = QuoteBuilder::new_receive(48955, load_test_pairs())
+            .send(SwapAsset::Lightning)
+            .receive(SwapAsset::Onchain)
+            .build()
+            .unwrap();
+
+        assert_eq!(quote.send_amount, 50000);
+        assert_eq!(quote.receive_amount, 48955);
+        assert_eq!(quote.network_fee, 795);
+        assert_eq!(quote.boltz_fee, 250);
+    }
+
+    #[test]
+    fn test_quote_receive_submarine_btc() {
+        // Inverse of test_quote_builder_submarine_btc
+        // quote(50000) -> receive_amount = 49497
+        // quote_receive(49497) -> send_amount should be 50000
+        let quote = QuoteBuilder::new_receive(49497, load_test_pairs())
+            .send(SwapAsset::Onchain)
+            .receive(SwapAsset::Lightning)
+            .build()
+            .unwrap();
+
+        assert_eq!(quote.send_amount, 50000);
+        assert_eq!(quote.receive_amount, 49497);
+        assert_eq!(quote.network_fee, 453);
+        assert_eq!(quote.boltz_fee, 50);
+    }
+
+    #[test]
     fn test_quote_receive_chain_lbtc_to_btc() {
         // Inverse of test_quote_builder_chain_lbtc_to_btc
         // quote(25000) -> receive_amount = 24161
@@ -622,6 +700,55 @@ mod tests {
             assert_eq!(
                 inverse_quote.send_amount, send,
                 "Coherence failed for send={}: forward.receive={}, inverse.send={}",
+                send, forward_quote.receive_amount, inverse_quote.send_amount
+            );
+        }
+    }
+
+    #[test]
+    fn test_quote_coherence_btc_ln() {
+        let swap_info = load_test_pairs();
+
+        // Lightning -> BTC
+        for send in [25000u64, 50000, 100000, 1000000] {
+            let forward_quote = QuoteBuilder::new_send(send, swap_info.clone())
+                .send(SwapAsset::Lightning)
+                .receive(SwapAsset::Onchain)
+                .build()
+                .unwrap();
+
+            let inverse_quote =
+                QuoteBuilder::new_receive(forward_quote.receive_amount, swap_info.clone())
+                    .send(SwapAsset::Lightning)
+                    .receive(SwapAsset::Onchain)
+                    .build()
+                    .unwrap();
+
+            assert_eq!(
+                inverse_quote.send_amount, send,
+                "LN->BTC coherence failed for send={}: forward.receive={}, inverse.send={}",
+                send, forward_quote.receive_amount, inverse_quote.send_amount
+            );
+        }
+
+        // BTC -> Lightning
+        for send in [25000u64, 50000, 100000, 1000000] {
+            let forward_quote = QuoteBuilder::new_send(send, swap_info.clone())
+                .send(SwapAsset::Onchain)
+                .receive(SwapAsset::Lightning)
+                .build()
+                .unwrap();
+
+            let inverse_quote =
+                QuoteBuilder::new_receive(forward_quote.receive_amount, swap_info.clone())
+                    .send(SwapAsset::Onchain)
+                    .receive(SwapAsset::Lightning)
+                    .build()
+                    .unwrap();
+
+            assert_eq!(
+                inverse_quote.send_amount, send,
+                "BTC->LN coherence failed for send={}: forward.receive={}, inverse.send={}",
                 send, forward_quote.receive_amount, inverse_quote.send_amount
             );
         }

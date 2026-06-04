@@ -68,8 +68,22 @@ impl BoltzSession {
         refund_address: &elements::Address,
         webhook: Option<Webhook<SubSwapStates>>,
     ) -> Result<PreparePayResponse, Error> {
-        let chain = self.chain();
+        self.prepare_pay_with_chain(
+            lightning_payment,
+            self.chain(),
+            refund_address.to_string(),
+            webhook,
+        )
+        .await
+    }
 
+    async fn prepare_pay_with_chain(
+        &self,
+        lightning_payment: &LightningPayment,
+        chain: Chain,
+        refund_address: String,
+        webhook: Option<Webhook<SubSwapStates>>,
+    ) -> Result<PreparePayResponse, Error> {
         let invoice = match lightning_payment {
             LightningPayment::Bolt11(invoice) => {
                 Invoice::Bolt11(Box::new(invoice.as_ref().clone()))
@@ -100,7 +114,7 @@ impl BoltzSession {
             compressed: true,
         };
 
-        if invoice.is_bolt11() {
+        if invoice.is_bolt11() && matches!(chain, Chain::Liquid(_)) {
             // mrh works only with bolt11
 
             if let Some((address, amount)) = check_for_mrh(&self.api, &invoice_str, chain).await? {
@@ -143,13 +157,19 @@ impl BoltzSession {
                 invoice_str.clone(),
             ))?;
 
-        let boltz_fee = self
-            .swap_info
-            .lock()
-            .await
-            .submarine_pairs
-            .get_lbtc_to_btc_pair()
-            .map(|pair| pair.fees.boltz(bolt11_amount));
+        let boltz_fee = {
+            let swap_info = self.swap_info.lock().await;
+            match chain {
+                Chain::Bitcoin(_) => swap_info
+                    .submarine_pairs
+                    .get_btc_to_btc_pair()
+                    .map(|pair| pair.fees.boltz(bolt11_amount)),
+                Chain::Liquid(_) => swap_info
+                    .submarine_pairs
+                    .get_lbtc_to_btc_pair()
+                    .map(|pair| pair.fees.boltz(bolt11_amount)),
+            }
+        };
 
         log::info!("[swap:{swap_id}] Got Swap Response from Boltz server {create_swap_response:?}");
 
@@ -190,7 +210,7 @@ impl BoltzSession {
                 bolt11_invoice: invoice.bolt11().cloned(),
                 bolt12_invoice: invoice.bolt12().cloned(),
                 our_keys,
-                refund_address: refund_address.to_string(),
+                refund_address,
                 create_swap_response: create_swap_response.clone(),
                 key_index,
                 mnemonic_identifier: mnemonic_identifier(&self.mnemonic)?,

@@ -698,6 +698,13 @@ impl PreparePayResponse {
     }
 
     pub fn uri_address(&self) -> Result<elements::Address, Error> {
+        if matches!(self.data.from_chain, Chain::Bitcoin(_)) {
+            return Err(Error::Generic(
+                "uri_address is only available for Liquid submarine swaps; use lockup_address instead"
+                    .to_string(),
+            ));
+        }
+
         Ok(elements::Address::from_str(
             &self.data.create_swap_response.address,
         )?)

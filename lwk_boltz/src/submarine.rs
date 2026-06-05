@@ -324,11 +324,26 @@ fn validate_submarine_swap(
             create_swap_response.validate(&bolt11.to_string(), refund_public_key, chain)?;
             Ok(())
         }
-        (Invoice::Bolt12(_), Chain::Bitcoin(_)) => {
-            // BOLT12 validation not supported for Bitcoin chain yet
-            Err(Error::Generic(
-                "BOLT12 validation not supported for Bitcoin chain".to_string(),
-            ))
+        (Invoice::Bolt12(bolt12), Chain::Bitcoin(bitcoin_chain)) => {
+            use boltz_client::swaps::bitcoin::BtcSwapScript;
+            use lwk_wollet::hashes::{ripemd160, Hash};
+
+            let payment_hash = bolt12.payment_hash();
+            let hashlock_computed = ripemd160::Hash::hash(&payment_hash.0);
+            let swap_script =
+                BtcSwapScript::submarine_from_swap_resp(create_swap_response, *refund_public_key)?;
+
+            if swap_script.hashlock.to_string() != hashlock_computed.to_string() {
+                return Err(Error::Generic(format!(
+                    "Hash160 mismatch for BOLT12: expected {}, got {}",
+                    swap_script.hashlock, hashlock_computed
+                )));
+            }
+
+            swap_script.validate_address(bitcoin_chain, create_swap_response.address.clone())?;
+
+            log::info!("BOLT12 invoice validated successfully for Bitcoin chain");
+            Ok(())
         }
         (Invoice::Bolt12(bolt12), Chain::Liquid(liquid_chain)) => {
             // BOLT12 validation for Liquid chain

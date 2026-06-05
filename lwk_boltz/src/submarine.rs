@@ -17,6 +17,7 @@ use boltz_client::util::sleep;
 use boltz_client::PublicKey;
 use lwk_wollet::bitcoin::{Denomination, PublicKey as BitcoinPublicKey};
 use lwk_wollet::elements;
+use lwk_wollet::elements::bitcoin;
 
 use crate::error::Error;
 use crate::prepare_pay_data::{to_prepare_pay_data, PreparePayData, PreparePayDataSerializable};
@@ -543,33 +544,22 @@ impl PreparePayResponse {
             }
             SwapState::InvoiceFailedToPay => {
                 log::warn!("[swap:{swap_id}] invoice.failedToPay Boltz failed to pay the invoice");
-                let addr = self.uri_address()?;
-                let utxo = self
-                    .chain_client
-                    .liquid_client()
-                    .ok_or(Error::MissingLiquidClient)?
-                    .get_address_utxo(&addr)
-                    .await?;
 
-                match utxo {
-                    Some(_) => {
-                        // UTXO exists, make refund transaction
-                        let tx = self.make_refund_tx_with_retry().await?;
-                        let txid =
-                            broadcast_tx_with_retry(&self.chain_client, &tx, &swap_id).await?;
-                        self.data.refund_txid = Some(txid.clone());
-                        log::info!(
-                            "[swap:{swap_id}] Cooperative Refund Successfully broadcasted: {txid}"
-                        );
-                        Ok(ControlFlow::Break(true))
-                    }
-                    None => {
-                        // No UTXO found, funds were not sent, consider the swap failed but completed
-                        log::warn!(
-                            "[swap:{swap_id}] No UTXO found at address, invoice payment failed without funds being sent"
-                        );
-                        Ok(ControlFlow::Break(false))
-                    }
+                if self.lockup_utxo_exists().await? {
+                    // UTXO exists, make refund transaction
+                    let tx = self.make_refund_tx_with_retry().await?;
+                    let txid = broadcast_tx_with_retry(&self.chain_client, &tx, &swap_id).await?;
+                    self.data.refund_txid = Some(txid.clone());
+                    log::info!(
+                        "[swap:{swap_id}] Cooperative Refund Successfully broadcasted: {txid}"
+                    );
+                    Ok(ControlFlow::Break(true))
+                } else {
+                    // No UTXO found, funds were not sent, consider the swap failed but completed
+                    log::warn!(
+                        "[swap:{swap_id}] No UTXO found at address, invoice payment failed without funds being sent"
+                    );
+                    Ok(ControlFlow::Break(false))
                 }
             }
             SwapState::TransactionLockupFailed => {
@@ -681,6 +671,38 @@ impl PreparePayResponse {
                 options: None,
             })
             .await?)
+    }
+
+    async fn lockup_utxo_exists(&self) -> Result<bool, Error> {
+        match self.data.from_chain {
+            Chain::Bitcoin(_) => {
+                let address = bitcoin::Address::from_str(self.lockup_address())
+                    .map_err(|e| {
+                        Error::Generic(format!(
+                            "Invalid Bitcoin lockup address {}: {e}",
+                            self.lockup_address()
+                        ))
+                    })?
+                    .assume_checked();
+                let utxos = self
+                    .chain_client
+                    .bitcoin_client()
+                    .ok_or_else(|| Error::Generic("Expected Bitcoin client".to_string()))?
+                    .get_address_utxos(&address)
+                    .await?;
+                Ok(!utxos.is_empty())
+            }
+            Chain::Liquid(_) => {
+                let address = elements::Address::from_str(self.lockup_address())?;
+                let utxo = self
+                    .chain_client
+                    .liquid_client()
+                    .ok_or(Error::MissingLiquidClient)?
+                    .get_address_utxo(&address)
+                    .await?;
+                Ok(utxo.is_some())
+            }
+        }
     }
 
     pub async fn complete_pay(mut self) -> Result<bool, Error> {

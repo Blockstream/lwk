@@ -23,7 +23,7 @@ use crate::prepare_pay_data::{to_prepare_pay_data, PreparePayData, PreparePayDat
 use crate::swap_state::SwapStateTrait;
 use crate::SwapPersistence;
 use crate::{
-    broadcast_tx_with_retry, mnemonic_identifier, next_status, wait_for_liquid_tx, BoltzSession,
+    broadcast_tx_with_retry, mnemonic_identifier, next_status, wait_for_chain_tx, BoltzSession,
     DynStore, Invoice, LightningPayment, SwapState, SwapType,
 };
 
@@ -527,9 +527,16 @@ impl PreparePayResponse {
                 );
                 if let Some(txid) = lockup_txid {
                     log::debug!(
-                        "[swap:{swap_id}] Waiting for Liquid index to see lockup tx {txid}"
+                        "[swap:{swap_id}] Waiting for {} index to see lockup tx {txid}",
+                        self.data.from_chain
                     );
-                    wait_for_liquid_tx(&self.chain_client, &txid, self.timeout_advance).await?;
+                    wait_for_chain_tx(
+                        &self.chain_client,
+                        self.data.from_chain,
+                        &txid,
+                        self.timeout_advance,
+                    )
+                    .await?;
                     self.data.lockup_txid = Some(txid);
                 }
                 Ok(ControlFlow::Continue(update))
@@ -588,9 +595,16 @@ impl PreparePayResponse {
                     );
                     if let Some(txid) = fetch_lockup_txid(self.api.as_ref(), self.swap_id()).await {
                         log::debug!(
-                            "[swap:{swap_id}] Waiting for Liquid index to see fetched lockup tx {txid}"
+                            "[swap:{swap_id}] Waiting for {} index to see fetched lockup tx {txid}",
+                            self.data.from_chain
                         );
-                        wait_for_liquid_tx(&self.chain_client, &txid, self.timeout_advance).await?;
+                        wait_for_chain_tx(
+                            &self.chain_client,
+                            self.data.from_chain,
+                            &txid,
+                            self.timeout_advance,
+                        )
+                        .await?;
                         self.data.lockup_txid = Some(txid);
                     }
                 }

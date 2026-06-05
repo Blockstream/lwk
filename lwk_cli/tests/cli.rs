@@ -1922,3 +1922,72 @@ fn test_sent_outputs() {
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }
+
+#[test]
+fn test_auth_err() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let addr = get_available_addr().unwrap();
+    let tmp = tempfile::tempdir().unwrap();
+    let datadir = tmp.path().display().to_string();
+    let server_url = format!("--server-url {}", &env.electrum_url());
+    let cli = format!("cli --addr {addr} -n regtest");
+    let params = format!("--datadir {datadir} {server_url}");
+
+    let err = sh_err(&format!(
+        "{cli} server start {params} --auth-token-url https://login --auth-client-id client_id --auth-client-secret secret"
+    ));
+    assert!(err.contains("Authentication is not supported with Electrum server type"));
+
+    let err = sh_err(&format!(
+        "{cli} server start {params} --auth-static-token token"
+    ));
+    assert!(err.contains("Authentication is not supported with Electrum server type"));
+
+    let err = sh_err(&format!(
+        "{cli} server start {params} --auth-token-url https://login --auth-client-id client_id"
+    ));
+    assert!(err.contains("All of the following must be set together for authentication:"))
+}
+
+#[test]
+fn test_auth_success() {
+    let env = TestEnvBuilder::from_env()
+        .with_electrum()
+        .with_esplora()
+        .build();
+    let addr = get_available_addr().unwrap();
+    let tmp = tempfile::tempdir().unwrap();
+    let datadir = tmp.path().display().to_string();
+    let cli = format!("cli --addr {addr} -n regtest");
+    let params = format!(
+        "--datadir {datadir} --server-url {} --server-type esplora --auth-static-token token",
+        env.esplora_url()
+    );
+
+    let t = {
+        let cli = cli.clone();
+        std::thread::spawn(move || {
+            sh(&format!("{cli} server start {params}"));
+        })
+    };
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+
+    let params = format!(
+        "--datadir {datadir} --server-url {} --server-type esplora --auth-token-url https://login --auth-client-id client_id --auth-client-secret secret",
+        env.esplora_url()
+    );
+
+    let t = {
+        let cli = cli.clone();
+        std::thread::spawn(move || {
+            sh(&format!("{cli} server start {params}"));
+        })
+    };
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}

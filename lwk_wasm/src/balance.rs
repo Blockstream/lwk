@@ -52,7 +52,7 @@ impl Balance {
             .serialize(&serializer)?)
     }
 
-    /// Returns the balance as an array of [key, value] pairs.
+    /// Returns the balance as a JavaScript `Map` of asset id to amount.
     #[wasm_bindgen]
     pub fn entries(&self) -> Result<JsValue, Error> {
         let serializer = Serializer::new().serialize_large_number_types_as_bigints(true);

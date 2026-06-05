@@ -1,5 +1,6 @@
 use crate::{
-    Address, AssetId, Balance, Error, OutPoint, Script, Transaction, TxOutSecrets, Txid, Wollet,
+    Address, AssetId, Balance, Error, Fees, OutPoint, Script, Transaction, TxOutSecrets, Txid,
+    Wollet,
 };
 use wasm_bindgen::prelude::*;
 
@@ -59,6 +60,11 @@ impl TxDetails {
         self.inner.balance().clone().into()
     }
 
+    /// Fees paid by this transaction.
+    pub fn fees(&self) -> Fees {
+        self.inner.fees().clone().into()
+    }
+
     /// Asset fees
     #[wasm_bindgen(js_name = feesAsset)]
     pub fn fees_asset(&self, asset: &AssetId) -> u64 {
@@ -80,8 +86,6 @@ impl TxDetails {
     pub fn outputs(&self) -> Vec<TxOutDetails> {
         self.inner.outputs().iter().map(Into::into).collect()
     }
-
-    // TODO: expose fees (need to handle hashmap, do we want to expose it?)
 }
 
 /// Transaction output details

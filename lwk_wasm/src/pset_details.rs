@@ -1,7 +1,7 @@
 use lwk_wollet::{bitcoin::bip32::KeySource, elements};
 use wasm_bindgen::prelude::*;
 
-use crate::{Address, AssetId, Balance, Txid};
+use crate::{Address, AssetId, Balance, Fees, Txid};
 
 /// The details of a Partially Signed Elements Transaction:
 ///
@@ -101,6 +101,11 @@ impl PsetDetails {
 
 #[wasm_bindgen]
 impl PsetBalance {
+    /// Fees paid by this transaction.
+    pub fn fees(&self) -> Fees {
+        self.inner.fees.clone().into()
+    }
+
     /// The amount of fee with given asset id
     #[wasm_bindgen(js_name = feesIn)]
     pub fn fees_in(&self, asset: AssetId) -> u64 {

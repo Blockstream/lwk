@@ -17,6 +17,7 @@ mod control_block;
 mod descriptor;
 mod error;
 mod esplora;
+mod fees;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod jade;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
@@ -104,6 +105,7 @@ pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use error::MagicRoutingHint;
 pub use esplora::EsploraClient;
+pub use fees::Fees;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use jade::{Jade, Singlesig};
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]

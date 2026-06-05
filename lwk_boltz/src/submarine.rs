@@ -78,6 +78,22 @@ impl BoltzSession {
         .await
     }
 
+    /// Create a submarine swap from Bitcoin to Lightning.
+    pub async fn btc_to_ln(
+        &self,
+        lightning_payment: &LightningPayment,
+        refund_address: &bitcoin::Address,
+        webhook: Option<Webhook<SubSwapStates>>,
+    ) -> Result<PreparePayResponse, Error> {
+        self.prepare_pay_with_chain(
+            lightning_payment,
+            self.btc_chain(),
+            refund_address.to_string(),
+            webhook,
+        )
+        .await
+    }
+
     async fn prepare_pay_with_chain(
         &self,
         lightning_payment: &LightningPayment,

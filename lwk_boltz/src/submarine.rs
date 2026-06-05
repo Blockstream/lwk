@@ -214,6 +214,7 @@ impl BoltzSession {
                 create_swap_response: create_swap_response.clone(),
                 key_index,
                 mnemonic_identifier: mnemonic_identifier(&self.mnemonic)?,
+                from_chain: chain,
             },
             swap_script: swap_script.clone(),
             rx,
@@ -232,14 +233,14 @@ impl BoltzSession {
         &self,
         data: PreparePayDataSerializable,
     ) -> Result<PreparePayResponse, Error> {
-        let mut data = to_prepare_pay_data(data, &self.mnemonic)?;
+        let mut data = to_prepare_pay_data(data, &self.mnemonic, self.chain())?;
         if data.lockup_txid.is_none() {
             data.lockup_txid =
                 fetch_lockup_txid(self.api.as_ref(), &data.create_swap_response.id).await;
         }
         let p = data.our_keys.public_key();
         let swap_script = SwapScript::submarine_from_swap_resp(
-            self.chain(),
+            data.from_chain,
             &data.create_swap_response,
             PublicKey {
                 inner: p,
@@ -290,6 +291,7 @@ impl BoltzSession {
                     e,
                     &self.mnemonic,
                     &refund_address.to_string(),
+                    self.chain(),
                 )
             })
             .collect()
@@ -365,6 +367,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
     e: &boltz_client::boltz::SwapRestoreResponse,
     mnemonic: &Mnemonic,
     refund_address: &str,
+    default_from_chain: Chain,
 ) -> Result<PreparePayData, Error> {
     // Only handle submarine swaps for now
     match e.swap_type {
@@ -431,6 +434,11 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
                 e.status, err
             ),
         })?;
+    let from_chain = crate::prepare_pay_data::submarine_chain_from_str(
+        &e.from,
+        default_from_chain,
+        Some(&e.id),
+    )?;
 
     Ok(PreparePayData {
         last_state,
@@ -446,6 +454,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
         key_index: refund_details.key_index,
         mnemonic_identifier: mnemonic_identifier(mnemonic)?,
         boltz_fee: None, // TODO
+        from_chain,
     })
 }
 

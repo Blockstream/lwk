@@ -710,6 +710,18 @@ impl PreparePayResponse {
         self.data.create_swap_response.bip21.clone()
     }
 
+    /// The lockup address where the user should send funds.
+    ///
+    /// This can be either a Liquid or Bitcoin address according to [`Self::from_chain`].
+    pub fn lockup_address(&self) -> &str {
+        &self.data.create_swap_response.address
+    }
+
+    /// The chain where the user lockup transaction is expected.
+    pub fn from_chain(&self) -> Chain {
+        self.data.from_chain
+    }
+
     /// The fee of the swap provider and the network fee
     ///
     /// It is equal to the amount requested onchain minus the amount of the bolt11 invoice.

@@ -192,7 +192,7 @@ impl QuoteBuilder {
                     self.mode,
                     network_fee,
                     pair.fees.percentage,
-                    pair.limits.minimal,
+                    pair.limits.minimal_batched.unwrap_or(pair.limits.minimal),
                     pair.limits.maximal,
                 ))
             }
@@ -209,7 +209,7 @@ impl QuoteBuilder {
                     self.mode,
                     network_fee,
                     pair.fees.percentage,
-                    pair.limits.minimal,
+                    pair.limits.minimal_batched.unwrap_or(pair.limits.minimal),
                     pair.limits.maximal,
                 ))
             }
@@ -354,7 +354,7 @@ mod tests {
         assert_eq!(quote.boltz_fee, 25);
         assert_eq!(quote.network_fee, 19);
         assert_eq!(quote.receive_amount, 24956);
-        assert_eq!(quote.min, 1000);
+        assert_eq!(quote.min, 21);
         assert_eq!(quote.max, 25_000_000);
     }
 

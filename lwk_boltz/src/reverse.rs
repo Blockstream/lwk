@@ -407,10 +407,17 @@ impl InvoiceResponse {
         };
 
         // Use the claim fee from Boltz API to match the quoted amount exactly.
-        // Add LIQUID_UNCOOPERATIVE_EXTRA as buffer for script-path claims.
+        // For Liquid claims, add LIQUID_UNCOOPERATIVE_EXTRA as buffer.
         // Fall back to Fee::Relative if claim_fee is not available (e.g., restored swaps).
         let fee = match self.data.claim_fee {
-            Some(claim_fee) => Fee::Absolute(claim_fee + LIQUID_UNCOOPERATIVE_EXTRA),
+            Some(claim_fee) => {
+                let extra = if matches!(self.data.to_chain, Chain::Liquid(_)) {
+                    LIQUID_UNCOOPERATIVE_EXTRA
+                } else {
+                    0
+                };
+                Fee::Absolute(claim_fee + extra)
+            }
             None => Fee::Relative(0.12),
         };
 

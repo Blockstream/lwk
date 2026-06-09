@@ -11,7 +11,7 @@ mod tests {
     use boltz_client::{
         boltz::{BoltzApiClientV2, BoltzWsConfig, CreateReverseRequest, BOLTZ_REGTEST},
         fees::Fee,
-        network::{Chain, LiquidChain},
+        network::{BitcoinChain, Chain, LiquidChain},
         swaps::{
             magic_routing::{check_for_mrh, sign_address},
             ChainClient, SwapScript, SwapTransactionParams, TransactionOptions,
@@ -23,7 +23,9 @@ mod tests {
         clients::{AnyClient, ElectrumClient, EsploraClient},
         BoltzSession, Error, InvoiceDataSerializable, SwapAsset, SwapPersistence,
     };
-    use lwk_wollet::{elements, secp256k1::rand::thread_rng, Network};
+    use lwk_wollet::{bitcoin, elements, secp256k1::rand::thread_rng, Network};
+
+    const BTC_CHAIN: BitcoinChain = BitcoinChain::BitcoinRegtest;
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
@@ -170,6 +172,66 @@ mod tests {
 
         // Poll for updates until payment is complete
         advance_until_complete_polling!(invoice_polling, true);
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_session_reverse_ln_to_btc() {
+        let _ = env_logger::try_init();
+
+        let _mining_handle = utils::start_block_mining();
+        let network = Network::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .build()
+            .await
+            .unwrap();
+        let claim_address = utils::generate_address(BTC_CHAIN.into()).await.unwrap();
+        let claim_address = bitcoin::Address::from_str(&claim_address)
+            .unwrap()
+            .assume_checked();
+
+        let invoice_amount = 100_000u64;
+        let quote = session
+            .quote(invoice_amount)
+            .await
+            .send(SwapAsset::Lightning)
+            .receive(SwapAsset::Onchain)
+            .build()
+            .unwrap();
+        let invoice = session
+            .ln_to_btc(invoice_amount, None, &claim_address, None)
+            .await
+            .unwrap();
+
+        assert_eq!(invoice.claim_address(), claim_address.to_string());
+        assert_eq!(invoice.to_chain(), BTC_CHAIN.into());
+
+        let claim_fee = invoice.claim_fee().expect("claim_fee should be set");
+        let onchain_amount = invoice.onchain_amount();
+        let expected_receive = onchain_amount - claim_fee;
+        assert_eq!(
+            expected_receive, quote.receive_amount,
+            "Quote receive_amount ({}) should match onchain_amount ({}) - claim_fee ({}) = {}",
+            quote.receive_amount, onchain_amount, claim_fee, expected_receive
+        );
+
+        log::info!("Invoice: {}", invoice.bolt11_invoice());
+        utils::start_pay_invoice_lnd(invoice.bolt11_invoice().to_string());
+        invoice.complete_pay().await.unwrap();
+
+        let actual_balance =
+            utils::get_address_balance(BTC_CHAIN.into(), &claim_address.to_string())
+                .await
+                .expect("Failed to get address balance");
+        assert_eq!(
+            actual_balance, quote.receive_amount,
+            "Actual received balance ({}) should match quote.receive_amount ({})",
+            actual_balance, quote.receive_amount
+        );
     }
 
     /// Test Magic Routing Hints: a Boltz wallet pays another Boltz wallet's invoice

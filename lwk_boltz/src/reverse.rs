@@ -276,6 +276,24 @@ impl BoltzSession {
         swaps: &[SwapRestoreResponse],
         claim_address: &elements::Address,
     ) -> Result<Vec<InvoiceData>, Error> {
+        self.restorable_reverse_swaps_with_address(swaps, claim_address.to_string())
+            .await
+    }
+
+    pub async fn restorable_reverse_btc_swaps(
+        &self,
+        swaps: &[SwapRestoreResponse],
+        claim_address: &bitcoin::Address,
+    ) -> Result<Vec<InvoiceData>, Error> {
+        self.restorable_reverse_swaps_with_address(swaps, claim_address.to_string())
+            .await
+    }
+
+    async fn restorable_reverse_swaps_with_address(
+        &self,
+        swaps: &[SwapRestoreResponse],
+        claim_address: String,
+    ) -> Result<Vec<InvoiceData>, Error> {
         swaps
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Reverse))
@@ -283,7 +301,7 @@ impl BoltzSession {
                 convert_swap_restore_response_to_invoice_data(
                     e,
                     &self.mnemonic,
-                    claim_address,
+                    &claim_address,
                     self.chain(),
                 )
             })
@@ -294,7 +312,7 @@ impl BoltzSession {
 pub(crate) fn convert_swap_restore_response_to_invoice_data(
     e: &boltz_client::boltz::SwapRestoreResponse,
     mnemonic: &Mnemonic,
-    claim_address: &elements::Address,
+    claim_address: &str,
     default_to_chain: Chain,
 ) -> Result<InvoiceData, Error> {
     // Only handle reverse swaps for now

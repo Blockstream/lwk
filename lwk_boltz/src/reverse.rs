@@ -27,8 +27,7 @@ use lwk_wollet::elements;
 
 use crate::derive_keypair;
 use crate::error::Error;
-use crate::invoice_data::InvoiceData;
-use crate::invoice_data::InvoiceDataSerializable;
+use crate::invoice_data::{reverse_chain_from_str, InvoiceData, InvoiceDataSerializable};
 use crate::mnemonic_identifier;
 use crate::preimage_from_keypair;
 use crate::swap_state::SwapStateTrait;
@@ -189,6 +188,7 @@ impl BoltzSession {
                 our_keys,
                 preimage,
                 claim_address,
+                to_chain,
                 key_index,
                 mnemonic_identifier: mnemonic_identifier(&self.mnemonic)?,
                 claim_broadcasted: false,
@@ -211,10 +211,10 @@ impl BoltzSession {
         &self,
         data: InvoiceDataSerializable,
     ) -> Result<InvoiceResponse, Error> {
-        let data = to_invoice_data(data, &self.mnemonic)?;
+        let data = to_invoice_data(data, &self.mnemonic, self.chain())?;
         let p = data.our_keys.public_key();
         let swap_script = SwapScript::reverse_from_swap_resp(
-            self.chain(),
+            data.to_chain,
             &data.create_reverse_response,
             PublicKey {
                 inner: p,
@@ -261,7 +261,12 @@ impl BoltzSession {
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Reverse))
             .map(|e| {
-                convert_swap_restore_response_to_invoice_data(e, &self.mnemonic, claim_address)
+                convert_swap_restore_response_to_invoice_data(
+                    e,
+                    &self.mnemonic,
+                    claim_address,
+                    self.chain(),
+                )
             })
             .collect()
     }
@@ -271,6 +276,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
     e: &boltz_client::boltz::SwapRestoreResponse,
     mnemonic: &Mnemonic,
     claim_address: &elements::Address,
+    default_to_chain: Chain,
 ) -> Result<InvoiceData, Error> {
     // Only handle reverse swaps for now
     match e.swap_type {
@@ -333,6 +339,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
             swap_id: Some(e.id.clone()),
             msg: format!("Failed to parse status '{}' as SwapState: {err}", e.status),
         })?;
+    let to_chain = reverse_chain_from_str(&e.to, default_to_chain, Some(&e.id))?;
 
     Ok(InvoiceData {
         last_state,
@@ -346,6 +353,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
         our_keys,
         preimage,
         claim_address: claim_address.to_string(),
+        to_chain,
         key_index: claim_details.key_index,
         mnemonic_identifier: mnemonic_identifier(mnemonic)?,
         claim_broadcasted: false,

@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use bip39::Mnemonic;
 use boltz_client::boltz::CreateReverseResponse;
+use boltz_client::network::{BitcoinChain, Chain, LiquidChain};
 use boltz_client::util::secrets::Preimage;
 use boltz_client::Keypair;
 use lightning::bitcoin::XKeyIdentifier;
@@ -41,6 +42,7 @@ pub struct InvoiceData {
     pub(crate) our_keys: Keypair,
     pub(crate) preimage: Preimage,
     pub(crate) claim_address: String,
+    pub(crate) to_chain: Chain,
     pub random_preimage: bool,
 }
 
@@ -56,6 +58,8 @@ pub struct InvoiceDataSerializable {
     pub create_reverse_response: CreateReverseResponse,
     pub key_index: u32,
     pub claim_address: String,
+    #[serde(default = "default_to_chain")]
+    pub to_chain: String,
 
     /// Extended fingerprint of mnemonic used for this boltz swap
     pub mnemonic_identifier: XKeyIdentifier,
@@ -69,6 +73,7 @@ pub struct InvoiceDataSerializable {
 pub fn to_invoice_data(
     i: InvoiceDataSerializable,
     mnemonic: &Mnemonic,
+    default_to_chain: Chain,
 ) -> Result<InvoiceData, Error> {
     let our_keys = derive_keypair(i.key_index, mnemonic)?;
     let preimage = match i.preimage.as_ref() {
@@ -95,6 +100,7 @@ pub fn to_invoice_data(
         our_keys,
         preimage,
         claim_address: i.claim_address,
+        to_chain: reverse_chain_from_str(&i.to_chain, default_to_chain, None)?,
         key_index: i.key_index,
         mnemonic_identifier: i.mnemonic_identifier,
         claim_broadcasted: i.claim_broadcasted.unwrap_or(false),
@@ -116,6 +122,7 @@ impl From<InvoiceData> for InvoiceDataSerializable {
             key_index: i.key_index,
             mnemonic_identifier: i.mnemonic_identifier,
             claim_address: i.claim_address,
+            to_chain: i.to_chain.to_string(),
             claim_broadcasted: Some(i.claim_broadcasted),
             preimage: i
                 .random_preimage
@@ -130,9 +137,45 @@ impl InvoiceDataSerializable {
     }
 }
 
+fn default_to_chain() -> String {
+    "L-BTC".to_string()
+}
+
+pub(crate) fn reverse_chain_from_str(
+    chain: &str,
+    default_to_chain: Chain,
+    swap_id: Option<&str>,
+) -> Result<Chain, Error> {
+    // TODO: Blend this with `submarine_chain_from_str` once reverse and submarine
+    // chain-aware restore paths settle.
+    let liquid_chain = match default_to_chain {
+        Chain::Liquid(liquid_chain) => liquid_chain,
+        Chain::Bitcoin(_) => {
+            return Err(Error::SwapRestoration {
+                swap_id: swap_id.map(ToOwned::to_owned),
+                msg: "Reverse restore expected a Liquid session chain".to_string(),
+            });
+        }
+    };
+
+    match chain {
+        "BTC" => Ok(Chain::Bitcoin(match liquid_chain {
+            LiquidChain::Liquid => BitcoinChain::Bitcoin,
+            LiquidChain::LiquidTestnet => BitcoinChain::BitcoinTestnet,
+            LiquidChain::LiquidRegtest => BitcoinChain::BitcoinRegtest,
+        })),
+        "L-BTC" => Ok(Chain::Liquid(liquid_chain)),
+        s => Err(Error::SwapRestoration {
+            swap_id: swap_id.map(ToOwned::to_owned),
+            msg: format!("Unknown reverse claim chain: {s}"),
+        }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::mnemonic_identifier;
+    use boltz_client::network::{Chain, LiquidChain};
     use lwk_wollet::elements::hex::ToHex;
     use std::str::FromStr;
 
@@ -144,6 +187,7 @@ mod tests {
         // Deserialize the JSON into InvoiceData
         let deserialized: InvoiceDataSerializable =
             serde_json::from_str(expected_serialized).unwrap();
+        assert_eq!(deserialized.to_chain, "L-BTC");
 
         let mnemonic = Mnemonic::from_str(
             "damp cart merit asset obvious idea chef traffic absent armed road link",
@@ -154,11 +198,20 @@ mod tests {
             identifier.to_string(),
             "e92cd0870c080a91a063345362b7e76d4ad3a4b4"
         );
-        let invoice_data = to_invoice_data(deserialized, &mnemonic).unwrap();
+        let invoice_data = to_invoice_data(
+            deserialized,
+            &mnemonic,
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+        )
+        .unwrap();
 
         assert_eq!(
             invoice_data.claim_address.to_string(),
             "el1qqd3yqxz9gu9r8stv5vrhzjaa6d9ks4elkxr92fxp3pxy5m43jjk6h672z708ucn50638ahpc0unxa92uu39h5vypvwzft9r5e"
+        );
+        assert_eq!(
+            invoice_data.to_chain,
+            Chain::Liquid(LiquidChain::LiquidRegtest)
         );
         assert_eq!(
             invoice_data.our_keys.secret_bytes().to_hex(),

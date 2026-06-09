@@ -13,7 +13,7 @@ mod tests {
     use boltz_client::{
         boltz::{BoltzApiClientV2, BoltzWsConfig, CreateSubmarineRequest, GetBolt12FetchRequest},
         fees::Fee,
-        network::{Chain, LiquidChain},
+        network::{BitcoinChain, Chain, LiquidChain},
         swaps::{ChainClient, SwapScript, SwapTransactionParams},
         util::sleep,
         Keypair, PublicKey, Secp256k1,
@@ -24,7 +24,9 @@ mod tests {
         parse_bolt12_invoice, verify_invoice_from_offer, BoltzSession, LightningPayment,
         PreparePayDataSerializable, SwapPersistence,
     };
-    use lwk_wollet::{elements, secp256k1::rand::thread_rng, Network};
+    use lwk_wollet::{bitcoin, elements, secp256k1::rand::thread_rng, Network};
+
+    const BTC_CHAIN: BitcoinChain = BitcoinChain::BitcoinRegtest;
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
@@ -310,6 +312,69 @@ mod tests {
         advance_until_complete_polling!(prepare_pay_response, true);
 
         // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_session_submarine_btc_to_ln() {
+        let _ = env_logger::try_init();
+
+        let mining_handle = utils::start_block_mining();
+
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                Network::default_regtest(),
+            )
+            .unwrap(),
+        );
+        let session = BoltzSession::builder(
+            Network::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .create_swap_timeout(TIMEOUT)
+        .build()
+        .await
+        .unwrap();
+
+        let refund_address = utils::generate_address(BTC_CHAIN.into()).await.unwrap();
+        let refund_address = bitcoin::Address::from_str(&refund_address)
+            .unwrap()
+            .assume_checked();
+        let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
+        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
+
+        let mut prepare_pay_response = session
+            .btc_to_ln(&lightning_payment, &refund_address, None)
+            .await
+            .unwrap();
+
+        assert_eq!(prepare_pay_response.from_chain(), BTC_CHAIN.into());
+        assert_eq!(
+            prepare_pay_response.lockup_address(),
+            prepare_pay_response.data.create_swap_response.address
+        );
+        assert!(prepare_pay_response.uri_address().is_err());
+
+        let lockup_txid_expected = utils::send_to_address(
+            BTC_CHAIN.into(),
+            prepare_pay_response.lockup_address(),
+            prepare_pay_response.uri_amount(),
+        )
+        .await
+        .unwrap();
+        log::info!("lockup_txid_expected: {lockup_txid_expected}");
+
+        advance_until_complete!(prepare_pay_response, true);
+        assert_eq!(
+            prepare_pay_response.lockup_txid(),
+            Some(lockup_txid_expected.as_str())
+        );
+        assert!(prepare_pay_response.refund_txid().is_none());
+
         mining_handle.abort();
     }
 

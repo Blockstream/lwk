@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use bip39::Mnemonic;
 use boltz_client::boltz::CreateSubmarineResponse;
+use boltz_client::network::{BitcoinChain, Chain, LiquidChain};
 use boltz_client::{Bolt11Invoice, Keypair};
 use lightning::bitcoin::XKeyIdentifier;
 use lightning::offers::invoice::Bolt12Invoice;
@@ -30,6 +31,7 @@ pub struct PreparePayData {
     pub refund_address: String,
     pub key_index: u32,
     pub mnemonic_identifier: XKeyIdentifier,
+    pub from_chain: Chain,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -48,6 +50,9 @@ pub struct PreparePayDataSerializable {
 
     /// Extended fingerprint of mnemonic used for this boltz swap
     pub mnemonic_identifier: XKeyIdentifier,
+
+    #[serde(default = "default_from_chain")]
+    pub from_chain: String,
 }
 
 impl From<PreparePayData> for PreparePayDataSerializable {
@@ -67,6 +72,7 @@ impl From<PreparePayData> for PreparePayDataSerializable {
             refund_address: data.refund_address,
             mnemonic_identifier: data.mnemonic_identifier,
             boltz_fee: data.boltz_fee,
+            from_chain: data.from_chain.to_string(),
         }
     }
 }
@@ -74,6 +80,7 @@ impl From<PreparePayData> for PreparePayDataSerializable {
 pub fn to_prepare_pay_data(
     data: PreparePayDataSerializable,
     mnemonic: &Mnemonic,
+    default_from_chain: Chain,
 ) -> Result<PreparePayData, Error> {
     let our_keys = derive_keypair(data.key_index, mnemonic)?;
     let mnemonic_identifier = mnemonic_identifier(mnemonic)?;
@@ -93,6 +100,11 @@ pub fn to_prepare_pay_data(
         .as_ref()
         .map(|i| crate::parse_bolt12_invoice(i))
         .transpose()?;
+    let from_chain = submarine_chain_from_str(
+        &data.from_chain,
+        default_from_chain,
+        Some(&data.create_swap_response.id),
+    )?;
     Ok(PreparePayData {
         last_state: data.last_state,
         swap_type: data.swap_type,
@@ -107,6 +119,7 @@ pub fn to_prepare_pay_data(
         key_index: data.key_index,
         mnemonic_identifier,
         boltz_fee: data.boltz_fee,
+        from_chain,
     })
 }
 
@@ -116,8 +129,44 @@ impl PreparePayDataSerializable {
     }
 }
 
+fn default_from_chain() -> String {
+    "L-BTC".to_string()
+}
+
+/// `chain` indicates only "BTC" or "L-BTC", we reuse `default_from_chain` inner network
+/// to initialize the respective network
+pub(crate) fn submarine_chain_from_str(
+    chain: &str,
+    default_from_chain: Chain,
+    swap_id: Option<&str>,
+) -> Result<Chain, Error> {
+    let liquid_chain = match default_from_chain {
+        Chain::Liquid(liquid_chain) => liquid_chain,
+        Chain::Bitcoin(_) => {
+            return Err(Error::SwapRestoration {
+                swap_id: swap_id.map(str::to_owned),
+                msg: "Submarine restore expected a Liquid session chain".to_string(),
+            })
+        }
+    };
+
+    match chain {
+        "BTC" => Ok(match liquid_chain {
+            LiquidChain::Liquid => Chain::Bitcoin(BitcoinChain::Bitcoin),
+            LiquidChain::LiquidTestnet => Chain::Bitcoin(BitcoinChain::BitcoinTestnet),
+            LiquidChain::LiquidRegtest => Chain::Bitcoin(BitcoinChain::BitcoinRegtest),
+        }),
+        "L-BTC" => Ok(Chain::Liquid(liquid_chain)),
+        s => Err(Error::SwapRestoration {
+            swap_id: swap_id.map(str::to_owned),
+            msg: format!("Unknown submarine funding chain: {s}"),
+        }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use boltz_client::network::{Chain, LiquidChain};
     use boltz_client::ToHex;
 
     use super::*;
@@ -132,12 +181,30 @@ mod tests {
             "damp cart merit asset obvious idea chef traffic absent armed road link",
         )
         .unwrap();
-        let prepare_pay_data = to_prepare_pay_data(deserialized, &mnemonic).unwrap();
+        let prepare_pay_data = to_prepare_pay_data(
+            deserialized,
+            &mnemonic,
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+        )
+        .unwrap();
         println!("prepare_pay_data: {prepare_pay_data:?}");
         assert!(prepare_pay_data.lockup_txid.is_none());
+        assert_eq!(
+            prepare_pay_data.from_chain,
+            Chain::Liquid(LiquidChain::LiquidRegtest)
+        );
         assert_eq!(
             prepare_pay_data.our_keys.secret_bytes().to_hex(),
             "70f75e954300859f9b32dfea93dfc5667e6cf71d1fad77602d6d6757fd347b01"
         );
+    }
+
+    #[test]
+    fn test_prepare_pay_data_defaults_missing_from_chain_to_lbtc() {
+        let json_data = include_str!("../tests/data/preapre_pay_data_serializable.json");
+        let deserialized: PreparePayDataSerializable = serde_json::from_str(json_data)
+            .expect("Failed to deserialize PreparePayDataSerializable from JSON");
+
+        assert_eq!(deserialized.from_chain, "L-BTC");
     }
 }

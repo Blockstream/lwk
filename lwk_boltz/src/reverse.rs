@@ -36,7 +36,7 @@ use crate::DynStore;
 use crate::SwapPersistence;
 use crate::SwapType;
 use crate::LIQUID_UNCOOPERATIVE_EXTRA;
-use crate::{broadcast_tx_with_retry, next_status, wait_for_liquid_tx, BoltzSession, SwapState};
+use crate::{broadcast_tx_with_retry, next_status, wait_for_chain_tx, BoltzSession, SwapState};
 
 pub struct InvoiceResponse {
     pub data: InvoiceData,
@@ -379,8 +379,17 @@ impl InvoiceResponse {
         log::info!("[swap:{swap_id}] transaction.mempool/confirmed Boltz broadcasted funding tx");
 
         let lockup_tx = if let Some(txid) = update.transaction.as_ref().map(|e| e.id.clone()) {
-            log::debug!("[swap:{swap_id}] Waiting for Liquid index to see lockup tx {txid}");
-            let tx = wait_for_liquid_tx(&self.chain_client, &txid, self.timeout_advance).await?;
+            log::debug!(
+                "[swap:{swap_id}] Waiting for {} index to see lockup tx {txid}",
+                self.data.to_chain
+            );
+            let tx = wait_for_chain_tx(
+                &self.chain_client,
+                self.data.to_chain,
+                &txid,
+                self.timeout_advance,
+            )
+            .await?;
             if self.data.lockup_txid.is_none() {
                 self.data.lockup_txid = Some(txid);
             }
@@ -393,7 +402,7 @@ impl InvoiceResponse {
         let options = match lockup_tx {
             Some(tx) => TransactionOptions::default()
                 .with_cooperative(true)
-                .with_lockup_tx(boltz_client::swaps::BtcLikeTransaction::Liquid(tx)),
+                .with_lockup_tx(tx),
             None => TransactionOptions::default().with_cooperative(true),
         };
 

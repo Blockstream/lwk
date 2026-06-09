@@ -417,6 +417,8 @@ boltz_chain:
   extends:
     - .base
     - .coverage_mixin
+  variables:
+    COMPOSE_PROFILES: ci
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
@@ -429,6 +431,8 @@ boltz_reverse:
   extends:
     - .base
     - .coverage_mixin
+  variables:
+    COMPOSE_PROFILES: ci
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
@@ -441,6 +445,8 @@ boltz_submarine:
   extends:
     - .base
     - .coverage_mixin
+  variables:
+    COMPOSE_PROFILES: ci
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive

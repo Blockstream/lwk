@@ -24,6 +24,7 @@ use boltz_client::swaps::TransactionOptions;
 use boltz_client::Bolt11Invoice;
 use boltz_client::PublicKey;
 use lwk_wollet::elements;
+use lwk_wollet::elements::bitcoin;
 
 use crate::derive_keypair;
 use crate::error::Error;
@@ -84,6 +85,24 @@ impl BoltzSession {
             amount,
             description,
             self.chain(),
+            claim_address.to_string(),
+            webhook,
+        )
+        .await
+    }
+
+    /// Create a reverse swap from Lightning to Bitcoin.
+    pub async fn ln_to_btc(
+        &self,
+        amount: u64,
+        description: Option<String>,
+        claim_address: &bitcoin::Address,
+        webhook: Option<Webhook<RevSwapStates>>,
+    ) -> Result<InvoiceResponse, Error> {
+        self.invoice_with_chain(
+            amount,
+            description,
+            self.btc_chain(),
             claim_address.to_string(),
             webhook,
         )

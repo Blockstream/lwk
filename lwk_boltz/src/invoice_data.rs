@@ -5,7 +5,6 @@ use boltz_client::boltz::CreateReverseResponse;
 use boltz_client::util::secrets::Preimage;
 use boltz_client::Keypair;
 use lightning::bitcoin::XKeyIdentifier;
-use lwk_wollet::elements;
 use serde::{Deserialize, Serialize};
 
 use crate::derive_keypair;
@@ -41,7 +40,7 @@ pub struct InvoiceData {
     pub(crate) mnemonic_identifier: XKeyIdentifier,
     pub(crate) our_keys: Keypair,
     pub(crate) preimage: Preimage,
-    pub(crate) claim_address: elements::Address,
+    pub(crate) claim_address: String,
     pub random_preimage: bool,
 }
 
@@ -56,7 +55,7 @@ pub struct InvoiceDataSerializable {
     pub lockup_txid: Option<String>,
     pub create_reverse_response: CreateReverseResponse,
     pub key_index: u32,
-    pub claim_address: elements::Address,
+    pub claim_address: String,
 
     /// Extended fingerprint of mnemonic used for this boltz swap
     pub mnemonic_identifier: XKeyIdentifier,
@@ -134,7 +133,7 @@ impl InvoiceDataSerializable {
 #[cfg(test)]
 mod tests {
     use crate::mnemonic_identifier;
-    use elements::hex::ToHex;
+    use lwk_wollet::elements::hex::ToHex;
     use std::str::FromStr;
 
     use super::*;

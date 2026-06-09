@@ -488,6 +488,18 @@ impl InvoiceResponse {
         self.data.create_reverse_response.onchain_amount
     }
 
+    /// The claim address where the user receives funds.
+    ///
+    /// This can be either a Liquid or Bitcoin address according to [`Self::to_chain`].
+    pub fn claim_address(&self) -> &str {
+        &self.data.claim_address
+    }
+
+    /// The chain where the user claim transaction is expected.
+    pub fn to_chain(&self) -> Chain {
+        self.data.to_chain
+    }
+
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
         let swap_id = self.swap_id().to_string();
         let update = self.next_status().await?;

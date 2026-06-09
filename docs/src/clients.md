@@ -53,6 +53,13 @@ This client is recommended for desktop, mobile, and server applications where in
 ```
 </section>
 
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+```
+</section>
+
 <div slot="title">Go</div>
 <section>
 
@@ -132,6 +139,13 @@ Use authenticated clients when:
 
 ```python
 {{#include ../../lwk_bindings/tests/bindings/authenticated_esplora_client.py:authenticated_esplora_client}}
+```
+</section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
 ```
 </section>
 

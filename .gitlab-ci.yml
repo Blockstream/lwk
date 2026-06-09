@@ -422,7 +422,7 @@ boltz_chain:
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
-    - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
+    - just regtest-env-start
     - just test-chain
 
 boltz_reverse:
@@ -436,7 +436,7 @@ boltz_reverse:
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
-    - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
+    - just regtest-env-start
     - just test-reverse
 
 boltz_submarine:
@@ -450,7 +450,7 @@ boltz_submarine:
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
-    - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
+    - just regtest-env-start
     - just test-submarine
 
 # maven credentials and gpg settings

@@ -32,6 +32,36 @@ regtest-env-start:
         ELAPSED=$((ELAPSED + 1))
     done
     echo "Regtest environment ready (waited ${ELAPSED}s)"
+
+    command -v timeout >/dev/null || { echo "Error: timeout is required for regtest readiness checks"; exit 1; }
+
+    wait_for_tcp() {
+        local name="$1"
+        local host="$2"
+        local port="$3"
+        local timeout="$4"
+        local elapsed=0
+
+        until timeout 1 bash -c "cat < /dev/null > /dev/tcp/${host}/${port}" 2>/dev/null; do
+            if [ "$elapsed" -ge "$timeout" ]; then
+                echo "Error: Timeout waiting for ${name} at ${host}:${port} after ${timeout} seconds"
+                exit 1
+            fi
+            sleep 1
+            elapsed=$((elapsed + 1))
+        done
+        echo "${name} ready at ${host}:${port} (waited ${elapsed}s)"
+    }
+
+    wait_for_tcp "Boltz API" "localhost" 9001 60
+    wait_for_tcp "Bitcoin electrum" "localhost" 19001 60
+    wait_for_tcp "Liquid electrum" "localhost" 19002 60
+    wait_for_tcp "Bitcoin electrs HTTP" "localhost" 3002 60
+    wait_for_tcp "Liquid electrs HTTP" "localhost" 3003 60
+    wait_for_tcp "Bitcoind RPC" "localhost" 18443 60
+    wait_for_tcp "Elements RPC" "localhost" 18884 60
+    wait_for_tcp "LND REST" "localhost" 8081 60
+    wait_for_tcp "RPC proxy" "localhost" 51234 60
     
     # Export environment variables to .env
     BITCOIND_COOKIE=$(cat "$COOKIE_FILE")

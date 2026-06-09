@@ -14,6 +14,7 @@ use boltz_client::boltz::SwapStatus;
 use boltz_client::boltz::Webhook;
 use boltz_client::boltz::{ClaimDetails, CreateReverseResponse};
 use boltz_client::fees::Fee;
+use boltz_client::network::Chain;
 use boltz_client::swaps::magic_routing::find_magic_routing_hint;
 use boltz_client::swaps::magic_routing::sign_address;
 use boltz_client::swaps::ChainClient;
@@ -80,7 +81,24 @@ impl BoltzSession {
         claim_address: &elements::Address,
         webhook: Option<Webhook<RevSwapStates>>,
     ) -> Result<InvoiceResponse, Error> {
-        let chain = self.chain();
+        self.invoice_with_chain(
+            amount,
+            description,
+            self.chain(),
+            claim_address.to_string(),
+            webhook,
+        )
+        .await
+    }
+
+    async fn invoice_with_chain(
+        &self,
+        amount: u64,
+        description: Option<String>,
+        to_chain: Chain,
+        claim_address: String,
+        webhook: Option<Webhook<RevSwapStates>>,
+    ) -> Result<InvoiceResponse, Error> {
         let (key_index, our_keys) = self.derive_next_keypair()?;
         let preimage = self.preimage(&our_keys);
 
@@ -90,17 +108,17 @@ impl BoltzSession {
         };
         let webhook_str = format!("{webhook:?}");
 
-        let addrs_sig = sign_address(&claim_address.to_string(), &our_keys)?;
+        let addrs_sig = sign_address(&claim_address, &our_keys)?;
         let create_reverse_req = CreateReverseRequest {
             from: "BTC".to_string(),
-            to: chain.to_string(),
+            to: to_chain.to_string(),
             invoice: None,
             invoice_amount: Some(amount),
             preimage_hash: Some(preimage.sha256),
             description,
             description_hash: None,
             address_signature: Some(addrs_sig.to_string()),
-            address: Some(claim_address.to_string()),
+            address: Some(claim_address.clone()),
             claim_public_key,
             referral_id: self.referral_id.clone(),
             webhook,
@@ -119,7 +137,11 @@ impl BoltzSession {
 
         let (boltz_fee, claim_fee) = {
             let swap_info = self.swap_info.lock().await;
-            match swap_info.reverse_pairs.get_btc_to_lbtc_pair() {
+            let pair = match to_chain {
+                Chain::Bitcoin(_) => swap_info.reverse_pairs.get_btc_to_btc_pair(),
+                Chain::Liquid(_) => swap_info.reverse_pairs.get_btc_to_lbtc_pair(),
+            };
+            match pair {
                 Some(pair) => (
                     Some(pair.fees.boltz(amount)),
                     Some(pair.fees.claim_estimate()),
@@ -139,7 +161,7 @@ impl BoltzSession {
         log::debug!("[swap:{swap_id}] Got Reverse swap response: {reverse_resp:?}");
 
         let swap_script =
-            SwapScript::reverse_from_swap_resp(chain, &reverse_resp, claim_public_key)?;
+            SwapScript::reverse_from_swap_resp(to_chain, &reverse_resp, claim_public_key)?;
         log::info!("[swap:{swap_id}] subscribing to swap webhook:{webhook_str}");
         self.ws.subscribe_swap(&swap_id).await?;
         let mut rx = self.ws.updates();
@@ -166,7 +188,7 @@ impl BoltzSession {
                 create_reverse_response: reverse_resp.clone(),
                 our_keys,
                 preimage,
-                claim_address: claim_address.clone(),
+                claim_address: elements::Address::from_str(&claim_address)?,
                 key_index,
                 mnemonic_identifier: mnemonic_identifier(&self.mnemonic)?,
                 claim_broadcasted: false,

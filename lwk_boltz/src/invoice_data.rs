@@ -158,6 +158,10 @@ mod tests {
         let invoice_data = to_invoice_data(deserialized, &mnemonic).unwrap();
 
         assert_eq!(
+            invoice_data.claim_address.to_string(),
+            "el1qqd3yqxz9gu9r8stv5vrhzjaa6d9ks4elkxr92fxp3pxy5m43jjk6h672z708ucn50638ahpc0unxa92uu39h5vypvwzft9r5e"
+        );
+        assert_eq!(
             invoice_data.our_keys.secret_bytes().to_hex(),
             "70f75e954300859f9b32dfea93dfc5667e6cf71d1fad77602d6d6757fd347b01"
         );

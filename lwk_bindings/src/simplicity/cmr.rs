@@ -63,7 +63,7 @@ mod tests {
 
     use crate::simplicity::{SimplicityArguments, SimplicityProgram, SimplicityTypedValue};
 
-    const TEST_CMR: &str = "b685a4424842507d7d747e6611a740d8c421038e9744e75d423d0e2e9f164d02";
+    const TEST_CMR: &str = "1b8b0834914675a1566132c81c2708fc614fab5cc38f17bf51643cc6c05d2d6f";
     const TEST_PUBLIC_KEY: &str =
         "8a65c55726dc32b59b649ad0187eb44490de681bb02601b8d3f58c8b9fff9083";
     const P2PK_SOURCE: &str = include_str!("../../../lwk_simplicity/data/p2pk.simf");

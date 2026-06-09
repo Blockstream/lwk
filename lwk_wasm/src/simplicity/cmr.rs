@@ -75,7 +75,7 @@ mod tests {
 
     wasm_bindgen_test_configure!(run_in_browser);
 
-    const TEST_CMR: &str = "b685a4424842507d7d747e6611a740d8c421038e9744e75d423d0e2e9f164d02";
+    const TEST_CMR: &str = "1b8b0834914675a1566132c81c2708fc614fab5cc38f17bf51643cc6c05d2d6f";
     const INVALID_CMR_HEX: &str =
         "zz85a4424842507d7d747e6611a740d8c421038e9744e75d423d0e2e9f164d02";
     const TEST_PUBLIC_KEY: &str =

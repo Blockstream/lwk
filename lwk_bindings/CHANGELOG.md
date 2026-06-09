@@ -5,6 +5,7 @@
 ## 0.18.0
 
 * deprecated `PsetBalance::fee()`, replacement `PsetBalance::fees()` and `PsetBalance::fees_in(asset_id)` ([ELIP-0204](https://github.com/ElementsProject/ELIPs/blob/main/elip-0204.mediawiki)).
+* `SimplicityProgram::load()` no longer includes debug symbols, which changes the resulting CMR and address; use `SimplicityProgram::load_with_debug_symbols(source, args, true)` to restore the previous behaviour.
 
 ## 0.17.2
 

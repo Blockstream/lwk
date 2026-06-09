@@ -71,6 +71,20 @@ stages:
     reports:
       junit: target/nextest/ci/junit.xml
 
+.boltz_mixin:
+  variables:
+    COMPOSE_PROFILES: ci
+    SCRIPTS_IMAGE: harbor.blockstream.io/docker/boltz/scripts:latest
+    LND_IMAGE: harbor.blockstream.io/docker/boltz/lnd:latest
+    CLN_IMAGE: harbor.blockstream.io/docker/boltz/c-lightning-plugins:latest
+    POSTGRES_IMAGE: harbor.blockstream.io/docker/library/postgres:18-alpine
+    BOLTZ_BACKEND_IMAGE: harbor.blockstream.io/docker/boltz/boltz:latest
+    FOUNDRY_IMAGE: harbor.blockstream.io/docker/boltz/foundry:latest
+    BITCOIN_CORE_IMAGE: harbor.blockstream.io/docker/boltz/bitcoin-core:latest
+    ELEMENTS_IMAGE: harbor.blockstream.io/docker/boltz/elements:latest
+    ELECTRS_IMAGE: harbor.blockstream.io/docker/boltz/electrs:latest
+    NGINX_IMAGE: harbor.blockstream.io/docker/library/nginx:alpine
+
 sast:
  stage: security
  needs: []
@@ -417,8 +431,7 @@ boltz_chain:
   extends:
     - .base
     - .coverage_mixin
-  variables:
-    COMPOSE_PROFILES: ci
+    - .boltz_mixin
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
@@ -431,8 +444,7 @@ boltz_reverse:
   extends:
     - .base
     - .coverage_mixin
-  variables:
-    COMPOSE_PROFILES: ci
+    - .boltz_mixin
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
@@ -445,8 +457,7 @@ boltz_submarine:
   extends:
     - .base
     - .coverage_mixin
-  variables:
-    COMPOSE_PROFILES: ci
+    - .boltz_mixin
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive

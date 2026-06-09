@@ -134,6 +134,14 @@ Use authenticated clients when:
 {{#include ../../lwk_bindings/tests/bindings/authenticated_esplora_client.py:authenticated_esplora_client}}
 ```
 </section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/authenticated_esplora_client.go:authenticated_esplora_client}}
+```
+</section>
 </custom-tabs>
 
 ## Waterfalls

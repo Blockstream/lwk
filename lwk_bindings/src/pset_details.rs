@@ -83,6 +83,15 @@ impl From<lwk_common::PsetBalance> for PsetBalance {
 
 #[uniffi::export]
 impl PsetBalance {
+    /// Fee paid by this transaction.
+    ///
+    /// Warning: if there are multiple assets paying fees this function can return an incorrect value.
+    ///
+    /// Deprecated: use `fees_in(asset_id)` or `fees()` instead.
+    pub fn fee(&self) -> u64 {
+        *self.inner.fees.values().next().unwrap_or(&0)
+    }
+
     pub fn fees(&self) -> HashMap<AssetId, u64> {
         self.inner
             .fees
@@ -280,7 +289,8 @@ mod tests {
         let wollet = Wollet::new(&network, &descriptor, None).unwrap();
 
         let details = wollet.pset_details(&pset).unwrap();
-        assert_eq!(details.balance().fees().into_values().next().unwrap(), 254);
+        assert_eq!(details.balance().fee(), 254);
+        assert_eq!(details.balance().fees_in(&network.policy_asset()), 254);
 
         let balances = details.balance().balances();
         assert_eq!(balances.len(), 1);

@@ -162,6 +162,7 @@ impl TestEnvBuilder {
             "-evbparams=simplicity:-1:::", // Enable Simplicity from block 0
             "-minrelaytxfee=0",            // test tx with no fees/asset fees
             "-blockmintxfee=0",            // test tx with no fees/asset fees
+            "-acceptunlimitedissuances=1",
         ];
         if let Some(bitcoind) = bitcoind.as_ref() {
             args.push("-validatepegin=1");

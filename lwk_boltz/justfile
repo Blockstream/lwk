@@ -11,8 +11,19 @@ regtest-env-start:
         exit 0
     fi
     
+    dump_regtest_logs() {
+        echo "Regtest startup failed; dumping compose status and logs"
+        (
+            cd regtest
+            docker compose ps || true
+            docker compose logs --no-color --tail=200 \
+                lnd-1 lnd-2 lnd-3 bitcoind bitcoind-init elementsd electrs electrs-liquid \
+                || true
+        )
+    }
+
     mkdir -p regtest/data/bitcoind && chown -R 1000:1000 regtest/data/bitcoind || true
-    (cd regtest && ./start.sh)
+    (cd regtest && ./start.sh) || { dump_regtest_logs; exit 1; }
     (cd proxy && docker compose up -d)
     
     # Wait for required files to be created (timeout after 30 seconds)

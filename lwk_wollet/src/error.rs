@@ -242,9 +242,6 @@ pub enum Error {
     #[error("Store error: {0}")]
     StoreError(lwk_common::BoxError),
 
-    #[error("Issuance amount greater than 21M*10^8 are not allowed")]
-    IssuanceAmountGreaterThanBtcMax,
-
     #[error("Number of transaction inputs ({0}) exceeds maximum allowed input count of 256")]
     TooManyInputs(usize),
 

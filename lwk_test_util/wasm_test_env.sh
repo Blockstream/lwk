@@ -78,6 +78,7 @@ $ELEMENTSD_EXEC \
     -rpcport=$ELEMENTS_PORT \
     -txindex=1 \
     -zmqpubrawtx=$ZMQ_ENDPOINT \
+    -acceptunlimitedissuances=1 \
     -daemon
 
 echo "Waiting for elementsd to start..."

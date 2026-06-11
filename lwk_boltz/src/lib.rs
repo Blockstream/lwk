@@ -61,7 +61,6 @@ use lwk_wollet::bitcoin::bip32::DerivationPath;
 use lwk_wollet::bitcoin::bip32::Xpriv;
 use lwk_wollet::bitcoin::bip32::Xpub;
 use lwk_wollet::bitcoin::NetworkKind;
-use lwk_wollet::elements;
 use lwk_wollet::ElectrumUrl;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast::error::TryRecvError;
@@ -913,18 +912,6 @@ pub async fn broadcast_tx_with_retry(
     Err(Error::RetryBroadcastFailed {
         swap_id: swap_id.to_string(),
     })
-}
-
-pub(crate) async fn wait_for_liquid_tx(
-    chain_client: &ChainClient,
-    txid: &str,
-    timeout: Duration,
-) -> Result<elements::Transaction, Error> {
-    let c = Chain::Liquid(LiquidChain::Liquid);
-    match wait_for_chain_tx(chain_client, c, txid, timeout).await? {
-        BtcLikeTransaction::Liquid(tx) => Ok(tx),
-        BtcLikeTransaction::Bitcoin(_) => unreachable!(),
-    }
 }
 
 pub(crate) async fn wait_for_chain_tx(

@@ -1406,7 +1406,12 @@ mod tests {
         crate::utils::assert_next_continue_status(&mut response, "transaction.server.mempool")
             .await;
 
-        crate::utils::mine_blocks(1441).await.unwrap();
+        // Mining 1441 blocks in chunks to avoid CI failure
+        for _ in 0..14 {
+            crate::utils::mine_blocks(100).await.unwrap();
+        }
+        crate::utils::mine_blocks(41).await.unwrap();
+
         log::info!("Mined 1441 blocks -> Boltz ask for a refund because we didn't claim");
         sleep(Duration::from_secs(3)).await;
 

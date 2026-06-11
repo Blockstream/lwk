@@ -14,6 +14,7 @@ use boltz_client::boltz::SwapStatus;
 use boltz_client::boltz::Webhook;
 use boltz_client::boltz::{ClaimDetails, CreateReverseResponse};
 use boltz_client::fees::Fee;
+use boltz_client::network::Chain;
 use boltz_client::swaps::magic_routing::find_magic_routing_hint;
 use boltz_client::swaps::magic_routing::sign_address;
 use boltz_client::swaps::ChainClient;
@@ -23,11 +24,11 @@ use boltz_client::swaps::TransactionOptions;
 use boltz_client::Bolt11Invoice;
 use boltz_client::PublicKey;
 use lwk_wollet::elements;
+use lwk_wollet::elements::bitcoin;
 
 use crate::derive_keypair;
 use crate::error::Error;
-use crate::invoice_data::InvoiceData;
-use crate::invoice_data::InvoiceDataSerializable;
+use crate::invoice_data::{reverse_chain_from_str, InvoiceData, InvoiceDataSerializable};
 use crate::mnemonic_identifier;
 use crate::preimage_from_keypair;
 use crate::swap_state::SwapStateTrait;
@@ -36,7 +37,7 @@ use crate::DynStore;
 use crate::SwapPersistence;
 use crate::SwapType;
 use crate::LIQUID_UNCOOPERATIVE_EXTRA;
-use crate::{broadcast_tx_with_retry, next_status, wait_for_liquid_tx, BoltzSession, SwapState};
+use crate::{broadcast_tx_with_retry, next_status, wait_for_chain_tx, BoltzSession, SwapState};
 
 pub struct InvoiceResponse {
     pub data: InvoiceData,
@@ -80,7 +81,42 @@ impl BoltzSession {
         claim_address: &elements::Address,
         webhook: Option<Webhook<RevSwapStates>>,
     ) -> Result<InvoiceResponse, Error> {
-        let chain = self.chain();
+        self.invoice_with_chain(
+            amount,
+            description,
+            self.chain(),
+            claim_address.to_string(),
+            webhook,
+        )
+        .await
+    }
+
+    /// Create a reverse swap from Lightning to Bitcoin.
+    pub async fn ln_to_btc(
+        &self,
+        amount: u64,
+        description: Option<String>,
+        claim_address: &bitcoin::Address,
+        webhook: Option<Webhook<RevSwapStates>>,
+    ) -> Result<InvoiceResponse, Error> {
+        self.invoice_with_chain(
+            amount,
+            description,
+            self.btc_chain(),
+            claim_address.to_string(),
+            webhook,
+        )
+        .await
+    }
+
+    async fn invoice_with_chain(
+        &self,
+        amount: u64,
+        description: Option<String>,
+        to_chain: Chain,
+        claim_address: String,
+        webhook: Option<Webhook<RevSwapStates>>,
+    ) -> Result<InvoiceResponse, Error> {
         let (key_index, our_keys) = self.derive_next_keypair()?;
         let preimage = self.preimage(&our_keys);
 
@@ -90,17 +126,17 @@ impl BoltzSession {
         };
         let webhook_str = format!("{webhook:?}");
 
-        let addrs_sig = sign_address(&claim_address.to_string(), &our_keys)?;
+        let addrs_sig = sign_address(&claim_address, &our_keys)?;
         let create_reverse_req = CreateReverseRequest {
             from: "BTC".to_string(),
-            to: chain.to_string(),
+            to: to_chain.to_string(),
             invoice: None,
             invoice_amount: Some(amount),
             preimage_hash: Some(preimage.sha256),
             description,
             description_hash: None,
             address_signature: Some(addrs_sig.to_string()),
-            address: Some(claim_address.to_string()),
+            address: Some(claim_address.clone()),
             claim_public_key,
             referral_id: self.referral_id.clone(),
             webhook,
@@ -119,7 +155,11 @@ impl BoltzSession {
 
         let (boltz_fee, claim_fee) = {
             let swap_info = self.swap_info.lock().await;
-            match swap_info.reverse_pairs.get_btc_to_lbtc_pair() {
+            let pair = match to_chain {
+                Chain::Bitcoin(_) => swap_info.reverse_pairs.get_btc_to_btc_pair(),
+                Chain::Liquid(_) => swap_info.reverse_pairs.get_btc_to_lbtc_pair(),
+            };
+            match pair {
                 Some(pair) => (
                     Some(pair.fees.boltz(amount)),
                     Some(pair.fees.claim_estimate()),
@@ -139,7 +179,7 @@ impl BoltzSession {
         log::debug!("[swap:{swap_id}] Got Reverse swap response: {reverse_resp:?}");
 
         let swap_script =
-            SwapScript::reverse_from_swap_resp(chain, &reverse_resp, claim_public_key)?;
+            SwapScript::reverse_from_swap_resp(to_chain, &reverse_resp, claim_public_key)?;
         log::info!("[swap:{swap_id}] subscribing to swap webhook:{webhook_str}");
         self.ws.subscribe_swap(&swap_id).await?;
         let mut rx = self.ws.updates();
@@ -166,7 +206,8 @@ impl BoltzSession {
                 create_reverse_response: reverse_resp.clone(),
                 our_keys,
                 preimage,
-                claim_address: claim_address.clone(),
+                claim_address,
+                to_chain,
                 key_index,
                 mnemonic_identifier: mnemonic_identifier(&self.mnemonic)?,
                 claim_broadcasted: false,
@@ -189,10 +230,10 @@ impl BoltzSession {
         &self,
         data: InvoiceDataSerializable,
     ) -> Result<InvoiceResponse, Error> {
-        let data = to_invoice_data(data, &self.mnemonic)?;
+        let data = to_invoice_data(data, &self.mnemonic, self.chain())?;
         let p = data.our_keys.public_key();
         let swap_script = SwapScript::reverse_from_swap_resp(
-            self.chain(),
+            data.to_chain,
             &data.create_reverse_response,
             PublicKey {
                 inner: p,
@@ -235,11 +276,34 @@ impl BoltzSession {
         swaps: &[SwapRestoreResponse],
         claim_address: &elements::Address,
     ) -> Result<Vec<InvoiceData>, Error> {
+        self.restorable_reverse_swaps_with_address(swaps, claim_address.to_string())
+            .await
+    }
+
+    pub async fn restorable_reverse_btc_swaps(
+        &self,
+        swaps: &[SwapRestoreResponse],
+        claim_address: &bitcoin::Address,
+    ) -> Result<Vec<InvoiceData>, Error> {
+        self.restorable_reverse_swaps_with_address(swaps, claim_address.to_string())
+            .await
+    }
+
+    async fn restorable_reverse_swaps_with_address(
+        &self,
+        swaps: &[SwapRestoreResponse],
+        claim_address: String,
+    ) -> Result<Vec<InvoiceData>, Error> {
         swaps
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Reverse))
             .map(|e| {
-                convert_swap_restore_response_to_invoice_data(e, &self.mnemonic, claim_address)
+                convert_swap_restore_response_to_invoice_data(
+                    e,
+                    &self.mnemonic,
+                    &claim_address,
+                    self.chain(),
+                )
             })
             .collect()
     }
@@ -248,7 +312,8 @@ impl BoltzSession {
 pub(crate) fn convert_swap_restore_response_to_invoice_data(
     e: &boltz_client::boltz::SwapRestoreResponse,
     mnemonic: &Mnemonic,
-    claim_address: &elements::Address,
+    claim_address: &str,
+    default_to_chain: Chain,
 ) -> Result<InvoiceData, Error> {
     // Only handle reverse swaps for now
     match e.swap_type {
@@ -311,6 +376,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
             swap_id: Some(e.id.clone()),
             msg: format!("Failed to parse status '{}' as SwapState: {err}", e.status),
         })?;
+    let to_chain = reverse_chain_from_str(&e.to, default_to_chain, Some(&e.id))?;
 
     Ok(InvoiceData {
         last_state,
@@ -323,7 +389,8 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
         create_reverse_response,
         our_keys,
         preimage,
-        claim_address: claim_address.clone(),
+        claim_address: claim_address.to_string(),
+        to_chain,
         key_index: claim_details.key_index,
         mnemonic_identifier: mnemonic_identifier(mnemonic)?,
         claim_broadcasted: false,
@@ -349,8 +416,17 @@ impl InvoiceResponse {
         log::info!("[swap:{swap_id}] transaction.mempool/confirmed Boltz broadcasted funding tx");
 
         let lockup_tx = if let Some(txid) = update.transaction.as_ref().map(|e| e.id.clone()) {
-            log::debug!("[swap:{swap_id}] Waiting for Liquid index to see lockup tx {txid}");
-            let tx = wait_for_liquid_tx(&self.chain_client, &txid, self.timeout_advance).await?;
+            log::debug!(
+                "[swap:{swap_id}] Waiting for {} index to see lockup tx {txid}",
+                self.data.to_chain
+            );
+            let tx = wait_for_chain_tx(
+                &self.chain_client,
+                self.data.to_chain,
+                &txid,
+                self.timeout_advance,
+            )
+            .await?;
             if self.data.lockup_txid.is_none() {
                 self.data.lockup_txid = Some(txid);
             }
@@ -363,15 +439,22 @@ impl InvoiceResponse {
         let options = match lockup_tx {
             Some(tx) => TransactionOptions::default()
                 .with_cooperative(true)
-                .with_lockup_tx(boltz_client::swaps::BtcLikeTransaction::Liquid(tx)),
+                .with_lockup_tx(tx),
             None => TransactionOptions::default().with_cooperative(true),
         };
 
         // Use the claim fee from Boltz API to match the quoted amount exactly.
-        // Add LIQUID_UNCOOPERATIVE_EXTRA as buffer for script-path claims.
+        // For Liquid claims, add LIQUID_UNCOOPERATIVE_EXTRA as buffer.
         // Fall back to Fee::Relative if claim_fee is not available (e.g., restored swaps).
         let fee = match self.data.claim_fee {
-            Some(claim_fee) => Fee::Absolute(claim_fee + LIQUID_UNCOOPERATIVE_EXTRA),
+            Some(claim_fee) => {
+                let extra = if matches!(self.data.to_chain, Chain::Liquid(_)) {
+                    LIQUID_UNCOOPERATIVE_EXTRA
+                } else {
+                    0
+                };
+                Fee::Absolute(claim_fee + extra)
+            }
             None => Fee::Relative(0.12),
         };
 
@@ -381,7 +464,7 @@ impl InvoiceResponse {
                 &self.data.preimage,
                 SwapTransactionParams {
                     keys: self.data.our_keys,
-                    output_address: self.data.claim_address.to_string(),
+                    output_address: self.data.claim_address.clone(),
                     fee,
                     swap_id: swap_id.clone(),
                     options: Some(options),
@@ -440,6 +523,18 @@ impl InvoiceResponse {
     /// The onchain amount that Boltz locks up for the swap
     pub fn onchain_amount(&self) -> u64 {
         self.data.create_reverse_response.onchain_amount
+    }
+
+    /// The claim address where the user receives funds.
+    ///
+    /// This can be either a Liquid or Bitcoin address according to [`Self::to_chain`].
+    pub fn claim_address(&self) -> &str {
+        &self.data.claim_address
+    }
+
+    /// The chain where the user claim transaction is expected.
+    pub fn to_chain(&self) -> Chain {
+        self.data.to_chain
     }
 
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {

@@ -2,6 +2,7 @@ use std::{fmt::Display, net::SocketAddr, path::PathBuf};
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
+use lwk_app::TokenProvider;
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum Network {
@@ -980,7 +981,73 @@ impl std::fmt::Display for ServerType {
     }
 }
 
+#[derive(Debug, Args, Clone)]
+pub struct AuthConfig {
+    /// Login URL for authenticated Esplora
+    #[arg(long, env)]
+    pub auth_token_url: Option<String>,
+
+    /// Client ID for authenticated Esplora
+    #[arg(long, env)]
+    pub auth_client_id: Option<String>,
+
+    /// Client secret for authenticated Esplora
+    #[arg(long, env)]
+    pub auth_client_secret: Option<String>,
+
+    /// Static token for authenticated Esplora
+    #[arg(long, env)]
+    pub auth_static_token: Option<String>,
+}
+
+#[allow(dead_code)] // the same issue as CliCommand
+impl AuthConfig {
+    pub fn token_provider(self, server_type: ServerType) -> Result<TokenProvider, anyhow::Error> {
+        let oauth_fields = [
+            self.auth_token_url.clone(),
+            self.auth_client_id.clone(),
+            self.auth_client_secret.clone(),
+        ];
+
+        let is_all_blockstream_present = oauth_fields.iter().all(|f| f.is_some());
+
+        if oauth_fields.iter().any(|f| f.is_some()) && !is_all_blockstream_present {
+            anyhow::bail!(
+                "All of the following must be set together for authentication:\n\
+                         --auth-token-url     or env: AUTH_TOKEN_URL\n\
+                         --auth-client-id     or env: AUTH_CLIENT_ID\n\
+                         --auth-client-secret or env: AUTH_CLIENT_SECRET"
+            );
+        }
+
+        if (is_all_blockstream_present || self.auth_static_token.is_some())
+            && matches!(server_type, ServerType::Electrum)
+        {
+            anyhow::bail!("Authentication is not supported with Electrum server type");
+        }
+
+        if is_all_blockstream_present {
+            if self.auth_static_token.is_some() {
+                anyhow::bail!(
+                    "Static token for authentication used with Blockstream API authentication"
+                )
+            }
+
+            return Ok(TokenProvider::Blockstream {
+                url: self.auth_token_url.expect("checked above"),
+                client_id: self.auth_client_id.expect("checked above"),
+                client_secret: self.auth_client_secret.expect("checked above"),
+            });
+        } else if let Some(token) = self.auth_static_token {
+            return Ok(TokenProvider::Static(token));
+        }
+
+        Ok(TokenProvider::None)
+    }
+}
+
 #[derive(Debug, Subcommand)]
+#[allow(clippy::large_enum_variant)]
 pub enum ServerCommand {
     /// Start the server
     Start {
@@ -1021,6 +1088,10 @@ pub enum ServerCommand {
         /// Persist blinders for sent outputs (experimental)
         #[arg(long)]
         with_experimental_blinders: bool,
+
+        /// Authentication parameters
+        #[command(flatten)]
+        auth: AuthConfig,
     },
 
     /// Wait until an entire blockchain scan has been completed

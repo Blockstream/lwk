@@ -4,7 +4,8 @@ use lwk_common::electrum_ssl::LIQUID_TESTNET_SOCKET;
 use lwk_common::Network;
 use lwk_jade::TIMEOUT;
 use lwk_wollet::amp2::Amp2;
-use lwk_wollet::clients::blocking::EsploraClient;
+use lwk_wollet::asyncr::EsploraClientBuilder;
+use lwk_wollet::clients::TokenProvider;
 use lwk_wollet::{amp2, ElectrumClient};
 use std::fs;
 use std::net::SocketAddr;
@@ -30,6 +31,8 @@ pub struct Config {
     pub amp2_keyorigin_xpub: String,
 
     pub with_experimental_blinders: bool,
+
+    pub token_provider: TokenProvider,
 }
 
 impl Config {
@@ -47,6 +50,7 @@ impl Config {
             amp2_url: amp2::URL_TESTNET.into(),
             amp2_keyorigin_xpub: amp2::KEYORIGIN_XPUB_TESTNET.into(),
             with_experimental_blinders: false,
+            token_provider: TokenProvider::None,
         }
     }
 
@@ -64,6 +68,7 @@ impl Config {
             amp2_url: "".into(),
             amp2_keyorigin_xpub: "".into(),
             with_experimental_blinders: false,
+            token_provider: TokenProvider::None,
         }
     }
 
@@ -84,6 +89,7 @@ impl Config {
             amp2_url: "".into(),
             amp2_keyorigin_xpub: "".into(),
             with_experimental_blinders: false,
+            token_provider: TokenProvider::None,
         }
     }
 
@@ -134,12 +140,16 @@ impl Config {
                 Ok(BlockchainClient::Electrum(electrum_client))
             }
             "esplora" => {
-                let esplora_client = EsploraClient::new(&self.server_url, self.network)?;
+                let builder = EsploraClientBuilder::new(&self.server_url, self.network)
+                    .token_provider(self.token_provider.clone());
+                let esplora_client = builder.build_blocking()?;
                 Ok(BlockchainClient::Esplora(esplora_client))
             }
             "waterfalls" => {
-                let waterfalls_client =
-                    EsploraClient::new_waterfalls(&self.server_url, self.network)?;
+                let builder = EsploraClientBuilder::new(&self.server_url, self.network)
+                    .waterfalls(true)
+                    .token_provider(self.token_provider.clone());
+                let waterfalls_client = builder.build_blocking()?;
                 Ok(BlockchainClient::Esplora(waterfalls_client))
             }
             _ => Err(Error::Generic(format!(

@@ -56,6 +56,7 @@ pub use client::Client;
 pub use config::Config;
 pub use error::Error;
 pub use lwk_tiny_jrpc::RpcError;
+pub use lwk_wollet::clients::TokenProvider;
 
 mod blockchain_client;
 mod client;

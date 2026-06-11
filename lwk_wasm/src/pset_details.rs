@@ -101,6 +101,15 @@ impl PsetDetails {
 
 #[wasm_bindgen]
 impl PsetBalance {
+    /// Fee paid by this transaction.
+    ///
+    /// Warning: if there are multiple assets paying fees this function can return an incorrect value.
+    ///
+    /// Deprecated: use `feesIn(assetId)` or `fees()` instead.
+    pub fn fee(&self) -> u64 {
+        *self.inner.fees.values().next().unwrap_or(&0)
+    }
+
     /// Fees paid by this transaction.
     pub fn fees(&self) -> Fees {
         self.inner.fees.clone().into()
@@ -291,6 +300,7 @@ mod tests {
 
         let details = wollet.pset_details(&pset).unwrap();
         assert_eq!(details.balance().fees_in(network.policy_asset()), 254);
+        assert_eq!(details.balance().fee(), 254);
         let balance: HashMap<lwk_wollet::elements::AssetId, i64> =
             serde_wasm_bindgen::from_value(details.balance().balances().entries().unwrap())
                 .unwrap();

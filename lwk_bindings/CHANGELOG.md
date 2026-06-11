@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* removed `PsetBalance::fee()`, replacement `PsetBalance::fees()` and `PsetBalance::fees_in(asset_id)` ([ELIP-0204](https://github.com/ElementsProject/ELIPs/blob/main/elip-0204.mediawiki)).
+* deprecated `PsetBalance::fee()`, replacement `PsetBalance::fees()` and `PsetBalance::fees_in(asset_id)` ([ELIP-0204](https://github.com/ElementsProject/ELIPs/blob/main/elip-0204.mediawiki)).
 
 ## 0.17.2
 

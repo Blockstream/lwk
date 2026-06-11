@@ -263,6 +263,7 @@ impl<T: Transport> LiquidClient<T> {
         let purpose = match variant {
             lwk_common::Singlesig::Wpkh => 84,
             lwk_common::Singlesig::ShWpkh => 49,
+            lwk_common::Singlesig::Tr => 86,
         };
         let path = format!("m/{purpose}h/{coin_type}h/0h")
             .parse()

@@ -52,6 +52,7 @@ pub trait Signer {
             Bip::Bip84 => 84,
             Bip::Bip49 => 49,
             Bip::Bip87 => 87,
+            Bip::Bip86 => 86,
         };
         let account = 0;
         let path = [purpose, coin_type, account];

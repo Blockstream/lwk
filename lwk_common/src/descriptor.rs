@@ -20,6 +20,7 @@ pub fn singlesig_desc<S: Signer + ?Sized>(
     let (prefix, path, suffix) = match script_variant {
         Singlesig::Wpkh => ("elwpkh", format!("84h/{coin_type}h/0h"), ""),
         Singlesig::ShWpkh => ("elsh(wpkh", format!("49h/{coin_type}h/0h"), ")"),
+        Singlesig::Tr => ("eltr", format!("86h/{coin_type}h/0h"), ""),
     };
 
     let fingerprint = signer.fingerprint().map_err(|e| format!("{e:?}"))?;
@@ -108,11 +109,14 @@ pub enum Singlesig {
 
     /// Witness public key hash wrapped in script hash as defined by bip49
     ShWpkh,
+
+    /// Taproot as defined by bip86
+    Tr,
 }
 
 /// The error type returned by Singlesig::from_str
 #[derive(Error, Debug)]
-#[error("Invalid singlesig variant '{0}' supported variant are: 'wpkh', 'shwpkh'")]
+#[error("Invalid singlesig variant '{0}', supported variants are: 'wpkh', 'shwpkh', 'taproot'")]
 pub struct InvalidSinglesigVariant(String);
 
 impl FromStr for Singlesig {
@@ -122,6 +126,7 @@ impl FromStr for Singlesig {
         Ok(match s {
             "wpkh" => Singlesig::Wpkh,
             "shwpkh" => Singlesig::ShWpkh,
+            "tr" => Singlesig::Tr,
             v => return Err(InvalidSinglesigVariant(v.to_string())),
         })
     }
@@ -181,6 +186,8 @@ pub enum Bip {
     Bip49,
     /// For multisig wallets
     Bip87,
+    /// For P2TR wallets
+    Bip86,
 }
 
 impl std::fmt::Display for Bip {
@@ -189,13 +196,14 @@ impl std::fmt::Display for Bip {
             Bip::Bip84 => write!(f, "bip84"),
             Bip::Bip49 => write!(f, "bip49"),
             Bip::Bip87 => write!(f, "bip87"),
+            Bip::Bip86 => write!(f, "bip86"),
         }
     }
 }
 
 /// The error type returned by Bip::from_str
 #[derive(Error, Debug)]
-#[error("Invalid bip  variant '{0}' supported variant are: 'bip84'")]
+#[error("Invalid bip variant '{0}', supported variants are: 'bip49', 'bip84', 'bip86', 'bip87'")]
 pub struct InvalidBipVariant(String);
 
 impl FromStr for Bip {
@@ -206,6 +214,7 @@ impl FromStr for Bip {
             "bip84" => Bip::Bip84,
             "bip49" => Bip::Bip49,
             "bip87" => Bip::Bip87,
+            "bip86" => Bip::Bip86,
             v => return Err(InvalidBipVariant(v.to_string())),
         })
     }
@@ -241,11 +250,23 @@ mod test {
 
     #[test]
     fn roundtrip_bip() {
-        for el in ["bip49", "bip84", "bip87"] {
+        for el in ["bip49", "bip84", "bip87", "bip86"] {
             let bip = Bip::from_str(el).unwrap();
             let bip_str = bip.to_string();
             assert_eq!(el, bip_str);
         }
         Bip::from_str("vattelapesca").unwrap_err();
+    }
+
+    #[test]
+    fn singlesig_from_str() {
+        use super::Singlesig;
+        assert!(matches!(Singlesig::from_str("wpkh"), Ok(Singlesig::Wpkh)));
+        assert!(matches!(
+            Singlesig::from_str("shwpkh"),
+            Ok(Singlesig::ShWpkh)
+        ));
+        assert!(matches!(Singlesig::from_str("tr"), Ok(Singlesig::Tr)));
+        Singlesig::from_str("invalid").unwrap_err();
     }
 }

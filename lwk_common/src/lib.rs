@@ -55,6 +55,10 @@ pub use crate::store::{
     ArcDynStoreError, BoxError, DynStore, EncryptedStore, EncryptedStoreError, FakeStore,
     FileStore, MemoryStore, Store,
 };
+use elements::bitcoin::bip32::{DerivationPath, Fingerprint};
+use elements::bitcoin::PublicKey as BitcoinPublicKey;
+use elements::taproot::TapLeafHash;
+use elements_miniscript::elements::secp256k1_zkp::XOnlyPublicKey;
 pub use fee::*;
 
 /// A trait for async read/write operations used by hardware wallet connections
@@ -75,7 +79,6 @@ use elements_miniscript::confidential::Key;
 use elements_miniscript::descriptor::DescriptorSecretKey;
 use elements_miniscript::elements::bitcoin::secp256k1::SecretKey;
 use elements_miniscript::elements::{
-    bitcoin::{bip32::KeySource, key::PublicKey},
     opcodes::all::OP_RETURN,
     pset::PartiallySignedTransaction,
     script::Builder,
@@ -145,9 +148,15 @@ fn commitments(
 fn is_mine(
     script_pubkey: &Script,
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
-    bip32_derivation: &BTreeMap<PublicKey, KeySource>,
+    bip32_derivation: &BTreeMap<BitcoinPublicKey, (Fingerprint, DerivationPath)>,
+    tap_key_origins: &BTreeMap<XOnlyPublicKey, (Vec<TapLeafHash>, (Fingerprint, DerivationPath))>,
 ) -> Result<bool, Error> {
-    for (_, path) in bip32_derivation.values() {
+    let paths: Vec<&DerivationPath> = if script_pubkey.is_v1_p2tr() {
+        tap_key_origins.values().map(|(_, (_, path))| path).collect()
+    } else {
+        bip32_derivation.values().map(|(_, path)| path).collect()
+    };
+    for path in paths {
         // TODO should I check descriptor derivation path is compatible with given bip32_derivation?
         // TODO consider fingerprint if available
         if path.is_empty() {
@@ -190,8 +199,13 @@ pub fn pset_balance(
                 });
             }
             Some(txout) => {
-                if !is_mine(&txout.script_pubkey, descriptor, &input.bip32_derivation)
-                    .unwrap_or(false)
+                if !is_mine(
+                    &txout.script_pubkey,
+                    descriptor,
+                    &input.bip32_derivation,
+                    &input.tap_key_origins,
+                )
+                .unwrap_or(false)
                 {
                     // Ignore outputs we don't own
                     continue;
@@ -276,7 +290,14 @@ pub fn pset_balance(
             continue;
         }
 
-        if !is_mine(&output.script_pubkey, descriptor, &output.bip32_derivation).unwrap_or(false) {
+        if !is_mine(
+            &output.script_pubkey,
+            descriptor,
+            &output.bip32_derivation,
+            &output.tap_key_origins,
+        )
+        .unwrap_or(false)
+        {
             // external recipients
             let blinding_pubkey = output.blinding_key.as_ref().map(|k| k.inner);
             let address =

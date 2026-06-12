@@ -174,6 +174,19 @@ impl BoltzSession {
         Ok(inner)
     }
 
+    /// Blocking version of [`crate::BoltzSession::restorable_reverse_btc_swaps`]
+    pub fn restorable_reverse_btc_swaps(
+        &self,
+        swaps: &[SwapRestoreResponse],
+        claim_address: &bitcoin::Address,
+    ) -> Result<Vec<InvoiceData>, Error> {
+        let inner = self.runtime.block_on(
+            self.inner
+                .restorable_reverse_btc_swaps(swaps, claim_address),
+        )?;
+        Ok(inner)
+    }
+
     /// Blocking version of [`crate::BoltzSession::restorable_submarine_swaps`]
     pub fn restorable_submarine_swaps(
         &self,

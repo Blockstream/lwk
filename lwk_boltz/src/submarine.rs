@@ -300,6 +300,24 @@ impl BoltzSession {
         swaps: &[SwapRestoreResponse],
         refund_address: &elements::Address,
     ) -> Result<Vec<PreparePayData>, Error> {
+        self.restorable_submarine_swaps_with_address(swaps, refund_address.to_string())
+            .await
+    }
+
+    pub async fn restorable_submarine_btc_swaps(
+        &self,
+        swaps: &[SwapRestoreResponse],
+        refund_address: &bitcoin::Address,
+    ) -> Result<Vec<PreparePayData>, Error> {
+        self.restorable_submarine_swaps_with_address(swaps, refund_address.to_string())
+            .await
+    }
+
+    async fn restorable_submarine_swaps_with_address(
+        &self,
+        swaps: &[SwapRestoreResponse],
+        refund_address: String,
+    ) -> Result<Vec<PreparePayData>, Error> {
         swaps
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Submarine))
@@ -307,7 +325,7 @@ impl BoltzSession {
                 convert_swap_restore_response_to_prepare_pay_data(
                     e,
                     &self.mnemonic,
-                    &refund_address.to_string(),
+                    &refund_address,
                     self.chain(),
                 )
             })

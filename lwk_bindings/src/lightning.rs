@@ -647,6 +647,30 @@ impl BoltzSession {
 
     /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
     ///
+    /// - filter the reverse BTC swaps
+    /// - add information from the session
+    /// - return typed data
+    ///
+    /// The claim address doesn't need to be the same used when creating the swap.
+    pub fn restorable_reverse_btc_swaps(
+        &self,
+        swap_list: &SwapList,
+        claim_address: &BitcoinAddress,
+    ) -> Result<Vec<String>, LwkError> {
+        let response = self
+            .inner
+            .restorable_reverse_btc_swaps(&swap_list.inner, claim_address.as_ref())?;
+        let data = response
+            .into_iter()
+            .map(|e| self.inner.restore_invoice(e.into()))
+            .map(|e| e.and_then(|e| e.serialize()))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(data)
+    }
+
+    /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
+    ///
     /// - filter the submarine swaps
     /// - add information from the session
     /// - return typed data

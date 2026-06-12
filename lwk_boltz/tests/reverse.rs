@@ -605,6 +605,92 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_restore_reverse_btc_from_boltz() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = utils::start_block_mining();
+
+        let network = Network::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+
+        let claim_address = utils::generate_address(BTC_CHAIN.into()).await.unwrap();
+        let claim_address = bitcoin::Address::from_str(&claim_address)
+            .unwrap()
+            .assume_checked();
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic.clone())
+            .build()
+            .await
+            .unwrap();
+
+        // Test restore after losing local data for a Lightning to Bitcoin reverse swap.
+        let mut invoice_response = session
+            .ln_to_btc(100_000, None, &claim_address, None)
+            .await
+            .unwrap();
+        let swap_id = invoice_response.swap_id().to_string();
+        utils::start_pay_invoice_lnd(invoice_response.bolt11_invoice().to_string());
+
+        let _ = invoice_response.advance().await.unwrap();
+        let _ = invoice_response.advance().await.unwrap();
+
+        assert!(invoice_response.claim_txid().is_some());
+        assert!(invoice_response.lockup_txid().is_some());
+        let original_lockup_txid = invoice_response.lockup_txid().map(|s| s.to_string());
+
+        drop(invoice_response);
+        drop(session);
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic)
+            .build()
+            .await
+            .unwrap();
+
+        let swap_list = session.swap_restore().await.unwrap();
+        let restorable = session
+            .restorable_reverse_btc_swaps(&swap_list, &claim_address)
+            .await
+            .unwrap();
+
+        let data: InvoiceDataSerializable = restorable
+            .into_iter()
+            .map(Into::into)
+            .find(|data: &InvoiceDataSerializable| data.create_reverse_response.id == swap_id)
+            .expect("our BTC reverse swap should be restorable from Boltz");
+        assert!(data.preimage.is_none());
+        assert_eq!(data.to_chain, "BTC");
+
+        let invoice_response_restored = session.restore_invoice(data).await.unwrap();
+        assert_eq!(swap_id, invoice_response_restored.swap_id());
+        assert_eq!(
+            invoice_response_restored.claim_address(),
+            claim_address.to_string()
+        );
+        assert_eq!(invoice_response_restored.to_chain(), BTC_CHAIN.into());
+        assert!(invoice_response_restored.claim_txid().is_none()); // Boltz does not store claim information.
+        assert_eq!(
+            invoice_response_restored
+                .lockup_txid()
+                .map(|s| s.to_string()),
+            original_lockup_txid
+        );
+
+        // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_restore_claim_txid() {
         let _ = env_logger::try_init();
 

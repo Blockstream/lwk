@@ -367,6 +367,10 @@ impl PreparePayResponse {
         self.inner.uri()
     }
 
+    pub fn lockup_address(&self) -> &str {
+        self.inner.lockup_address()
+    }
+
     pub fn uri_address(&self) -> Result<elements::Address, Error> {
         self.inner.uri_address()
     }

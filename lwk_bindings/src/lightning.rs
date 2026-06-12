@@ -883,6 +883,16 @@ impl PreparePayResponse {
             .uri())
     }
 
+    pub fn lockup_address(&self) -> Result<String, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .lockup_address()
+            .to_string())
+    }
+
     pub fn uri_address(&self) -> Result<Arc<Address>, LwkError> {
         let uri_address = self
             .inner

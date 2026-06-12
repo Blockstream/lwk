@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 /// Currency code as defined by ISO 4217
 #[derive(uniffi::Object, PartialEq, Eq, Hash, Debug, Clone)]
-#[uniffi::export(Display, Hash, Eq)]
+#[cfg_attr(feature = "uniffi_builtin_traits", uniffi::export(Display, Hash, Eq))]
 pub struct CurrencyCode {
     pub(crate) inner: lwk_wollet::CurrencyCode,
 }

@@ -37,10 +37,14 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 name = "lwk"
 
 [features]
-default = ["lightning"]
+default = ["lightning", "uniffi_builtin_traits"]
 foreign_bindings = ["test_env"]
 lightning = ["lwk_boltz", "tokio", "log"]
 test_env = ["dep:lwk_test_util"]
+# Disable for deterministic release builds: uniffi 0.29.4 emits these built-in
+# trait exports in nondeterministic order when multiple traits are exported.
+# This is fixed on uniffi main and will likely be fixed in uniffi 0.31.2.
+uniffi_builtin_traits = []
 # Experimental: API behind this feature is unstable and may change without notice.
 simplicity = ["lwk_simplicity"]
 

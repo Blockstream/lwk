@@ -8,7 +8,7 @@ use crate::{types::AssetId, ElectrumClient, EsploraClient, LwkError, TxBuilder};
 
 /// The network of the elements blockchain.
 #[derive(uniffi::Object, PartialEq, Eq, Hash, Debug, Clone, Copy)]
-#[uniffi::export(Display, Hash, Eq)]
+#[cfg_attr(feature = "uniffi_builtin_traits", uniffi::export(Display, Hash, Eq))]
 pub struct Network {
     pub(crate) inner: lwk_common::Network,
 }

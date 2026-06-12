@@ -4,7 +4,7 @@ use crate::{CurrencyCode, LwkError, WolletDescriptor};
 
 /// POS (Point of Sale) configuration for encoding/decoding
 #[derive(uniffi::Object, PartialEq, Eq, Hash, Debug, Clone)]
-#[uniffi::export(Display, Hash, Eq)]
+#[cfg_attr(feature = "uniffi_builtin_traits", uniffi::export(Display, Hash, Eq))]
 pub struct PosConfig {
     pub(crate) inner: lwk_wollet::PosConfig,
 }

@@ -958,8 +958,8 @@ impl EsploraClient {
                 return Ok(response);
             }
 
-            last_status = response.status();
             num_attempts += 1;
+            last_status = response.status();
         }
 
         log::warn!("{url} tried {num_attempts} times, failing");
@@ -1036,8 +1036,8 @@ impl EsploraClient {
                 return Ok(response);
             }
 
-            last_status = response.status();
             num_attempts += 1;
+            last_status = response.status();
         }
 
         log::warn!("{url} tried {num_attempts} times, failing");
@@ -1437,6 +1437,28 @@ mod tests {
         assert!(client.is_err());
     }
 
+    // Tiny local server that replies with the given status for each request.
+    async fn serve(status_line: &'static str, body: &'static str) -> String {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            loop {
+                let (mut sock, _) = listener.accept().await.unwrap();
+                let mut buf = [0u8; 1024];
+                let _ = sock.read(&mut buf).await;
+                let resp = format!(
+                        "HTTP/1.1 {status_line}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    );
+                let _ = sock.write_all(resp.as_bytes()).await;
+            }
+        });
+        format!("http://{addr}")
+    }
+
     /// Regression test for the 422 carve-out in `get_with_retry`.
     ///
     /// A 422 must be surfaced as `Ok(response)`, not turned into an error: the
@@ -1446,28 +1468,6 @@ mod tests {
     /// Other non-success statuses must still become errors.
     #[tokio::test]
     async fn get_with_retry_passes_422_through() {
-        use tokio::io::{AsyncReadExt, AsyncWriteExt};
-        use tokio::net::TcpListener;
-
-        // Tiny local server that replies with the given status for each request.
-        async fn serve(status_line: &'static str, body: &'static str) -> String {
-            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-            let addr = listener.local_addr().unwrap();
-            tokio::spawn(async move {
-                loop {
-                    let (mut sock, _) = listener.accept().await.unwrap();
-                    let mut buf = [0u8; 1024];
-                    let _ = sock.read(&mut buf).await;
-                    let resp = format!(
-                        "HTTP/1.1 {status_line}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                        body.len()
-                    );
-                    let _ = sock.write_all(resp.as_bytes()).await;
-                }
-            });
-            format!("http://{addr}")
-        }
-
         // 422 is passed through so the caller can run its recovery.
         let base = serve("422 Unprocessable Entity", "CannotDecrypt").await;
         let client = EsploraClient::new(Network::Liquid, &base);
@@ -1478,6 +1478,22 @@ mod tests {
         let base = serve("500 Internal Server Error", "boom").await;
         let client = EsploraClient::new(Network::Liquid, &base);
         assert!(client.get_with_retry(&base).await.is_err());
+    }
+
+    /// Regression test: `get_with_retry` must not loop forever on repeated 401s.
+    #[tokio::test]
+    async fn get_with_retry_401_exhausts_retries() {
+        // defined locally in `get_with_retry``
+        const MAX_RETRIES: usize = 6;
+
+        let base = serve("401 Unauthorized", "").await;
+        let client = EsploraClient::new(Network::Liquid, &base);
+        assert!(client.get_with_retry(&base).await.is_err());
+
+        assert_eq!(
+            client.requests.load(std::sync::atomic::Ordering::Relaxed),
+            MAX_RETRIES
+        );
     }
 
     #[ignore = "requires internet connection and env vars"]

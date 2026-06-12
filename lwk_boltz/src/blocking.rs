@@ -63,6 +63,24 @@ impl BoltzSession {
         })
     }
 
+    /// Create a blocking submarine swap from Bitcoin to Lightning.
+    pub fn btc_to_ln(
+        &self,
+        lightning_payment: &LightningPayment,
+        refund_address: &bitcoin::Address,
+        webhook: Option<Webhook<SubSwapStates>>,
+    ) -> Result<PreparePayResponse, Error> {
+        let inner = self.runtime.block_on(self.inner.btc_to_ln(
+            lightning_payment,
+            refund_address,
+            webhook,
+        ))?;
+        Ok(PreparePayResponse {
+            inner,
+            runtime: self.runtime.clone(),
+        })
+    }
+
     /// Blocking version of [`crate::BoltzSession::fetch_bolt12_invoice`].
     pub fn fetch_bolt12_invoice(
         &self,
@@ -93,6 +111,26 @@ impl BoltzSession {
         webhook: Option<Webhook<RevSwapStates>>,
     ) -> Result<InvoiceResponse, Error> {
         let inner = self.runtime.block_on(self.inner.invoice(
+            amount,
+            description,
+            claim_address,
+            webhook,
+        ))?;
+        Ok(InvoiceResponse {
+            inner,
+            runtime: self.runtime.clone(),
+        })
+    }
+
+    /// Create a blocking reverse swap from Lightning to Bitcoin.
+    pub fn ln_to_btc(
+        &self,
+        amount: u64,
+        description: Option<String>,
+        claim_address: &bitcoin::Address,
+        webhook: Option<Webhook<RevSwapStates>>,
+    ) -> Result<InvoiceResponse, Error> {
+        let inner = self.runtime.block_on(self.inner.ln_to_btc(
             amount,
             description,
             claim_address,

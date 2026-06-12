@@ -155,19 +155,22 @@ def should_start_completion_thread(swap_data):
     ).strip().lower()
     return answer in ("y", "yes")
 
-def show_invoice(boltz_session, wollet):
-    """Create and show an invoice"""
-    # Ask for the invoice amount
+def read_positive_amount(prompt):
+    """Read a positive satoshi amount from stdin."""
     while True:
         try:
-            amount_str = input("Enter invoice amount in satoshis: ").strip()
+            amount_str = input(prompt).strip()
             amount = int(amount_str)
             if amount <= 0:
                 print("Amount must be positive. Please try again.")
                 continue
-            break
+            return amount
         except ValueError:
             print("Invalid amount. Please enter a valid number.")
+
+def show_invoice(boltz_session, wollet):
+    """Create and show an invoice"""
+    amount = read_positive_amount("Enter invoice amount in satoshis: ")
 
     # Get the latest address for claiming
     claim_address = wollet.address(None).address()
@@ -230,19 +233,7 @@ def pay_bolt12_offer(boltz_session, wollet, esplora_client, signer, skip_complet
             # Set the amount based on items
             lightning_payment.set_bolt12_invoice_amount_via_items(items)
         else:
-            # Ask for amount in satoshis
-            while True:
-                try:
-                    amount_str = input("Enter amount in satoshis: ").strip()
-                    amount = int(amount_str)
-                    if amount <= 0:
-                        print("Amount must be positive. Please try again.")
-                        continue
-                    break
-                except ValueError:
-                    print("Invalid amount. Please enter a valid number.")
-
-            # Set the amount
+            amount = read_positive_amount("Enter amount in satoshis: ")
             lightning_payment.set_bolt12_invoice_amount(amount)
 
         # Get refund address
@@ -713,16 +704,7 @@ def get_quote(boltz_session):
     else:
         prompt = "Enter send amount in satoshis: "
     
-    while True:
-        try:
-            amount_str = input(prompt).strip()
-            amount = int(amount_str)
-            if amount <= 0:
-                print("Amount must be positive. Please try again.")
-                continue
-            break
-        except ValueError:
-            print("Invalid amount. Please enter a valid number.")
+    amount = read_positive_amount(prompt)
     
     try:
         # Create quote using appropriate method
@@ -755,17 +737,7 @@ def get_quote(boltz_session):
 
 def lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer):
     """Create a swap to convert LBTC to BTC"""
-    # Ask for the swap amount
-    while True:
-        try:
-            amount_str = input("Enter amount in satoshis to swap from LBTC to BTC: ").strip()
-            amount = int(amount_str)
-            if amount <= 0:
-                print("Amount must be positive. Please try again.")
-                continue
-            break
-        except ValueError:
-            print("Invalid amount. Please enter a valid number.")
+    amount = read_positive_amount("Enter amount in satoshis to swap from LBTC to BTC: ")
 
     # Ask for the Bitcoin claim address
     claim_address_str = input("Enter Bitcoin address to receive BTC: ").strip()
@@ -827,17 +799,7 @@ def lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer):
 
 def btc_to_lbtc_swap(boltz_session, wollet):
     """Create a swap to convert BTC to LBTC"""
-    # Ask for the swap amount
-    while True:
-        try:
-            amount_str = input("Enter amount in satoshis to swap from BTC to LBTC: ").strip()
-            amount = int(amount_str)
-            if amount <= 0:
-                print("Amount must be positive. Please try again.")
-                continue
-            break
-        except ValueError:
-            print("Invalid amount. Please enter a valid number.")
+    amount = read_positive_amount("Enter amount in satoshis to swap from BTC to LBTC: ")
 
     # Get a Liquid claim address from the wallet
     claim_address = wollet.address(None).address()

@@ -26,6 +26,17 @@ impl Amp2Descriptor {
     pub fn descriptor(&self) -> WolletDescriptor {
         self.inner.descriptor().into()
     }
+
+    /// Create an `Amp2Descriptor` using any `WolletDescriptor`
+    ///
+    /// Warning: AMP2 server only supports a limited subset of descriptors.
+    /// To make sure this AMP2 descriptor can be used safely,
+    /// register this with AMP2 as soon as possible.
+    #[uniffi::constructor]
+    pub fn new_with_custom_descriptor(desc: &WolletDescriptor) -> Self {
+        let inner = lwk_wollet::amp2::Amp2Descriptor::new_with_custom_descriptor(desc.into());
+        Self { inner }
+    }
 }
 
 impl From<lwk_wollet::amp2::Amp2Descriptor> for Amp2Descriptor {

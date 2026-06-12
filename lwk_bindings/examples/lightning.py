@@ -1064,6 +1064,8 @@ def main():
         print("18) Pay BOLT12 offer")
         print("19) Resolve BIP353 to BOLT12 offer")
         print("20) Resolve LNURL to Bolt11 invoice")
+        print("21) Pay Lightning from BTC (requires external btc wallet)")
+        print("22) Receive BTC from Lightning")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -1177,6 +1179,12 @@ def main():
         elif choice == '20':
             print("\n=== Resolving LNURL to Bolt11 Invoice ===")
             resolve_lnurl()
+        elif choice == '21':
+            print("\n=== Paying Lightning from BTC ===")
+            btc_to_ln_payment(boltz_session)
+        elif choice == '22':
+            print("\n=== Receiving BTC from Lightning ===")
+            ln_to_btc_invoice(boltz_session)
         elif choice == 'q':
             print("Goodbye!")
             break

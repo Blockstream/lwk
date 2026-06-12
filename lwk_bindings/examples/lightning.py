@@ -428,6 +428,37 @@ def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_t
     except Exception as e:
         print(f"Error preparing payment: {e}")
 
+def btc_to_ln_payment(boltz_session):
+    """Pay a Lightning invoice or offer from BTC onchain funds."""
+    try:
+        lightning_payment = read_lightning_payment("Enter bolt11 invoice or BOLT12 offer: ")
+
+        refund_address_str = input("Enter Bitcoin address for refunds: ").strip()
+        refund_address = BitcoinAddress(refund_address_str)
+
+        webhook_url = os.getenv('WEBHOOK')
+        webhook = WebHook(webhook_url, status=[]) if webhook_url else None
+        prepare_pay_response = boltz_session.btc_to_ln(lightning_payment, refund_address, webhook)
+
+        fee = prepare_pay_response.fee()
+        print(f"Fee: {fee}")
+        boltz_fee = prepare_pay_response.boltz_fee()
+        print(f"Boltz fee: {boltz_fee}")
+
+        swap_id = prepare_pay_response.swap_id()
+        lockup_address = prepare_pay_response.lockup_address()
+        lockup_amount = prepare_pay_response.uri_amount()
+        print(f"Swap ID: {swap_id}")
+        print(f"\n***** PLEASE SEND {lockup_amount} sats from your Bitcoin wallet to: {lockup_address} *****\n")
+
+        thread = threading.Thread(target=pay_invoice_thread, args=(prepare_pay_response,))
+        thread.daemon = True
+        thread.start()
+        print("Started thread to monitor payment completion.")
+
+    except Exception as e:
+        print(f"Error preparing BTC to Lightning payment: {e}")
+
 def restorable_reverse_swaps(boltz_session, wollet):
     """Fetch reverse swaps for the wallet"""
     try:

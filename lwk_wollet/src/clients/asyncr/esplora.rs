@@ -882,9 +882,13 @@ impl EsploraClient {
         self.requests.load(std::sync::atomic::Ordering::Relaxed)
     }
 
+    const MAX_HTTP_RETRIES: u32 = 6;
+
     async fn get_with_retry(&self, url: &str) -> Result<Response, Error> {
-        let mut attempt = 0;
-        loop {
+        let mut num_attempts = 0;
+        let mut last_status = StatusCode::default();
+
+        while num_attempts < Self::MAX_HTTP_RETRIES {
             self.requests
                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             let builder = self.client.get(url);
@@ -930,21 +934,15 @@ impl EsploraClient {
             // 429 Too many requests
             // 503 Service Temporarily Unavailable
             if response.status() == 429 || response.status() == 503 {
-                if attempt > 6 {
-                    log::warn!("{url} tried 6 times, failing");
-                    return Err(Error::Generic("Too many retry".to_string()));
-                }
-                let secs = 1 << attempt;
+                let secs = 1 << num_attempts;
 
                 log::debug!("{url} waiting {secs}");
 
                 async_sleep(secs * 1000).await?;
-                attempt += 1;
             } else if response.status() == 401 {
                 // 401 Unauthorized, the token is expired, so we need to refresh it
                 let mut cached_token = self.token.lock().await;
                 *cached_token = None;
-                attempt += 1;
             } else if response.status() != 422 && !response.status().is_success() {
                 // Surface the server's status and message instead of letting
                 // callers misparse an error body (e.g. a JSON `{"error": ...}`)
@@ -959,12 +957,22 @@ impl EsploraClient {
             } else {
                 return Ok(response);
             }
+
+            last_status = response.status();
+            num_attempts += 1;
         }
+
+        log::warn!("{url} tried {num_attempts} times, failing");
+        Err(Error::Generic(format!(
+            "Too many retries, last status: {last_status}",
+        )))
     }
 
     async fn post_with_retry(&self, url: &str, body: &str) -> Result<Response, Error> {
-        let mut attempt = 0;
-        loop {
+        let mut num_attempts = 0;
+        let mut last_status = StatusCode::default();
+
+        while num_attempts < Self::MAX_HTTP_RETRIES {
             self.requests
                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             let builder = self.client.post(url).body(body.to_owned());
@@ -1010,21 +1018,15 @@ impl EsploraClient {
             // 429 Too many requests
             // 503 Service Temporarily Unavailable
             if response.status() == 429 || response.status() == 503 {
-                if attempt > 6 {
-                    log::warn!("{url} tried 6 times, failing");
-                    return Err(Error::Generic("Too many retry".to_string()));
-                }
-                let secs = 1 << attempt;
+                let secs = 1 << num_attempts;
 
                 log::debug!("{url} waiting {secs}");
 
                 async_sleep(secs * 1000).await?;
-                attempt += 1;
             } else if response.status() == 401 {
                 // 401 Unauthorized, the token is expired, so we need to refresh it
                 let mut cached_token = self.token.lock().await;
                 *cached_token = None;
-                attempt += 1;
             } else if !response.status().is_success() {
                 // Surface the server's status and message instead of letting
                 // callers misparse an error body (e.g. a JSON `{"error": ...}`)
@@ -1033,7 +1035,15 @@ impl EsploraClient {
             } else {
                 return Ok(response);
             }
+
+            last_status = response.status();
+            num_attempts += 1;
         }
+
+        log::warn!("{url} tried {num_attempts} times, failing");
+        Err(Error::Generic(format!(
+            "Too many retries, last status: {last_status}",
+        )))
     }
 
     /// Returns true if the wallet has any tx using the first gap_limit addresses (default 20)

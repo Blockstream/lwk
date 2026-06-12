@@ -259,6 +259,7 @@ impl From<Singlesig> for Variant {
         match v.inner {
             lwk_common::Singlesig::Wpkh => Variant::Wpkh,
             lwk_common::Singlesig::ShWpkh => Variant::ShWpkh,
+            lwk_common::Singlesig::Tr => Variant::Tr,
         }
     }
 }
@@ -273,8 +274,11 @@ impl Singlesig {
             "ShWpkh" => Ok(Singlesig {
                 inner: lwk_common::Singlesig::ShWpkh,
             }),
+            "Tr" => Ok(Singlesig {
+                inner: lwk_common::Singlesig::Tr,
+            }),
             _ => Err(Error::Generic(
-                "Unsupported variant, possible values are: Wpkh and ShWpkh".to_string(),
+                "Unsupported variant, possible values are: Wpkh, ShWpkh and Tr".to_string(),
             )),
         }
     }

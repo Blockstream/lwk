@@ -18,3 +18,7 @@ pr_commands = [
     "/review",
     "/improve",
 ]
+handle_push_trigger = true
+push_commands = [
+    "/review"
+]

@@ -218,11 +218,10 @@ impl BoltzSession {
         swaps: &[SwapRestoreResponse],
         claim_address: &bitcoin::Address,
     ) -> Result<Vec<InvoiceData>, Error> {
-        let inner = self.runtime.block_on(
+        self.runtime.block_on(
             self.inner
                 .restorable_reverse_btc_swaps(swaps, claim_address),
-        )?;
-        Ok(inner)
+        )
     }
 
     /// Blocking version of [`crate::BoltzSession::restorable_submarine_swaps`]

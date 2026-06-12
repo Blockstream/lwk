@@ -4476,3 +4476,54 @@ fn test_removed_tx() {
     assert_eq!(utxos.len(), 1);
     assert_eq!(utxos[0].outpoint.txid, txid0);
 }
+
+#[test]
+fn test_miniscript_and_threshold() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let s1 = generate_signer();
+    let s2 = generate_signer();
+    let s3 = generate_signer();
+    let bip = lwk_common::Bip::Bip87;
+    let is_mainnet = false;
+    let xpub1 = s1.keyorigin_xpub(bip, is_mainnet).unwrap();
+    let xpub2 = s2.keyorigin_xpub(bip, is_mainnet).unwrap();
+    let xpub3 = s3.keyorigin_xpub(bip, is_mainnet).unwrap();
+
+    let wif_aa = "cTJTN1hGHqucsgqmYVbhU3g4eU9g5HzE1sxuSY32M1xap1K4sYHF";
+    let sk_a = bitcoin::PrivateKey::from_wif(wif_aa).unwrap().inner;
+    let pk_a = sk_a.public_key(&EC);
+
+    let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
+    let desc = format!(
+        "ct({view_key},elwsh(and_v(v:pk({pk_a}),multi(2,{xpub1}/0/*,{xpub2}/0/*,{xpub3}/0/*))))"
+    );
+
+    // Create the wallet
+    let client = test_client_electrum(&env.electrum_url());
+    let mut wallet = TestWollet::new(client, &desc);
+
+    let policy_asset = wallet.policy_asset();
+    wallet.fund_btc(&env);
+    let balance_before = wallet.balance_btc();
+    assert!(balance_before > 0);
+
+    let satoshi = 10_000;
+    let node_addr = env.elementsd_getnewaddress();
+    let mut pset = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&node_addr, satoshi)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let details = wallet.wollet.get_details(&pset).unwrap();
+    let fee = details.balance.fees_in(&policy_asset);
+    wallet.sign(&s1, &mut pset);
+    wallet.sign(&s2, &mut pset);
+    sign_with_seckey(sk_a, &mut pset).unwrap();
+
+    wallet.send(&mut pset);
+    let balance_after = wallet.balance_btc();
+    assert_eq!(balance_after, balance_before - satoshi - fee);
+}

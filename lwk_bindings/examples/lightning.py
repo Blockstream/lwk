@@ -168,6 +168,30 @@ def read_positive_amount(prompt):
         except ValueError:
             print("Invalid amount. Please enter a valid number.")
 
+def read_lightning_payment(prompt):
+    """Read a BOLT11 invoice or BOLT12 offer from stdin."""
+    payment_str = input(prompt).strip()
+    lightning_payment = LightningPayment(payment_str)
+
+    if lightning_payment.is_bolt12():
+        if lightning_payment.bolt12_offer_has_amount():
+            while True:
+                try:
+                    items_str = input("Enter number of items: ").strip()
+                    items = int(items_str)
+                    if items <= 0:
+                        print("Number of items must be positive. Please try again.")
+                        continue
+                    break
+                except ValueError:
+                    print("Invalid number. Please enter a valid integer.")
+            lightning_payment.set_bolt12_invoice_amount_via_items(items)
+        else:
+            amount = read_positive_amount("Enter amount in satoshis: ")
+            lightning_payment.set_bolt12_invoice_amount(amount)
+
+    return lightning_payment
+
 def show_invoice(boltz_session, wollet):
     """Create and show an invoice"""
     amount = read_positive_amount("Enter invoice amount in satoshis: ")
@@ -202,39 +226,13 @@ def show_invoice(boltz_session, wollet):
 
 def pay_bolt12_offer(boltz_session, wollet, esplora_client, signer, skip_completion_thread=False):
     """Pay a bolt12 offer"""
-    # Read bolt12 offer from user
-    offer_str = input("Enter BOLT12 offer: ").strip()
-
     try:
-        # Parse the offer
-        lightning_payment = LightningPayment(offer_str)
+        lightning_payment = read_lightning_payment("Enter BOLT12 offer: ")
 
         # Check if it's actually a BOLT12 offer
         if not lightning_payment.is_bolt12():
             print("Error: Not a valid BOLT12 offer")
             return
-
-        # Check if the offer has an amount (per-item pricing)
-        has_amount = lightning_payment.bolt12_offer_has_amount()
-
-        if has_amount:
-            # Ask for number of items
-            while True:
-                try:
-                    items_str = input("Enter number of items: ").strip()
-                    items = int(items_str)
-                    if items <= 0:
-                        print("Number of items must be positive. Please try again.")
-                        continue
-                    break
-                except ValueError:
-                    print("Invalid number. Please enter a valid integer.")
-
-            # Set the amount based on items
-            lightning_payment.set_bolt12_invoice_amount_via_items(items)
-        else:
-            amount = read_positive_amount("Enter amount in satoshis: ")
-            lightning_payment.set_bolt12_invoice_amount(amount)
 
         # Get refund address
         refund_address = wollet.address(None).address()
@@ -346,12 +344,8 @@ def resolve_lnurl():
 
 def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_thread=False):
     """Pay a bolt11 invoice"""
-    # Read bolt11 invoice from user
-    bolt11_str = input("Enter bolt11 invoice: ").strip()
-
     try:
-        # Parse the invoice
-        lightning_payment = LightningPayment(bolt11_str)
+        lightning_payment = read_lightning_payment("Enter bolt11 invoice: ")
 
         # Get refund address
         refund_address = wollet.address(None).address()

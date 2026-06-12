@@ -51,6 +51,15 @@ impl Amp2Descriptor {
     pub fn descriptor(&self) -> WolletDescriptor {
         self.inner.clone()
     }
+
+    /// Create an `Amp2Descriptor` using any `WolletDescriptor`
+    ///
+    /// Warning: AMP2 server only supports a limited subset of descriptors.
+    /// To make sure this AMP2 descriptor can be used safely,
+    /// register this with AMP2 as soon as possible.
+    pub fn new_with_custom_descriptor(desc: WolletDescriptor) -> Self {
+        Self::new(desc)
+    }
 }
 
 impl std::fmt::Display for Amp2Descriptor {
@@ -292,5 +301,9 @@ mod test {
         let err = Amp2::new("fake_xpub".to_string(), URL_TESTNET.to_string()).unwrap_err();
 
         assert!(matches!(err, crate::Error::InvalidKeyOriginXpubError(_)));
+
+        let desc_str = "ct(1111111111111111111111111111111111111111111111111111111111111111,elwsh(and_v(v:pk(026a04ab98d9e4774ad806e302dddeb63bea16b5cb5f223ee77478e861bb583eb3),multi(2,[342c8926/87h/1h/0h]tpubDDWUA7YvBHxdurKUrYFkdjsB59koHqvGRJ3j9zDhwMycxXHXz1ujTfHMB66K4rEWDM8BoDKDdJx3rVGp2qUSPnXVpQXi8qtnXqa96nPnZAH/0/*,[af9e5bc2/87h/1h/0h]tpubDDRPayLs2vBkRkyQ9X2BEhojxCy9vvZpjhubEVosz5pi66LuuAuyZQiUtsPBN5wSfhWLoMYM3gqVqT3Po4GpcWGUfPh8514ZBB9hfWFNEUA/0/*,[57411aec/87h/1h/0h]tpubDDmweWcTcRb54kZqy3Gv5JF8SjAyuoK3uPYXp24uz6nfsKjJojxjdZAang5HXDmtS8tg5CJntUC4fzn4aY5Dsg6Aphvq42vK9edmgX83NFg/0/*))))";
+        let desc: WolletDescriptor = desc_str.parse().unwrap();
+        let _amp2_desc = Amp2Descriptor::new_with_custom_descriptor(desc);
     }
 }

@@ -448,6 +448,25 @@ impl BoltzSession {
         })
     }
 
+    /// Prepare to pay a Lightning invoice from Bitcoin onchain funds.
+    pub fn btc_to_ln(
+        &self,
+        lightning_payment: &LightningPayment,
+        refund_address: &BitcoinAddress,
+        webhook: Option<Arc<WebHook>>,
+    ) -> Result<PreparePayResponse, LwkError> {
+        let webhook = typed_webhook::<SubSwapStates>(webhook.as_ref())?;
+        let response = self.inner.btc_to_ln(
+            &lightning_payment.clone()?,
+            refund_address.as_ref(),
+            webhook,
+        )?;
+
+        Ok(PreparePayResponse {
+            inner: Mutex::new(Some(response)),
+        })
+    }
+
     /// Fetch a BOLT12 invoice without creating or starting a swap
     pub fn fetch_bolt12_invoice(
         &self,
@@ -480,6 +499,27 @@ impl BoltzSession {
         let response = self
             .inner
             .invoice(amount, description, claim_address.as_ref(), webhook)
+            .map_err(|e| LwkError::Generic {
+                msg: format!("Invoice failed: {e:?}"),
+            })?;
+
+        Ok(InvoiceResponse {
+            inner: Mutex::new(Some(response)),
+        })
+    }
+
+    /// Create a new invoice for a Lightning to Bitcoin reverse swap.
+    pub fn ln_to_btc(
+        &self,
+        amount: u64,
+        description: Option<String>,
+        claim_address: &BitcoinAddress,
+        webhook: Option<Arc<WebHook>>,
+    ) -> Result<InvoiceResponse, LwkError> {
+        let webhook = typed_webhook::<RevSwapStates>(webhook.as_ref())?;
+        let response = self
+            .inner
+            .ln_to_btc(amount, description, claim_address.as_ref(), webhook)
             .map_err(|e| LwkError::Generic {
                 msg: format!("Invoice failed: {e:?}"),
             })?;

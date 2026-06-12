@@ -459,6 +459,39 @@ def btc_to_ln_payment(boltz_session):
     except Exception as e:
         print(f"Error preparing BTC to Lightning payment: {e}")
 
+def ln_to_btc_invoice(boltz_session):
+    """Create a Lightning invoice that pays out to a BTC address."""
+    amount = read_positive_amount("Enter invoice amount in satoshis: ")
+    claim_address_str = input("Enter Bitcoin address to receive BTC: ").strip()
+
+    try:
+        claim_address = BitcoinAddress(claim_address_str)
+
+        webhook_url = os.getenv('WEBHOOK')
+        webhook = WebHook(webhook_url, status=[]) if webhook_url else None
+        invoice_response = boltz_session.ln_to_btc(
+            amount, "Lightning to Bitcoin payment", claim_address, webhook
+        )
+
+        fee = invoice_response.fee()
+        print(f"Fee: {fee}")
+        boltz_fee = invoice_response.boltz_fee()
+        print(f"Boltz fee: {boltz_fee}")
+
+        bolt11_invoice = str(invoice_response.bolt11_invoice())
+        print(f"Invoice: {bolt11_invoice}")
+
+        swap_id = invoice_response.swap_id()
+        print(f"Swap ID: {swap_id}")
+
+        thread = threading.Thread(target=invoice_thread, args=(invoice_response, claim_address_str))
+        thread.daemon = True
+        thread.start()
+        print("Started thread to monitor invoice payment.")
+
+    except Exception as e:
+        print(f"Error creating Lightning to BTC invoice: {e}")
+
 def restorable_reverse_swaps(boltz_session, wollet):
     """Fetch reverse swaps for the wallet"""
     try:

@@ -1,3 +1,5 @@
+#![cfg(feature = "test_emulator")]
+
 use base64::Engine;
 use elements::{
     bitcoin::{self, bip32::Fingerprint, bip32::Xpub, sign_message::signed_msg_hash},

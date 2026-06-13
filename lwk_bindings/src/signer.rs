@@ -5,6 +5,7 @@ use std::sync::Arc;
 pub enum Singlesig {
     Wpkh,
     ShWpkh,
+    Taproot,
 }
 
 impl From<Singlesig> for lwk_common::Singlesig {
@@ -12,6 +13,7 @@ impl From<Singlesig> for lwk_common::Singlesig {
         match singlesig {
             Singlesig::Wpkh => lwk_common::Singlesig::Wpkh,
             Singlesig::ShWpkh => lwk_common::Singlesig::ShWpkh,
+            Singlesig::Taproot => lwk_common::Singlesig::Taproot,
         }
     }
 }

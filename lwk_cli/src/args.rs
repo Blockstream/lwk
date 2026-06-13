@@ -411,6 +411,7 @@ impl Display for BlindingKeyKind {
 pub enum SinglesigKind {
     Wpkh,
     Shwpkh,
+    Taproot,
 }
 
 impl Display for SinglesigKind {
@@ -418,6 +419,7 @@ impl Display for SinglesigKind {
         match self {
             SinglesigKind::Wpkh => write!(f, "wpkh"),
             SinglesigKind::Shwpkh => write!(f, "shwpkh"),
+            SinglesigKind::Taproot => write!(f, "taproot"),
         }
     }
 }

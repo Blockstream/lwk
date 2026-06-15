@@ -13,11 +13,18 @@ use crate::{
 #[derive(Debug)]
 pub struct TxBuilder {
     inner: lwk_wollet::TxBuilder,
+    /// Per-input sequence overrides applied in `finish`. Only populated by `setInputSequence`.
+    /// Must be set after all other builder methods — those methods go through
+    /// `From<lwk_wollet::TxBuilder>` which resets this field to an empty vec.
+    input_sequences: Vec<(elements::OutPoint, elements::Sequence)>,
 }
 
 impl From<lwk_wollet::TxBuilder> for TxBuilder {
     fn from(value: lwk_wollet::TxBuilder) -> Self {
-        Self { inner: value }
+        Self {
+            inner: value,
+            input_sequences: vec![],
+        }
     }
 }
 
@@ -34,12 +41,38 @@ impl TxBuilder {
     pub fn new(network: &Network) -> TxBuilder {
         TxBuilder {
             inner: lwk_wollet::TxBuilder::new(network.into()),
+            input_sequences: vec![],
         }
     }
 
-    /// Build the transaction
+    /// Build the transaction, applying any per-input sequence overrides set via
+    /// `setInputSequence`.
     pub fn finish(self, wollet: &Wollet) -> Result<Pset, Error> {
-        Ok(self.inner.finish(wollet.as_ref())?.into())
+        let input_sequences = self.input_sequences;
+        let mut pset = self.inner.finish(wollet.as_ref())?;
+        for input in pset.inputs_mut() {
+            let op = elements::OutPoint::new(input.previous_txid, input.previous_output_index);
+            if let Some(seq) =
+                input_sequences.iter().find_map(|(o, s)| (*o == op).then_some(*s))
+            {
+                input.sequence = Some(seq);
+            }
+        }
+        Ok(pset.into())
+    }
+
+    /// Override the nSequence for a specific input identified by its outpoint.
+    ///
+    /// Must be called **after** all other builder methods, because those methods go through
+    /// `From<lwk_wollet::TxBuilder>` which resets the per-input sequence list to empty.
+    ///
+    /// Pass `0xFFFFFFFE` (ENABLE_LOCKTIME_NO_RBF) to enable absolute locktime without RBF —
+    /// required by Simplicity's `check_lock_height` jet (returns 0 when all inputs are final).
+    #[wasm_bindgen(js_name = setInputSequence)]
+    pub fn set_input_sequence(mut self, outpoint: &OutPoint, sequence: u32) -> TxBuilder {
+        self.input_sequences
+            .push((outpoint.into(), elements::Sequence::from_consensus(sequence)));
+        self
     }
 
     /// Build the transaction for AMP0

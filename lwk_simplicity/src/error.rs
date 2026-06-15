@@ -76,4 +76,7 @@ pub enum ProgramError {
 
     #[error("Input index exceeds u32 maximum: {0}")]
     InputIndexOverflow(#[from] std::num::TryFromIntError),
+
+    #[error("Invalid control block: {0}")]
+    InvalidControlBlock(String),
 }

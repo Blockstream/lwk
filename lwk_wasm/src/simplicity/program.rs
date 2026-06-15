@@ -159,6 +159,40 @@ impl SimplicityProgram {
         Ok(signature.serialize().to_hex())
     }
 
+    /// Finalize a transaction with a storage-aware taproot spend info for the specified input.
+    ///
+    /// NOTE: The utxos object is destroyed during the execution of the function, so the argument that was
+    /// passed in the JS code cannot be reused.
+    #[allow(clippy::too_many_arguments)]
+    #[wasm_bindgen(js_name = finalizeTransactionWithSpendInfo)]
+    pub fn finalize_transaction_with_spend_info(
+        &self,
+        tx: &Transaction,
+        spend_info: &super::state_utils::StateTaprootSpendInfo,
+        utxos: Vec<TxOut>,
+        input_index: u32,
+        witness_values: &SimplicityWitnessValues,
+        network: &Network,
+        log_level: SimplicityLogLevel,
+    ) -> Result<Transaction, Error> {
+        let cmr: Cmr = self.inner.commit().cmr().into();
+        let cb_bytes = spend_info.control_block(&cmr)?.to_bytes();
+        let utxos_inner = convert_utxos(&utxos);
+
+        let finalized = signer::finalize_transaction_with_cb(
+            tx.as_ref().clone(),
+            &self.inner,
+            &utxos_inner,
+            input_index as usize,
+            witness_values.to_inner()?,
+            &cb_bytes,
+            network.into(),
+            log_level.into(),
+        )?;
+
+        Ok(finalized.into())
+    }
+
     /// Satisfy and execute this program in a transaction environment.
     ///
     /// NOTE: The utxos object is destroyed during the execution of the function, so the argument that was

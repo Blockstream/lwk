@@ -2,6 +2,8 @@ use crate::error::ProgramError;
 use crate::runner::run_program;
 use crate::scripts::{control_block, create_p2tr_address};
 
+use simplicityhl::elements::taproot;
+
 use std::sync::Arc;
 
 use lwk_common::Network;
@@ -79,6 +81,88 @@ pub fn finalize_transaction(
             simplicity_program_bytes,
             cmr.as_ref().to_vec(),
             control_block(cmr, *program_public_key).serialize(),
+        ],
+        pegin_witness: vec![],
+    };
+
+    Ok(tx)
+}
+
+/// Build an Elements environment from a pre-computed control block (no script pubkey check).
+///
+/// Use this for storage-aware UTXOs whose taproot tree includes hidden storage slot leaves that
+/// differ from the single-CMR-leaf tree that `get_and_verify_env` reconstructs.
+///
+/// # Errors
+/// Returns error if UTXO index is invalid or control block bytes cannot be parsed.
+pub fn get_env_with_cb(
+    tx: &Transaction,
+    program: &CompiledProgram,
+    utxos: &[TxOut],
+    input_index: usize,
+    control_block_bytes: &[u8],
+    network: Network,
+) -> Result<ElementsEnv<Arc<Transaction>>, ProgramError> {
+    let cmr = program.commit().cmr();
+
+    if utxos.len() <= input_index {
+        return Err(ProgramError::UtxoIndexOutOfBounds {
+            input_index,
+            utxo_count: utxos.len(),
+        });
+    }
+
+    let cb = taproot::ControlBlock::from_slice(control_block_bytes)
+        .map_err(|e| ProgramError::InvalidControlBlock(e.to_string()))?;
+
+    Ok(ElementsEnv::new(
+        Arc::new(tx.clone()),
+        utxos
+            .iter()
+            .map(|utxo| ElementsUtxo {
+                script_pubkey: utxo.script_pubkey.clone(),
+                asset: utxo.asset,
+                value: utxo.value,
+            })
+            .collect(),
+        u32::try_from(input_index)?,
+        cmr,
+        cb,
+        None,
+        network.genesis_hash(),
+    ))
+}
+
+/// Finalize a transaction using a pre-computed control block for a storage-aware UTXO.
+///
+/// # Errors
+/// Returns error if the control block is invalid or program execution fails.
+#[allow(clippy::too_many_arguments)]
+pub fn finalize_transaction_with_cb(
+    mut tx: Transaction,
+    program: &CompiledProgram,
+    utxos: &[TxOut],
+    input_index: usize,
+    witness_values: WitnessValues,
+    control_block_bytes: &[u8],
+    network: Network,
+    log_level: TrackerLogLevel,
+) -> Result<Transaction, ProgramError> {
+    let env = get_env_with_cb(&tx, program, utxos, input_index, control_block_bytes, network)?;
+
+    let pruned = run_program(program, witness_values, &env, log_level)?.0;
+
+    let (simplicity_program_bytes, simplicity_witness_bytes) = pruned.to_vec_with_witness();
+    let cmr = pruned.cmr();
+
+    tx.input[input_index].witness = TxInWitness {
+        amount_rangeproof: None,
+        inflation_keys_rangeproof: None,
+        script_witness: vec![
+            simplicity_witness_bytes,
+            simplicity_program_bytes,
+            cmr.as_ref().to_vec(),
+            control_block_bytes.to_vec(),
         ],
         pegin_witness: vec![],
     };

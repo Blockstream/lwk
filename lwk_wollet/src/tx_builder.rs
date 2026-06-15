@@ -352,6 +352,29 @@ impl TxBuilder {
         self
     }
 
+    /// Add an address-based output to the post-issuance output list.
+    ///
+    /// Like [`add_explicit_script_output`], outputs are appended after all asset and issuance
+    /// outputs but before L-BTC change and fee, enabling precise vout ordering for covenant
+    /// transactions that depend on output indexes.
+    ///
+    /// Unlike [`add_explicit_script_output`], a confidential `address` produces a blinded
+    /// output visible to the wallet; an unconfidential address produces an explicit one.
+    pub fn add_post_issuance_recipient(
+        mut self,
+        address: &Address,
+        satoshi: u64,
+        asset: AssetId,
+    ) -> Self {
+        self.post_issuance_recipients.push(Recipient {
+            satoshi,
+            script_pubkey: address.script_pubkey(),
+            blinding_pubkey: address.blinding_pubkey,
+            asset,
+        });
+        self
+    }
+
     /// Fee rate in sats/kvb
     /// Multiply sats/vb value by 1000 i.e. 1.0 sat/byte = 1000.0 sat/kvb
     pub fn fee_rate(mut self, fee_rate: Option<f32>) -> Self {

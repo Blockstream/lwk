@@ -75,9 +75,13 @@ impl Store for SqliteStore {
 mod tests {
     use super::*;
 
+    fn fast_tempdir() -> tempfile::TempDir {
+        tempfile::tempdir_in("/dev/shm").unwrap_or_else(|_| tempfile::tempdir().unwrap())
+    }
+
     #[test]
     fn sqlite_store() {
-        let dir = tempfile::tempdir().unwrap();
+        let dir = fast_tempdir();
         let db_path = dir.path().join("test.db");
         let store = SqliteStore::new(&db_path).unwrap();
 

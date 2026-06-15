@@ -1483,6 +1483,10 @@ mod tests {
             .unwrap()
     }
 
+    fn fast_tempdir() -> tempfile::TempDir {
+        tempfile::tempdir_in("/dev/shm").unwrap_or_else(|_| tempfile::tempdir().unwrap())
+    }
+
     #[test]
     fn test_signers() {
         let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
@@ -1519,7 +1523,7 @@ mod tests {
             .parse()
             .unwrap();
 
-        let tempdir = tempfile::tempdir().unwrap();
+        let tempdir = fast_tempdir();
         let mut wollet = WolletBuilder::new(Network::TestnetLiquid, desc.clone())
             .with_legacy_fs_store(&tempdir)
             .unwrap()
@@ -1567,7 +1571,7 @@ mod tests {
         let enc_bytes = lwk_test_util::update_test_vector_encrypted_bytes2();
         let expected_update = Update::deserialize_decrypted(&enc_bytes, &desc).unwrap();
 
-        let tempdir = tempfile::tempdir().unwrap();
+        let tempdir = fast_tempdir();
         let mut update_path = tempdir.path().to_path_buf();
         update_path.push(Network::TestnetLiquid.as_str());
         update_path.push("enc_cache");

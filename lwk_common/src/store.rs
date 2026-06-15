@@ -529,6 +529,10 @@ impl<S: Store> Store for EncryptedStore<S> {
 mod test {
     use super::{EncryptedStore, FakeStore, FileStore, MemoryStore, Store};
 
+    fn fast_tempdir() -> tempfile::TempDir {
+        tempfile::tempdir_in("/dev/shm").unwrap_or_else(|_| tempfile::tempdir().unwrap())
+    }
+
     #[test]
     fn memory_store() {
         let store = MemoryStore::new();
@@ -554,7 +558,7 @@ mod test {
 
     #[test]
     fn file_store_roundtrip() {
-        let dir = tempfile::tempdir().unwrap();
+        let dir = fast_tempdir();
         let store = FileStore::new(dir.path().to_path_buf()).unwrap();
 
         // Get non-existent key returns None
@@ -629,7 +633,7 @@ mod test {
     #[test]
     fn encrypted_store_file() {
         let key_bytes = [42u8; 32];
-        let dir = tempfile::tempdir().unwrap();
+        let dir = fast_tempdir();
         let inner = FileStore::new(dir.path().to_path_buf()).unwrap();
         let store = EncryptedStore::new(inner, key_bytes);
 

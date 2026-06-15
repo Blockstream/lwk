@@ -44,6 +44,13 @@ codegen-units = 1    # Reduce number of codegen units to increase optimizations.
 panic = "abort"      # Abort on panic
 strip = "debuginfo"  # Partially strip symbols from binary
 
+[profile.release-reproducible]
+inherits = "release"
+lto = "off"          # Disable both full LTO and Cargo's default thin-local LTO.
+codegen-units = 1    # Reduce backend scheduling/order variance.
+incremental = false  # Keep release artifacts independent from compiler cache state.
+strip = "symbols"    # Drop local symbol names that can be numbered nondeterministically.
+
 [profile.release-with-debug]
 inherits = "release"
 debug = true         # Include debug symbols for profiling

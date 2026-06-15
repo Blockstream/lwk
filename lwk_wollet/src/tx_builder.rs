@@ -16,8 +16,8 @@ use elements::{
     issuance::ContractHash,
     pset::{raw::ProprietaryKey, Output, PartiallySignedTransaction, PsbtSighashType},
     secp256k1_zkp::{self, RangeProof, SurjectionProof, ZERO_TWEAK},
-    Address, AssetId, BlindAssetProofs, BlindValueProofs, EcdsaSighashType, OutPoint, Script,
-    Transaction, TxOut, TxOutSecrets,
+    Address, AssetId, BlindAssetProofs, BlindValueProofs, EcdsaSighashType, LockTime, OutPoint,
+    Script, Transaction, TxOut, TxOutSecrets,
 };
 use lwk_common::calculate_fee;
 use rand::thread_rng;
@@ -229,6 +229,8 @@ pub struct TxBuilder {
 
     add_input_rangeproofs: bool,
 
+    fallback_locktime: Option<LockTime>,
+
     // LiquiDEX fields
     is_liquidex_make: bool,
     liquidex_proposals: Vec<LiquidexProposal<Validated>>,
@@ -250,6 +252,7 @@ impl TxBuilder {
             selected_utxos: None,
             input_order: None,
             add_input_rangeproofs: true,
+            fallback_locktime: None,
             is_liquidex_make: false,
             liquidex_proposals: vec![],
         }
@@ -424,6 +427,11 @@ impl TxBuilder {
     /// After a grace period, we plan to switch the default to `false`.
     pub fn add_input_rangeproofs(mut self, add_rangeproofs: bool) -> Self {
         self.add_input_rangeproofs = add_rangeproofs;
+        self
+    }
+
+    pub fn set_fallback_locktime(mut self, locktime: LockTime) -> Self {
+        self.fallback_locktime = Some(locktime);
         self
     }
 
@@ -1037,6 +1045,10 @@ impl TxBuilder {
         }
         // Init PSET
         let mut pset = PartiallySignedTransaction::new_v2();
+
+        if let Some(locktime) = self.fallback_locktime {
+            pset.global.tx_data.fallback_locktime = Some(locktime);
+        }
 
         let genesis_block_hash = self.network().genesis_hash().to_byte_array().to_vec();
         // Add genesis block hash as defined in ELIP-101 https://github.com/ElementsProject/ELIPs/blob/main/elip-0101.mediawiki

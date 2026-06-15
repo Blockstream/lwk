@@ -316,6 +316,14 @@ impl TxBuilder {
     pub fn add_input_rangeproofs(self, add_rangeproofs: bool) -> TxBuilder {
         self.inner.add_input_rangeproofs(add_rangeproofs).into()
     }
+
+    /// Set the fallback locktime on the transaction as a block height.
+    #[wasm_bindgen(js_name = setFallbackLocktimeHeight)]
+    pub fn set_fallback_locktime_height(self, height: u32) -> Result<TxBuilder, Error> {
+        let locktime = elements::LockTime::from_height(height)
+            .map_err(|e| Error::Generic(e.to_string()))?;
+        Ok(self.inner.set_fallback_locktime(locktime).into())
+    }
 }
 
 impl Display for TxBuilder {

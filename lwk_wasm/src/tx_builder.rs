@@ -8,6 +8,37 @@ use crate::{
     OutPoint, Pset, Script, Transaction, Wollet,
 };
 
+/// A recipient of newly issued asset units.
+#[wasm_bindgen]
+#[derive(Debug)]
+pub struct IssuanceRecipient {
+    inner: lwk_wollet::IssuanceRecipient,
+}
+
+impl From<IssuanceRecipient> for lwk_wollet::IssuanceRecipient {
+    fn from(value: IssuanceRecipient) -> Self {
+        value.inner
+    }
+}
+
+#[wasm_bindgen]
+impl IssuanceRecipient {
+    /// Create an issuance recipient using the next wallet external address.
+    pub fn wallet(satoshi: u64) -> IssuanceRecipient {
+        IssuanceRecipient {
+            inner: lwk_wollet::IssuanceRecipient::wallet(satoshi),
+        }
+    }
+
+    /// Create an issuance recipient from an address.
+    #[wasm_bindgen(js_name = fromAddress)]
+    pub fn from_address(satoshi: u64, address: &Address) -> IssuanceRecipient {
+        IssuanceRecipient {
+            inner: lwk_wollet::IssuanceRecipient::from_address(satoshi, address.as_ref()),
+        }
+    }
+}
+
 /// A transaction builder
 #[wasm_bindgen]
 #[derive(Debug)]

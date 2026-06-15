@@ -204,11 +204,11 @@ impl TxBuilder {
 
     /// Add an address-based output to the post-issuance output list.
     ///
-    /// Like `addExplicitScriptOutput`, outputs are appended after all asset and issuance
+    /// Like `addPostIssuanceScriptOutput`, outputs are appended after all asset and issuance
     /// outputs but before L-BTC change and fee, enabling precise vout ordering for covenant
     /// transactions that depend on output indexes.
     ///
-    /// Unlike `addExplicitScriptOutput`, a confidential `address` produces a blinded
+    /// Unlike `addPostIssuanceScriptOutput`, a confidential `address` produces a blinded
     /// output visible to the wallet; an unconfidential address produces an explicit one.
     #[wasm_bindgen(js_name = addPostIssuanceRecipient)]
     pub fn add_post_issuance_recipient(

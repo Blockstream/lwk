@@ -1094,6 +1094,13 @@ impl TxBuilder {
         // Assets that belongs to this transaction
         // all the ones with a recipient
         let mut assets: HashSet<_> = addressees_asset.iter().map(|a| a.asset).collect();
+        // and all the ones with post-issuance recipients
+        assets.extend(
+            self.post_issuance_recipients
+                .iter()
+                .filter(|a| a.asset != policy_asset)
+                .map(|a| a.asset),
+        );
         // and all the ones of utxos that are being added
         for utxo in &self.external_utxos {
             assets.insert(utxo.unblinded.asset);
@@ -1111,6 +1118,12 @@ impl TxBuilder {
                 wollet.add_output(&mut pset, addressee)?;
                 satoshi_out += addressee.satoshi;
             }
+            satoshi_out += self
+                .post_issuance_recipients
+                .iter()
+                .filter(|a| a.asset == asset)
+                .map(|a| a.satoshi)
+                .sum::<u64>();
 
             if self.input_order.is_some() {
                 satoshi_in = *manual_satoshi_in_by_asset.get(&asset).unwrap_or(&0);
@@ -1196,6 +1209,12 @@ impl TxBuilder {
             wollet.add_output(&mut pset, &addressee)?;
             satoshi_out += addressee.satoshi;
         }
+        satoshi_out += self
+            .post_issuance_recipients
+            .iter()
+            .filter(|a| a.asset == policy_asset)
+            .map(|a| a.satoshi)
+            .sum::<u64>();
 
         if self.input_order.is_some() {
             satoshi_in = *manual_satoshi_in_by_asset.get(&policy_asset).unwrap_or(&0);

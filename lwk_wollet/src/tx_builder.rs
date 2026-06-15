@@ -4,7 +4,10 @@ use crate::{
     hashes::Hash,
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
-    pset_create::{validate_address, IssuanceRequest, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS},
+    pset_create::{
+        validate_address, IssuanceRecipient, IssuanceRequest,
+        SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS,
+    },
     Contract, DownloadTxResult, Error, LiquidexProposal, Network, UnvalidatedRecipient, Update,
     Wollet, EC,
 };
@@ -51,6 +54,16 @@ pub fn extract_issuances(tx: &Transaction) -> Vec<IssuanceDetails> {
         }
     }
     r
+}
+
+fn sum_issuance_recipients(recipients: &[IssuanceRecipient]) -> Result<u64, Error> {
+    recipients.iter().try_fold(0u64, |sum, recipient| {
+        if recipient.satoshi() == 0 {
+            return Err(Error::InvalidAmount);
+        }
+        sum.checked_add(recipient.satoshi())
+            .ok_or(Error::InvalidAmount)
+    })
 }
 
 /// "Clone" of Wollet.add_input
@@ -169,6 +182,7 @@ pub(crate) fn add_input_inner(
 pub struct TxBuilder {
     network: Network,
     recipients: Vec<Recipient>,
+    post_issuance_recipients: Vec<Recipient>,
     fee_rate: f32,
     ct_discount: bool,
     issuance_request: IssuanceRequest,
@@ -191,6 +205,7 @@ impl TxBuilder {
         TxBuilder {
             network,
             recipients: vec![],
+            post_issuance_recipients: vec![],
             fee_rate: 100.0,
             ct_discount: true,
             issuance_request: IssuanceRequest::None,
@@ -282,6 +297,25 @@ impl TxBuilder {
         Ok(self)
     }
 
+    /// Add an unblinded output with an arbitrary script pubkey to the post-issuance output list.
+    ///
+    /// Outputs are appended after all asset and issuance outputs but before L-BTC change and fee,
+    /// enabling precise vout ordering for covenant transactions that depend on output indexes.
+    pub fn add_post_issuance_script_output(
+        mut self,
+        script_pubkey: Script,
+        satoshi: u64,
+        asset: AssetId,
+    ) -> Self {
+        self.post_issuance_recipients.push(Recipient {
+            satoshi,
+            script_pubkey,
+            blinding_pubkey: None,
+            asset,
+        });
+        self
+    }
+
     /// Fee rate in sats/kvb
     /// Multiply sats/vb value by 1000 i.e. 1.0 sat/byte = 1000.0 sat/kvb
     pub fn fee_rate(mut self, fee_rate: Option<f32>) -> Self {
@@ -347,9 +381,30 @@ impl TxBuilder {
     ///
     /// Can't be used if `reissue_asset` has been called
     pub fn issue_asset(
-        mut self,
+        self,
         asset_sats: u64,
         asset_receiver: Option<Address>,
+        token_sats: u64,
+        token_receiver: Option<Address>,
+        contract: Option<Contract>,
+    ) -> Result<Self, Error> {
+        if let Some(addr) = asset_receiver.as_ref() {
+            validate_address(&addr.to_string(), self.network())?;
+        }
+        let asset_recipients = match asset_receiver {
+            Some(address) => vec![IssuanceRecipient::from_address(asset_sats, &address)],
+            None if asset_sats > 0 => vec![IssuanceRecipient::wallet(asset_sats)],
+            None => vec![],
+        };
+        self.issue_asset_to_recipients(asset_recipients, token_sats, token_receiver, contract)
+    }
+
+    /// Issue an asset and send issued units to recipients.
+    ///
+    /// Recipient amounts are summed to determine the issued asset amount.
+    pub fn issue_asset_to_recipients(
+        mut self,
+        asset_recipients: Vec<IssuanceRecipient>,
         token_sats: u64,
         token_receiver: Option<Address>,
         contract: Option<Contract>,
@@ -357,25 +412,18 @@ impl TxBuilder {
         if !matches!(self.issuance_request, IssuanceRequest::None) {
             return Err(Error::IssuanceAlreadySet);
         }
-        if let Some(addr) = asset_receiver.as_ref() {
-            validate_address(&addr.to_string(), self.network())?;
-        }
         if let Some(addr) = token_receiver.as_ref() {
             validate_address(&addr.to_string(), self.network())?;
         }
+        let asset_sats = sum_issuance_recipients(&asset_recipients)?;
         if asset_sats == 0 && token_sats == 0 {
             return Err(Error::InvalidAmount);
         }
         if asset_sats > 21_000_000 * 100_000_000 {
             return Err(Error::IssuanceAmountGreaterThanBtcMax);
         }
-        self.issuance_request = IssuanceRequest::Issuance(
-            asset_sats,
-            asset_receiver,
-            token_sats,
-            token_receiver,
-            contract,
-        );
+        self.issuance_request =
+            IssuanceRequest::Issuance(asset_recipients, token_sats, token_receiver, contract);
         Ok(self)
     }
 
@@ -1059,27 +1107,16 @@ impl TxBuilder {
         // Set (re)issuance data
         match self.issuance_request {
             IssuanceRequest::None => {}
-            IssuanceRequest::Issuance(
-                satoshi_asset,
-                address_asset,
-                satoshi_token,
-                address_token,
-                contract,
-            ) => {
+            IssuanceRequest::Issuance(asset_recipients, satoshi_token, address_token, contract) => {
+                let satoshi_asset = sum_issuance_recipients(&asset_recipients)?;
                 // At least a L-BTC input for the fee was added.
                 let idx = 0;
                 let (asset, token) =
                     wollet.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token, contract)?;
 
-                if satoshi_asset > 0 {
-                    let addressee = match address_asset {
-                        Some(address) => Recipient::from_address(satoshi_asset, &address, asset),
-                        None => wollet.addressee_external(
-                            satoshi_asset,
-                            asset,
-                            &mut last_unused_external,
-                        )?,
-                    };
+                for recipient in asset_recipients {
+                    let addressee =
+                        recipient.into_recipient(wollet, asset, &mut last_unused_external)?;
                     wollet.add_output(&mut pset, &addressee)?;
                 }
 
@@ -1164,6 +1201,10 @@ impl TxBuilder {
                 };
                 wollet.add_output(&mut pset, &addressee)?;
             }
+        }
+
+        for addressee in &self.post_issuance_recipients {
+            wollet.add_output(&mut pset, addressee)?;
         }
 
         // Add a temporary fee, and always add a change or drain output,
@@ -1554,6 +1595,25 @@ impl<'a> WolletTxBuilder<'a> {
             inner: self.inner.issue_asset(
                 asset_sats,
                 asset_receiver,
+                token_sats,
+                token_receiver,
+                contract,
+            )?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::issue_asset_to_recipients()`]
+    pub fn issue_asset_to_recipients(
+        self,
+        asset_recipients: Vec<IssuanceRecipient>,
+        token_sats: u64,
+        token_receiver: Option<Address>,
+        contract: Option<Contract>,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.issue_asset_to_recipients(
+                asset_recipients,
                 token_sats,
                 token_receiver,
                 contract,

@@ -3,7 +3,7 @@ use crate::contract::Contract;
 use crate::elements::confidential::AssetBlindingFactor;
 use crate::elements::issuance::ContractHash;
 use crate::elements::pset::{Output, PartiallySignedTransaction};
-use crate::elements::{Address, AssetId, OutPoint, Transaction, TxOut, TxOutSecrets, Txid};
+use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::hashes::Hash;
 use crate::model::{Recipient, WalletTxOut};
@@ -19,8 +19,74 @@ pub const SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS: usize = 256;
 // We make issuance and reissuance are mutually exclusive for simplicity
 pub enum IssuanceRequest {
     None,
-    Issuance(u64, Option<Address>, u64, Option<Address>, Option<Contract>),
+    Issuance(
+        Vec<IssuanceRecipient>,
+        u64,
+        Option<Address>,
+        Option<Contract>,
+    ),
     Reissuance(AssetId, u64, Option<Address>, Option<Transaction>),
+}
+
+/// Recipient of newly issued asset units.
+#[derive(Debug, Clone)]
+pub struct IssuanceRecipient {
+    satoshi: u64,
+    script_pubkey: Option<Script>,
+    blinding_pubkey: Option<crate::elements::secp256k1_zkp::PublicKey>,
+}
+
+impl IssuanceRecipient {
+    /// Create an issuance recipient using the next wallet external address.
+    pub fn wallet(satoshi: u64) -> Self {
+        Self {
+            satoshi,
+            script_pubkey: None,
+            blinding_pubkey: None,
+        }
+    }
+
+    /// Create an issuance recipient from an address.
+    pub fn from_address(satoshi: u64, address: &Address) -> Self {
+        Self {
+            satoshi,
+            script_pubkey: Some(address.script_pubkey()),
+            blinding_pubkey: address.blinding_pubkey,
+        }
+    }
+
+    /// Create an issuance recipient from a generic recipient.
+    ///
+    /// The recipient asset is ignored and replaced with the newly issued asset
+    /// when the PSET is created.
+    pub fn from_recipient(recipient: Recipient) -> Self {
+        Self {
+            satoshi: recipient.satoshi,
+            script_pubkey: Some(recipient.script_pubkey),
+            blinding_pubkey: recipient.blinding_pubkey,
+        }
+    }
+
+    pub(crate) fn satoshi(&self) -> u64 {
+        self.satoshi
+    }
+
+    pub(crate) fn into_recipient(
+        self,
+        wollet: &Wollet,
+        asset: AssetId,
+        last_unused_external: &mut u32,
+    ) -> Result<Recipient, Error> {
+        match self.script_pubkey {
+            Some(script_pubkey) => Ok(Recipient {
+                satoshi: self.satoshi,
+                script_pubkey,
+                blinding_pubkey: self.blinding_pubkey,
+                asset,
+            }),
+            None => wollet.addressee_external(self.satoshi, asset, last_unused_external),
+        }
+    }
 }
 
 impl Wollet {

@@ -31,6 +31,22 @@ impl SimplicityProgram {
         Ok(SimplicityProgram { inner: compiled })
     }
 
+    /// Load and compile a Simplicity program from source, with optional debug information included.
+    /// Note that including debug information will change the CMR and thus the resulting address.
+    #[wasm_bindgen(js_name = loadWithDebugSymbols)]
+    pub fn load_with_debug_symbols(
+        source: &str,
+        arguments: &SimplicityArguments,
+        include_debug_info: bool,
+    ) -> Result<SimplicityProgram, Error> {
+        let compiled = scripts::load_program_with_debug_symbols(
+            source,
+            arguments.to_inner()?,
+            include_debug_info,
+        )?;
+        Ok(SimplicityProgram { inner: compiled })
+    }
+
     /// Get the Commitment Merkle Root of the program.
     #[wasm_bindgen(getter = cmr)]
     pub fn cmr(&self) -> Cmr {

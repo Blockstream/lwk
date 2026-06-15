@@ -35,7 +35,9 @@ async function runSimplicityP2pkTest() {
     let args = new lwk.SimplicityArguments();
     args = args.addValue("PUBLIC_KEY", lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY));
 
-    const program = lwk.SimplicityProgram.load(P2PK_SOURCE, args);
+    // At some point in the future, this should be replaced with SimplicityProgram.load,
+    // but for now the values above were calculated using loadWithDebugSymbols.
+    const program = lwk.SimplicityProgram.loadWithDebugSymbols(P2PK_SOURCE, args, true);
     const cmr = program.cmr.toString();
     assertEqual(cmr, TEST_CMR, "CMR mismatch");
 
@@ -86,7 +88,7 @@ async function runSimplicityP2pkTest() {
     // Verify add_value works for loading a program (regression)
     let args3 = new lwk.SimplicityArguments();
     args3 = args3.addValue("PUBLIC_KEY", lwk.SimplicityTypedValue.fromU256Hex(TEST_PUBLIC_KEY));
-    const program2 = lwk.SimplicityProgram.load(P2PK_SOURCE, args3);
+    const program2 = lwk.SimplicityProgram.loadWithDebugSymbols(P2PK_SOURCE, args3, true);
     assertEqual(program2.cmr.toString(), TEST_CMR, "Program2 CMR mismatch");
 
     // Round-trips

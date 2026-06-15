@@ -608,6 +608,21 @@ impl LockupResponse {
                 options: None,
             })
             .await?;
+
+        #[cfg(debug_assertions)]
+        {
+            // Simulate app crash AFTER construct_refund but BEFORE broadcast_tx.
+            if std::env::var("LWKBOLTZ_TEST_CRASH_AFTER_CONSTRUCT_REFUND").is_ok() {
+                log::warn!(
+                    "[swap:{swap_id}] TEST: Simulating crash AFTER construct_refund, BEFORE broadcast"
+                );
+
+                return Err(Error::Generic(
+                    "Simulated crash after construct_refund for testing".to_string(),
+                ));
+            }
+        }
+
         let txid = broadcast_tx_with_retry(&self.chain_client, &tx, &swap_id).await?;
         self.data.refund_txid = Some(txid.clone());
         log::info!("[swap:{swap_id}] Refund transaction broadcasted: {txid}");

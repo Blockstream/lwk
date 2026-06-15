@@ -1456,6 +1456,147 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_lbtc_btc_refunded_restore_after_failed_refund_broadcast() {
+        let _ = env_logger::try_init();
+
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+
+        let network = Network::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic.clone())
+            .build()
+            .await
+            .unwrap();
+
+        let refund_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let claim_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+            .await
+            .unwrap();
+        let refund_address = elements::Address::from_str(&refund_address_str).unwrap();
+        let claim_address = bitcoin::Address::from_str(&claim_address_str)
+            .unwrap()
+            .assume_checked();
+
+        let mut response = session
+            .lbtc_to_btc(50_000, &refund_address, &claim_address, None)
+            .await
+            .unwrap();
+        let swap_id = response.swap_id().to_string();
+
+        log::info!(
+            "LBTC->BTC failed refund broadcast restore test - Lockup address: {}",
+            response.lockup_address()
+        );
+        crate::utils::send_to_address(
+            LBTC_CHAIN.into(),
+            response.lockup_address(),
+            response.expected_amount(),
+        )
+        .await
+        .unwrap();
+
+        crate::utils::assert_next_continue_status(&mut response, "transaction.mempool").await;
+        crate::utils::mine_blocks(1).await.unwrap();
+        crate::utils::assert_next_continue_status(&mut response, "transaction.confirmed").await;
+        crate::utils::assert_next_continue_status(&mut response, "transaction.server.mempool")
+            .await;
+
+        for _ in 0..14 {
+            crate::utils::mine_blocks(100).await.unwrap();
+        }
+        crate::utils::mine_blocks(41).await.unwrap();
+
+        log::info!("Mined past timeout height, expecting Boltz transaction.refunded");
+
+        let expected_refunded = SwapState::TransactionRefunded.to_string();
+        let mut boltz_state = None;
+        for _ in 0..30 {
+            let swap_list = session.swap_restore().await.unwrap();
+            boltz_state = swap_list
+                .iter()
+                .find(|swap| swap.id.as_str() == swap_id.as_str())
+                .map(|swap| swap.status.clone());
+            if boltz_state.as_deref() == Some(expected_refunded.as_str()) {
+                break;
+            }
+            sleep(Duration::from_secs(1)).await;
+        }
+        assert_eq!(boltz_state.as_deref(), Some(expected_refunded.as_str()));
+
+        std::env::set_var("LWKBOLTZ_TEST_CRASH_AFTER_CONSTRUCT_REFUND", "1");
+        let mut crash_error = None;
+        for _ in 0..5 {
+            // this loops because transaction.server.confirmed update that can still be queued in the original session
+            match response.advance().await {
+                Ok(ControlFlow::Continue(update)) => {
+                    log::info!("Received pre-refund update: {}", update.status);
+                }
+                Ok(ControlFlow::Break(result)) => {
+                    panic!("Unexpected swap completion before refund crash: {result}");
+                }
+                Err(e) => {
+                    let err = e.to_string();
+                    if err.contains("Simulated crash after construct_refund") {
+                        crash_error = Some(err);
+                        break;
+                    }
+
+                    assert!(
+                        err.contains("swap not eligible for a cooperative claim")
+                            || err.contains("bad-txns-inputs-missingorspent"),
+                        "unexpected error before refund crash: {err}"
+                    );
+                }
+            }
+        }
+        std::env::remove_var("LWKBOLTZ_TEST_CRASH_AFTER_CONSTRUCT_REFUND");
+        let err = crash_error.expect("expected refund construction crash");
+        assert!(err.contains("Simulated crash after construct_refund"),);
+        assert!(response.refund_txid().is_none(),);
+
+        let serialized_data = response.serialize().unwrap();
+        drop(response);
+        drop(session);
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic)
+            .build()
+            .await
+            .unwrap();
+        let data = lwk_boltz::ChainSwapDataSerializable::deserialize(&serialized_data).unwrap();
+        assert_eq!(data.last_state, SwapState::ServerTransactionMempool);
+        assert!(data.refund_txid.is_none());
+        let mut response = session.restore_lockup(data).await.unwrap();
+
+        advance_until_complete!(response, true);
+
+        assert!(
+            response.refund_txid().is_some(),
+            "refund_txid should be set after restored refund transaction broadcast"
+        );
+
+        let refund_balance =
+            crate::utils::get_address_balance(LBTC_CHAIN.into(), &refund_address_str)
+                .await
+                .expect("Failed to get refund address balance");
+        assert!(
+            refund_balance > 0,
+            "Expected refund address to receive funds, got {refund_balance} sats"
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_lbtc_btc_skipped_server_confirmed() {
         let _ = env_logger::try_init();
 

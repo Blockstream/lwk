@@ -25,7 +25,7 @@ elements.workspace = true
 serialport = { version = "4.7.3", optional = true }
 thiserror = { workspace = true }
 
-log = "0.4.22"
+log.workspace = true
 
 elements-miniscript.workspace = true
 

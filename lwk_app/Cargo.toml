@@ -38,4 +38,4 @@ serial = ["lwk_jade/serial"]
 
 [dev-dependencies]
 enum-iterator = "1.4.1"
-tempfile = "3.8.1"
+tempfile.workspace = true

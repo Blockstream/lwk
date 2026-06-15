@@ -55,4 +55,5 @@ elements-miniscript = { version = "0.4", features = ["base64", "serde"] }
 serde = { version = "1.0" }
 serde_json = { version = "1.0" }
 log = { version = "0.4.22" }
+tempfile = { version = "3.8.0" }
 thiserror = { version = "2.0.18" }

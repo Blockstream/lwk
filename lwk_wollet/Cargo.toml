@@ -105,7 +105,7 @@ lwk_containers = { version = "0.14.0" }
 lwk_test_util = { version = "0.17.0" }
 lwk_common = { version = "0.17.0", features = ["sqlite"]}
 
-tempfile = "3.8.0"
+tempfile.workspace = true
 zmq = "0.10.0"
 
 criterion = "0.5.1"

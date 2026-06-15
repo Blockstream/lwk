@@ -12,5 +12,5 @@ test = false
 [dependencies]
 elements.workspace = true
 rand = "0.8.5"
-tempfile = "3.8.0"
+tempfile.workspace = true
 testcontainers = "0.14.0"

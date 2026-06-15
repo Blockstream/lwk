@@ -31,7 +31,7 @@ lwk_test_util = { version = "0.17.0" }
 
 shellwords = "1.1.0"
 elements.workspace = true
-tempfile = "3.8.0"
+tempfile.workspace = true
 
 [features]
 bindings = ["uniffi"]

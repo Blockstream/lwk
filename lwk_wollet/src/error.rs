@@ -226,6 +226,9 @@ pub enum Error {
     #[error("Missing wallet UTXO {0}")]
     MissingWalletUtxo(OutPoint),
 
+    #[error("Input order contains duplicated outpoint {0}")]
+    DuplicatedOutpoint(OutPoint),
+
     #[error("Transaction has empty witness, did you forget to sign and finalize?")]
     EmptyWitness,
 

@@ -19,13 +19,17 @@ pub const SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS: usize = 256;
 // We make issuance and reissuance are mutually exclusive for simplicity
 pub enum IssuanceRequest {
     None,
-    Issuance(
-        Vec<IssuanceRecipient>,
-        u64,
-        Option<Address>,
-        Option<Contract>,
-    ),
+    Issuances(Vec<IssuanceRequestItem>),
     Reissuance(AssetId, u64, Option<Address>, Option<Transaction>),
+}
+
+#[derive(Debug)]
+pub struct IssuanceRequestItem {
+    pub asset_recipients: Vec<IssuanceRecipient>,
+    pub token_sats: u64,
+    pub token_receiver: Option<Address>,
+    pub contract: Option<Contract>,
+    pub input_outpoint: Option<OutPoint>,
 }
 
 /// Recipient of newly issued asset units.

@@ -5,7 +5,7 @@ use crate::{
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
     pset_create::{
-        validate_address, IssuanceRecipient, IssuanceRequest,
+        validate_address, IssuanceRecipient, IssuanceRequest, IssuanceRequestItem,
         SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS,
     },
     Contract, DownloadTxResult, Error, LiquidexProposal, Network, UnvalidatedRecipient, Update,
@@ -168,6 +168,40 @@ pub(crate) fn add_input_inner(
     Ok(idx)
 }
 
+fn apply_issuance_request_item(
+    wollet: &Wollet,
+    pset: &mut PartiallySignedTransaction,
+    input_indexes_by_outpoint: &HashMap<OutPoint, usize>,
+    item: IssuanceRequestItem,
+    last_unused_external: &mut u32,
+) -> Result<(), Error> {
+    let satoshi_asset = sum_issuance_recipients(&item.asset_recipients)?;
+    let idx = match item.input_outpoint {
+        Some(outpoint) => *input_indexes_by_outpoint
+            .get(&outpoint)
+            .ok_or(Error::MissingWalletUtxo(outpoint))?,
+        None => 0,
+    };
+
+    let (asset, token) =
+        wollet.set_issuance(pset, idx, satoshi_asset, item.token_sats, item.contract)?;
+
+    for recipient in item.asset_recipients {
+        let addressee = recipient.into_recipient(wollet, asset, last_unused_external)?;
+        wollet.add_output(pset, &addressee)?;
+    }
+
+    if item.token_sats > 0 {
+        let addressee = match item.token_receiver {
+            Some(address) => Recipient::from_address(item.token_sats, &address, token),
+            None => wollet.addressee_external(item.token_sats, token, last_unused_external)?,
+        };
+        wollet.add_output(pset, &addressee)?;
+    }
+
+    Ok(())
+}
+
 /// A transaction builder
 ///
 /// See [`WolletTxBuilder`] for usage from rust.
@@ -191,6 +225,7 @@ pub struct TxBuilder {
     external_utxos: Vec<ExternalUtxo>,
 
     selected_utxos: Option<Vec<OutPoint>>,
+    input_order: Option<Vec<OutPoint>>,
 
     add_input_rangeproofs: bool,
 
@@ -213,6 +248,7 @@ impl TxBuilder {
             drain_to: None,
             external_utxos: vec![],
             selected_utxos: None,
+            input_order: None,
             add_input_rangeproofs: true,
             is_liquidex_make: false,
             liquidex_proposals: vec![],
@@ -403,13 +439,35 @@ impl TxBuilder {
     ///
     /// Recipient amounts are summed to determine the issued asset amount.
     pub fn issue_asset_to_recipients(
-        mut self,
+        self,
         asset_recipients: Vec<IssuanceRecipient>,
         token_sats: u64,
         token_receiver: Option<Address>,
         contract: Option<Contract>,
     ) -> Result<Self, Error> {
-        if !matches!(self.issuance_request, IssuanceRequest::None) {
+        self.issue_asset_to_recipients_at_input(
+            asset_recipients,
+            token_sats,
+            token_receiver,
+            contract,
+            None,
+        )
+    }
+
+    /// Issue an asset and send issued units to recipients from a specific transaction input.
+    ///
+    /// Recipient amounts are summed to determine the issued asset amount. When `input_outpoint` is
+    /// `None`, the issuance is attached to input 0, matching the legacy `issue_asset_to_recipients`
+    /// behavior.
+    pub fn issue_asset_to_recipients_at_input(
+        mut self,
+        asset_recipients: Vec<IssuanceRecipient>,
+        token_sats: u64,
+        token_receiver: Option<Address>,
+        contract: Option<Contract>,
+        input_outpoint: Option<OutPoint>,
+    ) -> Result<Self, Error> {
+        if matches!(self.issuance_request, IssuanceRequest::Reissuance(..)) {
             return Err(Error::IssuanceAlreadySet);
         }
         if let Some(addr) = token_receiver.as_ref() {
@@ -422,8 +480,23 @@ impl TxBuilder {
         if asset_sats > 21_000_000 * 100_000_000 {
             return Err(Error::IssuanceAmountGreaterThanBtcMax);
         }
-        self.issuance_request =
-            IssuanceRequest::Issuance(asset_recipients, token_sats, token_receiver, contract);
+
+        let item = IssuanceRequestItem {
+            asset_recipients,
+            token_sats,
+            token_receiver,
+            contract,
+            input_outpoint,
+        };
+
+        match &mut self.issuance_request {
+            IssuanceRequest::None => {
+                self.issuance_request = IssuanceRequest::Issuances(vec![item]);
+            }
+            IssuanceRequest::Issuances(items) => items.push(item),
+            IssuanceRequest::Reissuance(..) => unreachable!("checked above"),
+        }
+
         Ok(self)
     }
 
@@ -499,6 +572,16 @@ impl TxBuilder {
     /// * Insufficient funds (remember to include L-BTC utxos for fees)
     pub fn set_wallet_utxos(mut self, utxos: Vec<OutPoint>) -> Self {
         self.selected_utxos = Some(utxos);
+        self
+    }
+
+    /// Set the exact order in which selected wallet and external inputs are added.
+    ///
+    /// This is intended for covenant transactions whose programs depend on input indexes. When set,
+    /// no automatic wallet input selection is performed; every input required by the transaction must
+    /// be present in this list and available either as a wallet UTXO or as an external UTXO.
+    pub fn set_input_order(mut self, input_order: Vec<OutPoint>) -> Self {
+        self.input_order = Some(input_order);
         self
     }
 
@@ -964,6 +1047,50 @@ impl TxBuilder {
             }
         }
 
+        let mut input_indexes_by_outpoint = HashMap::new();
+        let mut manual_satoshi_in_by_asset: HashMap<AssetId, u64> = HashMap::new();
+        let external_utxos_by_outpoint: HashMap<OutPoint, &ExternalUtxo> = self
+            .external_utxos
+            .iter()
+            .map(|utxo| (utxo.outpoint, utxo))
+            .collect();
+
+        if let Some(input_order) = &self.input_order {
+            for outpoint in input_order {
+                if input_indexes_by_outpoint.contains_key(outpoint) {
+                    return Err(Error::DuplicatedOutpoint(*outpoint));
+                }
+
+                if let Some(utxo) = utxos.get(outpoint) {
+                    let idx = wollet.add_input(
+                        &mut pset,
+                        &mut inp_txout_sec,
+                        &mut inp_weight,
+                        utxo,
+                        self.add_input_rangeproofs,
+                    )?;
+                    input_indexes_by_outpoint.insert(*outpoint, idx);
+                    *manual_satoshi_in_by_asset
+                        .entry(utxo.unblinded.asset)
+                        .or_default() += utxo.unblinded.value;
+                } else if let Some(utxo) = external_utxos_by_outpoint.get(outpoint) {
+                    let idx = add_external_input(
+                        &mut pset,
+                        &mut inp_txout_sec,
+                        &mut inp_weight,
+                        utxo,
+                        self.add_input_rangeproofs,
+                    )?;
+                    input_indexes_by_outpoint.insert(*outpoint, idx);
+                    *manual_satoshi_in_by_asset
+                        .entry(utxo.unblinded.asset)
+                        .or_default() += utxo.unblinded.value;
+                } else {
+                    return Err(Error::MissingWalletUtxo(*outpoint));
+                }
+            }
+        }
+
         // Assets that belongs to this transaction
         // all the ones with a recipient
         let mut assets: HashSet<_> = addressees_asset.iter().map(|a| a.asset).collect();
@@ -985,47 +1112,56 @@ impl TxBuilder {
                 satoshi_out += addressee.satoshi;
             }
 
-            // Add all external asset utxos
-            for utxo in &self.external_utxos {
-                if utxo.unblinded.asset != asset {
-                    continue;
-                }
-                add_external_input(
-                    &mut pset,
-                    &mut inp_txout_sec,
-                    &mut inp_weight,
-                    utxo,
-                    self.add_input_rangeproofs,
-                )?;
-                satoshi_in += utxo.unblinded.value;
-            }
-
-            if self.selected_utxos.is_some() {
-                // Add only selected asset utxos
-                for utxo in &selected_utxos {
+            if self.input_order.is_some() {
+                satoshi_in = *manual_satoshi_in_by_asset.get(&asset).unwrap_or(&0);
+            } else {
+                // Add all external asset utxos
+                for utxo in &self.external_utxos {
                     if utxo.unblinded.asset != asset {
                         continue;
                     }
-                    wollet.add_input(
+                    let idx = add_external_input(
                         &mut pset,
                         &mut inp_txout_sec,
                         &mut inp_weight,
                         utxo,
                         self.add_input_rangeproofs,
                     )?;
+                    input_indexes_by_outpoint.insert(utxo.outpoint, idx);
+                    satoshi_in += utxo.unblinded.value;
+                }
+            }
+
+            if self.input_order.is_some() {
+                // Manual input order is authoritative; do not add more inputs.
+            } else if self.selected_utxos.is_some() {
+                // Add only selected asset utxos
+                for utxo in &selected_utxos {
+                    if utxo.unblinded.asset != asset {
+                        continue;
+                    }
+                    let idx = wollet.add_input(
+                        &mut pset,
+                        &mut inp_txout_sec,
+                        &mut inp_weight,
+                        utxo,
+                        self.add_input_rangeproofs,
+                    )?;
+                    input_indexes_by_outpoint.insert(utxo.outpoint, idx);
                     satoshi_in += utxo.unblinded.value;
                 }
             } else {
                 // Add more asset utxos until we cover the amount to send
                 if satoshi_in < satoshi_out {
                     for utxo in utxos.values().filter(|u| u.unblinded.asset == asset) {
-                        wollet.add_input(
+                        let idx = wollet.add_input(
                             &mut pset,
                             &mut inp_txout_sec,
                             &mut inp_weight,
                             utxo,
                             self.add_input_rangeproofs,
                         )?;
+                        input_indexes_by_outpoint.insert(utxo.outpoint, idx);
                         satoshi_in += utxo.unblinded.value;
                         if satoshi_in >= satoshi_out {
                             break;
@@ -1061,45 +1197,54 @@ impl TxBuilder {
             satoshi_out += addressee.satoshi;
         }
 
-        // Add all external L-BTC utxos
-        for utxo in &self.external_utxos {
-            if utxo.unblinded.asset != policy_asset {
-                continue;
-            }
-            add_external_input(
-                &mut pset,
-                &mut inp_txout_sec,
-                &mut inp_weight,
-                utxo,
-                self.add_input_rangeproofs,
-            )?;
-            satoshi_in += utxo.unblinded.value;
-        }
-
-        if self.selected_utxos.is_some() {
-            for utxo in &selected_utxos {
+        if self.input_order.is_some() {
+            satoshi_in = *manual_satoshi_in_by_asset.get(&policy_asset).unwrap_or(&0);
+        } else {
+            // Add all external L-BTC utxos
+            for utxo in &self.external_utxos {
                 if utxo.unblinded.asset != policy_asset {
                     continue;
                 }
-                wollet.add_input(
+                let idx = add_external_input(
                     &mut pset,
                     &mut inp_txout_sec,
                     &mut inp_weight,
                     utxo,
                     self.add_input_rangeproofs,
                 )?;
+                input_indexes_by_outpoint.insert(utxo.outpoint, idx);
+                satoshi_in += utxo.unblinded.value;
+            }
+        }
+
+        if self.input_order.is_some() {
+            // Manual input order is authoritative; do not add more inputs.
+        } else if self.selected_utxos.is_some() {
+            for utxo in &selected_utxos {
+                if utxo.unblinded.asset != policy_asset {
+                    continue;
+                }
+                let idx = wollet.add_input(
+                    &mut pset,
+                    &mut inp_txout_sec,
+                    &mut inp_weight,
+                    utxo,
+                    self.add_input_rangeproofs,
+                )?;
+                input_indexes_by_outpoint.insert(utxo.outpoint, idx);
                 satoshi_in += utxo.unblinded.value;
             }
         } else {
             // FIXME: For implementation simplicity now we always add all L-BTC inputs
             for utxo in utxos.values().filter(|u| u.unblinded.asset == policy_asset) {
-                wollet.add_input(
+                let idx = wollet.add_input(
                     &mut pset,
                     &mut inp_txout_sec,
                     &mut inp_weight,
                     utxo,
                     self.add_input_rangeproofs,
                 )?;
+                input_indexes_by_outpoint.insert(utxo.outpoint, idx);
                 satoshi_in += utxo.unblinded.value;
             }
         }
@@ -1107,29 +1252,15 @@ impl TxBuilder {
         // Set (re)issuance data
         match self.issuance_request {
             IssuanceRequest::None => {}
-            IssuanceRequest::Issuance(asset_recipients, satoshi_token, address_token, contract) => {
-                let satoshi_asset = sum_issuance_recipients(&asset_recipients)?;
-                // At least a L-BTC input for the fee was added.
-                let idx = 0;
-                let (asset, token) =
-                    wollet.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token, contract)?;
-
-                for recipient in asset_recipients {
-                    let addressee =
-                        recipient.into_recipient(wollet, asset, &mut last_unused_external)?;
-                    wollet.add_output(&mut pset, &addressee)?;
-                }
-
-                if satoshi_token > 0 {
-                    let addressee = match address_token {
-                        Some(address) => Recipient::from_address(satoshi_token, &address, token),
-                        None => wollet.addressee_external(
-                            satoshi_token,
-                            token,
-                            &mut last_unused_external,
-                        )?,
-                    };
-                    wollet.add_output(&mut pset, &addressee)?;
+            IssuanceRequest::Issuances(items) => {
+                for item in items {
+                    apply_issuance_request_item(
+                        wollet,
+                        &mut pset,
+                        &input_indexes_by_outpoint,
+                        item,
+                        &mut last_unused_external,
+                    )?;
                 }
             }
             IssuanceRequest::Reissuance(asset, satoshi_asset, address_asset, issuance_tx) => {

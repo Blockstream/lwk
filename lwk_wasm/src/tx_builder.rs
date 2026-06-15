@@ -171,6 +171,32 @@ impl TxBuilder {
             .into())
     }
 
+    /// Issue an asset and send issued units to recipients.
+    ///
+    /// Recipient amounts are summed to determine the issued asset amount.
+    #[wasm_bindgen(js_name = issueAssetToRecipients)]
+    pub fn issue_asset_to_recipients(
+        self,
+        asset_recipients: Vec<IssuanceRecipient>,
+        token_sats: u64,
+        token_receiver: Option<Address>,
+        contract: Option<Contract>,
+        input_outpoint: Option<OutPoint>,
+    ) -> Result<TxBuilder, Error> {
+        let asset_recipients = asset_recipients.into_iter().map(Into::into).collect();
+        Ok(self
+            .inner
+            .issue_asset_to_recipients_at_input(
+                asset_recipients,
+                token_sats,
+                token_receiver.map(Into::into),
+                contract.map(Into::into),
+                input_outpoint.map(Into::into),
+            )?
+            .into())
+    }
+
+
     /// Reissue an asset
     ///
     /// reissue the asset defined by `asset_to_reissue`, provided the reissuance token is owned
@@ -216,6 +242,13 @@ impl TxBuilder {
     pub fn set_wallet_utxos(self, outpoints: Vec<OutPoint>) -> TxBuilder {
         let outpoints: Vec<elements::OutPoint> = outpoints.into_iter().map(Into::into).collect();
         self.inner.set_wallet_utxos(outpoints).into()
+    }
+
+    /// Set the exact order in which selected wallet and external inputs are added.
+    #[wasm_bindgen(js_name = setInputOrder)]
+    pub fn set_input_order(self, outpoints: Vec<OutPoint>) -> TxBuilder {
+        let outpoints: Vec<elements::OutPoint> = outpoints.into_iter().map(Into::into).collect();
+        self.inner.set_input_order(outpoints).into()
     }
 
     /// Adds external UTXOs

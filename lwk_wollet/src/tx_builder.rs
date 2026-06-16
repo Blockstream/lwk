@@ -11,12 +11,12 @@ use crate::{
 use elements::{
     confidential::{AssetBlindingFactor, Nonce, Value, ValueBlindingFactor},
     issuance::ContractHash,
-    pset::{raw::ProprietaryKey, Output, PartiallySignedTransaction, PsbtSighashType},
+    pset::{Output, PartiallySignedTransaction, PsbtSighashType},
     secp256k1_zkp::{self, RangeProof, SurjectionProof, ZERO_TWEAK},
     Address, AssetId, BlindAssetProofs, BlindValueProofs, EcdsaSighashType, OutPoint, Script,
     Transaction, TxOut, TxOutSecrets,
 };
-use lwk_common::calculate_fee;
+use lwk_common::{calculate_fee, set_genesis_hash};
 use rand::thread_rng;
 
 pub fn extract_issuances(tx: &Transaction) -> Vec<IssuanceDetails> {
@@ -878,15 +878,7 @@ impl TxBuilder {
         // Init PSET
         let mut pset = PartiallySignedTransaction::new_v2();
 
-        let genesis_block_hash = self.network().genesis_hash().to_byte_array().to_vec();
-        // Add genesis block hash as defined in ELIP-101 https://github.com/ElementsProject/ELIPs/blob/main/elip-0101.mediawiki
-        // TODO: upstream to rust elements
-        // TODO: tested with Jade 1.0.37 but does not work. Safe to merge because subtype is unique.
-        const PSBT_ELEMENTS_GLOBAL_GENESIS_HASH: u8 = 0x02;
-        pset.global.proprietary.insert(
-            ProprietaryKey::from_pset_pair(PSBT_ELEMENTS_GLOBAL_GENESIS_HASH, vec![]),
-            genesis_block_hash,
-        );
+        set_genesis_hash(&mut pset, &self.network());
         let mut inp_txout_sec = HashMap::new();
         let mut last_unused_internal = wollet.last_unused_internal();
         let mut last_unused_external = wollet.last_unused_external();

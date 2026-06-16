@@ -25,8 +25,8 @@ use elements_miniscript::{
 };
 use fxhash::FxHasher;
 use lwk_common::{
-    burn_script, pset_balance, pset_issuances, pset_signatures, Balance, DynStore, EncryptedStore,
-    FakeStore, FileStore, MemoryStore, PsetDetails,
+    burn_script, get_genesis_hash, pset_balance, pset_issuances, pset_signatures, Balance,
+    DynStore, EncryptedStore, FakeStore, FileStore, MemoryStore, PsetDetails,
 };
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hasher;
@@ -1178,8 +1178,11 @@ impl Wollet {
             }
         }
 
+        // ELIP-101 key written by TxBuilder: https://github.com/ElementsProject/ELIPs/blob/main/elip-0101.mediawiki
+        let genesis_hash = get_genesis_hash(pset);
+
         // genesis_hash is only used for BIP341 (taproot) sighash computation
-        let result = pset.finalize_mut(&EC, BlockHash::all_zeros());
+        let result = pset.finalize_mut(&EC, genesis_hash);
 
         // Replace the original sighashes in the finalized signatures
         for original_sig in original_sigs {

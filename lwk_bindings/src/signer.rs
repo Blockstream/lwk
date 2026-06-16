@@ -64,6 +64,14 @@ impl Bip {
             inner: lwk_common::Bip::Bip87,
         }
     }
+
+    /// For P2TR wallets
+    #[uniffi::constructor]
+    pub fn new_bip86() -> Self {
+        Self {
+            inner: lwk_common::Bip::Bip86,
+        }
+    }
 }
 
 /// A Software signer, wrapper over [`lwk_signer::SwSigner`]
@@ -198,6 +206,10 @@ mod tests {
 
         let xpub = signer.keyorigin_xpub(&Bip::new_bip87()).unwrap();
         let expected = "[73c5da0a/87h/1h/0h]tpubDCChhoz5Qdrkn7Z7KXawq6Ad6r3A4MUkCoVTqeWxfTkA6bHNJ3CHUEtALQdkNeixNz4446PcAmw4WKcj3mV2vb29H7sg9EPzbyCU1y2merw";
+        assert_eq!(xpub, expected);
+
+        let xpub = signer.keyorigin_xpub(&Bip::new_bip86()).unwrap();
+        let expected = "[73c5da0a/86h/1h/0h]tpubDDfvzhdVV4unsoKt5aE6dcsNsfeWbTgmLZPi8LQDYU2xixrYemMfWJ3BaVneH3u7DBQePdTwhpybaKRU95pi6PMUtLPBJLVQRpzEnjfjZzX";
         assert_eq!(xpub, expected);
 
         assert_eq!(signer.mnemonic().unwrap(), mnemonic);

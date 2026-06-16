@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-/// The bip variant for a descriptor like specified in the bips (49, 84, 87)
+/// The bip variant for a descriptor like specified in the bips (49, 84, 86, 87)
 #[wasm_bindgen]
 pub struct Bip {
     inner: lwk_common::Bip,
@@ -47,6 +47,11 @@ impl Bip {
         lwk_common::Bip::Bip87.into()
     }
 
+    /// Creates a bip86 variant
+    pub fn bip86() -> Bip {
+        lwk_common::Bip::Bip86.into()
+    }
+
     /// Return the string representation of the bip variant, such as "bip49", "bip84" or "bip87"
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
@@ -68,5 +73,6 @@ mod tests {
         assert_eq!(Bip::bip49().to_string(), "bip49");
         assert_eq!(Bip::bip84().to_string(), "bip84");
         assert_eq!(Bip::bip87().to_string(), "bip87");
+        assert_eq!(Bip::bip86().to_string(), "bip86");
     }
 }

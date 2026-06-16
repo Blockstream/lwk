@@ -1267,6 +1267,7 @@ impl LockupResponse {
                 PaymentState::Continue
             }
             Ok(ControlFlow::Break(update)) => {
+                *lock = Some(response);
                 if update {
                     PaymentState::Success
                 } else {

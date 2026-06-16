@@ -20,6 +20,9 @@ pub enum LiquidClientError<T: Debug> {
     InvalidResponse(String),
     #[error("Unsupported App Version")]
     UnsupportedAppVersion,
+    // TODO: remove when taproot is implemented
+    #[error("Taproot inputs are not supported by the Ledger signer")]
+    UnsupportedTaprootInput,
 }
 
 impl<T: Debug> From<InterpreterError> for LiquidClientError<T> {

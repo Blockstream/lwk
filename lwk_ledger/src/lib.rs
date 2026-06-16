@@ -116,6 +116,19 @@ impl<T: Transport> Signer for &Ledger<T> {
                     .as_ref()
                     .map(|x| x.is_v0_p2wpkh())
                     .unwrap_or(false);
+            let is_p2tr = input
+                .witness_utxo
+                .as_ref()
+                .map(|u| u.script_pubkey.is_v1_p2tr())
+                .unwrap_or(false);
+            if is_p2tr
+                && input
+                    .tap_key_origins
+                    .values()
+                    .any(|(_, (fp, _))| fp == &master_fp)
+            {
+                return Err(Error::UnsupportedTaprootInput);
+            }
             // Singlesig
             if is_p2wpkh || is_p2shwpkh {
                 // We expect exactly one element
@@ -233,7 +246,9 @@ impl<T: Transport> Signer for &Ledger<T> {
                         // TODO: user the pubkey from PartialSignature to insert in partial_sigs
                         let sig_vec = match sig {
                             PartialSignature::Sig(_, sig) => sig.to_vec(),
-                            _ => panic!("FIXME: support taproot sig or raise error"),
+                            PartialSignature::TapScriptSig(..) => {
+                                return Err(Error::UnsupportedTaprootInput)
+                            }
                         };
                         input.partial_sigs.insert(*public_key, sig_vec);
                         // FIXME: handle cases where we have multiple pubkeys with master fingerprint

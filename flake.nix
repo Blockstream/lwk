@@ -43,13 +43,6 @@
         rust-overlay.follows = "rust-overlay";
       };
     };
-    nexus_relay = {
-      url = "github:RCasatta/nexus_relay";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        flake-utils.follows = "flake-utils";
-      };
-    };
     # TODO: Remove nixpkgs-mdbook once MSRV reach 1.88+ and we can upgrade mdbook dependency in docs/snippets/processor
     nixpkgs-mdbook.url = "github:NixOS/nixpkgs/566e53c2ad750c84f6d31f9ccb9d00f823165550";
   };
@@ -63,7 +56,6 @@
       electrs-flake,
       waterfalls-flake,
       registry-flake,
-      nexus_relay,
       nixpkgs-mdbook,
       ...
     }:
@@ -190,7 +182,6 @@
           ELECTRS_LIQUID_EXEC = electrs.program;
           WATERFALLS_EXEC = "${waterfalls}/bin/waterfalls";
           ASSET_REGISTRY_EXEC = "${registry.default}/bin/server";
-          NEXUS_RELAY_EXEC = "${nexus_relay.packages.${system}.default}/bin/nexus_relay";
           WEBSOCAT_EXEC = "${pkgs.websocat}/bin/websocat";
           SKIP_VERIFY_DOMAIN_LINK = "1"; # the registry server skips validation
         };

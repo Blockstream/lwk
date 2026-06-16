@@ -37,6 +37,21 @@ impl Jade {
                 return Err(Error::MultipleBip32DerivationsInput(i));
             }
 
+            // TODO: handle `tap_key_origins` for taproot case
+            if jade_derivation.is_none()
+                && input
+                    .tap_key_origins
+                    .values()
+                    .any(|(_, (fingerprint, _))| fingerprint == &my_fingerprint)
+            {
+                let desc = input
+                    .witness_utxo
+                    .as_ref()
+                    .map(|u| u.script_pubkey.asm())
+                    .unwrap_or_else(|| "taproot".to_string());
+                return Err(Error::UnsupportedScriptPubkeyType(desc));
+            }
+
             if let Some((want_public_key, (_, derivation_path))) = jade_derivation {
                 let path: Vec<u32> = derivation_path_to_vec(derivation_path);
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.18.0
+
 * Remove `lwk_wollet::ElementsNetwork`, replaced with `lwk_common::Network`. Notes for migration:
   * `lwk_wollet::ElementsNetwork::genesis_block_hash()` replaced by `lwk_common::Network::genesis_hash()`;
   * `lwk_wollet::ElementsNetwork::policy_asset()` returned `AssetId`, `lwk_common::Network::policy_asset()` returns `&AssetId`;

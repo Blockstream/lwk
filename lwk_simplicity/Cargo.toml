@@ -1,6 +1,6 @@
 [package]
 name = "lwk_simplicity"
-version = "0.17.0"
+version = "0.18.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Utilities to deal with Simplicity transactions"
 license = "MIT OR BSD-2-Clause"
@@ -8,9 +8,9 @@ exclude = ["tests/", "data/"]
 documentation = "https://docs.rs/lwk_simplicity"
 
 [dependencies]
-lwk_common = { version = "0.17.0" }
-lwk_signer = { version = "0.17.0", default-features = false }
-lwk_wollet = { version = "0.17.0", default-features = false }
+lwk_common = { version = "0.18.0" }
+lwk_signer = { version = "0.18.0", default-features = false }
+lwk_wollet = { version = "0.18.0", default-features = false }
 
 simplicityhl = { version = "0.4.1" }
 
@@ -28,8 +28,8 @@ uuid = { version = "~1.20", default-features = false, features = [
 uuid = { version = "~1.20", default-features = false, features = ["js"] }
 
 [dev-dependencies]
-lwk_test_util = { version = "0.17.0" }
-lwk_wollet = { version = "0.17.0", default-features = false, features = [
+lwk_test_util = { version = "0.18.0" }
+lwk_wollet = { version = "0.18.0", default-features = false, features = [
     "esplora",
     "electrum",
 ] }

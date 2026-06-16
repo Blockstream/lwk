@@ -7,9 +7,9 @@ You can use the crates released on [crates.io](https://crates.io)
 
 ```rust,ignore
 [dependencies]
-lwk_wollet = "0.17.0"
-lwk_signer = "0.17.0"
-lwk_common = "0.17.0"
+lwk_wollet = "0.18.0"
+lwk_signer = "0.18.0"
+lwk_common = "0.18.0"
 ```
 
 ## Python

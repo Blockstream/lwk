@@ -577,7 +577,7 @@ dependencies = [
  "bitcoin",
  "boltz-client-macros",
  "electrum-client",
- "elements 0.25.2",
+ "elements 0.25.3",
  "env_logger",
  "futures-util",
  "getrandom 0.2.16",
@@ -1206,9 +1206,9 @@ dependencies = [
 
 [[package]]
 name = "elements"
-version = "0.25.2"
+version = "0.25.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81b2569d3495bfdfce36c504fd4d78752ff4a7699f8a33e6f3ee523bddf9f6ad"
+checksum = "83c63a04238f4b7f3564fe9705921452c2900efd00982545e5c634fac9024fe2"
 dependencies = [
  "bech32 0.11.0",
  "bitcoin",
@@ -1236,7 +1236,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "571fa105690f83c7833df2109eb2e14ca0e62d633d2624ffcb166ff18a3da870"
 dependencies = [
  "bitcoin",
- "elements 0.25.2",
+ "elements 0.25.3",
  "miniscript",
  "serde",
 ]
@@ -2548,7 +2548,7 @@ dependencies = [
 name = "lwk_bindings"
 version = "0.17.2"
 dependencies = [
- "elements 0.25.2",
+ "elements 0.25.3",
  "log",
  "lwk_boltz",
  "lwk_common",
@@ -2598,7 +2598,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "ctrlc",
- "elements 0.25.2",
+ "elements 0.25.3",
  "env_logger",
  "log",
  "lwk_app",
@@ -2617,7 +2617,7 @@ version = "0.17.0"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.21.7",
- "elements 0.25.2",
+ "elements 0.25.3",
  "elements-miniscript",
  "getrandom 0.2.16",
  "qr_code",
@@ -2633,7 +2633,7 @@ dependencies = [
 name = "lwk_containers"
 version = "0.14.0"
 dependencies = [
- "elements 0.25.2",
+ "elements 0.25.3",
  "rand 0.8.5",
  "tempfile",
  "testcontainers",
@@ -2648,7 +2648,7 @@ name = "lwk_jade"
 version = "0.17.0"
 dependencies = [
  "base64 0.21.7",
- "elements 0.25.2",
+ "elements 0.25.3",
  "elements-miniscript",
  "hex",
  "log",
@@ -2689,7 +2689,7 @@ version = "0.17.0"
 dependencies = [
  "bip21",
  "bitcoin-payment-instructions",
- "elements 0.25.2",
+ "elements 0.25.3",
  "lightning 0.1.7",
  "lightning-invoice 0.33.2",
  "lnurl-rs",
@@ -2812,7 +2812,7 @@ dependencies = [
  "cbc",
  "criterion",
  "electrum-client",
- "elements 0.25.2",
+ "elements 0.25.3",
  "elements 0.26.1",
  "elements-miniscript",
  "flate2",
@@ -3864,7 +3864,7 @@ version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9465315bc9d4566e1724f0fffcbcc446268cb522e60f9a27bcded6b19c108113"
 dependencies = [
- "bitcoin_hashes 0.14.0",
+ "bitcoin_hashes 0.13.0",
  "rand 0.8.5",
  "secp256k1-sys 0.10.1",
  "serde",
@@ -4172,7 +4172,7 @@ dependencies = [
  "bitcoin",
  "bitcoin_hashes 0.14.0",
  "byteorder",
- "elements 0.25.2",
+ "elements 0.25.3",
  "getrandom 0.2.16",
  "ghost-cell",
  "hex-conservative 0.2.1",

@@ -21,6 +21,7 @@ mod keyorigin_xpub;
 mod model;
 mod network;
 pub mod precision;
+mod pset;
 mod qr;
 mod segwit;
 mod signer;
@@ -44,6 +45,7 @@ pub use crate::keyorigin_xpub::{keyorigin_xpub_from_str, InvalidKeyOriginXpub};
 pub use crate::model::*;
 pub use crate::network::{ElementsParamsBuilder, Network};
 pub use crate::precision::Precision;
+pub use crate::pset::{get_genesis_hash, set_genesis_hash};
 pub use crate::qr::*;
 pub use crate::segwit::is_provably_segwit;
 #[cfg(feature = "amp0")]

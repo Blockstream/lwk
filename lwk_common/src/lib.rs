@@ -154,7 +154,10 @@ fn is_mine(
     tap_key_origins: &BTreeMap<XOnlyPublicKey, (Vec<TapLeafHash>, (Fingerprint, DerivationPath))>,
 ) -> Result<bool, Error> {
     let paths: Vec<&DerivationPath> = if script_pubkey.is_v1_p2tr() {
-        tap_key_origins.values().map(|(_, (_, path))| path).collect()
+        tap_key_origins
+            .values()
+            .map(|(_, (_, path))| path)
+            .collect()
     } else {
         bip32_derivation.values().map(|(_, path)| path).collect()
     };

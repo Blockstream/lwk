@@ -15,15 +15,16 @@ use elements_miniscript::{
         },
         hashes::Hash,
         pset::PartiallySignedTransaction,
+        schnorr::TapTweak,
         secp256k1_zkp::{All, Secp256k1},
         sighash::SighashCache,
-        EcdsaSighashType,
+        EcdsaSighashType, SchnorrSig, SchnorrSighashType,
     },
     elementssig_to_rawsig,
-    psbt::PsbtExt,
+    psbt::{PsbtExt, PsbtSighashMsg},
     slip77::MasterBlindingKey,
 };
-use lwk_common::Signer;
+use lwk_common::{get_genesis_hash, Signer};
 
 /// Possible errors when signing with the software signer [`SwSigner`]
 #[derive(thiserror::Error, Debug)]
@@ -313,55 +314,103 @@ impl Signer for SwSigner {
         let mut sighash_cache = SighashCache::new(&tx);
         let mut signature_added = 0;
 
+        let genesis_hash = get_genesis_hash(pset);
+
         let signer_fingerprint = self.fingerprint();
-        // genesis hash is not used at all for sighash calculation
-        let genesis_hash = elements_miniscript::elements::BlockHash::all_zeros();
         let mut messages = vec![];
         for (i, inp) in pset.inputs().iter().enumerate() {
             // computing all the messages to sign
             // since the pset is borrowed, we can't do this action in a inputs_mut() for loop
-            let msg = if inp
-                .bip32_derivation
-                .values()
-                .any(|(fp, _)| fp == &signer_fingerprint)
-            {
-                Some(
-                    pset.sighash_msg(i, &mut sighash_cache, None, genesis_hash)?
-                        .to_secp_msg(),
-                )
+            let is_taproot = inp
+                .witness_utxo
+                .as_ref()
+                .map(|o| o.script_pubkey.is_v1_p2tr())
+                .unwrap_or(false);
+
+            let mine = if is_taproot {
+                inp.tap_key_origins
+                    .values()
+                    .any(|(_, (fp, _))| fp == &signer_fingerprint)
+            } else {
+                inp.bip32_derivation
+                    .values()
+                    .any(|(fp, _)| fp == &signer_fingerprint)
+            };
+
+            let msg = if mine {
+                Some(pset.sighash_msg(i, &mut sighash_cache, None, genesis_hash)?)
             } else {
                 None
             };
-            messages.push(msg);
+            messages.push((msg, is_taproot));
         }
 
-        for (input, msg) in pset.inputs_mut().iter_mut().zip(messages) {
-            if msg.is_none() {
-                continue;
-            }
-            let msg = msg.expect("just checked");
-            let hash_ty = input
-                .sighash_type
-                .map(|h| h.ecdsa_hash_ty().unwrap_or(EcdsaSighashType::All))
-                .unwrap_or(EcdsaSighashType::All);
-            for (want_public_key, (fingerprint, derivation_path)) in input.bip32_derivation.iter() {
-                if &signer_fingerprint == fingerprint {
-                    let ext_derived = self.xprv.derive_priv(&self.secp, derivation_path)?;
-                    let private_key = PrivateKey::new(ext_derived.private_key, Network::Bitcoin);
-                    let public_key = private_key.public_key(&self.secp);
-                    if want_public_key == &public_key {
-                        // fixme: for taproot use schnorr
-                        let sig = match self.ecdsa_sign_opt {
-                            EcdsaSignOpt::LowR => {
-                                self.secp.sign_ecdsa_low_r(&msg, &private_key.inner)
-                            }
-                            EcdsaSignOpt::NoGrind => self.secp.sign_ecdsa(&msg, &private_key.inner),
-                        };
-                        let sig = elementssig_to_rawsig(&(sig, hash_ty));
+        for (input, (msg, is_taproot)) in pset.inputs_mut().iter_mut().zip(messages) {
+            let msg = match msg {
+                None => continue,
+                Some(m) => m,
+            };
 
-                        let inserted = input.partial_sigs.insert(public_key, sig);
-                        if inserted.is_none() {
+            if is_taproot {
+                for (pubkey, (_, (fingerprint, derivation_path))) in input.tap_key_origins.iter() {
+                    if fingerprint == &signer_fingerprint {
+                        let derived = self.xprv.derive_priv(&self.secp, derivation_path)?;
+                        let keypair = derived.to_keypair(&self.secp);
+
+                        let (x_only_pubkey, _) = bitcoin::XOnlyPublicKey::from_keypair(&keypair);
+
+                        if input.tap_internal_key != Some(x_only_pubkey)
+                            || input.tap_key_sig.is_some()
+                            || &x_only_pubkey != pubkey
+                        {
+                            continue;
+                        }
+
+                        if let PsbtSighashMsg::TapSighash(hash) = msg {
+                            let msg = Message::from_digest(hash.to_byte_array());
+
+                            let tweaked_keypair =
+                                keypair.tap_tweak(&self.secp, input.tap_merkle_root);
+
+                            let sig = self.secp.sign_schnorr(&msg, &tweaked_keypair.to_inner());
+                            let hash_ty = input
+                                .sighash_type
+                                .and_then(|h| h.schnorr_hash_ty())
+                                .unwrap_or(SchnorrSighashType::Default);
+
+                            input.tap_key_sig = Some(SchnorrSig { sig, hash_ty });
                             signature_added += 1;
+                        }
+                    }
+                }
+            } else {
+                let hash_ty = input
+                    .sighash_type
+                    .map(|h| h.ecdsa_hash_ty().unwrap_or(EcdsaSighashType::All))
+                    .unwrap_or(EcdsaSighashType::All);
+                for (want_public_key, (fingerprint, derivation_path)) in
+                    input.bip32_derivation.iter()
+                {
+                    if &signer_fingerprint == fingerprint {
+                        let ext_derived = self.xprv.derive_priv(&self.secp, derivation_path)?;
+                        let private_key =
+                            PrivateKey::new(ext_derived.private_key, Network::Bitcoin);
+                        let public_key = private_key.public_key(&self.secp);
+                        if want_public_key == &public_key {
+                            let sig = match self.ecdsa_sign_opt {
+                                EcdsaSignOpt::LowR => self
+                                    .secp
+                                    .sign_ecdsa_low_r(&msg.to_secp_msg(), &private_key.inner),
+                                EcdsaSignOpt::NoGrind => {
+                                    self.secp.sign_ecdsa(&msg.to_secp_msg(), &private_key.inner)
+                                }
+                            };
+                            let sig = elementssig_to_rawsig(&(sig, hash_ty));
+
+                            let inserted = input.partial_sigs.insert(public_key, sig);
+                            if inserted.is_none() {
+                                signature_added += 1;
+                            }
                         }
                     }
                 }

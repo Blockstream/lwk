@@ -96,10 +96,6 @@ js-sys = { version = "0.3.68" }
 [dev-dependencies]
 lwk_jade = { version = "0.18.0", features = ["test_emulator"] }
 lwk_ledger = { version = "0.18.0", features = ["test_emulator"] }
-# TODO: move tests related to the simplicity to the lwk_simplicity to avoid circlar deps
-# -> lwk_simplicity has dependency lwk_wollet
-# -> lwk_wollet has dev-dependency lwk_simplicity
-lwk_simplicity = { version = "0.18.0" }
 lwk_signer = { version = "0.18.0", features = ["jade", "ledger"] }
 lwk_containers = { version = "0.18.0" }
 lwk_test_util = { version = "0.18.0" }

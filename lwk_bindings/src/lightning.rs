@@ -189,6 +189,29 @@ fn with_swap_context(err: lwk_boltz::Error, swap_id: &str) -> LwkError {
     }
 }
 
+fn typed_webhook<T: std::str::FromStr>(
+    webhook: Option<&Arc<WebHook>>,
+) -> Result<Option<lwk_boltz::Webhook<T>>, LwkError> {
+    let status = webhook
+        .filter(|w| !w.status.is_empty())
+        .map(|w| {
+            w.status
+                .iter()
+                .map(|s| s.parse::<T>())
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .transpose()
+        .map_err(|_| LwkError::Generic {
+            msg: "Invalid status".to_string(),
+        })?;
+
+    Ok(webhook.map(|w| lwk_boltz::Webhook::<T> {
+        url: w.url.to_string(),
+        hash_swap_id: None,
+        status,
+    }))
+}
+
 /// Asset type for swap quotes
 #[derive(uniffi::Enum, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SwapAsset {
@@ -413,27 +436,27 @@ impl BoltzSession {
         refund_address: &Address,
         webhook: Option<Arc<WebHook>>,
     ) -> Result<PreparePayResponse, LwkError> {
-        let status = webhook
-            .as_ref()
-            .filter(|w| !w.status.is_empty())
-            .map(|w| {
-                w.status
-                    .iter()
-                    .map(|s| s.parse::<SubSwapStates>())
-                    .collect::<Result<Vec<_>, _>>()
-            })
-            .transpose()
-            .map_err(|_| LwkError::Generic {
-                msg: "Invalid status".to_string(),
-            })?;
-        let webhook = webhook
-            .as_ref()
-            .map(|w| lwk_boltz::Webhook::<SubSwapStates> {
-                url: w.url.to_string(),
-                hash_swap_id: None,
-                status,
-            });
+        let webhook = typed_webhook::<SubSwapStates>(webhook.as_ref())?;
         let response = self.inner.prepare_pay(
+            &lightning_payment.clone()?,
+            refund_address.as_ref(),
+            webhook,
+        )?;
+
+        Ok(PreparePayResponse {
+            inner: Mutex::new(Some(response)),
+        })
+    }
+
+    /// Prepare to pay a Lightning invoice from Bitcoin onchain funds.
+    pub fn btc_to_ln(
+        &self,
+        lightning_payment: &LightningPayment,
+        refund_address: &BitcoinAddress,
+        webhook: Option<Arc<WebHook>>,
+    ) -> Result<PreparePayResponse, LwkError> {
+        let webhook = typed_webhook::<SubSwapStates>(webhook.as_ref())?;
+        let response = self.inner.btc_to_ln(
             &lightning_payment.clone()?,
             refund_address.as_ref(),
             webhook,
@@ -472,29 +495,31 @@ impl BoltzSession {
         claim_address: &Address,
         webhook: Option<Arc<WebHook>>,
     ) -> Result<InvoiceResponse, LwkError> {
-        let status = webhook
-            .as_ref()
-            .filter(|w| !w.status.is_empty())
-            .map(|w| {
-                w.status
-                    .iter()
-                    .map(|s| s.parse::<RevSwapStates>())
-                    .collect::<Result<Vec<_>, _>>()
-            })
-            .transpose()
-            .map_err(|_| LwkError::Generic {
-                msg: "Invalid status".to_string(),
-            })?;
-        let webhook = webhook
-            .as_ref()
-            .map(|w| lwk_boltz::Webhook::<RevSwapStates> {
-                url: w.url.to_string(),
-                hash_swap_id: None,
-                status,
-            });
+        let webhook = typed_webhook::<RevSwapStates>(webhook.as_ref())?;
         let response = self
             .inner
             .invoice(amount, description, claim_address.as_ref(), webhook)
+            .map_err(|e| LwkError::Generic {
+                msg: format!("Invoice failed: {e:?}"),
+            })?;
+
+        Ok(InvoiceResponse {
+            inner: Mutex::new(Some(response)),
+        })
+    }
+
+    /// Create a new invoice for a Lightning to Bitcoin reverse swap.
+    pub fn ln_to_btc(
+        &self,
+        amount: u64,
+        description: Option<String>,
+        claim_address: &BitcoinAddress,
+        webhook: Option<Arc<WebHook>>,
+    ) -> Result<InvoiceResponse, LwkError> {
+        let webhook = typed_webhook::<RevSwapStates>(webhook.as_ref())?;
+        let response = self
+            .inner
+            .ln_to_btc(amount, description, claim_address.as_ref(), webhook)
             .map_err(|e| LwkError::Generic {
                 msg: format!("Invoice failed: {e:?}"),
             })?;
@@ -856,6 +881,16 @@ impl PreparePayResponse {
             .as_ref()
             .ok_or(LwkError::ObjectConsumed)?
             .uri())
+    }
+
+    pub fn lockup_address(&self) -> Result<String, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .lockup_address()
+            .to_string())
     }
 
     pub fn uri_address(&self) -> Result<Arc<Address>, LwkError> {

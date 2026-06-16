@@ -155,19 +155,46 @@ def should_start_completion_thread(swap_data):
     ).strip().lower()
     return answer in ("y", "yes")
 
-def show_invoice(boltz_session, wollet):
-    """Create and show an invoice"""
-    # Ask for the invoice amount
+def read_positive_amount(prompt):
+    """Read a positive satoshi amount from stdin."""
     while True:
         try:
-            amount_str = input("Enter invoice amount in satoshis: ").strip()
+            amount_str = input(prompt).strip()
             amount = int(amount_str)
             if amount <= 0:
                 print("Amount must be positive. Please try again.")
                 continue
-            break
+            return amount
         except ValueError:
             print("Invalid amount. Please enter a valid number.")
+
+def read_lightning_payment(prompt):
+    """Read a BOLT11 invoice or BOLT12 offer from stdin."""
+    payment_str = input(prompt).strip()
+    lightning_payment = LightningPayment(payment_str)
+
+    if lightning_payment.is_bolt12():
+        if lightning_payment.bolt12_offer_has_amount():
+            while True:
+                try:
+                    items_str = input("Enter number of items: ").strip()
+                    items = int(items_str)
+                    if items <= 0:
+                        print("Number of items must be positive. Please try again.")
+                        continue
+                    break
+                except ValueError:
+                    print("Invalid number. Please enter a valid integer.")
+            lightning_payment.set_bolt12_invoice_amount_via_items(items)
+        else:
+            amount = read_positive_amount("Enter amount in satoshis: ")
+            lightning_payment.set_bolt12_invoice_amount(amount)
+
+    return lightning_payment
+
+def show_invoice(boltz_session, wollet):
+    """Create and show an invoice"""
+    amount = read_positive_amount("Enter invoice amount in satoshis: ")
 
     # Get the latest address for claiming
     claim_address = wollet.address(None).address()
@@ -199,51 +226,13 @@ def show_invoice(boltz_session, wollet):
 
 def pay_bolt12_offer(boltz_session, wollet, esplora_client, signer, skip_completion_thread=False):
     """Pay a bolt12 offer"""
-    # Read bolt12 offer from user
-    offer_str = input("Enter BOLT12 offer: ").strip()
-
     try:
-        # Parse the offer
-        lightning_payment = LightningPayment(offer_str)
+        lightning_payment = read_lightning_payment("Enter BOLT12 offer: ")
 
         # Check if it's actually a BOLT12 offer
         if not lightning_payment.is_bolt12():
             print("Error: Not a valid BOLT12 offer")
             return
-
-        # Check if the offer has an amount (per-item pricing)
-        has_amount = lightning_payment.bolt12_offer_has_amount()
-
-        if has_amount:
-            # Ask for number of items
-            while True:
-                try:
-                    items_str = input("Enter number of items: ").strip()
-                    items = int(items_str)
-                    if items <= 0:
-                        print("Number of items must be positive. Please try again.")
-                        continue
-                    break
-                except ValueError:
-                    print("Invalid number. Please enter a valid integer.")
-
-            # Set the amount based on items
-            lightning_payment.set_bolt12_invoice_amount_via_items(items)
-        else:
-            # Ask for amount in satoshis
-            while True:
-                try:
-                    amount_str = input("Enter amount in satoshis: ").strip()
-                    amount = int(amount_str)
-                    if amount <= 0:
-                        print("Amount must be positive. Please try again.")
-                        continue
-                    break
-                except ValueError:
-                    print("Invalid amount. Please enter a valid number.")
-
-            # Set the amount
-            lightning_payment.set_bolt12_invoice_amount(amount)
 
         # Get refund address
         refund_address = wollet.address(None).address()
@@ -355,12 +344,8 @@ def resolve_lnurl():
 
 def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_thread=False):
     """Pay a bolt11 invoice"""
-    # Read bolt11 invoice from user
-    bolt11_str = input("Enter bolt11 invoice: ").strip()
-
     try:
-        # Parse the invoice
-        lightning_payment = LightningPayment(bolt11_str)
+        lightning_payment = read_lightning_payment("Enter bolt11 invoice: ")
 
         # Get refund address
         refund_address = wollet.address(None).address()
@@ -442,6 +427,70 @@ def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_t
 
     except Exception as e:
         print(f"Error preparing payment: {e}")
+
+def btc_to_ln_payment(boltz_session):
+    """Pay a Lightning invoice or offer from BTC onchain funds."""
+    try:
+        lightning_payment = read_lightning_payment("Enter bolt11 invoice or BOLT12 offer: ")
+
+        refund_address_str = input("Enter Bitcoin address for refunds: ").strip()
+        refund_address = BitcoinAddress(refund_address_str)
+
+        webhook_url = os.getenv('WEBHOOK')
+        webhook = WebHook(webhook_url, status=[]) if webhook_url else None
+        prepare_pay_response = boltz_session.btc_to_ln(lightning_payment, refund_address, webhook)
+
+        fee = prepare_pay_response.fee()
+        print(f"Fee: {fee}")
+        boltz_fee = prepare_pay_response.boltz_fee()
+        print(f"Boltz fee: {boltz_fee}")
+
+        swap_id = prepare_pay_response.swap_id()
+        lockup_address = prepare_pay_response.lockup_address()
+        lockup_amount = prepare_pay_response.uri_amount()
+        print(f"Swap ID: {swap_id}")
+        print(f"\n***** PLEASE SEND {lockup_amount} sats from your Bitcoin wallet to: {lockup_address} *****\n")
+
+        thread = threading.Thread(target=pay_invoice_thread, args=(prepare_pay_response,))
+        thread.daemon = True
+        thread.start()
+        print("Started thread to monitor payment completion.")
+
+    except Exception as e:
+        print(f"Error preparing BTC to Lightning payment: {e}")
+
+def ln_to_btc_invoice(boltz_session):
+    """Create a Lightning invoice that pays out to a BTC address."""
+    amount = read_positive_amount("Enter invoice amount in satoshis: ")
+    claim_address_str = input("Enter Bitcoin address to receive BTC: ").strip()
+
+    try:
+        claim_address = BitcoinAddress(claim_address_str)
+
+        webhook_url = os.getenv('WEBHOOK')
+        webhook = WebHook(webhook_url, status=[]) if webhook_url else None
+        invoice_response = boltz_session.ln_to_btc(
+            amount, "Lightning to Bitcoin payment", claim_address, webhook
+        )
+
+        fee = invoice_response.fee()
+        print(f"Fee: {fee}")
+        boltz_fee = invoice_response.boltz_fee()
+        print(f"Boltz fee: {boltz_fee}")
+
+        bolt11_invoice = str(invoice_response.bolt11_invoice())
+        print(f"Invoice: {bolt11_invoice}")
+
+        swap_id = invoice_response.swap_id()
+        print(f"Swap ID: {swap_id}")
+
+        thread = threading.Thread(target=invoice_thread, args=(invoice_response, claim_address_str))
+        thread.daemon = True
+        thread.start()
+        print("Started thread to monitor invoice payment.")
+
+    except Exception as e:
+        print(f"Error creating Lightning to BTC invoice: {e}")
 
 def restorable_reverse_swaps(boltz_session, wollet):
     """Fetch reverse swaps for the wallet"""
@@ -713,16 +762,7 @@ def get_quote(boltz_session):
     else:
         prompt = "Enter send amount in satoshis: "
     
-    while True:
-        try:
-            amount_str = input(prompt).strip()
-            amount = int(amount_str)
-            if amount <= 0:
-                print("Amount must be positive. Please try again.")
-                continue
-            break
-        except ValueError:
-            print("Invalid amount. Please enter a valid number.")
+    amount = read_positive_amount(prompt)
     
     try:
         # Create quote using appropriate method
@@ -755,17 +795,7 @@ def get_quote(boltz_session):
 
 def lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer):
     """Create a swap to convert LBTC to BTC"""
-    # Ask for the swap amount
-    while True:
-        try:
-            amount_str = input("Enter amount in satoshis to swap from LBTC to BTC: ").strip()
-            amount = int(amount_str)
-            if amount <= 0:
-                print("Amount must be positive. Please try again.")
-                continue
-            break
-        except ValueError:
-            print("Invalid amount. Please enter a valid number.")
+    amount = read_positive_amount("Enter amount in satoshis to swap from LBTC to BTC: ")
 
     # Ask for the Bitcoin claim address
     claim_address_str = input("Enter Bitcoin address to receive BTC: ").strip()
@@ -827,17 +857,7 @@ def lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer):
 
 def btc_to_lbtc_swap(boltz_session, wollet):
     """Create a swap to convert BTC to LBTC"""
-    # Ask for the swap amount
-    while True:
-        try:
-            amount_str = input("Enter amount in satoshis to swap from BTC to LBTC: ").strip()
-            amount = int(amount_str)
-            if amount <= 0:
-                print("Amount must be positive. Please try again.")
-                continue
-            break
-        except ValueError:
-            print("Invalid amount. Please enter a valid number.")
+    amount = read_positive_amount("Enter amount in satoshis to swap from BTC to LBTC: ")
 
     # Get a Liquid claim address from the wallet
     claim_address = wollet.address(None).address()
@@ -1044,6 +1064,8 @@ def main():
         print("18) Pay BOLT12 offer")
         print("19) Resolve BIP353 to BOLT12 offer")
         print("20) Resolve LNURL to Bolt11 invoice")
+        print("21) Pay Lightning from BTC (requires external btc wallet)")
+        print("22) Receive BTC from Lightning")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -1157,6 +1179,12 @@ def main():
         elif choice == '20':
             print("\n=== Resolving LNURL to Bolt11 Invoice ===")
             resolve_lnurl()
+        elif choice == '21':
+            print("\n=== Paying Lightning from BTC ===")
+            btc_to_ln_payment(boltz_session)
+        elif choice == '22':
+            print("\n=== Receiving BTC from Lightning ===")
+            ln_to_btc_invoice(boltz_session)
         elif choice == 'q':
             print("Goodbye!")
             break

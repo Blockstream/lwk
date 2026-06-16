@@ -27,7 +27,7 @@
       };
     };
     waterfalls-flake = {
-      url = "github:RCasatta/waterfalls";
+      url = "github:RCasatta/waterfalls/subscribe";
       inputs.nixpkgs.follows = "waterfalls-nixpkgs";
       inputs.crane.follows = "waterfalls-crane";
       inputs.rust-overlay.follows = "waterfalls-rust-overlay";

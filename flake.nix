@@ -172,7 +172,11 @@
             pkgs.cargo-nextest
             pkgs.grcov
             pkgs.go
+            pkgs.lsof
             pkgs.nixfmt
+            pkgs.psmisc
+            pkgs.sqlite
+            pkgs.libxml2
             pkgs.yq # to validate yml
             pkgs.jq
           ];

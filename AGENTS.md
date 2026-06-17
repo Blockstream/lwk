@@ -80,6 +80,12 @@ cargo -q doc --no-deps -p lwk_wollet --all-features
 RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo +nightly -q doc --all-features --no-deps
 ```
 
+### YAML Validation
+Use `yq` to validate YAML files:
+`yq '.' .gitlab-ci.yml > /dev/null && echo "ok"`
+or python:
+`python3 -c 'import yaml; yaml.safe_load(open(".gitlab-ci.yml")); print("ok")'`
+
 ## Just Commands
 
 The project uses `just` for complex workflows, some examples include:

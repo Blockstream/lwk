@@ -176,7 +176,11 @@ fn wallet_flow_e2e_inner<const N: usize>(
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let desc = desc(&signers);
     let client = test_client_electrum(&env.electrum_url());
-    let wallet = TestWollet::new(client, &desc);
+    let opt = TestWolletOpt {
+        network: Some(env.elementsd_network()),
+        ..Default::default()
+    };
+    let wallet = TestWollet::with_opt(client, &desc, &opt);
     let signers = signers
         .into_iter()
         .map(AnySigner::Software)
@@ -191,6 +195,14 @@ fn wallet_flow_e2e_slip77_wpkh() {
     let slip77_key = generate_slip77();
     wallet_flow_e2e_inner([generate_signer()], |signers| {
         format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signers[0].xpub())
+    });
+}
+
+#[test]
+fn wallet_flow_e2e_slip77_tr() {
+    let slip77_key = generate_slip77();
+    wallet_flow_e2e_inner([generate_signer()], |signers| {
+        format!("ct(slip77({}),eltr({}/*))", slip77_key, signers[0].xpub())
     });
 }
 
@@ -241,6 +253,13 @@ fn wallet_flow_e2e_slip77_wpkh_multipath() {
 fn wallet_flow_e2e_elip151_wpkh() {
     wallet_flow_e2e_inner([generate_signer()], |signers| {
         format!("ct(elip151,elwpkh({}/*))", signers[0].xpub())
+    });
+}
+
+#[test]
+fn wallet_flow_e2e_elip151_tr() {
+    wallet_flow_e2e_inner([generate_signer()], |signers| {
+        format!("ct(elip151,eltr({}/*))", signers[0].xpub())
     });
 }
 

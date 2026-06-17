@@ -8,7 +8,6 @@ LISTEN_ADDR="${LISTEN_ADDR:-127.0.0.1:3000}"
 ELEMENTS_ADDR="${ELEMENTS_ADDR:-127.0.0.1:7041}"
 ASSET_REGISTRY_ADDR="${ASSET_REGISTRY_ADDR:-127.0.0.1:3023}"
 ELECTRS_HTTP_ADDR="${ELECTRS_HTTP_ADDR:-127.0.0.1:3002}" # required for asset registry server
-NEXUS_RELAY_PORT="${NEXUS_RELAY_PORT:-3330}"
 JADE_WEBSOCKET_PORT="${JADE_WEBSOCKET_PORT:-3331}"
 EMULATOR_PORT="${EMULATOR_PORT:-30121}"
 ELEMENTSD_EXEC="${ELEMENTSD_EXEC:-elementsd}"
@@ -26,7 +25,6 @@ fi
 WATERFALLS_EXEC="${WATERFALLS_EXEC:-waterfalls}"
 REGISTRY_EXEC="${REGISTRY_EXEC:-server}"
 ELECTRS_LIQUID_EXEC="${ELECTRS_LIQUID_EXEC:-electrs}"
-NEXUS_RELAY_EXEC="${NEXUS_RELAY_EXEC:-nexus_relay}"
 WEBSOCAT_EXEC="${WEBSOCAT_EXEC:-websocat}"
 
 # Create temporary root directory
@@ -145,16 +143,6 @@ SKIP_VERIFY_DOMAIN_LINK=1 $REGISTRY_EXEC \
 
 ASSET_REGISTRY_PID=$!
 
-# Start nexus_relay in the background
-echo "Starting nexus_relay..."
-$NEXUS_RELAY_EXEC \
-    --port $NEXUS_RELAY_PORT \
-    --base-url "http://$ELEMENTS_ADDR" \
-    --zmq-endpoint "$ZMQ_ENDPOINT" \
-    --network elements-regtest &
-
-NEXUS_RELAY_PID=$!
-
 POLICY_ASSET=$($ELEMENTS_CLI_CMD getsidechaininfo | jq .pegged_asset)
 
 echo "Using executables:"
@@ -163,7 +151,6 @@ echo "  elements-cli: $ELEMENTS_CLI_EXEC"
 echo "  electrs: $ELECTRS_LIQUID_EXEC"
 echo "  waterfalls: $WATERFALLS_EXEC"
 echo "  registry: $REGISTRY_EXEC"
-echo "  nexus_relay: $NEXUS_RELAY_EXEC"
 echo "  websocat: $WEBSOCAT_EXEC"
 echo
 echo "Waterfalls HTTP API: http://$LISTEN_ADDR"
@@ -171,7 +158,6 @@ echo "Elements RPC address: http://$ELEMENTS_ADDR"
 echo "Electrs RPC address: $ELECTRS_RPC_ADDR"
 echo "Electrs HTTP API: http://$ELECTRS_HTTP_ADDR"
 echo "Asset Registry address: http://$ASSET_REGISTRY_ADDR"
-echo "Nexus Relay WebSocket: ws://localhost:$NEXUS_RELAY_PORT"
 echo "Jade WebSocket Bridge: ws://localhost:$JADE_WEBSOCKET_PORT"
 echo "Policy asset: $POLICY_ASSET"
 
@@ -188,7 +174,6 @@ cleanup() {
     kill $GENERATE_PID || true
     kill $ASSET_REGISTRY_PID || true
     kill $ELECTRS_PID || true
-    kill $NEXUS_RELAY_PID || true
     kill $WEBSOCAT_PID || true
     $ELEMENTS_CLI_CMD stop || true
     if [ ! -z "$JADE_CONTAINER_ID" ]; then

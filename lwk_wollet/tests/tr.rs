@@ -86,7 +86,14 @@ fn test_taproot_singlesig_receive_balance_send() {
     let signer = SwSigner::new(TEST_MNEMONIC, false).unwrap();
     let desc_str = singlesig_desc(&signer, Singlesig::Tr, DescriptorBlindingKey::Slip77).unwrap();
     let client = test_client_electrum(&env.electrum_url());
-    let mut wallet = TestWollet::new(client, &desc_str);
+    let mut wallet = TestWollet::with_opt(
+        client,
+        &desc_str,
+        &TestWolletOpt {
+            network: Some(env.elementsd_network()),
+            ..Default::default()
+        },
+    );
 
     // 1. Receive
     let fund_sat = 1_000_000;

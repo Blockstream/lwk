@@ -276,7 +276,10 @@ fn test_faucet() {
         .waterfalls(true)
         .build_blocking()
         .unwrap();
-    let opt = TestWolletOpt { utxo_only: true };
+    let opt = TestWolletOpt {
+        utxo_only: true,
+        ..Default::default()
+    };
     let mut w = TestWollet::with_opt(client, &desc, &opt);
 
     let lbtc = w.policy_asset();
@@ -438,7 +441,10 @@ fn test_waterfalls_utxo_only_persisted() {
         .waterfalls(true)
         .build_blocking()
         .unwrap();
-    let opt = TestWolletOpt { utxo_only: true };
+    let opt = TestWolletOpt {
+        utxo_only: true,
+        ..Default::default()
+    };
     let mut w = TestWollet::with_opt(client, &desc, &opt);
 
     let lbtc = w.policy_asset();

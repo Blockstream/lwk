@@ -77,6 +77,7 @@ pub fn wait_for_tx_confirmation<S: BlockchainBackend>(
 #[derive(Default)]
 pub struct TestWolletOpt {
     pub utxo_only: bool,
+    pub network: Option<Network>,
 }
 
 impl<C: BlockchainBackend> TestWollet<C> {
@@ -87,7 +88,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
     pub fn with_opt(mut client: C, desc: &str, opt: &TestWolletOpt) -> Self {
         let db_root_dir = TempDir::new().unwrap();
 
-        let network = Network::default_regtest();
+        let network = opt.network.unwrap_or(Network::default_regtest());
         let descriptor = if desc.starts_with("ct") {
             add_checksum(desc)
         } else {

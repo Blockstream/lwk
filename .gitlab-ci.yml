@@ -198,7 +198,8 @@ test_cli:
     - .coverage_mixin
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo test -p lwk_cli
+    - nproc
+    - cargo test -p lwk_cli -- --test-threads=2
 
 test_simplicity:
   stage: test

@@ -123,6 +123,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "amp2_mock"
+version = "0.18.0"
+dependencies = [
+ "log",
+ "lwk_signer",
+ "lwk_wollet",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

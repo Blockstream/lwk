@@ -1,6 +1,7 @@
 //! **Experimental**: This API may change without notice.
 
 pub mod error;
+pub mod lending;
 pub mod runner;
 pub mod scripts;
 pub mod signer;

@@ -1,4 +1,6 @@
 mod amp0;
+#[cfg(feature = "amp2")]
+mod amp2;
 mod blinders;
 mod blockchain_backend;
 mod elements_wallet;

@@ -147,6 +147,8 @@ test_wollet:
   script:
     - docker pull xenoky/local-jade-emulator:1.0.27
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    - cargo build -p amp2_mock && export AMP2_MOCK_EXEC=$PWD/target/debug/amp2_mock
+    - ls $PWD/target/debug
     - nproc
     - cargo test -p lwk_wollet -p lwk_signer -- --test-threads=2
 

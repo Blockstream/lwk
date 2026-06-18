@@ -1,3 +1,4 @@
+use crate::amp2::Amp2D;
 use crate::init_logging;
 use crate::registry::RegistryD;
 use crate::waterfalls::WaterfallsD;
@@ -28,12 +29,14 @@ pub struct TestEnvBuilder {
     bitcoind_exec: String,
     waterfalls_exec: String,
     registry_exec: String,
+    amp2_exec: String,
     with_electrum: bool,
     with_esplora: bool,
     with_bitcoind: bool,
     with_waterfalls: bool,
     waterfalls_max_txs_seen: Option<usize>,
     with_registry: bool,
+    with_amp2: bool,
     with_zmq: bool,
 }
 
@@ -45,12 +48,14 @@ impl TestEnvBuilder {
     /// * BITCOIND_EXEC
     /// * WATERFALLS_EXEC
     /// * ASSET_REGISTRY_EXEC
+    /// * AMP2_MOCK_EXEC
     pub fn from_env() -> Self {
         let elementsd_exec = std::env::var("ELEMENTSD_EXEC").unwrap_or_default();
         let electrs_exec = std::env::var("ELECTRS_LIQUID_EXEC").unwrap_or_default();
         let bitcoind_exec = std::env::var("BITCOIND_EXEC").unwrap_or_default();
         let waterfalls_exec = std::env::var("WATERFALLS_EXEC").unwrap_or_default();
         let registry_exec = std::env::var("ASSET_REGISTRY_EXEC").unwrap_or_default();
+        let amp2_exec = std::env::var("AMP2_MOCK_EXEC").unwrap_or_default();
 
         Self {
             elementsd_exec,
@@ -58,12 +63,14 @@ impl TestEnvBuilder {
             bitcoind_exec,
             waterfalls_exec,
             registry_exec,
+            amp2_exec,
             with_electrum: false,
             with_esplora: false,
             with_bitcoind: false,
             with_waterfalls: false,
             waterfalls_max_txs_seen: None,
             with_registry: false,
+            with_amp2: false,
             with_zmq: false,
         }
     }
@@ -105,6 +112,12 @@ impl TestEnvBuilder {
         self
     }
 
+    /// Start an AMP2 mock server
+    pub fn with_amp2(mut self) -> Self {
+        self.with_amp2 = true;
+        self
+    }
+
     /// Start elementsd with ZMQ endpoints
     pub fn with_zmq(mut self) -> Self {
         self.with_zmq = true;
@@ -132,6 +145,9 @@ impl TestEnvBuilder {
             if !self.with_esplora {
                 panic!("asset registry requires esplora, call 'with_esplora()'");
             }
+        }
+        if self.amp2_exec.is_empty() && self.with_amp2 {
+            panic!("AMP2_MOCK_EXEC must be set");
         }
 
         init_logging();
@@ -273,12 +289,19 @@ impl TestEnvBuilder {
             None
         };
 
+        let amp2d = if self.with_amp2 {
+            Some(Amp2D::new(&self.amp2_exec))
+        } else {
+            None
+        };
+
         TestEnv {
             elementsd,
             bitcoind,
             electrsd,
             waterfallsd,
             registryd,
+            amp2d,
             zmq_endpoint,
         }
     }
@@ -293,6 +316,7 @@ pub struct TestEnv {
     electrsd: Option<ElectrsD>,
     waterfallsd: Option<WaterfallsD>,
     registryd: Option<RegistryD>,
+    amp2d: Option<Amp2D>,
     zmq_endpoint: Option<String>,
 }
 
@@ -330,6 +354,10 @@ impl TestEnv {
             .as_ref()
             .map(|r| r.url().to_string())
             .unwrap_or_default()
+    }
+
+    pub fn amp2_url(&self) -> String {
+        self.amp2d.as_ref().unwrap().url().to_string()
     }
 
     // Functions for Elements RPC client

@@ -126,11 +126,11 @@ dependencies = [
 name = "amp2_mock"
 version = "0.18.0"
 dependencies = [
- "log",
+ "lwk_common",
  "lwk_signer",
- "lwk_wollet",
  "serde",
  "serde_json",
+ "tiny_http",
 ]
 
 [[package]]

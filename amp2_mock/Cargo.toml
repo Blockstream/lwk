@@ -11,9 +11,9 @@ name = "amp2_mock"
 path = "src/main.rs"
 
 [dependencies]
-lwk_wollet = { version = "0.18.0" }
+lwk_common = { version = "0.18.0" }
 lwk_signer = { version = "0.18.0" }
 
 serde.workspace = true
 serde_json.workspace = true
-log.workspace = true
+tiny_http = "0.12.0"

@@ -13,6 +13,7 @@ path = "src/main.rs"
 [dependencies]
 lwk_common = { version = "0.18.0" }
 lwk_signer = { version = "0.18.0" }
+lwk_wollet = { version = "0.18.0" }
 
 serde.workspace = true
 serde_json.workspace = true

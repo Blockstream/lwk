@@ -128,6 +128,7 @@ version = "0.18.0"
 dependencies = [
  "lwk_common",
  "lwk_signer",
+ "lwk_wollet",
  "serde",
  "serde_json",
  "tiny_http",

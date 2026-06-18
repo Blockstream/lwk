@@ -8,6 +8,8 @@ exclude = ["tests/"]
 license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_cli"
 
+default-run = "lwk_cli"
+
 [lib]
 test = false
 

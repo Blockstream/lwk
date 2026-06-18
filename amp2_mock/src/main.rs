@@ -1,7 +1,9 @@
 use lwk_common::Network;
 use lwk_common::{Bip, Signer};
 use lwk_signer::SwSigner;
+use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 #[derive(Serialize)]
 struct InfoXpub {
@@ -16,6 +18,16 @@ struct RegisterRequest {
 #[derive(Serialize)]
 struct RegisterResponse {
     wid: String,
+}
+
+#[derive(Deserialize)]
+struct SignRequest {
+    pset: String,
+}
+
+#[derive(Serialize)]
+struct SignResponse {
+    pset: String,
 }
 
 #[derive(Serialize)]
@@ -59,6 +71,7 @@ fn main() {
                 (200, serde_json::to_string(&resp).unwrap())
             }
             "/wallets/register" => handle_register(&mut request, &server_xpub),
+            "/wallets/sign" => handle_sign(&mut request, &signer),
             _ => (404, err_json("not found")),
         };
 
@@ -99,6 +112,32 @@ fn handle_register(request: &mut tiny_http::Request, server_xpub: &str) -> (u16,
     };
 
     let resp = RegisterResponse { wid };
+    (200, serde_json::to_string(&resp).unwrap())
+}
+
+fn handle_sign(request: &mut tiny_http::Request, signer: &SwSigner) -> (u16, String) {
+    let mut body = String::new();
+    if request.as_reader().read_to_string(&mut body).is_err() {
+        return (400, err_json("failed to read request body"));
+    }
+
+    let req: SignRequest = match serde_json::from_str(&body) {
+        Ok(r) => r,
+        Err(e) => return (400, err_json(&format!("invalid json: {e}"))),
+    };
+
+    let mut pset = match PartiallySignedTransaction::from_str(&req.pset) {
+        Ok(p) => p,
+        Err(e) => return (400, err_json(&format!("invalid pset: {e}"))),
+    };
+
+    if let Err(e) = signer.sign(&mut pset) {
+        return (400, err_json(&format!("signing failed: {e:?}")));
+    }
+
+    let resp = SignResponse {
+        pset: pset.to_string(),
+    };
     (200, serde_json::to_string(&resp).unwrap())
 }
 

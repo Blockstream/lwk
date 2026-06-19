@@ -8,6 +8,7 @@ LISTEN_ADDR="${LISTEN_ADDR:-127.0.0.1:3000}"
 ELEMENTS_ADDR="${ELEMENTS_ADDR:-127.0.0.1:7041}"
 ASSET_REGISTRY_ADDR="${ASSET_REGISTRY_ADDR:-127.0.0.1:3023}"
 ELECTRS_HTTP_ADDR="${ELECTRS_HTTP_ADDR:-127.0.0.1:3002}" # required for asset registry server
+AMP2_MOCK_ADDR="${AMP2_MOCK_ADDR:-127.0.0.1:5000}"
 JADE_WEBSOCKET_PORT="${JADE_WEBSOCKET_PORT:-3331}"
 EMULATOR_PORT="${EMULATOR_PORT:-30121}"
 ELEMENTSD_EXEC="${ELEMENTSD_EXEC:-elementsd}"
@@ -26,6 +27,7 @@ WATERFALLS_EXEC="${WATERFALLS_EXEC:-waterfalls}"
 REGISTRY_EXEC="${REGISTRY_EXEC:-server}"
 ELECTRS_LIQUID_EXEC="${ELECTRS_LIQUID_EXEC:-electrs}"
 WEBSOCAT_EXEC="${WEBSOCAT_EXEC:-websocat}"
+AMP2_MOCK_EXEC="${AMP2_MOCK_EXEC:-amp2_mock}"
 
 # Create temporary root directory
 ROOT_DIR=$(mktemp -d)
@@ -143,6 +145,12 @@ SKIP_VERIFY_DOMAIN_LINK=1 $REGISTRY_EXEC \
 
 ASSET_REGISTRY_PID=$!
 
+# Start AMP2 mock in the background
+echo "Starting AMP2 mock..."
+$AMP2_MOCK_EXEC "$AMP2_MOCK_ADDR" &
+
+AMP2_MOCK_PID=$!
+
 POLICY_ASSET=$($ELEMENTS_CLI_CMD getsidechaininfo | jq .pegged_asset)
 
 echo "Using executables:"
@@ -151,6 +159,7 @@ echo "  elements-cli: $ELEMENTS_CLI_EXEC"
 echo "  electrs: $ELECTRS_LIQUID_EXEC"
 echo "  waterfalls: $WATERFALLS_EXEC"
 echo "  registry: $REGISTRY_EXEC"
+echo "  amp2_mock: $AMP2_MOCK_EXEC"
 echo "  websocat: $WEBSOCAT_EXEC"
 echo
 echo "Waterfalls HTTP API: http://$LISTEN_ADDR"
@@ -158,6 +167,7 @@ echo "Elements RPC address: http://$ELEMENTS_ADDR"
 echo "Electrs RPC address: $ELECTRS_RPC_ADDR"
 echo "Electrs HTTP API: http://$ELECTRS_HTTP_ADDR"
 echo "Asset Registry address: http://$ASSET_REGISTRY_ADDR"
+echo "AMP2 mock address: http://$AMP2_MOCK_ADDR"
 echo "Jade WebSocket Bridge: ws://localhost:$JADE_WEBSOCKET_PORT"
 echo "Policy asset: $POLICY_ASSET"
 
@@ -166,10 +176,12 @@ echo "Press Ctrl+C to stop all services"
 # Need to set these env vars for tests
 export ELECTRS_LIQUID_EXEC
 export ELEMENTSD_EXEC
+export AMP2_MOCK_EXEC
 
 # Handle cleanup on script termination
 cleanup() {
     echo "Stopping services..."
+    kill $AMP2_MOCK_PID || true
     kill $WATERFALLS_PID || true
     kill $GENERATE_PID || true
     kill $ASSET_REGISTRY_PID || true

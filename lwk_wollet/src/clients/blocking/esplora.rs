@@ -67,6 +67,19 @@ impl EsploraClient {
     pub fn set_waterfalls_server_recipient(&mut self, recipient: Recipient) {
         self.client.set_waterfalls_server_recipient(recipient);
     }
+
+    /// Return the descriptor string to use with Waterfalls descriptor endpoints.
+    ///
+    /// This is a temporary API exposed to let callers use Waterfalls subscription
+    /// endpoints directly. It may be removed once subscription support is
+    /// implemented in LWK.
+    pub fn waterfalls_descriptor(
+        &mut self,
+        descriptor: &WolletDescriptor,
+    ) -> Result<String, Error> {
+        self.rt
+            .block_on(self.client.waterfalls_descriptor(descriptor))
+    }
 }
 
 impl BlockchainBackend for EsploraClient {

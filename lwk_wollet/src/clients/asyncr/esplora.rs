@@ -570,6 +570,30 @@ impl EsploraClient {
         Ok(encrypted_descriptor)
     }
 
+    /// Return the descriptor string to use with Waterfalls descriptor endpoints.
+    ///
+    /// This is a temporary API exposed to let callers use Waterfalls subscription
+    /// endpoints directly. It may be removed once subscription support is
+    /// implemented in LWK.
+    ///
+    /// The returned descriptor has key origin information stripped and is encrypted
+    /// for the Waterfalls server recipient unless descriptor encryption has been
+    /// explicitly disabled on this client.
+    pub async fn waterfalls_descriptor(
+        &mut self,
+        descriptor: &WolletDescriptor,
+    ) -> Result<String, Error> {
+        if !self.waterfalls {
+            return Err(Error::WaterfallsUnimplemented);
+        }
+        if descriptor.is_elip151() {
+            return Err(Error::UsingWaterfallsWithElip151);
+        }
+
+        let base_desc = descriptor.bitcoin_descriptor_without_key_origin()?;
+        self.get_or_encrypt_descriptor(&base_desc).await
+    }
+
     pub(crate) async fn get_history_waterfalls<S: WolletState>(
         &mut self,
         descriptor: &WolletDescriptor,
@@ -746,15 +770,7 @@ impl EsploraClient {
         &mut self,
         descriptor: &WolletDescriptor,
     ) -> Result<LastUsedIndexResponse, Error> {
-        if !self.waterfalls {
-            return Err(Error::WaterfallsUnimplemented);
-        }
-        if descriptor.is_elip151() {
-            return Err(Error::UsingWaterfallsWithElip151);
-        }
-
-        let base_desc = descriptor.bitcoin_descriptor_without_key_origin()?;
-        let desc = self.get_or_encrypt_descriptor(&base_desc).await?;
+        let desc = self.waterfalls_descriptor(descriptor).await?;
 
         let url = format!(
             "{}/v1/last_used_index?descriptor={}",

@@ -131,6 +131,21 @@
             '';
           }
         );
+        amp2MockArgs = commonArgs // {
+          pname = "amp2_mock";
+          cargoExtraArgs = "-p amp2_mock";
+        };
+        amp2MockCargoArtifacts = craneLib.buildDepsOnly amp2MockArgs;
+        amp2Mock = craneLib.buildPackage (
+          amp2MockArgs
+          // {
+            cargoArtifacts = amp2MockCargoArtifacts;
+
+            postInstall = ''
+              rm -rf $out/lib
+            '';
+          }
+        );
 
         # Build mdbook-snippets from local source
         mdbook-snippets = craneLib.buildPackage {
@@ -151,6 +166,7 @@
           # but it's also the default.
           inherit bin;
           default = bin;
+          amp2-mock = amp2Mock;
           inherit mdbook-snippets;
           inherit mcp-language-server;
         };
@@ -170,6 +186,7 @@
             pkgs.cargo-depgraph
             pkgs.cargo-bloat
             pkgs.cargo-nextest
+            amp2Mock
             pkgs.grcov
             pkgs.go
             pkgs.lsof
@@ -186,6 +203,7 @@
           ELECTRS_LIQUID_EXEC = electrs.program;
           WATERFALLS_EXEC = "${waterfalls}/bin/waterfalls";
           ASSET_REGISTRY_EXEC = "${registry.default}/bin/server";
+          AMP2_MOCK_EXEC = "${amp2Mock}/bin/amp2_mock";
           WEBSOCAT_EXEC = "${pkgs.websocat}/bin/websocat";
           SKIP_VERIFY_DOMAIN_LINK = "1"; # the registry server skips validation
         };

@@ -154,6 +154,26 @@ impl EsploraClient {
         Ok(())
     }
 
+    /// Return the descriptor string to use with Waterfalls descriptor endpoints.
+    ///
+    /// This is a temporary API exposed to let callers use Waterfalls subscription
+    /// endpoints directly. It may be removed once subscription support is
+    /// implemented in LWK.
+    ///
+    /// The returned descriptor has key origin information stripped and is encrypted
+    /// for the Waterfalls server recipient unless descriptor encryption has been
+    /// explicitly disabled on this client.
+    #[wasm_bindgen(js_name = waterfallsDescriptor)]
+    pub async fn waterfalls_descriptor(
+        &mut self,
+        descriptor: &WolletDescriptor,
+    ) -> Result<String, Error> {
+        Ok(self
+            .inner
+            .waterfalls_descriptor(descriptor.as_ref())
+            .await?)
+    }
+
     /// Query the last used derivation index for a wallet's descriptor from the waterfalls server.
     ///
     /// This method queries the waterfalls `/v1/last_used_index` endpoint to get the last used

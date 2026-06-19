@@ -63,27 +63,38 @@ fn main() {
     eprintln!("amp2_mock listening on {actual_addr}");
 
     for mut request in server.incoming_requests() {
-        let (status, body) = match request.url() {
-            "/info/xpub" => {
-                let resp = InfoXpub {
-                    keyorigin_xpub: keyorigin_xpub.clone(),
-                };
-                (200, serde_json::to_string(&resp).unwrap())
-            }
-            "/wallets/register" => handle_register(&mut request, &server_xpub),
-            "/wallets/sign" => handle_sign(&mut request, &signer),
-            _ => (404, err_json("not found")),
-        };
+        let response = if request.method() == &tiny_http::Method::Options {
+            response_with_cors(204, String::new())
+        } else {
+            let (status, body) = match request.url() {
+                "/info/xpub" => {
+                    let resp = InfoXpub {
+                        keyorigin_xpub: keyorigin_xpub.clone(),
+                    };
+                    (200, serde_json::to_string(&resp).unwrap())
+                }
+                "/wallets/register" => handle_register(&mut request, &server_xpub),
+                "/wallets/sign" => handle_sign(&mut request, &signer),
+                _ => (404, err_json("not found")),
+            };
 
-        let response = tiny_http::Response::from_string(body)
-            .with_status_code(status)
-            .with_header(
-                "Content-Type: application/json"
-                    .parse::<tiny_http::Header>()
-                    .unwrap(),
-            );
+            response_with_cors(status, body)
+        };
         let _ = request.respond(response);
     }
+}
+
+fn response_with_cors(status: u16, body: String) -> tiny_http::Response<std::io::Cursor<Vec<u8>>> {
+    tiny_http::Response::from_string(body)
+        .with_status_code(status)
+        .with_header(header("Content-Type", "application/json"))
+        .with_header(header("Access-Control-Allow-Origin", "*"))
+        .with_header(header("Access-Control-Allow-Methods", "GET, POST, OPTIONS"))
+        .with_header(header("Access-Control-Allow-Headers", "Content-Type"))
+}
+
+fn header(name: &str, value: &str) -> tiny_http::Header {
+    tiny_http::Header::from_bytes(name.as_bytes(), value.as_bytes()).unwrap()
 }
 
 fn handle_register(request: &mut tiny_http::Request, server_xpub: &str) -> (u16, String) {

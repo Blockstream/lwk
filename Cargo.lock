@@ -1231,9 +1231,9 @@ dependencies = [
 
 [[package]]
 name = "elements"
-version = "0.26.1"
+version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d562b364c5d2aced40b01b3f73fc968311787e6813957593d4ffa94cd8733e3"
+checksum = "1210978e2686f892318085f806866014d4788479a37f0a634db97fcb39454bde"
 dependencies = [
  "bech32 0.11.0",
  "bitcoin",
@@ -2558,7 +2558,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_bindings"
-version = "0.18.0"
+version = "0.18.1"
 dependencies = [
  "elements 0.25.3",
  "log",
@@ -2604,7 +2604,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_cli"
-version = "0.18.0"
+version = "0.18.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -2625,7 +2625,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_common"
-version = "0.18.0"
+version = "0.18.1"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.21.7",
@@ -2643,7 +2643,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_containers"
-version = "0.18.0"
+version = "0.18.1"
 dependencies = [
  "elements 0.25.3",
  "rand 0.8.5",
@@ -2657,7 +2657,7 @@ version = "0.10.0"
 
 [[package]]
 name = "lwk_jade"
-version = "0.18.0"
+version = "0.18.1"
 dependencies = [
  "base64 0.21.7",
  "elements 0.25.3",
@@ -2682,7 +2682,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_ledger"
-version = "0.18.0"
+version = "0.18.1"
 dependencies = [
  "byteorder",
  "elements-miniscript",
@@ -2697,7 +2697,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_payment_instructions"
-version = "0.18.0"
+version = "0.18.1"
 dependencies = [
  "bip21",
  "bitcoin-payment-instructions",
@@ -2725,7 +2725,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_signer"
-version = "0.18.0"
+version = "0.18.1"
 dependencies = [
  "base64 0.21.7",
  "bip39",
@@ -2812,7 +2812,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wollet"
-version = "0.18.0"
+version = "0.18.1"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -2825,7 +2825,7 @@ dependencies = [
  "criterion",
  "electrum-client",
  "elements 0.25.3",
- "elements 0.26.1",
+ "elements 0.26.2",
  "elements-miniscript",
  "flate2",
  "futures",

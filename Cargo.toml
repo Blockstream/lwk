@@ -51,7 +51,7 @@ debug = true         # Include debug symbols for profiling
 strip = "none"       # Don't strip any symbols
 
 [workspace.dependencies]
-elements = { version = "0.25.0", features = ["base64", "serde"] }
+elements = { version = "0.25.3", features = ["base64", "serde"] }
 elements-miniscript = { version = "0.4", features = ["base64", "serde"] }
 serde = { version = "1.0" }
 serde_json = { version = "1.0" }

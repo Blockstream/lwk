@@ -1291,7 +1291,9 @@ mod tests {
     };
 
     use super::{merge_waterfalls_history, waterfalls_outpoint, EsploraClient};
+    use base64::Engine;
     use elements::{encode::Decodable, BlockHash};
+    use std::io::Read;
     use tokio::time::sleep;
 
     async fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
@@ -1315,6 +1317,38 @@ mod tests {
     async fn sleep_test() {
         // TODO this doesn't last a second when run, is it right?
         async_sleep(1).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn waterfalls_descriptor_is_encrypted_and_cached() {
+        let desc_str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
+        let desc: WolletDescriptor = desc_str.parse().unwrap();
+        let expected = desc.bitcoin_descriptor_without_key_origin().unwrap();
+        let identity = age::x25519::Identity::generate();
+
+        let mut client = EsploraClientBuilder::new("http://example.com", Network::Liquid)
+            .waterfalls(true)
+            .build()
+            .unwrap();
+        client.set_waterfalls_server_recipient(identity.to_public());
+
+        let encrypted = client.waterfalls_descriptor(&desc).await.unwrap();
+        assert_ne!(encrypted, expected);
+        assert_eq!(
+            encrypted,
+            client.waterfalls_descriptor(&desc).await.unwrap()
+        );
+
+        let encrypted = base64::prelude::BASE64_STANDARD_NO_PAD
+            .decode(encrypted)
+            .unwrap();
+        let mut reader = age::Decryptor::new(&encrypted[..])
+            .unwrap()
+            .decrypt(std::iter::once(&identity as &dyn age::Identity))
+            .unwrap();
+        let mut decrypted = String::new();
+        reader.read_to_string(&mut decrypted).unwrap();
+        assert_eq!(decrypted, expected);
     }
 
     #[test]

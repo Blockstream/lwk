@@ -63,7 +63,7 @@ use lwk_wollet::bitcoin::bip32::Xpub;
 use lwk_wollet::bitcoin::NetworkKind;
 use lwk_wollet::ElectrumUrl;
 use serde::{Deserialize, Serialize};
-use tokio::sync::broadcast::error::TryRecvError;
+use tokio::sync::broadcast::error::{RecvError, TryRecvError};
 use tokio::sync::Mutex;
 
 pub use crate::chain_data::{to_chain_data, ChainSwapData, ChainSwapDataSerializable};
@@ -838,13 +838,28 @@ pub async fn next_status(
                 Err(TryRecvError::Empty) => {
                     return Err(Error::NoBoltzUpdate);
                 }
+                Err(TryRecvError::Lagged(skipped)) => {
+                    log::warn!(
+                        "Lagged {skipped} Boltz updates while waiting state for swap id {swap_id}"
+                    );
+                    continue;
+                }
                 Err(e) => return Err(e.into()),
             }
         } else {
             // since we can receive updates for all swaps, we need to check the deadline
             let remaining = deadline - async_now().await;
             tokio::select! {
-                update = rx.recv() => update?,
+                update = rx.recv() => match update {
+                    Ok(update) => update,
+                    Err(RecvError::Lagged(skipped)) => {
+                        log::warn!(
+                            "Lagged {skipped} Boltz updates while waiting state for swap id {swap_id}"
+                        );
+                        continue;
+                    }
+                    Err(e) => return Err(e.into()),
+                },
                 sleep_result = async_sleep(remaining) => {
                     sleep_result?;
                     log::warn!("Timeout while waiting state for swap id {swap_id}");
@@ -999,9 +1014,10 @@ pub fn display_bolt12_invoice(bolt12_invoice: &Bolt12Invoice) -> String {
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
+    use std::time::Duration;
 
     use bip39::Mnemonic;
-    use boltz_client::boltz::SwapRestoreResponse;
+    use boltz_client::boltz::{SwapRestoreResponse, SwapStatus};
     use lightning::offers::offer::Offer;
     use lwk_wollet::bitcoin::NetworkKind;
 
@@ -1062,6 +1078,52 @@ mod tests {
         let data = include_str!("../tests/data/swap_restore_response.json");
         let data: Vec<SwapRestoreResponse> = serde_json::from_str(data).unwrap();
         assert_eq!(data.len(), 32);
+    }
+
+    #[tokio::test]
+    async fn test_next_status_polling_skips_lagged_updates() {
+        let (tx, mut rx) = tokio::sync::broadcast::channel(1);
+        tx.send(SwapStatus {
+            id: "other".to_string(),
+            status: "invoice.set".to_string(),
+            ..Default::default()
+        })
+        .unwrap();
+        tx.send(SwapStatus {
+            id: "swap-id".to_string(),
+            status: "swap.expired".to_string(),
+            ..Default::default()
+        })
+        .unwrap();
+
+        let update = crate::next_status(&mut rx, Duration::from_millis(100), "swap-id", true)
+            .await
+            .unwrap();
+
+        assert_eq!(update.status, "swap.expired");
+    }
+
+    #[tokio::test]
+    async fn test_next_status_blocking_skips_lagged_updates() {
+        let (tx, mut rx) = tokio::sync::broadcast::channel(1);
+        tx.send(SwapStatus {
+            id: "other".to_string(),
+            status: "invoice.set".to_string(),
+            ..Default::default()
+        })
+        .unwrap();
+        tx.send(SwapStatus {
+            id: "swap-id".to_string(),
+            status: "swap.expired".to_string(),
+            ..Default::default()
+        })
+        .unwrap();
+
+        let update = crate::next_status(&mut rx, Duration::from_millis(100), "swap-id", false)
+            .await
+            .unwrap();
+
+        assert_eq!(update.status, "swap.expired");
     }
 
     #[test]

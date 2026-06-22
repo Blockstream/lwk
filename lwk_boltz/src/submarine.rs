@@ -246,6 +246,12 @@ impl BoltzSession {
         Ok(response)
     }
 
+    /// Restore a submarine swap from serialized data.
+    ///
+    /// After restoring a non-terminal swap, callers should promptly call
+    /// [`PreparePayResponse::advance`], preferably before restoring many other swaps on the same
+    /// session. This lets the restored swap consume its initial Boltz websocket updates before the
+    /// bounded websocket broadcast buffer fills and drops older updates.
     pub async fn restore_prepare_pay(
         &self,
         data: PreparePayDataSerializable,

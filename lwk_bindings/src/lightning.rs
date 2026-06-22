@@ -478,7 +478,11 @@ impl BoltzSession {
         Ok(Arc::new(Invoice::from(invoice)))
     }
 
-    /// Restore a payment from its serialized data see `PreparePayResponse::serialize`
+    /// Restore a payment from its serialized data see `PreparePayResponse::serialize`.
+    ///
+    /// After restoring a non-terminal swap, call `PreparePayResponse::advance` promptly,
+    /// preferably before restoring many other swaps on the same session, so websocket updates are
+    /// consumed before the bounded broadcast buffer fills.
     pub fn restore_prepare_pay(&self, data: &str) -> Result<PreparePayResponse, LwkError> {
         let data = PreparePayDataSerializable::deserialize(data)?;
         let response = self.inner.restore_prepare_pay(data)?;
@@ -529,7 +533,11 @@ impl BoltzSession {
         })
     }
 
-    /// Restore an invoice flow from its serialized data see `InvoiceResponse::serialize`
+    /// Restore an invoice flow from its serialized data see `InvoiceResponse::serialize`.
+    ///
+    /// After restoring a non-terminal swap, call `InvoiceResponse::advance` promptly, preferably
+    /// before restoring many other swaps on the same session, so websocket updates are consumed
+    /// before the bounded broadcast buffer fills.
     pub fn restore_invoice(&self, data: &str) -> Result<InvoiceResponse, LwkError> {
         let data: InvoiceDataSerializable = serde_json::from_str(data)?;
         let response = self.inner.restore_invoice(data)?;
@@ -591,7 +599,11 @@ impl BoltzSession {
         })
     }
 
-    /// Restore an onchain swap from its serialized data see `LockupResponse::serialize`
+    /// Restore an onchain swap from its serialized data see `LockupResponse::serialize`.
+    ///
+    /// After restoring a non-terminal swap, call `LockupResponse::advance` promptly, preferably
+    /// before restoring many other swaps on the same session, so websocket updates are consumed
+    /// before the bounded broadcast buffer fills.
     pub fn restore_lockup(&self, data: &str) -> Result<LockupResponse, LwkError> {
         let data = ChainSwapDataSerializable::deserialize(data)?;
         let response = self.inner.restore_lockup(data)?;

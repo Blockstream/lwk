@@ -58,3 +58,7 @@ serde_json = { version = "1.0" }
 log = { version = "0.4.22" }
 tempfile = { version = "3" }
 thiserror = { version = "2.0.18" }
+
+[patch.crates-io.smplx-std]
+git = "https://github.com/gerau/smplx.git"
+rev = "da5a22da20293637473f67bd73a3645afda3a2a6"

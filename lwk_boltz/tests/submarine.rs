@@ -718,6 +718,60 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_submarine_advance_skips_lagged_updates() {
+        let _ = env_logger::try_init();
+
+        let refund_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let refund_address = elements::Address::from_str(&refund_address).unwrap();
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                Network::default_regtest(),
+            )
+            .unwrap(),
+        );
+        let session = BoltzSession::builder(
+            Network::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .polling(true)
+        .build()
+        .await
+        .unwrap();
+
+        let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
+        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
+        let mut idle_response = session
+            .prepare_pay(&lightning_payment, &refund_address, None)
+            .await
+            .unwrap();
+
+        // BoltzWsApi uses a broadcast channel with capacity 16. Keep idle_response's
+        // receiver unread while more than 16 unrelated swap updates are emitted.
+        let mut other_responses = Vec::new();
+        for _ in 0..17 {
+            let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
+            let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
+            let response = session
+                .prepare_pay(&lightning_payment, &refund_address, None)
+                .await
+                .unwrap();
+            other_responses.push(response);
+        }
+
+        match idle_response.advance().await {
+            Err(lwk_boltz::Error::NoBoltzUpdate) => {}
+            Err(err) => panic!("expected lagged updates to be skipped, got {err:?}"),
+            Ok(update) => panic!("expected no update for idle swap, got {update:?}"),
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_restore_submarine_btc_from_swap_list() {
         let _ = env_logger::try_init();
 

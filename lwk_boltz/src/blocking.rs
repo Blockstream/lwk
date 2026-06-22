@@ -90,6 +90,7 @@ impl BoltzSession {
             .block_on(self.inner.fetch_bolt12_invoice(lightning_payment))
     }
 
+    /// Blocking version of [`crate::BoltzSession::restore_prepare_pay`].
     pub fn restore_prepare_pay(
         &self,
         data: PreparePayDataSerializable,
@@ -142,6 +143,7 @@ impl BoltzSession {
         })
     }
 
+    /// Blocking version of [`crate::BoltzSession::restore_invoice`].
     pub fn restore_invoice(&self, data: InvoiceDataSerializable) -> Result<InvoiceResponse, Error> {
         let inner = self.runtime.block_on(self.inner.restore_invoice(data))?;
         Ok(InvoiceResponse {
@@ -188,6 +190,7 @@ impl BoltzSession {
         })
     }
 
+    /// Blocking version of [`crate::BoltzSession::restore_lockup`].
     pub fn restore_lockup(&self, data: ChainSwapDataSerializable) -> Result<LockupResponse, Error> {
         let inner = self.runtime.block_on(self.inner.restore_lockup(data))?;
         Ok(LockupResponse {

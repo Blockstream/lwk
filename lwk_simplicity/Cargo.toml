@@ -27,11 +27,13 @@ uuid = { version = "~1.20", default-features = false, features = [
 lending-contracts = {git = "https://github.com/gerau/simplicity-lending.git",  rev = "a7c286f13e7f148ee2a998aed7a899f82d508392", optional = true}
 simplex = { package = "smplx-std", git = "https://github.com/gerau/smplx.git", rev = "da5a22da20293637473f67bd73a3645afda3a2a6", optional = true }
 
+rand = "0.8"
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 uuid = { version = "~1.20", default-features = false, features = ["js"] }
 
 [features]
-lending = ["lending-contracts", "simplex"]
+lending = ["lending-contracts", "simplex", "lwk_wollet/electrum", "lwk_wollet/esplora"]
 
 [[test]]
 name = "lending"

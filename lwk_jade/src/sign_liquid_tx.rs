@@ -24,6 +24,13 @@ pub struct SignLiquidTxParams {
     pub trusted_commitments: Vec<Option<Commitment>>,
 
     pub additional_info: Option<AdditionalInfo>,
+
+    #[serde(
+        rename = "genesis_hash",
+        with = "serde_bytes",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub genesis_hash: Option<Vec<u8>>,
 }
 
 impl std::fmt::Debug for SignLiquidTxParams {
@@ -37,6 +44,7 @@ impl std::fmt::Debug for SignLiquidTxParams {
             .field("asset_info", &self.asset_info)
             .field("trusted_commitments", &self.trusted_commitments)
             .field("additional_info", &self.additional_info)
+            .field("genesis_hash", &self.genesis_hash)
             .finish()
     }
 }

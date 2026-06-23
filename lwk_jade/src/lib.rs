@@ -27,18 +27,19 @@ pub use consts::{BAUD_RATE, TIMEOUT};
 use elements::{
     bitcoin::bip32::{ChildNumber, DerivationPath, Fingerprint},
     encode::serialize,
+    hashes::Hash,
     hex::ToHex,
     opcodes::{
         all::{OP_CHECKMULTISIG, OP_PUSHNUM_1, OP_PUSHNUM_16},
         All,
     },
-    pset::PartiallySignedTransaction,
+    pset::{serialize::Serialize, PartiallySignedTransaction},
     script::Instruction,
-    Script,
+    BlockHash, Script,
 };
 pub use error::Error;
 use get_receive_address::{SingleOrMulti, Variant};
-use lwk_common::Network;
+use lwk_common::{get_genesis_hash, Network};
 
 use register_multisig::RegisteredMultisigDetails;
 use sign_liquid_tx::{AssetInfo, Change, Commitment, Contract, Prevout, SignLiquidTxParams};
@@ -171,7 +172,6 @@ fn create_jade_sign_req(
         trusted_commitments.push(trusted_commitment);
 
         let mut change = None;
-
         for (_, (_, (fingerprint, path))) in output.tap_key_origins.iter() {
             if fingerprint == &my_fingerprint {
                 let is_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_CHAIN);
@@ -186,7 +186,6 @@ fn create_jade_sign_req(
                 }
             }
         }
-
         for (fingerprint, path) in output.bip32_derivation.values() {
             if fingerprint == &my_fingerprint {
                 // This ensures that path has at least 2 elements
@@ -274,7 +273,15 @@ fn create_jade_sign_req(
         }
         // TODO: handle token metadata
     }
+
+    let genesis_hash = get_genesis_hash(pset);
+
     let params = SignLiquidTxParams {
+        genesis_hash: if genesis_hash != BlockHash::all_zeros() {
+            Some(genesis_hash.as_byte_array().to_vec())
+        } else {
+            None
+        },
         network,
         txn,
         num_inputs: tx.input.len() as u32,

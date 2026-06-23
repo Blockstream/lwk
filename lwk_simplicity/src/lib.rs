@@ -1,6 +1,7 @@
 //! **Experimental**: This API may change without notice.
 
 pub mod error;
+#[cfg(feature = "lending")]
 pub mod lending;
 pub mod runner;
 pub mod scripts;

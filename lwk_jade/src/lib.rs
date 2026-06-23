@@ -171,6 +171,22 @@ fn create_jade_sign_req(
         trusted_commitments.push(trusted_commitment);
 
         let mut change = None;
+
+        for (_, (_, (fingerprint, path))) in output.tap_key_origins.iter() {
+            if fingerprint == &my_fingerprint {
+                let is_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_CHAIN);
+                if is_change && output.script_pubkey.is_v1_p2tr() {
+                    change = Some(Change {
+                        address: SingleOrMulti::Single {
+                            variant: Variant::Tr,
+                            path: derivation_path_to_vec(path),
+                        },
+                        is_change,
+                    });
+                }
+            }
+        }
+
         for (fingerprint, path) in output.bip32_derivation.values() {
             if fingerprint == &my_fingerprint {
                 // This ensures that path has at least 2 elements

@@ -187,6 +187,16 @@ pub struct TxInputParams {
     /// 32 bytes anti-exfiltration commitment (random data not verified for now). TODO verify
     #[serde(with = "serde_bytes")]
     pub ae_host_commitment: Vec<u8>,
+
+    // Required for all inputs when any input is taproot (Liquid/BIP341): Jade stores these in
+    // the scriptpubkeys/assets maps used by wally_tx_get_input_signature_hash to compute
+    // sha_scriptpubkeys and sha_assets over all inputs.
+    // https://github.com/Blockstream/Jade/blob/3edd8f4b03ae65d6ee38fb8620b46aad88ab341e/main/process/sign_tx.c#L644-L656
+    #[serde(with = "serde_bytes", skip_serializing_if = "Vec::is_empty")]
+    pub scriptpubkey: Vec<u8>,
+
+    #[serde(with = "serde_bytes", skip_serializing_if = "Vec::is_empty")]
+    pub asset_generator: Vec<u8>,
 }
 
 impl Debug for TxInputParams {
@@ -198,6 +208,8 @@ impl Debug for TxInputParams {
             .field("path", &self.path)
             .field("sighash", &self.sighash)
             .field("ae_host_commitment", &self.ae_host_commitment.to_hex())
+            .field("scriptpubkey", &self.scriptpubkey.to_hex())
+            .field("asset_generator", &self.asset_generator.to_hex())
             .finish()
     }
 }
@@ -247,6 +259,8 @@ mod test {
             path: Some(vec![2]),
             sighash: Some(1),
             ae_host_commitment: vec![3; 32],
+            asset_generator: vec![],
+            scriptpubkey: vec![],
         })
         .unwrap();
 
@@ -260,6 +274,8 @@ mod test {
             path: Some(vec![]),
             sighash: None,
             ae_host_commitment: vec![],
+            asset_generator: vec![],
+            scriptpubkey: vec![],
         })
         .unwrap();
 

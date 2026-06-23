@@ -92,6 +92,9 @@ pub enum Error {
     #[error("Multiple bip 32 derivations for Jade in input {0}")]
     MultipleBip32DerivationsInput(usize),
 
+    #[error("Multiple taproot derivations for Jade in input {0}")]
+    MultipleTapDerivationsInput(usize),
+
     #[error("Previous script pubkey is wsh but witness script is missing in input {0}")]
     MissingWitnessScript(usize),
 

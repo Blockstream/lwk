@@ -95,7 +95,10 @@ fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
     use lwk_common::Signer;
     use lwk_signer::SwSigner;
     use lwk_wollet::amp0::{blocking::Amp0, Amp0Pset};
-    use lwk_wollet::{clients::blocking::EsploraClient, Network, WolletBuilder};
+    use lwk_wollet::{
+        clients::blocking::{EsploraClient, WaterfallsClient},
+        Network, WolletBuilder,
+    };
 
     // Signer
     let mnemonic = "<mnemonic>";
@@ -125,7 +128,7 @@ fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = EsploraClient::new(url, Network::TestnetLiquid)?;
     // esplora is too slow // ANCHOR: ignore
     let url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"; // ANCHOR: ignore
-    let mut client = EsploraClient::new_waterfalls(url, Network::TestnetLiquid)?; // ANCHOR: ignore
+    let mut client = WaterfallsClient::new(url, Network::TestnetLiquid)?; // ANCHOR: ignore
     if let Some(update) = client.full_scan_to_index(&wollet, amp0.last_index())? {
         wollet.apply_update(update)?;
     }

@@ -1109,8 +1109,7 @@ async fn test_esplora_waterfalls_last_used_index() {
     let desc = "ct(slip77(2411e278affa5c47010eab6d313c1ec66628ec0dd03b6fc98d1a05a0618719e6),elwpkh([a8874235/84'/1776'/0']xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#upsg7h8m";
     let desc = WolletDescriptor::from_str(desc).unwrap();
 
-    let mut client = clients::asyncr::EsploraClientBuilder::new(url, Network::Liquid)
-        .waterfalls(true)
+    let mut client = clients::asyncr::WaterfallsClientBuilder::new(url, Network::Liquid)
         .build()
         .unwrap();
 
@@ -2027,15 +2026,13 @@ fn test_clients() {
     assert_eq!(electrum_client.capabilities().len(), 0);
     assert_eq!(esplora_client.capabilities().len(), 0);
 
-    let esplora_waterfalls_client = clients::blocking::EsploraClient::new_waterfalls(
-        &env.waterfalls_url(),
-        Network::default_regtest(),
-    )
-    .unwrap();
+    let esplora_waterfalls_client =
+        clients::blocking::WaterfallsClient::new(&env.waterfalls_url(), Network::default_regtest())
+            .unwrap();
     assert_eq!(esplora_waterfalls_client.capabilities().len(), 1);
 }
 
-fn wait_esplora_tx_update(client: &mut blocking::EsploraClient, wollet: &Wollet) -> Update {
+fn wait_blockchain_tx_update<C: BlockchainBackend>(client: &mut C, wollet: &Wollet) -> Update {
     for _ in 0..50 {
         let update = client.full_scan(wollet).unwrap();
         if let Some(update) = update {
@@ -2054,11 +2051,9 @@ fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: use TestWollet also for EsploraClient
     let env = TestEnvBuilder::from_env().with_waterfalls().build();
 
-    let mut client = clients::blocking::EsploraClient::new_waterfalls(
-        &env.waterfalls_url(),
-        Network::default_regtest(),
-    )
-    .unwrap();
+    let mut client =
+        clients::blocking::WaterfallsClient::new(&env.waterfalls_url(), Network::default_regtest())
+            .unwrap();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -2073,7 +2068,7 @@ fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
     let address = wollet.address(None).unwrap();
     let _txid = env.elementsd_sendtoaddress(address.address(), sats, None);
 
-    let update = wait_esplora_tx_update(&mut client, &wollet);
+    let update = wait_blockchain_tx_update(&mut client, &wollet);
     wollet.apply_update(update).unwrap();
     let balance = wollet.balance().unwrap();
     assert_eq!(sats, *balance.get(network.policy_asset()).unwrap());
@@ -2093,7 +2088,7 @@ fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
     let tx = wollet.finalize(&mut pset).unwrap();
     let txid = client.broadcast(&tx).unwrap();
 
-    let update = wait_esplora_tx_update(&mut client, &wollet);
+    let update = wait_blockchain_tx_update(&mut client, &wollet);
     wollet.apply_update(update).unwrap();
     let balance = wollet.balance().unwrap();
     assert_eq!(0, *balance.get(network.policy_asset()).unwrap());
@@ -2123,8 +2118,7 @@ fn test_waterfalls_has_more_reused_address_balance() {
         .build();
     let network = Network::default_regtest();
 
-    let client =
-        clients::blocking::EsploraClient::new_waterfalls(&env.waterfalls_url(), network).unwrap();
+    let client = clients::blocking::WaterfallsClient::new(&env.waterfalls_url(), network).unwrap();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -2328,11 +2322,9 @@ fn test_non_standard_gap_limit_waterfalls_esplora() {
     // TODO: use TestWollet also for EsploraClient
     let env = TestEnvBuilder::from_env().with_waterfalls().build();
 
-    let mut client = clients::blocking::EsploraClient::new_waterfalls(
-        &env.waterfalls_url(),
-        Network::default_regtest(),
-    )
-    .unwrap();
+    let mut client =
+        clients::blocking::WaterfallsClient::new(&env.waterfalls_url(), Network::default_regtest())
+            .unwrap();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -2974,7 +2966,7 @@ fn test_no_wildcard() {
         .unwrap();
 
     let mut waterfalls_client =
-        clients::blocking::EsploraClient::new_waterfalls(&env.waterfalls_url(), network).unwrap();
+        clients::blocking::WaterfallsClient::new(&env.waterfalls_url(), network).unwrap();
 
     // TODO: improve this
     std::thread::sleep(std::time::Duration::from_millis(1000));
@@ -3223,7 +3215,7 @@ fn test_sync_high_index() {
     let network = Network::default_regtest();
 
     let mut client =
-        clients::blocking::EsploraClient::new_waterfalls(&env.waterfalls_url(), network).unwrap();
+        clients::blocking::WaterfallsClient::new(&env.waterfalls_url(), network).unwrap();
 
     // Signer
     let slip77_key = generate_slip77();
@@ -3672,7 +3664,9 @@ fn test_fee_service() {
 async fn async_clients() -> Result<(), Box<dyn std::error::Error>> {
     init_logging();
     // ANCHOR: authenticated_esplora_client
-    use lwk_wollet::clients::asyncr::{EsploraClient as AsyncEsploraClient, EsploraClientBuilder};
+    use lwk_wollet::clients::asyncr::{
+        EsploraClient as AsyncEsploraClient, EsploraClientBuilder, WaterfallsClientBuilder,
+    };
     use lwk_wollet::clients::TokenProvider;
 
     let base_url = "https://enterprise.blockstream.info/liquid/api";
@@ -3696,9 +3690,7 @@ async fn async_clients() -> Result<(), Box<dyn std::error::Error>> {
 
     // ANCHOR: waterfalls_client
     let waterfalls_url = "https://waterfalls.liquidwebwallet.org/liquid/api";
-    let mut client = EsploraClientBuilder::new(waterfalls_url, Network::Liquid)
-        .waterfalls(true)
-        .build()?;
+    let mut client = WaterfallsClientBuilder::new(waterfalls_url, Network::Liquid).build()?;
     // ANCHOR_END: waterfalls_client
     let tip = client.tip().await.unwrap();
     assert!(tip.height > 100);
@@ -3712,8 +3704,7 @@ async fn async_clients() -> Result<(), Box<dyn std::error::Error>> {
     let login_url =
         "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
 
-    let mut client = EsploraClientBuilder::new(base_url, Network::Liquid)
-        .waterfalls(true) // <- added
+    let mut client = WaterfallsClientBuilder::new(base_url, Network::Liquid)
         .token_provider(TokenProvider::Blockstream {
             url: login_url.to_string(),
             client_id: client_id.to_string(),

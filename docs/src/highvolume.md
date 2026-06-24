@@ -73,7 +73,7 @@ and often times this is enough.
 
 For this case you can use "utxo only" mode.
 You need to mark you `Wollet` as "utxo only" with `WolletBuilder::utxo_only()`,
-and you need to use Waterfalls with a "utxo only" client (`EsploraClientBuilder::utxo_only()`).
+and you need to use Waterfalls with a "utxo only" client (`WaterfallsClientBuilder::utxo_only()`).
 Then automatically you will only download transactions that have an unspent output,
 drastically reducing the network, memory and disk usage.
 

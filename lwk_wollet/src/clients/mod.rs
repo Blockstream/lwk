@@ -40,6 +40,13 @@ pub struct EsploraClientBuilder {
     token_provider: TokenProvider,
 }
 
+/// A builder for the [`crate::clients::asyncr::WaterfallsClient`] or [`crate::clients::blocking::WaterfallsClient`]
+#[cfg(feature = "esplora")]
+#[derive(Debug, Clone)]
+pub struct WaterfallsClientBuilder {
+    inner: EsploraClientBuilder,
+}
+
 /// Provider of a token for authenticated services backend of Esplora and Waterfalls
 #[cfg(feature = "esplora")]
 #[derive(Clone)]
@@ -99,6 +106,8 @@ impl EsploraClientBuilder {
     /// separate calls, and in this case future addresses cannot be derived.
     /// In both cases, the server can see transactions that are involved in the wallet but it knows nothing about the
     /// assets and amount exchanged due to the nature of confidential transactions.
+    ///
+    /// Prefer [`WaterfallsClientBuilder`] for new Waterfalls clients.
     pub fn waterfalls(mut self, waterfalls: bool) -> Self {
         self.waterfalls = waterfalls;
         self
@@ -144,6 +153,59 @@ impl EsploraClientBuilder {
     /// Set the token provider for authenticated services
     pub fn token_provider(mut self, token: TokenProvider) -> Self {
         self.token_provider = token;
+        self
+    }
+}
+
+#[cfg(feature = "esplora")]
+impl WaterfallsClientBuilder {
+    /// Create a new [`WaterfallsClientBuilder`].
+    pub fn new(base_url: &str, network: Network) -> Self {
+        let inner = EsploraClientBuilder::new(base_url, network).waterfalls(true);
+        Self { inner }
+    }
+
+    /// Whether the client is `utxo_only`.
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// If true, the client will only fetch transactions with unspent outputs.
+    /// The resulting balance will be the same as a full scan, but the scan will be faster
+    /// at the cost of not having the full transaction history.
+    pub fn utxo_only(mut self, utxo_only: bool) -> Self {
+        self.inner.utxo_only = utxo_only;
+        self
+    }
+
+    /// Set a timeout in seconds for requests.
+    pub fn timeout(mut self, timeout: u8) -> Self {
+        self.inner.timeout = Some(timeout);
+        self
+    }
+
+    /// Set the concurrency level for requests, default is 1.
+    ///
+    /// Concurrency can't be 0, if 0 is passed 1 will be used.
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.inner.concurrency = Some(concurrency.max(1));
+        self
+    }
+
+    /// Set the HTTP request headers for each request.
+    pub fn headers(mut self, headers: HashMap<String, String>) -> Self {
+        self.inner.headers = headers;
+        self
+    }
+
+    /// Add a HTTP header to set on each request.
+    pub fn header(mut self, key: String, val: String) -> Self {
+        self.inner.headers.insert(key, val);
+        self
+    }
+
+    /// Set the token provider for authenticated services.
+    pub fn token_provider(mut self, token: TokenProvider) -> Self {
+        self.inner.token_provider = token;
         self
     }
 }

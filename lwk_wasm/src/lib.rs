@@ -104,7 +104,7 @@ pub use control_block::ControlBlock;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use error::MagicRoutingHint;
-pub use esplora::EsploraClient;
+pub use esplora::{EsploraClient, WaterfallsClient, WaterfallsClientBuilder};
 pub use fees::Fees;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use jade::{Jade, Singlesig};

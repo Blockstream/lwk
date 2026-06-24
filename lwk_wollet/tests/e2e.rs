@@ -1215,6 +1215,7 @@ async fn test_esplora_wasm_waterfalls_desc(desc: &str, url: &str) -> usize {
     for waterfalls in [true, false] {
         let start = Instant::now();
         let mut wollet = WolletBuilder::new(network, desc.clone()).build().unwrap();
+        #[allow(deprecated)]
         let mut client = clients::asyncr::EsploraClientBuilder::new(url, network)
             .waterfalls(waterfalls)
             .concurrency(4)

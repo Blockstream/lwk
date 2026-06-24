@@ -131,6 +131,7 @@ pub struct WaterfallsClientBuilder {
 }
 
 impl From<EsploraClientBuilder> for lwk_wollet::clients::EsploraClientBuilder {
+    #[allow(deprecated)]
     fn from(builder: EsploraClientBuilder) -> Self {
         let mut result = lwk_wollet::clients::EsploraClientBuilder::new(
             &builder.base_url,
@@ -199,6 +200,7 @@ impl EsploraClient {
     /// Construct an Esplora Client using Waterfalls endpoint
     #[uniffi::constructor]
     pub fn new_waterfalls(url: &str, network: &Network) -> Result<Arc<Self>, LwkError> {
+        #[allow(deprecated)]
         let builder =
             lwk_wollet::clients::EsploraClientBuilder::new(url, network.into()).waterfalls(true);
         let client = builder.clone().build_blocking()?;

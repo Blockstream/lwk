@@ -207,6 +207,7 @@ impl EsploraClient {
         concurrency: usize,
         utxo_only: bool,
     ) -> Result<Self, Error> {
+        #[allow(deprecated)]
         let builder = asyncr::EsploraClientBuilder::new(url, network.into())
             .waterfalls(waterfalls)
             .concurrency(concurrency)
@@ -276,6 +277,7 @@ impl EsploraClient {
 
     /// Set the waterfalls server recipient key. This is used to encrypt the descriptor when calling the waterfalls endpoint.
     #[wasm_bindgen(js_name = setWaterfallsServerRecipient)]
+    #[allow(deprecated)]
     pub async fn set_waterfalls_server_recipient(&mut self, recipient: &str) -> Result<(), Error> {
         let recipient: age::x25519::Recipient = recipient
             .parse()
@@ -294,6 +296,7 @@ impl EsploraClient {
     /// for the Waterfalls server recipient unless descriptor encryption has been
     /// explicitly disabled on this client.
     #[wasm_bindgen(js_name = waterfallsDescriptor)]
+    #[allow(deprecated)]
     pub async fn waterfalls_descriptor(
         &mut self,
         descriptor: &WolletDescriptor,

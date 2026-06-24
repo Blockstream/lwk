@@ -579,6 +579,10 @@ impl EsploraClient {
     /// The returned descriptor has key origin information stripped and is encrypted
     /// for the Waterfalls server recipient unless descriptor encryption has been
     /// explicitly disabled on this client.
+    #[deprecated(
+        since = "0.18.2",
+        note = "use WaterfallsClient::waterfalls_descriptor instead"
+    )]
     pub async fn waterfalls_descriptor(
         &mut self,
         descriptor: &WolletDescriptor,
@@ -770,6 +774,7 @@ impl EsploraClient {
         &mut self,
         descriptor: &WolletDescriptor,
     ) -> Result<LastUsedIndexResponse, Error> {
+        #[allow(deprecated)]
         let desc = self.waterfalls_descriptor(descriptor).await?;
 
         let url = format!(
@@ -791,11 +796,19 @@ impl EsploraClient {
     }
 
     /// Avoid encrypting the descriptor when calling the waterfalls endpoint.
+    #[deprecated(
+        since = "0.18.2",
+        note = "use WaterfallsClient::avoid_encryption instead"
+    )]
     pub fn avoid_encryption(&mut self) {
         self.waterfalls_avoid_encryption = true;
     }
 
     /// Set the waterfalls server recipient key. This is used to encrypt the descriptor when calling the waterfalls endpoint.
+    #[deprecated(
+        since = "0.18.2",
+        note = "use WaterfallsClient::set_waterfalls_server_recipient instead"
+    )]
     pub fn set_waterfalls_server_recipient(&mut self, recipient: Recipient) {
         self.waterfalls_server_recipient = Some(recipient);
     }
@@ -1183,6 +1196,7 @@ impl WaterfallsClient {
         &mut self,
         descriptor: &WolletDescriptor,
     ) -> Result<String, Error> {
+        #[allow(deprecated)]
         self.inner.waterfalls_descriptor(descriptor).await
     }
 
@@ -1196,6 +1210,7 @@ impl WaterfallsClient {
 
     /// Avoid encrypting the descriptor when calling the Waterfalls endpoint.
     pub fn avoid_encryption(&mut self) {
+        #[allow(deprecated)]
         self.inner.avoid_encryption();
     }
 
@@ -1208,6 +1223,7 @@ impl WaterfallsClient {
     ///
     /// This is used to encrypt the descriptor when calling the Waterfalls endpoint.
     pub fn set_waterfalls_server_recipient(&mut self, recipient: Recipient) {
+        #[allow(deprecated)]
         self.inner.set_waterfalls_server_recipient(recipient);
     }
 
@@ -1641,6 +1657,7 @@ mod tests {
 
     #[test]
     fn test_esplora_client_builder_error() {
+        #[allow(deprecated)]
         let client = crate::asyncr::EsploraClientBuilder::new("", Network::Liquid)
             .waterfalls(false)
             .utxo_only(true)
@@ -1781,6 +1798,7 @@ mod tests {
             } else {
                 format!("https://enterprise{env}blockstream.info/liquid/api")
             };
+            #[allow(deprecated)]
             let mut client = EsploraClientBuilder::new(&base_url, Network::Liquid)
                 .token_provider(TokenProvider::Blockstream {
                     url: staging_login.to_string(),

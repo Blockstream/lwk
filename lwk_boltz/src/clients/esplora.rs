@@ -139,6 +139,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires internet connection"]
     async fn test_waterfalls_client() {
+        #[allow(deprecated)]
         let client = EsploraClientBuilder::new(
             "https://waterfalls.liquidwebwallet.org/liquid/api",
             Network::Liquid,

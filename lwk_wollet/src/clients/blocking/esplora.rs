@@ -111,9 +111,11 @@ impl EsploraClient {
     /// Create a new Esplora client using the "waterfalls" endpoint
     ///
     /// Prefer [`WaterfallsClient`] for new Waterfalls clients.
+    #[deprecated(since = "0.18.2", note = "use WaterfallsClient::new instead")]
     pub fn new_waterfalls(url: &str, network: Network) -> Result<Self, Error> {
         Ok(Self {
             rt: Runtime::new()?,
+            #[allow(deprecated)]
             client: EsploraClientBuilder::new(url, network)
                 .waterfalls(true)
                 .build()?,
@@ -121,17 +123,30 @@ impl EsploraClient {
     }
 
     /// Do not encrypt the descriptor when using the "waterfalls" endpoint
+    #[deprecated(
+        since = "0.18.2",
+        note = "use WaterfallsClient::avoid_encryption instead"
+    )]
     pub fn waterfalls_avoid_encryption(&mut self) {
         self.client.waterfalls_avoid_encryption = true;
     }
 
     /// Returns the waterfall server recipient key using a cached value or by asking the server its key
+    #[deprecated(
+        since = "0.18.2",
+        note = "use WaterfallsClient::waterfalls_server_recipient instead"
+    )]
     pub fn waterfalls_server_recipient(&mut self) -> Result<Recipient, Error> {
         self.rt.block_on(self.client.waterfalls_server_recipient())
     }
 
     /// Set the waterfalls server recipient key. This is used to encrypt the descriptor when calling the waterfalls endpoint.
+    #[deprecated(
+        since = "0.18.2",
+        note = "use WaterfallsClient::set_waterfalls_server_recipient instead"
+    )]
     pub fn set_waterfalls_server_recipient(&mut self, recipient: Recipient) {
+        #[allow(deprecated)]
         self.client.set_waterfalls_server_recipient(recipient);
     }
 
@@ -140,10 +155,15 @@ impl EsploraClient {
     /// This is a temporary API exposed to let callers use Waterfalls subscription
     /// endpoints directly. It may be removed once subscription support is
     /// implemented in LWK.
+    #[deprecated(
+        since = "0.18.2",
+        note = "use WaterfallsClient::waterfalls_descriptor instead"
+    )]
     pub fn waterfalls_descriptor(
         &mut self,
         descriptor: &WolletDescriptor,
     ) -> Result<String, Error> {
+        #[allow(deprecated)]
         self.rt
             .block_on(self.client.waterfalls_descriptor(descriptor))
     }

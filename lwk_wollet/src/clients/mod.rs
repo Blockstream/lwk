@@ -108,6 +108,7 @@ impl EsploraClientBuilder {
     /// assets and amount exchanged due to the nature of confidential transactions.
     ///
     /// Prefer [`WaterfallsClientBuilder`] for new Waterfalls clients.
+    #[deprecated(since = "0.18.2", note = "use WaterfallsClientBuilder instead")]
     pub fn waterfalls(mut self, waterfalls: bool) -> Self {
         self.waterfalls = waterfalls;
         self
@@ -120,6 +121,10 @@ impl EsploraClientBuilder {
     /// if true, the client will only fetch transactions with unspent outputs.
     /// The resulting balance will be the same as a full scan, but the scan will be faster
     /// at the cost of not having the full transaciton history.
+    #[deprecated(
+        since = "0.18.2",
+        note = "use WaterfallsClientBuilder::utxo_only instead"
+    )]
     pub fn utxo_only(mut self, utxo_only: bool) -> Self {
         self.utxo_only = utxo_only;
         self
@@ -161,6 +166,7 @@ impl EsploraClientBuilder {
 impl WaterfallsClientBuilder {
     /// Create a new [`WaterfallsClientBuilder`].
     pub fn new(base_url: &str, network: Network) -> Self {
+        #[allow(deprecated)]
         let inner = EsploraClientBuilder::new(base_url, network).waterfalls(true);
         Self { inner }
     }

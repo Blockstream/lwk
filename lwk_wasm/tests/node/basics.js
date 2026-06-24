@@ -42,13 +42,13 @@ async function runBasicsTest() {
 
         // ANCHOR: waterfalls_client
         const url_waterfalls = "https://waterfalls.liquidwebwallet.org/liquid/api";
-        const waterfalls_client = new lwk.EsploraClient(lwk.Network.mainnet(), url_waterfalls, true, 4, false);
+        const waterfalls_client = new lwk.WaterfallsClient(lwk.Network.mainnet(), url_waterfalls);
         // ANCHOR_END: waterfalls_client
 
         // ANCHOR: client
         const url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
         // TODO: name variables // ANCHOR: ignore
-        const client = new lwk.EsploraClient(network, url, true, 4, false);
+        const client = new lwk.WaterfallsClient(network, url);
 
         const update = await client.fullScan(wollet);
         if (update) {

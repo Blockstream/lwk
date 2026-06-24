@@ -64,7 +64,7 @@ async function runMultisigTest() {
 	// Update the wollet state
 	const url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
 	// TODO: name variables // ANCHOR: ignore
-	const client = new lwk.EsploraClient(network, url, true, 4, false);
+	const client = new lwk.WaterfallsClient(network, url);
 
 	const update = await client.fullScan(wollet_c);
 	if (update) {

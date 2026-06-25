@@ -7,46 +7,30 @@ use thiserror::Error;
 #[error("Invalid key origin xpub \"{0}\", expected [fingerprint/path]xpub")]
 pub struct InvalidKeyOriginXpub(String);
 
-// TODO: cleanup this fn
 /// Parse a keyorigin xpub from a string
 ///
 /// Example: "[73c5da0a/84h/1h/0h]tpub..."
 pub fn keyorigin_xpub_from_str(
     s: &str,
 ) -> Result<(Option<(Fingerprint, DerivationPath)>, Xpub), InvalidKeyOriginXpub> {
-    let parts: Vec<_> = s.split('[').collect();
-    if parts.len() == 1 {
-        let xpub = Xpub::from_str(s).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
-        return Ok((None, xpub));
-    }
-    if parts.len() != 2 {
-        return Err(InvalidKeyOriginXpub("unexpected format".to_string()));
-    }
-    if !parts[0].is_empty() {
-        return Err(InvalidKeyOriginXpub("unexpected format".to_string()));
-    }
-    let s = parts[1];
+    let (keyorigin, xpub) = match s.strip_prefix('[').and_then(|inner| inner.split_once(']')) {
+        None => {
+            let xpub = Xpub::from_str(s).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
+            return Ok((None, xpub));
+        }
+        Some((keyorigin, xpub)) => (keyorigin, xpub),
+    };
 
-    let parts: Vec<_> = s.split(']').collect();
-    if parts.len() != 2 {
-        return Err(InvalidKeyOriginXpub("unexpected format".to_string()));
-    }
-    let keyorigin = parts[0];
-    let xpub = parts[1];
-
-    if keyorigin.len() < 9 {
-        return Err(InvalidKeyOriginXpub("unexpected format".to_string()));
-    }
-    let fingerprint = &keyorigin[0..8];
-    if &keyorigin[8..9] != "/" {
-        return Err(InvalidKeyOriginXpub("unexpected format".to_string()));
-    }
-    let path = format!("m/{}", &keyorigin[9..]);
+    let (fingerprint, path) = keyorigin
+        .split_once('/')
+        .ok_or(InvalidKeyOriginXpub("unexpected format".to_string()))?;
 
     let fingerprint =
         Fingerprint::from_str(fingerprint).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
-    let path = DerivationPath::from_str(&path).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
+    let path = DerivationPath::from_str(&format!("m/{}", path))
+        .map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
     let xpub = Xpub::from_str(xpub).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
+
     Ok((Some((fingerprint, path)), xpub))
 }
 

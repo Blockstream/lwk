@@ -436,6 +436,83 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_restore_submarine_btc_to_ln_from_data() {
+        let _ = env_logger::try_init();
+
+        let mining_handle = utils::start_block_mining();
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                Network::default_regtest(),
+            )
+            .unwrap(),
+        );
+
+        let session = BoltzSession::builder(
+            Network::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .create_swap_timeout(TIMEOUT)
+        .mnemonic(mnemonic.clone())
+        .build()
+        .await
+        .unwrap();
+
+        let refund_address = utils::generate_address(BTC_CHAIN.into()).await.unwrap();
+        let refund_address = bitcoin::Address::from_str(&refund_address)
+            .unwrap()
+            .assume_checked();
+        let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
+        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
+
+        let prepare_pay_response = session
+            .btc_to_ln(&lightning_payment, &refund_address, None)
+            .await
+            .unwrap();
+        let swap_id = prepare_pay_response.swap_id().to_string();
+        let lockup_address = prepare_pay_response.lockup_address().to_string();
+        let expected_amount = prepare_pay_response.uri_amount();
+        let serialized_data = prepare_pay_response.serialize().unwrap();
+
+        drop(prepare_pay_response);
+        drop(session);
+
+        let session = BoltzSession::builder(
+            Network::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .create_swap_timeout(TIMEOUT)
+        .mnemonic(mnemonic)
+        .build()
+        .await
+        .unwrap();
+        let data = PreparePayDataSerializable::deserialize(&serialized_data).unwrap();
+        let prepare_pay_response = session.restore_prepare_pay(data).await.unwrap();
+        assert_eq!(prepare_pay_response.swap_id(), swap_id);
+        assert_eq!(prepare_pay_response.from_chain(), BTC_CHAIN.into());
+        assert_eq!(prepare_pay_response.lockup_address(), lockup_address);
+        assert_eq!(prepare_pay_response.uri_amount(), expected_amount);
+
+        utils::send_to_address(
+            BTC_CHAIN.into(),
+            prepare_pay_response.lockup_address(),
+            prepare_pay_response.uri_amount(),
+        )
+        .await
+        .unwrap();
+        prepare_pay_response.complete_pay().await.unwrap();
+
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_restore_submarine() {
         let _ = env_logger::try_init();
 

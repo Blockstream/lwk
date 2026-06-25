@@ -380,6 +380,62 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_submarine_btc_to_ln_underpay_refund() {
+        let _ = env_logger::try_init();
+
+        let mining_handle = utils::start_block_mining();
+
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                Network::default_regtest(),
+            )
+            .unwrap(),
+        );
+        let session = BoltzSession::builder(
+            Network::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .create_swap_timeout(TIMEOUT)
+        .build()
+        .await
+        .unwrap();
+
+        let refund_address = utils::generate_address(BTC_CHAIN.into()).await.unwrap();
+        let refund_address = bitcoin::Address::from_str(&refund_address)
+            .unwrap()
+            .assume_checked();
+        let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
+        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
+
+        let mut prepare_pay_response = session
+            .btc_to_ln(&lightning_payment, &refund_address, None)
+            .await
+            .unwrap();
+
+        assert_eq!(prepare_pay_response.from_chain(), BTC_CHAIN.into());
+
+        utils::send_to_address(
+            BTC_CHAIN.into(),
+            prepare_pay_response.lockup_address(),
+            prepare_pay_response.uri_amount() - 1,
+        )
+        .await
+        .unwrap();
+
+        advance_until_complete!(prepare_pay_response, true);
+        assert!(
+            prepare_pay_response.refund_txid().is_some(),
+            "refund_txid should be set after BTC underpay refund transaction is broadcasted"
+        );
+
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_restore_submarine() {
         let _ = env_logger::try_init();
 

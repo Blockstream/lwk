@@ -306,7 +306,7 @@ impl BoltzSession {
         swaps: &[SwapRestoreResponse],
         refund_address: &elements::Address,
     ) -> Result<Vec<PreparePayData>, Error> {
-        self.restorable_submarine_swaps_with_address(swaps, &refund_address.to_string())
+        self.restorable_submarine_swaps_with_address(swaps, &refund_address.to_string(), "L-BTC")
     }
 
     pub async fn restorable_submarine_btc_swaps(
@@ -314,17 +314,18 @@ impl BoltzSession {
         swaps: &[SwapRestoreResponse],
         refund_address: &bitcoin::Address,
     ) -> Result<Vec<PreparePayData>, Error> {
-        self.restorable_submarine_swaps_with_address(swaps, &refund_address.to_string())
+        self.restorable_submarine_swaps_with_address(swaps, &refund_address.to_string(), "BTC")
     }
 
     fn restorable_submarine_swaps_with_address(
         &self,
         swaps: &[SwapRestoreResponse],
         refund_address: &str,
+        from_chain: &str,
     ) -> Result<Vec<PreparePayData>, Error> {
         swaps
             .iter()
-            .filter(|e| matches!(e.swap_type, SwapRestoreType::Submarine))
+            .filter(|e| is_submarine_restore_for_from_chain(e, from_chain))
             .map(|e| {
                 convert_swap_restore_response_to_prepare_pay_data(
                     e,
@@ -335,6 +336,10 @@ impl BoltzSession {
             })
             .collect()
     }
+}
+
+fn is_submarine_restore_for_from_chain(e: &SwapRestoreResponse, from_chain: &str) -> bool {
+    matches!(e.swap_type, SwapRestoreType::Submarine) && e.from == from_chain
 }
 
 async fn fetch_lockup_txid(api: &BoltzApiClientV2, swap_id: &str) -> Option<String> {
@@ -838,5 +843,36 @@ impl PreparePayResponse {
         self.data.lockup_txid = Some(txid);
         self.persist()?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn submarine_restore_filter_matches_pair_direction() {
+        let data = include_str!("../tests/data/swap_restore_response.json");
+        let swaps: Vec<SwapRestoreResponse> = serde_json::from_str(data).unwrap();
+
+        assert!(swaps
+            .iter()
+            .any(|e| is_submarine_restore_for_from_chain(e, "L-BTC")));
+        assert!(!swaps
+            .iter()
+            .any(|e| is_submarine_restore_for_from_chain(e, "BTC")));
+
+        let mut btc_submarine = swaps
+            .iter()
+            .find(|e| is_submarine_restore_for_from_chain(e, "L-BTC"))
+            .unwrap()
+            .clone();
+        btc_submarine.from = "BTC".to_string();
+
+        assert!(is_submarine_restore_for_from_chain(&btc_submarine, "BTC"));
+        assert!(!is_submarine_restore_for_from_chain(
+            &btc_submarine,
+            "L-BTC"
+        ));
     }
 }

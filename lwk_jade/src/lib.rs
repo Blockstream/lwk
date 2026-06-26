@@ -11,6 +11,7 @@ pub mod get_receive_address;
 pub mod protocol;
 pub mod register_multisig;
 pub mod sign_liquid_tx;
+mod sign_pset_common;
 
 #[cfg(feature = "test_emulator")]
 mod jade_emulator;

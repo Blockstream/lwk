@@ -21,13 +21,12 @@ assert(len(txs) >= 99)
 balance = wollet.balance()
 
 # Fetch transactions using waterfalls and utxos only
-b = EsploraClientBuilder(
+b = WaterfallsClientBuilder(
     base_url="https://waterfalls.liquidwebwallet.org/liquidtestnet/api",
     network=network,
-    waterfalls=True,
     utxo_only=True,
 )
-client_utxo_only = EsploraClient.from_builder(b)
+client_utxo_only = WaterfallsClient.from_builder(b)
 b = WolletBuilder(network, desc)
 b.utxo_only(True)
 wollet_utxo_only = b.build()

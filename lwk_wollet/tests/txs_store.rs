@@ -132,8 +132,7 @@ async fn test_txs_store_huge() {
         .with_merge_threshold(Some(1))
         .build()
         .unwrap();
-    let mut client = clients::asyncr::EsploraClientBuilder::new(url, network)
-        .waterfalls(true)
+    let mut client = clients::asyncr::WaterfallsClientBuilder::new(url, network)
         .concurrency(4)
         .build()
         .unwrap();

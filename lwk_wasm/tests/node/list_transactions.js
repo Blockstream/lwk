@@ -8,7 +8,10 @@ async function runListTransactionsTest() {
         const network = lwk.Network.testnet();
         console.assert(network.toString() === "LiquidTestnet");
 
-        const client = new lwk.EsploraClient(network, "https://waterfalls.liquidwebwallet.org/liquidtestnet/api", true, 4, false);
+        const waterfallsUrl = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+        const client = new lwk.WaterfallsClientBuilder(network, waterfallsUrl)
+            .concurrency(4)
+            .build();
 
         const signer = new lwk.Signer(mnemonic, network);
         const desc = signer.wpkhSlip77Descriptor();
@@ -62,7 +65,10 @@ async function runListTransactionsTest() {
         console.assert(old_url === new_url);
 
         // Fetch transactions using waterfalls and utxos only
-        const client_utxo_only = new lwk.EsploraClient(network, "https://waterfalls.liquidwebwallet.org/liquidtestnet/api", true, 4, true);
+        const client_utxo_only = new lwk.WaterfallsClientBuilder(network, waterfallsUrl)
+            .concurrency(4)
+            .utxoOnly(true)
+            .build();
         const wollet_utxo_only = new lwk.WolletBuilder(network, desc).utxoOnly(true).build();
         console.log("Starting UTXO-only full scan...");
         const update_utxo_only = await client_utxo_only.fullScan(wollet_utxo_only);

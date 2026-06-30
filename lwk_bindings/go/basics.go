@@ -100,7 +100,7 @@ func main() {
 	_ = esploraClient
 
 	// ANCHOR: waterfalls_client
-	waterfallsClient, err := lwk.EsploraClientNewWaterfalls("https://waterfalls.liquidwebwallet.org/liquid/api", lwk.NetworkMainnet())
+	waterfallsClient, err := lwk.NewWaterfallsClient("https://waterfalls.liquidwebwallet.org/liquid/api", lwk.NetworkMainnet())
 	if err != nil {
 		log.Fatal(err)
 	}

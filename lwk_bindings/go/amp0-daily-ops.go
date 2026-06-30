@@ -64,7 +64,7 @@ func main() {
 
 	// Update the wallet with (new) blockchain data
 	url := "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"
-	client, err := lwk.EsploraClientNewWaterfalls(url, network)
+	client, err := lwk.NewWaterfallsClient(url, network)
 	if err != nil {
 		log.Fatal(err)
 	}

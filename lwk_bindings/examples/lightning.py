@@ -919,13 +919,12 @@ def main():
     file_store = FileStore("swaps")
     store_link = ForeignStoreLink(file_store)
 
-    b = EsploraClientBuilder(
+    b = WaterfallsClientBuilder(
         base_url="https://waterfalls.liquidwebwallet.org/liquid/api",
         network=network,
-        waterfalls=True,
         utxo_only=True,
     )
-    esplora_client = EsploraClient.from_builder(b)
+    esplora_client = WaterfallsClient.from_builder(b)
 
     signer = Signer(mnemonic, network)
     desc = signer.wpkh_slip77_descriptor()

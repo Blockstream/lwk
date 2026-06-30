@@ -278,6 +278,7 @@ mod tests {
         let network = Network::Liquid;
 
         let url = "https://waterfalls.liquidwebwallet.org/liquid/api";
+        #[allow(deprecated)]
         let client = EsploraClientBuilder::new(url, network)
             .waterfalls(true)
             .build()

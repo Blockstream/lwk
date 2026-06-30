@@ -38,7 +38,7 @@ addr = str(amp0.address(None).address());
 
 # Update the wallet with (new) blockchain data
 url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
-client = EsploraClient.new_waterfalls(url, network)
+client = WaterfallsClient(url, network)
 last_index = amp0.last_index()
 update = client.full_scan_to_index(wollet, last_index)
 wollet.apply_update(update)

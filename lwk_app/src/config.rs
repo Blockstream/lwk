@@ -4,7 +4,7 @@ use lwk_common::electrum_ssl::LIQUID_TESTNET_SOCKET;
 use lwk_common::Network;
 use lwk_jade::TIMEOUT;
 use lwk_wollet::amp2::Amp2;
-use lwk_wollet::asyncr::EsploraClientBuilder;
+use lwk_wollet::asyncr::{EsploraClientBuilder, WaterfallsClientBuilder};
 use lwk_wollet::clients::TokenProvider;
 use lwk_wollet::{amp2, ElectrumClient};
 use std::fs;
@@ -146,11 +146,10 @@ impl Config {
                 Ok(BlockchainClient::Esplora(esplora_client))
             }
             "waterfalls" => {
-                let builder = EsploraClientBuilder::new(&self.server_url, self.network)
-                    .waterfalls(true)
+                let builder = WaterfallsClientBuilder::new(&self.server_url, self.network)
                     .token_provider(self.token_provider.clone());
                 let waterfalls_client = builder.build_blocking()?;
-                Ok(BlockchainClient::Esplora(waterfalls_client))
+                Ok(BlockchainClient::Waterfalls(waterfalls_client))
             }
             _ => Err(Error::Generic(format!(
                 "Unsupported server type: {}",

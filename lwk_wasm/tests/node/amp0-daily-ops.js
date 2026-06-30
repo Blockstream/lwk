@@ -43,7 +43,7 @@ async function runAmp0DailyOps() {
 
         // Sync the wallet
         const url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
-        const client = new lwk.EsploraClient(network, url, true, 4, false);
+        const client = new lwk.WaterfallsClient(network, url);
 
         const last_index = amp0.lastIndex();
         const update = await client.fullScanToIndex(wollet, last_index);

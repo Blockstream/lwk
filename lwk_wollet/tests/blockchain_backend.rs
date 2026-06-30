@@ -44,11 +44,9 @@ fn test_has_txs_before_and_after_funding_esplora() {
 fn test_has_txs_before_and_after_funding_waterfalls() {
     let env = TestEnvBuilder::from_env().with_waterfalls().build();
 
-    let client = clients::blocking::EsploraClient::new_waterfalls(
-        &env.waterfalls_url(),
-        Network::default_regtest(),
-    )
-    .unwrap();
+    let client =
+        clients::blocking::WaterfallsClient::new(&env.waterfalls_url(), Network::default_regtest())
+            .unwrap();
 
     test_has_txs_before_and_after_funding(env, client);
 }

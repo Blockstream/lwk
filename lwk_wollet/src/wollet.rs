@@ -120,7 +120,7 @@ impl WolletBuilder {
     ///
     /// **Experimental**: this API might change without notice.
     ///
-    /// [`crate::clients::EsploraClientBuilder`] allows to create clients will only fetch transactions with
+    /// [`crate::clients::WaterfallsClientBuilder`] allows to create clients that only fetch transactions with
     /// unspent outputs to minimize the network and memory usage.
     ///
     /// If `utxo_only` is `true`, the `Wollet` will only work with `utxo_only` clients.

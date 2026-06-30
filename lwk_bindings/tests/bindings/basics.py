@@ -50,7 +50,7 @@ client = EsploraClient(url, Network.mainnet())
 
 # ANCHOR: waterfalls_client
 url = "https://waterfalls.liquidwebwallet.org/liquid/api"
-client = EsploraClient.new_waterfalls(url, Network.mainnet())
+client = WaterfallsClient(url, Network.mainnet())
 # ANCHOR_END: waterfalls_client
 
 # ANCHOR: client

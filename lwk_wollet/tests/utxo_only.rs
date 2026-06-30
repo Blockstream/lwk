@@ -3,7 +3,7 @@ use clients::blocking::BlockchainBackend;
 use lwk_common::Signer;
 use lwk_signer::*;
 use lwk_test_util::*;
-use lwk_wollet::clients::EsploraClientBuilder;
+use lwk_wollet::clients::{EsploraClientBuilder, WaterfallsClientBuilder};
 use lwk_wollet::*;
 use std::str::FromStr;
 
@@ -19,8 +19,7 @@ fn test_esplora_waterfalls_utxo_only() {
 
     let network = Network::default_regtest();
     let mut wollet = WolletBuilder::new(network, desc.clone()).build().unwrap();
-    let mut client = EsploraClientBuilder::new(&env.waterfalls_url(), network)
-        .waterfalls(true)
+    let mut client = WaterfallsClientBuilder::new(&env.waterfalls_url(), network)
         .build_blocking()
         .unwrap();
 
@@ -28,8 +27,7 @@ fn test_esplora_waterfalls_utxo_only() {
         .utxo_only(true)
         .build()
         .unwrap();
-    let mut client_utxo_only = EsploraClientBuilder::new(&env.waterfalls_url(), network)
-        .waterfalls(true)
+    let mut client_utxo_only = WaterfallsClientBuilder::new(&env.waterfalls_url(), network)
         .utxo_only(true)
         .build_blocking()
         .unwrap();
@@ -124,15 +122,13 @@ fn test_waterfalls_utxo_only_with_dummy() {
     let network = Network::default_regtest();
     let lbtc = network.policy_asset();
 
-    let client = EsploraClientBuilder::new(&env.waterfalls_url(), network)
-        .waterfalls(true)
+    let client = WaterfallsClientBuilder::new(&env.waterfalls_url(), network)
         .build_blocking()
         .unwrap();
     let mut w = TestWollet::new(client, &desc);
 
     let wd = WolletDescriptor::from_str(&desc).unwrap();
-    let mut client_utxo_only = EsploraClientBuilder::new(&env.waterfalls_url(), network)
-        .waterfalls(true)
+    let mut client_utxo_only = WaterfallsClientBuilder::new(&env.waterfalls_url(), network)
         .utxo_only(true)
         .build_blocking()
         .unwrap();
@@ -202,17 +198,15 @@ async fn test_esplora_waterfalls_balance_comparison(
     let network = Network::TestnetLiquid;
 
     let mut wollet = WolletBuilder::new(network, desc.clone()).build()?;
-    let mut client = EsploraClientBuilder::new(esplora_url, network)
-        .waterfalls(true)
+    let mut client = WaterfallsClientBuilder::new(esplora_url, network)
         .concurrency(4)
         .build()?;
 
     let mut wollet_utxo_only = WolletBuilder::new(network, desc.clone())
         .utxo_only(true)
         .build()?;
-    let mut client_utxo_only = EsploraClientBuilder::new(esplora_url, network)
+    let mut client_utxo_only = WaterfallsClientBuilder::new(esplora_url, network)
         .utxo_only(true)
-        .waterfalls(true)
         .concurrency(4)
         .build()?;
 
@@ -271,9 +265,8 @@ fn test_faucet() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
-    let client = EsploraClientBuilder::new(&env.waterfalls_url(), network)
+    let client = WaterfallsClientBuilder::new(&env.waterfalls_url(), network)
         .utxo_only(true)
-        .waterfalls(true)
         .build_blocking()
         .unwrap();
     let opt = TestWolletOpt {
@@ -366,12 +359,10 @@ fn test_incompatible_utxo_only() {
     let mut client_esplora = EsploraClientBuilder::new(&env.esplora_url(), network)
         .build_blocking()
         .unwrap();
-    let mut client_waterfalls = EsploraClientBuilder::new(&env.waterfalls_url(), network)
-        .waterfalls(true)
+    let mut client_waterfalls = WaterfallsClientBuilder::new(&env.waterfalls_url(), network)
         .build_blocking()
         .unwrap();
-    let mut client_waterfalls_uo = EsploraClientBuilder::new(&env.waterfalls_url(), network)
-        .waterfalls(true)
+    let mut client_waterfalls_uo = WaterfallsClientBuilder::new(&env.waterfalls_url(), network)
         .utxo_only(true)
         .build_blocking()
         .unwrap();
@@ -410,12 +401,10 @@ async fn test_incompatible_utxo_only_async() {
     let mut client_esplora = EsploraClientBuilder::new(esplora_url, network)
         .build()
         .unwrap();
-    let mut client_waterfalls = EsploraClientBuilder::new(waterfalls_url, network)
-        .waterfalls(true)
+    let mut client_waterfalls = WaterfallsClientBuilder::new(waterfalls_url, network)
         .build()
         .unwrap();
-    let mut client_waterfalls_uo = EsploraClientBuilder::new(waterfalls_url, network)
-        .waterfalls(true)
+    let mut client_waterfalls_uo = WaterfallsClientBuilder::new(waterfalls_url, network)
         .utxo_only(true)
         .build()
         .unwrap();
@@ -436,9 +425,8 @@ fn test_waterfalls_utxo_only_persisted() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
-    let client = EsploraClientBuilder::new(&env.waterfalls_url(), network)
+    let client = WaterfallsClientBuilder::new(&env.waterfalls_url(), network)
         .utxo_only(true)
-        .waterfalls(true)
         .build_blocking()
         .unwrap();
     let opt = TestWolletOpt {

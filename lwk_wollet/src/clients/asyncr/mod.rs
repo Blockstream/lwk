@@ -4,9 +4,9 @@
 mod esplora;
 
 #[cfg(feature = "esplora")]
-pub use crate::clients::EsploraClientBuilder;
+pub use crate::clients::{EsploraClientBuilder, WaterfallsClientBuilder};
 
 #[cfg(feature = "esplora")]
-pub use esplora::{EsploraClient, LastUsedIndexResponse};
+pub use esplora::{EsploraClient, LastUsedIndexResponse, WaterfallsClient};
 
 pub use crate::async_util::{async_now, async_sleep};

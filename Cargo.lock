@@ -625,7 +625,7 @@ dependencies = [
  "bip85_extended",
  "bitcoin",
  "boltz-client-macros",
- "electrum-client",
+ "electrum-client 0.21.0",
  "elements 0.25.3",
  "env_logger",
  "futures-util",
@@ -1272,7 +1272,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91435161fb2ad5098e7ac7a4b793bf9c34723b0208a3fcf6f33707489e771396"
 dependencies = [
  "bitcoind",
- "electrum-client",
+ "electrum-client 0.21.0",
  "log",
  "nix 0.25.1",
  "which",
@@ -1283,6 +1283,23 @@ name = "electrum-client"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a0bd443023f9f5c4b7153053721939accc7113cbdf810a024434eed454b3db1"
+dependencies = [
+ "bitcoin",
+ "byteorder",
+ "libc",
+ "log",
+ "rustls",
+ "serde",
+ "serde_json",
+ "webpki-roots 0.25.4",
+ "winapi",
+]
+
+[[package]]
+name = "electrum-client"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1970c5d7bd9de6d4041cbfc3e46faa3e85fe7efcea2b0eb06750d3ae1ef577b7"
 dependencies = [
  "bitcoin",
  "byteorder",
@@ -2978,7 +2995,7 @@ dependencies = [
  "bitcoincore-rpc",
  "cbc",
  "criterion",
- "electrum-client",
+ "electrum-client 0.25.0",
  "elements 0.25.3",
  "elements 0.26.2",
  "elements-miniscript",
@@ -4054,7 +4071,7 @@ version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9465315bc9d4566e1724f0fffcbcc446268cb522e60f9a27bcded6b19c108113"
 dependencies = [
- "bitcoin_hashes 0.13.0",
+ "bitcoin_hashes 0.14.2",
  "rand 0.8.5",
  "secp256k1-sys 0.10.1",
  "serde",

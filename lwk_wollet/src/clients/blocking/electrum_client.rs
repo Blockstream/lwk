@@ -11,6 +11,7 @@ use elements::Address;
 use elements::{bitcoin, BlockHash, BlockHeader, Script, Transaction, Txid};
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::time::Duration;
 
 use super::BlockchainBackend;
 
@@ -186,7 +187,7 @@ impl ElectrumUrl {
             }
             ElectrumUrl::Plaintext(url) => (format!("tcp://{url}"), builder),
         };
-        let builder = builder.timeout(options.timeout);
+        let builder = builder.timeout(options.timeout.map(|t| Duration::from_secs(t as u64)));
         Ok(Client::from_config(&url, builder.build())?)
     }
 }
@@ -276,7 +277,7 @@ mod tests {
         // Use a hostname that definitely does not exist to avoid any chance of connection
         let url = "tcp://this-host-definitely-does-not-exist.example.com:50001";
         let config = ConfigBuilder::new()
-            .timeout(Some(1)) // Short timeout to make the test faster
+            .timeout(Some(std::time::Duration::from_secs(1))) // Short timeout to make the test faster
             .build();
 
         // Building the client should return an error because we cannot resolve the host.

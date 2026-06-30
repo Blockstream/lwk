@@ -22,7 +22,7 @@ rand = "0.8"
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 aes-gcm-siv = "0.11.0"
-electrum-client = { version = "0.21.0", optional = true, default-features = false, features = [
+electrum-client = { version = "0.25.0", optional = true, default-features = false, features = [
     "use-rustls-ring",
     "proxy",
 ] }

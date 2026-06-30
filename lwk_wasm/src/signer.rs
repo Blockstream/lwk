@@ -3,8 +3,13 @@ use std::collections::HashMap;
 use crate::{Bip, Error, Mnemonic, Network, Pset, WolletDescriptor, Xpub};
 use lwk_common::Signer as SignerTrait;
 use lwk_wollet::{
-    bitcoin::bip32, bitcoin::sign_message::MessageSignature,
-    elements::pset::PartiallySignedTransaction, elements_miniscript::slip77,
+    bitcoin::{
+        bip32,
+        hashes::Hash,
+        sign_message::{signed_msg_hash, MessageSignature},
+    },
+    elements::{hex::ToHex, pset::PartiallySignedTransaction},
+    elements_miniscript::slip77,
 };
 use wasm_bindgen::prelude::*;
 
@@ -12,6 +17,25 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 pub struct Signer {
     pub(crate) inner: lwk_signer::SwSigner,
+}
+
+#[wasm_bindgen]
+pub struct EcdsaMessageSignature {
+    message_hash: String,
+    signature: String,
+}
+
+#[wasm_bindgen]
+impl EcdsaMessageSignature {
+    #[wasm_bindgen(getter = messageHash)]
+    pub fn message_hash(&self) -> String {
+        self.message_hash.clone()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn signature(&self) -> String {
+        self.signature.clone()
+    }
 }
 
 #[wasm_bindgen]
@@ -41,6 +65,27 @@ impl Signer {
             .inner
             .sign_message(message, &bip32::DerivationPath::master())?;
         Ok(signature.to_string())
+    }
+
+    /// Sign a message with a key at the given BIP32 derivation path.
+    #[wasm_bindgen(js_name = signMessageAtPath)]
+    pub fn sign_message_at_path(
+        &self,
+        message: &str,
+        path: Vec<u32>,
+    ) -> Result<EcdsaMessageSignature, Error> {
+        let path = bip32::DerivationPath::from_iter(path.into_iter().map(Into::into));
+        let signature = self.inner.sign_message(message, &path)?;
+        let message_hash = signed_msg_hash(message);
+        let (recovery_id, compact_signature) = signature.signature.serialize_compact();
+        let mut signature_bytes = Vec::with_capacity(65);
+        signature_bytes.extend_from_slice(&compact_signature);
+        signature_bytes.push(recovery_id.to_i32() as u8);
+
+        Ok(EcdsaMessageSignature {
+            message_hash: message_hash.to_byte_array().to_hex(),
+            signature: signature_bytes.to_hex(),
+        })
     }
 
     /// Return the witness public key hash, slip77 descriptor of this signer

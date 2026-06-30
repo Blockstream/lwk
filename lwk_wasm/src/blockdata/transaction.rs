@@ -1,6 +1,6 @@
-use crate::{AssetId, Error};
+use crate::{AssetId, Error, TxOut};
 #[cfg(feature = "simplicity")]
-use crate::{TxIn, TxInWitness, TxOut};
+use crate::{TxIn, TxInWitness};
 
 use std::str::FromStr;
 
@@ -104,6 +104,18 @@ impl Transaction {
     pub fn to_string_js(&self) -> String {
         format!("{self}")
     }
+
+    /// Return a clone of the output at the given vout.
+    #[wasm_bindgen(js_name = output)]
+    pub fn output(&self, vout: usize) -> Option<TxOut> {
+        self.inner.output.get(vout).cloned().map(Into::into)
+    }
+
+    /// Return a clone of the outputs of this transaction
+    #[wasm_bindgen(getter = outputs)]
+    pub fn outputs(&self) -> Vec<TxOut> {
+        self.inner.output.iter().map(|o| o.clone().into()).collect()
+    }
 }
 
 #[cfg(feature = "simplicity")]
@@ -113,12 +125,6 @@ impl Transaction {
     #[wasm_bindgen(getter = inputs)]
     pub fn inputs(&self) -> Vec<TxIn> {
         self.inner.input.iter().map(|i| i.clone().into()).collect()
-    }
-
-    /// Return a clone of the outputs of this transaction
-    #[wasm_bindgen(getter = outputs)]
-    pub fn outputs(&self) -> Vec<TxOut> {
-        self.inner.output.iter().map(|o| o.clone().into()).collect()
     }
 }
 
@@ -259,5 +265,13 @@ mod tests {
 
         let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
         assert_eq!(tx.fee(&AssetId::from_string(policy_asset).unwrap()), 250);
+
+        let outputs = tx.outputs();
+        assert!(!outputs.is_empty());
+        assert_eq!(
+            outputs[0].to_string_js(),
+            tx.output(0).unwrap().to_string_js()
+        );
+        assert!(tx.output(outputs.len()).is_none());
     }
 }

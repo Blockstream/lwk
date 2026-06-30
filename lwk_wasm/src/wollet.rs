@@ -1,11 +1,12 @@
 use crate::blockdata::asset_id::AssetIds;
 use crate::{
-    AddressResult, Balance, Error, Network, Pset, PsetDetails, Transaction, Update, WalletTx,
-    WalletTxOut, WolletDescriptor,
+    Address, AddressResult, Balance, Error, Network, Pset, PsetDetails, Transaction, Update,
+    WalletTx, WalletTxOut, WolletDescriptor,
 };
 use lwk_jade::derivation_path_to_vec;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use lwk_wollet::elements_miniscript::ForEachKey;
+use lwk_wollet::Chain;
 use wasm_bindgen::prelude::*;
 
 /// A watch-only wallet defined by a CT descriptor.
@@ -69,20 +70,38 @@ impl Wollet {
     pub fn address_full_path(&self, index: u32) -> Result<Vec<u32>, Error> {
         // TODO we should add the full path to lwk_wollet::AddressResult
 
-        let definite_desc = self
-            .inner
-            .wollet_descriptor()
-            .definite_descriptor(lwk_wollet::Chain::External, index)?;
-        let mut full_path: Vec<u32> = vec![];
-        definite_desc.for_each_key(|k| {
-            if let Some(path) = k.full_derivation_path() {
-                full_path = derivation_path_to_vec(&path);
+        self.full_derivation_path(Chain::External, index)
+    }
+
+    /// Find the full derivation path for a wallet-owned address.
+    #[wasm_bindgen(js_name = addressFullPathFor)]
+    pub fn address_full_path_for(
+        &self,
+        address: &Address,
+        max_index: u32,
+    ) -> Result<Vec<u32>, Error> {
+        if address.as_ref().params != self.inner.network().address_params() {
+            return Err(Error::Generic(
+                "Address network does not match this wallet".to_string(),
+            ));
+        }
+
+        let script_pubkey = address.as_ref().script_pubkey();
+
+        for chain in [Chain::External, Chain::Internal] {
+            for index in 0..=max_index {
+                let derived_script_pubkey =
+                    self.inner.wollet_descriptor().script_pubkey(chain, index)?;
+
+                if derived_script_pubkey == script_pubkey {
+                    return self.full_derivation_path(chain, index);
+                }
             }
+        }
 
-            true
-        });
-
-        Ok(full_path)
+        Err(Error::Generic(
+            "Address does not belong to this wallet within the scanned range".to_string(),
+        ))
     }
 
     /// Apply an update containing blockchain data
@@ -208,6 +227,31 @@ impl Wollet {
     #[wasm_bindgen(js_name = isAmp0)]
     pub fn is_amp0(&self) -> bool {
         self.inner.is_amp0()
+    }
+}
+
+impl Wollet {
+    fn full_derivation_path(&self, chain: Chain, index: u32) -> Result<Vec<u32>, Error> {
+        let definite_desc = self
+            .inner
+            .wollet_descriptor()
+            .definite_descriptor(chain, index)?;
+        let mut full_path: Vec<u32> = vec![];
+        definite_desc.for_each_key(|k| {
+            if let Some(path) = k.full_derivation_path() {
+                full_path = derivation_path_to_vec(&path);
+            }
+
+            true
+        });
+
+        if full_path.is_empty() {
+            return Err(Error::Generic(
+                "Address derivation path was not found in wallet descriptor".to_string(),
+            ));
+        }
+
+        Ok(full_path)
     }
 }
 

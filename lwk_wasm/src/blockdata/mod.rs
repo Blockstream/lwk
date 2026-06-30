@@ -15,7 +15,6 @@ pub mod transaction;
 pub mod tx_in;
 #[cfg(feature = "simplicity")]
 pub mod tx_in_witness;
-#[cfg(feature = "simplicity")]
 pub mod tx_out;
 pub mod tx_out_secrets;
 #[cfg(feature = "simplicity")]

@@ -1,8 +1,10 @@
 //! Liquid transaction output
 
-use crate::{Address, AssetId, Error, Network, Script, SecretKey, TxOutSecrets};
+use crate::{Address, AssetId, Network, Script};
+#[cfg(feature = "simplicity")]
+use crate::{Error, SecretKey, TxOutSecrets};
 
-use lwk_wollet::elements::{self, confidential, TxOutWitness};
+use lwk_wollet::elements::{self, confidential, encode::serialize, hex::ToHex, TxOutWitness};
 
 use wasm_bindgen::prelude::*;
 
@@ -60,6 +62,18 @@ impl TxOut {
         self.inner.script_pubkey.clone().into()
     }
 
+    /// Return the consensus encoded bytes of this transaction output, excluding the output witness.
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Vec<u8> {
+        serialize(&self.inner)
+    }
+
+    /// Return the hex representation of the consensus encoded output bytes.
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        serialize(&self.inner).to_hex()
+    }
+
     /// Whether or not this output is a fee output
     #[wasm_bindgen(js_name = isFee)]
     pub fn is_fee(&self) -> bool {
@@ -90,6 +104,7 @@ impl TxOut {
     }
 
     /// Unblind the output using the given secret key
+    #[cfg(feature = "simplicity")]
     pub fn unblind(&self, secret_key: &SecretKey) -> Result<TxOutSecrets, Error> {
         Ok(self
             .inner
@@ -102,7 +117,7 @@ impl TxOut {
 mod tests {
     use super::TxOut;
     use crate::{AssetId, Network, Script};
-    use lwk_wollet::elements::{self, confidential};
+    use lwk_wollet::elements::{self, confidential, encode::serialize, hex::ToHex};
     use wasm_bindgen_test::*;
 
     wasm_bindgen_test_configure!(run_in_browser);
@@ -121,6 +136,8 @@ mod tests {
         assert!(tx_out
             .unconfidential_address(&Network::regtest_default())
             .is_some());
+        assert_eq!(tx_out.to_bytes(), serialize(tx_out.as_ref()));
+        assert_eq!(tx_out.to_string_js(), serialize(tx_out.as_ref()).to_hex());
 
         let fee_output = elements::TxOut {
             script_pubkey: elements::Script::new(),

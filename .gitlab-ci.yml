@@ -212,6 +212,9 @@ test_simplicity:
     - .coverage_mixin
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    # installing from fork with 1.85 rust version
+    - cargo install --git https://github.com/gerau/simplicity-lending.git --rev 5c9a1c72a15737ac15d53d5da88d3f838a8ff320 --locked lending-indexer --root ./lending
+    - export LENDING_INDEXER_EXEC="$(pwd)/lending/bin/simplicity-lending-indexer"
     - cargo test -p lwk_simplicity --features lending
 
 unit_tests:

@@ -2916,6 +2916,7 @@ dependencies = [
  "lwk_signer",
  "lwk_test_util",
  "lwk_wollet",
+ "rand 0.8.5",
  "serde",
  "serde_json",
  "simplicityhl",

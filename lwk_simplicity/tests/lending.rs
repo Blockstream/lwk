@@ -1,57 +1,78 @@
-use lwk_common::Signer;
-use lwk_simplicity::lending::OfferDetails;
-use lwk_wollet::blocking::BlockchainBackend;
-use lwk_wollet::blocking::EsploraClient;
-use lwk_wollet::elements::AssetId;
 use std::str::FromStr;
 
-use lwk_common::Network;
-use lwk_signer::SwSigner;
-use lwk_simplicity::lending::LendingSession;
-use lwk_test_util::generate_mnemonic;
-use lwk_test_util::generate_view_key;
-use lwk_test_util::TestEnvBuilder;
-use lwk_wollet::WolletBuilder;
-use lwk_wollet::WolletDescriptor;
+use lwk_simplicity::lending::{LendingSession, OfferDetails};
+use lwk_test_util::*;
+use lwk_wollet::blocking::BlockchainBackend;
+use lwk_wollet::elements::AssetId;
+use lwk_wollet::*;
+
+mod common;
+use common::*;
+
+pub fn fund_wollet<S: BlockchainBackend>(
+    wollet: &mut Wollet,
+    client: &mut S,
+    env: &TestEnv,
+    satoshi: u64,
+) {
+    let address = wollet.address(None).unwrap();
+    let txid = env.elementsd_sendtoaddress(address.address(), satoshi, None);
+    env.elementsd_generate(1);
+    wait_for_tx(wollet, client, &txid);
+}
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "not yet implemented")]
 fn test_borrow_flow() {
-    let env = TestEnvBuilder::from_env().with_esplora().build();
-
-    let client = EsploraClient::new(&env.esplora_url(), Network::default_regtest()).unwrap();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let mut client = electrum_client(&env);
     let network = env.elementsd_network();
 
     // Create borrower
-    let mnemonic = generate_mnemonic();
-    let signer_borrower = SwSigner::new(&mnemonic, false).unwrap();
+    let borrower_signer = generate_signer();
     let view_key = generate_view_key();
-    let desc = format!("ct({},elwpkh({}/*))", view_key, signer_borrower.xpub());
-    let wd = WolletDescriptor::from_str(&desc).unwrap();
-    let wollet_borrower = WolletBuilder::new(network, wd.clone()).build().unwrap();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, borrower_signer.xpub());
+    let borrower_wd = WolletDescriptor::from_str(&desc).unwrap();
+    let mut borrower_wollet = WolletBuilder::new(network, borrower_wd.clone())
+        .build()
+        .unwrap();
 
     // Create lender
-    let mnemonic = generate_mnemonic();
-    let signer_lender = SwSigner::new(&mnemonic, false).unwrap();
+    let lender_signer = generate_signer();
     let view_key = generate_view_key();
-    let desc = format!("ct({},elwpkh({}/*))", view_key, signer_lender.xpub());
-    let wd = WolletDescriptor::from_str(&desc).unwrap();
-    let _wollet_lender = WolletBuilder::new(network, wd.clone()).build().unwrap();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, lender_signer.xpub());
+    let lender_wd = WolletDescriptor::from_str(&desc).unwrap();
+    let mut _lender_wollet = WolletBuilder::new(network, lender_wd.clone())
+        .build()
+        .unwrap();
 
+    // Fund the borrower wallet with L-BTC
+    fund_wollet(&mut borrower_wollet, &mut client, &env, 500);
     // Create lending session
-    let session = LendingSession::builder(network, wd).build().unwrap();
+    let mut borrower_session = LendingSession::builder(network, borrower_wd)
+        .set_indexer_url("https://127.0.0.1".to_string())
+        .set_signer(Box::new(borrower_signer))
+        .set_electrum_client(client)
+        .build()
+        .unwrap();
 
-    // Create, sign and broadcast transaction for borrow preparations for given wollet
-    let mut pset = session
-        .borrower_prepare(&wollet_borrower)
-        .unwrap()
-        .inner()
-        .clone();
-    let sig_added = signer_borrower.sign(&mut pset).unwrap();
-    // only one sign -- on utxo which are used for fee and issuance.
-    assert_eq!(sig_added, 1);
-    let tx = wollet_borrower.finalize(&mut pset).unwrap();
-    client.broadcast(&tx).unwrap();
+    // sync to fetch fee transaction
+    borrower_session.sync().unwrap();
+
+    // borrower_prepare, which selects fee UTXO, builds, signs, finalizes, broadcasts internally
+    let prepared = borrower_session.borrower_prepare().unwrap();
+    let client = electrum_client(&env);
+    let transaction = client.get_transaction(prepared.txid).unwrap();
+
+    assert_eq!(
+        transaction.output[0].asset.to_string(),
+        prepared.issued_asset_id.to_string()
+    );
+
+    assert_eq!(
+        transaction.output[1].asset.to_string(),
+        prepared.issued_asset_id.to_string()
+    );
 
     // Create borrow details
     let borrow_details = OfferDetails {
@@ -65,13 +86,7 @@ fn test_borrow_flow() {
         principal_interest_rate: 2_000,
     };
 
-    // Create, sign and broadcast borrow offer
-    let mut pset = session
-        .borrower_create_offer(&wollet_borrower, borrow_details)
-        .unwrap()
-        .inner()
-        .clone();
-    let _sig_added = signer_borrower.sign(&mut pset).unwrap();
-    let tx = wollet_borrower.finalize(&mut pset).unwrap();
-    client.broadcast(&tx).unwrap();
+    let _create = borrower_session
+        .borrower_create_offer(borrow_details)
+        .unwrap();
 }

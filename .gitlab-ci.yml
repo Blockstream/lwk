@@ -212,7 +212,7 @@ test_simplicity:
     - .coverage_mixin
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo test -p lwk_simplicity
+    - cargo test -p lwk_simplicity --features lending
 
 unit_tests:
   stage: test

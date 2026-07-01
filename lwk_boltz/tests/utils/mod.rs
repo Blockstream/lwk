@@ -357,6 +357,45 @@ pub async fn get_address_balance(chain: Chain, address: &str) -> Result<u64, Box
     Err(format!("No UTXOs found at {address} after 30 attempts").into())
 }
 
+pub async fn find_unspent_vout_by_address(
+    chain: Chain,
+    txid: &str,
+    address: &str,
+) -> Result<Option<u32>, Box<dyn Error>> {
+    let raw_tx = json_rpc_request(chain, "getrawtransaction", json!([txid, true])).await?;
+    let vouts = raw_tx
+        .get("vout")
+        .and_then(Value::as_array)
+        .ok_or("Expected vout array")?;
+
+    for (idx, vout) in vouts.iter().enumerate() {
+        if !json_contains_str(vout, address) {
+            continue;
+        }
+
+        let vout_index = vout.get("n").and_then(Value::as_u64).unwrap_or(idx as u64) as u32;
+        if is_txout_unspent(chain, txid, vout_index).await? {
+            return Ok(Some(vout_index));
+        }
+    }
+
+    Ok(None)
+}
+
+pub async fn is_txout_unspent(chain: Chain, txid: &str, vout: u32) -> Result<bool, Box<dyn Error>> {
+    let result = json_rpc_request(chain, "gettxout", json!([txid, vout, true])).await?;
+    Ok(!result.is_null())
+}
+
+fn json_contains_str(value: &Value, needle: &str) -> bool {
+    match value {
+        Value::String(s) => s == needle,
+        Value::Array(values) => values.iter().any(|value| json_contains_str(value, needle)),
+        Value::Object(map) => map.values().any(|value| json_contains_str(value, needle)),
+        _ => false,
+    }
+}
+
 pub fn start_block_mining() -> JoinHandle<()> {
     tokio::spawn(async {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(3));

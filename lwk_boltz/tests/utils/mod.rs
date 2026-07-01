@@ -307,13 +307,23 @@ pub fn start_pay_invoice_lnd(invoice: String) {
 }
 
 pub async fn mine_blocks(n_blocks: u64) -> Result<(), Box<dyn Error>> {
-    for chain in [
-        BitcoinChain::BitcoinRegtest.into(),
-        LiquidChain::LiquidRegtest.into(),
-    ] {
-        let address = generate_address(chain).await?;
-        json_rpc_request(chain, "generatetoaddress", json!([n_blocks, address])).await?;
+    const MAX_BLOCKS_PER_RPC: u64 = 100;
+
+    let mut remaining_blocks = n_blocks;
+    while remaining_blocks > 0 {
+        let blocks_to_mine = remaining_blocks.min(MAX_BLOCKS_PER_RPC);
+
+        for chain in [
+            BitcoinChain::BitcoinRegtest.into(),
+            LiquidChain::LiquidRegtest.into(),
+        ] {
+            let address = generate_address(chain).await?;
+            json_rpc_request(chain, "generatetoaddress", json!([blocks_to_mine, address])).await?;
+        }
+
+        remaining_blocks -= blocks_to_mine;
     }
+
     Ok(())
 }
 

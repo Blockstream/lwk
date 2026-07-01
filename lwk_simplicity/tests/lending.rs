@@ -7,6 +7,7 @@ use lwk_wollet::elements::AssetId;
 use lwk_wollet::*;
 
 mod common;
+mod indexer;
 use common::*;
 
 pub fn fund_wollet<S: BlockchainBackend>(

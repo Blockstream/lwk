@@ -1,6 +1,8 @@
 use std::str::FromStr;
+use std::time::Duration;
 
-use lwk_simplicity::lending::{LendingSession, OfferDetails};
+use elements::hex::ToHex;
+use lwk_simplicity::lending::{IndexerClient, LendingSession, OfferDetails};
 use lwk_test_util::*;
 use lwk_wollet::blocking::BlockchainBackend;
 use lwk_wollet::elements::AssetId;
@@ -9,6 +11,8 @@ use lwk_wollet::*;
 mod common;
 mod indexer;
 use common::*;
+
+use testcontainers::clients::Cli;
 
 pub fn fund_wollet<S: BlockchainBackend>(
     wollet: &mut Wollet,
@@ -22,11 +26,26 @@ pub fn fund_wollet<S: BlockchainBackend>(
     wait_for_tx(wollet, client, &txid);
 }
 
-#[test]
+#[tokio::test]
 #[should_panic(expected = "not yet implemented")]
-fn test_borrow_flow() {
-    let env = TestEnvBuilder::from_env().with_electrum().build();
+async fn test_borrow_flow() {
+    let binary = std::fs::canonicalize(
+        std::env::var("LENDING_INDEXER_EXEC").expect("LENDING_INDEXER_EXEC must be set"),
+    )
+    .expect("LENDING_INDEXER_EXEC path does not exist");
+
+    let env = TestEnvBuilder::from_env()
+        .with_electrum()
+        .with_esplora()
+        .build();
     let mut client = electrum_client(&env);
+
+    // Start postgres, run migrations, launch indexer
+    let cli = Cli::default();
+    let indexer = indexer::start_indexer(&env, &cli, &binary, 8081).await;
+    let indexer_url = indexer.api_url().to_string();
+    let indexer_client = IndexerClient::new(indexer_url.clone()).unwrap();
+
     let network = env.elementsd_network();
 
     // Create borrower
@@ -51,7 +70,7 @@ fn test_borrow_flow() {
     fund_wollet(&mut borrower_wollet, &mut client, &env, 500);
     // Create lending session
     let mut borrower_session = LendingSession::builder(network, borrower_wd)
-        .set_indexer_url("https://127.0.0.1".to_string())
+        .set_indexer_url(indexer_url)
         .set_signer(Box::new(borrower_signer))
         .set_electrum_client(client)
         .build()
@@ -65,6 +84,8 @@ fn test_borrow_flow() {
     let client = electrum_client(&env);
     let transaction = client.get_transaction(prepared.txid).unwrap();
 
+    env.elementsd_generate(1);
+
     assert_eq!(
         transaction.output[0].asset.to_string(),
         prepared.issued_asset_id.to_string()
@@ -74,6 +95,23 @@ fn test_borrow_flow() {
         transaction.output[1].asset.to_string(),
         prepared.issued_asset_id.to_string()
     );
+
+    // Check if indexer is showing our factory by script_pubkey
+    let spk = transaction.output[0].script_pubkey.to_hex();
+    let mut found = false;
+    for _ in 0..20 {
+        if !indexer_client
+            .get_factories_by_script(&spk)
+            .await
+            .unwrap()
+            .is_empty()
+        {
+            found = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+    assert!(found);
 
     // Create borrow details
     let borrow_details = OfferDetails {

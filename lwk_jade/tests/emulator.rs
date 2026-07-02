@@ -462,12 +462,12 @@ async fn async_sign() {
 
 fn mock_version_info() -> VersionInfoResult {
     VersionInfoResult {
-        jade_version: "1".to_string(),
+        jade_version: "1.0.41-beta1-dirty".to_string(),
         jade_ota_max_chunk: 4096,
         jade_config: "NORADIO".to_string(),
-        board_type: "DEV".to_string(),
+        board_type: "QEMU".to_string(),
         jade_features: "DEV".to_string(),
-        idf_version: "v5.1.2".to_string(),
+        idf_version: "v5.5.4".to_string(),
         chip_features: "32000000".to_string(),
         efusemac: "000000000000".to_string(),
         battery_status: 0,

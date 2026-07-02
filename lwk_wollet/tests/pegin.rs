@@ -54,6 +54,7 @@ fn test_fetch_full_header_regtest() {
     test_fetch_last_full_header(client, Network::default_regtest());
 }
 
+#[ignore = "require network calls"]
 #[test]
 fn test_fetch_full_header_mainnet() {
     let electrum_url = ElectrumUrl::new(LIQUID_SOCKET, true, true).unwrap();
@@ -61,6 +62,7 @@ fn test_fetch_full_header_mainnet() {
     test_fetch_last_full_header(electrum_client, Network::Liquid);
 }
 
+#[ignore = "require network calls"]
 #[test]
 fn test_fetch_full_header_testnet() {
     let electrum_url = ElectrumUrl::new(LIQUID_TESTNET_SOCKET, true, true).unwrap();

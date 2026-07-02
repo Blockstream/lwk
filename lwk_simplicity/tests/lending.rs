@@ -1,3 +1,4 @@
+use lwk_common::Signer;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -71,20 +72,29 @@ async fn test_borrow_flow() {
     // Create lending session
     let mut borrower_session = LendingSession::builder(network, borrower_wd)
         .set_indexer_url(indexer_url)
-        .set_signer(Box::new(borrower_signer))
         .set_electrum_client(client)
         .build()
         .unwrap();
 
+    let client = electrum_client(&env);
+
     // sync to fetch fee transaction
     borrower_session.sync().unwrap();
 
-    // borrower_prepare, which selects fee UTXO, builds, signs, finalizes, broadcasts internally
-    let prepared = borrower_session
+    // borrower_prepare, which selects fee UTXO and builds transaction
+    let mut prepared = borrower_session
         .borrower_prepare(BorrowerAccountParams {})
         .unwrap();
-    let client = electrum_client(&env);
-    let transaction = client.get_transaction(prepared.txid).unwrap();
+
+    // sign
+    borrower_signer.sign(&mut prepared.pset).unwrap();
+
+    // finalize
+    let tx = borrower_session.finalize(&mut prepared.pset).unwrap();
+
+    // broadcast
+    let txid = client.broadcast(&tx).unwrap();
+    let transaction = client.get_transaction(txid).unwrap();
 
     env.elementsd_generate(1);
 

@@ -1,10 +1,7 @@
-use lwk_common::{Network, Signer};
-use lwk_signer::SignError;
+use lwk_common::Network;
 use lwk_wollet::{
     blocking::{BlockchainBackend, EsploraClient},
-    elements::{
-        pset::PartiallySignedTransaction, Address, AssetId, OutPoint, Script, Transaction, Txid,
-    },
+    elements::{pset::PartiallySignedTransaction, Address, AssetId, Script, Transaction, Txid},
     ElectrumClient, Wollet, WolletBuilder, WolletDescriptor, EC,
 };
 
@@ -28,6 +25,7 @@ enum AnyClient {
 }
 
 impl AnyClient {
+    #[allow(dead_code)]
     fn broadcast(&self, tx: &Transaction) -> Result<Txid, lwk_wollet::Error> {
         match self {
             AnyClient::Electrum(c) => c.broadcast(tx),
@@ -50,7 +48,6 @@ pub struct LendingSession {
     network: Network,
     indexer_url: String,
     wollet: Wollet,
-    signer: Box<dyn Signer<Error = SignError>>,
     client: AnyClient,
 }
 
@@ -163,17 +160,6 @@ impl LendingSession {
             .add_details(&mut pset)
             .map_err(LendingError::Wallet)?;
 
-        self.signer
-            .sign(&mut pset)
-            .map_err(|e| LendingError::Config(format!("signing error: {e}")))?;
-
-        let tx = self
-            .wollet
-            .finalize(&mut pset)
-            .map_err(LendingError::Wallet)?;
-
-        let txid = self.client.broadcast(&tx).map_err(LendingError::Wallet)?;
-
         let factory_address = lwk_wollet::elements::Address::from_script(
             &issuance_factory.get_script_pubkey(),
             None,
@@ -182,11 +168,8 @@ impl LendingSession {
         .ok_or_else(|| LendingError::Config("invalid factory script_pubkey".into()))?;
 
         Ok(BorrowerAccountCreationResult {
-            txid,
-            funding_outpoint,
+            pset,
             factory_address,
-            factory_auth_outpoint: OutPoint { txid, vout: 0 },
-            issuance_factory_outpoint: OutPoint { txid, vout: 1 },
             issued_asset_id: issuance_details.asset_id,
         })
     }
@@ -233,6 +216,16 @@ impl LendingSession {
         }
         Ok(())
     }
+
+    /// Finalizes PSET with wollet
+    ///
+    /// In the future, this method would also append required witness for simplicity outputs.
+    pub fn finalize(
+        &self,
+        pset: &mut PartiallySignedTransaction,
+    ) -> Result<Transaction, LendingError> {
+        self.wollet.finalize(pset).map_err(LendingError::Wallet)
+    }
 }
 
 /// Builder for creating a [`LendingSession`].
@@ -240,7 +233,6 @@ pub struct LendingSessionBuilder {
     network: Network,
     indexer_url: Option<String>,
     descriptor: WolletDescriptor,
-    signer: Option<Box<dyn Signer<Error = SignError>>>,
     client: Option<AnyClient>,
 }
 
@@ -251,18 +243,12 @@ impl LendingSessionBuilder {
             network,
             descriptor,
             indexer_url: None,
-            signer: None,
             client: None,
         }
     }
 
     pub fn set_indexer_url(mut self, indexer_url: String) -> Self {
         self.indexer_url = Some(indexer_url);
-        self
-    }
-
-    pub fn set_signer(mut self, signer: Box<dyn Signer<Error = SignError>>) -> Self {
-        self.signer = Some(signer);
         self
     }
 
@@ -278,9 +264,6 @@ impl LendingSessionBuilder {
 
     /// Build the [`LendingSession`].
     pub fn build(self) -> Result<LendingSession, LendingError> {
-        let signer = self
-            .signer
-            .ok_or_else(|| LendingError::Config("signer is required".into()))?;
         let client = self
             .client
             .ok_or_else(|| LendingError::Config("blockchain client is required".into()))?;
@@ -296,7 +279,6 @@ impl LendingSessionBuilder {
             network: self.network,
             wollet,
             indexer_url,
-            signer,
             client,
         })
     }
@@ -318,11 +300,8 @@ pub struct RepaymentDetails {
 pub struct BorrowerAccountParams {}
 
 pub struct BorrowerAccountCreationResult {
-    pub txid: Txid,
-    pub funding_outpoint: OutPoint,
+    pub pset: PartiallySignedTransaction,
     pub factory_address: Address,
-    pub factory_auth_outpoint: OutPoint,
-    pub issuance_factory_outpoint: OutPoint,
     pub issued_asset_id: AssetId,
 }
 

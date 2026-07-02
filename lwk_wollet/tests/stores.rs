@@ -165,7 +165,8 @@ fn fake_persisted_txs_store_restore_reloads_last_unused() {
 
     let wollet2 = WolletBuilder::new(network, wd)
         .with_updates_store(updates_store)
-        .with_txs_store(txs_store)
+        .with_txs_store(Arc::new(PanicStore::new_persisted()))
+        .set_encryption_txs_store(false)
         .with_merge_threshold(Some(1))
         .build()
         .unwrap();

@@ -262,8 +262,11 @@ impl PanicStore {
 impl Store for PanicStore {
     type Error = std::convert::Infallible;
 
-    fn get<K: AsRef<[u8]>>(&self, _key: K) -> Result<Option<Vec<u8>>, Self::Error> {
-        panic!("PanicStore::get called")
+    fn get<K: AsRef<[u8]>>(&self, key: K) -> Result<Option<Vec<u8>>, Self::Error> {
+        panic!(
+            "PanicStore::get called for {}",
+            String::from_utf8_lossy(key.as_ref())
+        )
     }
 
     fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, _key: K, _value: V) -> Result<(), Self::Error> {

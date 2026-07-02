@@ -1,5 +1,8 @@
 use crate::{Error, Network, Pset, Transaction, Txid, Update, Wollet, WolletDescriptor};
-use lwk_wollet::{age, clients::asyncr};
+use lwk_wollet::{
+    age,
+    clients::{asyncr, TokenProvider},
+};
 use wasm_bindgen::prelude::*;
 
 /// Response from the last_used_index endpoint
@@ -173,6 +176,90 @@ impl EsploraClient {
     ) -> Result<LastUsedIndexResponse, Error> {
         let result = self.inner.last_used_index(descriptor.as_ref()).await?;
         Ok(result.into())
+    }
+}
+
+/// Builder for an [`EsploraClient`] exposing the full set of backend options
+/// (waterfalls, utxo-only, concurrency, timeout, custom headers and
+/// authentication) instead of the fixed-arity [`EsploraClient::new`] constructor.
+///
+/// Setters mutate the builder in place, so from JavaScript they are called
+/// imperatively rather than chained:
+///
+/// ```js
+/// const builder = new EsploraClientBuilder(network, url);
+/// builder.waterfalls(true);
+/// builder.header("x-api-key", apiKey);
+/// const client = builder.build();
+/// ```
+#[wasm_bindgen]
+pub struct EsploraClientBuilder {
+    inner: asyncr::EsploraClientBuilder,
+}
+
+#[wasm_bindgen]
+impl EsploraClientBuilder {
+    /// Create a builder for an Esplora (optionally Waterfalls) backend on the given network.
+    #[wasm_bindgen(constructor)]
+    pub fn new(network: &Network, url: &str) -> Self {
+        Self {
+            inner: asyncr::EsploraClientBuilder::new(url, network.into()),
+        }
+    }
+
+    /// Use the Waterfalls descriptor endpoint for a faster scan on supporting servers.
+    pub fn waterfalls(&mut self, waterfalls: bool) {
+        self.inner = self.inner.clone().waterfalls(waterfalls);
+    }
+
+    /// Only fetch transactions with unspent outputs: faster, but without full history.
+    #[wasm_bindgen(js_name = utxoOnly)]
+    pub fn utxo_only(&mut self, utxo_only: bool) {
+        self.inner = self.inner.clone().utxo_only(utxo_only);
+    }
+
+    /// Number of concurrent requests during a scan (default 1; 0 is treated as 1).
+    pub fn concurrency(&mut self, concurrency: usize) {
+        self.inner = self.inner.clone().concurrency(concurrency);
+    }
+
+    /// Per-request timeout in seconds.
+    pub fn timeout(&mut self, timeout: u8) {
+        self.inner = self.inner.clone().timeout(timeout);
+    }
+
+    /// Add an HTTP header sent on every request (e.g. an API key header).
+    pub fn header(&mut self, key: String, value: String) {
+        self.inner = self.inner.clone().header(key, value);
+    }
+
+    /// Authenticate with a static bearer token (sets `Authorization: Bearer <token>`).
+    #[wasm_bindgen(js_name = staticToken)]
+    pub fn static_token(&mut self, token: String) {
+        self.inner = self
+            .inner
+            .clone()
+            .token_provider(TokenProvider::Static(token));
+    }
+
+    /// Authenticate via the Blockstream OAuth client-credentials flow.
+    #[wasm_bindgen(js_name = blockstreamToken)]
+    pub fn blockstream_token(&mut self, url: String, client_id: String, client_secret: String) {
+        self.inner = self.inner.clone().token_provider(TokenProvider::Blockstream {
+            url,
+            client_id,
+            client_secret,
+        });
+    }
+
+    /// Build the configured Esplora client.
+    pub fn build(&self) -> Result<EsploraClient, Error> {
+        let builder = self.inner.clone();
+        let inner = builder
+            .clone()
+            .build()
+            .map_err(|e| Error::Generic(e.to_string()))?;
+        Ok(EsploraClient { inner, builder })
     }
 }
 

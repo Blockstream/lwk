@@ -50,7 +50,7 @@ ELEMENTS_CLI_CMD="$ELEMENTS_CLI_EXEC -rpcconnect=$ELEMENTS_HOST -rpcport=$ELEMEN
 
 # Start Jade emulator docker container
 echo "Starting Jade emulator..."
-JADE_CONTAINER_ID=$(docker run -d --rm -p $EMULATOR_PORT:$EMULATOR_PORT xenoky/local-jade-emulator:1.0.27)
+JADE_CONTAINER_ID=$(docker run -d --rm -p $EMULATOR_PORT:$EMULATOR_PORT xenoky/local-jade-emulator:1.0.41-beta1)
 echo "Jade emulator container ID: $JADE_CONTAINER_ID"
 
 # Wait for Jade emulator to be ready

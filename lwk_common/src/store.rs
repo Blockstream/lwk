@@ -238,6 +238,47 @@ impl Store for FakeStore {
     }
 }
 
+/// A [`Store`] implementation that intentionally panics on reads.
+///
+/// This is useful in tests that need to assert a code path does not read from
+/// storage. Writes/removals are acknowledged but discarded, like [`FakeStore`].
+#[derive(Debug, Default, Clone, Copy)]
+pub struct PanicStore {
+    persisted: bool,
+}
+
+impl PanicStore {
+    /// Create a new `PanicStore`.
+    pub fn new() -> Self {
+        Self { persisted: false }
+    }
+
+    /// Create a `PanicStore` that reports itself as persisted while still discarding data.
+    pub fn new_persisted() -> Self {
+        Self { persisted: true }
+    }
+}
+
+impl Store for PanicStore {
+    type Error = std::convert::Infallible;
+
+    fn get<K: AsRef<[u8]>>(&self, _key: K) -> Result<Option<Vec<u8>>, Self::Error> {
+        panic!("PanicStore::get called")
+    }
+
+    fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, _key: K, _value: V) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn remove<K: AsRef<[u8]>>(&self, _key: K) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn is_persisted(&self) -> bool {
+        self.persisted
+    }
+}
+
 /// A filesystem-backed implementation of [`Store`].
 ///
 /// Each key/value is stored as a file under a root directory, where the filename

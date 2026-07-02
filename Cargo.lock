@@ -2922,6 +2922,8 @@ dependencies = [
  "serde_json",
  "simplicityhl",
  "smplx-std",
+ "tempfile",
+ "testcontainers",
  "thiserror 2.0.18",
  "tokio",
  "uuid",

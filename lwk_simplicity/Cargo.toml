@@ -51,3 +51,6 @@ lwk_wollet = { version = "0.18.0", default-features = false, features = [
     "esplora",
     "electrum",
 ] }
+
+testcontainers = "0.14"
+tempfile.workspace = true

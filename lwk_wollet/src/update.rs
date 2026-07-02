@@ -209,7 +209,10 @@ pub struct Update {
     ///
     /// In general utxos are not returned by the server, and they are computed
     /// by the [`Wollet`] from its transactions. However if the server is
-    /// "utxo only" they are returned so we store them here.
+    /// "utxo only" they are returned so we store them here. When using a
+    /// persisted txs store, persisted updates also keep this snapshot so the
+    /// wallet state can be restored without reading transactions from the txs
+    /// store.
     pub unspent: Vec<(OutPoint, Script)>,
 
     /// The next unused derivation index for each chain, as known when the update was created.
@@ -561,6 +564,7 @@ impl Wollet {
             &new_txs.txs,
             utxo_only,
             unspent,
+            version >= 5,
         )?;
         cache.timestamps.extend(timestamps);
         if version >= 4 {
@@ -620,7 +624,16 @@ impl Wollet {
     }
 
     /// Persist an update to the store using an indexed key
-    fn persist_update(&self, update: Update) -> Result<(), Error> {
+    fn persist_update(&self, mut update: Update) -> Result<(), Error> {
+        if self.cache.txs_store_is_persisted() {
+            update.version = update.version.max(5);
+            update.unspent = self
+                .cache
+                .unspent()
+                .iter()
+                .map(|(outpoint, script)| (*outpoint, script.clone()))
+                .collect();
+        }
         self.updates_persister
             .persist(update, self.cache.txs_store_is_persisted())
     }
@@ -861,8 +874,11 @@ impl Encodable for Update {
         if self.version >= 3 {
             bytes_written +=
                 elements::encode::VarInt(self.unspent.len() as u64).consensus_encode(&mut w)?;
-            for (op, _script) in &self.unspent {
+            for (op, script) in &self.unspent {
                 bytes_written += op.consensus_encode(&mut w)?;
+                if self.version >= 5 {
+                    bytes_written += script.consensus_encode(&mut w)?;
+                }
             }
         }
         if self.version >= 4 {
@@ -882,7 +898,7 @@ impl Decodable for Update {
         }
 
         let version = u8::consensus_decode(&mut d)?;
-        if version > 4 {
+        if version > 5 {
             return Err(elements::encode::Error::ParseFailed("Unsupported version"));
         }
         let wollet_status = if version >= 1 {
@@ -959,7 +975,13 @@ impl Decodable for Update {
             let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
             let mut vec = Vec::with_capacity(len as usize);
             for _ in 0..len {
-                vec.push((OutPoint::consensus_decode(&mut d)?, Script::new()));
+                let outpoint = OutPoint::consensus_decode(&mut d)?;
+                let script = if version >= 5 {
+                    Script::consensus_decode(&mut d)?
+                } else {
+                    Script::new()
+                };
+                vec.push((outpoint, script));
             }
             vec
         } else {

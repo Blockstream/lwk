@@ -158,8 +158,12 @@ fn fake_persisted_txs_store_restore_reloads_last_unused() {
         .unwrap()
         .unwrap();
     let persisted_update = Update::deserialize(&persisted_bytes).unwrap();
-    assert_eq!(persisted_update.version, 4);
+    assert_eq!(persisted_update.version, 5);
     assert!(persisted_update.new_txs.txs.is_empty());
+    assert!(persisted_update
+        .unspent
+        .iter()
+        .all(|(_, script)| !script.is_empty()));
     assert_eq!(persisted_update.last_unused.external, 1);
     assert_eq!(persisted_update.last_unused.internal, 0);
 

@@ -1406,11 +1406,7 @@ mod tests {
         crate::utils::assert_next_continue_status(&mut response, "transaction.server.mempool")
             .await;
 
-        // Mining 1441 blocks in chunks to avoid CI failure
-        for _ in 0..14 {
-            crate::utils::mine_blocks(100).await.unwrap();
-        }
-        crate::utils::mine_blocks(41).await.unwrap();
+        crate::utils::mine_blocks(1441).await.unwrap();
 
         log::info!("Mined 1441 blocks -> Boltz ask for a refund because we didn't claim");
         sleep(Duration::from_secs(3)).await;
@@ -1510,10 +1506,7 @@ mod tests {
         crate::utils::assert_next_continue_status(&mut response, "transaction.server.mempool")
             .await;
 
-        for _ in 0..14 {
-            crate::utils::mine_blocks(100).await.unwrap();
-        }
-        crate::utils::mine_blocks(41).await.unwrap();
+        crate::utils::mine_blocks(1441).await.unwrap();
 
         log::info!("Mined past timeout height, expecting Boltz transaction.refunded");
 
@@ -1593,6 +1586,256 @@ mod tests {
             refund_balance > 0,
             "Expected refund address to receive funds, got {refund_balance} sats"
         );
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_session_lbtc_btc_refunded_restore_from_boltz_without_store() {
+        let _ = env_logger::try_init();
+
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+
+        let network = Network::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic.clone())
+            .random_preimages(true)
+            .build()
+            .await
+            .unwrap();
+
+        let original_refund_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let original_claim_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+            .await
+            .unwrap();
+        let original_refund_address =
+            elements::Address::from_str(&original_refund_address_str).unwrap();
+        let original_claim_address = bitcoin::Address::from_str(&original_claim_address_str)
+            .unwrap()
+            .assume_checked();
+
+        let mut response = session
+            .lbtc_to_btc(
+                50_000,
+                &original_refund_address,
+                &original_claim_address,
+                None,
+            )
+            .await
+            .unwrap();
+        let swap_id = response.swap_id().to_string();
+        let lockup_address = response.lockup_address().to_string();
+        let expected_amount = response.expected_amount();
+        log::info!(
+            "LBTC->BTC no-store refunded restore test - swap_id: {swap_id}, lockup address: {lockup_address}",
+        );
+
+        let lockup_txid =
+            crate::utils::send_to_address(LBTC_CHAIN.into(), &lockup_address, expected_amount)
+                .await
+                .unwrap();
+        log::info!("Sent user Liquid lockup tx {lockup_txid}");
+
+        crate::utils::assert_next_continue_status(&mut response, "transaction.mempool").await;
+        crate::utils::mine_blocks(1).await.unwrap();
+        crate::utils::assert_next_continue_status(&mut response, "transaction.confirmed").await;
+        crate::utils::assert_next_continue_status(&mut response, "transaction.server.mempool")
+            .await;
+
+        let lockup_vout = crate::utils::find_unspent_vout_by_address(
+            LBTC_CHAIN.into(),
+            &lockup_txid,
+            &lockup_address,
+        )
+        .await
+        .unwrap_or_else(|err| {
+            log::warn!("Could not inspect original Liquid lockup output before refund: {err}");
+            None
+        });
+        log::info!(
+            "Original Liquid lockup tx {lockup_txid} vout for {lockup_address}: {lockup_vout:?}"
+        );
+
+        crate::utils::mine_blocks(1441).await.unwrap();
+
+        let expected_refunded = SwapState::TransactionRefunded.to_string();
+        let mut boltz_state = None;
+        for _ in 0..30 {
+            let swap_list = session.swap_restore().await.unwrap();
+            boltz_state = swap_list
+                .iter()
+                .find(|swap| swap.id.as_str() == swap_id.as_str())
+                .map(|swap| swap.status.clone());
+            if boltz_state.as_deref() == Some(expected_refunded.as_str()) {
+                break;
+            }
+            sleep(Duration::from_secs(1)).await;
+        }
+        assert_eq!(
+            boltz_state.as_deref(),
+            Some(expected_refunded.as_str()),
+            "swap_restore should report latest status transaction.refunded for {swap_id}, got {boltz_state:?}",
+        );
+
+        drop(response);
+        drop(session);
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic)
+            .random_preimages(true)
+            .build()
+            .await
+            .unwrap();
+
+        let swap_list = session.swap_restore().await.unwrap();
+        let restore_summary = swap_list
+            .iter()
+            .map(|swap| {
+                format!(
+                    "{}:{:?}:{}->{}:{}",
+                    swap.id, swap.swap_type, swap.from, swap.to, swap.status
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        let restored_swap = swap_list
+            .iter()
+            .find(|swap| swap.id.as_str() == swap_id.as_str())
+            .unwrap_or_else(|| {
+                panic!(
+                    "swap_restore did not return original swap {swap_id}; returned {} swaps: {restore_summary}",
+                    swap_list.len()
+                )
+            });
+        assert_eq!(
+            restored_swap.status, expected_refunded,
+            "swap_restore returned {swap_id}, but latest status was {}",
+            restored_swap.status
+        );
+        assert_eq!(restored_swap.from, "L-BTC");
+        assert_eq!(restored_swap.to, "BTC");
+
+        let new_refund_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let new_claim_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+            .await
+            .unwrap();
+        let new_refund_address = elements::Address::from_str(&new_refund_address_str).unwrap();
+        let new_claim_address = bitcoin::Address::from_str(&new_claim_address_str)
+            .unwrap()
+            .assume_checked();
+
+        let restorable = session
+            .restorable_lbtc_to_btc_swaps(&swap_list, &new_claim_address, &new_refund_address)
+            .await
+            .unwrap_or_else(|err| {
+                panic!("restorable_lbtc_to_btc_swaps failed while reconstructing from Boltz: {err}")
+            });
+        let restorable_ids = restorable
+            .iter()
+            .map(|data| {
+                format!(
+                    "{}:{}->{}:{:?}",
+                    data.create_chain_response.id, data.from_chain, data.to_chain, data.last_state
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        let data = restorable
+            .into_iter()
+            .find(|data| data.create_chain_response.id == swap_id)
+            .unwrap_or_else(|| {
+                panic!(
+                    "restorable_lbtc_to_btc_swaps did not include {swap_id}; restorable swaps: {restorable_ids}"
+                )
+            });
+        assert_eq!(data.from_chain, Chain::Liquid(LBTC_CHAIN));
+        assert_eq!(data.to_chain, Chain::Bitcoin(BTC_CHAIN));
+        assert_eq!(data.last_state, SwapState::TransactionRefunded);
+        assert!(
+            !data.random_preimage,
+            "Boltz-only restore should not require the lost random preimage for refund"
+        );
+        assert!(
+            data.refund_txid.is_none(),
+            "Boltz restore data should not already contain our Liquid refund txid"
+        );
+
+        let data: lwk_boltz::ChainSwapDataSerializable = data.into();
+        assert!(
+            data.preimage.is_none(),
+            "Boltz-only restore should not serialize a preimage recovered from local state"
+        );
+        let mut response = session
+            .restore_lockup(data)
+            .await
+            .unwrap_or_else(|err| panic!("restore_lockup failed for {swap_id}: {err}"));
+        assert_eq!(response.swap_id(), swap_id);
+        assert_eq!(response.chain_from(), Chain::Liquid(LBTC_CHAIN));
+        assert_eq!(response.chain_to(), Chain::Bitcoin(BTC_CHAIN));
+
+        let mut saw_refunded_replay = false;
+        for _ in 0..5 {
+            match response.advance().await {
+                Ok(ControlFlow::Continue(update)) => {
+                    log::info!("Restored swap replay status: {}", update.status);
+                    if update.status == expected_refunded {
+                        saw_refunded_replay = true;
+                    }
+                }
+                Ok(ControlFlow::Break(success)) => {
+                    assert!(success, "restored refund flow should complete successfully");
+                    saw_refunded_replay = true;
+                    break;
+                }
+                Err(err) => {
+                    panic!(
+                        "advance failed after Boltz-only restore for {swap_id}; this indicates websocket replay or build_and_broadcast_refund failed: {err}"
+                    );
+                }
+            }
+        }
+        assert!(
+            saw_refunded_replay,
+            "restore_lockup subscribed, but advance did not receive transaction.refunded replay for {swap_id}"
+        );
+        assert!(
+            response.refund_txid().is_some(),
+            "refund_txid should be set after restored Liquid refund broadcast"
+        );
+
+        let refund_balance =
+            crate::utils::get_address_balance(LBTC_CHAIN.into(), &new_refund_address_str)
+                .await
+                .expect("Failed to get new Liquid refund address balance");
+        assert!(
+            refund_balance > 0,
+            "Expected new Liquid refund address to receive funds, got {refund_balance} sats"
+        );
+
+        if let Some(vout) = lockup_vout {
+            let unspent = crate::utils::is_txout_unspent(LBTC_CHAIN.into(), &lockup_txid, vout)
+                .await
+                .expect("Failed to inspect original Liquid lockup output after refund");
+            assert!(
+                !unspent,
+                "Original Liquid lockup output {lockup_txid}:{vout} should be spent by refund"
+            );
+        } else {
+            log::warn!(
+                "Skipping original Liquid lockup output spent assertion; node decode did not expose the lockup address"
+            );
+        }
     }
 
     #[tokio::test]

@@ -250,7 +250,9 @@ impl WolletBuilder {
 
         wollet.restore_updates()?;
 
-        wollet.cache.add_txids_from_txs_store();
+        if wollet.cache.all_txids().is_empty() {
+            wollet.cache.add_txids_from_txs_store();
+        }
         Ok(wollet)
     }
 }

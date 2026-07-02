@@ -47,8 +47,8 @@ pub struct WaterfallsClientBuilder {
     inner: EsploraClientBuilder,
 }
 
-/// Provider of a token for authenticated services backend of Esplora and Waterfalls
-#[cfg(feature = "esplora")]
+/// Provider of a token for authenticated backends (Esplora/Waterfalls REST and Electrum)
+#[cfg(any(feature = "esplora", feature = "electrum"))]
 #[derive(Clone)]
 pub enum TokenProvider {
     /// No token is needed
@@ -68,7 +68,7 @@ pub enum TokenProvider {
 
 // Manual `Debug` that redacts secret material (the static token and the
 // OAuth client secret) so credentials never leak into logs or error output.
-#[cfg(feature = "esplora")]
+#[cfg(any(feature = "esplora", feature = "electrum"))]
 impl std::fmt::Debug for TokenProvider {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

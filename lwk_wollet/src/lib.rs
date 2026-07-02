@@ -162,8 +162,11 @@ pub use crate::pos::PosConfig;
 pub use crate::wollet::full_scan_to_index_with_electrum_client;
 #[cfg(feature = "electrum")]
 pub use crate::wollet::full_scan_with_electrum_client;
+#[allow(deprecated)]
 #[cfg(feature = "electrum")]
-pub use clients::blocking::electrum_client::{ElectrumClient, ElectrumOptions};
+pub use clients::blocking::electrum_client::ElectrumOptions;
+#[cfg(feature = "electrum")]
+pub use clients::blocking::electrum_client::{ElectrumClient, ElectrumClientBuilder};
 
 #[cfg(feature = "esplora")]
 pub use age;

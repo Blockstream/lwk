@@ -3,6 +3,7 @@ use std::{net::IpAddr, str::FromStr};
 /// An electrum url parsable from string in the following form: `tcp://example.com:50001` or `ssl://example.com:50002`
 ///
 /// If you need to use tls without validating the domain, use the constructor [`ElectrumUrl`]
+// TODO: deprecate in favour of the builder accepting simpler types.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ElectrumUrl {
     /// The TLS scheme with the domain name and the flag indicating if the domain name should be validated

@@ -2917,11 +2917,13 @@ dependencies = [
  "lwk_test_util",
  "lwk_wollet",
  "rand 0.8.5",
+ "reqwest",
  "serde",
  "serde_json",
  "simplicityhl",
  "smplx-std",
  "thiserror 2.0.18",
+ "tokio",
  "uuid",
 ]
 

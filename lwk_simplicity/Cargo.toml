@@ -41,6 +41,10 @@ lending = ["lending-contracts", "simplex", "reqwest", "lwk_wollet/electrum", "lw
 name = "lending"
 required-features = ["lending"]
 
+[[test]]
+name = "indexer_client"
+required-features = ["lending"]
+
 [dev-dependencies]
 lwk_test_util = { version = "0.18.0" }
 lwk_wollet = { version = "0.18.0", default-features = false, features = [

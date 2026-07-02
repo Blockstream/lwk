@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use elements::hex::ToHex;
-use lwk_simplicity::lending::{IndexerClient, LendingSession, OfferDetails};
+use lwk_simplicity::lending::*;
 use lwk_test_util::*;
 use lwk_wollet::blocking::BlockchainBackend;
 use lwk_wollet::elements::AssetId;
@@ -80,7 +80,9 @@ async fn test_borrow_flow() {
     borrower_session.sync().unwrap();
 
     // borrower_prepare, which selects fee UTXO, builds, signs, finalizes, broadcasts internally
-    let prepared = borrower_session.borrower_prepare().unwrap();
+    let prepared = borrower_session
+        .borrower_prepare(BorrowerAccountParams {})
+        .unwrap();
     let client = electrum_client(&env);
     let transaction = client.get_transaction(prepared.txid).unwrap();
 

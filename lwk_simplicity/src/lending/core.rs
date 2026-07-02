@@ -68,7 +68,10 @@ impl LendingSession {
     }
 
     /// One-time action from every user to prepare for creating an offer.
-    pub fn borrower_prepare(&self) -> Result<BorrowerAccountCreationResult, LendingError> {
+    pub fn borrower_prepare(
+        &self,
+        _params: BorrowerAccountParams,
+    ) -> Result<BorrowerAccountCreationResult, LendingError> {
         // TODO: we should estimate fee dynamically
         const FEE: u64 = 250;
         const ISSUANCE_AMOUNT: u64 = 2;
@@ -311,6 +314,8 @@ pub struct OfferDetails {
 pub struct RepaymentDetails {
     pub amount_to_repay: u64,
 }
+
+pub struct BorrowerAccountParams {}
 
 pub struct BorrowerAccountCreationResult {
     pub txid: Txid,

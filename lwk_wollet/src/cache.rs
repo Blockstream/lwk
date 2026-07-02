@@ -334,13 +334,24 @@ impl Cache {
             .retain(|o, _| deleted_txids.iter().all(|txid| txid != &o.txid));
     }
 
-    fn update_unspent_utxos_only(&mut self, unspent: Vec<OutPoint>, txs: &[(Txid, Transaction)]) {
+    fn update_unspent_from_snapshot(
+        &mut self,
+        unspent: Vec<(OutPoint, Script)>,
+        txs: &[(Txid, Transaction)],
+    ) {
         let unspent = unspent
             .into_iter()
-            .filter_map(|op| {
+            .filter_map(|(op, script)| {
                 self.unspent
                     .get(&op)
                     .cloned()
+                    .or_else(|| {
+                        if script.is_empty() {
+                            None
+                        } else {
+                            Some(script)
+                        }
+                    })
                     .or_else(|| self.outpoint_script(&op, txs))
                     .map(|script| (op, script))
             })
@@ -378,14 +389,14 @@ impl Cache {
         deleted_txids: &[Txid],
         txs: &[(Txid, Transaction)],
         utxo_only: bool,
-        unspent: Vec<OutPoint>,
+        unspent: Vec<(OutPoint, Script)>,
     ) -> Result<(), Error> {
         // TODO: cleanup this functions
         self.extend_all_txs(txs)?;
         self.update_heights(txid_height_new, deleted_txids);
         self.rebuild_sorted_txids();
         if utxo_only {
-            self.update_unspent_utxos_only(unspent, txs);
+            self.update_unspent_from_snapshot(unspent, txs);
         } else {
             self.update_unspent(txid_height_new, deleted_txids, txs);
         }

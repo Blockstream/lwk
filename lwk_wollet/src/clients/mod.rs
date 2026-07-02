@@ -273,8 +273,12 @@ pub struct Data {
     /// The tip of the blockchain at the time the get_history was called.
     pub tip: Option<BlockHash>,
 
-    /// The unspent outputs of this get_history call, this is non-empty only in waterfalls UTXO mode, where it's needed to know which outputs are unspent to create a dummy tx spending all the other outputs.
-    pub unspent: Vec<OutPoint>,
+    /// The unspent outputs of this get_history call with their script pubkeys.
+    ///
+    /// This is non-empty only in waterfalls UTXO mode, where it's needed to know
+    /// which outputs are unspent to create a dummy tx spending all the other
+    /// outputs.
+    pub unspent: Vec<(OutPoint, Script)>,
 }
 
 /// Capabilities that can be supported by a [`blocking::BlockchainBackend`]

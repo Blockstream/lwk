@@ -668,17 +668,6 @@ impl EsploraClient {
                 has_more.extend(addresses.iter().cloned());
             }
 
-            if self.utxo_only {
-                let unspent = waterfalls_result
-                    .txs_seen
-                    .values()
-                    .flatten()
-                    .flatten()
-                    .map(waterfalls_outpoint)
-                    .collect::<Result<Vec<_>, _>>()?;
-                data.unspent.extend(unspent);
-            }
-
             for (desc, chain_history) in waterfalls_result.txs_seen.iter() {
                 let desc: elements_miniscript::Descriptor<DescriptorPublicKey> = desc.parse()?;
 
@@ -714,6 +703,10 @@ impl EsploraClient {
                     }
 
                     for tx_seen in script_history {
+                        if self.utxo_only {
+                            data.unspent
+                                .push((waterfalls_outpoint(tx_seen)?, script.clone()));
+                        }
                         merge_waterfalls_history(&mut data, tx_seen);
                     }
                 }
@@ -751,13 +744,15 @@ impl EsploraClient {
                     "Waterfalls returned has_more for unsupported script: {address}"
                 )));
             };
-            data.scripts.insert(script, (chain, child, blinding_pubkey));
+            data.scripts
+                .insert(script.clone(), (chain, child, blinding_pubkey));
             for tx_seen in self
                 .get_address_history_waterfalls_from_page(&address, 1)
                 .await?
             {
                 if self.utxo_only {
-                    data.unspent.push(waterfalls_outpoint(&tx_seen)?);
+                    data.unspent
+                        .push((waterfalls_outpoint(&tx_seen)?, script.clone()));
                 }
                 merge_waterfalls_history(&mut data, &tx_seen);
             }

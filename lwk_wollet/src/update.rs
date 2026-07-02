@@ -205,13 +205,12 @@ pub struct Update {
     /// The tip of the blockchain at the time the update was generated
     pub tip: BlockHeader,
 
-    /// The unspent outputs
+    /// The unspent outputs with their script pubkeys.
     ///
     /// In general utxos are not returned by the server, and they are computed
     /// by the [`Wollet`] from its transactions. However if the server is
     /// "utxo only" they are returned so we store them here.
-    // TODO: change to `Vec<OutPoint, Script>` we currently "recover it" after, we may want to just keep it
-    pub unspent: Vec<OutPoint>,
+    pub unspent: Vec<(OutPoint, Script)>,
 
     /// The next unused derivation index for each chain, as known when the update was created.
     ///
@@ -445,7 +444,7 @@ impl Wollet {
                     unspent.insert(outpoint, output.script_pubkey.clone());
                 }
             }
-            unspent.into_keys().collect()
+            unspent.into_iter().collect()
         } else {
             vec![]
         };
@@ -862,7 +861,7 @@ impl Encodable for Update {
         if self.version >= 3 {
             bytes_written +=
                 elements::encode::VarInt(self.unspent.len() as u64).consensus_encode(&mut w)?;
-            for op in &self.unspent {
+            for (op, _script) in &self.unspent {
                 bytes_written += op.consensus_encode(&mut w)?;
             }
         }
@@ -960,7 +959,7 @@ impl Decodable for Update {
             let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
             let mut vec = Vec::with_capacity(len as usize);
             for _ in 0..len {
-                vec.push(OutPoint::consensus_decode(&mut d)?);
+                vec.push((OutPoint::consensus_decode(&mut d)?, Script::new()));
             }
             vec
         } else {

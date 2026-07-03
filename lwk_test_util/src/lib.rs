@@ -19,6 +19,51 @@ use std::{
     time::Duration,
 };
 
+/// A [`lwk_common::Store`] implementation that intentionally panics on reads.
+///
+/// This is useful in tests that need to assert a code path does not read from
+/// storage. Writes/removals are acknowledged but discarded, like
+/// [`lwk_common::FakeStore`].
+#[derive(Debug, Default, Clone, Copy)]
+pub struct PanicStore {
+    persisted: bool,
+}
+
+impl PanicStore {
+    /// Create a new `PanicStore`.
+    pub fn new() -> Self {
+        Self { persisted: false }
+    }
+
+    /// Create a `PanicStore` that reports itself as persisted while still discarding data.
+    pub fn new_persisted() -> Self {
+        Self { persisted: true }
+    }
+}
+
+impl lwk_common::Store for PanicStore {
+    type Error = std::convert::Infallible;
+
+    fn get<K: AsRef<[u8]>>(&self, key: K) -> Result<Option<Vec<u8>>, Self::Error> {
+        panic!(
+            "PanicStore::get called for {}",
+            String::from_utf8_lossy(key.as_ref())
+        )
+    }
+
+    fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, _key: K, _value: V) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn remove<K: AsRef<[u8]>>(&self, _key: K) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn is_persisted(&self) -> bool {
+        self.persisted
+    }
+}
+
 mod amp2;
 mod auth;
 mod registry;

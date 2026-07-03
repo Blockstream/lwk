@@ -55,7 +55,7 @@ pub use crate::signer::Signer;
 pub use crate::sqlite::{SqliteStore, SqliteStoreError};
 pub use crate::store::{
     ArcDynStoreError, BoxError, DynStore, EncryptedStore, EncryptedStoreError, FakeStore,
-    FileStore, MemoryStore, PanicStore, Store,
+    FileStore, MemoryStore, Store,
 };
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint};
 use elements::bitcoin::PublicKey as BitcoinPublicKey;

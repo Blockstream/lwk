@@ -403,6 +403,9 @@ impl Wollet {
                 break;
             }
         }
+        if self.cache.all_txids().is_empty() {
+            self.cache.add_txids_from_txs_store();
+        }
         Ok(())
     }
 }

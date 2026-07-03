@@ -59,6 +59,18 @@ impl Jade {
         })
     }
 
+    /// Releases the Web Serial port so it can be reopened without reloading the page.
+    pub async fn disconnect(&self) -> Result<(), Error> {
+        // Logout is best-effort (e.g. device may already be unplugged); releasing the
+        // port is what matters for a subsequent `fromSerial()` to work.
+        let _ = self.inner.logout().await;
+        self.inner.stream().release().await?;
+        wasm_bindgen_futures::JsFuture::from(self._port.close())
+            .await
+            .map_err(Error::JsVal)?;
+        Ok(())
+    }
+
     #[wasm_bindgen(js_name = getVersion)]
     pub async fn get_version(&self) -> Result<JsValue, Error> {
         let version = self.inner.version_info().await?;

@@ -323,6 +323,11 @@ impl<S: Stream<Error = Error>> Jade<S> {
         self.network
     }
 
+    /// Returns a reference to the underlying transport stream.
+    pub fn stream(&self) -> &S {
+        &self.stream
+    }
+
     // Should be implemented via the Signer trait, but here we are async...
     pub async fn slip77_master_blinding_key(&self) -> Result<slip77::MasterBlindingKey> {
         let params = GetMasterBlindingKeyParams {

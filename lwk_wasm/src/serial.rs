@@ -85,6 +85,22 @@ impl WebSerial {
             writer: serial_port.writable().get_writer().map_err(Error::JsVal)?,
         })
     }
+
+    /// Cancels the reader and closes the writer, releasing the locks they hold on the
+    /// port's `readable`/`writable` streams. Must run before the port itself is closed,
+    /// since `SerialPort.close()` rejects while either stream is locked.
+    ///
+    /// cancel/close are best-effort: if the device was unplugged the streams are
+    /// already errored and these reject, but the locks must still be released.
+    pub async fn release(&self) -> Result<(), Error> {
+        let _ = wasm_bindgen_futures::JsFuture::from(self.reader.cancel()).await;
+        self.reader.release_lock();
+
+        let _ = wasm_bindgen_futures::JsFuture::from(self.writer.close()).await;
+        self.writer.release_lock();
+
+        Ok(())
+    }
 }
 
 impl Stream for WebSerial {

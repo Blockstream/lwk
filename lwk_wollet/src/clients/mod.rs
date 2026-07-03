@@ -275,7 +275,7 @@ pub struct Data {
 
     /// The unspent outputs of this get_history call with their script pubkeys.
     ///
-    /// This is non-empty only in waterfalls UTXO mode, where it's needed to know
+    /// This is non-empty only in waterfalls UTXO only mode, where it's needed to know
     /// which outputs are unspent to create a dummy tx spending all the other
     /// outputs.
     pub unspent: Vec<(OutPoint, Script)>,

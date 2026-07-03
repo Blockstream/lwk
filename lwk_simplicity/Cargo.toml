@@ -28,15 +28,21 @@ lending-contracts = {git = "https://github.com/gerau/simplicity-lending.git",  r
 simplex = { package = "smplx-std", git = "https://github.com/gerau/smplx.git", rev = "da5a22da20293637473f67bd73a3645afda3a2a6", optional = true }
 
 rand = "0.8"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"], optional = true }
+tokio = { version = "1.36.0", features = ["rt", "macros"], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 uuid = { version = "~1.20", default-features = false, features = ["js"] }
 
 [features]
-lending = ["lending-contracts", "simplex", "lwk_wollet/electrum", "lwk_wollet/esplora"]
+lending = ["lending-contracts", "simplex", "reqwest", "lwk_wollet/electrum", "lwk_wollet/esplora", "tokio"]
 
 [[test]]
 name = "lending"
+required-features = ["lending"]
+
+[[test]]
+name = "indexer_client"
 required-features = ["lending"]
 
 [dev-dependencies]

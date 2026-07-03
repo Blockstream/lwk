@@ -3024,6 +3024,7 @@ dependencies = [
  "reqwest",
  "rmp-serde",
  "rmpv",
+ "rustls",
  "scrypt",
  "serde",
  "serde_json",

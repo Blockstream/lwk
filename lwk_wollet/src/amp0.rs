@@ -1342,6 +1342,11 @@ impl WebSocketClient {
         use futures::StreamExt;
         use tokio_tungstenite::connect_async;
 
+        // Workaround: electrum-client 0.25's rustls-ring feature activates both ring and
+        // aws-lc-rs on the shared rustls 0.23, causing a panic when tokio-tungstenite tries
+        // to auto-select a provider. Explicitly install ring; subsequent calls are no-ops.
+        let _ = rustls::crypto::ring::default_provider().install_default();
+
         let (ws_stream, _) = connect_async(url).await?;
         let (write, read) = ws_stream.split();
 
@@ -1361,6 +1366,8 @@ impl WebSocketClient {
             connect_async_with_config,
             tungstenite::{client::IntoClientRequest, http::HeaderValue},
         };
+
+        let _ = rustls::crypto::ring::default_provider().install_default();
 
         // Start with the URL and let it create the base request
         let mut request = url.into_client_request()?;

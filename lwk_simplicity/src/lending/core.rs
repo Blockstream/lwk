@@ -226,6 +226,43 @@ impl LendingSession {
     ) -> Result<Transaction, LendingError> {
         self.wollet.finalize(pset).map_err(LendingError::Wallet)
     }
+
+    /// Finalize Simplicity program inputs on the PSET.
+    ///
+    /// This function is applicable only for simplicity-lending, because it doesn't use any
+    /// simplicity programs with signatures.
+    fn finalize_program_inputs(
+        &self,
+        ft: &FinalTransaction,
+        pset: &mut PartiallySignedTransaction,
+    ) -> Result<(), LendingError> {
+        let simplex_network = to_simplicity_network(self.network);
+
+        for (index, final_input) in ft.inputs().iter().enumerate() {
+            let Some(program_input) = &final_input.program_input else {
+                continue;
+            };
+
+            let witness_map: HashMap<simplicityhl::str::WitnessName, simplicityhl::Value> =
+                program_input
+                    .witness
+                    .build_witness()
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect();
+
+            let witness_values = WitnessValues::from(witness_map);
+
+            let pruned_witness = program_input
+                .program
+                .finalize(pset, &witness_values, index, &simplex_network)
+                .map_err(|e| LendingError::Config(format!("program finalization error: {e}")))?;
+
+            pset.inputs_mut()[index].final_script_witness = Some(pruned_witness);
+        }
+
+        Ok(())
+    }
 }
 
 /// Builder for creating a [`LendingSession`].

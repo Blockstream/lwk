@@ -43,6 +43,12 @@ fn test_blinding_nonces() {
 #[cfg(feature = "amp0")]
 #[ignore = "requires network calls"]
 fn test_amp0_setup() -> Result<(), Box<dyn std::error::Error>> {
+    if std::env::var("GITLAB_CI").as_deref() == Ok("true")
+        && (std::env::var("CI_COMMIT_BRANCH").as_deref() != Ok("master")
+            || std::env::var("CI_JOB_NAME").as_deref() != Ok("amp0"))
+    {
+        return Ok(());
+    }
     // ANCHOR: amp0-setup
     use lwk_common::{Amp0Signer, Network};
     use lwk_signer::SwSigner;
@@ -91,6 +97,12 @@ fn test_amp0_setup() -> Result<(), Box<dyn std::error::Error>> {
 #[ignore = "requires network calls"]
 #[rustfmt::skip] // our priority here is that generated docs renders nicely
 fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
+    if std::env::var("GITLAB_CI").as_deref() == Ok("true")
+        && (std::env::var("CI_COMMIT_BRANCH").as_deref() != Ok("master")
+            || std::env::var("CI_JOB_NAME").as_deref() != Ok("amp0"))
+    {
+        return Ok(());
+    }
     // ANCHOR: amp0-daily-ops
     use lwk_common::Signer;
     use lwk_signer::SwSigner;

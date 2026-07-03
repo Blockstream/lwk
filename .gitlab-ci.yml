@@ -420,6 +420,9 @@ amp0:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     # slow amp0 unit tests
     - cargo test -p lwk_wollet slow_amp0 -- --include-ignored
+    # rust amp0 e2e tests
+    - cargo test -p lwk_wollet amp0_setup -- --include-ignored
+    - cargo test -p lwk_wollet amp0_daily_ops -- --include-ignored
     # bindings
     - cargo test -p lwk_bindings --features foreign_bindings amp0
     # wasm

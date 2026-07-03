@@ -41,7 +41,11 @@ fn roundtrip(
         }
     };
     let client = test_client_electrum(&env.electrum_url());
-    let mut wallet = TestWollet::new(client, &desc_str);
+    let opt = crate::test_wollet::TestWolletOpt {
+        network: Some(env.elementsd_network()),
+        ..Default::default()
+    };
+    let mut wallet = TestWollet::with_opt(client, &desc_str, &opt);
 
     wallet.fund_btc(env);
 
@@ -253,6 +257,11 @@ fn emul_roundtrip_shwpkh() {
 #[test]
 fn emul_roundtrip_2of2() {
     emul_roundtrip_multisig(2);
+}
+
+#[test]
+fn emul_roundtrip_tr() {
+    emul_roundtrip_singlesig(Singlesig::Tr);
 }
 
 #[test]

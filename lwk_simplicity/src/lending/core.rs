@@ -29,7 +29,7 @@ use simplicityhl::WitnessValues;
 use crate::lending::error::LendingError;
 use crate::lending::network::to_simplicity_network;
 
-use super::indexer::client::FactoryDetailsResponse;
+use super::indexer::response::FactoryDetailsResponse;
 
 enum AnyClient {
     Electrum(Box<ElectrumClient>),

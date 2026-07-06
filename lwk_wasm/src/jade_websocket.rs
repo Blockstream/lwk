@@ -55,6 +55,16 @@ impl JadeWebSocket {
         })
     }
 
+    pub async fn disconnect(&self) -> Result<(), Error> {
+        let _ = self.inner.logout().await;
+        self.inner
+            .stream()
+            .websocket()
+            .close()
+            .map_err(Error::JsVal)?;
+        Ok(())
+    }
+
     #[wasm_bindgen(js_name = getVersion)]
     pub async fn get_version(&self) -> Result<JsValue, Error> {
         let version = self.inner.version_info().await?;

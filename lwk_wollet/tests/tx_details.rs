@@ -173,3 +173,32 @@ fn test_tx_details_no_wildcard() {
     assert!(tx_det2.outputs().iter().any(|o| o.is_mine()));
     assert!(tx_det2.outputs().iter().any(|o| !o.is_mine()));
 }
+
+#[test]
+fn test_txs_cannot_unblind() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let s = generate_signer();
+
+    let view_key1 = generate_view_key();
+    let d1 = format!("ct({view_key1},elwpkh({}/*))", s.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w1 = TestWollet::new(client, &d1);
+
+    let view_key2 = generate_view_key();
+    let d2 = format!("ct({view_key2},elwpkh({}/*))", s.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w2 = TestWollet::new(client, &d2);
+
+    let txid1 = w1.fund_btc(&env);
+    let txid2 = w2.fund_btc(&env);
+    w1.wait_for_tx_outside_list(&txid2);
+    w2.wait_for_tx_outside_list(&txid1);
+
+    assert_eq!(w1.wollet.transactions().unwrap().len(), 1);
+    assert_eq!(w2.wollet.transactions().unwrap().len(), 1);
+    let opt = TxsOpt::default();
+    // TODO: only 1 transaction should be listed there
+    assert_eq!(w1.wollet.txs(&opt).unwrap().len(), 2);
+    assert_eq!(w2.wollet.txs(&opt).unwrap().len(), 2);
+}

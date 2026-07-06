@@ -39,5 +39,5 @@ async fn test_get_factories_by_script_unknown_script() {
 }
 
 fn client() -> IndexerClient {
-    IndexerClient::new(BASE_URL).unwrap()
+    IndexerClient::builder(BASE_URL).build().unwrap()
 }

@@ -9,23 +9,41 @@ use uuid::Uuid;
 use crate::lending::LendingError;
 
 #[derive(Clone, Debug)]
+pub struct IndexerClientBuilder {
+    base_url: String,
+}
+
+impl IndexerClientBuilder {
+    pub fn new(base_url: impl Into<String>) -> Self {
+        Self {
+            base_url: base_url.into(),
+        }
+    }
+
+    pub fn build(self) -> Result<IndexerClient, LendingError> {
+        let mut url: String = self.base_url;
+        while url.ends_with('/') {
+            url.pop();
+        }
+
+        Ok(IndexerClient {
+            base_url: url,
+            client: reqwest::Client::builder()
+                .build()
+                .map_err(|err| LendingError::Config(err.to_string()))?,
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct IndexerClient {
     base_url: String,
     client: reqwest::Client,
 }
 
 impl IndexerClient {
-    pub fn new(base_url: impl Into<String>) -> Result<Self, LendingError> {
-        let mut url: String = base_url.into();
-        while url.ends_with('/') {
-            url.pop();
-        }
-        Ok(Self {
-            base_url: url,
-            client: reqwest::Client::builder()
-                .build()
-                .map_err(|err| LendingError::Config(err.to_string()))?,
-        })
+    pub fn builder(base_url: impl Into<String>) -> IndexerClientBuilder {
+        IndexerClientBuilder::new(base_url)
     }
 
     pub fn base_url(&self) -> &str {

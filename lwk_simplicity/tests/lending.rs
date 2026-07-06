@@ -45,7 +45,7 @@ async fn test_borrow_flow() {
     let cli = Cli::default();
     let indexer = indexer::start_indexer(&env, &cli, &binary, 8081).await;
     let indexer_url = indexer.api_url().to_string();
-    let indexer_client = IndexerClient::new(indexer_url.clone()).unwrap();
+    let indexer_client = IndexerClient::builder(indexer_url.clone()).build().unwrap();
 
     let network = env.elementsd_network();
 

@@ -1,4 +1,4 @@
-use lwk_simplicity::lending::{IndexerClient, OfferFilters};
+use lwk_simplicity::lending::{IndexerClient, OfferFiltersRequest};
 
 const BASE_URL: &str = "https://lending.dev.blockstream.com/api";
 
@@ -6,7 +6,10 @@ const BASE_URL: &str = "https://lending.dev.blockstream.com/api";
 #[ignore = "requires internet connection"]
 async fn test_list_offers_default_filters() {
     let c = client();
-    let resp = c.list_offers(&OfferFilters::default()).await.unwrap();
+    let resp = c
+        .list_offers(&OfferFiltersRequest::default())
+        .await
+        .unwrap();
     assert!(resp.total >= resp.items.len() as u64, "total ≥ items count");
     assert!(resp.limit > 0, "default limit should be positive");
     assert_eq!(resp.offset, 0, "default offset should be 0");
@@ -16,7 +19,7 @@ async fn test_list_offers_default_filters() {
 #[ignore = "requires internet connection"]
 async fn test_list_offers_zero_limit() {
     let c = client();
-    let filters = OfferFilters {
+    let filters = OfferFiltersRequest {
         limit: Some(0),
         ..Default::default()
     };

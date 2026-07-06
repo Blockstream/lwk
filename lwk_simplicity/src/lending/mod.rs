@@ -4,7 +4,7 @@ mod indexer;
 mod network;
 
 pub use indexer::client::IndexerClient;
-pub use indexer::client::OfferFilters;
+pub use indexer::request::OfferFiltersRequest;
 
 pub use core::BorrowerAccountCreationResult;
 pub use core::BorrowerAccountParams;

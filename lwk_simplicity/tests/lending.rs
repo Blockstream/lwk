@@ -173,7 +173,7 @@ async fn test_borrow_flow() {
 
     for _ in 0..20 {
         let offers = indexer_client
-            .list_offers(&OfferFilters::default())
+            .list_offers(&OfferFiltersRequest::default())
             .await
             .unwrap();
 

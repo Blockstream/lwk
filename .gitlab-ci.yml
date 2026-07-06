@@ -396,7 +396,6 @@ wasm:
     - cargo check --target wasm32-unknown-unknown -p lwk_ledger --no-default-features
     - cargo check --target wasm32-unknown-unknown -p lwk_boltz --no-default-features
     - (cd lwk_wasm && CHROMEDRIVER_ARGS="--allowed-ips=127.0.0.1" WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --chrome --headless --features serial)
-    - (cd lwk_wasm && RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --no-opt --features serial)
     # testing nodejs package
     - cd lwk_wasm
     - RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --no-opt --target nodejs --out-dir pkg_node -- --features serial,simplicity
@@ -404,9 +403,33 @@ wasm:
     - cd tests/node
     - npm install
     - npm run test
+
+build_wasm:
+  stage: build
+  needs: []
+  extends: .base
+  variables:
+    RUSTFLAGS: "--cfg=web_sys_unstable_apis"
+  script:
+    - cd lwk_wasm
+    - wasm-pack build --no-opt --features serial
   artifacts:
     paths:
       - lwk_wasm/pkg
+
+liquid_web_wallet:
+  stage: test
+  extends: .base
+  needs:
+    - job: build_wasm
+      artifacts: true
+  script:
+    - cd ..
+    - git clone --depth 1 --branch master https://github.com/RCasatta/liquid-web-wallet.git
+    - cd liquid-web-wallet
+    - npm install
+    - npm install $CI_PROJECT_DIR/lwk_wasm/pkg
+    - npm run build
 
 # AMP0 has a closed source backend, so its tests are unreliable, allow them to fail.
 # Anyway for MRs/PRs that touch AMP0 code, this must pass.

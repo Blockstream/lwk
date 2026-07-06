@@ -428,6 +428,7 @@ liquid_web_wallet:
     - git clone --depth 1 --branch master https://github.com/RCasatta/liquid-web-wallet.git
     - cd liquid-web-wallet
     - npm install
+    - npm install $CI_PROJECT_DIR/lwk_wasm/pkg
     - npm run build
 
 # AMP0 has a closed source backend, so its tests are unreliable, allow them to fail.

@@ -1,4 +1,4 @@
-//! Indexer client implementation for indexer in `simplicity-lending`.
+//! Client implementation for lending indexer in `simplicity-lending`.
 //! <https://github.com/BlockstreamResearch/simplicity-lending/tree/main/crates/indexer#api-reference>
 
 use reqwest::StatusCode;
@@ -46,6 +46,9 @@ impl IndexerClient {
         deserialize_response(resp).await
     }
 
+    /// Get factories for the given script pubkey.
+    ///
+    /// A factory is a UTXO which allows the owner to create offers.
     pub async fn get_factories_by_script(
         &self,
         script_pubkey: &str,

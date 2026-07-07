@@ -6,7 +6,7 @@ use crate::{
     model::{ExternalUtxo, IssuanceDetails, Recipient},
     pset_create::{validate_address, IssuanceRequest, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS},
     Contract, DownloadTxResult, Error, LiquidexProposal, Network, UnvalidatedRecipient, Update,
-    Wollet, EC,
+    WalletTxOut, Wollet, EC,
 };
 use elements::{
     confidential::{AssetBlindingFactor, Nonce, Value, ValueBlindingFactor},
@@ -177,6 +177,7 @@ pub struct TxBuilder {
     external_utxos: Vec<ExternalUtxo>,
 
     selected_utxos: Option<Vec<OutPoint>>,
+    inputs_order: Option<Vec<OutPoint>>,
 
     add_input_rangeproofs: bool,
 
@@ -198,6 +199,7 @@ impl TxBuilder {
             drain_to: None,
             external_utxos: vec![],
             selected_utxos: None,
+            inputs_order: None,
             add_input_rangeproofs: true,
             is_liquidex_make: false,
             liquidex_proposals: vec![],
@@ -445,6 +447,15 @@ impl TxBuilder {
     /// * Insufficient funds (remember to include L-BTC utxos for fees)
     pub fn set_wallet_utxos(mut self, utxos: Vec<OutPoint>) -> Self {
         self.selected_utxos = Some(utxos);
+        self
+    }
+
+    /// Orders inputs selected with manual coin selection and external utxos
+    ///
+    /// If this is called, `set_wallet_utxos` must be called too.
+    /// The outpoints passed to this method, must be the union of the outpoints passed to `set_wallet_utxos` and `set_external_utxos`.
+    pub fn set_inputs_order(mut self, inputs_order: Vec<OutPoint>) -> Self {
+        self.inputs_order = Some(inputs_order);
         self
     }
 
@@ -871,9 +882,39 @@ impl TxBuilder {
 
     fn finish_inner(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
         if self.is_liquidex_make {
+            if self.inputs_order.is_some() {
+                return Err(Error::LiquidexUnsupportedWithInputsOrder);
+            }
+
             return self.finish_liquidex_make(wollet);
         } else if !self.liquidex_proposals.is_empty() {
+            if self.inputs_order.is_some() {
+                return Err(Error::LiquidexUnsupportedWithInputsOrder);
+            }
+
             return self.finish_liquidex_take(wollet);
+        }
+
+        if let Some(inputs_order) = self.inputs_order.as_ref() {
+            let selected_outpoints = self
+                .selected_utxos
+                .as_ref()
+                .ok_or(Error::InputsOrderRequiresWalletUtxos)?;
+
+            // TODO: check selected_utxos for duplicates too
+            let mut ordered = HashSet::new();
+            for outpoint in inputs_order {
+                if !ordered.insert(*outpoint) {
+                    return Err(Error::DuplicatedOutpoint(*outpoint));
+                }
+            }
+
+            let mut expected: HashSet<OutPoint> = selected_outpoints.iter().copied().collect();
+            expected.extend(self.external_utxos.iter().map(|utxo| utxo.outpoint));
+
+            if ordered != expected {
+                return Err(Error::InputsOrderUtxosMismatch);
+            }
         }
         // Init PSET
         let mut pset = PartiallySignedTransaction::new_v2();
@@ -915,60 +956,50 @@ impl TxBuilder {
         // Policy asset is handled separately below
         assets.remove(&policy_asset);
 
+        enum Item<'a> {
+            Own(&'a WalletTxOut),
+            External(&'a ExternalUtxo),
+        }
+
         for asset in assets {
             let mut satoshi_out = 0;
             let mut satoshi_in = 0;
+
             for addressee in addressees_asset.iter().filter(|a| a.asset == asset) {
                 wollet.add_output(&mut pset, addressee)?;
                 satoshi_out += addressee.satoshi;
             }
 
-            // Add all external asset utxos
-            for utxo in &self.external_utxos {
-                if utxo.unblinded.asset != asset {
-                    continue;
-                }
-                add_external_input(
-                    &mut pset,
-                    &mut inp_txout_sec,
-                    &mut inp_weight,
-                    utxo,
-                    self.add_input_rangeproofs,
-                )?;
+            let mut gathered = Vec::new();
+
+            for utxo in self
+                .external_utxos
+                .iter()
+                .filter(|utxo| utxo.unblinded.asset == asset)
+            {
+                gathered.push(Item::External(utxo));
                 satoshi_in += utxo.unblinded.value;
             }
 
             if self.selected_utxos.is_some() {
                 // Add only selected asset utxos
-                for utxo in &selected_utxos {
-                    if utxo.unblinded.asset != asset {
-                        continue;
-                    }
-                    wollet.add_input(
-                        &mut pset,
-                        &mut inp_txout_sec,
-                        &mut inp_weight,
-                        utxo,
-                        self.add_input_rangeproofs,
-                    )?;
+                for &utxo in selected_utxos
+                    .iter()
+                    .filter(|utxo| utxo.unblinded.asset == asset)
+                {
+                    gathered.push(Item::Own(utxo));
                     satoshi_in += utxo.unblinded.value;
                 }
             } else {
-                // Add more asset utxos until we cover the amount to send
-                if satoshi_in < satoshi_out {
-                    for utxo in utxos.values().filter(|u| u.unblinded.asset == asset) {
-                        wollet.add_input(
-                            &mut pset,
-                            &mut inp_txout_sec,
-                            &mut inp_weight,
-                            utxo,
-                            self.add_input_rangeproofs,
-                        )?;
-                        satoshi_in += utxo.unblinded.value;
-                        if satoshi_in >= satoshi_out {
-                            break;
-                        }
-                    }
+                let mut auto_utxos = utxos.values().filter(|u| u.unblinded.asset == asset);
+
+                while satoshi_in < satoshi_out {
+                    let Some(utxo) = auto_utxos.next() else {
+                        break;
+                    };
+
+                    gathered.push(Item::Own(utxo));
+                    satoshi_in += utxo.unblinded.value;
                 }
             }
 
@@ -988,6 +1019,56 @@ impl TxBuilder {
                     is_token: false,
                 });
             }
+
+            if self.inputs_order.is_none() {
+                for utxo in gathered {
+                    match utxo {
+                        Item::Own(utxo) => wollet.add_input(
+                            &mut pset,
+                            &mut inp_txout_sec,
+                            &mut inp_weight,
+                            utxo,
+                            self.add_input_rangeproofs,
+                        )?,
+                        Item::External(utxo) => add_external_input(
+                            &mut pset,
+                            &mut inp_txout_sec,
+                            &mut inp_weight,
+                            utxo,
+                            self.add_input_rangeproofs,
+                        )?,
+                    };
+                }
+            }
+        }
+
+        if let Some(inputs_order) = self.inputs_order.as_ref() {
+            let external_by_outpoint = self
+                .external_utxos
+                .iter()
+                .map(|eu| (eu.outpoint, eu))
+                .collect::<HashMap<_, _>>();
+            for outpoint in inputs_order {
+                if let Some(utxo) = utxos.get(outpoint) {
+                    wollet.add_input(
+                        &mut pset,
+                        &mut inp_txout_sec,
+                        &mut inp_weight,
+                        utxo,
+                        self.add_input_rangeproofs,
+                    )?;
+                } else {
+                    add_external_input(
+                        &mut pset,
+                        &mut inp_txout_sec,
+                        &mut inp_weight,
+                        external_by_outpoint
+                            .get(outpoint)
+                            .expect("set equality checked at the top"),
+                        self.add_input_rangeproofs,
+                    )?;
+                }
+            }
         }
 
         // L-BTC inputs and outputs
@@ -1004,13 +1085,15 @@ impl TxBuilder {
             if utxo.unblinded.asset != policy_asset {
                 continue;
             }
-            add_external_input(
-                &mut pset,
-                &mut inp_txout_sec,
-                &mut inp_weight,
-                utxo,
-                self.add_input_rangeproofs,
-            )?;
+            if self.inputs_order.is_none() {
+                add_external_input(
+                    &mut pset,
+                    &mut inp_txout_sec,
+                    &mut inp_weight,
+                    utxo,
+                    self.add_input_rangeproofs,
+                )?;
+            }
             satoshi_in += utxo.unblinded.value;
         }
 
@@ -1019,13 +1102,15 @@ impl TxBuilder {
                 if utxo.unblinded.asset != policy_asset {
                     continue;
                 }
-                wollet.add_input(
-                    &mut pset,
-                    &mut inp_txout_sec,
-                    &mut inp_weight,
-                    utxo,
-                    self.add_input_rangeproofs,
-                )?;
+                if self.inputs_order.is_none() {
+                    wollet.add_input(
+                        &mut pset,
+                        &mut inp_txout_sec,
+                        &mut inp_weight,
+                        utxo,
+                        self.add_input_rangeproofs,
+                    )?;
+                }
                 satoshi_in += utxo.unblinded.value;
             }
         } else {
@@ -1052,6 +1137,10 @@ impl TxBuilder {
                 address_token,
                 contract,
             ) => {
+                // TODO: remove once issuance can be pinned to a specific input
+                if self.inputs_order.is_some() {
+                    return Err(Error::IssuanceUnsupportedWithInputsOrder);
+                }
                 // At least a L-BTC input for the fee was added.
                 let idx = 0;
                 let (asset, token) =
@@ -1097,19 +1186,25 @@ impl TxBuilder {
                     match inp_txout_sec.iter().find(|(_, u)| u.asset == token) {
                         Some((idx, u)) => (*idx, u.asset_bf),
                         None => {
+                            if self.inputs_order.is_some() {
+                                // The token utxo isn't among the pinned inputs, and
+                                // `inputs_order` forbids adding any input beyond them.
+                                return Err(Error::TokenUtxoNotInInputsOrder(token));
+                            }
                             // Add an input sending the token,
                             let utxos_token: Vec<_> = utxos
                                 .values()
                                 .filter(|u| u.unblinded.asset == token)
                                 .collect();
-                            let utxo_token =
-                                utxos_token
-                                    .first()
-                                    .ok_or_else(|| Error::InsufficientFunds {
-                                        missing_sats: 1, // We need at least one token
-                                        asset_id: token,
-                                        is_token: true,
-                                    })?;
+                            let utxo_token = utxos_token
+                                .first()
+                                // TODO: add new error for this case
+                                .ok_or_else(|| Error::InsufficientFunds {
+                                    missing_sats: 1, // We need at least one token
+                                    asset_id: token,
+                                    is_token: true,
+                                })?;
+
                             let idx = wollet.add_input(
                                 &mut pset,
                                 &mut inp_txout_sec,
@@ -1595,6 +1690,14 @@ impl<'a> WolletTxBuilder<'a> {
         Self {
             wollet: self.wollet,
             inner: self.inner.set_wallet_utxos(utxos),
+        }
+    }
+
+    /// Wrapper of [`TxBuilder::set_inputs_order()`]
+    pub fn set_inputs_order(self, inputs_order: Vec<OutPoint>) -> Self {
+        Self {
+            wollet: self.wollet,
+            inner: self.inner.set_inputs_order(inputs_order),
         }
     }
 

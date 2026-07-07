@@ -233,6 +233,26 @@ pub enum Error {
     #[error("Missing wallet UTXO {0}")]
     MissingWalletUtxo(OutPoint),
 
+    #[error("Inputs order contains duplicated outpoint {0}")]
+    DuplicatedOutpoint(OutPoint),
+
+    #[error("Manual inputs order requires `set_wallet_utxos` to be set too")]
+    InputsOrderRequiresWalletUtxos,
+
+    #[error(
+        "Manual inputs order must be exactly the union of the outpoints passed to `set_wallet_utxos` and the external utxos"
+    )]
+    InputsOrderUtxosMismatch,
+
+    #[error("Reissuance token {0} utxo is required but not present in the manual inputs order")]
+    TokenUtxoNotInInputsOrder(crate::elements::AssetId),
+
+    #[error("Issuing a new asset is not supported together with a manual input order")]
+    IssuanceUnsupportedWithInputsOrder,
+
+    #[error("LiquiDEX make/take is not supported together with a manual inputs order")]
+    LiquidexUnsupportedWithInputsOrder,
+
     #[error("Transaction has empty witness, did you forget to sign and finalize?")]
     EmptyWitness,
 

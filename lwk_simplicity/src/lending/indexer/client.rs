@@ -173,13 +173,43 @@ impl OfferFilters {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct OfferListItemShort {
+pub struct OfferListItem {
     pub id: Uuid,
+    pub issuance_factory_id: Uuid,
+    pub status: OfferStatus,
+    pub collateral_asset: String,
+    pub principal_asset: String,
+    pub collateral_amount: String,
+    pub principal_amount: String,
+    pub interest_rate: u32,
+    pub loan_expiration_height: u32,
+    pub created_at_height: u64,
+    pub created_at_txid: String,
+    pub participants: Vec<ParticipantShort>,
+    pub borrower_principal_utxo: Option<OfferUtxoOutpointShort>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ParticipantType {
+    Borrower,
+    Lender,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ParticipantShort {
+    pub participant_type: ParticipantType,
+    pub script_pubkey: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct OfferUtxoOutpointShort {
+    pub txid: String,
+    pub vout: u32,
+}
+#[derive(Debug, Clone, Deserialize)]
 pub struct OfferListResponse {
-    pub items: Vec<OfferListItemShort>,
+    pub items: Vec<OfferListItem>,
     pub total: u64,
     pub limit: u64,
     pub offset: u64,

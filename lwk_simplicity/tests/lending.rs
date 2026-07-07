@@ -20,15 +20,15 @@ pub fn fund_wollet<S: BlockchainBackend>(
     client: &mut S,
     env: &TestEnv,
     satoshi: u64,
+    asset_id: Option<AssetId>,
 ) {
     let address = wollet.address(None).unwrap();
-    let txid = env.elementsd_sendtoaddress(address.address(), satoshi, None);
+    let txid = env.elementsd_sendtoaddress(address.address(), satoshi, asset_id);
     env.elementsd_generate(1);
     wait_for_tx(wollet, client, &txid);
 }
 
 #[tokio::test]
-#[should_panic(expected = "not yet implemented")]
 async fn test_borrow_flow() {
     let binary = std::fs::canonicalize(
         std::env::var("LENDING_INDEXER_EXEC").expect("LENDING_INDEXER_EXEC must be set"),
@@ -68,7 +68,18 @@ async fn test_borrow_flow() {
         .unwrap();
 
     // Fund the borrower wallet with L-BTC
-    fund_wollet(&mut borrower_wollet, &mut client, &env, 500);
+    fund_wollet(&mut borrower_wollet, &mut client, &env, 500_000, None);
+
+    // create a collateral_asset and send to the borrower
+    let collateral_asset_id = env.elementsd_issueasset(1_000_000);
+    fund_wollet(
+        &mut borrower_wollet,
+        &mut client,
+        &env,
+        500_000,
+        Some(collateral_asset_id),
+    );
+
     // Create lending session
     let mut borrower_session = LendingSession::builder(network, borrower_wd)
         .set_indexer_url(indexer_url)
@@ -110,34 +121,74 @@ async fn test_borrow_flow() {
 
     // Check if indexer is showing our factory by script_pubkey
     let spk = transaction.output[0].script_pubkey.to_hex();
-    let mut found = false;
+    let mut found_factory = None;
+
     for _ in 0..20 {
-        if !indexer_client
-            .get_factories_by_script(&spk)
-            .await
-            .unwrap()
-            .is_empty()
-        {
-            found = true;
+        let factories = indexer_client.get_factories_by_script(&spk).await.unwrap();
+
+        // If we get an element, store it and break out of the loop
+        if let Some(factory) = factories.into_iter().next() {
+            found_factory = Some(factory);
             break;
         }
+
         tokio::time::sleep(Duration::from_millis(500)).await;
     }
-    assert!(found);
+
+    let factory = found_factory.expect("Factory was not found within the timeout");
 
     // Create borrow details
     let borrow_details = OfferDetails {
         principal_asset_id: AssetId::from_byte_array([0; 32]),
         principal_amount: 10000,
-        collateral_asset_id: *network.policy_asset(),
+        collateral_asset_id,
         collateral_amount: 200000,
         // 60 blocks after the current one
         loan_expiration_time: env.elementsd_height() as u32 + 60,
         // 20 % interest rate
         principal_interest_rate: 2_000,
+        protocol_fee_keeper_asset_id: *network.policy_asset(),
     };
 
-    let _create = borrower_session
-        .borrower_create_offer(borrow_details)
+    // sync to fetch fee transaction
+    borrower_session.sync().unwrap();
+
+    let mut create = borrower_session
+        .borrower_create_offer(borrow_details, factory.clone())
         .unwrap();
+
+    // sign
+    borrower_signer.sign(&mut create.pset).unwrap();
+
+    // finalize
+    let tx = borrower_session.finalize(&mut create.pset).unwrap();
+
+    // broadcast
+    let txid = client.broadcast(&tx).unwrap();
+
+    env.elementsd_generate(1);
+
+    // Check if indexer is showing our factory by script_pubkey
+    let mut found_offers = None;
+
+    for _ in 0..20 {
+        let offers = indexer_client
+            .list_offers(&OfferFilters::default())
+            .await
+            .unwrap();
+
+        if !offers.items.is_empty() {
+            found_offers = Some(offers);
+            break;
+        }
+
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+
+    let items = found_offers.expect("offer not found").items;
+
+    let item = items.first().expect("items for list_offers is empty");
+
+    assert_eq!(item.issuance_factory_id, factory.id);
+    assert_eq!(item.created_at_txid, txid.to_string());
 }

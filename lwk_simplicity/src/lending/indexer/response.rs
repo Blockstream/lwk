@@ -1,6 +1,8 @@
 use serde::Deserialize;
 use uuid::Uuid;
 
+use super::common::OfferStatus;
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct OfferListItem {
     pub id: Uuid,

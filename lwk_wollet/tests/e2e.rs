@@ -2591,6 +2591,236 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[test]
+fn test_inputs_order() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &desc);
+    let node_address = env.elementsd_getnewaddress();
+
+    let policy_asset = w.policy_asset();
+
+    // Fund the wallet with 2 L-BTC UTXOs
+    w.fund(&env, 100_000, None, None);
+    w.fund(&env, 500_000, None, None);
+    env.elementsd_generate(1);
+
+    let utxos = w.wollet.utxos().unwrap();
+    assert_eq!(utxos.len(), 2);
+    let utxo_small = utxos
+        .iter()
+        .find(|u| u.unblinded.value == 100_000)
+        .unwrap()
+        .outpoint;
+    let utxo_big = utxos
+        .iter()
+        .find(|u| u.unblinded.value == 500_000)
+        .unwrap()
+        .outpoint;
+
+    // Pin the smaller UTXO first, even though auto-selection would pick the
+    // bigger one first (utxos are sorted biggest first, see test_manual_coin_selection).
+    let mut pset = w
+        .tx_builder()
+        .add_recipient(&node_address, 550_000, policy_asset)
+        .unwrap()
+        .set_wallet_utxos(vec![utxo_small, utxo_big])
+        .set_inputs_order(vec![utxo_small, utxo_big])
+        .finish()
+        .unwrap();
+    assert_eq!(pset.inputs().len(), 2);
+    let in0 = OutPoint::new(
+        pset.inputs()[0].previous_txid,
+        pset.inputs()[0].previous_output_index,
+    );
+    let in1 = OutPoint::new(
+        pset.inputs()[1].previous_txid,
+        pset.inputs()[1].previous_output_index,
+    );
+    assert_eq!(in0, utxo_small);
+    assert_eq!(in1, utxo_big);
+    signer.sign(&mut pset).unwrap();
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let tx = serialize(&tx);
+    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+
+    // Duplicated outpoint in inputs_order
+    let err = w
+        .tx_builder()
+        .set_wallet_utxos(vec![utxo_small])
+        .set_inputs_order(vec![utxo_small, utxo_small])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::DuplicatedOutpoint(o) if o == utxo_small));
+
+    // inputs_order requires set_wallet_utxos to be set too
+    let err = w
+        .tx_builder()
+        .set_inputs_order(vec![utxo_big])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::InputsOrderRequiresWalletUtxos));
+
+    // inputs_order must be exactly the union of set_wallet_utxos and the external utxos
+    let err = w
+        .tx_builder()
+        .set_wallet_utxos(vec![utxo_small])
+        .set_inputs_order(vec![utxo_big])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::InputsOrderUtxosMismatch));
+
+    // Outpoint not owned by the wallet and not provided as an external utxo
+    let non_wallet_outpoint = OutPoint::new(txid_test_vector(), 0);
+    let err = w
+        .tx_builder()
+        .set_wallet_utxos(vec![non_wallet_outpoint])
+        .set_inputs_order(vec![non_wallet_outpoint])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::MissingWalletUtxo(o) if o == non_wallet_outpoint));
+
+    // inputs_order mixing a selected wallet utxo with an external utxo succeeds,
+    // and the external utxo is pinned first even though it was added last.
+    let signer2 = generate_signer();
+    let view_key2 = generate_view_key();
+    let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer2.xpub());
+    let client2 = test_client_electrum(&env.electrum_url());
+    let mut w2 = TestWollet::new(client2, &desc2);
+    w2.fund(&env, 200_000, None, None);
+    env.elementsd_generate(1);
+    let external_utxo = w2.make_external(&w2.wollet.utxos().unwrap()[0]);
+    let external_outpoint = external_utxo.outpoint;
+
+    let mut pset = w
+        .tx_builder()
+        .add_recipient(&node_address, 600_000, policy_asset)
+        .unwrap()
+        .set_wallet_utxos(vec![utxo_big])
+        .add_external_utxos(vec![external_utxo])
+        .unwrap()
+        .set_inputs_order(vec![external_outpoint, utxo_big])
+        .finish()
+        .unwrap();
+    assert_eq!(pset.inputs().len(), 2);
+    let in0 = OutPoint::new(
+        pset.inputs()[0].previous_txid,
+        pset.inputs()[0].previous_output_index,
+    );
+    let in1 = OutPoint::new(
+        pset.inputs()[1].previous_txid,
+        pset.inputs()[1].previous_output_index,
+    );
+    assert_eq!(in0, external_outpoint);
+    assert_eq!(in1, utxo_big);
+
+    w2.wollet.add_details(&mut pset).unwrap();
+    let mixed_signers = [
+        &AnySigner::Software(signer.clone()),
+        &AnySigner::Software(signer2),
+    ];
+    for s in mixed_signers {
+        w.sign(s, &mut pset);
+    }
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let tx = serialize(&tx);
+    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+
+    // Issuing a new asset together with a manual input order is rejected
+    let err = w
+        .tx_builder()
+        .issue_asset(10, None, 1, None, None)
+        .unwrap()
+        .set_wallet_utxos(vec![utxo_big])
+        .set_inputs_order(vec![utxo_big])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::IssuanceUnsupportedWithInputsOrder));
+    // Issue an asset (without inputs_order) so we can test reissuance + inputs_order
+    let signers = [&AnySigner::Software(signer.clone())];
+    let (asset, token) = w.issueasset(&signers, 10, 1, None, None);
+    env.elementsd_generate(1);
+    let utxos = w.wollet.utxos().unwrap();
+    let token_utxo = utxos
+        .iter()
+        .find(|u| u.unblinded.asset == token)
+        .unwrap()
+        .outpoint;
+    let lbtc_utxo = utxos
+        .iter()
+        .find(|u| u.unblinded.asset == policy_asset)
+        .unwrap()
+        .outpoint;
+
+    // Reissuance with inputs_order that omits the required token utxo is rejected
+    let err = w
+        .tx_builder()
+        .reissue_asset(asset, 5, None, None)
+        .unwrap()
+        .set_wallet_utxos(vec![lbtc_utxo])
+        .set_inputs_order(vec![lbtc_utxo])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::TokenUtxoNotInInputsOrder(a) if a == token));
+
+    // LiquiDEX make combined with a manual inputs order is rejected
+    let err = w
+        .tx_builder()
+        .liquidex_make(lbtc_utxo, &node_address, 1000, asset)
+        .unwrap()
+        .set_inputs_order(vec![lbtc_utxo])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::LiquidexUnsupportedWithInputsOrder));
+
+    // LiquiDEX take combined with a manual inputs order is rejected
+    let addr_recv = w.address_result(None).address().clone();
+    let mut pset = w
+        .tx_builder()
+        .liquidex_make(lbtc_utxo, &addr_recv, 1000, asset)
+        .unwrap()
+        .finish()
+        .unwrap();
+    signer.sign(&mut pset).unwrap();
+    let proposal = LiquidexProposal::from_pset(&pset).unwrap();
+    let txid = proposal.needed_tx().unwrap();
+    let tx = w.wollet.transaction(&txid).unwrap().unwrap().tx;
+    let proposal = proposal.validate(tx).unwrap();
+
+    let err = w2
+        .tx_builder()
+        .liquidex_take(vec![proposal])
+        .unwrap()
+        .set_inputs_order(vec![])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::LiquidexUnsupportedWithInputsOrder));
+
+    // Reissuance with inputs_order that includes the token utxo succeeds
+    let mut pset = w
+        .tx_builder()
+        .reissue_asset(asset, 5, None, None)
+        .unwrap()
+        .set_wallet_utxos(vec![token_utxo, lbtc_utxo])
+        .set_inputs_order(vec![token_utxo, lbtc_utxo])
+        .finish()
+        .unwrap();
+    assert_eq!(pset.inputs().len(), 2);
+    let in0 = OutPoint::new(
+        pset.inputs()[0].previous_txid,
+        pset.inputs()[0].previous_output_index,
+    );
+    assert_eq!(in0, token_utxo);
+    signer.sign(&mut pset).unwrap();
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let tx = serialize(&tx);
+    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+}
+
 #[ignore = "This test connects to liquid testnet"]
 #[test]
 fn test_liquid_testnet() {

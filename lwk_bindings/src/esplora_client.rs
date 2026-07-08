@@ -6,7 +6,7 @@ use lwk_wollet::{
     clients::blocking::{self, BlockchainBackend},
 };
 
-use crate::{BlockHeader, LwkError, Network, Transaction, Txid, Update, Wollet};
+use crate::{BlockHeader, LwkError, Network, Transaction, Txid, Update, Wollet, WolletDescriptor};
 
 /// A blockchain backend implementation based on the
 /// [esplora HTTP API](https://github.com/blockstream/esplora/blob/master/API.md)
@@ -25,6 +25,60 @@ pub struct EsploraClient {
 #[derive(uniffi::Object, Debug)]
 pub struct WaterfallsClient {
     pub(crate) inner: Mutex<blocking::WaterfallsClient>,
+}
+
+/// A blocking Waterfalls descriptor subscription stream.
+#[derive(uniffi::Object)]
+pub struct WaterfallsSubscription {
+    inner: blocking::WaterfallsSubscription,
+}
+
+/// An update received from a Waterfalls descriptor subscription stream.
+#[derive(uniffi::Record, Clone, Debug, PartialEq, Eq)]
+pub struct WaterfallsSubscriptionEvent {
+    /// The event kind: `tip`, `mempool`, `block`, or `reorg`.
+    pub kind: String,
+
+    /// The Waterfalls server tip observed when the event was emitted.
+    pub tip: Option<WaterfallsSubscriptionTip>,
+}
+
+/// Chain tip metadata included in Waterfalls subscription events.
+#[derive(uniffi::Record, Clone, Debug, PartialEq, Eq)]
+pub struct WaterfallsSubscriptionTip {
+    /// The tip block height.
+    pub height: u32,
+
+    /// The tip block hash.
+    pub block_hash: String,
+
+    /// The tip block timestamp.
+    pub timestamp: u32,
+}
+
+impl From<lwk_wollet::clients::WaterfallsSubscriptionEvent> for WaterfallsSubscriptionEvent {
+    fn from(event: lwk_wollet::clients::WaterfallsSubscriptionEvent) -> Self {
+        Self {
+            kind: match event.kind {
+                lwk_wollet::clients::WaterfallsSubscriptionEventKind::Tip => "tip",
+                lwk_wollet::clients::WaterfallsSubscriptionEventKind::Mempool => "mempool",
+                lwk_wollet::clients::WaterfallsSubscriptionEventKind::Block => "block",
+                lwk_wollet::clients::WaterfallsSubscriptionEventKind::Reorg => "reorg",
+            }
+            .to_string(),
+            tip: event.tip.map(Into::into),
+        }
+    }
+}
+
+impl From<lwk_wollet::clients::WaterfallsSubscriptionTip> for WaterfallsSubscriptionTip {
+    fn from(tip: lwk_wollet::clients::WaterfallsSubscriptionTip) -> Self {
+        Self {
+            height: tip.height,
+            block_hash: tip.block_hash.to_string(),
+            timestamp: tip.timestamp,
+        }
+    }
 }
 
 /// Provider of a token for authenticated Esplora and Waterfalls backends.
@@ -321,6 +375,38 @@ impl WaterfallsClient {
         let tip = self.inner.lock()?.tip()?;
         Ok(Arc::new(tip.into()))
     }
+
+    /// Subscribe to Waterfalls descriptor updates.
+    ///
+    /// Subscription events are hints. `tip` events only indicate a new chain tip;
+    /// `mempool`, `block`, and `reorg` indicate wallet invalidation hints.
+    pub fn subscribe(
+        &self,
+        descriptor: &WolletDescriptor,
+    ) -> Result<Arc<WaterfallsSubscription>, LwkError> {
+        let subscription = self.inner.lock()?.subscribe(descriptor.as_ref())?;
+        Ok(Arc::new(WaterfallsSubscription {
+            inner: subscription,
+        }))
+    }
+}
+
+#[uniffi::export]
+impl WaterfallsSubscription {
+    /// Return the next Waterfalls subscription update.
+    ///
+    /// Returns `None` when the server closes the stream or [`Self::close`] is called.
+    pub fn next_update(&self) -> Result<Option<WaterfallsSubscriptionEvent>, LwkError> {
+        self.inner
+            .next_update()
+            .map(|event| event.map(Into::into))
+            .map_err(Into::into)
+    }
+
+    /// Stop the subscription stream and release its worker thread.
+    pub fn close(&self) {
+        self.inner.close();
+    }
 }
 
 impl EsploraClient {
@@ -340,6 +426,9 @@ impl EsploraClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str::FromStr;
+
+    use elements::BlockHash;
     use lwk_wollet::clients::TokenProvider as CoreTokenProvider;
 
     // These tests exercise the binding-side authentication wiring offline: building a client
@@ -430,5 +519,31 @@ mod tests {
             }),
         };
         assert!(WaterfallsClient::from_builder(builder).is_ok());
+    }
+
+    #[test]
+    fn waterfalls_subscription_event_conversion() {
+        let block_hash =
+            BlockHash::from_str("0000000000000000000000000000000000000000000000000000000000000001")
+                .unwrap();
+        let event = lwk_wollet::clients::WaterfallsSubscriptionEvent {
+            kind: lwk_wollet::clients::WaterfallsSubscriptionEventKind::Tip,
+            tip: Some(lwk_wollet::clients::WaterfallsSubscriptionTip {
+                height: 42,
+                block_hash,
+                timestamp: 123,
+            }),
+        };
+
+        let event = WaterfallsSubscriptionEvent::from(event);
+        assert_eq!(event.kind, "tip");
+        assert_eq!(
+            event.tip,
+            Some(WaterfallsSubscriptionTip {
+                height: 42,
+                block_hash: block_hash.to_string(),
+                timestamp: 123,
+            })
+        );
     }
 }

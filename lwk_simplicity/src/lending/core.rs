@@ -101,7 +101,7 @@ impl LendingSession {
             .iter()
             .filter(|u| u.unblinded.asset == policy_asset && u.unblinded.value > FEE)
             .min_by_key(|u| u.unblinded.value)
-            .ok_or_else(|| LendingError::Config("no suitable funding UTXO".into()))?;
+            .ok_or_else(|| LendingError::Generic("no suitable funding UTXO".into()))?;
         let input_value = funding_utxo.unblinded.value;
         let funding_outpoint = funding_utxo.outpoint;
 
@@ -109,7 +109,9 @@ impl LendingSession {
             .wollet
             .transaction(&funding_outpoint.txid)
             .map_err(LendingError::Wallet)?
-            .ok_or_else(|| LendingError::Config("transaction for funding UTXO not found".into()))?;
+            .ok_or_else(|| {
+                LendingError::Generic("transaction for funding UTXO not found".into())
+            })?;
         let txout = tx_details.tx.output[funding_outpoint.vout as usize].clone();
 
         let parameters = IssuanceFactoryParameters {
@@ -138,7 +140,7 @@ impl LendingSession {
         let user_blinding_pk = address_result
             .address()
             .blinding_pubkey
-            .ok_or_else(|| LendingError::Config("address has no blinding key".into()))?;
+            .ok_or_else(|| LendingError::Generic("address has no blinding key".into()))?;
 
         ft.add_output(PartialOutput::new(
             user_script,
@@ -163,7 +165,7 @@ impl LendingSession {
             .script_pubkey();
         let user_blinding_pk_btc =
             lwk_wollet::elements::bitcoin::PublicKey::from_slice(&user_blinding_pk.serialize())
-                .map_err(|e| LendingError::Config(format!("invalid blinding key: {e}")))?;
+                .map_err(|e| LendingError::Generic(format!("invalid blinding key: {e}")))?;
         ft.add_output(
             PartialOutput::new(change_script, change_value, policy_asset)
                 .with_blinding_key(user_blinding_pk_btc),
@@ -173,7 +175,7 @@ impl LendingSession {
         let mut rng = thread_rng();
 
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)
-            .map_err(|e| LendingError::Config(format!("blinding error: {e}")))?;
+            .map_err(|e| LendingError::Generic(format!("blinding error: {e}")))?;
 
         self.wollet
             .add_details(&mut pset)
@@ -184,7 +186,7 @@ impl LendingSession {
             None,
             self.network.address_params(),
         )
-        .ok_or_else(|| LendingError::Config("invalid factory script_pubkey".into()))?;
+        .ok_or_else(|| LendingError::Generic("invalid factory script_pubkey".into()))?;
 
         Ok(BorrowerAccountCreationResult {
             pset,
@@ -277,13 +279,13 @@ impl LendingSession {
                     && u.unblinded.value >= details.collateral_amount
             })
             .min_by_key(|u| u.unblinded.value)
-            .ok_or_else(|| LendingError::Config("no suitable collateral UTXO in wallet".into()))?;
+            .ok_or_else(|| LendingError::Generic("no suitable collateral UTXO in wallet".into()))?;
         let collateral_value = collateral_utxo.unblinded.value;
 
         let collateral_tx = self
             .client
             .get_transaction(collateral_utxo.outpoint.txid)
-            .map_err(|e| LendingError::Config(format!("failed to fetch collateral tx: {e}")))?;
+            .map_err(|e| LendingError::Generic(format!("failed to fetch collateral tx: {e}")))?;
         let collateral_txout = collateral_tx.output[collateral_utxo.outpoint.vout as usize].clone();
 
         // Select a UTXO for a fee
@@ -295,13 +297,15 @@ impl LendingSession {
                     && u.outpoint != collateral_utxo.outpoint
             })
             .min_by_key(|u| u.unblinded.value)
-            .ok_or_else(|| LendingError::Config("no suitable fee funding UTXO in wallet".into()))?;
+            .ok_or_else(|| {
+                LendingError::Generic("no suitable fee funding UTXO in wallet".into())
+            })?;
         let fee_funding_value = fee_funding_utxo.unblinded.value;
 
         let fee_funding_tx = self
             .client
             .get_transaction(fee_funding_utxo.outpoint.txid)
-            .map_err(|e| LendingError::Config(format!("failed to fetch fee funding tx: {e}")))?;
+            .map_err(|e| LendingError::Generic(format!("failed to fetch fee funding tx: {e}")))?;
         let fee_funding_txout =
             fee_funding_tx.output[fee_funding_utxo.outpoint.vout as usize].clone();
 
@@ -311,7 +315,7 @@ impl LendingSession {
         let user_blinding_pk = address_result
             .address()
             .blinding_pubkey
-            .ok_or_else(|| LendingError::Config("address has no blinding key".into()))?;
+            .ok_or_else(|| LendingError::Generic("address has no blinding key".into()))?;
 
         // Use shared entropy for both NFTs
         let nfts_entropy = get_random_seed();
@@ -412,7 +416,7 @@ impl LendingSession {
 
         let user_blinding_pk_btc =
             lwk_wollet::elements::bitcoin::PublicKey::from_slice(&user_blinding_pk.serialize())
-                .map_err(|e| LendingError::Config(format!("invalid blinding key: {e}")))?;
+                .map_err(|e| LendingError::Generic(format!("invalid blinding key: {e}")))?;
 
         // Add fee output
         ft.add_output(PartialOutput::new(Script::default(), FEE, policy_asset));
@@ -443,7 +447,7 @@ impl LendingSession {
         // Blind, add details
         let mut rng = thread_rng();
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)
-            .map_err(|e| LendingError::Config(format!("blinding error: {e}")))?;
+            .map_err(|e| LendingError::Generic(format!("blinding error: {e}")))?;
 
         self.wollet
             .add_details(&mut pset)
@@ -526,7 +530,7 @@ impl LendingSession {
             let pruned_witness = program_input
                 .program
                 .finalize(pset, &witness_values, index, &simplex_network)
-                .map_err(|e| LendingError::Config(format!("program finalization error: {e}")))?;
+                .map_err(|e| LendingError::Generic(format!("program finalization error: {e}")))?;
 
             pset.inputs_mut()[index].final_script_witness = Some(pruned_witness);
         }

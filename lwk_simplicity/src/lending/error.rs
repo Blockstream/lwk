@@ -13,4 +13,7 @@ pub enum LendingError {
 
     #[error("Configuration error: {0}")]
     Config(String),
+
+    #[error("Generic error: {0}")]
+    Generic(String),
 }

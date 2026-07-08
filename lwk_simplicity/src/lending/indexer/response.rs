@@ -1,3 +1,4 @@
+use lwk_wollet::elements::AssetId;
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -8,8 +9,8 @@ pub struct OfferListItem {
     pub id: Uuid,
     pub issuance_factory_id: Uuid,
     pub status: OfferStatus,
-    pub collateral_asset: String,
-    pub principal_asset: String,
+    pub collateral_asset: AssetId,
+    pub principal_asset: AssetId,
     pub collateral_amount: String,
     pub principal_amount: String,
     pub interest_rate: u32,

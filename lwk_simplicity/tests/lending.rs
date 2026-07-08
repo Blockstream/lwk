@@ -154,7 +154,7 @@ async fn test_borrow_flow() {
     borrower_session.sync().unwrap();
 
     let mut create = borrower_session
-        .borrower_create_offer(borrow_details, factory.clone())
+        .borrower_create_offer(borrow_details, factory.clone().try_into().unwrap())
         .unwrap();
 
     // sign

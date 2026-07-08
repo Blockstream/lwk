@@ -1,4 +1,4 @@
-use lwk_wollet::elements::AssetId;
+use lwk_wollet::elements::{AssetId, Txid};
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -36,7 +36,7 @@ pub struct ParticipantShort {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct OfferUtxoOutpointShort {
-    pub txid: String,
+    pub txid: Txid,
     pub vout: u32,
 }
 #[derive(Debug, Clone, Deserialize)]
@@ -56,14 +56,14 @@ pub enum FactoryStatus {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct FactoryProgramUtxoDto {
-    pub txid: String,
+    pub txid: Txid,
     pub vout: u32,
     pub created_at_height: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct FactoryAuthUtxoDto {
-    pub txid: String,
+    pub txid: Txid,
     pub vout: u32,
     pub script_pubkey: String,
     pub created_at_height: u64,
@@ -72,7 +72,7 @@ pub struct FactoryAuthUtxoDto {
 #[derive(Debug, Clone, Deserialize)]
 pub struct FactoryDetailsResponse {
     pub id: Uuid,
-    pub factory_asset_id: String,
+    pub factory_asset_id: AssetId,
     pub program_script_pubkey: String,
     pub status: FactoryStatus,
     pub issuing_utxos_count: u16,

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 use lwk_common::Network;
 use lwk_wollet::{
@@ -203,34 +203,13 @@ impl LendingSession {
     pub fn borrower_create_offer(
         &mut self,
         details: OfferDetails,
-        factory: FactoryDetailsResponse,
+        factory: FactoryDetails,
     ) -> Result<CreateBorrowTransaction, LendingError> {
         // TODO: we should estimate fee dynamically
         const FEE: u64 = 250;
         const NFT_AMOUNT: u64 = 1;
 
         let policy_asset = *self.network.policy_asset();
-
-        let auth_utxo_data = factory.auth_utxo.as_ref().ok_or_else(|| {
-            LendingError::Config("factory has no auth UTXO on the indexer".into())
-        })?;
-        let program_utxo_data = factory.program_utxo.as_ref().ok_or_else(|| {
-            LendingError::Config("factory has no program UTXO on the indexer".into())
-        })?;
-
-        let auth_outpoint = OutPoint {
-            txid: Txid::from_str(&auth_utxo_data.txid)
-                .map_err(|e| LendingError::Config(format!("invalid auth txid: {e}")))?,
-            vout: auth_utxo_data.vout,
-        };
-        let program_outpoint = OutPoint {
-            txid: Txid::from_str(&program_utxo_data.txid)
-                .map_err(|e| LendingError::Config(format!("invalid program txid: {e}")))?,
-            vout: program_utxo_data.vout,
-        };
-
-        let factory_asset_id = AssetId::from_str(&factory.factory_asset_id)
-            .map_err(|e| LendingError::Config(format!("invalid factory asset id: {e}")))?;
 
         let issuance_factory_params = IssuanceFactoryParameters {
             issuing_utxos_count: 2,
@@ -242,31 +221,25 @@ impl LendingSession {
         // Fetch the prepare transaction to obtain the raw txouts for the factory utxos.
         let prepare_tx = self
             .client
-            .get_transaction(
-                Txid::from_str(&auth_utxo_data.txid)
-                    .map_err(|e| LendingError::Config(format!("invalid created_at_txid: {e}")))?,
-            )
-            .map_err(|e| LendingError::Config(format!("failed to fetch prepare tx: {e}")))?;
+            .get_transaction(factory.auth_utxo.txid)
+            .map_err(|e| LendingError::Generic(format!("failed to fetch prepare tx: {e}")))?;
 
         let program_tx = self
             .client
-            .get_transaction(
-                Txid::from_str(&program_utxo_data.txid)
-                    .map_err(|e| LendingError::Config(format!("invalid created_at_txid: {e}")))?,
-            )
-            .map_err(|e| LendingError::Config(format!("failed to fetch prepare tx: {e}")))?;
+            .get_transaction(factory.program_utxo.txid)
+            .map_err(|e| LendingError::Generic(format!("failed to fetch program tx: {e}")))?;
 
         let auth_txout = prepare_tx
             .output
-            .get(auth_outpoint.vout as usize)
-            .ok_or_else(|| LendingError::Config("auth vout out of bounds".into()))?
+            .get(factory.auth_utxo.vout as usize)
+            .ok_or_else(|| LendingError::Generic("auth vout out of bounds".into()))?
             .clone();
 
         let auth_script = auth_txout.script_pubkey.clone();
         let program_txout = program_tx
             .output
-            .get(program_outpoint.vout as usize)
-            .ok_or_else(|| LendingError::Config("program vout out of bounds".into()))?
+            .get(factory.program_utxo.vout as usize)
+            .ok_or_else(|| LendingError::Generic("program vout out of bounds".into()))?
             .clone();
 
         // TODO: should we select this UTXOs outside of the session?
@@ -326,10 +299,10 @@ impl LendingSession {
         // Input 0: auth UTXO
         ft.add_input(
             PartialInput::new(UTXO {
-                outpoint: auth_outpoint,
+                outpoint: factory.auth_utxo,
                 txout: auth_txout,
                 secrets: Some(TxOutSecrets {
-                    asset: factory_asset_id,
+                    asset: factory.factory_asset_id,
                     asset_bf: AssetBlindingFactor::zero(),
                     value: 1,
                     value_bf: ValueBlindingFactor::zero(),
@@ -342,7 +315,7 @@ impl LendingSession {
         ft.add_output(PartialOutput::new(
             auth_script.clone(),
             NFT_AMOUNT,
-            factory_asset_id,
+            factory.factory_asset_id,
         ));
 
         // - Input 1: program UTXO with borrower NFT issuance
@@ -351,10 +324,10 @@ impl LendingSession {
         let borrower_nft_details = issuance_factory.attach_assets_issuance(
             &mut ft,
             UTXO {
-                outpoint: program_outpoint,
+                outpoint: factory.program_utxo,
                 txout: program_txout,
                 secrets: Some(TxOutSecrets {
-                    asset: factory_asset_id,
+                    asset: factory.factory_asset_id,
                     asset_bf: AssetBlindingFactor::zero(),
                     value: 1,
                     value_bf: ValueBlindingFactor::zero(),
@@ -591,6 +564,46 @@ impl LendingSessionBuilder {
             wollet,
             indexer_url,
             client,
+        })
+    }
+}
+
+pub struct FactoryDetails {
+    factory_asset_id: AssetId,
+    auth_utxo: OutPoint,
+    program_utxo: OutPoint,
+}
+
+impl TryFrom<FactoryDetailsResponse> for FactoryDetails {
+    type Error = LendingError;
+
+    fn try_from(value: FactoryDetailsResponse) -> Result<Self, Self::Error> {
+        if matches!(
+            value.status,
+            super::indexer::response::FactoryStatus::Removed
+        ) {
+            return Err(LendingError::CannotParseFactory(
+                "factory status is Removed".to_string(),
+            ));
+        }
+
+        let auth_utxo = value.auth_utxo.ok_or(LendingError::CannotParseFactory(
+            "auth_utxo is missing".to_string(),
+        ))?;
+        let program_utxo = value.program_utxo.ok_or(LendingError::CannotParseFactory(
+            "program_utxo is missing".to_string(),
+        ))?;
+
+        Ok(Self {
+            factory_asset_id: value.factory_asset_id,
+            auth_utxo: OutPoint {
+                txid: auth_utxo.txid,
+                vout: auth_utxo.vout,
+            },
+            program_utxo: OutPoint {
+                txid: program_utxo.txid,
+                vout: program_utxo.vout,
+            },
         })
     }
 }

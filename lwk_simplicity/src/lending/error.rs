@@ -16,4 +16,7 @@ pub enum LendingError {
 
     #[error("Generic error: {0}")]
     Generic(String),
+
+    #[error("Cannot parse factory data: {0}")]
+    CannotParseFactory(String),
 }

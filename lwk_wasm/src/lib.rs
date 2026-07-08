@@ -104,6 +104,8 @@ pub use control_block::ControlBlock;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use error::MagicRoutingHint;
+#[cfg(all(feature = "browser", target_arch = "wasm32"))]
+pub use esplora::WaterfallsSubscription;
 pub use esplora::{EsploraClient, WaterfallsClient, WaterfallsClientBuilder};
 pub use fees::Fees;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]

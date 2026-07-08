@@ -1,34 +1,43 @@
+use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{HashSet, VecDeque},
     str,
 };
 
 use age::x25519::Recipient;
 use elements::{BlockHash, Script, Txid};
+#[cfg(not(target_arch = "wasm32"))]
 use reqwest::Response;
 
 use crate::{
     cache::Height,
-    clients::{
-        waterfalls::{waterfalls_subscribe_url, WaterfallsSseParser},
-        Capability, Data, History, WaterfallsClientBuilder, WaterfallsSubscriptionEvent,
-    },
-    wollet::WolletState,
+    clients::{waterfalls::waterfalls_subscribe_url, History, WaterfallsClientBuilder},
     Error, Network, Update, Wollet, WolletDescriptor,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use crate::{
+    clients::{waterfalls::WaterfallsSseParser, Capability, Data, WaterfallsSubscriptionEvent},
+    wollet::WolletState,
+};
 
+#[cfg(not(target_arch = "wasm32"))]
 use super::{error_for_status, EsploraClient, LastUsedIndexResponse};
+#[cfg(target_arch = "wasm32")]
+use super::{EsploraClient, LastUsedIndexResponse};
 
 /// A Waterfalls descriptor subscription stream.
 ///
 /// The stream yields typed Waterfalls update events. A `Tip` event only means
 /// the chain tip changed; other event kinds are wallet invalidation hints.
+#[cfg(not(target_arch = "wasm32"))]
 pub struct WaterfallsSubscription {
     response: Response,
     parser: WaterfallsSseParser,
     pending: VecDeque<WaterfallsSubscriptionEvent>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl WaterfallsSubscription {
     /// Return the next Waterfalls subscription update.
     ///
@@ -128,6 +137,7 @@ impl WaterfallsClient {
         self.inner.full_scan_to_index(wollet, index).await
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) async fn get_history_waterfalls<S: WolletState>(
         &mut self,
         descriptor: &WolletDescriptor,
@@ -171,6 +181,7 @@ impl WaterfallsClient {
     /// Subscription events are hints. Callers remain responsible for running a
     /// normal scan after wallet invalidation events and for reopening the stream
     /// after reconnects or scans that expand the watched derivation range.
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn subscribe(
         &mut self,
         descriptor: &WolletDescriptor,
@@ -225,6 +236,7 @@ impl WaterfallsClient {
         self.inner.utxo_only
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn capabilities(&self) -> HashSet<Capability> {
         self.inner.capabilities()
     }

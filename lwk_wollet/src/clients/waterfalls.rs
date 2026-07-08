@@ -1,7 +1,9 @@
 use elements::BlockHash;
 use serde::Deserialize;
 
-use crate::{descriptor::url_encode_descriptor, Error};
+use crate::descriptor::url_encode_descriptor;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::Error;
 
 /// An update received from the Waterfalls descriptor subscription stream.
 ///
@@ -57,6 +59,7 @@ pub(crate) fn waterfalls_subscribe_url(base_url: &str, descriptor: &str) -> Stri
     )
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Default)]
 pub(crate) struct WaterfallsSseParser {
     buffer: String,
@@ -64,6 +67,7 @@ pub(crate) struct WaterfallsSseParser {
     data: String,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl WaterfallsSseParser {
     pub(crate) fn push_str(
         &mut self,
@@ -126,7 +130,7 @@ impl WaterfallsSseParser {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use std::str::FromStr;
 

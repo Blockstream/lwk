@@ -1,6 +1,10 @@
 use crate::{Error, Network, Pset, Transaction, Txid, Update, Wollet, WolletDescriptor};
 use lwk_wollet::{age, clients::asyncr};
 use wasm_bindgen::prelude::*;
+#[cfg(all(feature = "browser", target_arch = "wasm32"))]
+use wasm_bindgen::JsCast;
+#[cfg(all(feature = "browser", target_arch = "wasm32"))]
+use wasm_bindgen_futures::js_sys::{Error as JsError, Function, JSON};
 
 /// Response from the last_used_index endpoint
 ///
@@ -55,6 +59,15 @@ pub struct EsploraClient {
 #[wasm_bindgen]
 pub struct WaterfallsClient {
     inner: asyncr::WaterfallsClient,
+}
+
+/// A browser EventSource-backed Waterfalls descriptor subscription stream.
+#[cfg(all(feature = "browser", target_arch = "wasm32"))]
+#[wasm_bindgen]
+pub struct WaterfallsSubscription {
+    source: web_sys::EventSource,
+    on_update: Closure<dyn FnMut(web_sys::MessageEvent)>,
+    on_error: Option<Closure<dyn FnMut(web_sys::Event)>>,
 }
 
 /// A builder for constructing [`WaterfallsClient`] instances.
@@ -185,6 +198,83 @@ impl WaterfallsClient {
             .await?)
     }
 
+    /// Return the Waterfalls descriptor subscription URL for browser EventSource clients.
+    #[wasm_bindgen(js_name = waterfallsSubscribeUrl)]
+    pub async fn waterfalls_subscribe_url(
+        &mut self,
+        descriptor: &WolletDescriptor,
+    ) -> Result<String, Error> {
+        Ok(self
+            .inner
+            .waterfalls_subscribe_url(descriptor.as_ref())
+            .await?)
+    }
+
+    /// Subscribe to Waterfalls descriptor updates using browser EventSource.
+    ///
+    /// `onChanged` is called as `onChanged(kind, rawData)`, where `kind` is
+    /// `tip`, `mempool`, `block`, or `reorg`, and `rawData` is the raw SSE data
+    /// string. Browser EventSource cannot set custom authentication headers.
+    #[cfg(all(feature = "browser", target_arch = "wasm32"))]
+    pub async fn subscribe(
+        &mut self,
+        descriptor: &WolletDescriptor,
+        on_changed: Function,
+        on_error: Option<Function>,
+    ) -> Result<WaterfallsSubscription, Error> {
+        let url = self
+            .inner
+            .waterfalls_subscribe_url(descriptor.as_ref())
+            .await?;
+        let source = web_sys::EventSource::new(&url).map_err(Error::JsVal)?;
+
+        let on_error_for_update = on_error.clone();
+        let on_update = Closure::wrap(Box::new(move |event: web_sys::MessageEvent| {
+            let Some(data) = event.data().as_string() else {
+                if let Some(on_error) = &on_error_for_update {
+                    let error = JsError::new("Waterfalls SSE update event data is not a string");
+                    let _ = on_error.call1(&JsValue::NULL, error.as_ref());
+                }
+                return;
+            };
+
+            let kind = JSON::parse(&data).ok().and_then(|value| {
+                js_sys_reflect_get(&value, "type")
+                    .ok()
+                    .and_then(|kind| kind.as_string())
+            });
+
+            let Some(kind) = kind else {
+                if let Some(on_error) = &on_error_for_update {
+                    let error = JsError::new("Invalid Waterfalls SSE update event");
+                    let _ = on_error.call1(&JsValue::NULL, error.as_ref());
+                }
+                return;
+            };
+
+            let _ = on_changed.call2(&JsValue::NULL, &JsValue::from(kind), &JsValue::from(data));
+        }) as Box<dyn FnMut(_)>);
+        source
+            .add_event_listener_with_callback("update", on_update.as_ref().unchecked_ref())
+            .map_err(Error::JsVal)?;
+
+        let on_error = if let Some(on_error) = on_error {
+            let on_error = Closure::wrap(Box::new(move |event: web_sys::Event| {
+                let _ = on_error.call1(&JsValue::NULL, &event.into());
+            }) as Box<dyn FnMut(_)>);
+            source.set_onerror(Some(on_error.as_ref().unchecked_ref()));
+            Some(on_error)
+        } else {
+            None
+        };
+
+        Ok(WaterfallsSubscription {
+            source,
+            on_update,
+            on_error,
+        })
+    }
+
     /// Query the last used derivation index for a wallet's descriptor from the Waterfalls server.
     #[wasm_bindgen(js_name = lastUsedIndex)]
     pub async fn last_used_index(
@@ -193,6 +283,32 @@ impl WaterfallsClient {
     ) -> Result<LastUsedIndexResponse, Error> {
         let result = self.inner.last_used_index(descriptor.as_ref()).await?;
         Ok(result.into())
+    }
+}
+
+#[cfg(all(feature = "browser", target_arch = "wasm32"))]
+fn js_sys_reflect_get(value: &JsValue, field: &str) -> Result<JsValue, JsValue> {
+    wasm_bindgen_futures::js_sys::Reflect::get(value, &JsValue::from(field))
+}
+
+#[cfg(all(feature = "browser", target_arch = "wasm32"))]
+#[wasm_bindgen]
+impl WaterfallsSubscription {
+    /// Close the underlying browser EventSource stream.
+    pub fn close(&self) {
+        let _ = self
+            .source
+            .remove_event_listener_with_callback("update", self.on_update.as_ref().unchecked_ref());
+        self.source.set_onerror(None);
+        self.source.close();
+        let _ = &self.on_error;
+    }
+}
+
+#[cfg(all(feature = "browser", target_arch = "wasm32"))]
+impl Drop for WaterfallsSubscription {
+    fn drop(&mut self) {
+        self.close();
     }
 }
 

@@ -2,6 +2,7 @@
 //! the standard esplora client of which contain a lot of duplicated code.
 
 use crate::async_util::async_sleep;
+use crate::clients::waterfalls::waterfalls_subscribe_url;
 use crate::clients::{try_unblind, Capability, History, TokenProvider};
 use crate::clients::{EsploraClientBuilder, LastUnused, WaterfallsClientBuilder};
 use crate::descriptor::url_encode_descriptor;
@@ -1198,6 +1199,20 @@ impl WaterfallsClient {
     ) -> Result<String, Error> {
         #[allow(deprecated)]
         self.inner.waterfalls_descriptor(descriptor).await
+    }
+
+    /// Return the Waterfalls descriptor subscription URL for browser EventSource clients.
+    ///
+    /// The URL uses the same descriptor preparation as [`Self::waterfalls_descriptor`]:
+    /// key origin information is stripped and the descriptor is encrypted unless
+    /// descriptor encryption has been explicitly disabled on this client.
+    pub async fn waterfalls_subscribe_url(
+        &mut self,
+        descriptor: &WolletDescriptor,
+    ) -> Result<String, Error> {
+        #[allow(deprecated)]
+        let desc = self.inner.waterfalls_descriptor(descriptor).await?;
+        Ok(waterfalls_subscribe_url(&self.inner.base_url, &desc))
     }
 
     /// Query the last used derivation index for a descriptor from the Waterfalls server.

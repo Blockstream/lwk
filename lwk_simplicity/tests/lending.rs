@@ -93,15 +93,16 @@ async fn test_borrow_flow() {
     borrower_session.sync().unwrap();
 
     // borrower_prepare, which selects fee UTXO and builds transaction
-    let mut prepared = borrower_session
+    let prepared = borrower_session
         .borrower_prepare(BorrowerAccountParams {})
         .unwrap();
+    let mut pset = prepared.inner().clone();
 
     // sign
-    borrower_signer.sign(&mut prepared.pset).unwrap();
+    borrower_signer.sign(&mut pset).unwrap();
 
     // finalize
-    let tx = borrower_session.finalize(&mut prepared.pset).unwrap();
+    let tx = borrower_session.finalize(&mut pset).unwrap();
 
     // broadcast
     let txid = client.broadcast(&tx).unwrap();
@@ -153,15 +154,17 @@ async fn test_borrow_flow() {
     // sync to fetch fee transaction
     borrower_session.sync().unwrap();
 
-    let mut create = borrower_session
+    let create = borrower_session
         .borrower_create_offer(borrow_details, factory.clone().try_into().unwrap())
         .unwrap();
 
+    let mut pset = create.into_inner();
+
     // sign
-    borrower_signer.sign(&mut create.pset).unwrap();
+    borrower_signer.sign(&mut pset).unwrap();
 
     // finalize
-    let tx = borrower_session.finalize(&mut create.pset).unwrap();
+    let tx = borrower_session.finalize(&mut pset).unwrap();
 
     // broadcast
     let txid = client.broadcast(&tx).unwrap();

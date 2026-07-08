@@ -625,11 +625,30 @@ pub struct RepaymentDetails {
 pub struct BorrowerAccountParams {}
 
 pub struct BorrowerAccountCreationResult {
-    pub pset: PartiallySignedTransaction,
+    pset: PartiallySignedTransaction,
     pub factory_address: Address,
     pub issued_asset_id: AssetId,
 }
 
+impl BorrowerAccountCreationResult {
+    pub fn inner(&self) -> &PartiallySignedTransaction {
+        &self.pset
+    }
+    pub fn into_inner(self) -> PartiallySignedTransaction {
+        self.pset
+    }
+}
+
 pub struct CreateBorrowTransaction {
-    pub pset: PartiallySignedTransaction,
+    pset: PartiallySignedTransaction,
+}
+
+impl CreateBorrowTransaction {
+    pub fn inner(&self) -> &PartiallySignedTransaction {
+        &self.pset
+    }
+
+    pub fn into_inner(self) -> PartiallySignedTransaction {
+        self.pset
+    }
 }

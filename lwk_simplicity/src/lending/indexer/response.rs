@@ -16,7 +16,7 @@ pub struct OfferListItem {
     pub interest_rate: u32,
     pub loan_expiration_height: u32,
     pub created_at_height: u64,
-    pub created_at_txid: String,
+    pub created_at_txid: Txid,
     pub participants: Vec<ParticipantShort>,
     pub borrower_principal_utxo: Option<OfferUtxoOutpointShort>,
 }
@@ -78,7 +78,7 @@ pub struct FactoryDetailsResponse {
     pub issuing_utxos_count: u16,
     pub reissuance_flags: u64,
     pub created_at_height: u64,
-    pub created_at_txid: String,
+    pub created_at_txid: Txid,
     pub auth_utxo: Option<FactoryAuthUtxoDto>,
     pub program_utxo: Option<FactoryProgramUtxoDto>,
 }

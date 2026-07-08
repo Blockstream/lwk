@@ -190,5 +190,5 @@ async fn test_borrow_flow() {
     let item = items.first().expect("items for list_offers is empty");
 
     assert_eq!(item.issuance_factory_id, factory.id);
-    assert_eq!(item.created_at_txid, txid.to_string());
+    assert_eq!(item.created_at_txid, txid);
 }

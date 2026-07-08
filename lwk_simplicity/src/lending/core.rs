@@ -195,6 +195,8 @@ impl LendingSession {
         })
     }
 
+    // TODO: we shouldn't have so many network calls in this function
+    // TODO: we should attach fee rate to the function/struct
     /// Create a borrow offer
     ///
     /// # Errors

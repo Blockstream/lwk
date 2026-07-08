@@ -1,9 +1,14 @@
+use lwk_wollet::elements::AssetId;
+use lwk_wollet::hashes::sha256;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 use testcontainers::clients::Cli;
 use testcontainers::images::postgres::Postgres;
 use testcontainers::RunnableImage;
+
+/// Test protocol fee keeper asset id
+pub const PROTOCOL_FEE_KEEPER_ASSET_ID: AssetId = AssetId::from_inner(sha256::Midstate([1; 32]));
 
 pub struct IndexerContext<'a> {
     _pg_container: testcontainers::Container<'a, Postgres>,
@@ -46,8 +51,6 @@ pub async fn start_indexer<'a>(
     binary: &Path,
     api_port: u16,
 ) -> IndexerContext<'a> {
-    let policy_asset = env.elementsd_policy_asset();
-
     let host_path = std::env::current_dir()
         .unwrap()
         .join("tests")
@@ -85,7 +88,7 @@ esplora:
   timeout: 10
   network: "regtest"
 indexer:
-  protocol_fee_keeper_asset_id: "{policy_asset}"
+  protocol_fee_keeper_asset_id: "{PROTOCOL_FEE_KEEPER_ASSET_ID}"
   interval: 200
   last_indexed_height: {chain_height}
 "#

@@ -4,8 +4,10 @@ mod indexer;
 mod network;
 
 pub use indexer::client::IndexerClient;
+pub use indexer::common::OfferStatus;
 pub use indexer::request::OfferFiltersRequest;
 
+pub use core::AcceptOfferTransaction;
 pub use core::BorrowerAccountCreationResult;
 pub use core::BorrowerAccountParams;
 pub use core::CreateBorrowTransaction;

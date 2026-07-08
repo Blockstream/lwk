@@ -2043,6 +2043,67 @@ fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(feature = "esplora")]
 #[test]
+fn test_waterfalls_subscribe() -> Result<(), Box<dyn std::error::Error>> {
+    let env = TestEnvBuilder::from_env().with_waterfalls().build();
+
+    let mut client =
+        clients::blocking::WaterfallsClient::new(&env.waterfalls_url(), Network::default_regtest())
+            .unwrap();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer.xpub());
+    let desc = WolletDescriptor::from_str(&desc).unwrap();
+    let network = Network::default_regtest();
+    let mut wollet = WolletBuilder::new(network, desc.clone()).build().unwrap();
+
+    let err = match client.subscribe(&desc) {
+        Ok(_) => panic!("subscribe should fail before the descriptor is scanned"),
+        Err(err) => err,
+    };
+    assert!(matches!(err, Error::EsploraHttpError { status: 400, .. }));
+
+    if let Some(update) = client.full_scan(&wollet)? {
+        wollet.apply_update(update)?;
+    }
+
+    let subscription = client.subscribe(&desc)?;
+
+    let sats = 1_000;
+    let address = wollet.address(Some(0)).unwrap();
+    env.elementsd_sendtoaddress(address.address(), sats, None);
+
+    let event = subscription.next_update()?.unwrap();
+    assert_eq!(
+        event.kind,
+        clients::WaterfallsSubscriptionEventKind::Mempool
+    );
+    assert!(event.tip.is_some());
+
+    let update = client.full_scan(&wollet)?.unwrap();
+    wollet.apply_update(update)?;
+    assert_eq!(
+        sats,
+        *wollet.balance()?.get(network.policy_asset()).unwrap()
+    );
+
+    env.elementsd_generate(1);
+    let event = subscription.next_update()?.unwrap();
+    assert_eq!(event.kind, clients::WaterfallsSubscriptionEventKind::Block);
+    assert!(event.tip.is_some());
+
+    env.elementsd_generate(1);
+    let event = subscription.next_update()?.unwrap();
+    assert_eq!(event.kind, clients::WaterfallsSubscriptionEventKind::Tip);
+    assert!(event.tip.is_some());
+
+    subscription.close();
+
+    Ok(())
+}
+
+#[cfg(feature = "esplora")]
+#[test]
 fn test_waterfalls_has_more_reused_address_balance() {
     let env = TestEnvBuilder::from_env()
         .with_waterfalls_max_txs_seen(3)

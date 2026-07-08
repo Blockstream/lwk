@@ -1,12 +1,19 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{mpsc, Mutex},
+    thread,
+};
 
 use age::x25519::Recipient;
 use elements::{BlockHash, Script, Txid};
 use tokio::runtime::Runtime;
+use tokio::sync::oneshot;
 
 use crate::{
     cache::Height,
-    clients::{asyncr, Capability, Data, History, WaterfallsClientBuilder},
+    clients::{
+        asyncr, Capability, Data, History, WaterfallsClientBuilder, WaterfallsSubscriptionEvent,
+    },
     wollet::WolletState,
     Error, Network, WolletDescriptor,
 };
@@ -32,6 +39,94 @@ impl WaterfallsClientBuilder {
 pub struct WaterfallsClient {
     rt: Runtime,
     client: asyncr::WaterfallsClient,
+}
+
+/// A blocking Waterfalls descriptor subscription stream.
+///
+/// The stream owns a worker thread that reads the async SSE stream. Use
+/// [`Self::close`] to stop the worker and interrupt a blocked [`Self::next_update`].
+pub struct WaterfallsSubscription {
+    updates: Mutex<mpsc::Receiver<Result<Option<WaterfallsSubscriptionEvent>, Error>>>,
+    close: Mutex<Option<oneshot::Sender<()>>>,
+    worker: Mutex<Option<thread::JoinHandle<()>>>,
+}
+
+impl WaterfallsSubscription {
+    fn new(subscription: asyncr::WaterfallsSubscription) -> Result<Self, Error> {
+        let (updates_tx, updates_rx) = mpsc::channel();
+        let (close_tx, mut close_rx) = oneshot::channel();
+        let rt = Runtime::new()?;
+        let worker = thread::spawn(move || {
+            rt.block_on(async move {
+                let mut subscription = subscription;
+                loop {
+                    tokio::select! {
+                        _ = &mut close_rx => break,
+                        event = subscription.next_update() => {
+                            match event {
+                                Ok(Some(event)) => {
+                                    if updates_tx.send(Ok(Some(event))).is_err() {
+                                        break;
+                                    }
+                                }
+                                Ok(None) => {
+                                    let _ = updates_tx.send(Ok(None));
+                                    break;
+                                }
+                                Err(err) => {
+                                    let _ = updates_tx.send(Err(err));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        Ok(Self {
+            updates: Mutex::new(updates_rx),
+            close: Mutex::new(Some(close_tx)),
+            worker: Mutex::new(Some(worker)),
+        })
+    }
+
+    /// Return the next Waterfalls subscription update.
+    ///
+    /// Returns `Ok(None)` when the server closes the stream or [`Self::close`]
+    /// is called.
+    pub fn next_update(&self) -> Result<Option<WaterfallsSubscriptionEvent>, Error> {
+        match self
+            .updates
+            .lock()
+            .map_err(|_| Error::Generic("subscription receiver mutex poisoned".to_string()))?
+            .recv()
+        {
+            Ok(event) => event,
+            Err(_) => Ok(None),
+        }
+    }
+
+    /// Stop the subscription stream and release its worker thread.
+    pub fn close(&self) {
+        if let Ok(mut close) = self.close.lock() {
+            if let Some(close) = close.take() {
+                let _ = close.send(());
+            }
+        }
+
+        if let Ok(mut worker) = self.worker.lock() {
+            if let Some(worker) = worker.take() {
+                let _ = worker.join();
+            }
+        }
+    }
+}
+
+impl Drop for WaterfallsSubscription {
+    fn drop(&mut self) {
+        self.close();
+    }
 }
 
 impl WaterfallsClient {
@@ -75,6 +170,19 @@ impl WaterfallsClient {
         descriptor: &WolletDescriptor,
     ) -> Result<asyncr::LastUsedIndexResponse, Error> {
         self.rt.block_on(self.client.last_used_index(descriptor))
+    }
+
+    /// Subscribe to Waterfalls descriptor updates.
+    ///
+    /// Subscription events are hints. Callers remain responsible for running a
+    /// normal scan after wallet invalidation events and for reopening the stream
+    /// after reconnects or scans that expand the watched derivation range.
+    pub fn subscribe(
+        &mut self,
+        descriptor: &WolletDescriptor,
+    ) -> Result<WaterfallsSubscription, Error> {
+        let subscription = self.rt.block_on(self.client.subscribe(descriptor))?;
+        WaterfallsSubscription::new(subscription)
     }
 }
 
@@ -122,5 +230,79 @@ impl BlockchainBackend for WaterfallsClient {
 
     fn utxo_only(&self) -> bool {
         self.client.utxo_only()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        io::{Read, Write},
+        net::TcpListener,
+        sync::Arc,
+        thread,
+        time::Duration,
+    };
+
+    use crate::{
+        clients::{blocking::WaterfallsClient, WaterfallsSubscriptionEventKind},
+        Network, WolletDescriptor,
+    };
+
+    fn serve(status_line: &'static str, body: &'static str, keep_open: bool) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        thread::spawn(move || loop {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0u8; 1024];
+            let _ = stream.read(&mut request);
+            let response = format!(
+                    "HTTP/1.1 {status_line}\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n{body}",
+                );
+            let _ = stream.write_all(response.as_bytes());
+            if keep_open {
+                thread::sleep(Duration::from_secs(30));
+            }
+        });
+        format!("http://{addr}")
+    }
+
+    fn descriptor() -> WolletDescriptor {
+        lwk_test_util::TEST_DESCRIPTOR.parse().unwrap()
+    }
+
+    #[test]
+    fn blocking_subscribe_next_update_returns_events_and_eof() {
+        let base_url = serve(
+            "200 OK",
+            ": ready\n\nevent: update\ndata: {\"type\":\"tip\"}\n\nevent: update\ndata: {\"type\":\"block\"}\n\n",
+            false,
+        );
+        let mut client = WaterfallsClient::new(&base_url, Network::Liquid).unwrap();
+        client.avoid_encryption();
+
+        let subscription = client.subscribe(&descriptor()).unwrap();
+
+        let first = subscription.next_update().unwrap().unwrap();
+        assert_eq!(first.kind, WaterfallsSubscriptionEventKind::Tip);
+
+        let second = subscription.next_update().unwrap().unwrap();
+        assert_eq!(second.kind, WaterfallsSubscriptionEventKind::Block);
+
+        assert!(subscription.next_update().unwrap().is_none());
+    }
+
+    #[test]
+    fn blocking_subscribe_close_interrupts_next_update() {
+        let base_url = serve("200 OK", ": ready\n\n", true);
+        let mut client = WaterfallsClient::new(&base_url, Network::Liquid).unwrap();
+        client.avoid_encryption();
+
+        let subscription = Arc::new(client.subscribe(&descriptor()).unwrap());
+        let worker_subscription = Arc::clone(&subscription);
+        let worker = thread::spawn(move || worker_subscription.next_update().unwrap());
+
+        subscription.close();
+
+        assert!(worker.join().unwrap().is_none());
     }
 }

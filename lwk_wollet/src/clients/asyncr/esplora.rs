@@ -39,7 +39,7 @@ use std::{
 };
 
 mod waterfalls;
-pub use waterfalls::WaterfallsClient;
+pub use waterfalls::{WaterfallsClient, WaterfallsSubscription};
 
 // TODO: Perhaps the waterfalls server's MAX_ADDRESSES could be configurable and return
 // the max page size in the response, so we know when we have to request another page

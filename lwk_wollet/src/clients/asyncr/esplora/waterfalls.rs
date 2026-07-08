@@ -1,18 +1,53 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    str,
+};
 
 use age::x25519::Recipient;
 use elements::{BlockHash, Script, Txid};
+use reqwest::Response;
 
 use crate::{
     cache::Height,
     clients::{
-        waterfalls::waterfalls_subscribe_url, Capability, Data, History, WaterfallsClientBuilder,
+        waterfalls::{waterfalls_subscribe_url, WaterfallsSseParser},
+        Capability, Data, History, WaterfallsClientBuilder, WaterfallsSubscriptionEvent,
     },
     wollet::WolletState,
     Error, Network, Update, Wollet, WolletDescriptor,
 };
 
-use super::{EsploraClient, LastUsedIndexResponse};
+use super::{error_for_status, EsploraClient, LastUsedIndexResponse};
+
+/// A Waterfalls descriptor subscription stream.
+///
+/// The stream yields typed Waterfalls update events. A `Tip` event only means
+/// the chain tip changed; other event kinds are wallet invalidation hints.
+pub struct WaterfallsSubscription {
+    response: Response,
+    parser: WaterfallsSseParser,
+    pending: VecDeque<WaterfallsSubscriptionEvent>,
+}
+
+impl WaterfallsSubscription {
+    /// Return the next Waterfalls subscription update.
+    ///
+    /// Returns `Ok(None)` when the server closes the stream.
+    pub async fn next_update(&mut self) -> Result<Option<WaterfallsSubscriptionEvent>, Error> {
+        loop {
+            if let Some(event) = self.pending.pop_front() {
+                return Ok(Some(event));
+            }
+
+            let Some(chunk) = self.response.chunk().await? else {
+                return Ok(None);
+            };
+            let chunk = str::from_utf8(&chunk)
+                .map_err(|e| Error::Generic(format!("invalid Waterfalls SSE UTF-8: {e}")))?;
+            self.pending.extend(self.parser.push_str(chunk)?);
+        }
+    }
+}
 
 #[derive(Debug)]
 /// A blockchain backend implementation based on the
@@ -131,6 +166,28 @@ impl WaterfallsClient {
         Ok(waterfalls_subscribe_url(&self.inner.base_url, &desc))
     }
 
+    /// Subscribe to Waterfalls descriptor updates.
+    ///
+    /// Subscription events are hints. Callers remain responsible for running a
+    /// normal scan after wallet invalidation events and for reopening the stream
+    /// after reconnects or scans that expand the watched derivation range.
+    pub async fn subscribe(
+        &mut self,
+        descriptor: &WolletDescriptor,
+    ) -> Result<WaterfallsSubscription, Error> {
+        let url = self.waterfalls_subscribe_url(descriptor).await?;
+        let response = self.inner.get_with_retry(&url).await?;
+        if !response.status().is_success() {
+            return Err(error_for_status(&url, response).await);
+        }
+
+        Ok(WaterfallsSubscription {
+            response,
+            parser: WaterfallsSseParser::default(),
+            pending: VecDeque::new(),
+        })
+    }
+
     /// Query the last used derivation index for a descriptor from the Waterfalls server.
     pub async fn last_used_index(
         &mut self,
@@ -190,5 +247,91 @@ impl WaterfallsClientBuilder {
         Ok(WaterfallsClient {
             inner: builder.build()?,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
+    use crate::{
+        clients::{asyncr::WaterfallsClientBuilder, WaterfallsSubscriptionEventKind},
+        Error, Network, WolletDescriptor,
+    };
+
+    async fn serve(status_line: &'static str, body: &'static str) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            loop {
+                let (mut sock, _) = listener.accept().await.unwrap();
+                let mut buf = [0u8; 1024];
+                let _ = sock.read(&mut buf).await;
+                let resp = format!(
+                    "HTTP/1.1 {status_line}\r\nContent-Type: text/event-stream\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = sock.write_all(resp.as_bytes()).await;
+            }
+        });
+        format!("http://{addr}")
+    }
+
+    fn descriptor() -> WolletDescriptor {
+        lwk_test_util::TEST_DESCRIPTOR.parse().unwrap()
+    }
+
+    #[tokio::test]
+    async fn subscribe_next_update_ignores_ready_and_returns_events() {
+        let base_url = serve(
+            "200 OK",
+            ": ready\n\nevent: update\ndata: {\"type\":\"tip\"}\n\nevent: update\ndata: {\"type\":\"mempool\"}\n\n",
+        )
+        .await;
+        let mut client = WaterfallsClientBuilder::new(&base_url, Network::Liquid)
+            .build()
+            .unwrap();
+        client.avoid_encryption();
+
+        let mut subscription = client.subscribe(&descriptor()).await.unwrap();
+
+        let first = subscription.next_update().await.unwrap().unwrap();
+        assert_eq!(first.kind, WaterfallsSubscriptionEventKind::Tip);
+
+        let second = subscription.next_update().await.unwrap().unwrap();
+        assert_eq!(second.kind, WaterfallsSubscriptionEventKind::Mempool);
+
+        assert!(subscription.next_update().await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn subscribe_returns_error_for_scan_required() {
+        let base_url = serve("400 Bad Request", "DescriptorNotScanned").await;
+        let mut client = WaterfallsClientBuilder::new(&base_url, Network::Liquid)
+            .build()
+            .unwrap();
+        client.avoid_encryption();
+
+        let err = match client.subscribe(&descriptor()).await {
+            Ok(_) => panic!("subscribe should fail"),
+            Err(err) => err,
+        };
+        assert!(matches!(err, Error::EsploraHttpError { status: 400, .. }));
+    }
+
+    #[tokio::test]
+    async fn subscribe_returns_error_for_422() {
+        let base_url = serve("422 Unprocessable Entity", "CannotDecrypt").await;
+        let mut client = WaterfallsClientBuilder::new(&base_url, Network::Liquid)
+            .build()
+            .unwrap();
+        client.avoid_encryption();
+
+        let err = match client.subscribe(&descriptor()).await {
+            Ok(_) => panic!("subscribe should fail"),
+            Err(err) => err,
+        };
+        assert!(matches!(err, Error::EsploraHttpError { status: 422, .. }));
     }
 }

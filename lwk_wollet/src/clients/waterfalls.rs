@@ -58,14 +58,12 @@ pub(crate) fn waterfalls_subscribe_url(base_url: &str, descriptor: &str) -> Stri
 }
 
 #[derive(Default)]
-#[allow(dead_code)] // Staged for the streaming subscription handle.
 pub(crate) struct WaterfallsSseParser {
     buffer: String,
     event_name: Option<String>,
     data: String,
 }
 
-#[allow(dead_code)] // Staged for the streaming subscription handle.
 impl WaterfallsSseParser {
     pub(crate) fn push_str(
         &mut self,

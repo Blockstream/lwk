@@ -235,36 +235,12 @@ impl BlockchainBackend for WaterfallsClient {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        io::{Read, Write},
-        net::TcpListener,
-        sync::Arc,
-        thread,
-        time::Duration,
-    };
+    use std::{sync::Arc, thread};
 
     use crate::{
         clients::{blocking::WaterfallsClient, WaterfallsSubscriptionEventKind},
         Network, WolletDescriptor,
     };
-
-    fn serve(status_line: &'static str, body: &'static str, keep_open: bool) -> String {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap();
-        thread::spawn(move || loop {
-            let (mut stream, _) = listener.accept().unwrap();
-            let mut request = [0u8; 1024];
-            let _ = stream.read(&mut request);
-            let response = format!(
-                    "HTTP/1.1 {status_line}\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n{body}",
-                );
-            let _ = stream.write_all(response.as_bytes());
-            if keep_open {
-                thread::sleep(Duration::from_secs(30));
-            }
-        });
-        format!("http://{addr}")
-    }
 
     fn descriptor() -> WolletDescriptor {
         lwk_test_util::TEST_DESCRIPTOR.parse().unwrap()
@@ -272,8 +248,9 @@ mod tests {
 
     #[test]
     fn blocking_subscribe_next_update_returns_events_and_eof() {
-        let base_url = serve(
+        let base_url = lwk_test_util::serve_http_response(
             "200 OK",
+            "text/event-stream",
             ": ready\n\nevent: update\ndata: {\"type\":\"tip\"}\n\nevent: update\ndata: {\"type\":\"block\"}\n\n",
             false,
         );
@@ -293,7 +270,8 @@ mod tests {
 
     #[test]
     fn blocking_subscribe_close_interrupts_next_update() {
-        let base_url = serve("200 OK", ": ready\n\n", true);
+        let base_url =
+            lwk_test_util::serve_http_response("200 OK", "text/event-stream", ": ready\n\n", true);
         let mut client = WaterfallsClient::new(&base_url, Network::Liquid).unwrap();
         client.avoid_encryption();
 

@@ -1503,28 +1503,6 @@ mod tests {
         assert!(client.is_err());
     }
 
-    // Tiny local server that replies with the given status for each request.
-    async fn serve(status_line: &'static str, body: &'static str) -> String {
-        use tokio::io::{AsyncReadExt, AsyncWriteExt};
-        use tokio::net::TcpListener;
-
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        tokio::spawn(async move {
-            loop {
-                let (mut sock, _) = listener.accept().await.unwrap();
-                let mut buf = [0u8; 1024];
-                let _ = sock.read(&mut buf).await;
-                let resp = format!(
-                        "HTTP/1.1 {status_line}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                        body.len()
-                    );
-                let _ = sock.write_all(resp.as_bytes()).await;
-            }
-        });
-        format!("http://{addr}")
-    }
-
     /// Regression test for the 422 carve-out in `get_with_retry`.
     ///
     /// A 422 must be surfaced as `Ok(response)`, not turned into an error: the
@@ -1535,13 +1513,23 @@ mod tests {
     #[tokio::test]
     async fn get_with_retry_passes_422_through() {
         // 422 is passed through so the caller can run its recovery.
-        let base = serve("422 Unprocessable Entity", "CannotDecrypt").await;
+        let base = lwk_test_util::serve_http_response(
+            "422 Unprocessable Entity",
+            "text/plain",
+            "CannotDecrypt",
+            false,
+        );
         let client = EsploraClient::new(Network::Liquid, &base);
         let response = client.get_with_retry(&base).await.unwrap();
         assert_eq!(response.status().as_u16(), 422);
 
         // A genuine server error is still surfaced as an Err.
-        let base = serve("500 Internal Server Error", "boom").await;
+        let base = lwk_test_util::serve_http_response(
+            "500 Internal Server Error",
+            "text/plain",
+            "boom",
+            false,
+        );
         let client = EsploraClient::new(Network::Liquid, &base);
         assert!(client.get_with_retry(&base).await.is_err());
     }
@@ -1552,7 +1540,7 @@ mod tests {
         // defined locally in `get_with_retry``
         const MAX_RETRIES: usize = 6;
 
-        let base = serve("401 Unauthorized", "").await;
+        let base = lwk_test_util::serve_http_response("401 Unauthorized", "text/plain", "", false);
         let client = EsploraClient::new(Network::Liquid, &base);
         assert!(client.get_with_retry(&base).await.is_err());
 

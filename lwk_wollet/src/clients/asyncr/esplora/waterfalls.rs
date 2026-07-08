@@ -252,31 +252,10 @@ impl WaterfallsClientBuilder {
 
 #[cfg(test)]
 mod tests {
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    use tokio::net::TcpListener;
-
     use crate::{
         clients::{asyncr::WaterfallsClientBuilder, WaterfallsSubscriptionEventKind},
         Error, Network, WolletDescriptor,
     };
-
-    async fn serve(status_line: &'static str, body: &'static str) -> String {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        tokio::spawn(async move {
-            loop {
-                let (mut sock, _) = listener.accept().await.unwrap();
-                let mut buf = [0u8; 1024];
-                let _ = sock.read(&mut buf).await;
-                let resp = format!(
-                    "HTTP/1.1 {status_line}\r\nContent-Type: text/event-stream\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                    body.len()
-                );
-                let _ = sock.write_all(resp.as_bytes()).await;
-            }
-        });
-        format!("http://{addr}")
-    }
 
     fn descriptor() -> WolletDescriptor {
         lwk_test_util::TEST_DESCRIPTOR.parse().unwrap()
@@ -284,11 +263,12 @@ mod tests {
 
     #[tokio::test]
     async fn subscribe_next_update_ignores_ready_and_returns_events() {
-        let base_url = serve(
+        let base_url = lwk_test_util::serve_http_response(
             "200 OK",
+            "text/event-stream",
             ": ready\n\nevent: update\ndata: {\"type\":\"tip\"}\n\nevent: update\ndata: {\"type\":\"mempool\"}\n\n",
-        )
-        .await;
+            false,
+        );
         let mut client = WaterfallsClientBuilder::new(&base_url, Network::Liquid)
             .build()
             .unwrap();
@@ -307,7 +287,12 @@ mod tests {
 
     #[tokio::test]
     async fn subscribe_returns_error_for_scan_required() {
-        let base_url = serve("400 Bad Request", "DescriptorNotScanned").await;
+        let base_url = lwk_test_util::serve_http_response(
+            "400 Bad Request",
+            "text/event-stream",
+            "DescriptorNotScanned",
+            false,
+        );
         let mut client = WaterfallsClientBuilder::new(&base_url, Network::Liquid)
             .build()
             .unwrap();
@@ -322,7 +307,12 @@ mod tests {
 
     #[tokio::test]
     async fn subscribe_returns_error_for_422() {
-        let base_url = serve("422 Unprocessable Entity", "CannotDecrypt").await;
+        let base_url = lwk_test_util::serve_http_response(
+            "422 Unprocessable Entity",
+            "text/event-stream",
+            "CannotDecrypt",
+            false,
+        );
         let mut client = WaterfallsClientBuilder::new(&base_url, Network::Liquid)
             .build()
             .unwrap();

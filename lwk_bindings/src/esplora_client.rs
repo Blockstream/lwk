@@ -395,7 +395,7 @@ impl WaterfallsClient {
 impl WaterfallsSubscription {
     /// Return the next Waterfalls subscription update.
     ///
-    /// Returns `None` when the server closes the stream or [`Self::close`] is called.
+    /// Returns `None` when the server closes the stream or [`Self::close_subscription`] is called.
     pub fn next_update(&self) -> Result<Option<WaterfallsSubscriptionEvent>, LwkError> {
         self.inner
             .next_update()
@@ -404,7 +404,7 @@ impl WaterfallsSubscription {
     }
 
     /// Stop the subscription stream and release its worker thread.
-    pub fn close(&self) {
+    pub fn close_subscription(&self) {
         self.inner.close();
     }
 }

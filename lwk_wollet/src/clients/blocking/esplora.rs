@@ -45,7 +45,7 @@ impl EsploraClient {
 impl EsploraClient {
     /// Create a new Esplora client using the "waterfalls" endpoint
     ///
-    /// Prefer [`WaterfallsClient`] for new Waterfalls clients.
+    /// Prefer [`crate::clients::blocking::WaterfallsClient`] for new Waterfalls clients.
     #[deprecated(since = "0.18.2", note = "use WaterfallsClient::new instead")]
     pub fn new_waterfalls(url: &str, network: Network) -> Result<Self, Error> {
         Ok(Self {

@@ -2075,11 +2075,8 @@ fn test_waterfalls_subscribe() -> Result<(), Box<dyn std::error::Error>> {
     let (_receiver_signer, receiver_desc, mut receiver_wollet) = create_wollet()?;
     let (sender_signer, sender_desc, mut sender_wollet) = create_wollet()?;
 
-    let err = match client.subscribe(&receiver_desc) {
-        Ok(_) => panic!("subscribe should fail before the descriptor is scanned"),
-        Err(err) => err,
-    };
-    assert!(matches!(err, Error::EsploraHttpError { status: 400, .. }));
+    let receiver_subscription = client.subscribe(&receiver_desc)?;
+    let sender_subscription = client.subscribe(&sender_desc)?;
 
     if let Some(update) = client.full_scan(&receiver_wollet)? {
         receiver_wollet.apply_update(update)?;
@@ -2103,8 +2100,14 @@ fn test_waterfalls_subscribe() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap()
     );
 
-    let receiver_subscription = client.subscribe(&receiver_desc)?;
-    let sender_subscription = client.subscribe(&sender_desc)?;
+    assert_waterfalls_subscription_event(
+        &receiver_subscription,
+        clients::WaterfallsSubscriptionEventKind::Tip,
+    )?;
+    assert_waterfalls_subscription_event(
+        &sender_subscription,
+        clients::WaterfallsSubscriptionEventKind::Block,
+    )?;
 
     let sats = 1_000;
     let receiver_address = receiver_wollet.address(Some(0))?;

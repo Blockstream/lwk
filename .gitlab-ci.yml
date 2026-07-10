@@ -165,6 +165,28 @@ test_jade:
     - docker pull xenoky/local-jade-emulator:1.0.27
     - cargo test -p lwk_jade --features asyncr
 
+# Authenticated Explorer API tests: Keycloak + APISIX (openid-connect) fronting the TestEnv
+# esplora. Tests are #[ignore] so they only run here (they need docker and the
+# closed-source blockstream/apisix image). Non-blocking while the container->job networking
+# is proven on this runner.
+test_auth:
+  stage: test
+  needs: []
+  allow_failure: true
+  extends:
+    - .base
+    - .coverage_mixin
+  variables:
+      TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
+  script:
+    - docker pull quay.io/keycloak/keycloak:26.5
+    - docker pull blockstream/apisix:2aa6756a-20251211
+    # smoke: keycloak + apisix + container->host round-trip, no regtest binaries needed
+    - cargo test -p lwk_test_util auth_stack_smoke -- --ignored
+    # full e2e: one authenticated call served by the regtest esplora
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    - cargo test -p lwk_wollet test_esplora_authenticated -- --ignored
+
 test_ledger:
   stage: test
   needs: []

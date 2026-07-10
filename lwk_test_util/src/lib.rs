@@ -14,9 +14,11 @@ use rand::{thread_rng, Rng};
 use std::str::FromStr;
 
 mod amp2;
+mod auth;
 mod registry;
 mod test_env;
 mod waterfalls;
+pub use auth::{AuthStack, AUTH_CLIENT_ID, AUTH_CLIENT_SECRET, AUTH_REALM, AUTH_USER_UUID};
 pub use test_env::{TestEnv, TestEnvBuilder};
 
 const DEFAULT_FEE_RATE: f32 = 100.0;

@@ -1,4 +1,5 @@
 use crate::amp2::Amp2D;
+use crate::auth::AuthStack;
 use crate::init_logging;
 use crate::registry::RegistryD;
 use crate::waterfalls::WaterfallsD;
@@ -38,6 +39,7 @@ pub struct TestEnvBuilder {
     with_registry: bool,
     with_amp2: bool,
     with_zmq: bool,
+    with_auth: bool,
 }
 
 impl TestEnvBuilder {
@@ -72,6 +74,7 @@ impl TestEnvBuilder {
             with_registry: false,
             with_amp2: false,
             with_zmq: false,
+            with_auth: false,
         }
     }
 
@@ -124,6 +127,14 @@ impl TestEnvBuilder {
         self
     }
 
+    /// Start an authenticated gateway (Keycloak + APISIX) fronting the Esplora server
+    ///
+    /// Requires `with_esplora()` and docker.
+    pub fn with_auth(mut self) -> Self {
+        self.with_auth = true;
+        self
+    }
+
     /// Start the test environment
     pub fn build(self) -> TestEnv {
         if self.elementsd_exec.is_empty() {
@@ -148,6 +159,9 @@ impl TestEnvBuilder {
         }
         if self.amp2_exec.is_empty() && self.with_amp2 {
             panic!("AMP2_MOCK_EXEC must be set");
+        }
+        if self.with_auth && !self.with_esplora {
+            panic!("auth gateway requires esplora, call 'with_esplora()'");
         }
 
         init_logging();
@@ -295,6 +309,18 @@ impl TestEnvBuilder {
             None
         };
 
+        let auth = if self.with_auth {
+            let esplora_url = electrsd.as_ref().unwrap().esplora_url.as_ref().unwrap();
+            let esplora_port: u16 = esplora_url
+                .rsplit(':')
+                .next()
+                .and_then(|p| p.parse().ok())
+                .unwrap_or_else(|| panic!("cannot parse esplora port from '{esplora_url}'"));
+            Some(AuthStack::new(esplora_port))
+        } else {
+            None
+        };
+
         TestEnv {
             elementsd,
             bitcoind,
@@ -303,6 +329,7 @@ impl TestEnvBuilder {
             registryd,
             amp2d,
             zmq_endpoint,
+            auth,
         }
     }
 }
@@ -318,6 +345,7 @@ pub struct TestEnv {
     registryd: Option<RegistryD>,
     amp2d: Option<Amp2D>,
     zmq_endpoint: Option<String>,
+    auth: Option<AuthStack>,
 }
 
 impl TestEnv {
@@ -358,6 +386,16 @@ impl TestEnv {
 
     pub fn amp2_url(&self) -> String {
         self.amp2d.as_ref().unwrap().url().to_string()
+    }
+
+    /// Base url of the authenticated gateway fronting the Esplora server (requires `with_auth`)
+    pub fn esplora_gateway_url(&self) -> String {
+        self.auth.as_ref().unwrap().gateway_url()
+    }
+
+    /// The OAuth2 token endpoint of the auth gateway (requires `with_auth`)
+    pub fn oidc_token_url(&self) -> String {
+        self.auth.as_ref().unwrap().token_url()
     }
 
     // Functions for Elements RPC client

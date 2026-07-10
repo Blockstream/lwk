@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use lwk_common::Network;
+use lwk_common::{calculate_fee, Network};
 use lwk_wollet::{
+    bitcoin,
     blocking::{BlockchainBackend, EsploraClient},
     elements::{
         confidential::{AssetBlindingFactor, ValueBlindingFactor},
@@ -563,6 +564,51 @@ impl LendingSession {
         })
     }
 
+    /// Estimate the fee for the given [`FinalTransaction`] and adds fee and change output
+    ///
+    /// Returns the computed fee in satoshis, or an error if funds are insufficient.
+    fn add_fee(
+        &self,
+        ft: &mut FinalTransaction,
+        change_script: Script,
+        change_pk: bitcoin::PublicKey,
+        fee_rate: f32,
+    ) -> Result<u64, LendingError> {
+        let simplex_network = to_simplicity_network(self.network);
+        let policy_asset = *self.network.policy_asset();
+
+        let (mut pset, inp_txout_sec) = ft.extract_pst();
+        let mut rng = thread_rng();
+        pset.blind_last(&mut rng, &EC, &inp_txout_sec)
+            .map_err(lwk_wollet::Error::from)?;
+        let tx = pset.extract_tx().map_err(lwk_wollet::Error::from)?;
+
+        let weight = tx.discount_weight();
+        let fee = calculate_fee(weight, fee_rate);
+
+        let available_delta =
+            u64::try_from(ft.calculate_fee_delta(&simplex_network)).map_err(|_| {
+                LendingError::Generic("fee delta is negative, no L-BTC available for fee".into())
+            })?;
+
+        if available_delta < fee {
+            return Err(LendingError::Generic(format!(
+                "insufficient L-BTC for fee: need {fee}, have {available_delta}"
+            )));
+        }
+
+        let change = available_delta - fee;
+
+        ft.add_output(PartialOutput::new(Script::default(), fee, policy_asset));
+        if change != 0 {
+            ft.add_output(
+                PartialOutput::new(change_script, change, policy_asset)
+                    .with_blinding_key(change_pk),
+            );
+        }
+
+        Ok(fee)
+    }
 }
 
 /// Builder for creating a [`LendingSession`].

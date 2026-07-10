@@ -44,9 +44,9 @@ async function runBasicsTest() {
 
         // ANCHOR: client
         if (false) { // ANCHOR: ignore
-        const url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+        const url_esplora = "https://blockstream.info/liquidtestnet/api";
         // TODO: name variables // ANCHOR: ignore
-        const client = new lwk.WaterfallsClient(network, url);
+        const client = new lwk.EsploraClient(lwk.Network.mainnet(), url_esplora, true, 4, false);
         } // ANCHOR: ignore
         const client = new lwk.WaterfallsClient(network, WATERFALLS_URL); // ANCHOR: ignore
         let fundTxid = await fundAddress(wollet.address(null).address(), BigInt(100_000), network, client); // ANCHOR: ignore

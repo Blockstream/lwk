@@ -1,5 +1,6 @@
 target*
 *swp
+.DS_Store
 bak*
 bin/
 .vscode

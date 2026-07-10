@@ -30,6 +30,12 @@ pub const AUTH_USER_UUID: &str = "lwk-test-user-uuid";
 const KEYCLOAK_PORT: u16 = 8_080;
 const APISIX_PORT: u16 = 9_081;
 
+/// Lean test realm modeled on the production one (`blockstream/keycloak-public`,
+/// `setup/realms/blockstream-public.json`): same realm name, a confidential service-account
+/// client with the `client_credentials` grant (like the dashboard-created API clients), the
+/// audience mapper emitting `account`, and the `user_uuid` claim the credit-checker keys on.
+/// Kept minimal on purpose — see the MR discussion; `KEYCLOAK_IMAGE_*` env vars allow swapping
+/// in the production image if realm fidelity is ever needed.
 const REALM_JSON: &str = include_str!("auth/realm.json");
 
 fn keycloak_image() -> String {

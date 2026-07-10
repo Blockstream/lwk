@@ -261,6 +261,8 @@ coverage_report:
       artifacts: true
     - job: test_simplicity
       artifacts: true
+    - job: test_auth
+      artifacts: true
     - job: bindings
       artifacts: true
     - job: amp0

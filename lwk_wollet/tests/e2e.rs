@@ -1977,6 +1977,17 @@ fn wait_blockchain_tx_update<C: BlockchainBackend>(client: &mut C, wollet: &Woll
 }
 
 #[cfg(feature = "esplora")]
+fn assert_waterfalls_subscription_event(
+    subscription: &clients::blocking::WaterfallsSubscription,
+    kind: clients::WaterfallsSubscriptionEventKind,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let event = subscription.next_update()?.unwrap();
+    assert_eq!(event.kind, kind);
+    assert!(event.tip.is_some());
+    Ok(())
+}
+
+#[cfg(feature = "esplora")]
 #[test]
 fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: use TestWollet also for EsploraClient
@@ -2050,54 +2061,104 @@ fn test_waterfalls_subscribe() -> Result<(), Box<dyn std::error::Error>> {
         clients::blocking::WaterfallsClient::new(&env.waterfalls_url(), Network::default_regtest())
             .unwrap();
 
-    let signer = generate_signer();
-    let view_key = generate_view_key();
-    let desc = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer.xpub());
-    let desc = WolletDescriptor::from_str(&desc).unwrap();
     let network = Network::default_regtest();
-    let mut wollet = WolletBuilder::new(network, desc.clone()).build().unwrap();
+    let create_wollet =
+        || -> Result<(SwSigner, WolletDescriptor, Wollet), Box<dyn std::error::Error>> {
+            let signer = generate_signer();
+            let view_key = generate_view_key();
+            let desc = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer.xpub());
+            let desc = WolletDescriptor::from_str(&desc)?;
+            let wollet = WolletBuilder::new(network, desc.clone()).build()?;
+            Ok((signer, desc, wollet))
+        };
 
-    let err = match client.subscribe(&desc) {
+    let (_receiver_signer, receiver_desc, mut receiver_wollet) = create_wollet()?;
+    let (sender_signer, sender_desc, mut sender_wollet) = create_wollet()?;
+
+    let err = match client.subscribe(&receiver_desc) {
         Ok(_) => panic!("subscribe should fail before the descriptor is scanned"),
         Err(err) => err,
     };
     assert!(matches!(err, Error::EsploraHttpError { status: 400, .. }));
 
-    if let Some(update) = client.full_scan(&wollet)? {
-        wollet.apply_update(update)?;
+    if let Some(update) = client.full_scan(&receiver_wollet)? {
+        receiver_wollet.apply_update(update)?;
+    }
+    if let Some(update) = client.full_scan(&sender_wollet)? {
+        sender_wollet.apply_update(update)?;
     }
 
-    let subscription = client.subscribe(&desc)?;
+    let sender_funding_sats = 100_000;
+    let sender_funding_address = sender_wollet.address(Some(0))?;
+    env.elementsd_sendtoaddress(sender_funding_address.address(), sender_funding_sats, None);
+    env.elementsd_generate(1);
+
+    let update = wait_blockchain_tx_update(&mut client, &sender_wollet);
+    sender_wollet.apply_update(update)?;
+    assert_eq!(
+        sender_funding_sats,
+        *sender_wollet
+            .balance()?
+            .get(network.policy_asset())
+            .unwrap()
+    );
+
+    let receiver_subscription = client.subscribe(&receiver_desc)?;
+    let sender_subscription = client.subscribe(&sender_desc)?;
 
     let sats = 1_000;
-    let address = wollet.address(Some(0)).unwrap();
-    env.elementsd_sendtoaddress(address.address(), sats, None);
+    let receiver_address = receiver_wollet.address(Some(0))?;
+    let mut pset = sender_wollet
+        .tx_builder()
+        .add_lbtc_recipient(receiver_address.address(), sats)?
+        .finish()?;
+    let sigs = sender_signer.sign(&mut pset)?;
+    assert!(sigs > 0);
 
-    let event = subscription.next_update()?.unwrap();
-    assert_eq!(
-        event.kind,
-        clients::WaterfallsSubscriptionEventKind::Mempool
-    );
-    assert!(event.tip.is_some());
+    let tx = sender_wollet.finalize(&mut pset)?;
+    client.broadcast(&tx)?;
 
-    let update = client.full_scan(&wollet)?.unwrap();
-    wollet.apply_update(update)?;
+    assert_waterfalls_subscription_event(
+        &receiver_subscription,
+        clients::WaterfallsSubscriptionEventKind::Mempool,
+    )?;
+    assert_waterfalls_subscription_event(
+        &sender_subscription,
+        clients::WaterfallsSubscriptionEventKind::Mempool,
+    )?;
+
+    let update = client.full_scan(&receiver_wollet)?.unwrap();
+    receiver_wollet.apply_update(update)?;
     assert_eq!(
         sats,
-        *wollet.balance()?.get(network.policy_asset()).unwrap()
+        *receiver_wollet
+            .balance()?
+            .get(network.policy_asset())
+            .unwrap()
     );
 
     env.elementsd_generate(1);
-    let event = subscription.next_update()?.unwrap();
-    assert_eq!(event.kind, clients::WaterfallsSubscriptionEventKind::Block);
-    assert!(event.tip.is_some());
+    assert_waterfalls_subscription_event(
+        &receiver_subscription,
+        clients::WaterfallsSubscriptionEventKind::Block,
+    )?;
+    assert_waterfalls_subscription_event(
+        &sender_subscription,
+        clients::WaterfallsSubscriptionEventKind::Block,
+    )?;
 
     env.elementsd_generate(1);
-    let event = subscription.next_update()?.unwrap();
-    assert_eq!(event.kind, clients::WaterfallsSubscriptionEventKind::Tip);
-    assert!(event.tip.is_some());
+    assert_waterfalls_subscription_event(
+        &receiver_subscription,
+        clients::WaterfallsSubscriptionEventKind::Tip,
+    )?;
+    assert_waterfalls_subscription_event(
+        &sender_subscription,
+        clients::WaterfallsSubscriptionEventKind::Tip,
+    )?;
 
-    subscription.close();
+    receiver_subscription.close();
+    sender_subscription.close();
 
     Ok(())
 }

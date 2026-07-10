@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import re
 from pathlib import Path
 
@@ -25,6 +26,20 @@ HEADING_RE = re.compile(r"^(#{1,6})(\s+.+)$")
 IGNORE_FENCE_RE = re.compile(r"^(```[A-Za-z0-9_#+-]+),ignore$", re.MULTILINE)
 
 
+@dataclass(frozen=True)
+class PageEntry:
+    fallback: str
+    path: Path
+    level: int
+
+
+@dataclass(frozen=True)
+class RenderedPage:
+    path: Path
+    title: str
+    lines: list[str]
+
+
 def slugify(text: str) -> str:
     text = text.strip().lower()
     text = re.sub(r"<[^>]+>", "", text)
@@ -33,10 +48,10 @@ def slugify(text: str) -> str:
     return text.strip("-")
 
 
-def summary_pages() -> list[tuple[str, Path]]:
+def summary_pages() -> list[PageEntry]:
     """Return all source markdown pages, with SUMMARY.md entries first."""
     seen: set[Path] = set()
-    pages: list[tuple[str, Path]] = []
+    pages: list[PageEntry] = []
 
     for line in SUMMARY.read_text(encoding="utf-8").splitlines():
         title = SUMMARY_TITLE_RE.search(line)
@@ -47,7 +62,8 @@ def summary_pages() -> list[tuple[str, Path]]:
         path = (SRC_DIR / targets[-1]).resolve()
         if path not in seen:
             seen.add(path)
-            pages.append((title.group(1), path))
+            level = (len(line) - len(line.lstrip())) // 2
+            pages.append(PageEntry(title.group(1), path, level))
 
     for path in sorted(SRC_DIR.glob("*.md")):
         if path.name == "SUMMARY.md":
@@ -56,7 +72,7 @@ def summary_pages() -> list[tuple[str, Path]]:
         resolved = path.resolve()
         if resolved not in seen:
             seen.add(resolved)
-            pages.append((path.stem, resolved))
+            pages.append(PageEntry(path.stem, resolved, 0))
 
     return pages
 
@@ -209,12 +225,108 @@ def demote_headings(text: str, title: str) -> str:
     return "\n".join(output).strip()
 
 
-def render_index(pages: list[tuple[str, Path]]) -> str:
-    pages = [(fallback, path) for fallback, path in pages if page_has_body(path)]
-    titles = {path: page_title(path, fallback) for fallback, path in pages}
-    slug_by_file = {path.name: slugify(title) for path, title in titles.items()}
+def render_page(entry: PageEntry, title: str, slug_by_file: dict[str, str]) -> RenderedPage:
+    text = entry.path.read_text(encoding="utf-8")
+    text = expand_includes(text, entry.path)
+    text = clean_tabs(text)
+    text = rewrite_links(text, entry.path, slug_by_file)
+    text = clean_code_fences(text)
+    text = demote_headings(text, title)
 
-    lines = [
+    lines = ["", "---", "", f"## {title}", ""]
+    if text:
+        lines.extend(text.splitlines())
+
+    return RenderedPage(entry.path, title, lines)
+
+
+def content_ranges(
+    header_lines: list[str],
+    toc_line_count: int,
+    rendered_pages: list[RenderedPage],
+) -> dict[Path, tuple[int, int]]:
+    ranges: dict[Path, tuple[int, int]] = {}
+    current_line = len(header_lines) + toc_line_count
+
+    for page in rendered_pages:
+        # Each page section starts with a blank, separator, and blank line.
+        start = current_line + 4
+        end = current_line + len(page.lines)
+        ranges[page.path] = (start, end)
+        current_line += len(page.lines)
+
+    return ranges
+
+
+def toc_entries(entries: list[PageEntry], page_ranges: dict[Path, tuple[int, int]]) -> list[PageEntry]:
+    output: list[PageEntry] = []
+
+    for index, entry in enumerate(entries):
+        has_range = entry.path in page_ranges
+        descendant_has_range = False
+
+        for child in entries[index + 1 :]:
+            if child.level <= entry.level:
+                break
+            if child.path in page_ranges:
+                descendant_has_range = True
+                break
+
+        if has_range or descendant_has_range:
+            output.append(entry)
+
+    return output
+
+
+def outline_ranges(
+    entries: list[PageEntry],
+    page_ranges: dict[Path, tuple[int, int]],
+) -> dict[Path, tuple[int, int]]:
+    ranges: dict[Path, tuple[int, int]] = {}
+
+    for index, entry in enumerate(entries):
+        child_ranges = []
+        if entry.path in page_ranges:
+            child_ranges.append(page_ranges[entry.path])
+
+        for child in entries[index + 1 :]:
+            if child.level <= entry.level:
+                break
+            if child.path in page_ranges:
+                child_ranges.append(page_ranges[child.path])
+
+        if child_ranges:
+            ranges[entry.path] = (
+                min(start for start, _ in child_ranges),
+                max(end for _, end in child_ranges),
+            )
+
+    return ranges
+
+
+def render_toc(
+    entries: list[PageEntry],
+    titles: dict[Path, str],
+    page_ranges: dict[Path, tuple[int, int]],
+    ranges: dict[Path, tuple[int, int]],
+) -> list[str]:
+    lines: list[str] = []
+
+    for entry in entries:
+        title = titles[entry.path]
+        start, end = ranges[entry.path]
+        label = f"[{title}](#{slugify(title)})" if entry.path in page_ranges else title
+        lines.append(f"{'  ' * entry.level}- {label} (lines {start}-{end})")
+
+    return lines
+
+
+def render_index(pages: list[PageEntry]) -> str:
+    titles = {entry.path: page_title(entry.path, entry.fallback) for entry in pages}
+    body_pages = [entry for entry in pages if page_has_body(entry.path)]
+    slug_by_file = {entry.path.name: slugify(titles[entry.path]) for entry in body_pages}
+
+    header_lines = [
         "<!-- Generated by docs/generate_llms.py; do not edit manually. -->",
         "",
         "# LWK Documentation",
@@ -226,22 +338,15 @@ def render_index(pages: list[tuple[str, Path]]) -> str:
         "",
     ]
 
-    for _, path in pages:
-        title = titles[path]
-        lines.append(f"- [{title}](#{slugify(title)})")
+    rendered_pages = [render_page(entry, titles[entry.path], slug_by_file) for entry in body_pages]
+    toc_pages = toc_entries(pages, {page.path: (0, 0) for page in rendered_pages})
+    page_ranges = content_ranges(header_lines, len(toc_pages), rendered_pages)
+    ranges = outline_ranges(toc_pages, page_ranges)
+    toc_lines = render_toc(toc_pages, titles, page_ranges, ranges)
+    lines = header_lines + toc_lines
 
-    for _, path in pages:
-        title = titles[path]
-        text = path.read_text(encoding="utf-8")
-        text = expand_includes(text, path)
-        text = clean_tabs(text)
-        text = rewrite_links(text, path, slug_by_file)
-        text = clean_code_fences(text)
-        text = demote_headings(text, title)
-
-        lines.extend(["", "---", "", f"## {title}", ""])
-        if text:
-            lines.append(text)
+    for page in rendered_pages:
+        lines.extend(page.lines)
 
     return "\n".join(lines).rstrip() + "\n"
 

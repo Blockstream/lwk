@@ -512,6 +512,57 @@ impl LendingSession {
 
         Ok(())
     }
+
+    // TODO: we could add multiple utxo with sum > sats for more flexibility
+    /// Return simplex [`UTXO`] with given asset ID and a amount higher than given sats.
+    /// Searches for suitable UTXO inside wallet cache.
+    ///
+    /// # Errors
+    ///
+    /// Return an error if suitable UTXO not found.
+    fn get_utxo(
+        &self,
+        asset_id: AssetId,
+        sats: u64,
+        excluded: &[OutPoint],
+    ) -> Result<UTXO, LendingError> {
+        let utxos = self.wollet.utxos().map_err(LendingError::Wallet)?;
+        let utxo = utxos
+            .into_iter()
+            .filter(|u| {
+                u.unblinded.asset == asset_id
+                    && u.unblinded.value >= sats
+                    && !excluded.contains(&u.outpoint)
+            })
+            .min_by_key(|u| u.unblinded.value)
+            .ok_or(LendingError::Generic(format!(
+                "No suitable UTXO found for {asset_id} with amount {sats}"
+            )))?;
+        let txid = &utxo.outpoint.txid;
+
+        let tx = self
+            .wollet
+            .transaction(txid)?
+            .ok_or(LendingError::Generic(format!(
+                "transaction with txid {txid} was not found in wallet"
+            )))?;
+        let vout = utxo.outpoint.vout;
+
+        let txout = tx
+            .tx
+            .output
+            .get(vout as usize)
+            .ok_or(LendingError::Generic(format!(
+                "Output for txid {txid} with vout {vout} was not found"
+            )))?;
+
+        Ok(UTXO {
+            outpoint: utxo.outpoint,
+            txout: txout.clone(),
+            secrets: Some(utxo.unblinded),
+        })
+    }
+
 }
 
 /// Builder for creating a [`LendingSession`].

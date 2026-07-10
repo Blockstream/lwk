@@ -1,39 +1,28 @@
 const lwk = require('lwk_node');
-
-// TODO: use regtest instead of testnet:
-// however keep displaying testnet in the generated docs using // ANCHOR: ignore
+const { fundAddress, generateAddress, waitForTx, WATERFALLS_URL } = require("./scripts/utils.js")
 
 async function runMultisigTest() {
     try {
 	// ANCHOR: multisig-setup
+	if (false) { // ANCHOR: ignore
 	const network = lwk.Network.testnet();
+	} // ANCHOR: ignore
+	const network = lwk.Network.regtestDefault(); // ANCHOR: ignore
 	// Derivation for multisig
 	const bip = lwk.Bip.bip87();
 
 	// Alice creates their signer and gets the xpub
-	if (false) { // ANCHOR: ignore
 	const mnemonic_a = lwk.Mnemonic.fromRandom(12);
-	} // ANCHOR: ignore
-	// Fixed mnemonic with some funds // ANCHOR: ignore
-	const mnemonic_a = new lwk.Mnemonic("kind they sing appear whip boil divorce essence mask alien teach wire"); // ANCHOR: ignore
 	const signer_a = new lwk.Signer(mnemonic_a, network);
 	const xpub_a = signer_a.keyoriginXpub(bip);
 
 	// Bob creates their signer and gets the xpub
-	if (false) { // ANCHOR: ignore
 	const mnemonic_b = lwk.Mnemonic.fromRandom(12);
-	} // ANCHOR: ignore
-	// Fixed mnemonic with some funds // ANCHOR: ignore
-	const mnemonic_b = new lwk.Mnemonic("vast response truth other mansion skull hold amused capital satoshi oxygen brass"); // ANCHOR: ignore
 	const signer_b = new lwk.Signer(mnemonic_b, network);
 	const xpub_b = signer_b.keyoriginXpub(bip);
 
 	// Carol, who acts as a coordinator, creates their signer and gets the xpub
-	if (false) { // ANCHOR: ignore
 	const mnemonic_c = lwk.Mnemonic.fromRandom(12);
-	} // ANCHOR: ignore
-	// Fixed mnemonic with some funds // ANCHOR: ignore
-	const mnemonic_c = new lwk.Mnemonic("fresh inner begin grid symbol congress wall outer mass enable coil repeat"); // ANCHOR: ignore
 	const signer_c = new lwk.Signer(mnemonic_c, network);
 	const xpub_c = signer_c.keyoriginXpub(bip);
 
@@ -62,31 +51,33 @@ async function runMultisigTest() {
 	const balance = wollet_c.balance();
 
 	// Update the wollet state
+	if (false) { // ANCHOR: ignore
 	const url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
 	// TODO: name variables // ANCHOR: ignore
 	const client = new lwk.WaterfallsClient(network, url);
+	} // ANCHOR: ignore
 
+	const client = new lwk.WaterfallsClient(network, WATERFALLS_URL);  // ANCHOR: ignore
 	const update = await client.fullScan(wollet_c);
 	if (update) {
 	    wollet_c.applyUpdate(update);
 	}
 	// ANCHOR_END: multisig-receive
 
-	const lbtc = network.policyAsset().toString();
-	const lbtc_balance = wollet_c.balance().entries().get(lbtc) || 0n;
-	if (lbtc_balance < 500n) {
-	    console.log(`Balance is insufficient to make a transaction, send some tLBTC to ${addr}`);
-	    return;
-	}
+	// Fund the multisig wallet
+	const multisigAddr = wollet_c.address(null).address();
+	let fundTxid = await fundAddress(multisigAddr, BigInt(100_000), network, client);
+	await waitForTx(wollet_c, client, fundTxid);
 
 	// ANCHOR: multisig-send
 	// Carol creates a transaction send few sats to a certain address
 	const sats = BigInt(100);
+	const lbtc = network.policyAsset();
 	if (false) { // ANCHOR: ignore
 	const address = new lwk.Address("<address>");
 	const asset = new lwk.AssetId.fromString("<asset>");
 	} // ANCHOR: ignore
-	const address = new lwk.Address("tlq1qq2g07nju42l0nlx0erqa3wsel2l8prnq96rlnhml262mcj7pe8w6ndvvyg237japt83z24m8gu4v3yfhaqvrqxydadc9scsmw"); // ANCHOR: ignore
+	const address = generateAddress(); // ANCHOR: ignore
 	const asset = network.policyAsset(); // ANCHOR: ignore
 
 	var builder = new lwk.TxBuilder(network)
@@ -106,7 +97,7 @@ async function runMultisigTest() {
 	// Then Bob uses the wollet to analyze the PSET
 	const details = wollet_b.psetDetails(pset);
 	// PSET has a reasonable fee
-	console.assert(details.balance().feesIn(network.policyAsset()) < 100);
+	console.assert(details.balance().feesIn(lbtc) < 100);
 	// PSET has a signature from Carol
 	console.assert(details.fingerprintsHas().length === 1);
 	console.assert(details.fingerprintsHas().includes(signer_c.fingerprint()));
@@ -136,7 +127,7 @@ async function runMultisigTest() {
 	// ANCHOR_END: multisig-send
 	console.log(txid.toString());
     } catch (error) {
-	console.error("Basics test failed:", error);
+	console.error("Multisig test failed:", error);
 	throw error;
     }
 }

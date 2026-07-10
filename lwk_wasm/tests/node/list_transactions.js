@@ -1,14 +1,15 @@
 const lwk = require('lwk_node');
+const { WATERFALLS_URL } = require("./scripts/utils.js");
 
 async function runListTransactionsTest() {
     try {
         console.log("Starting list transactions test");
 
         const mnemonic = new lwk.Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
-        const network = lwk.Network.testnet();
-        console.assert(network.toString() === "LiquidTestnet");
+        const network = lwk.Network.regtestDefault();
+        console.assert(network.isRegtest());
 
-        const waterfallsUrl = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+        const waterfallsUrl = WATERFALLS_URL;
         const client = new lwk.WaterfallsClientBuilder(network, waterfallsUrl)
             .concurrency(4)
             .build();
@@ -26,7 +27,7 @@ async function runListTransactionsTest() {
         }
 
         const txs = wollet.transactions();
-        console.assert(txs.length >= 99);
+        console.assert(txs.length >= 20);
         const opt = lwk.TxsOpt.default();
         const txs2 = wollet.txs(opt);
         console.assert(txs.length === txs2.length);

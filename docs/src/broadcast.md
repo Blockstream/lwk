@@ -28,7 +28,7 @@ you can call `Wollet::apply_tx()`.
 <section>
 
 ```python
-{{#include ../../lwk_wasm/tests/node/basics.js:broadcast:ignore}}
+{{#include ../../lwk_bindings/tests/bindings/basics.py:broadcast:ignore}}
 ```
 </section>
 

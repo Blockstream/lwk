@@ -2,7 +2,7 @@
 export ELECTRS_LIQUID_EXEC="$PWD/bin/electrs_linux_esplora_027e38d3ebc2f85b28ae76f8f3448438ee4fc7b1_liquid"
 export ELEMENTSD_EXEC="$PWD/bin/elements-23.3.1/bin/elementsd"
 export BITCOIND_EXEC="$PWD/bin/bitcoin-26.0/bin/bitcoind"
-export WATERFALLS_EXEC="$PWD/bin/waterfalls_c09b914"
+export WATERFALLS_EXEC="$PWD/bin/waterfalls_c4e36a0"
 export ASSET_REGISTRY_EXEC="$PWD/bin/asset_registry_server_5ecf533"
 export JADE_EMULATOR_IMAGE_NAME=xenoky/local-jade-emulator
 export JADE_EMULATOR_IMAGE_VERSION="1.0.41-beta1"

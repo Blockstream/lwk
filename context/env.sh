@@ -1,6 +1,7 @@
 #!/bin/sh
 export ELECTRS_LIQUID_EXEC="$PWD/bin/electrs_linux_esplora_027e38d3ebc2f85b28ae76f8f3448438ee4fc7b1_liquid"
 export ELEMENTSD_EXEC="$PWD/bin/elements-23.3.1/bin/elementsd"
+export ELEMENTS_CLI_EXEC="$PWD/bin/elements-23.3.1/bin/elements-cli"
 export BITCOIND_EXEC="$PWD/bin/bitcoin-26.0/bin/bitcoind"
 export WATERFALLS_EXEC="$PWD/bin/waterfalls_6b505c5"
 export ASSET_REGISTRY_EXEC="$PWD/bin/asset_registry_server_5ecf533"

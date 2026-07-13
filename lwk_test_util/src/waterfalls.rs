@@ -59,18 +59,23 @@ impl WaterfallsD {
             Ok(None) => {} // Process is still running, proceed
         }
 
-        // Wait for waterfalls to start
-        let mut started = false;
+        // Wait for waterfalls to start. Polling runs on a dedicated thread so `new` is
+        // callable from async (tokio) tests too: `reqwest::blocking` panics when its
+        // internal runtime is dropped inside an async context.
         let url = format!("{waterfalls_url}/blocks/tip/hash");
-        for _ in 0..50 {
-            std::thread::sleep(Duration::from_millis(100));
-            if let Ok(r) = reqwest::blocking::get(&url) {
-                if r.status().as_u16() == 200 {
-                    started = true;
-                    break;
+        let started = std::thread::spawn(move || {
+            for _ in 0..50 {
+                std::thread::sleep(Duration::from_millis(100));
+                if let Ok(r) = reqwest::blocking::get(&url) {
+                    if r.status().as_u16() == 200 {
+                        return true;
+                    }
                 }
             }
-        }
+            false
+        })
+        .join()
+        .expect("waterfalls poll thread panicked");
         assert!(started, "waterfalls hasn't started after 5s");
 
         WaterfallsD {

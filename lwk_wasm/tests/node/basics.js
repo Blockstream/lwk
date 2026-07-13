@@ -11,7 +11,7 @@ async function runBasicsTest() {
         const mnemonic = lwk.Mnemonic.fromRandom(12);
         } // ANCHOR: ignore
         // Fixed mnemonic with some funds // ANCHOR: ignore
-        const mnemonic = new lwk.Mnemonic("other august catalog large suit off fan hammer ritual sword evil scrub"); // ANCHOR: ignore
+        const mnemonic = new lwk.Mnemonic("uncle win diagram apple poverty sun cement rib opera barely april mountain"); // ANCHOR: ignore
         const network = lwk.Network.testnet();
         const signer = new lwk.Signer(mnemonic, network);
         // ANCHOR_END: generate-signer

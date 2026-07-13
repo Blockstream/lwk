@@ -88,32 +88,16 @@ impl LendingSession {
     pub fn borrower_prepare(
         &self,
         _params: BorrowerAccountParams,
+        fee_rate: f32,
     ) -> Result<BorrowerAccountCreationResult, LendingError> {
-        // TODO: we should estimate fee dynamically
-        const FEE: u64 = 250;
         const ISSUANCE_AMOUNT: u64 = 2;
         const FACTORY_AUTH_AMOUNT: u64 = 1;
         const ISSUANCE_FACTORY_AMOUNT: u64 = 1;
+        const FEE_ESTIMATE: u64 = 250;
 
         let policy_asset = *self.network.policy_asset();
 
-        let utxos = self.wollet.utxos().map_err(LendingError::Wallet)?;
-        let funding_utxo = utxos
-            .iter()
-            .filter(|u| u.unblinded.asset == policy_asset && u.unblinded.value > FEE)
-            .min_by_key(|u| u.unblinded.value)
-            .ok_or_else(|| LendingError::Generic("no suitable funding UTXO".into()))?;
-        let input_value = funding_utxo.unblinded.value;
-        let funding_outpoint = funding_utxo.outpoint;
-
-        let tx_details = self
-            .wollet
-            .transaction(&funding_outpoint.txid)
-            .map_err(LendingError::Wallet)?
-            .ok_or_else(|| {
-                LendingError::Generic("transaction for funding UTXO not found".into())
-            })?;
-        let txout = tx_details.tx.output[funding_outpoint.vout as usize].clone();
+        let funding_utxo = self.get_utxo(policy_asset, FEE_ESTIMATE, &[])?;
 
         let parameters = IssuanceFactoryParameters {
             issuing_utxos_count: 2,
@@ -125,23 +109,25 @@ impl LendingSession {
         let mut ft = FinalTransaction::new();
         let entropy = get_random_seed();
 
-        let utxo = UTXO {
-            outpoint: funding_outpoint,
-            txout,
-            secrets: Some(funding_utxo.unblinded),
-        };
         let issuance_details = ft.add_issuance_input(
-            PartialInput::new(utxo),
+            PartialInput::new(funding_utxo.clone()),
             IssuanceInput::new_issuance(ISSUANCE_AMOUNT, 0, entropy),
             RequiredSignature::NativeEcdsa,
         );
 
-        let address_result = self.wollet.address(None).map_err(LendingError::Wallet)?;
-        let user_script = address_result.address().script_pubkey();
-        let user_blinding_pk = address_result
-            .address()
-            .blinding_pubkey
-            .ok_or_else(|| LendingError::Generic("address has no blinding key".into()))?;
+        let change_addr = self.wollet.change(None)?;
+        let change_script = change_addr.address().script_pubkey();
+        let change_blinding =
+            change_addr
+                .address()
+                .blinding_pubkey
+                .ok_or(LendingError::Generic(
+                    "change address has no blinding key".into(),
+                ))?;
+        let change_pk = bitcoin::PublicKey::from(change_blinding);
+
+        let user_addr = self.wollet.address(None)?;
+        let user_script = user_addr.address().script_pubkey();
 
         ft.add_output(PartialOutput::new(
             user_script,
@@ -155,22 +141,7 @@ impl LendingSession {
             ISSUANCE_FACTORY_AMOUNT,
         );
 
-        let change_value = input_value - FEE;
-        ft.add_output(PartialOutput::new(Script::default(), FEE, policy_asset));
-
-        let change_script = self
-            .wollet
-            .address(None)
-            .map_err(LendingError::Wallet)?
-            .address()
-            .script_pubkey();
-        let user_blinding_pk_btc =
-            lwk_wollet::elements::bitcoin::PublicKey::from_slice(&user_blinding_pk.serialize())
-                .map_err(|e| LendingError::Generic(format!("invalid blinding key: {e}")))?;
-        ft.add_output(
-            PartialOutput::new(change_script, change_value, policy_asset)
-                .with_blinding_key(user_blinding_pk_btc),
-        );
+        let _ = self.add_fee(&mut ft, change_script, change_pk, fee_rate)?;
 
         let (mut pset, inp_txout_sec) = ft.extract_pst();
         let mut rng = thread_rng();
@@ -207,10 +178,10 @@ impl LendingSession {
         &mut self,
         details: OfferDetails,
         factory: FactoryDetails,
+        fee_rate: f32,
     ) -> Result<CreateBorrowTransaction, LendingError> {
-        // TODO: we should estimate fee dynamically
-        const FEE: u64 = 250;
         const NFT_AMOUNT: u64 = 1;
+        const FEE_ESTIMATE: u64 = 250;
 
         let policy_asset = *self.network.policy_asset();
 
@@ -245,53 +216,25 @@ impl LendingSession {
             .ok_or_else(|| LendingError::Generic("program vout out of bounds".into()))?
             .clone();
 
-        // TODO: should we select this UTXOs outside of the session?
-        // Find collateral UTXO via wollet
-        let utxos = self.wollet.utxos().map_err(LendingError::Wallet)?;
-        let collateral_utxo = utxos
-            .iter()
-            .filter(|u| {
-                u.unblinded.asset == details.collateral_asset_id
-                    && u.unblinded.value >= details.collateral_amount
-            })
-            .min_by_key(|u| u.unblinded.value)
-            .ok_or_else(|| LendingError::Generic("no suitable collateral UTXO in wallet".into()))?;
-        let collateral_value = collateral_utxo.unblinded.value;
+        let collateral_utxo =
+            self.get_utxo(details.collateral_asset_id, details.collateral_amount, &[])?;
 
-        let collateral_tx = self
-            .client
-            .get_transaction(collateral_utxo.outpoint.txid)
-            .map_err(|e| LendingError::Generic(format!("failed to fetch collateral tx: {e}")))?;
-        let collateral_txout = collateral_tx.output[collateral_utxo.outpoint.vout as usize].clone();
+        let fee_funding_utxo =
+            self.get_utxo(policy_asset, FEE_ESTIMATE, &[collateral_utxo.outpoint])?;
 
-        // Select a UTXO for a fee
-        let fee_funding_utxo = utxos
-            .iter()
-            .filter(|u| {
-                u.unblinded.asset == policy_asset
-                    && u.unblinded.value > FEE
-                    && u.outpoint != collateral_utxo.outpoint
-            })
-            .min_by_key(|u| u.unblinded.value)
-            .ok_or_else(|| {
-                LendingError::Generic("no suitable fee funding UTXO in wallet".into())
-            })?;
-        let fee_funding_value = fee_funding_utxo.unblinded.value;
+        let change_addr = self.wollet.change(None)?;
+        let change_script = change_addr.address().script_pubkey();
+        let change_blinding =
+            change_addr
+                .address()
+                .blinding_pubkey
+                .ok_or(LendingError::Generic(
+                    "change address has no blinding key".into(),
+                ))?;
+        let change_pk = bitcoin::PublicKey::from(change_blinding);
 
-        let fee_funding_tx = self
-            .client
-            .get_transaction(fee_funding_utxo.outpoint.txid)
-            .map_err(|e| LendingError::Generic(format!("failed to fetch fee funding tx: {e}")))?;
-        let fee_funding_txout =
-            fee_funding_tx.output[fee_funding_utxo.outpoint.vout as usize].clone();
-
-        // Derive the user's next receive address for auth return and change
-        let address_result = self.wollet.address(None).map_err(LendingError::Wallet)?;
-        let user_script = address_result.address().script_pubkey();
-        let user_blinding_pk = address_result
-            .address()
-            .blinding_pubkey
-            .ok_or_else(|| LendingError::Generic("address has no blinding key".into()))?;
+        let user_addr = self.wollet.address(None)?;
+        let user_script = user_addr.address().script_pubkey();
 
         // Use shared entropy for both NFTs
         let nfts_entropy = get_random_seed();
@@ -349,22 +292,14 @@ impl LendingSession {
         // Input 2: collateral UTXO with lender NFT issuance
         let lender_nft_issuance = IssuanceInput::new_issuance(NFT_AMOUNT, 0, nfts_entropy);
         let lender_nft_details = ft.add_issuance_input(
-            PartialInput::new(UTXO {
-                outpoint: collateral_utxo.outpoint,
-                txout: collateral_txout,
-                secrets: Some(collateral_utxo.unblinded),
-            }),
+            PartialInput::new(collateral_utxo.clone()),
             lender_nft_issuance,
             RequiredSignature::NativeEcdsa,
         );
 
         // Input 3: fee funding UTXO
         ft.add_input(
-            PartialInput::new(UTXO {
-                outpoint: fee_funding_utxo.outpoint,
-                txout: fee_funding_txout,
-                secrets: Some(fee_funding_utxo.unblinded),
-            }),
+            PartialInput::new(fee_funding_utxo.clone()),
             RequiredSignature::NativeEcdsa,
         );
 
@@ -390,32 +325,20 @@ impl LendingSession {
         // - Output 5: lending covenant collateral
         lending_offer.attach_creation(&mut ft);
 
-        let user_blinding_pk_btc =
-            lwk_wollet::elements::bitcoin::PublicKey::from_slice(&user_blinding_pk.serialize())
-                .map_err(|e| LendingError::Generic(format!("invalid blinding key: {e}")))?;
-
-        // Add fee output
-        ft.add_output(PartialOutput::new(Script::default(), FEE, policy_asset));
-
-        // Add fee change output
-        let fee_change_value = fee_funding_value - FEE;
-        ft.add_output(
-            PartialOutput::new(user_script.clone(), fee_change_value, policy_asset)
-                .with_blinding_key(user_blinding_pk_btc),
-        );
-
         // Add collateral change output
-        let collateral_change_value = collateral_value - details.collateral_amount;
-        if collateral_change_value > 0 {
+        if collateral_utxo.amount() > details.collateral_amount {
             ft.add_output(
                 PartialOutput::new(
-                    user_script.clone(),
-                    collateral_change_value,
+                    change_script.clone(),
+                    collateral_utxo.amount() - details.collateral_amount,
                     details.collateral_asset_id,
                 )
-                .with_blinding_key(user_blinding_pk_btc),
+                .with_blinding_key(change_pk),
             );
         }
+
+        // Add fee
+        let _ = self.add_fee(&mut ft, change_script, change_pk, fee_rate)?;
 
         // Extract
         let (mut pset, inp_txout_sec) = ft.extract_pst();

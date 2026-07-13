@@ -110,7 +110,7 @@ async fn test_borrow_flow() {
 
     // borrower_prepare, which selects fee UTXO and builds transaction
     let prepared = borrower_session
-        .borrower_prepare(BorrowerAccountParams {})
+        .borrower_prepare(BorrowerAccountParams {}, 100.0)
         .unwrap();
     let mut pset = prepared.inner().clone();
 
@@ -171,7 +171,7 @@ async fn test_borrow_flow() {
     borrower_session.sync().unwrap();
 
     let create = borrower_session
-        .borrower_create_offer(borrow_details, factory.clone().try_into().unwrap())
+        .borrower_create_offer(borrow_details, factory.clone().try_into().unwrap(), 100.0)
         .unwrap();
 
     let mut pset = create.into_inner();

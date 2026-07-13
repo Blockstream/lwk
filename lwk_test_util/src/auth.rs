@@ -327,14 +327,26 @@ impl AuthStack {
     }
 
     fn set_credits_(redis_name: &str, credits: u64) {
-        docker(&[
-            "exec",
-            redis_name,
-            "redis-cli",
-            "SET",
-            &format!("user:{AUTH_USER_UUID}"),
-            &credits.to_string(),
-        ]);
+        // Redis may not accept connections right after `docker run -d` returns, retry briefly.
+        for _ in 0..50 {
+            let ok = Command::new("docker")
+                .args([
+                    "exec",
+                    redis_name,
+                    "redis-cli",
+                    "SET",
+                    &format!("user:{AUTH_USER_UUID}"),
+                    &credits.to_string(),
+                ])
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false);
+            if ok {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        panic!("failed to set credits in redis '{redis_name}' after 5s");
     }
 
     /// The Keycloak OAuth2 token endpoint (reachable from the host).

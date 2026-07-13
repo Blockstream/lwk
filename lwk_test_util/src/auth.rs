@@ -54,6 +54,12 @@ fn apisix_image() -> String {
     format!("{name}:{version}")
 }
 
+fn redis_image() -> String {
+    let name = std::env::var("REDIS_IMAGE_NAME").unwrap_or_else(|_| "redis".to_string());
+    let version = std::env::var("REDIS_IMAGE_VERSION").unwrap_or_else(|_| "7-alpine".to_string());
+    format!("{name}:{version}")
+}
+
 // Minimal APISIX static config: standalone (file) mode, only the plugins the test routes use.
 const APISIX_CONFIG_YAML: &str = r#"
 apisix:
@@ -64,20 +70,27 @@ apisix:
 nginx_config:
   error_log: "/dev/stderr"
   error_log_level: "warn"
+  http_server_configuration_snippet: |
+    # nginx variables written by the credit-checker plugin (as in the production config)
+    set $jwt_sub "";
+    set $client_id "";
 deployment:
   role: data_plane
   role_data_plane:
     config_provider: yaml
 plugins:
   - openid-connect
+  - oidc-identity-extractor
+  - credit-checker
 "#;
 
-// Standalone routes: a catch-all requiring a valid JWT (validated against Keycloak's JWKS),
-// proxying to the host upstream. Placeholders are substituted at runtime.
+// Standalone routes: a catch-all with the production plugin chain — a valid JWT (validated
+// against Keycloak's JWKS), identity extraction, then credit checking against redis — proxying
+// to the host upstream. Placeholders are substituted at runtime.
 const APISIX_STANDALONE_YAML: &str = r#"
 routes:
   - id: 1
-    name: "esplora-auth"
+    name: "explorer-auth"
     uri: "/*"
     plugins:
       openid-connect:
@@ -92,6 +105,11 @@ routes:
         set_userinfo_header: false
         set_id_token_header: false
         set_refresh_token_header: false
+      oidc-identity-extractor: {}
+      credit-checker:
+        redis_host: "__REDIS_HOST__"
+        redis_port: 6379
+        redis_timeout: 1000
     upstream:
       type: roundrobin
       scheme: http
@@ -99,6 +117,11 @@ routes:
         "__UPSTREAM__": 1
 #END
 "#;
+
+/// Default credit balance seeded for [`AUTH_USER_UUID`]: ample so that auth-focused tests never
+/// exhaust it (a full scan issues many requests, waterfalls calls cost 10 credits each). Tests
+/// exercising exhaustion call [`AuthStack::set_credits`] explicitly.
+const DEFAULT_CREDITS: u64 = 1_000_000;
 
 /// Under gitlab CI mounting from the default tempdir may fail, use the project dir instead
 /// (same workaround as `PinServer::tempdir`).
@@ -158,9 +181,10 @@ impl Drop for DockerContainer {
     }
 }
 
-/// Keycloak + APISIX fronting `upstream_port` on the host.
+/// Keycloak + redis (credit balances) + APISIX fronting `upstream_port` on the host.
 pub struct AuthStack {
     keycloak: DockerContainer,
+    redis: DockerContainer,
     apisix: DockerContainer,
     network: String,
     keycloak_port: u16,
@@ -186,8 +210,15 @@ impl AuthStack {
         let network = format!("lwk-auth-{suffix}");
         let keycloak_name = format!("lwk-keycloak-{suffix}");
         let apisix_name = format!("lwk-apisix-{suffix}");
+        let redis_name = format!("lwk-redis-{suffix}");
 
         docker(&["network", "create", &network]);
+
+        // Redis: credit balances read/decremented by the credit-checker plugin
+        // (key `user:{user_uuid}`, see CREDIT_SYSTEM.md in apigw-dashboard).
+        let redis =
+            DockerContainer::run(&["--name", &redis_name, "--network", &network, &redis_image()]);
+        Self::set_credits_(&redis_name, DEFAULT_CREDITS);
 
         // Keycloak: issues client_credentials tokens; APISIX validates against its JWKS.
         // KC_HOSTNAME pins the issuer to the in-network name: APISIX validates the token `iss`
@@ -238,6 +269,7 @@ impl AuthStack {
                     "http://{keycloak_name}:{KEYCLOAK_PORT}/realms/{AUTH_REALM}/.well-known/openid-configuration"
                 ),
             )
+            .replace("__REDIS_HOST__", &redis_name)
             .replace("__UPSTREAM__", &format!("{upstream_host}:{upstream_port}"));
         let apisix_dir = tempdir().expect("tempdir");
         let config_path = apisix_dir.path().join("config.yaml");
@@ -276,6 +308,7 @@ impl AuthStack {
 
         AuthStack {
             keycloak,
+            redis,
             apisix,
             network,
             keycloak_port,
@@ -283,6 +316,25 @@ impl AuthStack {
             _keycloak_dir: keycloak_dir,
             _apisix_dir: apisix_dir,
         }
+    }
+
+    /// Set the credit balance of [`AUTH_USER_UUID`] (seeded to a large default on startup).
+    ///
+    /// The credit-checker plugin decrements it per request (10 for waterfalls calls) and
+    /// denies with `402 Payment Required` when exhausted.
+    pub fn set_credits(&self, credits: u64) {
+        Self::set_credits_(&self.redis.name, credits);
+    }
+
+    fn set_credits_(redis_name: &str, credits: u64) {
+        docker(&[
+            "exec",
+            redis_name,
+            "redis-cli",
+            "SET",
+            &format!("user:{AUTH_USER_UUID}"),
+            &credits.to_string(),
+        ]);
     }
 
     /// The Keycloak OAuth2 token endpoint (reachable from the host).
@@ -342,11 +394,26 @@ impl Drop for AuthStack {
     fn drop(&mut self) {
         // Containers must be removed before the network can be.
         let _ = Command::new("docker")
-            .args(["rm", "-f", &self.apisix.name, &self.keycloak.name])
+            .args([
+                "rm",
+                "-f",
+                &self.apisix.name,
+                &self.keycloak.name,
+                &self.redis.name,
+            ])
             .output();
-        let _ = Command::new("docker")
-            .args(["network", "rm", &self.network])
-            .output();
+        // Removing the network can race the container endpoints detaching, retry briefly.
+        for _ in 0..5 {
+            let removed = Command::new("docker")
+                .args(["network", "rm", &self.network])
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false);
+            if removed {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(300));
+        }
     }
 }
 
@@ -436,7 +503,31 @@ mod test {
             );
             println!("apisix logs:\n{}", stack.apisix_logs());
         }
+        // the credit-checker decremented the balance and reports the remainder
+        if r.headers().get("x-credits-remaining").is_none() {
+            println!("headers: {:#?}", r.headers());
+            println!("apisix logs:\n{}", stack.apisix_logs());
+        }
+        let remaining: u64 = r
+            .headers()
+            .get("x-credits-remaining")
+            .expect("x-credits-remaining header")
+            .to_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        assert!(remaining < super::DEFAULT_CREDITS);
         assert_eq!(r.status().as_u16(), 200);
         assert_eq!(r.text().unwrap(), "ok");
+
+        // valid token but exhausted credits -> 402 Payment Required
+        stack.set_credits(0);
+        let r = client.get(&url).bearer_auth(&token).send().unwrap();
+        assert_eq!(r.status().as_u16(), 402);
+
+        // topping up restores access
+        stack.set_credits(50);
+        let r = client.get(&url).bearer_auth(&token).send().unwrap();
+        assert_eq!(r.status().as_u16(), 200);
     }
 }

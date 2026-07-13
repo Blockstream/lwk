@@ -86,6 +86,7 @@ pub use electrum_client::ElectrumClient;
 pub use error::LwkError;
 pub use esplora_client::{
     EsploraClient, EsploraClientBuilder, TokenProvider, WaterfallsClient, WaterfallsClientBuilder,
+    WaterfallsSubscription, WaterfallsSubscriptionEvent, WaterfallsSubscriptionTip,
 };
 pub use liquidex::{AssetAmount, UnvalidatedLiquidexProposal, ValidatedLiquidexProposal};
 pub use mnemonic::Mnemonic;

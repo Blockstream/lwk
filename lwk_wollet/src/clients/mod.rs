@@ -25,6 +25,13 @@ pub mod blocking;
 pub mod asyncr;
 
 pub(crate) mod electrum_url;
+#[cfg(feature = "esplora")]
+mod waterfalls;
+
+#[cfg(feature = "esplora")]
+pub use waterfalls::{
+    WaterfallsSubscriptionEvent, WaterfallsSubscriptionEventKind, WaterfallsSubscriptionTip,
+};
 
 /// A builder for the [`crate::clients::asyncr::EsploraClient`] or [`crate::clients::blocking::EsploraClient`]
 #[cfg(feature = "esplora")]

@@ -11,8 +11,9 @@ documentation = "https://docs.rs/lwk_wasm"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["console_error_panic_hook"]
-serial = ["web-sys"]
+default = ["browser", "console_error_panic_hook"]
+browser = ["web-sys"]
+serial = ["browser"]
 # Experimental: API behind this feature is unstable and may change without notice.
 simplicity = ["lwk_simplicity"]
 
@@ -86,6 +87,8 @@ web-sys = { version = "0.3.69", optional = true, features = [
     "HidInputReportEvent",
     "console",
     "Performance",
+    "EventSource",
+    "EventTarget",
     "WebSocket",
     "MessageEvent",
     "BinaryType",
@@ -104,6 +107,10 @@ web-sys = { version = "0.3.69", optional = true, features = [
     "HidDeviceRequestOptions",
     "HidInputReportEvent",
     "console",
+    "EventSource",
+    "EventTarget",
+    "Event",
+    "MessageEvent",
 ] }
 
 [dev-dependencies]

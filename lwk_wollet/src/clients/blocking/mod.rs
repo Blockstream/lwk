@@ -13,9 +13,13 @@ use std::collections::{HashMap, HashSet};
 
 #[cfg(feature = "esplora")]
 mod esplora;
+#[cfg(feature = "esplora")]
+mod waterfalls;
 
 #[cfg(feature = "esplora")]
-pub use esplora::{EsploraClient, WaterfallsClient};
+pub use esplora::EsploraClient;
+#[cfg(feature = "esplora")]
+pub use waterfalls::{WaterfallsClient, WaterfallsSubscription};
 
 #[cfg(feature = "elements_rpc")]
 pub use elements_rpc_client::ElementsRpcClient;

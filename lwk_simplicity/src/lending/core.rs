@@ -645,7 +645,8 @@ impl LendingSession {
     }
 
     // TODO: should we add more policy_asset inputs here if fee is not fully covered?
-    /// Estimate the fee for the given [`FinalTransaction`] and adds fee and change output
+    /// Estimate the fee for the given [`FinalTransaction`] and adds fee and change output.
+    /// `fee_rate` is fee rate in sats/kvb.
     ///
     /// Returns the computed fee in satoshis, or an error if funds are insufficient.
     fn add_fee(

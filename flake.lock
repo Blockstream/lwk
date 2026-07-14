@@ -215,7 +215,6 @@
       },
       "original": {
         "owner": "RCasatta",
-        "ref": "subscribe_before_scan",
         "repo": "waterfalls",
         "type": "github"
       }

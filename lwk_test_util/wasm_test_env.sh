@@ -48,19 +48,21 @@ ZMQ_ENDPOINT="tcp://${ELEMENTS_HOST}:29000"
 # Initialize elements-cli command with common arguments
 ELEMENTS_CLI_CMD="$ELEMENTS_CLI_EXEC -rpcconnect=$ELEMENTS_HOST -rpcport=$ELEMENTS_PORT -rpcuser=user -rpcpassword=pass"
 
-# Start Jade emulator docker container
-echo "Starting Jade emulator..."
-JADE_CONTAINER_ID=$(docker run -d --rm -p $EMULATOR_PORT:$EMULATOR_PORT xenoky/local-jade-emulator:1.0.41-beta1)
-echo "Jade emulator container ID: $JADE_CONTAINER_ID"
+if [ "$SKIP_JADE" != "1" ]; then
+    # Start Jade emulator docker container
+    echo "Starting Jade emulator..."
+    JADE_CONTAINER_ID=$(docker run -d --rm -p $EMULATOR_PORT:$EMULATOR_PORT xenoky/local-jade-emulator:1.0.41-beta1)
+    echo "Jade emulator container ID: $JADE_CONTAINER_ID"
 
-# Wait for Jade emulator to be ready
-echo "Waiting for Jade emulator to start..."
-sleep 3
+    # Wait for Jade emulator to be ready
+    echo "Waiting for Jade emulator to start..."
+    sleep 3
 
-# Start websocat to bridge TCP to WebSocket for Jade
-echo "Starting WebSocket bridge for Jade..."
-$WEBSOCAT_EXEC --binary ws-listen:127.0.0.1:$JADE_WEBSOCKET_PORT tcp:127.0.0.1:$EMULATOR_PORT &
-WEBSOCAT_PID=$!
+    # Start websocat to bridge TCP to WebSocket for Jade
+    echo "Starting WebSocket bridge for Jade..."
+    $WEBSOCAT_EXEC --binary ws-listen:127.0.0.1:$JADE_WEBSOCKET_PORT tcp:127.0.0.1:$EMULATOR_PORT &
+    WEBSOCAT_PID=$!
+fi
 
 # Start elementsd
 $ELEMENTSD_EXEC \
@@ -186,11 +188,13 @@ cleanup() {
     kill $GENERATE_PID || true
     kill $ASSET_REGISTRY_PID || true
     kill $ELECTRS_PID || true
-    kill $WEBSOCAT_PID || true
     $ELEMENTS_CLI_CMD stop || true
-    if [ ! -z "$JADE_CONTAINER_ID" ]; then
-        echo "Stopping Jade emulator container..."
-        docker stop $JADE_CONTAINER_ID || true
+    if [ "$SKIP_JADE" != "1" ]; then
+        kill $WEBSOCAT_PID || true
+        if [ ! -z "$JADE_CONTAINER_ID" ]; then
+            echo "Stopping Jade emulator container..."
+            docker stop $JADE_CONTAINER_ID || true
+        fi
     fi
     echo "Removing temporary directory..."
     rm -rf "$ROOT_DIR"

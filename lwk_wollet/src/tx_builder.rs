@@ -895,17 +895,26 @@ impl TxBuilder {
             return self.finish_liquidex_take(wollet);
         }
 
+        if let Some(selected_outpoints) = self.selected_utxos.as_ref() {
+            let mut outpoints_set = HashSet::new();
+
+            for &outpoint in selected_outpoints {
+                if !outpoints_set.insert(outpoint) {
+                    return Err(Error::DuplicatedOutpoint(outpoint));
+                }
+            }
+        }
+
         if let Some(inputs_order) = self.inputs_order.as_ref() {
             let selected_outpoints = self
                 .selected_utxos
                 .as_ref()
                 .ok_or(Error::InputsOrderRequiresWalletUtxos)?;
 
-            // TODO: check selected_utxos for duplicates too
             let mut ordered = HashSet::new();
-            for outpoint in inputs_order {
-                if !ordered.insert(*outpoint) {
-                    return Err(Error::DuplicatedOutpoint(*outpoint));
+            for &outpoint in inputs_order {
+                if !ordered.insert(outpoint) {
+                    return Err(Error::DuplicatedOutpoint(outpoint));
                 }
             }
 

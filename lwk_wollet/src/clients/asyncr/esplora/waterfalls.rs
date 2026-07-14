@@ -298,26 +298,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn subscribe_returns_error_for_scan_required() {
-        let base_url = lwk_test_util::serve_http_response(
-            "400 Bad Request",
-            "text/event-stream",
-            "DescriptorNotScanned",
-            false,
-        );
-        let mut client = WaterfallsClientBuilder::new(&base_url, Network::Liquid)
-            .build()
-            .unwrap();
-        client.avoid_encryption();
-
-        let err = match client.subscribe(&descriptor()).await {
-            Ok(_) => panic!("subscribe should fail"),
-            Err(err) => err,
-        };
-        assert!(matches!(err, Error::EsploraHttpError { status: 400, .. }));
-    }
-
-    #[tokio::test]
     async fn subscribe_returns_error_for_422() {
         let base_url = lwk_test_util::serve_http_response(
             "422 Unprocessable Entity",

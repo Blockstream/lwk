@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Add Waterfalls descriptor subscriptions, returning `tip`, `mempool`, `block`, and `reorg` events that callers can use as wallet rescan hints.
+
 ## 0.18.0
 
 * Remove `lwk_wollet::ElementsNetwork`, replaced with `lwk_common::Network`. Notes for migration:

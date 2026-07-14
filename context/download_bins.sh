@@ -17,10 +17,10 @@ ELECTRS_NAME="${ELECTRS_FILENAME%.zip}"
 mv electrs "${ELECTRS_NAME}" && chmod +x "${ELECTRS_NAME}"
 
 # waterfalls
-WATERFALLS_FILENAME="waterfalls_c4e36a0.gz"
-WATERFALLS_EXPECTED_SHA256="36e389850520c4dd427ca93b112c45df8777a7270728dd3255b8c6afe9d90ffd"
+WATERFALLS_FILENAME="waterfalls_6b505c5.gz"
+WATERFALLS_EXPECTED_SHA256="0b48e0193f88a2e68974dda7eb6c7d2093acc1cc876aaa0f0e3b2d58d6fc50ee"
 
-curl -Ls "https://github.com/LeoComandini/waterfalls/releases/download/c4e36a0/${WATERFALLS_FILENAME}" -o "${WATERFALLS_FILENAME}"
+curl -Ls "https://github.com/LeoComandini/waterfalls/releases/download/6b505c5/${WATERFALLS_FILENAME}" -o "${WATERFALLS_FILENAME}"
 echo "${WATERFALLS_EXPECTED_SHA256}  ${WATERFALLS_FILENAME}" | sha256sum -c -
 gunzip "${WATERFALLS_FILENAME}"
 WATERFALLS_NAME="${WATERFALLS_FILENAME%.gz}"

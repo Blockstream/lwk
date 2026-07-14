@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Add Waterfalls descriptor subscription support for wasm/browser clients using `EventSource`.
+
 ## 0.18.0
 
 * deprecated `PsetBalance::fee()`, replacement `PsetBalance::fees()` and `PsetBalance::fees_in(asset_id)` ([ELIP-0204](https://github.com/ElementsProject/ELIPs/blob/main/elip-0204.mediawiki)).

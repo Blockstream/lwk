@@ -127,7 +127,8 @@ impl TestEnvBuilder {
         self
     }
 
-    /// Start an authenticated gateway (Keycloak + APISIX) fronting the Esplora server
+    /// Start an authenticated gateway (Keycloak + redis + APISIX) fronting the Esplora
+    /// server, or the Waterfalls server when `with_waterfalls()` is also set
     ///
     /// Requires `with_esplora()` and docker.
     pub fn with_auth(mut self) -> Self {
@@ -160,8 +161,11 @@ impl TestEnvBuilder {
         if self.amp2_exec.is_empty() && self.with_amp2 {
             panic!("AMP2_MOCK_EXEC must be set");
         }
-        if self.with_auth && !self.with_esplora {
-            panic!("auth gateway requires esplora, call 'with_esplora()'");
+        if self.with_auth && !self.with_esplora && !self.with_waterfalls {
+            panic!("auth gateway requires esplora or waterfalls, call 'with_esplora()' or 'with_waterfalls()'");
+        }
+        if self.with_auth && self.with_esplora && self.with_waterfalls {
+            panic!("auth gateway fronts either esplora or waterfalls, not both (yet): enable only one of them with 'with_auth()'");
         }
 
         init_logging();
@@ -310,13 +314,24 @@ impl TestEnvBuilder {
         };
 
         let auth = if self.with_auth {
-            let esplora_url = electrsd.as_ref().unwrap().esplora_url.as_ref().unwrap();
-            let esplora_port: u16 = esplora_url
+            // The gateway fronts the Waterfalls server when it runs (its API is a superset
+            // used by the waterfalls clients), the plain Esplora server otherwise.
+            let upstream_url = match waterfallsd.as_ref() {
+                Some(waterfallsd) => waterfallsd.waterfalls_url().to_string(),
+                None => electrsd
+                    .as_ref()
+                    .unwrap()
+                    .esplora_url
+                    .as_ref()
+                    .unwrap()
+                    .to_string(),
+            };
+            let upstream_port: u16 = upstream_url
                 .rsplit(':')
                 .next()
                 .and_then(|p| p.parse().ok())
-                .unwrap_or_else(|| panic!("cannot parse esplora port from '{esplora_url}'"));
-            Some(AuthStack::new(esplora_port))
+                .unwrap_or_else(|| panic!("cannot parse upstream port from '{upstream_url}'"));
+            Some(AuthStack::new(upstream_port))
         } else {
             None
         };
@@ -390,12 +405,23 @@ impl TestEnv {
 
     /// Base url of the authenticated gateway fronting the Esplora server (requires `with_auth`)
     pub fn esplora_gateway_url(&self) -> String {
+        self.gateway_url()
+    }
+
+    /// Base url of the authenticated gateway (requires `with_auth`); it fronts the Waterfalls
+    /// server when `with_waterfalls` is set, the Esplora server otherwise
+    pub fn gateway_url(&self) -> String {
         self.auth.as_ref().unwrap().gateway_url()
     }
 
     /// The OAuth2 token endpoint of the auth gateway (requires `with_auth`)
     pub fn oidc_token_url(&self) -> String {
         self.auth.as_ref().unwrap().token_url()
+    }
+
+    /// Set the credit balance of the test user on the auth gateway (requires `with_auth`)
+    pub fn set_credits(&self, credits: u64) {
+        self.auth.as_ref().unwrap().set_credits(credits)
     }
 
     // Functions for Elements RPC client

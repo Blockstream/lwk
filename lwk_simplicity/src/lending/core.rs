@@ -6,7 +6,7 @@ use lwk_wollet::{
     blocking::{BlockchainBackend, EsploraClient},
     elements::{
         confidential::{AssetBlindingFactor, ValueBlindingFactor},
-        pset::PartiallySignedTransaction,
+        pset::{PartiallySignedTransaction, PsetBlindError},
         Address, AssetId, OutPoint, Script, Transaction, TxOutSecrets, Txid,
     },
     ElectrumClient, Wollet, WolletBuilder, WolletDescriptor, EC,
@@ -737,6 +737,11 @@ impl LendingSession {
         let (mut pset, inp_txout_sec) = ft.extract_pst();
         let mut rng = thread_rng();
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)
+            .or_else(|e| match e {
+                // We ignoring this error because we can have simplicity-only outputs
+                PsetBlindError::AtleastOneOutputBlind => Ok(()),
+                other => Err(other),
+            })
             .map_err(lwk_wollet::Error::from)?;
         let tx = pset.extract_tx().map_err(lwk_wollet::Error::from)?;
 

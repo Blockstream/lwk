@@ -117,6 +117,10 @@ npm install
 node network.js
 ```
 
+> [!NOTE]
+> Some tests require having local instances of `elements` and `waterfalls` launched and pre-funded wallet, which could be done with a helper script: [wasm_test_env.sh](../lwk_test_util/wasm_test_env.sh)
+
+
 ## Javascript code conventions
 
 For new additions and improvements, follow our [guidelines](GUIDE.md).

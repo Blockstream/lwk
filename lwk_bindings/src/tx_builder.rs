@@ -212,6 +212,9 @@ impl TxBuilder {
         Ok(())
     }
 
+    // TODO: add wrapper for `set_inputs_order`
+    // TODO: add python test once the wrapper above exists
+
     /// Adds external UTXOs
     ///
     /// Note: unblinded UTXOs with the same scriptpubkeys as the wallet, are considered external.

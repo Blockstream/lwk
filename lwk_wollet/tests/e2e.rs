@@ -4506,64 +4506,46 @@ async fn test_esplora_authenticated() {
 }
 
 /// Authenticated Waterfalls API through the gateway with the production plugin chain
-/// (openid-connect → oidc-identity-extractor → credit-checker): a funded wallet full-scans
-/// via the waterfalls endpoint with a Keycloak token, and exhausted credits deny the calls
+/// (openid-connect → oidc-identity-extractor → credit-checker): a funded wallet syncs via
+/// the waterfalls endpoint with a Keycloak token, and exhausted credits deny the calls
 /// (402 Payment Required).
 #[cfg(feature = "esplora")]
-#[tokio::test]
+#[test]
 #[ignore = "requires docker and the blockstream/apisix image"]
-async fn test_esplora_authenticated_waterfalls() {
+fn test_esplora_authenticated_waterfalls() {
     let env = TestEnvBuilder::from_env()
-        .with_esplora()
         .with_waterfalls()
         .with_auth()
         .build();
-    let gateway_url = env.gateway_url();
     let network = Network::default_regtest();
 
-    let signer = generate_signer();
-    let view_key = generate_view_key();
-    let descriptor: WolletDescriptor = format!("ct({},elwpkh({}/*))", view_key, signer.xpub())
-        .parse()
-        .unwrap();
-    let mut wollet = WolletBuilder::new(network, descriptor).build().unwrap();
-
-    // fund the wallet so the scan has something to find
-    let address = wollet.address(None).unwrap();
-    let txid = env.elementsd_sendtoaddress(address.address(), 10_000, None);
-    env.elementsd_generate(1);
-
-    let token_provider = clients::TokenProvider::Blockstream {
+    let token_provider = || clients::TokenProvider::Blockstream {
         url: env.oidc_token_url(),
         client_id: lwk_test_util::AUTH_CLIENT_ID.to_string(),
         client_secret: lwk_test_util::AUTH_CLIENT_SECRET.to_string(),
     };
-    let mut client = clients::asyncr::WaterfallsClientBuilder::new(&gateway_url, network)
-        .token_provider(token_provider)
-        .build()
+    let client = clients::WaterfallsClientBuilder::new(&env.gateway_url(), network)
+        .token_provider(token_provider())
+        .build_blocking()
         .unwrap();
 
-    // full scan through the authenticated gateway finds the funding tx
-    let mut found = false;
-    for _ in 0..50 {
-        let update = client.full_scan(&wollet).await.unwrap();
-        if let Some(update) = update {
-            if !update.only_tip() {
-                wollet.apply_update(update).unwrap();
-                found = true;
-                break;
-            }
-        }
-        std::thread::sleep(std::time::Duration::from_millis(200));
-    }
-    assert!(found, "update with txs didn't arrive through the gateway");
-    assert!(wollet
-        .transactions()
-        .unwrap()
-        .iter()
-        .any(|tx| tx.txid == txid));
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer.xpub());
+    let mut wallet = TestWollet::new(client, &desc);
 
-    // valid token but exhausted credits -> denied (402 Payment Required)
+    // funding syncs the wallet through the authenticated gateway
+    wallet.fund_btc(&env);
+
+    // valid token but exhausted credits -> denied with 402 Payment Required
     env.set_credits(0);
-    assert!(client.full_scan(&wollet).await.is_err());
+    let mut denied_client = clients::WaterfallsClientBuilder::new(&env.gateway_url(), network)
+        .token_provider(token_provider())
+        .build_blocking()
+        .unwrap();
+    let err = denied_client.full_scan(&wallet.wollet).unwrap_err();
+    assert!(
+        matches!(err, Error::EsploraHttpError { status: 402, .. }),
+        "expected an EsploraHttpError with status 402, got: {err:?}"
+    );
 }

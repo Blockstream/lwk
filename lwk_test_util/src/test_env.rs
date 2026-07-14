@@ -164,6 +164,9 @@ impl TestEnvBuilder {
         if self.with_auth && !self.with_esplora && !self.with_waterfalls {
             panic!("auth gateway requires esplora or waterfalls, call 'with_esplora()' or 'with_waterfalls()'");
         }
+        if self.with_auth && self.with_esplora && self.with_waterfalls {
+            panic!("auth gateway fronts either esplora or waterfalls, not both (yet): enable only one of them with 'with_auth()'");
+        }
 
         init_logging();
 

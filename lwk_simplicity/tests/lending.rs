@@ -223,7 +223,13 @@ async fn test_borrow_flow() {
     lender_session.sync().unwrap();
 
     let accept = lender_session
-        .accept_offer(item.created_at_txid, protocol_fee_keeper_asset_id, 100.0)
+        .accept_offer(
+            AcceptOfferDetails {
+                pending_offer_creation_txid: txid,
+                protocol_fee_keeper_asset_id: PROTOCOL_FEE_KEEPER_ASSET_ID,
+            },
+            100.0,
+        )
         .unwrap();
 
     let mut pset = accept.into_inner();

@@ -377,8 +377,7 @@ impl LendingSession {
     /// creation transaction cannot be fetched, or the lending transaction construction fails.
     pub fn accept_offer(
         &mut self,
-        pending_offer_creation_txid: Txid,
-        protocol_fee_keeper_asset_id: AssetId,
+        details: AcceptOfferDetails,
         fee_rate: f32,
     ) -> Result<AcceptOfferTransaction, LendingError> {
         const FEE_ESTIMATE: u64 = 250;
@@ -388,12 +387,14 @@ impl LendingSession {
         let policy_asset = *self.network.policy_asset();
 
         // Fetch the pending offer creation transaction
-        let creation_tx = self.client.get_transaction(pending_offer_creation_txid)?;
+        let creation_tx = self
+            .client
+            .get_transaction(details.pending_offer_creation_txid)?;
 
         // Reconstruct the LendingOffer from the creation transaction
         let mut offer = LendingOffer::try_from_tx(
             &creation_tx,
-            protocol_fee_keeper_asset_id,
+            details.protocol_fee_keeper_asset_id,
             to_simplicity_network(self.network),
         )
         .map_err(|e| {
@@ -415,7 +416,7 @@ impl LendingSession {
 
         let pending_offer_utxo = UTXO {
             outpoint: OutPoint {
-                txid: pending_offer_creation_txid,
+                txid: details.pending_offer_creation_txid,
                 vout: COVENANT_VOUT as u32,
             },
             txout: covenant_txout,
@@ -433,7 +434,7 @@ impl LendingSession {
 
         let lender_nft_utxo = UTXO {
             outpoint: OutPoint {
-                txid: pending_offer_creation_txid,
+                txid: details.pending_offer_creation_txid,
                 vout: LENDER_NFT_VOUT as u32,
             },
             txout: lender_nft_txout,
@@ -801,6 +802,11 @@ pub struct OfferDetails {
     pub collateral_amount: u64,
     pub loan_expiration_time: u32,
     pub principal_interest_rate: u16,
+    pub protocol_fee_keeper_asset_id: AssetId,
+}
+
+pub struct AcceptOfferDetails {
+    pub pending_offer_creation_txid: Txid,
     pub protocol_fee_keeper_asset_id: AssetId,
 }
 

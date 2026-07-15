@@ -27,11 +27,19 @@ pub const AUTH_CLIENT_ID: &str = "lwk-test";
 pub const AUTH_CLIENT_SECRET: &str = "lwk-test-secret";
 /// The fixed `user_uuid` claim emitted for tokens of [`AUTH_CLIENT_ID`] (credit accounting key).
 pub const AUTH_USER_UUID: &str = "lwk-test-user-uuid";
+/// A client identical to [`AUTH_CLIENT_ID`] (same audience and `user_uuid` mappers) but
+/// issuing five-second tokens (client attribute `access.token.lifespan`), for expiry tests.
+pub const AUTH_SHORT_CLIENT_ID: &str = "lwk-test-short";
+/// The client secret of [`AUTH_SHORT_CLIENT_ID`].
+pub const AUTH_SHORT_CLIENT_SECRET: &str = "lwk-test-short-secret";
 
 const KEYCLOAK_PORT: u16 = 8_080;
 const KEYCLOAK_TLS_PORT: u16 = 8_443;
 const APISIX_PORT: u16 = 9_081;
 const RPC_PROXY_PORT: u16 = 50_001;
+/// The proxy's metrics/health port, serving `/readyz` (200 once JWKS is loaded and the proxy
+/// can validate tokens, see the rpcproxy `#43`/readyz work).
+const RPC_PROXY_METRICS_PORT: u16 = 9_090;
 
 /// Lean test realm modeled on the production one (`blockstream/keycloak-public`,
 /// `setup/realms/blockstream-public.json`): same realm name, a confidential service-account
@@ -205,10 +213,22 @@ struct DockerContainer {
 
 impl DockerContainer {
     fn run(args: &[&str]) -> DockerContainer {
+        Self::try_run(args).unwrap_or_else(|e| panic!("docker run failed: {e}"))
+    }
+
+    /// Like [`Self::run`] but returns the docker stderr on failure instead of panicking.
+    fn try_run(args: &[&str]) -> Result<DockerContainer, String> {
         let name = args[args.iter().position(|a| *a == "--name").expect("--name") + 1];
-        docker(&[&["run", "-d"], args].concat());
-        DockerContainer {
-            name: name.to_string(),
+        let output = Command::new("docker")
+            .args([&["run", "-d"], args].concat())
+            .output()
+            .expect("docker not available");
+        if output.status.success() {
+            Ok(DockerContainer {
+                name: name.to_string(),
+            })
+        } else {
+            Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
         }
     }
 
@@ -244,6 +264,7 @@ pub struct AuthStack {
     keycloak_port: u16,
     apisix_port: Option<u16>,
     rpc_proxy_port: Option<u16>,
+    rpc_proxy_metrics_port: Option<u16>,
     _keycloak_dir: TempDir,
     _apisix_dir: Option<TempDir>,
     _certs_dir: TempDir,
@@ -390,44 +411,85 @@ impl AuthStack {
         // Electrum RPC proxy: validates the in-band JWT against Keycloak's JWKS (fetched over
         // TLS, hence SSL_CERT_FILE) and checks credits in the shared redis, then proxies to
         // the host Electrum server.
-        let (rpc_proxy, rpc_proxy_port) = match electrum_upstream_port {
+        let (rpc_proxy, rpc_proxy_port, rpc_proxy_metrics_port) = match electrum_upstream_port {
             Some(electrum_port) => {
-                let rpc_proxy = DockerContainer::run(&[
-                    "--name",
-                    &rpc_proxy_name,
-                    "--network",
-                    &network,
-                    "-e",
-                    &format!("LISTEN_ADDR=0.0.0.0:{RPC_PROXY_PORT}"),
-                    "-e",
-                    &format!("UPSTREAM_ADDR={upstream_host}:{electrum_port}"),
-                    "-e",
-                    "REQUIRE_JWT=true",
-                    "-e",
-                    &format!(
-                        "OIDC_ISSUER_URL=https://{keycloak_name}:{KEYCLOAK_TLS_PORT}/realms/{AUTH_REALM}"
-                    ),
-                    "-e",
-                    "EXPECTED_AUDIENCE=account",
-                    "-e",
-                    "CREDIT_CHECK_ENABLED=true",
-                    "-e",
-                    &format!("REDIS_URL=redis://{redis_name}:6379"),
-                    "-e",
-                    "SSL_CERT_FILE=/certs/cert.pem",
-                    "-e",
-                    "RUST_LOG=warn",
-                    "-v",
-                    &format!("{}:/certs", certs_dir.path().display()),
-                    "-p",
-                    &RPC_PROXY_PORT.to_string(),
-                    &rpc_proxy_image(),
-                ]);
-                let port = rpc_proxy.host_port(RPC_PROXY_PORT);
-                poll_until_tcp(port, 60, "electrum rpc proxy");
-                (Some(rpc_proxy), Some(port))
+                // Publish the proxy and its metrics/health port on fixed host ports (not
+                // ephemeral `-p <container_port>`) so `docker restart` preserves both
+                // mappings, see `restart_electrum_gateway`. Picking free ports then binding
+                // them in a separate `docker run` races other allocations, so retry with
+                // fresh ports when docker reports one already taken (the failed run leaves a
+                // Created container to remove first).
+                let (rpc_proxy, host_port, metrics_port) = {
+                    let mut attempt = 0;
+                    loop {
+                        attempt += 1;
+                        let host_port = free_port();
+                        let metrics_port = free_port();
+                        let port_arg = format!("{host_port}:{RPC_PROXY_PORT}");
+                        let metrics_arg = format!("{metrics_port}:{RPC_PROXY_METRICS_PORT}");
+                        let result = DockerContainer::try_run(&[
+                            "--name",
+                            &rpc_proxy_name,
+                            "--network",
+                            &network,
+                            "-e",
+                            &format!("LISTEN_ADDR=0.0.0.0:{RPC_PROXY_PORT}"),
+                            "-e",
+                            &format!("METRICS_ADDR=0.0.0.0:{RPC_PROXY_METRICS_PORT}"),
+                            "-e",
+                            &format!("UPSTREAM_ADDR={upstream_host}:{electrum_port}"),
+                            "-e",
+                            "REQUIRE_JWT=true",
+                            "-e",
+                            &format!(
+                                "OIDC_ISSUER_URL=https://{keycloak_name}:{KEYCLOAK_TLS_PORT}/realms/{AUTH_REALM}"
+                            ),
+                            "-e",
+                            "EXPECTED_AUDIENCE=account",
+                            "-e",
+                            "CREDIT_CHECK_ENABLED=true",
+                            "-e",
+                            &format!("REDIS_URL=redis://{redis_name}:6379"),
+                            "-e",
+                            "SSL_CERT_FILE=/certs/cert.pem",
+                            "-e",
+                            "RUST_LOG=warn",
+                            "-v",
+                            &format!("{}:/certs", certs_dir.path().display()),
+                            "-p",
+                            &port_arg,
+                            "-p",
+                            &metrics_arg,
+                            &rpc_proxy_image(),
+                        ]);
+                        match result {
+                            Ok(container) => break (container, host_port, metrics_port),
+                            Err(e)
+                                if attempt < 5
+                                    && (e.contains("already allocated")
+                                        || e.contains("already in use")) =>
+                            {
+                                // Remove the Created container the failed run left behind so
+                                // the retry can reuse the name.
+                                let _ = Command::new("docker")
+                                    .args(["rm", "-f", &rpc_proxy_name])
+                                    .output();
+                            }
+                            Err(e) => panic!("failed to start the electrum rpc proxy: {e}"),
+                        }
+                    }
+                };
+                // /readyz turns 200 only once the proxy can validate tokens (JWKS loaded);
+                // the proxy binds its listener before that, so a TCP check would be premature.
+                poll_until(
+                    &format!("http://127.0.0.1:{metrics_port}/readyz"),
+                    200,
+                    60,
+                    "electrum rpc proxy",
+                );
+                (Some(rpc_proxy), Some(host_port), Some(metrics_port))
             }
-            None => (None, None),
+            None => (None, None, None),
         };
 
         AuthStack {
@@ -439,6 +501,7 @@ impl AuthStack {
             keycloak_port,
             apisix_port,
             rpc_proxy_port,
+            rpc_proxy_metrics_port,
             _keycloak_dir: keycloak_dir,
             _apisix_dir: apisix_dir,
             _certs_dir: certs_dir,
@@ -505,23 +568,34 @@ impl AuthStack {
         )
     }
 
-    /// Fetch a `client_credentials` access token from Keycloak, as an lwk client would.
+    /// Fetch a `client_credentials` access token for [`AUTH_CLIENT_ID`] from Keycloak, as
+    /// an lwk client would.
     ///
     /// Runs on a dedicated thread so it's callable from both sync and async (tokio) tests.
     pub fn fetch_token(&self) -> String {
+        self.fetch_token_for(AUTH_CLIENT_ID, AUTH_CLIENT_SECRET)
+    }
+
+    /// Fetch a `client_credentials` access token for the given client from Keycloak, as an
+    /// lwk client would (e.g. [`AUTH_SHORT_CLIENT_ID`] for a five-second token).
+    ///
+    /// Runs on a dedicated thread so it's callable from both sync and async (tokio) tests.
+    pub fn fetch_token_for(&self, client_id: &str, client_secret: &str) -> String {
         let token_url = self.token_url();
-        std::thread::spawn(move || Self::fetch_token_inner(token_url))
+        let client_id = client_id.to_string();
+        let client_secret = client_secret.to_string();
+        std::thread::spawn(move || Self::fetch_token_inner(token_url, client_id, client_secret))
             .join()
             .expect("fetch_token thread panicked")
     }
 
-    fn fetch_token_inner(token_url: String) -> String {
+    fn fetch_token_inner(token_url: String, client_id: String, client_secret: String) -> String {
         let client = reqwest::blocking::Client::new();
         let response = client
             .post(token_url)
             .form(&[
-                ("client_id", AUTH_CLIENT_ID),
-                ("client_secret", AUTH_CLIENT_SECRET),
+                ("client_id", client_id.as_str()),
+                ("client_secret", client_secret.as_str()),
                 ("grant_type", "client_credentials"),
                 ("scope", "openid"),
             ])
@@ -533,6 +607,33 @@ impl AuthStack {
             .as_str()
             .expect("access_token")
             .to_string()
+    }
+
+    /// Restart the Electrum RPC proxy container, dropping all its client connections (as a
+    /// production restart or idle disconnect would), and wait until it accepts connections
+    /// again; panics if the stack was started without an Electrum upstream.
+    pub fn restart_electrum_gateway(&self) {
+        let name = &self
+            .rpc_proxy
+            .as_ref()
+            .expect("auth stack has no electrum upstream, call 'with_electrum()'")
+            .name;
+        docker(&["restart", name]);
+        // The proxy and its metrics port are published on fixed host ports (see `free_port`),
+        // so both mappings survive the restart and the client reconnects to the same
+        // endpoint. Wait on /readyz, which turns 200 only once the proxy has reloaded its
+        // JWKS and can validate tokens again: the listener binds before that, so a valid
+        // token would be denied (-32004, indistinguishable from an expired one) during the
+        // reload window.
+        let metrics_port = self
+            .rpc_proxy_metrics_port
+            .expect("rpc_proxy_metrics_port is set whenever rpc_proxy is");
+        poll_until(
+            &format!("http://127.0.0.1:{metrics_port}/readyz"),
+            200,
+            60,
+            "restarted electrum rpc proxy",
+        );
     }
 
     /// The docker logs (stderr) of the APISIX container, for debugging; panics if the stack
@@ -600,20 +701,19 @@ fn upstream_host(network: &str) -> String {
     ])
 }
 
-/// Poll a TCP `port` on localhost until it accepts connections, panicking after `attempts` * 1s.
-fn poll_until_tcp(port: u16, attempts: u32, what: &str) {
-    for _ in 0..attempts {
-        if std::net::TcpStream::connect_timeout(
-            &std::net::SocketAddr::from(([127, 0, 0, 1], port)),
-            Duration::from_secs(1),
-        )
-        .is_ok()
-        {
-            return;
-        }
-        std::thread::sleep(Duration::from_secs(1));
-    }
-    panic!("{what} not ready: 127.0.0.1:{port} did not accept connections after {attempts}s");
+/// Pick a currently-free TCP host port by binding to port 0 and releasing it.
+///
+/// Used to publish the Electrum RPC proxy on a fixed host port so `docker restart` preserves
+/// the mapping: ephemeral `-p <container_port>` publishing reassigns the host port on restart,
+/// which would strand the client (and `restart_electrum_gateway`) on the old port. There is a
+/// small window before the container binds it, which the serial auth tests accept (as the
+/// bitcoind/electrs test helpers do).
+fn free_port() -> u16 {
+    std::net::TcpListener::bind("0.0.0.0:0")
+        .expect("bind ephemeral port")
+        .local_addr()
+        .expect("local_addr")
+        .port()
 }
 
 /// Poll `url` until it returns `status`, panicking after `attempts` * 1s.
@@ -705,6 +805,60 @@ mod test {
         stack.set_credits(50);
         let r = client.get(&url).bearer_auth(&token).send().unwrap();
         assert_eq!(r.status().as_u16(), 200);
+
+        // The short-lifespan client issues five-second tokens (realm client attribute
+        // `access.token.lifespan`), used by the token expiry e2e tests in lwk_wollet.
+        stack.set_credits(10_000); // headroom for the expiry polling below
+        let token_response: serde_json::Value = client
+            .post(stack.token_url())
+            .form(&[
+                ("client_id", AUTH_SHORT_CLIENT_ID),
+                ("client_secret", AUTH_SHORT_CLIENT_SECRET),
+                ("grant_type", "client_credentials"),
+                ("scope", "openid"),
+            ])
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        assert_eq!(
+            token_response["expires_in"].as_u64(),
+            Some(5),
+            "the short client must issue five-second tokens, got: {token_response}"
+        );
+        let short_token = token_response["access_token"].as_str().unwrap();
+
+        // served while valid...
+        let r = client.get(&url).bearer_auth(short_token).send().unwrap();
+        assert_eq!(r.status().as_u16(), 200);
+
+        // ...and denied once expired; the poll also bounds the gateway's `exp` leeway.
+        // APISIX (lua-resty-openidc) validates `exp` with a 120s default leeway
+        // (`iat_slack` doubles as the system leeway for all claims), so the denial
+        // arrives ~125s after the mint, not after 5s.
+        let start = std::time::Instant::now();
+        loop {
+            std::thread::sleep(Duration::from_secs(5));
+            let status = client
+                .get(&url)
+                .bearer_auth(short_token)
+                .send()
+                .unwrap()
+                .status()
+                .as_u16();
+            if status == 401 {
+                break;
+            }
+            assert_eq!(
+                status, 200,
+                "unexpected status while waiting for the expiry"
+            );
+            assert!(
+                start.elapsed() < Duration::from_secs(240),
+                "the five-second token was not denied within 240s"
+            );
+        }
+        println!("short token denied after {:?}", start.elapsed());
     }
 
     /// One raw Electrum JSON-RPC call with an optional in-band `authorization` member

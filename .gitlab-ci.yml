@@ -192,7 +192,9 @@ test_auth:
     # (scoped to the e2e binary: the lib has ignored `authenticated` tests hitting real
     # staging/prod endpoints)
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo test -p lwk_wollet --test e2e authenticated -- --ignored
+    # electrum_oidc enables TokenProvider::Blockstream for the Electrum client (its expiry
+    # e2e is gated on the feature)
+    - cargo test -p lwk_wollet --features electrum_oidc --test e2e authenticated -- --ignored
 
 test_ledger:
   stage: test

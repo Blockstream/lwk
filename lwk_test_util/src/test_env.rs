@@ -452,6 +452,22 @@ impl TestEnv {
         self.auth.as_ref().unwrap().fetch_token()
     }
 
+    /// Fetch a `client_credentials` access token for the given client from the auth
+    /// gateway's Keycloak, e.g. [`crate::AUTH_SHORT_CLIENT_ID`] for a five-second token
+    /// (requires `with_auth`)
+    pub fn fetch_oidc_token_for(&self, client_id: &str, client_secret: &str) -> String {
+        self.auth
+            .as_ref()
+            .unwrap()
+            .fetch_token_for(client_id, client_secret)
+    }
+
+    /// Restart the authenticated Electrum RPC proxy, dropping its client connections
+    /// (requires `with_auth` and `with_electrum`)
+    pub fn restart_electrum_gateway(&self) {
+        self.auth.as_ref().unwrap().restart_electrum_gateway()
+    }
+
     /// Set the credit balance of the test user on the auth gateway (requires `with_auth`)
     pub fn set_credits(&self, credits: u64) {
         self.auth.as_ref().unwrap().set_credits(credits)

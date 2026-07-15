@@ -134,11 +134,23 @@ impl ElectrumClient {
 
 /// Whether the error is the authenticated Electrum RPC proxy denying the call because it
 /// lacks a valid token (JSON-RPC code -32004, AUTHENTICATION_REQUIRED).
+///
+/// The denial can arrive nested inside [`electrum_client::Error::AllAttemptsErrored`]: when a
+/// connection drops (e.g. the token expired mid-session and the server closed the idle
+/// connection), electrum-client reconnects and re-runs the `server.version` handshake, which
+/// carries the token and is denied with -32004. If the preceding reconnect attempt already
+/// spent the retry budget, that -32004 is wrapped in `AllAttemptsErrored` rather than surfaced
+/// directly, so this checks the wrapped errors too.
 #[cfg(feature = "electrum_oidc")]
 fn is_auth_denied(error: &electrum_client::Error) -> bool {
     const AUTHENTICATION_REQUIRED: i64 = -32004;
-    matches!(error, electrum_client::Error::Protocol(value)
-        if value.get("code").and_then(|c| c.as_i64()) == Some(AUTHENTICATION_REQUIRED))
+    match error {
+        electrum_client::Error::Protocol(value) => {
+            value.get("code").and_then(|c| c.as_i64()) == Some(AUTHENTICATION_REQUIRED)
+        }
+        electrum_client::Error::AllAttemptsErrored(errors) => errors.iter().any(is_auth_denied),
+        _ => false,
+    }
 }
 
 /// Builder for an [`ElectrumClient`].
@@ -219,7 +231,7 @@ impl ElectrumClientBuilder {
             ));
         }
         let auth = token_provider_auth(&self.token_provider)?;
-        let client = url.build_client_inner(self.timeout, auth.provider)?;
+        let client = url.build_client_inner(self.timeout, auth.provider, auth.retry)?;
         let header = client.block_headers_subscribe_raw()?;
         let tip: BlockHeader = elements_deserialize(&header.header)?;
 
@@ -328,14 +340,20 @@ impl ElectrumUrl {
     #[deprecated(note = "use ElectrumClientBuilder instead")]
     #[allow(deprecated)]
     pub fn build_client(&self, options: &ElectrumOptions) -> Result<Client, Error> {
-        self.build_client_inner(options.timeout.map(|t| Duration::from_secs(t as u64)), None)
+        self.build_client_inner(
+            options.timeout.map(|t| Duration::from_secs(t as u64)),
+            None,
+            None,
+        )
     }
 
-    /// Build an electrum-client [`Client`] from the url, timeout and authorization provider.
+    /// Build an electrum-client [`Client`] from the url, timeout, authorization provider and
+    /// optional `retry` override (`None` keeps electrum-client's default).
     pub(crate) fn build_client_inner(
         &self,
         timeout: Option<Duration>,
         auth_provider: Option<AuthProvider>,
+        retry: Option<u8>,
     ) -> Result<Client, Error> {
         let builder = ConfigBuilder::new();
         let (url, builder) = match self {
@@ -344,17 +362,23 @@ impl ElectrumUrl {
             }
             ElectrumUrl::Plaintext(url) => (format!("tcp://{url}"), builder),
         };
-        let builder = builder
+        let mut builder = builder
             .timeout(timeout)
             .authorization_provider(auth_provider);
+        if let Some(retry) = retry {
+            builder = builder.retry(retry);
+        }
         Ok(Client::from_config(&url, builder.build())?)
     }
 }
 
 /// The result of converting a [`TokenProvider`]: the electrum-client [`AuthProvider`]
-/// closure plus, for [`TokenProvider::Blockstream`], the token cache shared with it.
+/// closure plus, for [`TokenProvider::Blockstream`], the token cache shared with it and the
+/// retry override needed for the reactive refresh.
 struct ElectrumAuth {
     provider: Option<AuthProvider>,
+    /// electrum-client `retry` override (`None` keeps its default of 1).
+    retry: Option<u8>,
     #[cfg(feature = "electrum_oidc")]
     token_cache: Option<TokenCache>,
 }
@@ -363,6 +387,7 @@ impl ElectrumAuth {
     fn new(provider: Option<AuthProvider>) -> Self {
         Self {
             provider,
+            retry: None,
             #[cfg(feature = "electrum_oidc")]
             token_cache: None,
         }
@@ -418,6 +443,11 @@ fn token_provider_auth(token_provider: &TokenProvider) -> Result<ElectrumAuth, E
 
             Ok(ElectrumAuth {
                 provider: Some(provider),
+                // electrum-client drops the reconnect's error when its retry budget is
+                // exhausted (returning `AllAttemptsErrored` without it), so the -32004 from
+                // the reconnect's `server.version` handshake is only surfaced with retry >= 2:
+                // one attempt is spent on the dead connection, the next carries the -32004.
+                retry: Some(2),
                 token_cache: Some(token_cache),
             })
         }
@@ -653,6 +683,22 @@ mod tests {
 
         let other = electrum_client::Error::Message("boom".to_string());
         assert!(!is_auth_denied(&other));
+
+        // A -32004 nested in AllAttemptsErrored (the reconnect-after-drop case) is detected.
+        let nested = electrum_client::Error::AllAttemptsErrored(vec![
+            electrum_client::Error::Message("Broken pipe".to_string()),
+            electrum_client::Error::Protocol(
+                serde_json::json!({"code": -32004, "message": "authentication required"}),
+            ),
+        ]);
+        assert!(is_auth_denied(&nested));
+
+        // AllAttemptsErrored without a -32004 is not treated as an auth denial.
+        let nested_io = electrum_client::Error::AllAttemptsErrored(vec![
+            electrum_client::Error::Message("Broken pipe".to_string()),
+            electrum_client::Error::Message("unexpected EOF".to_string()),
+        ]);
+        assert!(!is_auth_denied(&nested_io));
     }
 
     #[test]

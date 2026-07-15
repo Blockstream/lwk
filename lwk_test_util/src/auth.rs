@@ -28,7 +28,9 @@ pub const AUTH_CLIENT_SECRET: &str = "lwk-test-secret";
 pub const AUTH_USER_UUID: &str = "lwk-test-user-uuid";
 
 const KEYCLOAK_PORT: u16 = 8_080;
+const KEYCLOAK_TLS_PORT: u16 = 8_443;
 const APISIX_PORT: u16 = 9_081;
+const RPC_PROXY_PORT: u16 = 50_001;
 
 /// Lean test realm modeled on the production one (`blockstream/keycloak-public`,
 /// `setup/realms/blockstream-public.json`): same realm name, a confidential service-account
@@ -57,6 +59,22 @@ fn apisix_image() -> String {
 fn redis_image() -> String {
     let name = std::env::var("REDIS_IMAGE_NAME").unwrap_or_else(|_| "redis".to_string());
     let version = std::env::var("REDIS_IMAGE_VERSION").unwrap_or_else(|_| "7-alpine".to_string());
+    format!("{name}:{version}")
+}
+
+fn rpc_proxy_image() -> String {
+    // The prebuilt production image (closed-source, gitlab registry access required). The
+    // pinned tag is the one deployed by flux and is bumped manually, like the apisix pin.
+    // For local runs without registry access, build the image from
+    // gl.blockstream.io/explorer/electrum-rpc/electrs-electrum-proxy (`docker build . -t
+    // local/rpcproxy:dev`) and set RPC_PROXY_IMAGE_NAME=local/rpcproxy
+    // RPC_PROXY_IMAGE_VERSION=dev.
+    let name = std::env::var("RPC_PROXY_IMAGE_NAME").unwrap_or_else(|_| {
+        "glregistry.blockstream.io/explorer/electrum-rpc/electrs-electrum-proxy/prod/rpcproxy"
+            .to_string()
+    });
+    let version = std::env::var("RPC_PROXY_IMAGE_VERSION")
+        .unwrap_or_else(|_| "4540cbae-20260714161505".to_string());
     format!("{name}:{version}")
 }
 
@@ -132,6 +150,45 @@ fn tempdir() -> Result<TempDir, std::io::Error> {
     }
 }
 
+/// Generate a self-signed TLS certificate for Keycloak with `cn` as CN and SAN.
+///
+/// The RPC proxy's SSRF guard requires the OIDC issuer to be `https://` at a non-local
+/// domain name, so Keycloak serves TLS on its in-network container name and the proxy
+/// trusts this certificate via `SSL_CERT_FILE`.
+fn generate_cert(dir: &std::path::Path, cn: &str) {
+    let out = Command::new("openssl")
+        .args([
+            "req",
+            "-x509",
+            "-newkey",
+            "rsa:2048",
+            "-nodes",
+            "-days",
+            "5",
+            "-keyout",
+            &format!("{}/key.pem", dir.display()),
+            "-out",
+            &format!("{}/cert.pem", dir.display()),
+            "-subj",
+            &format!("/CN={cn}"),
+            "-addext",
+            &format!("subjectAltName=DNS:{cn}"),
+        ])
+        .output()
+        .expect("openssl not available");
+    assert!(
+        out.status.success(),
+        "openssl failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    // Throwaway cert: world-readable so the containers' non-root users can read the key.
+    for f in ["key.pem", "cert.pem"] {
+        let _ = Command::new("chmod")
+            .args(["0644", &format!("{}/{f}", dir.display())])
+            .output();
+    }
+}
+
 /// Run `docker` with `args`, panicking (with stderr) on failure, returning stdout.
 fn docker(args: &[&str]) -> String {
     let output = Command::new("docker")
@@ -181,38 +238,48 @@ impl Drop for DockerContainer {
     }
 }
 
-/// Keycloak + redis (credit balances) + APISIX fronting `upstream_port` on the host.
+/// Keycloak + redis (credit balances) + APISIX fronting `upstream_port` on the host, and
+/// optionally the Electrum RPC proxy fronting `electrum_upstream_port`.
 pub struct AuthStack {
     keycloak: DockerContainer,
     redis: DockerContainer,
     apisix: DockerContainer,
+    rpc_proxy: Option<DockerContainer>,
     network: String,
     keycloak_port: u16,
     apisix_port: u16,
+    rpc_proxy_port: Option<u16>,
     _keycloak_dir: TempDir,
     _apisix_dir: TempDir,
+    _certs_dir: TempDir,
 }
 
 impl AuthStack {
     /// Start Keycloak and APISIX, with APISIX proxying authenticated requests to
-    /// `upstream_port` on the host.
+    /// `upstream_port` on the host; with `electrum_upstream_port` also start the Electrum
+    /// RPC proxy (`REQUIRE_JWT` + credit checking) fronting that host port.
     ///
     /// Runs on a dedicated thread so it's callable from both sync and async (tokio) tests:
     /// the readiness polling uses `reqwest::blocking`, which panics inside an async context.
-    pub fn new(upstream_port: u16) -> AuthStack {
-        std::thread::spawn(move || Self::new_inner(upstream_port))
+    pub fn new(upstream_port: u16, electrum_upstream_port: Option<u16>) -> AuthStack {
+        std::thread::spawn(move || Self::new_inner(upstream_port, electrum_upstream_port))
             .join()
             .expect("AuthStack setup thread panicked")
     }
 
-    fn new_inner(upstream_port: u16) -> AuthStack {
+    fn new_inner(upstream_port: u16, electrum_upstream_port: Option<u16>) -> AuthStack {
         let suffix: u32 = thread_rng().gen();
         let network = format!("lwk-auth-{suffix}");
         let keycloak_name = format!("lwk-keycloak-{suffix}");
         let apisix_name = format!("lwk-apisix-{suffix}");
         let redis_name = format!("lwk-redis-{suffix}");
+        let rpc_proxy_name = format!("lwk-rpcproxy-{suffix}");
 
         docker(&["network", "create", &network]);
+
+        // Self-signed cert for Keycloak's TLS listener (see `generate_cert`).
+        let certs_dir = tempdir().expect("tempdir");
+        generate_cert(certs_dir.path(), &keycloak_name);
 
         // Redis: credit balances read/decremented by the credit-checker plugin
         // (key `user:{user_uuid}`, see CREDIT_SYSTEM.md in apigw-dashboard).
@@ -220,10 +287,12 @@ impl AuthStack {
             DockerContainer::run(&["--name", &redis_name, "--network", &network, &redis_image()]);
         Self::set_credits_(&redis_name, DEFAULT_CREDITS);
 
-        // Keycloak: issues client_credentials tokens; APISIX validates against its JWKS.
-        // KC_HOSTNAME pins the issuer to the in-network name: APISIX validates the token `iss`
-        // claim against the discovery document, so it must not depend on which interface the
-        // token was requested from (the host uses the published 127.0.0.1 port).
+        // Keycloak: issues client_credentials tokens; APISIX and the RPC proxy validate
+        // against its JWKS. KC_HOSTNAME pins the issuer to the in-network https name: the
+        // validators check the token `iss` claim against the discovery document, so it must
+        // not depend on which interface the token was requested from (the host uses the
+        // published plain-http 127.0.0.1 port). TLS is served for the RPC proxy, whose SSRF
+        // guard requires an https issuer at a non-local domain.
         let keycloak_dir = tempdir().expect("tempdir");
         let realm_path = keycloak_dir.path().join("realm.json");
         let mut file = std::fs::File::create(&realm_path).expect("create realm");
@@ -238,17 +307,21 @@ impl AuthStack {
             "-e",
             "KC_BOOTSTRAP_ADMIN_PASSWORD=admin",
             "-e",
-            &format!("KC_HOSTNAME=http://{keycloak_name}:{KEYCLOAK_PORT}"),
+            &format!("KC_HOSTNAME=https://{keycloak_name}:{KEYCLOAK_TLS_PORT}"),
             "-v",
             &format!(
                 "{}:/opt/keycloak/data/import",
                 keycloak_dir.path().display()
             ),
+            "-v",
+            &format!("{}:/certs", certs_dir.path().display()),
             "-p",
             &KEYCLOAK_PORT.to_string(),
             &keycloak_image(),
             "start-dev",
             "--import-realm",
+            "--https-certificate-file=/certs/cert.pem",
+            "--https-certificate-key-file=/certs/key.pem",
         ]);
         let keycloak_port = keycloak.host_port(KEYCLOAK_PORT);
 
@@ -306,15 +379,61 @@ impl AuthStack {
         let gateway_probe = format!("http://127.0.0.1:{apisix_port}/blocks/tip/height");
         poll_until(&gateway_probe, 401, 60, "apisix gateway");
 
+        // Electrum RPC proxy: validates the in-band JWT against Keycloak's JWKS (fetched over
+        // TLS, hence SSL_CERT_FILE) and checks credits in the shared redis, then proxies to
+        // the host Electrum server.
+        let (rpc_proxy, rpc_proxy_port) = match electrum_upstream_port {
+            Some(electrum_port) => {
+                let rpc_proxy = DockerContainer::run(&[
+                    "--name",
+                    &rpc_proxy_name,
+                    "--network",
+                    &network,
+                    "-e",
+                    &format!("LISTEN_ADDR=0.0.0.0:{RPC_PROXY_PORT}"),
+                    "-e",
+                    &format!("UPSTREAM_ADDR={upstream_host}:{electrum_port}"),
+                    "-e",
+                    "REQUIRE_JWT=true",
+                    "-e",
+                    &format!(
+                        "OIDC_ISSUER_URL=https://{keycloak_name}:{KEYCLOAK_TLS_PORT}/realms/{AUTH_REALM}"
+                    ),
+                    "-e",
+                    "EXPECTED_AUDIENCE=account",
+                    "-e",
+                    "CREDIT_CHECK_ENABLED=true",
+                    "-e",
+                    &format!("REDIS_URL=redis://{redis_name}:6379"),
+                    "-e",
+                    "SSL_CERT_FILE=/certs/cert.pem",
+                    "-e",
+                    "RUST_LOG=warn",
+                    "-v",
+                    &format!("{}:/certs", certs_dir.path().display()),
+                    "-p",
+                    &RPC_PROXY_PORT.to_string(),
+                    &rpc_proxy_image(),
+                ]);
+                let port = rpc_proxy.host_port(RPC_PROXY_PORT);
+                poll_until_tcp(port, 60, "electrum rpc proxy");
+                (Some(rpc_proxy), Some(port))
+            }
+            None => (None, None),
+        };
+
         AuthStack {
             keycloak,
             redis,
             apisix,
+            rpc_proxy,
             network,
             keycloak_port,
             apisix_port,
+            rpc_proxy_port,
             _keycloak_dir: keycloak_dir,
             _apisix_dir: apisix_dir,
+            _certs_dir: certs_dir,
         }
     }
 
@@ -362,6 +481,16 @@ impl AuthStack {
         format!("http://127.0.0.1:{}", self.apisix_port)
     }
 
+    /// Url of the authenticated Electrum RPC proxy (reachable from the host); panics if the
+    /// stack was started without an Electrum upstream.
+    pub fn electrum_gateway_url(&self) -> String {
+        format!(
+            "tcp://127.0.0.1:{}",
+            self.rpc_proxy_port
+                .expect("auth stack has no electrum upstream, call 'with_electrum()'")
+        )
+    }
+
     /// Fetch a `client_credentials` access token from Keycloak, as an lwk client would.
     ///
     /// Runs on a dedicated thread so it's callable from both sync and async (tokio) tests.
@@ -405,15 +534,17 @@ impl AuthStack {
 impl Drop for AuthStack {
     fn drop(&mut self) {
         // Containers must be removed before the network can be.
-        let _ = Command::new("docker")
-            .args([
-                "rm",
-                "-f",
-                &self.apisix.name,
-                &self.keycloak.name,
-                &self.redis.name,
-            ])
-            .output();
+        let mut names = vec![
+            self.apisix.name.clone(),
+            self.keycloak.name.clone(),
+            self.redis.name.clone(),
+        ];
+        if let Some(rpc_proxy) = &self.rpc_proxy {
+            names.push(rpc_proxy.name.clone());
+        }
+        let mut args = vec!["rm".to_string(), "-f".to_string()];
+        args.extend(names);
+        let _ = Command::new("docker").args(&args).output();
         // Removing the network can race the container endpoints detaching, retry briefly.
         for _ in 0..5 {
             let removed = Command::new("docker")
@@ -450,6 +581,22 @@ fn upstream_host(network: &str) -> String {
         "--format",
         "{{(index .IPAM.Config 0).Gateway}}",
     ])
+}
+
+/// Poll a TCP `port` on localhost until it accepts connections, panicking after `attempts` * 1s.
+fn poll_until_tcp(port: u16, attempts: u32, what: &str) {
+    for _ in 0..attempts {
+        if std::net::TcpStream::connect_timeout(
+            &std::net::SocketAddr::from(([127, 0, 0, 1], port)),
+            Duration::from_secs(1),
+        )
+        .is_ok()
+        {
+            return;
+        }
+        std::thread::sleep(Duration::from_secs(1));
+    }
+    panic!("{what} not ready: 127.0.0.1:{port} did not accept connections after {attempts}s");
 }
 
 /// Poll `url` until it returns `status`, panicking after `attempts` * 1s.
@@ -493,7 +640,7 @@ mod test {
             }
         });
 
-        let stack = AuthStack::new(upstream_port);
+        let stack = AuthStack::new(upstream_port, None);
         let url = format!("{}/blocks/tip/height", stack.gateway_url());
         let client = reqwest::blocking::Client::new();
 
@@ -541,5 +688,122 @@ mod test {
         stack.set_credits(50);
         let r = client.get(&url).bearer_auth(&token).send().unwrap();
         assert_eq!(r.status().as_u16(), 200);
+    }
+
+    /// One raw Electrum JSON-RPC call with an optional in-band `authorization` member
+    /// ("Bearer <jwt>"), as the lwk Electrum client sends it. Err on denial (error response
+    /// or closed connection).
+    ///
+    /// Raw instead of the real Electrum client because lwk_test_util cannot depend on
+    /// lwk_wollet (dependency cycle); the e2e tests in lwk_wollet cover the real client.
+    fn electrum_call(port: u16, authorization: Option<&str>) -> Result<serde_json::Value, String> {
+        let mut stream =
+            std::net::TcpStream::connect(("127.0.0.1", port)).map_err(|e| e.to_string())?;
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .unwrap();
+        let mut request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "blockchain.headers.subscribe",
+            "params": []
+        });
+        if let Some(authorization) = authorization {
+            request["authorization"] = authorization.into();
+        }
+        let mut line = serde_json::to_string(&request).unwrap();
+        line.push('\n');
+        stream
+            .write_all(line.as_bytes())
+            .map_err(|e| e.to_string())?;
+        let mut reader = std::io::BufReader::new(stream);
+        let mut response = String::new();
+        std::io::BufRead::read_line(&mut reader, &mut response).map_err(|e| e.to_string())?;
+        if response.is_empty() {
+            return Err("connection closed".to_string());
+        }
+        let value: serde_json::Value =
+            serde_json::from_str(&response).map_err(|e| e.to_string())?;
+        match value.get("error") {
+            Some(error) => Err(error.to_string()),
+            None => Ok(value),
+        }
+    }
+
+    /// Smoke test of the Electrum RPC leg (no elementsd/electrs needed): a valid Keycloak
+    /// token is proxied to the upstream, missing/garbage tokens and exhausted credits are
+    /// denied. The enforcement invariant is "not served" — the proxy denies with a JSON-RPC
+    /// error (-32004) or by closing the connection.
+    #[test]
+    #[ignore = "requires docker, the blockstream/apisix image and the rpcproxy image"]
+    fn auth_stack_smoke_rpc() {
+        // Tiny Electrum-ish upstream: answers any JSON-RPC line with result "ok".
+        let listener = std::net::TcpListener::bind("0.0.0.0:0").unwrap();
+        let electrum_port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let mut stream = stream.unwrap();
+                std::thread::spawn(move || {
+                    let mut reader = std::io::BufReader::new(stream.try_clone().unwrap());
+                    let mut line = String::new();
+                    while std::io::BufRead::read_line(&mut reader, &mut line).is_ok() {
+                        if line.is_empty() {
+                            break;
+                        }
+                        let id = serde_json::from_str::<serde_json::Value>(&line)
+                            .ok()
+                            .and_then(|v| v.get("id").cloned())
+                            .unwrap_or(1.into());
+                        let response =
+                            serde_json::json!({"jsonrpc": "2.0", "result": "ok", "id": id});
+                        let mut out = response.to_string();
+                        out.push('\n');
+                        if stream.write_all(out.as_bytes()).is_err() {
+                            break;
+                        }
+                        line.clear();
+                    }
+                });
+            }
+        });
+
+        let stack = AuthStack::new(electrum_port, Some(electrum_port));
+        let port: u16 = stack
+            .electrum_gateway_url()
+            .rsplit(':')
+            .next()
+            .unwrap()
+            .parse()
+            .unwrap();
+
+        // Denials arrive as explicit JSON-RPC error lines with well-defined codes.
+        let assert_denied = |result: Result<serde_json::Value, String>, code: &str| {
+            let err = result.unwrap_err();
+            assert!(
+                err.contains(code),
+                "expected a denial with {code}, got: {err}"
+            );
+        };
+
+        // missing token -> denied with AUTHENTICATION_REQUIRED
+        assert_denied(electrum_call(port, None), "-32004");
+
+        // garbage token -> denied with AUTHENTICATION_REQUIRED
+        assert_denied(electrum_call(port, Some("Bearer not-a-jwt")), "-32004");
+
+        // valid Keycloak token -> proxied to the upstream
+        let token = stack.fetch_token();
+        let authorization = format!("Bearer {token}");
+        let response = electrum_call(port, Some(&authorization)).unwrap();
+        assert_eq!(response["result"], "ok");
+
+        // valid token but exhausted credits -> denied with INSUFFICIENT_CREDITS
+        stack.set_credits(0);
+        assert_denied(electrum_call(port, Some(&authorization)), "-32000");
+
+        // topping up restores access
+        stack.set_credits(50);
+        let response = electrum_call(port, Some(&authorization)).unwrap();
+        assert_eq!(response["result"], "ok");
     }
 }

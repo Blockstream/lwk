@@ -181,11 +181,17 @@ test_auth:
   script:
     - docker pull quay.io/keycloak/keycloak:26.5
     - docker pull blockstream/apisix:2aa6756a-20251211
-    # smoke: keycloak + apisix + container->host round-trip, no regtest binaries needed
+    # The closed-source RPC proxy image lives in the gitlab registry; the job token needs
+    # read access to explorer/electrum-rpc/electrs-electrum-proxy for this pull to work.
+    - docker login -u gitlab-ci-token -p "$CI_JOB_TOKEN" glregistry.blockstream.io
+    - docker pull glregistry.blockstream.io/explorer/electrum-rpc/electrs-electrum-proxy/prod/rpcproxy:4540cbae-20260714161505
+    # smokes: keycloak + apisix + rpc proxy + container->host round-trips, no regtest binaries
     - cargo test -p lwk_test_util auth_stack_smoke -- --ignored
-    # full e2e: one authenticated call served by the regtest esplora
+    # full e2e: authenticated esplora/waterfalls/electrum calls served by the regtest servers
+    # (scoped to the e2e binary: the lib has ignored `authenticated` tests hitting real
+    # staging/prod endpoints)
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo test -p lwk_wollet test_esplora_authenticated -- --ignored
+    - cargo test -p lwk_wollet --test e2e authenticated -- --ignored
 
 test_ledger:
   stage: test

@@ -736,7 +736,6 @@ impl TxBuilder {
                 return Err(Error::InsufficientFunds {
                     missing_sats: satoshi_out - satoshi_in,
                     asset_id: maker_output_asset,
-                    is_token: false,
                 });
             }
         }
@@ -777,7 +776,6 @@ impl TxBuilder {
             return Err(Error::InsufficientFunds {
                 missing_sats: (satoshi_out + temp_fee + 1) - satoshi_in, // +1 to ensure we have more than just equal
                 asset_id: wollet.policy_asset(),
-                is_token: false,
             });
         }
         let satoshi_change = satoshi_in - satoshi_out - temp_fee;
@@ -833,7 +831,6 @@ impl TxBuilder {
             return Err(Error::InsufficientFunds {
                 missing_sats: (satoshi_out + fee + 1) - satoshi_in, // +1 to ensure we have more than just equal
                 asset_id: wollet.policy_asset(),
-                is_token: false,
             });
         }
         let satoshi_change = satoshi_in - satoshi_out - fee;
@@ -1016,7 +1013,6 @@ impl TxBuilder {
                 return Err(Error::InsufficientFunds {
                     missing_sats: satoshi_out - satoshi_in,
                     asset_id: asset,
-                    is_token: false,
                 });
             }
 
@@ -1198,12 +1194,7 @@ impl TxBuilder {
                                 .collect();
                             let utxo_token = utxos_token
                                 .first()
-                                // TODO: add new error for this case
-                                .ok_or_else(|| Error::InsufficientFunds {
-                                    missing_sats: 1, // We need at least one token
-                                    asset_id: token,
-                                    is_token: true,
-                                })?;
+                                .ok_or_else(|| Error::MissingReissuanceTokenUtxo(token))?;
 
                             let idx = wollet.add_input(
                                 &mut pset,
@@ -1254,7 +1245,6 @@ impl TxBuilder {
             return Err(Error::InsufficientFunds {
                 missing_sats: (satoshi_out + temp_fee + 1) - satoshi_in, // +1 to ensure we have more than just equal
                 asset_id: wollet.policy_asset(),
-                is_token: false,
             });
         }
         let satoshi_change = satoshi_in - satoshi_out - temp_fee;
@@ -1292,7 +1282,6 @@ impl TxBuilder {
             return Err(Error::InsufficientFunds {
                 missing_sats: (satoshi_out + fee + 1) - satoshi_in, // +1 to ensure we have more than just equal
                 asset_id: wollet.policy_asset(),
-                is_token: false,
             });
         }
         let satoshi_change = satoshi_in - satoshi_out - fee;

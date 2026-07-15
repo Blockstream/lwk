@@ -432,7 +432,7 @@ impl Cache {
 #[cfg(test)]
 mod tests {
     use crate::{cache::Cache, WolletDescriptor};
-    use elements::{Address, AddressParams, Txid};
+    use elements::{Address, AddressParams, Transaction, Txid};
     use elements_miniscript::ConfidentialDescriptor;
     use std::{
         collections::hash_map::DefaultHasher,
@@ -491,5 +491,33 @@ mod tests {
         assert_eq!(12004253425667158821, hasher.finish());
 
         // TODO test other fields change the hash
+    }
+
+    #[test]
+    fn test_v5_restore_keeps_deleted_txids() {
+        let tx = Transaction {
+            version: 2,
+            lock_time: elements::LockTime::ZERO,
+            input: vec![],
+            output: vec![],
+        };
+        let txid = tx.txid();
+        let mut live = Cache::default();
+        live.update(&[(txid, None)], &[], &[(txid, tx)], false, vec![], false)
+            .unwrap();
+        live.update(&[], &[txid], &[], false, vec![], false)
+            .unwrap();
+
+        assert!(live.all_txids().contains(&txid));
+
+        // A merged persisted update may only mention a historical transaction in
+        // `txid_height_delete`. The transaction is still present in the txs store,
+        // so restoring the authoritative v5 snapshot must reconstruct its txid.
+        let mut restored = Cache::default();
+        restored
+            .update(&[], &[txid], &[], false, vec![], true)
+            .unwrap();
+
+        assert_eq!(live.all_txids(), restored.all_txids());
     }
 }

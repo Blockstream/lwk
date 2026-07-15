@@ -777,7 +777,7 @@ fn create_pset_error() {
         .finish()
         .unwrap_err();
 
-    assert!(matches!(err, Error::InsufficientFunds { .. }));
+    assert!(matches!(err, Error::MissingReissuanceTokenUtxo(_)));
 
     // The other wallet is unaware of the issuance transaction,
     // so it can't reissue the asset.

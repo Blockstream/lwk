@@ -368,7 +368,7 @@ impl Cache {
         self.heights.retain(|k, _| !to_delete.contains(k));
         self.heights.extend(new.iter().copied());
         if update_txids {
-            self.txids.retain(|txid| !to_delete.contains(txid));
+            self.txids.extend(to_delete.iter().copied());
             self.txids.extend(new.iter().map(|(txid, _)| *txid));
         }
     }

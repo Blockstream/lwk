@@ -1,18 +1,15 @@
 const lwk = require('lwk_node');
-
-// TODO: use regtest instead of testnet:
-// however keep displaying testnet in the generated docs using // ANCHOR: ignore
+const { fundAddress, waitForTx, WATERFALLS_URL } = require('./scripts/utils');
 
 async function runBasicsTest() {
     try {
 
         // ANCHOR: generate-signer
-        if (false) { // ANCHOR: ignore
         const mnemonic = lwk.Mnemonic.fromRandom(12);
-        } // ANCHOR: ignore
-        // Fixed mnemonic with some funds // ANCHOR: ignore
-        const mnemonic = new lwk.Mnemonic("uncle win diagram apple poverty sun cement rib opera barely april mountain"); // ANCHOR: ignore
+        if (false) { // ANCHOR: ignore
         const network = lwk.Network.testnet();
+        } // ANCHOR: ignore
+        const network = lwk.Network.regtestDefault(); // ANCHOR: ignore
         const signer = new lwk.Signer(mnemonic, network);
         // ANCHOR_END: generate-signer
 
@@ -46,15 +43,20 @@ async function runBasicsTest() {
         // ANCHOR_END: waterfalls_client
 
         // ANCHOR: client
-        const url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+        if (false) { // ANCHOR: ignore
+        const url_esplora = "https://blockstream.info/liquidtestnet/api";
         // TODO: name variables // ANCHOR: ignore
-        const client = new lwk.WaterfallsClient(network, url);
-
-        const update = await client.fullScan(wollet);
-        if (update) {
-            wollet.applyUpdate(update);
-        }
+        const client = new lwk.EsploraClient(lwk.Network.mainnet(), url_esplora, true, 4, false);
+        } // ANCHOR: ignore
+        const client = new lwk.WaterfallsClient(network, WATERFALLS_URL); // ANCHOR: ignore
+        let fundTxid = await fundAddress(wollet.address(null).address(), BigInt(100_000), network, client); // ANCHOR: ignore
+        await waitForTx(wollet, client, fundTxid); // ANCHOR: ignore
         // ANCHOR_END: client
+
+        // Verify funds exist // ANCHOR: ignore
+        const lbtc = network.policyAsset().toString(); // ANCHOR: ignore
+        const lbtcBalance = wollet.balance().entries().get(lbtc) || 0n; // ANCHOR: ignore
+        console.assert(lbtcBalance > 0n, "Pre-seeded wallet should have L-BTC"); // ANCHOR: ignore
 
         // ANCHOR: tx
         const sats = BigInt(1000);

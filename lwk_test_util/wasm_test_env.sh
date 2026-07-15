@@ -48,19 +48,21 @@ ZMQ_ENDPOINT="tcp://${ELEMENTS_HOST}:29000"
 # Initialize elements-cli command with common arguments
 ELEMENTS_CLI_CMD="$ELEMENTS_CLI_EXEC -rpcconnect=$ELEMENTS_HOST -rpcport=$ELEMENTS_PORT -rpcuser=user -rpcpassword=pass"
 
-# Start Jade emulator docker container
-echo "Starting Jade emulator..."
-JADE_CONTAINER_ID=$(docker run -d --rm -p $EMULATOR_PORT:$EMULATOR_PORT xenoky/local-jade-emulator:1.0.41-beta1)
-echo "Jade emulator container ID: $JADE_CONTAINER_ID"
+if [ "$SKIP_JADE" != "1" ]; then
+    # Start Jade emulator docker container
+    echo "Starting Jade emulator..."
+    JADE_CONTAINER_ID=$(docker run -d --rm -p $EMULATOR_PORT:$EMULATOR_PORT xenoky/local-jade-emulator:1.0.41-beta1)
+    echo "Jade emulator container ID: $JADE_CONTAINER_ID"
 
-# Wait for Jade emulator to be ready
-echo "Waiting for Jade emulator to start..."
-sleep 3
+    # Wait for Jade emulator to be ready
+    echo "Waiting for Jade emulator to start..."
+    sleep 3
 
-# Start websocat to bridge TCP to WebSocket for Jade
-echo "Starting WebSocket bridge for Jade..."
-$WEBSOCAT_EXEC --binary ws-listen:127.0.0.1:$JADE_WEBSOCKET_PORT tcp:127.0.0.1:$EMULATOR_PORT &
-WEBSOCAT_PID=$!
+    # Start websocat to bridge TCP to WebSocket for Jade
+    echo "Starting WebSocket bridge for Jade..."
+    $WEBSOCAT_EXEC --binary ws-listen:127.0.0.1:$JADE_WEBSOCKET_PORT tcp:127.0.0.1:$EMULATOR_PORT &
+    WEBSOCAT_PID=$!
+fi
 
 # Start elementsd
 $ELEMENTSD_EXEC \
@@ -88,8 +90,11 @@ $ELEMENTS_CLI_CMD createwallet test_wallet
 $ELEMENTS_CLI_CMD rescanblockchain
 
 # First wpkh_slip77 address of "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
-$ELEMENTS_CLI_CMD sendtoaddress el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq 1
-
+# Send 25 different transactions so we could use this in pagination tests.
+for i in {1..25}; do
+    $ELEMENTS_CLI_CMD sendtoaddress el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq 0.1
+    $ELEMENTS_CLI_CMD generatetoaddress 1 $($ELEMENTS_CLI_CMD getnewaddress)
+done
 # first wpkh_slip77 address of ledger mnemonic "glory promote mansion idle axis finger extra february uncover one trip resource lawn turtle enact monster seven myth punch hobby comfort wild raise skin"
 $ELEMENTS_CLI_CMD sendtoaddress el1qqvk6gl0lgs80w8rargdqyfsl7f0llsttzsx8gd4fz262cjnt0uxh6y68aq4qx76ahvuvlrz8t8ey9v04clsf58w045gzmxga3 1
 
@@ -186,11 +191,13 @@ cleanup() {
     kill $GENERATE_PID || true
     kill $ASSET_REGISTRY_PID || true
     kill $ELECTRS_PID || true
-    kill $WEBSOCAT_PID || true
     $ELEMENTS_CLI_CMD stop || true
-    if [ ! -z "$JADE_CONTAINER_ID" ]; then
-        echo "Stopping Jade emulator container..."
-        docker stop $JADE_CONTAINER_ID || true
+    if [ "$SKIP_JADE" != "1" ]; then
+        kill $WEBSOCAT_PID || true
+        if [ ! -z "$JADE_CONTAINER_ID" ]; then
+            echo "Stopping Jade emulator container..."
+            docker stop $JADE_CONTAINER_ID || true
+        fi
     fi
     echo "Removing temporary directory..."
     rm -rf "$ROOT_DIR"

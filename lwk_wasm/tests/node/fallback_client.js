@@ -1,17 +1,18 @@
 const lwk = require('lwk_node');
+const { WATERFALLS_URL } = require("./scripts/utils.js");
 
 async function testFallbackClientWithRetry() {
     try {
-        const network = lwk.Network.testnet();
+        const network = lwk.Network.regtestDefault();
 
-        const mnemonic = new lwk.Mnemonic("other august catalog large suit off fan hammer ritual sword evil scrub");
+        const mnemonic = lwk.Mnemonic.fromRandom(12);
         const signer = new lwk.Signer(mnemonic, network);
 
         const desc = signer.wpkhSlip77Descriptor();
         const wollet = new lwk.Wollet(network, desc);
 
-        const primary_url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
-        const fallback_url = "https://another-waterfalls-server.info/liquidtesnet/api ";
+        const primary_url = "https://primary-waterfalls-server.info/liquidtesnet/api";
+        const fallback_url = WATERFALLS_URL;
         const waterfalls = true;
         const concurrency = 4;
         const utxo_only = false;
@@ -48,4 +49,3 @@ if (require.main === module) {
 }
 
 module.exports = {testFallbackClientWithRetry};
-

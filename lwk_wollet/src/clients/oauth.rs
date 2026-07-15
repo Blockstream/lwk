@@ -1,4 +1,5 @@
-//! OAuth2 token fetching shared by the authenticated clients.
+//! OAuth2 token fetching shared by the authenticated clients (Esplora/Waterfalls REST
+//! and, behind the `electrum_oidc` feature, the Electrum client).
 
 use crate::Error;
 use reqwest::Response;
@@ -52,4 +53,30 @@ pub(crate) async fn fetch_oauth_token(
         .to_string();
 
     Ok(token)
+}
+
+/// Fetches an OAuth2 access token using the client credentials flow, blocking the caller.
+///
+/// Runs [`fetch_oauth_token`] on a dedicated thread with its own tokio runtime, so it is
+/// safe to call from sync contexts and from within async (tokio) contexts alike, where
+/// blocking on a nested runtime would panic. Token fetches are rare (client construction
+/// and refresh after an authentication denial), so the per-call thread cost is negligible.
+#[cfg(all(feature = "electrum_oidc", not(target_arch = "wasm32")))]
+pub(crate) fn fetch_oauth_token_blocking(
+    url: &str,
+    client_id: &str,
+    client_secret: &str,
+) -> Result<String, Error> {
+    let url = url.to_string();
+    let client_id = client_id.to_string();
+    let client_secret = client_secret.to_string();
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Runtime::new()?;
+        rt.block_on(async {
+            let client = reqwest::Client::new();
+            fetch_oauth_token(&client, &url, &client_id, &client_secret).await
+        })
+    })
+    .join()
+    .map_err(|_| Error::Generic("the token fetch thread panicked".to_string()))?
 }

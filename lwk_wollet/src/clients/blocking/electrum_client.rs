@@ -17,6 +17,11 @@ use std::time::Duration;
 
 use super::BlockchainBackend;
 
+/// Shared cache of the OAuth token minted by the [`AuthProvider`] closure, so the client
+/// can invalidate it when the server denies a call with an authentication error.
+#[cfg(feature = "electrum_oidc")]
+type TokenCache = Arc<std::sync::Mutex<Option<String>>>;
+
 /// A client to issue TCP requests to an electrum server.
 pub struct ElectrumClient {
     client: Client,
@@ -24,6 +29,12 @@ pub struct ElectrumClient {
     tip: BlockHeader,
 
     script_status: HashMap<Script, ScriptStatus>,
+
+    /// For [`TokenProvider::Blockstream`]: the token cache shared with the [`AuthProvider`]
+    /// closure, so an authentication denial can invalidate the token and the retried call
+    /// mints a fresh one. `None` for the other providers.
+    #[cfg(feature = "electrum_oidc")]
+    token_cache: Option<TokenCache>,
 }
 
 impl Debug for ElectrumClient {
@@ -72,10 +83,10 @@ impl ElectrumClient {
         let elements_script = address.script_pubkey();
         let bitcoin_script = bitcoin::ScriptBuf::from(elements_script.to_bytes());
 
-        let val = match self.client.script_subscribe(&bitcoin_script) {
+        let val = match self.with_token_refresh(|client| client.script_subscribe(&bitcoin_script)) {
             Ok(val) => val,
             Err(electrum_client::Error::AlreadySubscribed(_)) => {
-                self.client.script_get_history(&bitcoin_script)?; // it seems it must be called, otherwise the server don't update the status
+                self.with_token_refresh(|client| client.script_get_history(&bitcoin_script))?; // it seems it must be called, otherwise the server don't update the status
                 self.client.script_pop(&bitcoin_script)?
             }
             Err(e) => return Err(e.into()),
@@ -89,8 +100,45 @@ impl ElectrumClient {
 
     /// Ping the Electrum server
     pub fn ping(&self) -> Result<(), Error> {
-        Ok(self.client.ping()?)
+        Ok(self.with_token_refresh(|client| client.ping())?)
     }
+
+    /// Run an electrum call and, when the server denies it with an authentication error
+    /// (the cached OAuth token expired and the connection was re-established), invalidate
+    /// the cached token and retry the call once.
+    ///
+    /// The retry works because the server closes the denied connection: the retried call
+    /// hits the dead connection, so electrum-client transparently reconnects and the
+    /// [`AuthProvider`] closure mints a fresh token for the new connection.
+    ///
+    /// Without the `electrum_oidc` feature (or with a non-`Blockstream` provider) the call
+    /// runs exactly once.
+    fn with_token_refresh<T>(
+        &self,
+        mut op: impl FnMut(&Client) -> Result<T, electrum_client::Error>,
+    ) -> Result<T, electrum_client::Error> {
+        let result = op(&self.client);
+        #[cfg(feature = "electrum_oidc")]
+        if let (Err(e), Some(cache)) = (&result, &self.token_cache) {
+            if is_auth_denied(e) {
+                log::debug!("authentication denied, invalidating the token and retrying once");
+                if let Ok(mut guard) = cache.lock() {
+                    *guard = None;
+                }
+                return op(&self.client);
+            }
+        }
+        result
+    }
+}
+
+/// Whether the error is the authenticated Electrum RPC proxy denying the call because it
+/// lacks a valid token (JSON-RPC code -32004, AUTHENTICATION_REQUIRED).
+#[cfg(feature = "electrum_oidc")]
+fn is_auth_denied(error: &electrum_client::Error) -> bool {
+    const AUTHENTICATION_REQUIRED: i64 = -32004;
+    matches!(error, electrum_client::Error::Protocol(value)
+        if value.get("code").and_then(|c| c.as_i64()) == Some(AUTHENTICATION_REQUIRED))
 }
 
 /// Builder for an [`ElectrumClient`].
@@ -124,8 +172,15 @@ impl ElectrumClientBuilder {
     /// `Bearer` token injected as the `authorization` member of the JSON-RPC requests,
     /// for proxies that require it).
     ///
-    /// Currently only [`TokenProvider::None`] and [`TokenProvider::Static`] are supported
-    /// for Electrum; [`TokenProvider::Blockstream`] returns an error from [`Self::build`].
+    /// [`TokenProvider::None`] and [`TokenProvider::Static`] are always supported.
+    /// [`TokenProvider::Blockstream`] (automatic OAuth2 token fetch and refresh) requires
+    /// the `electrum_oidc` cargo feature; without it, [`Self::build`] returns an error.
+    ///
+    /// With `TokenProvider::Blockstream` the token is fetched by [`Self::build`] and
+    /// cached. The server validates the token when a connection is established, so an
+    /// expired token surfaces as an authentication denial (JSON-RPC error -32004) on the
+    /// first call after a reconnection: the client then invalidates the cached token and
+    /// retries the call once, minting a fresh token for the new connection.
     ///
     /// Security:
     /// - The token is only protected in transit on TLS (`ssl://`) connections. Setting a
@@ -163,7 +218,8 @@ impl ElectrumClientBuilder {
                 "refusing to send an Electrum auth token over a plaintext (tcp://) connection; use ssl:// or call allow_plaintext_with_token(true)".to_string(),
             ));
         }
-        let client = url.build_client_inner(self.timeout, &self.token_provider)?;
+        let auth = token_provider_auth(&self.token_provider)?;
+        let client = url.build_client_inner(self.timeout, auth.provider)?;
         let header = client.block_headers_subscribe_raw()?;
         let tip: BlockHeader = elements_deserialize(&header.header)?;
 
@@ -171,6 +227,8 @@ impl ElectrumClientBuilder {
             client,
             tip,
             script_status: HashMap::new(),
+            #[cfg(feature = "electrum_oidc")]
+            token_cache: auth.token_cache,
         })
     }
 }
@@ -192,7 +250,9 @@ impl BlockchainBackend for ElectrumClient {
                 // It might be that the client has reconnected and subscriptions don't persist
                 // across connections. Calling `client.ping()` won't help here because the
                 // successful retry will prevent us knowing about the reconnect.
-                if let Ok(header) = self.client.block_headers_subscribe_raw() {
+                if let Ok(header) =
+                    self.with_token_refresh(|client| client.block_headers_subscribe_raw())
+                {
                     let tip: BlockHeader = elements_deserialize(&header.header)?;
                     self.tip = tip;
                 }
@@ -205,9 +265,8 @@ impl BlockchainBackend for ElectrumClient {
     fn broadcast(&self, tx: &Transaction) -> Result<Txid, Error> {
         // TODO: check that the transaction contains some signatures
 
-        let txid = self
-            .client
-            .transaction_broadcast_raw(&elements_serialize(tx))?;
+        let tx_bytes = elements_serialize(tx);
+        let txid = self.with_token_refresh(|client| client.transaction_broadcast_raw(&tx_bytes))?;
         Ok(Txid::from_raw_hash(txid.to_raw_hash()))
     }
 
@@ -218,7 +277,7 @@ impl BlockchainBackend for ElectrumClient {
             .collect();
 
         let mut result = vec![];
-        for tx in self.client.batch_transaction_get_raw(&txids)? {
+        for tx in self.with_token_refresh(|client| client.batch_transaction_get_raw(&txids))? {
             let tx: Transaction = elements::encode::deserialize(&tx)?;
             result.push(tx);
         }
@@ -231,7 +290,7 @@ impl BlockchainBackend for ElectrumClient {
         _: &HashMap<Height, BlockHash>,
     ) -> Result<Vec<BlockHeader>, Error> {
         let mut result = vec![];
-        for header in self.client.batch_block_header_raw(heights)? {
+        for header in self.with_token_refresh(|client| client.batch_block_header_raw(heights))? {
             let header: BlockHeader = elements::encode::deserialize(&header)?;
             result.push(header);
         }
@@ -245,8 +304,7 @@ impl BlockchainBackend for ElectrumClient {
             .collect();
 
         Ok(self
-            .client
-            .batch_script_get_history(&scripts)?
+            .with_token_refresh(|client| client.batch_script_get_history(&scripts))?
             .into_iter()
             .map(|e| e.into_iter().map(Into::into).collect())
             .collect())
@@ -270,17 +328,14 @@ impl ElectrumUrl {
     #[deprecated(note = "use ElectrumClientBuilder instead")]
     #[allow(deprecated)]
     pub fn build_client(&self, options: &ElectrumOptions) -> Result<Client, Error> {
-        self.build_client_inner(
-            options.timeout.map(|t| Duration::from_secs(t as u64)),
-            &TokenProvider::None,
-        )
+        self.build_client_inner(options.timeout.map(|t| Duration::from_secs(t as u64)), None)
     }
 
-    /// Build an electrum-client [`Client`] from the url, timeout and token provider.
+    /// Build an electrum-client [`Client`] from the url, timeout and authorization provider.
     pub(crate) fn build_client_inner(
         &self,
         timeout: Option<Duration>,
-        token_provider: &TokenProvider,
+        auth_provider: Option<AuthProvider>,
     ) -> Result<Client, Error> {
         let builder = ConfigBuilder::new();
         let (url, builder) = match self {
@@ -291,23 +346,84 @@ impl ElectrumUrl {
         };
         let builder = builder
             .timeout(timeout)
-            .authorization_provider(token_provider_auth(token_provider)?);
+            .authorization_provider(auth_provider);
         Ok(Client::from_config(&url, builder.build())?)
     }
 }
 
+/// The result of converting a [`TokenProvider`]: the electrum-client [`AuthProvider`]
+/// closure plus, for [`TokenProvider::Blockstream`], the token cache shared with it.
+struct ElectrumAuth {
+    provider: Option<AuthProvider>,
+    #[cfg(feature = "electrum_oidc")]
+    token_cache: Option<TokenCache>,
+}
+
+impl ElectrumAuth {
+    fn new(provider: Option<AuthProvider>) -> Self {
+        Self {
+            provider,
+            #[cfg(feature = "electrum_oidc")]
+            token_cache: None,
+        }
+    }
+}
+
 /// Convert a [`TokenProvider`] into an electrum-client [`AuthProvider`] (a closure that
-/// returns the `authorization` header value). Only `None`/`Static` are supported for
-/// Electrum; `Blockstream` requires fetching a token and is not wired here yet.
-fn token_provider_auth(token_provider: &TokenProvider) -> Result<Option<AuthProvider>, Error> {
+/// returns the `authorization` header value).
+///
+/// For [`TokenProvider::Blockstream`] (feature `electrum_oidc`) this fetches the first
+/// token, so failures like wrong credentials surface here with their real cause instead
+/// of an authentication denial from the server.
+fn token_provider_auth(token_provider: &TokenProvider) -> Result<ElectrumAuth, Error> {
     match token_provider {
-        TokenProvider::None => Ok(None),
+        TokenProvider::None => Ok(ElectrumAuth::new(None)),
         TokenProvider::Static(token) => {
             let header = format!("Bearer {token}");
-            Ok(Some(Arc::new(move || Some(header.clone())) as AuthProvider))
+            Ok(ElectrumAuth::new(Some(
+                Arc::new(move || Some(header.clone())) as AuthProvider,
+            )))
         }
+        #[cfg(feature = "electrum_oidc")]
+        TokenProvider::Blockstream {
+            url,
+            client_id,
+            client_secret,
+        } => {
+            use crate::clients::oauth::fetch_oauth_token_blocking;
+
+            // Mint the first token now: the connection's first message needs it anyway.
+            let token = fetch_oauth_token_blocking(url, client_id, client_secret)?;
+            let token_cache: TokenCache = Arc::new(std::sync::Mutex::new(Some(token)));
+
+            let cache = token_cache.clone();
+            let url = url.clone();
+            let client_id = client_id.clone();
+            let client_secret = client_secret.clone();
+            // Invoked by electrum-client before each request: returns the cached token,
+            // minting a new one after the client invalidated it on an authentication
+            // denial. If the mint fails the request is sent without a token, so the
+            // server's denial surfaces to the caller (the failure itself is only logged).
+            let provider = Arc::new(move || {
+                let mut guard = cache.lock().ok()?;
+                if guard.is_none() {
+                    log::debug!("fetching authentication token");
+                    match fetch_oauth_token_blocking(&url, &client_id, &client_secret) {
+                        Ok(token) => *guard = Some(token),
+                        Err(e) => log::warn!("failed to fetch the authentication token: e='{e}'"),
+                    }
+                }
+                guard.as_ref().map(|token| format!("Bearer {token}"))
+            }) as AuthProvider;
+
+            Ok(ElectrumAuth {
+                provider: Some(provider),
+                token_cache: Some(token_cache),
+            })
+        }
+        #[cfg(not(feature = "electrum_oidc"))]
         TokenProvider::Blockstream { .. } => Err(Error::Generic(
-            "TokenProvider::Blockstream is not yet supported for the Electrum client; use TokenProvider::Static".to_string(),
+            "TokenProvider::Blockstream for the Electrum client requires the `electrum_oidc` cargo feature; enable it or use TokenProvider::Static".to_string(),
         )),
     }
 }
@@ -415,13 +531,18 @@ mod tests {
         use super::token_provider_auth;
         use crate::clients::TokenProvider;
 
-        assert!(token_provider_auth(&TokenProvider::None).unwrap().is_none());
+        assert!(token_provider_auth(&TokenProvider::None)
+            .unwrap()
+            .provider
+            .is_none());
 
         let provider = token_provider_auth(&TokenProvider::Static("tok".to_string()))
             .unwrap()
+            .provider
             .expect("a static token yields an auth provider");
         assert_eq!(provider(), Some("Bearer tok".to_string()));
 
+        #[cfg(not(feature = "electrum_oidc"))]
         assert!(
             token_provider_auth(&TokenProvider::Blockstream {
                 url: "https://example/token".to_string(),
@@ -429,8 +550,109 @@ mod tests {
                 client_secret: "secret".to_string(),
             })
             .is_err(),
-            "Blockstream is not supported for Electrum yet and should error"
+            "Blockstream requires the electrum_oidc feature and should error without it"
         );
+    }
+
+    /// The `Blockstream` auth provider mints a token when created, serves it from the
+    /// cache on subsequent calls, and mints a fresh one after the cache is invalidated
+    /// (what the client does when the server denies a call with -32004).
+    #[cfg(feature = "electrum_oidc")]
+    #[test]
+    fn blockstream_token_is_minted_cached_and_refreshed() {
+        use super::token_provider_auth;
+        use crate::clients::TokenProvider;
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        // Minimal OAuth token endpoint: each request is counted and answered with a new
+        // access_token (tok1, tok2, ...).
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let hits = Arc::new(AtomicUsize::new(0));
+        let server_hits = hits.clone();
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let mut stream = stream.unwrap();
+                let n = server_hits.fetch_add(1, Ordering::SeqCst) + 1;
+                // Read until the whole request (headers + form body) is in: the request
+                // is tiny, but it may still arrive split across reads.
+                let mut request = Vec::new();
+                let mut buf = [0u8; 1024];
+                loop {
+                    let read = stream.read(&mut buf).unwrap();
+                    request.extend_from_slice(&buf[..read]);
+                    let text = String::from_utf8_lossy(&request);
+                    if let Some((head, body)) = text.split_once("\r\n\r\n") {
+                        let content_length: usize = head
+                            .lines()
+                            .find_map(|l| {
+                                l.to_lowercase()
+                                    .strip_prefix("content-length:")
+                                    .map(str::trim)
+                                    .map(str::to_string)
+                            })
+                            .and_then(|v| v.parse().ok())
+                            .unwrap_or(0);
+                        if body.len() >= content_length {
+                            break;
+                        }
+                    }
+                }
+                let body = format!(r#"{{"access_token":"tok{n}"}}"#);
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+                    body.len(),
+                );
+                stream.write_all(response.as_bytes()).unwrap();
+            }
+        });
+
+        let auth = token_provider_auth(&TokenProvider::Blockstream {
+            url: format!("http://127.0.0.1:{port}/token"),
+            client_id: "id".to_string(),
+            client_secret: "secret".to_string(),
+        })
+        .unwrap();
+        let provider = auth.provider.expect("Blockstream yields an auth provider");
+        let cache = auth.token_cache.expect("Blockstream yields a token cache");
+
+        // the first token is minted when the provider is created
+        assert_eq!(hits.load(Ordering::SeqCst), 1);
+
+        // calls serve the cached token without touching the endpoint
+        assert_eq!(provider(), Some("Bearer tok1".to_string()));
+        assert_eq!(provider(), Some("Bearer tok1".to_string()));
+        assert_eq!(hits.load(Ordering::SeqCst), 1);
+
+        // invalidating the cache (as the client does on an authentication denial)
+        // makes the next call mint a fresh token
+        cache.lock().unwrap().take();
+        assert_eq!(provider(), Some("Bearer tok2".to_string()));
+        assert_eq!(hits.load(Ordering::SeqCst), 2);
+    }
+
+    /// Only the proxy's AUTHENTICATION_REQUIRED denial triggers the token refresh; other
+    /// denials (e.g. insufficient credits) and other errors are surfaced untouched.
+    #[cfg(feature = "electrum_oidc")]
+    #[test]
+    fn only_authentication_denials_are_retried() {
+        use super::is_auth_denied;
+
+        let auth = electrum_client::Error::Protocol(
+            serde_json::json!({"code": -32004, "message": "authentication required"}),
+        );
+        assert!(is_auth_denied(&auth));
+
+        let credits = electrum_client::Error::Protocol(
+            serde_json::json!({"code": -32000, "message": "insufficient credits"}),
+        );
+        assert!(!is_auth_denied(&credits));
+
+        let other = electrum_client::Error::Message("boom".to_string());
+        assert!(!is_auth_denied(&other));
     }
 
     #[test]

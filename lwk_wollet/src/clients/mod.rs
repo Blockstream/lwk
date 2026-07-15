@@ -34,7 +34,7 @@ pub use waterfalls::{
     WaterfallsSubscriptionUpdate,
 };
 
-#[cfg(feature = "esplora")]
+#[cfg(any(feature = "esplora", feature = "electrum_oidc"))]
 pub(crate) mod oauth;
 
 /// A builder for the [`crate::clients::asyncr::EsploraClient`] or [`crate::clients::blocking::EsploraClient`]

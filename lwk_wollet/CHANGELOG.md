@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Add Waterfalls descriptor subscriptions, returning `tip`, `mempool`, `block`, and `reorg` events that callers can use as wallet rescan hints.
+* Add the `electrum_oidc` feature: `TokenProvider::Blockstream` support for `ElectrumClient` (automatic OAuth2 token fetch, plus invalidate and retry once when the server denies a call with an authentication error). Not available on wasm.
 
 ## 0.18.0
 

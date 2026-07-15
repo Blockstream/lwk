@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.18.2
+
 * Add `WaterfallsClient::subscribe()` and `WaterfallsSubscription` to expose Waterfalls descriptor subscription events to foreign bindings.
 
 ## 0.18.0

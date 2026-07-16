@@ -4,7 +4,7 @@ use std::{collections::HashMap, io::ErrorKind};
 use crate::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant};
 use crate::protocol::{
     AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams, GenericMethod,
-    GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, IsAuthResult, Request,
+    GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, IsAuthResult, Request, Response,
     SignMessageParams, UpdatePinserverParams, VersionInfoResult,
 };
 use crate::register_multisig::{
@@ -72,6 +72,34 @@ impl Stream for JadeTcpStream {
 impl Jade<JadeTcpStream> {
     pub fn new_tcp(stream: tokio::net::TcpStream, network: Network) -> Self {
         Jade::new(JadeTcpStream::new(stream), network)
+    }
+}
+
+async fn read_loop<S: Stream<Error = Error>, T>(stream: &S) -> Result<Response<T>>
+where
+    T: std::fmt::Debug + DeserializeOwned,
+{
+    let mut rx = [0u8; 4096];
+    let mut total = 0;
+    loop {
+        match stream.read(&mut rx[total..]).await {
+            Ok(0) => {
+                return Err(Error::IoError(std::io::Error::new(
+                    ErrorKind::UnexpectedEof,
+                    "connection closed or buffer full",
+                )))
+            }
+
+            Ok(len) => {
+                total += len;
+                let reader = &rx[..total];
+                if let Some(value) = try_parse_response::<T>(reader) {
+                    return value;
+                }
+            }
+            Err(Error::IoError(e)) if e.kind() == ErrorKind::Interrupted => (),
+            Err(e) => return Err(e),
+        }
     }
 }
 
@@ -352,25 +380,11 @@ impl<S: Stream<Error = Error>> Jade<S> {
 
         self.stream.write(&buf).await?;
 
-        let mut rx = [0u8; 4096];
-
-        let mut total = 0;
-        loop {
-            match self.stream.read(&mut rx[total..]).await {
-                Ok(len) => {
-                    total += len;
-                    let reader = &rx[..total];
-
-                    if let Some(value) = try_parse_response(reader) {
-                        return value;
-                    }
-                }
-                Err(Error::IoError(e)) if e.kind() == ErrorKind::Interrupted => (),
-
-                Err(e) => {
-                    return Err(e);
-                }
-            }
+        let resp: Response<T> = read_loop(&self.stream).await?;
+        match (resp.result, resp.error) {
+            (Some(result), _) => Ok(result),
+            (_, Some(error)) => Err(Error::JadeError(error)),
+            _ => Err(Error::JadeNeitherErrorNorResult),
         }
     }
 }

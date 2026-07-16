@@ -6,7 +6,7 @@ use std::{collections::HashMap, io::ErrorKind};
 use crate::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant};
 use crate::protocol::{
     AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams, GenericMethod,
-    GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, IsAuthResult, Request,
+    GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, IsAuthResult, Request, Response,
     SignMessageParams, UpdatePinserverParams, VersionInfoResult,
 };
 use crate::register_multisig::{
@@ -51,6 +51,36 @@ pub struct Jade {
 
     /// Cached multisigs details
     multisigs_details: Mutex<Option<Vec<RegisteredMultisigDetails>>>,
+}
+
+fn read_loop<T>(conn: &mut Connection) -> Result<Response<T>>
+where
+    T: std::fmt::Debug + DeserializeOwned,
+{
+    let mut rx = [0u8; 4096];
+    let mut total = 0;
+    loop {
+        match conn.read(&mut rx[total..]) {
+            Ok(0) => {
+                return Err(Error::IoError(std::io::Error::new(
+                    ErrorKind::UnexpectedEof,
+                    "connection closed or buffer full",
+                )))
+            }
+            Ok(len) => {
+                total += len;
+                let reader = &rx[..total];
+                if let Some(value) = try_parse_response::<T>(reader) {
+                    return value;
+                }
+            }
+            Err(e) => {
+                if e.kind() != ErrorKind::Interrupted {
+                    return Err(Error::IoError(e));
+                }
+            }
+        }
+    }
 }
 
 impl Jade {
@@ -370,25 +400,11 @@ impl Jade {
 
         conn.write_all(&buf)?;
 
-        let mut rx = [0u8; 4096];
-
-        let mut total = 0;
-        loop {
-            match conn.read(&mut rx[total..]) {
-                Ok(len) => {
-                    total += len;
-                    let reader = &rx[..total];
-
-                    if let Some(value) = try_parse_response(reader) {
-                        return value;
-                    }
-                }
-                Err(e) => {
-                    if e.kind() != ErrorKind::Interrupted {
-                        return Err(Error::IoError(e));
-                    }
-                }
-            }
+        let resp = read_loop::<T>(&mut conn)?;
+        match (resp.result, resp.error) {
+            (Some(result), _) => Ok(result),
+            (_, Some(error)) => Err(Error::JadeError(error)),
+            _ => Err(Error::JadeNeitherErrorNorResult),
         }
     }
 }

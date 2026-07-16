@@ -231,7 +231,7 @@ pub enum Error {
     #[error("Missing wallet UTXO {0}")]
     MissingWalletUtxo(OutPoint),
 
-    #[error("Inputs order contains duplicated outpoint {0}")]
+    #[error("Duplicated outpoint {0}")]
     DuplicatedOutpoint(OutPoint),
 
     #[error("Manual inputs order requires `set_wallet_utxos` to be set too")]

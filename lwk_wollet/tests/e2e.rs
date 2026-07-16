@@ -2508,6 +2508,16 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_err();
     assert!(matches!(err, Error::MissingWalletUtxo(_)));
 
+    // Duplicated outpoint in set_wallet_utxos
+    let err = w
+        .tx_builder()
+        .add_recipient(&node_address, 200_000, policy_asset)
+        .unwrap()
+        .set_wallet_utxos(vec![utxos[0].outpoint, utxos[0].outpoint])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::DuplicatedOutpoint(_)));
+
     let signers = [&AnySigner::Software(signer.clone())];
     let (asset, token) = w.issueasset(&signers, 10, 1, None, None);
     env.elementsd_generate(1);

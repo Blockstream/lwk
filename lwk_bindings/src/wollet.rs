@@ -357,6 +357,9 @@ mod tests {
     use super::*;
     use lwk_wollet::bitcoin::hashes::Hash;
 
+    const REDEPOSIT_DESCRIPTOR: &str = "ct(slip77(a8f5c7be6fbf3eaccf80f907c20e677b3e33223b4f86699991522fbcb0a0381d),elwpkh([9869f387/84'/1'/0']tpubDCKAvXbLyJxHn8GbcgLna71N4tkphUqppBLMss1eumTockyixAHkPqGNZJXzBvsQ3EpnUbGvUd56CMTdcVRDvdaLzYbuP7uBt2R6pMkizy2/<0;1>/*))#4mg5xhpd";
+    const WATERFALLS_URL: &str = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+
     #[test]
     fn test_new_with_datadir_loads_encrypted_update_backward_compat() {
         let desc_string = lwk_test_util::wollet_descriptor_string2();
@@ -385,5 +388,30 @@ mod tests {
         let inner = wollet.inner_wollet().unwrap();
         assert_eq!(inner.updates().unwrap().len(), 1);
         assert_eq!(inner.tip().height(), 1360180);
+    }
+
+    #[test]
+    #[ignore = "requires the production Waterfalls testnet server"]
+    fn redeposit_is_classified_correctly() {
+        let network = Network::testnet();
+        let descriptor = WolletDescriptor::new(REDEPOSIT_DESCRIPTOR).unwrap();
+        let wollet = Wollet::new(&network, &descriptor, None).unwrap();
+        let client = crate::EsploraClient::new_waterfalls(WATERFALLS_URL, &network).unwrap();
+
+        if let Some(update) = client.full_scan(&wollet).unwrap() {
+            wollet.apply_update(&update).unwrap();
+        }
+
+        let policy_asset = network.policy_asset();
+        let mut found_redeposit = false;
+        for tx in wollet.transactions().unwrap() {
+            let fee = tx.fee();
+            let balance = tx.balance();
+            if fee > 0 && balance.len() == 1 && balance.get(&policy_asset) == Some(&-(fee as i64)) {
+                assert_eq!(tx.type_(), "redeposit");
+                found_redeposit = true;
+            }
+        }
+        assert!(found_redeposit, "the redeposit transaction was not found");
     }
 }

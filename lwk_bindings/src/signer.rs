@@ -140,6 +140,12 @@ impl Signer {
         Ok(self.inner.fingerprint().to_string())
     }
 
+    /// Return the signer fingerprint
+    pub fn slip77_master_blinding_key(&self) -> Result<String, LwkError> {
+        let mbk = lwk_common::Signer::slip77_master_blinding_key(&self.inner)?;
+        Ok(format!("slip77({mbk})"))
+    }
+
     /// Get the mnemonic of the signer
     pub fn mnemonic(&self) -> Result<Arc<Mnemonic>, LwkError> {
         Ok(Arc::new(self.inner.mnemonic().map(Into::into).ok_or_else(

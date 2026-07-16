@@ -4,9 +4,7 @@ mnemonic = Mnemonic.from_random(12)
 network = Network.regtest_default()
 signer = Signer(mnemonic, network)
 
-# TODO: signer.slip77_master_blinding_key
-d = signer.singlesig_desc(Singlesig.WPKH, DescriptorBlindingKey.SLIP77)
-master_blinding_key = str(d).split(",")[0].split("ct(")[1]
+master_blinding_key = signer.slip77_master_blinding_key()
 fingerprint = signer.fingerprint()
 
 path = get_path(network, "wpkh", 0)
@@ -24,4 +22,5 @@ desc = WolletDescriptor.from_xpub(
 )
 
 # Check against the descriptor obtained directly from the signer
+d = signer.singlesig_desc(Singlesig.WPKH, DescriptorBlindingKey.SLIP77)
 assert str(desc) == str(d)

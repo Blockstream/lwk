@@ -177,13 +177,12 @@ impl Wollet {
         let err = || LwkError::Generic {
             msg: "tx not found".to_string(),
         };
-        Ok(Arc::new(
-            self.inner
-                .lock()?
-                .transaction(&txid.into())?
-                .ok_or_else(err)?
-                .into(),
-        ))
+        let details = self
+            .inner
+            .lock()?
+            .tx_details(&txid.into(), &lwk_wollet::TxOpt::default())?
+            .ok_or_else(err)?;
+        Ok(Arc::new(details.try_into()?))
     }
 
     /// Get the unspent transaction outputs of the wallet

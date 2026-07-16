@@ -44,13 +44,18 @@ async function runBasicsTest() {
 
         // ANCHOR: client
         if (false) { // ANCHOR: ignore
-        const url_esplora = "https://blockstream.info/liquidtestnet/api";
+        const url = "https://blockstream.info/liquidtestnet/api";
         // TODO: name variables // ANCHOR: ignore
-        const client = new lwk.EsploraClient(lwk.Network.mainnet(), url_esplora, true, 4, false);
+        const client = new lwk.EsploraClient(network, url, true, 4, false);
         } // ANCHOR: ignore
         const client = new lwk.WaterfallsClient(network, WATERFALLS_URL); // ANCHOR: ignore
         let fundTxid = await fundAddress(wollet.address(null).address(), BigInt(100_000), network, client); // ANCHOR: ignore
         await waitForTx(wollet, client, fundTxid); // ANCHOR: ignore
+
+        const update = await client.fullScan(wollet);
+        if (update) {
+            wollet.applyUpdate(update);
+        }
         // ANCHOR_END: client
 
         // Verify funds exist // ANCHOR: ignore

@@ -54,6 +54,10 @@ impl TryFrom<lwk_wollet::TxDetails> for WalletTx {
 }
 
 impl WalletTx {
+    /// This check works only when transaction details include the full transaction data.
+    ///
+    /// This is a temporary compatibility measure. Relevance will be filtered upstream in
+    /// `txs()` using the list of non-relevant transaction IDs stored in the wallet cache.
     pub(crate) fn is_relevant(&self) -> bool {
         !self.inner.balance.is_empty()
             || self.inner.inputs.iter().any(Option::is_some)

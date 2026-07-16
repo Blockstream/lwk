@@ -7,6 +7,27 @@ use serde::{ser::SerializeStruct, Deserialize, Serialize};
 use crate::get_receive_address::SingleOrMulti;
 
 #[derive(Serialize)]
+pub struct SignPsbtParams {
+    pub network: Network,
+
+    #[serde(with = "serde_bytes")]
+    pub psbt: Vec<u8>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub additional_info: Option<AdditionalInfo>,
+}
+
+impl std::fmt::Debug for SignPsbtParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SignPsbtParams")
+            .field("network", &self.network)
+            .field("psbt_bytes", &self.psbt.len())
+            .field("additional_info", &self.additional_info)
+            .finish()
+    }
+}
+
+#[derive(Serialize)]
 pub struct SignLiquidTxParams {
     pub network: Network,
 

@@ -10,7 +10,7 @@ use crate::{
     error::ErrorDetails,
     get_receive_address::GetReceiveAddressParams,
     register_multisig::{GetRegisteredMultisigParams, RegisterMultisigParams},
-    sign_liquid_tx::{SignLiquidTxParams, TxInputParams},
+    sign_liquid_tx::{SignLiquidTxParams, SignPsbtParams, TxInputParams},
 };
 
 #[derive(Debug, Serialize)]
@@ -36,7 +36,9 @@ pub enum Request {
     SignMessage(SignMessageParams),
     GetSignature(GetSignatureParams),
     SignLiquidTx(SignLiquidTxParams),
+    SignPsbt(SignPsbtParams),
     TxInput(TxInputParams),
+    GetExtendedData(GetExtendedDataParams),
     DebugSetMnemonic(DebugSetMnemonicParams),
     RegisterMultisig(RegisterMultisigParams),
     GetRegisteredMultisigs,
@@ -68,7 +70,9 @@ impl std::fmt::Display for Request {
             Request::SignMessage(_) => write!(f, "sign_message"),
             Request::GetSignature(_) => write!(f, "get_signature"),
             Request::SignLiquidTx(_) => write!(f, "sign_liquid_tx"),
+            Request::SignPsbt(_) => write!(f, "sign_psbt"),
             Request::TxInput(_) => write!(f, "tx_input"),
+            Request::GetExtendedData(_) => write!(f, "get_extended_data"),
             Request::DebugSetMnemonic(_) => write!(f, "debug_set_mnemonic"),
             Request::RegisterMultisig(_) => write!(f, "register_multisig"),
             Request::GetRegisteredMultisigs => write!(f, "get_registered_multisigs"),
@@ -84,6 +88,7 @@ impl Request {
             Request::GetXpub(e) => Some(e.network),
             Request::GetReceiveAddress(e) => Some(e.network),
             Request::SignLiquidTx(e) => Some(e.network),
+            Request::SignPsbt(e) => Some(e.network),
             Request::RegisterMultisig(e) => Some(e.network),
             _ => None,
         }

@@ -408,6 +408,7 @@ mod tests {
             let balance = tx.balance();
             if fee > 0 && balance.len() == 1 && balance.get(&policy_asset) == Some(&-(fee as i64)) {
                 assert_eq!(tx.type_(), "redeposit");
+                assert_eq!(wollet.transaction(&tx.txid()).unwrap().type_(), "redeposit");
                 found_redeposit = true;
             }
         }

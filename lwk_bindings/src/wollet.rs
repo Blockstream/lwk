@@ -168,6 +168,7 @@ impl Wollet {
             .into_iter()
             .map(TryInto::try_into)
             .collect::<Result<_, _>>()?;
+        // Filter to preserve the behavior of `Wollet::transactions_paginated()`.
         txs.retain(WalletTx::is_relevant);
         Ok(txs.into_iter().map(Arc::new).collect())
     }

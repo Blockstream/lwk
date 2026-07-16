@@ -1002,11 +1002,11 @@ fn test_issue() {
     complete(&cli, "w2", get_str(&r, "pset"), &["s2"]);
     assert_eq!(1, get_balance(&cli, "w2", asset));
 
-    // Reissue from wallet w1 without token fails with InsufficientFunds
+    // Reissue from wallet w1 without token fails with MissingReissuanceTokenUtxo
     let err = sh_err(&format!(
         "{cli} wallet reissue --wallet w1 --asset {asset} --satoshi-asset 1"
     ));
-    let expected = format!("Insufficient funds: missing 1 units for reissuance token {token}");
+    let expected = format!("Reissuance token {token} utxo not found in the wallet");
     assert!(err.contains(&expected));
 
     // Removing the asset will cause the "external" reissuance to fail

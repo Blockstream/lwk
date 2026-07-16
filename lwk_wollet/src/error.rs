@@ -120,12 +120,10 @@ pub enum Error {
     #[error("Input must be confidential")]
     NotConfidentialInput,
 
-    #[error("Insufficient funds: missing {missing_sats} units for {} {asset_id}",
-        .is_token.then(|| "reissuance token").unwrap_or("asset"))]
+    #[error("Insufficient funds: missing {missing_sats} units for asset {asset_id}")]
     InsufficientFunds {
         missing_sats: u64,
         asset_id: crate::elements::AssetId,
-        is_token: bool,
     },
 
     #[error("Missing issuance")]
@@ -246,6 +244,9 @@ pub enum Error {
 
     #[error("Reissuance token {0} utxo is required but not present in the manual inputs order")]
     TokenUtxoNotInInputsOrder(crate::elements::AssetId),
+
+    #[error("Reissuance token {0} utxo not found in the wallet")]
+    MissingReissuanceTokenUtxo(crate::elements::AssetId),
 
     #[error("Issuing a new asset is not supported together with a manual input order")]
     IssuanceUnsupportedWithInputsOrder,

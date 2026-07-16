@@ -345,6 +345,135 @@ fn multi_multisig(env: &TestEnv, jade_signer: &AnySigner) {
 }
 
 #[test]
+fn sign_vs_sign_psbt() {
+    init_logging();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let docker = Cli::default();
+    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
+    let id = jade_init.jade.identifier().unwrap();
+    let jade_signer = AnySigner::Jade(jade_init.jade, id);
+
+    let desc_str = singlesig_desc(
+        &jade_signer,
+        Singlesig::Wpkh,
+        lwk_common::DescriptorBlindingKey::Slip77,
+    )
+    .unwrap();
+    let client = test_client_electrum(&env.electrum_url());
+    let mut wallet = TestWollet::new(client, &desc_str);
+
+    wallet.fund_btc(&env);
+
+    let node_address = env.elementsd_getnewaddress();
+    let pset = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&node_address, 10_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let mut pset_a = pset.clone();
+    let sigs_a = jade_signer.sign(&mut pset_a).unwrap();
+    assert!(sigs_a > 0);
+
+    let (jade, _) = match &jade_signer {
+        AnySigner::Jade(j, id) => (j, id),
+        _ => panic!("expected Jade signer"),
+    };
+    let mut pset_b = jade.sign_v2(&pset).unwrap();
+
+    // Both methods should sign the same number of inputs
+    let sigs_b: usize = pset_b
+        .inputs()
+        .iter()
+        .map(|input| input.partial_sigs.len() + input.tap_key_sig.iter().count())
+        .sum();
+    assert_eq!(
+        sigs_a, sigs_b as u32,
+        "sign and sign_psbt produced different signature counts"
+    );
+
+    let balance_before = wallet.balance(&wallet.policy_asset());
+
+    wallet.send(&mut pset_b);
+
+    // Balance should decrease
+    assert!(wallet.balance(&wallet.policy_asset()) < balance_before);
+}
+
+// Test with larger PSET to test if we handling correctly chunking
+#[test]
+fn large_pset_sign_psbt() {
+    init_logging();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let docker = Cli::default();
+    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
+    let id = jade_init.jade.identifier().unwrap();
+    let jade_signer = AnySigner::Jade(jade_init.jade, id);
+
+    let desc_str = singlesig_desc(
+        &jade_signer,
+        Singlesig::Wpkh,
+        lwk_common::DescriptorBlindingKey::Slip77,
+    )
+    .unwrap();
+    let client = test_client_electrum(&env.electrum_url());
+    let mut wallet = TestWollet::new(client, &desc_str);
+
+    let num_inputs = 15;
+    for _ in 0..num_inputs {
+        wallet.fund_btc(&env);
+    }
+
+    assert!(
+        wallet.wollet.utxos().unwrap().len() >= num_inputs,
+        "expected at least {num_inputs} UTXOs"
+    );
+
+    let node_address = env.elementsd_getnewaddress();
+    let mut pset = wallet
+        .tx_builder()
+        .drain_lbtc_wallet()
+        .drain_lbtc_to(node_address)
+        .finish()
+        .unwrap();
+
+    assert!(
+        pset.inputs().len() >= num_inputs,
+        "expected at least {num_inputs} inputs, got {}",
+        pset.inputs().len()
+    );
+    let pset_size = elements::encode::serialize(&pset).len();
+    assert!(
+        pset_size > 3000,
+        "expected PSET > 3KB to trigger multi-part response, got {pset_size} bytes"
+    );
+
+    let (jade, _) = match &jade_signer {
+        AnySigner::Jade(j, id) => (j, id),
+        _ => panic!("expected Jade signer"),
+    };
+    pset = jade.sign_v2(&pset).unwrap();
+
+    let sigs_added: usize = pset
+        .inputs()
+        .iter()
+        .map(|input| input.partial_sigs.len() + input.tap_key_sig.iter().count())
+        .sum();
+    assert!(
+        sigs_added == num_inputs,
+        "expected at least {num_inputs} signatures, got {sigs_added}"
+    );
+
+    let balance_before = wallet.balance(&wallet.policy_asset());
+
+    wallet.send(&mut pset);
+
+    // Balance should decrease
+    assert!(wallet.balance(&wallet.policy_asset()) < balance_before);
+}
+
+#[test]
 fn emul_multi_multisig() {
     init_logging();
     let env = TestEnvBuilder::from_env().with_electrum().build();

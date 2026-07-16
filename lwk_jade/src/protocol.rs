@@ -181,6 +181,14 @@ impl Debug for GetSignatureParams {
     }
 }
 
+#[derive(Debug, Serialize)]
+pub struct GetExtendedDataParams {
+    pub origid: String,
+    pub orig: String,
+    pub seqnum: u64,
+    pub seqlen: u64,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HandshakeComplete {
     pub encrypted_data: String,

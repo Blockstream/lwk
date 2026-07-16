@@ -396,6 +396,29 @@ fn jade_sign_liquid_tx() {
 }
 
 #[test]
+fn jade_sign_psbt() {
+    let docker = clients::Cli::default();
+    let mut jade = TestJadeEmulator::new(&docker);
+    jade.set_debug_mnemonic(TEST_MNEMONIC);
+
+    let pset_base64 = include_str!("../test_data/pset_to_be_signed.base64");
+    let pset: PartiallySignedTransaction = pset_base64.parse().unwrap();
+    assert_eq!(pset.outputs().len(), 3);
+
+    let signed_pset = jade.jade.sign_v2(&pset).unwrap();
+
+    let sigs_added: usize = signed_pset
+        .inputs()
+        .iter()
+        .map(|input| input.partial_sigs.len())
+        .sum();
+    assert!(
+        sigs_added > 0,
+        "sign_psbt should add at least one signature"
+    );
+}
+
+#[test]
 fn jade_get_master_blinding_key() {
     let docker = clients::Cli::default();
     let mut jade = TestJadeEmulator::new(&docker);

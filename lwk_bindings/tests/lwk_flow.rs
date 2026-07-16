@@ -37,6 +37,9 @@ fn test_lwk_flow() {
     let balance = wollet.balance();
     println!("{balance:?}");
     let txs = wollet.transactions().unwrap();
+    let first_page = wollet.transactions_paginated(0, 1).unwrap();
+    assert_eq!(first_page.len(), 1);
+    assert_eq!(first_page[0].txid(), txs[0].txid());
     for tx in txs {
         for output in tx.outputs() {
             let script_pubkey = match output.as_ref() {

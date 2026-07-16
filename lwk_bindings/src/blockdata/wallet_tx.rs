@@ -1,7 +1,10 @@
 //! Liquid wallet transaction
 
-use crate::{types::AssetId, Transaction, Txid, WalletTxOut};
 use std::{collections::HashMap, sync::Arc};
+
+use elements::bitcoin::bip32::ChildNumber;
+
+use crate::{types::AssetId, LwkError, Transaction, Txid, WalletTxOut};
 
 /// Value returned by asking transactions to the wallet. Contains details about a transaction
 /// from the perspective of the wallet, for example the net-balance of the transaction for the
@@ -15,6 +18,76 @@ impl From<lwk_wollet::WalletTx> for WalletTx {
     fn from(inner: lwk_wollet::WalletTx) -> Self {
         Self { inner }
     }
+}
+
+impl TryFrom<lwk_wollet::TxDetails> for WalletTx {
+    type Error = LwkError;
+
+    fn try_from(details: lwk_wollet::TxDetails) -> Result<Self, Self::Error> {
+        let tx = details.tx().cloned().ok_or_else(|| LwkError::Generic {
+            msg: "transaction details do not contain the transaction".to_string(),
+        })?;
+        let inputs: Vec<_> = details
+            .inputs()
+            .iter()
+            .map(wallet_tx_out_from_details)
+            .collect();
+        let outputs: Vec<_> = details
+            .outputs()
+            .iter()
+            .map(wallet_tx_out_from_details)
+            .collect();
+
+        Ok(lwk_wollet::WalletTx {
+            tx,
+            txid: details.txid(),
+            height: details.height(),
+            balance: details.balance().clone(),
+            fee: details.fees().values().sum(),
+            type_: details.tx_type().to_string(),
+            timestamp: details.timestamp(),
+            inputs,
+            outputs,
+        }
+        .into())
+    }
+}
+
+impl WalletTx {
+    pub(crate) fn is_relevant(&self) -> bool {
+        !self.inner.balance.is_empty()
+            || self.inner.inputs.iter().any(Option::is_some)
+            || self.inner.outputs.iter().any(Option::is_some)
+    }
+}
+
+fn wallet_tx_out_from_details(
+    details: &lwk_wollet::TxOutDetails,
+) -> Option<lwk_wollet::WalletTxOut> {
+    let path = details.path()?;
+    let [chain, wildcard_index] = path.as_ref() else {
+        return None;
+    };
+    let ext_int = match chain {
+        ChildNumber::Normal { index: 0 } => lwk_wollet::Chain::External,
+        ChildNumber::Normal { index: 1 } => lwk_wollet::Chain::Internal,
+        _ => return None,
+    };
+    let wildcard_index = match wildcard_index {
+        ChildNumber::Normal { index } => *index,
+        ChildNumber::Hardened { .. } => return None,
+    };
+
+    Some(lwk_wollet::WalletTxOut {
+        outpoint: details.outpoint(),
+        script_pubkey: details.script_pubkey()?.clone(),
+        height: details.height(),
+        unblinded: details.unblinded()?,
+        wildcard_index,
+        ext_int,
+        address: details.address()?.clone(),
+        is_spent: details.is_spent(),
+    })
 }
 
 #[uniffi::export]

@@ -156,14 +156,20 @@ impl Wollet {
         offset: u32,
         limit: u32,
     ) -> Result<Vec<Arc<WalletTx>>, LwkError> {
-        Ok(self
+        let opt = lwk_wollet::TxsOpt {
+            offset: Some(offset as usize),
+            limit: Some(limit as usize),
+            ..Default::default()
+        };
+        let mut txs: Vec<WalletTx> = self
             .inner
             .lock()?
-            .transactions_paginated(offset as usize, limit as usize)?
+            .txs(&opt)?
             .into_iter()
-            .map(Into::into)
-            .map(Arc::new)
-            .collect())
+            .map(TryInto::try_into)
+            .collect::<Result<_, _>>()?;
+        txs.retain(WalletTx::is_relevant);
+        Ok(txs.into_iter().map(Arc::new).collect())
     }
 
     /// Get all the wallet transaction

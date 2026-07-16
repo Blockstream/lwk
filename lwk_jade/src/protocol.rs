@@ -200,6 +200,10 @@ pub struct Response<T> {
     pub id: String,
     pub result: Option<T>,
     pub error: Option<ErrorDetails>,
+    #[serde(default)]
+    pub seqnum: Option<u64>,
+    #[serde(default)]
+    pub seqlen: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]

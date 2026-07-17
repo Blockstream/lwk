@@ -645,6 +645,37 @@ impl LendingSession {
         })
     }
 
+    /// Return simplex [`UTXO`] for an explicit (non-confidential) UTXO with given asset ID and a amount higher than given sats.
+    /// Searches for suitable UTXO inside wallet cache and could be used to discover explicit NFTs
+    ///
+    /// # Errors
+    ///
+    /// Return an error if suitable UTXO not found.
+    fn get_explicit_utxo(
+        &self,
+        asset_id: AssetId,
+        sats: u64,
+        excluded: &[OutPoint],
+    ) -> Result<UTXO, LendingError> {
+        let utxos = self.wollet.explicit_utxos().map_err(LendingError::Wallet)?;
+        let utxo = utxos
+            .into_iter()
+            .filter(|u| {
+                u.unblinded.asset == asset_id
+                    && u.unblinded.value >= sats
+                    && !excluded.contains(&u.outpoint)
+            })
+            .min_by_key(|u| u.unblinded.value)
+            .ok_or(LendingError::Generic(format!(
+                "No suitable explicit UTXO found for {asset_id} with amount {sats}"
+            )))?;
+        Ok(UTXO {
+            outpoint: utxo.outpoint,
+            txout: utxo.txout,
+            secrets: Some(utxo.unblinded),
+        })
+    }
+
     // TODO: should we add more policy_asset inputs here if fee is not fully covered?
     /// Estimate the fee for the given [`FinalTransaction`] and adds fee and change output.
     /// `fee_rate` is fee rate in sats/kvb.

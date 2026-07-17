@@ -147,3 +147,45 @@ fn test_tx_details() {
     assert!(txs_minimal.iter().all(|tx| tx.inputs().is_empty()));
     assert!(txs_minimal.iter().all(|tx| tx.outputs().is_empty()));
 }
+
+#[test]
+fn test_tx_details_no_wildcard() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let s = generate_signer();
+    let view_key = generate_view_key();
+    let d = format!("ct({view_key},elwpkh({}))", s.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &d);
+    let signers = [&AnySigner::Software(s.clone())];
+
+    let txid1 = w.fund_btc(&env);
+    // FIXME: replace with the following line once pset_balance is fixed
+    // let txid2 = w.send_btc(&signers, None, None);
+    let addr = w.address();
+    let mut pset = w
+        .tx_builder()
+        .add_lbtc_recipient(&addr, 10_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let details = w.wollet.get_details(&pset).unwrap();
+    // FIXME: should contain the fee
+    assert!(details.balance.balances.is_empty());
+    for signer in signers {
+        w.sign(signer, &mut pset);
+    }
+    let txid2 = w.send(&mut pset);
+
+    let txopt = TxOpt::default();
+    let tx_det1 = w.wollet.tx_details(&txid1, &txopt).unwrap().unwrap();
+    let tx_det2 = w.wollet.tx_details(&txid2, &txopt).unwrap().unwrap();
+
+    assert!(!tx_det1.inputs()[0].is_mine());
+    assert!(tx_det1.outputs().iter().any(|o| o.is_mine()));
+
+    assert!(tx_det2.inputs()[0].is_mine());
+    assert!(tx_det2.outputs().iter().any(|o| o.is_mine()));
+    assert!(tx_det2.outputs().iter().any(|o| !o.is_mine()));
+}

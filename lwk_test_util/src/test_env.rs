@@ -315,6 +315,17 @@ impl TestEnvBuilder {
             None
         };
 
+        // Plain endpoint urls as served by the processes themselves; with auth (below)
+        // the gateway replaces the one it fronts.
+        let mut esplora_url = electrsd
+            .as_ref()
+            .and_then(|e| e.esplora_url.as_ref())
+            .map(|url| format!("http://{url}"));
+        let mut waterfalls_url = waterfallsd.as_ref().map(|w| w.waterfalls_url().to_string());
+        let mut electrum_url = electrsd
+            .as_ref()
+            .map(|e| format!("tcp://{}", e.electrum_url));
+
         let auth = if self.with_auth {
             let parse_port = |url: &str| -> u16 {
                 url.rsplit(':')
@@ -324,32 +335,48 @@ impl TestEnvBuilder {
             };
             // The gateway fronts the Waterfalls server when it runs (its API is a superset
             // used by the waterfalls clients), the plain Esplora server when that is
-            // enabled; with neither (electrum-only), the APISIX side is skipped.
-            let upstream_port = match waterfallsd.as_ref() {
-                Some(waterfallsd) => Some(parse_port(waterfallsd.waterfalls_url())),
-                None if self.with_esplora => Some(parse_port(
-                    electrsd.as_ref().unwrap().esplora_url.as_ref().unwrap(),
-                )),
-                None => None,
-            };
+            // enabled (both together are rejected above); with neither (electrum-only),
+            // the APISIX side is skipped.
+            let upstream_port = waterfalls_url
+                .as_deref()
+                .or(esplora_url.as_deref())
+                .map(parse_port);
             // With an Electrum server the stack also fronts it with the RPC proxy.
-            let electrum_upstream_port = self
-                .with_electrum
-                .then(|| parse_port(&electrsd.as_ref().unwrap().electrum_url));
+            let electrum_upstream_port = if self.with_electrum {
+                electrum_url.as_deref().map(parse_port)
+            } else {
+                None
+            };
             Some(AuthStack::new(upstream_port, electrum_upstream_port))
         } else {
             None
         };
 
+        if let Some(auth) = &auth {
+            // Tests must reach the servers through the gateways: replace the endpoint the
+            // gateway fronts (waterfalls or esplora, whichever produced `upstream_port`
+            // above) and the electrum endpoint. The raw electrum port is not exposed
+            // without `with_electrum()`, since using it would bypass auth.
+            if waterfalls_url.is_some() {
+                waterfalls_url = Some(auth.gateway_url());
+            } else if esplora_url.is_some() {
+                esplora_url = Some(auth.gateway_url());
+            }
+            electrum_url = self.with_electrum.then(|| auth.electrum_gateway_url());
+        }
+
         TestEnv {
             elementsd,
             bitcoind,
             electrsd,
-            waterfallsd,
+            _waterfallsd: waterfallsd,
             registryd,
             amp2d,
             zmq_endpoint,
             auth,
+            esplora_url,
+            waterfalls_url,
+            electrum_url,
         }
     }
 }
@@ -361,11 +388,17 @@ pub struct TestEnv {
     elementsd: BitcoinD,
     bitcoind: Option<BitcoinD>,
     electrsd: Option<ElectrsD>,
-    waterfallsd: Option<WaterfallsD>,
+    /// Kept for its `Drop`, which stops the waterfalls server process.
+    _waterfallsd: Option<WaterfallsD>,
     registryd: Option<RegistryD>,
     amp2d: Option<Amp2D>,
     zmq_endpoint: Option<String>,
     auth: Option<AuthStack>,
+    /// Public endpoint urls, resolved once in `TestEnvBuilder::build`: the gateway url
+    /// when the auth stack fronts the endpoint, the plain server url otherwise.
+    esplora_url: Option<String>,
+    waterfalls_url: Option<String>,
+    electrum_url: Option<String>,
 }
 
 impl TestEnv {
@@ -376,42 +409,25 @@ impl TestEnv {
     /// Url of the Electrum server; with `with_auth` it is the authenticated RPC proxy
     /// fronting it
     pub fn electrum_url(&self) -> String {
-        if let Some(auth) = &self.auth {
-            return auth.electrum_gateway_url();
-        }
-        let url = &self.electrsd.as_ref().unwrap().electrum_url;
-        format!("tcp://{url}")
+        self.electrum_url
+            .clone()
+            .expect("electrum is not enabled, call 'with_electrum()'")
     }
 
-    /// Url of the Esplora server; with `with_auth` (and no waterfalls) it is the
-    /// authenticated gateway fronting it
+    /// Url of the Esplora server; with `with_auth` it is the authenticated gateway
+    /// fronting it
     pub fn esplora_url(&self) -> String {
-        if let Some(auth) = &self.auth {
-            if self.waterfallsd.is_none() {
-                return auth.gateway_url();
-            }
-        }
-        let url = &self
-            .electrsd
-            .as_ref()
-            .unwrap()
-            .esplora_url
-            .as_ref()
-            .unwrap();
-        format!("http://{url}")
+        self.esplora_url
+            .clone()
+            .expect("esplora is not enabled, call 'with_esplora()'")
     }
 
     /// Url of the Waterfalls server; with `with_auth` it is the authenticated gateway
     /// fronting it
     pub fn waterfalls_url(&self) -> String {
-        if let (Some(auth), Some(_)) = (&self.auth, &self.waterfallsd) {
-            return auth.gateway_url();
-        }
-        self.waterfallsd
-            .as_ref()
-            .unwrap()
-            .waterfalls_url()
-            .to_string()
+        self.waterfalls_url
+            .clone()
+            .expect("waterfalls is not enabled, call 'with_waterfalls()'")
     }
 
     pub fn registry_url(&self) -> String {

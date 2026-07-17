@@ -25,7 +25,7 @@ mod sign_pset;
 #[derive(Debug)]
 pub struct Jade<S: Stream> {
     /// Jade working via emulator(tcp), physical(serial/bluetooth)
-    stream: S,
+    stream: Mutex<S>,
 
     /// The network
     network: Network,
@@ -106,7 +106,7 @@ where
 impl<S: Stream<Error = Error>> Jade<S> {
     pub fn new(stream: S, network: Network) -> Self {
         Self {
-            stream,
+            stream: Mutex::new(stream),
             network,
             cached_xpubs: Mutex::new(HashMap::new()),
             multisigs_details: Mutex::new(None),
@@ -352,7 +352,7 @@ impl<S: Stream<Error = Error>> Jade<S> {
     }
 
     /// Returns a reference to the underlying transport stream.
-    pub fn stream(&self) -> &S {
+    pub fn stream(&self) -> &Mutex<S> {
         &self.stream
     }
 
@@ -373,14 +373,15 @@ impl<S: Stream<Error = Error>> Jade<S> {
     where
         T: std::fmt::Debug + DeserializeOwned,
     {
+        let stream = self.stream.lock().await;
         if let Some(network) = request.network() {
             self.check_network(network)?;
         }
         let buf = request.serialize()?;
 
-        self.stream.write(&buf).await?;
+        stream.write(&buf).await?;
 
-        let resp: Response<T> = read_loop(&self.stream).await?;
+        let resp: Response<T> = read_loop(&*stream).await?;
         match (resp.result, resp.error) {
             (Some(result), _) => Ok(result),
             (_, Some(error)) => Err(Error::JadeError(error)),

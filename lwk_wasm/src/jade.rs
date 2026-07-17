@@ -64,7 +64,8 @@ impl Jade {
         // Logout is best-effort (e.g. device may already be unplugged); releasing the
         // port is what matters for a subsequent `fromSerial()` to work.
         let _ = self.inner.logout().await;
-        self.inner.stream().release().await?;
+        let stream = self.inner.stream().lock().await;
+        stream.release().await?;
         wasm_bindgen_futures::JsFuture::from(self._port.close())
             .await
             .map_err(Error::JsVal)?;

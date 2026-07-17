@@ -175,6 +175,48 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires regtest environment; stress reproducer"]
+    async fn test_reverse_creation_initial_update_stress() {
+        let _ = env_logger::try_init();
+
+        let iterations = std::env::var("LWK_BOLTZ_RACE_ITERATIONS")
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(500);
+        let network = Network::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client))
+            .create_swap_timeout(TIMEOUT)
+            .build()
+            .await
+            .unwrap();
+        let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let claim_address = elements::Address::from_str(&claim_address).unwrap();
+
+        for attempt in 1..=iterations {
+            match session.invoice(100_000, None, &claim_address, None).await {
+                Ok(invoice) => {
+                    let swap_id = invoice.swap_id();
+                    log::info!("Created reverse swap {attempt}/{iterations}: {swap_id}");
+                }
+                Err(Error::Timeout(swap_id)) => {
+                    panic!(
+                        "Missed initial WebSocket update for swap {swap_id} on attempt {attempt}/{iterations}"
+                    );
+                }
+                Err(error) => {
+                    panic!(
+                        "Reverse swap creation failed on attempt {attempt}/{iterations}: {error}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
     #[ignore = "requires regtest environment"]
     async fn test_session_reverse_ln_to_btc() {
         let _ = env_logger::try_init();
@@ -1087,8 +1129,8 @@ mod tests {
             SwapScript::reverse_from_swap_resp(chain, &reverse_resp, claim_public_key).unwrap();
         let swap_id = reverse_resp.id.clone();
 
-        ws_api.subscribe_swap(&swap_id).await.unwrap();
         let mut rx = ws_api.updates();
+        ws_api.subscribe_swap(&swap_id).await.unwrap();
 
         loop {
             let update = rx.recv().await.unwrap();

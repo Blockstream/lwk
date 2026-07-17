@@ -181,8 +181,8 @@ impl BoltzSession {
         let swap_script =
             SwapScript::reverse_from_swap_resp(to_chain, &reverse_resp, claim_public_key)?;
         log::info!("[swap:{swap_id}] subscribing to swap webhook:{webhook_str}");
-        self.ws.subscribe_swap(&swap_id).await?;
         let mut rx = self.ws.updates();
+        self.ws.subscribe_swap(&swap_id).await?;
 
         let update = next_status(&mut rx, self.timeout, &swap_id, false).await?;
         let last_state = update.swap_state()?;

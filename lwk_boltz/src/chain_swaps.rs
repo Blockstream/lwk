@@ -153,8 +153,8 @@ impl BoltzSession {
             claim_public_key,
         )?;
 
-        self.ws.subscribe_swap(&swap_id).await?;
         let mut rx = self.ws.updates();
+        self.ws.subscribe_swap(&swap_id).await?;
         let update = next_status(&mut rx, self.timeout, &swap_id, false).await?;
         let last_state = update.swap_state()?;
 

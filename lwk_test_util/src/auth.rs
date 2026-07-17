@@ -157,18 +157,13 @@ fn tempdir() -> Result<TempDir, std::io::Error> {
 /// trusts this certificate via `SSL_CERT_FILE`.
 fn generate_cert(dir: &std::path::Path, cn: &str) {
     let out = Command::new("openssl")
+        .args(["req", "-x509", "-newkey", "rsa:2048", "-nodes"])
+        .args(["-days", "5"])
+        .arg("-keyout")
+        .arg(dir.join("key.pem"))
+        .arg("-out")
+        .arg(dir.join("cert.pem"))
         .args([
-            "req",
-            "-x509",
-            "-newkey",
-            "rsa:2048",
-            "-nodes",
-            "-days",
-            "5",
-            "-keyout",
-            &format!("{}/key.pem", dir.display()),
-            "-out",
-            &format!("{}/cert.pem", dir.display()),
             "-subj",
             &format!("/CN={cn}"),
             "-addext",
@@ -183,9 +178,7 @@ fn generate_cert(dir: &std::path::Path, cn: &str) {
     );
     // Throwaway cert: world-readable so the containers' non-root users can read the key.
     for f in ["key.pem", "cert.pem"] {
-        let _ = Command::new("chmod")
-            .args(["0644", &format!("{}/{f}", dir.display())])
-            .output();
+        let _ = Command::new("chmod").arg("0644").arg(dir.join(f)).output();
     }
 }
 

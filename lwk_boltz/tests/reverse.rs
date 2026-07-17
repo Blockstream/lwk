@@ -1087,8 +1087,8 @@ mod tests {
             SwapScript::reverse_from_swap_resp(chain, &reverse_resp, claim_public_key).unwrap();
         let swap_id = reverse_resp.id.clone();
 
-        ws_api.subscribe_swap(&swap_id).await.unwrap();
         let mut rx = ws_api.updates();
+        ws_api.subscribe_swap(&swap_id).await.unwrap();
 
         loop {
             let update = rx.recv().await.unwrap();

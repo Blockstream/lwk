@@ -153,6 +153,19 @@ fn is_mine(
     bip32_derivation: &BTreeMap<BitcoinPublicKey, (Fingerprint, DerivationPath)>,
     tap_key_origins: &BTreeMap<XOnlyPublicKey, (Vec<TapLeafHash>, (Fingerprint, DerivationPath))>,
 ) -> Result<bool, Error> {
+    // Without a wildcard the derivation index is irrelevant: every index derives the same
+    // script for a given (possibly multi-path) single descriptor. So we can check for a match
+    // directly, without relying on any derivation info from the PSET.
+    if !descriptor.descriptor.has_wildcard() {
+        for d in descriptor.descriptor.clone().into_single_descriptors()? {
+            let mine = d.at_derivation_index(0)?.script_pubkey();
+            if &mine == script_pubkey {
+                return Ok(true);
+            }
+        }
+        return Ok(false);
+    }
+
     let paths: Vec<&DerivationPath> = if script_pubkey.is_v1_p2tr() {
         tap_key_origins
             .values()

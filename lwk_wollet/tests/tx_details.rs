@@ -160,23 +160,7 @@ fn test_tx_details_no_wildcard() {
     let signers = [&AnySigner::Software(s.clone())];
 
     let txid1 = w.fund_btc(&env);
-    // FIXME: replace with the following line once pset_balance is fixed
-    // let txid2 = w.send_btc(&signers, None, None);
-    let addr = w.address();
-    let mut pset = w
-        .tx_builder()
-        .add_lbtc_recipient(&addr, 10_000)
-        .unwrap()
-        .finish()
-        .unwrap();
-
-    let details = w.wollet.get_details(&pset).unwrap();
-    // FIXME: should contain the fee
-    assert!(details.balance.balances.is_empty());
-    for signer in signers {
-        w.sign(signer, &mut pset);
-    }
-    let txid2 = w.send(&mut pset);
+    let txid2 = w.send_btc(&signers, None, None);
 
     let txopt = TxOpt::default();
     let tx_det1 = w.wollet.tx_details(&txid1, &txopt).unwrap().unwrap();

@@ -3212,30 +3212,7 @@ fn test_no_wildcard() {
     wallet.fund_btc(&env);
 
     // Send
-    let balance_before = wallet.balance_btc();
-    let mut pset = wallet
-        .tx_builder()
-        .add_lbtc_recipient(&wallet.address(), 10_000)
-        .unwrap()
-        .finish()
-        .unwrap();
-    pset = pset_rt(&pset);
-
-    let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee = details.balance.fees_in(&wallet.policy_asset()) as i64;
-    assert!(fee > 0);
-    // TODO: fix balance computation for this case, then use send_btc in this test
-    assert!(!details
-        .balance
-        .balances
-        .contains_key(&wallet.policy_asset()));
-
-    wallet.sign(&signer, &mut pset);
-    let txid = wallet.send(&mut pset);
-    let balance_after = wallet.balance_btc();
-    assert!(balance_before > balance_after);
-    let tx = wallet.get_tx(&txid);
-    assert_eq!(&tx.type_, "outgoing");
+    wallet.send_btc(&[&AnySigner::Software(signer.clone())], None, None);
 
     let txs = wallet.wollet.transactions().unwrap();
     assert_eq!(txs.len(), 2);

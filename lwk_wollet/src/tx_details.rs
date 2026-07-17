@@ -132,6 +132,7 @@ impl Wollet {
         };
         if let Some(txout) = txout {
             let script_pubkey = txout.script_pubkey.clone();
+            details.is_mine = self.cache.paths.contains_key(&script_pubkey);
             let (ext_int, wildcard_index, blinding_pubkey) = if let Some((chain, idx)) =
                 self.cache.paths.get(&script_pubkey)
             {
@@ -209,14 +210,14 @@ impl Wollet {
                 let mut b = BTreeMap::new();
                 // For net balance computation we ignore explicit inputs and outputs
                 for i in &inputs {
-                    if i.path().is_some() && !i.is_explicit() {
+                    if i.is_mine() && !i.is_explicit() {
                         if let Some(u) = i.unblinded() {
                             *b.entry(u.asset).or_default() -= u.value as i64;
                         }
                     }
                 }
                 for o in &outputs {
-                    if o.path().is_some() && !o.is_explicit() {
+                    if o.is_mine() && !o.is_explicit() {
                         if let Some(u) = o.unblinded() {
                             *b.entry(u.asset).or_default() += u.value as i64;
                         }
@@ -346,6 +347,13 @@ pub struct TxOutDetails {
 
     is_spent: bool,
 
+    // Whether the input or output belongs to the wollet.
+    //
+    // Computed directly from cache membership rather than from `wildcard_index`/`ext_int`,
+    // since those do not identify ownership for a wollet defined by a descriptor that has
+    // no multi-path and no wildcard.
+    is_mine: bool,
+
     // Path
     wildcard_index: Option<ChildNumber>,
     ext_int: Option<Chain>,
@@ -415,6 +423,11 @@ impl TxOutDetails {
     /// incorrectly. For wallet outputs, it can be outdated.
     pub fn is_spent(&self) -> bool {
         self.is_spent
+    }
+
+    /// Whether the input or output belongs to the wollet
+    pub fn is_mine(&self) -> bool {
+        self.is_mine
     }
 
     fn unblinded_str(&self) -> Option<String> {

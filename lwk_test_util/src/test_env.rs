@@ -127,10 +127,12 @@ impl TestEnvBuilder {
         self
     }
 
-    /// Start an authenticated gateway (Keycloak + redis + APISIX) fronting the Esplora or
-    /// the Waterfalls server, plus the Electrum RPC proxy when `with_electrum()` is set
+    /// Start an authenticated gateway (Keycloak + redis, plus APISIX fronting the Esplora
+    /// or the Waterfalls server when one is enabled, plus the Electrum RPC proxy when
+    /// `with_electrum()` is set)
     ///
-    /// Requires `with_esplora()` or `with_waterfalls()` (not both), and docker.
+    /// Requires docker and at least one of `with_esplora()`, `with_waterfalls()` (not
+    /// both) or `with_electrum()`.
     pub fn with_auth(mut self) -> Self {
         self.with_auth = true;
         self
@@ -161,8 +163,8 @@ impl TestEnvBuilder {
         if self.amp2_exec.is_empty() && self.with_amp2 {
             panic!("AMP2_MOCK_EXEC must be set");
         }
-        if self.with_auth && !self.with_esplora && !self.with_waterfalls {
-            panic!("auth gateway requires esplora or waterfalls (the APISIX side always runs and needs an HTTP upstream, even for electrum-only tests): call 'with_esplora()' or 'with_waterfalls()'");
+        if self.with_auth && !self.with_esplora && !self.with_waterfalls && !self.with_electrum {
+            panic!("auth gateway requires an upstream: call 'with_esplora()', 'with_waterfalls()' or 'with_electrum()'");
         }
         if self.with_auth && self.with_esplora && self.with_waterfalls {
             panic!("auth gateway fronts either esplora or waterfalls, not both (yet): enable only one of them with 'with_auth()'");
@@ -314,35 +316,26 @@ impl TestEnvBuilder {
         };
 
         let auth = if self.with_auth {
-            // The gateway fronts the Waterfalls server when it runs (its API is a superset
-            // used by the waterfalls clients), the plain Esplora server otherwise.
-            let upstream_url = match waterfallsd.as_ref() {
-                Some(waterfallsd) => waterfallsd.waterfalls_url().to_string(),
-                None => electrsd
-                    .as_ref()
-                    .unwrap()
-                    .esplora_url
-                    .as_ref()
-                    .unwrap()
-                    .to_string(),
-            };
-            let upstream_port: u16 = upstream_url
-                .rsplit(':')
-                .next()
-                .and_then(|p| p.parse().ok())
-                .unwrap_or_else(|| panic!("cannot parse upstream port from '{upstream_url}'"));
-            // With an Electrum server the stack also fronts it with the RPC proxy.
-            let electrum_upstream_port = if self.with_electrum {
-                let electrum_url = &electrsd.as_ref().unwrap().electrum_url;
-                let port: u16 = electrum_url
-                    .rsplit(':')
+            let parse_port = |url: &str| -> u16 {
+                url.rsplit(':')
                     .next()
                     .and_then(|p| p.parse().ok())
-                    .unwrap_or_else(|| panic!("cannot parse electrum port from '{electrum_url}'"));
-                Some(port)
-            } else {
-                None
+                    .unwrap_or_else(|| panic!("cannot parse port from '{url}'"))
             };
+            // The gateway fronts the Waterfalls server when it runs (its API is a superset
+            // used by the waterfalls clients), the plain Esplora server when that is
+            // enabled; with neither (electrum-only), the APISIX side is skipped.
+            let upstream_port = match waterfallsd.as_ref() {
+                Some(waterfallsd) => Some(parse_port(waterfallsd.waterfalls_url())),
+                None if self.with_esplora => Some(parse_port(
+                    electrsd.as_ref().unwrap().esplora_url.as_ref().unwrap(),
+                )),
+                None => None,
+            };
+            // With an Electrum server the stack also fronts it with the RPC proxy.
+            let electrum_upstream_port = self
+                .with_electrum
+                .then(|| parse_port(&electrsd.as_ref().unwrap().electrum_url));
             Some(AuthStack::new(upstream_port, electrum_upstream_port))
         } else {
             None

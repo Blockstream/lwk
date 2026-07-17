@@ -93,7 +93,6 @@ fn test_waterfalls_authenticated() {
 #[ignore = "requires docker, the blockstream/apisix image and the rpcproxy image"]
 fn test_electrum_authenticated() {
     let env = TestEnvBuilder::from_env()
-        .with_esplora()
         .with_electrum()
         .with_auth()
         .build();

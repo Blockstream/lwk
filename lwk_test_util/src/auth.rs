@@ -1,6 +1,7 @@
-//! Authenticated Explorer API test stack: Keycloak (OAuth2 token issuer) + the Blockstream
-//! APISIX gateway (`openid-connect` JWT enforcement) fronting a host upstream (e.g. the
-//! Esplora HTTP API of the [`crate::TestEnv`] electrs).
+//! Authenticated Explorer API test stack: Keycloak (OAuth2 token issuer), plus the
+//! Blockstream APISIX gateway (`openid-connect` JWT enforcement) fronting an HTTP host
+//! upstream (e.g. the Esplora HTTP API of the [`crate::TestEnv`] electrs) and/or the
+//! Electrum RPC proxy fronting an Electrum host upstream.
 //!
 //! Both run as docker containers on a shared network so APISIX can reach Keycloak by container
 //! name for OIDC discovery/JWKS; the test process reaches both via published localhost ports,
@@ -231,36 +232,42 @@ impl Drop for DockerContainer {
     }
 }
 
-/// Keycloak + redis (credit balances) + APISIX fronting `upstream_port` on the host, and
-/// optionally the Electrum RPC proxy fronting `electrum_upstream_port`.
+/// Keycloak + redis (credit balances), plus APISIX fronting `upstream_port` when given and
+/// the Electrum RPC proxy fronting `electrum_upstream_port` when given (at least one
+/// upstream is required).
 pub struct AuthStack {
     keycloak: DockerContainer,
     redis: DockerContainer,
-    apisix: DockerContainer,
+    apisix: Option<DockerContainer>,
     rpc_proxy: Option<DockerContainer>,
     network: String,
     keycloak_port: u16,
-    apisix_port: u16,
+    apisix_port: Option<u16>,
     rpc_proxy_port: Option<u16>,
     _keycloak_dir: TempDir,
-    _apisix_dir: TempDir,
+    _apisix_dir: Option<TempDir>,
     _certs_dir: TempDir,
 }
 
 impl AuthStack {
-    /// Start Keycloak and APISIX, with APISIX proxying authenticated requests to
-    /// `upstream_port` on the host; with `electrum_upstream_port` also start the Electrum
-    /// RPC proxy (`REQUIRE_JWT` + credit checking) fronting that host port.
+    /// Start Keycloak and redis; with `upstream_port` also start APISIX proxying
+    /// authenticated requests to that host port, and with `electrum_upstream_port` the
+    /// Electrum RPC proxy (`REQUIRE_JWT` + credit checking) fronting that host port.
+    /// At least one upstream is required.
     ///
     /// Runs on a dedicated thread so it's callable from both sync and async (tokio) tests:
     /// the readiness polling uses `reqwest::blocking`, which panics inside an async context.
-    pub fn new(upstream_port: u16, electrum_upstream_port: Option<u16>) -> AuthStack {
+    pub fn new(upstream_port: Option<u16>, electrum_upstream_port: Option<u16>) -> AuthStack {
         std::thread::spawn(move || Self::new_inner(upstream_port, electrum_upstream_port))
             .join()
             .expect("AuthStack setup thread panicked")
     }
 
-    fn new_inner(upstream_port: u16, electrum_upstream_port: Option<u16>) -> AuthStack {
+    fn new_inner(upstream_port: Option<u16>, electrum_upstream_port: Option<u16>) -> AuthStack {
+        assert!(
+            upstream_port.is_some() || electrum_upstream_port.is_some(),
+            "AuthStack requires at least one upstream (HTTP or Electrum)"
+        );
         let suffix: u32 = thread_rng().gen();
         let network = format!("lwk-auth-{suffix}");
         let keycloak_name = format!("lwk-keycloak-{suffix}");
@@ -323,54 +330,62 @@ impl AuthStack {
         );
         poll_until(&discovery_url, 200, 120, "keycloak realm");
 
-        // APISIX: reaches Keycloak by container name on the shared network, and the upstream
-        // on the host (see `upstream_host`).
+        // APISIX: fronts the HTTP upstream when one is given (skipped for electrum-only
+        // stacks). It reaches Keycloak by container name on the shared network, and the
+        // upstream on the host (see `upstream_host`).
         let upstream_host = upstream_host(&network);
-        let standalone_yaml = APISIX_STANDALONE_YAML
-            .replace("__CLIENT_ID__", AUTH_CLIENT_ID)
-            .replace("__REALM__", AUTH_REALM)
-            .replace(
-                "__DISCOVERY__",
-                &format!(
-                    "http://{keycloak_name}:{KEYCLOAK_PORT}/realms/{AUTH_REALM}/.well-known/openid-configuration"
-                ),
-            )
-            .replace("__REDIS_HOST__", &redis_name)
-            .replace("__UPSTREAM__", &format!("{upstream_host}:{upstream_port}"));
-        let apisix_dir = tempdir().expect("tempdir");
-        let config_path = apisix_dir.path().join("config.yaml");
-        let mut file = std::fs::File::create(&config_path).expect("create config");
-        file.write_all(APISIX_CONFIG_YAML.as_bytes())
-            .expect("write config");
-        let standalone_path = apisix_dir.path().join("apisix.yaml");
-        let mut file = std::fs::File::create(&standalone_path).expect("create standalone");
-        file.write_all(standalone_yaml.as_bytes())
-            .expect("write standalone");
-        let apisix = DockerContainer::run(&[
-            "--name",
-            &apisix_name,
-            "--network",
-            &network,
-            "-v",
-            &format!(
-                "{}:/usr/local/apisix/conf/config.yaml",
-                config_path.display()
-            ),
-            "-v",
-            &format!(
-                "{}:/usr/local/apisix/conf/apisix.yaml",
-                standalone_path.display()
-            ),
-            "-p",
-            &APISIX_PORT.to_string(),
-            &apisix_image(),
-        ]);
-        let apisix_port = apisix.host_port(APISIX_PORT);
+        let (apisix, apisix_port, apisix_dir) = match upstream_port {
+            Some(upstream_port) => {
+                let standalone_yaml = APISIX_STANDALONE_YAML
+                    .replace("__CLIENT_ID__", AUTH_CLIENT_ID)
+                    .replace("__REALM__", AUTH_REALM)
+                    .replace(
+                        "__DISCOVERY__",
+                        &format!(
+                            "http://{keycloak_name}:{KEYCLOAK_PORT}/realms/{AUTH_REALM}/.well-known/openid-configuration"
+                        ),
+                    )
+                    .replace("__REDIS_HOST__", &redis_name)
+                    .replace("__UPSTREAM__", &format!("{upstream_host}:{upstream_port}"));
+                let apisix_dir = tempdir().expect("tempdir");
+                let config_path = apisix_dir.path().join("config.yaml");
+                let mut file = std::fs::File::create(&config_path).expect("create config");
+                file.write_all(APISIX_CONFIG_YAML.as_bytes())
+                    .expect("write config");
+                let standalone_path = apisix_dir.path().join("apisix.yaml");
+                let mut file = std::fs::File::create(&standalone_path).expect("create standalone");
+                file.write_all(standalone_yaml.as_bytes())
+                    .expect("write standalone");
+                let apisix = DockerContainer::run(&[
+                    "--name",
+                    &apisix_name,
+                    "--network",
+                    &network,
+                    "-v",
+                    &format!(
+                        "{}:/usr/local/apisix/conf/config.yaml",
+                        config_path.display()
+                    ),
+                    "-v",
+                    &format!(
+                        "{}:/usr/local/apisix/conf/apisix.yaml",
+                        standalone_path.display()
+                    ),
+                    "-p",
+                    &APISIX_PORT.to_string(),
+                    &apisix_image(),
+                ]);
+                let apisix_port = apisix.host_port(APISIX_PORT);
 
-        // Without a token the gateway must answer 401: proves both that APISIX is up and that
-        // the openid-connect plugin is active on the route.
-        let gateway_probe = format!("http://127.0.0.1:{apisix_port}/blocks/tip/height");
-        poll_until(&gateway_probe, 401, 60, "apisix gateway");
+                // Without a token the gateway must answer 401: proves both that APISIX is up
+                // and that the openid-connect plugin is active on the route.
+                let gateway_probe = format!("http://127.0.0.1:{apisix_port}/blocks/tip/height");
+                poll_until(&gateway_probe, 401, 60, "apisix gateway");
+
+                (Some(apisix), Some(apisix_port), Some(apisix_dir))
+            }
+            None => (None, None, None),
+        };
 
         // Electrum RPC proxy: validates the in-band JWT against Keycloak's JWKS (fetched over
         // TLS, hence SSL_CERT_FILE) and checks credits in the shared redis, then proxies to
@@ -469,9 +484,15 @@ impl AuthStack {
         )
     }
 
-    /// Base url of the authenticated gateway fronting the upstream (reachable from the host).
+    /// Base url of the authenticated gateway fronting the HTTP upstream (reachable from the
+    /// host); panics if the stack was started without an HTTP upstream.
     pub fn gateway_url(&self) -> String {
-        format!("http://127.0.0.1:{}", self.apisix_port)
+        format!(
+            "http://127.0.0.1:{}",
+            self.apisix_port.expect(
+                "auth stack has no HTTP upstream, call 'with_esplora()' or 'with_waterfalls()'"
+            )
+        )
     }
 
     /// Url of the authenticated Electrum RPC proxy (reachable from the host); panics if the
@@ -514,10 +535,14 @@ impl AuthStack {
             .to_string()
     }
 
-    /// The docker logs (stderr) of the APISIX container, for debugging.
+    /// The docker logs (stderr) of the APISIX container, for debugging; panics if the stack
+    /// was started without an HTTP upstream.
     pub fn apisix_logs(&self) -> String {
+        let apisix = self.apisix.as_ref().expect(
+            "auth stack has no HTTP upstream, call 'with_esplora()' or 'with_waterfalls()'",
+        );
         let output = Command::new("docker")
-            .args(["logs", &self.apisix.name])
+            .args(["logs", &apisix.name])
             .output()
             .expect("docker logs");
         String::from_utf8_lossy(&output.stderr).to_string()
@@ -527,11 +552,10 @@ impl AuthStack {
 impl Drop for AuthStack {
     fn drop(&mut self) {
         // Containers must be removed before the network can be.
-        let mut names = vec![
-            self.apisix.name.clone(),
-            self.keycloak.name.clone(),
-            self.redis.name.clone(),
-        ];
+        let mut names = vec![self.keycloak.name.clone(), self.redis.name.clone()];
+        if let Some(apisix) = &self.apisix {
+            names.push(apisix.name.clone());
+        }
         if let Some(rpc_proxy) = &self.rpc_proxy {
             names.push(rpc_proxy.name.clone());
         }
@@ -633,7 +657,7 @@ mod test {
             }
         });
 
-        let stack = AuthStack::new(upstream_port, None);
+        let stack = AuthStack::new(Some(upstream_port), None);
         let url = format!("{}/blocks/tip/height", stack.gateway_url());
         let client = reqwest::blocking::Client::new();
 
@@ -760,7 +784,8 @@ mod test {
             }
         });
 
-        let stack = AuthStack::new(electrum_port, Some(electrum_port));
+        // Electrum-only stack: no HTTP upstream, so no APISIX container.
+        let stack = AuthStack::new(None, Some(electrum_port));
         let port: u16 = stack
             .electrum_gateway_url()
             .rsplit(':')

@@ -140,7 +140,7 @@ impl Signer {
         Ok(self.inner.fingerprint().to_string())
     }
 
-    /// Return the signer fingerprint
+    /// Return the signer slip77 master blinding key
     pub fn slip77_master_blinding_key(&self) -> Result<String, LwkError> {
         let mbk = lwk_common::Signer::slip77_master_blinding_key(&self.inner)?;
         Ok(format!("slip77({mbk})"))

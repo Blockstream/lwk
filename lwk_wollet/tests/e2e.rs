@@ -1044,11 +1044,15 @@ async fn test_esplora_address_history_paging() {
     // address (25 confirmed on Blockstream esplora); older confirmed
     // transactions must be fetched via `/txs/chain/{last_seen_txid}` pages.
     // Regression test: an address with more transactions than one page must
-    // sync its full history, not a silently truncated one.
+    // sync its full history, not a silently truncated one. concurrency(4)
+    // also exercises the ordered `buffered` address walk.
     let env = TestEnvBuilder::from_env().with_esplora().build();
     let url = env.esplora_url();
     let network = Network::default_regtest();
-    let mut client = clients::asyncr::EsploraClient::new(network, &url);
+    let mut client = clients::asyncr::EsploraClientBuilder::new(&url, network)
+        .concurrency(4)
+        .build()
+        .unwrap();
     let signer = generate_signer();
     let view_key = generate_view_key();
     let descriptor = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());

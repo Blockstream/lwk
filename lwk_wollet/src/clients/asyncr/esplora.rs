@@ -27,7 +27,7 @@ use futures::lock::Mutex;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::Mutex;
 
-use futures::stream::{iter, StreamExt};
+use futures::stream::{iter, StreamExt, TryStreamExt};
 use reqwest::{Response, StatusCode};
 use serde::Deserialize;
 use std::sync::atomic::AtomicUsize;
@@ -225,11 +225,23 @@ impl EsploraClient {
         &self,
         addresses: &[Address],
     ) -> Result<Vec<Vec<History>>, Error> {
-        let mut result = vec![];
-        for address in addresses.iter() {
-            result.push(self.get_address_history(address).await?);
-        }
-        Ok(result)
+        // `buffered` (not `buffer_unordered`) so results keep the input
+        // order: callers map histories back to derivation indices
+        // positionally (see `get_history`). `try_collect` stops at the
+        // first error, dropping in-flight requests, matching the failure
+        // semantics of the previous sequential loop.
+        //
+        // The futures are instantiated eagerly (they stay inert until
+        // polled; `buffered` still caps concurrent polling) so the stream
+        // holds concrete futures rather than an `&Address`-borrowing
+        // closure — the closure form trips rustc's higher-ranked `FnOnce`
+        // limitation (rust-lang/rust#89976) when downstream `async_trait`
+        // users such as lwk_boltz must prove the resulting future `Send`.
+        let futures: Vec<_> = addresses
+            .iter()
+            .map(|address| self.get_address_history(address))
+            .collect();
+        iter(futures).buffered(self.concurrency).try_collect().await
     }
 
     /// Fetch the confirmed transaction history of a single address plus its

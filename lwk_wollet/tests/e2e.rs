@@ -1039,6 +1039,47 @@ async fn wait_update_with_txs(
 
 #[cfg(feature = "esplora")]
 #[tokio::test]
+async fn test_esplora_address_history_paging() {
+    // Esplora returns a bounded first page of transaction history per
+    // address (25 confirmed on Blockstream esplora); older confirmed
+    // transactions must be fetched via `/txs/chain/{last_seen_txid}` pages.
+    // Regression test: an address with more transactions than one page must
+    // sync its full history, not a silently truncated one.
+    let env = TestEnvBuilder::from_env().with_esplora().build();
+    let url = env.esplora_url();
+    let network = Network::default_regtest();
+    let mut client = clients::asyncr::EsploraClient::new(network, &url);
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let descriptor = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let descriptor: WolletDescriptor = descriptor.parse().unwrap();
+    let mut wollet = WolletBuilder::new(network, descriptor).build().unwrap();
+
+    let address = wollet.address(None).unwrap();
+    const TXS: usize = 30; // more than one 25-tx confirmed page
+    for i in 0..TXS {
+        env.elementsd_sendtoaddress(address.address(), 10_000, None);
+        // Confirm in batches so the sends never hit the node's unconfirmed
+        // descendant-chain limit (25).
+        if i % 10 == 9 {
+            env.elementsd_generate(1);
+        }
+    }
+
+    for _ in 0..50 {
+        if let Some(update) = client.full_scan(&wollet).await.unwrap() {
+            wollet.apply_update(update).unwrap();
+        }
+        if wollet.transactions().unwrap().len() == TXS {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    assert_eq!(wollet.transactions().unwrap().len(), TXS);
+}
+
+#[cfg(feature = "esplora")]
+#[tokio::test]
 async fn test_esplora_requests_counter() {
     use std::collections::HashMap;
 

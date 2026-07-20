@@ -120,10 +120,7 @@ mod tests {
         network::{LiquidChain, LiquidClient},
         ToHex,
     };
-    use lwk_wollet::{
-        asyncr::{self, EsploraClientBuilder},
-        elements, Network,
-    };
+    use lwk_wollet::{asyncr, elements, Network};
 
     use crate::clients::EsploraClient;
 
@@ -132,26 +129,11 @@ mod tests {
     async fn test_esplora_client() {
         let client =
             asyncr::EsploraClient::new(Network::Liquid, "https://blockstream.info/liquid/api");
-
+        let client = EsploraClient::from_client(Arc::new(client), Network::Liquid);
         test_esplora_client_liquid(client).await;
     }
 
-    #[tokio::test]
-    #[ignore = "requires internet connection"]
-    async fn test_waterfalls_client() {
-        #[allow(deprecated)]
-        let client = EsploraClientBuilder::new(
-            "https://waterfalls.liquidwebwallet.org/liquid/api",
-            Network::Liquid,
-        )
-        .waterfalls(true)
-        .build()
-        .unwrap();
-        test_esplora_client_liquid(client).await;
-    }
-
-    async fn test_esplora_client_liquid(raw_client: asyncr::EsploraClient) {
-        let client = EsploraClient::from_client(Arc::new(raw_client), Network::Liquid);
+    async fn test_esplora_client_liquid(client: EsploraClient) {
         assert_eq!(client.network(), LiquidChain::Liquid);
 
         assert_eq!(

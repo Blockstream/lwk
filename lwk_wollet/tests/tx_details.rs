@@ -198,7 +198,6 @@ fn test_txs_cannot_unblind() {
     assert_eq!(w1.wollet.transactions().unwrap().len(), 1);
     assert_eq!(w2.wollet.transactions().unwrap().len(), 1);
     let opt = TxsOpt::default();
-    // TODO: only 1 transaction should be listed there
-    assert_eq!(w1.wollet.txs(&opt).unwrap().len(), 2);
-    assert_eq!(w2.wollet.txs(&opt).unwrap().len(), 2);
+    assert_eq!(w1.wollet.txs(&opt).unwrap().len(), 1);
+    assert_eq!(w2.wollet.txs(&opt).unwrap().len(), 1);
 }

@@ -296,6 +296,10 @@ impl Wollet {
         let offset = opt.offset.unwrap_or(0);
         let limit = opt.limit.unwrap_or(usize::MAX);
         for (txid, height) in self.cache.sorted_txids().skip(offset).take(limit) {
+            if !opt.with_cannot_unblind && self.cache.cannot_unblind(txid) {
+                // Transaction carries no balance information, ignore it by default
+                continue;
+            }
             if let Some(tx) = self.tx_details_inner(txid, *height, unspent, opt.without_tx)? {
                 txs.push(tx);
             }
@@ -321,6 +325,12 @@ pub struct TxsOpt {
     /// This can improve performance significantly, but some returned
     /// value might become inaccurate.
     pub without_tx: bool,
+    /// Include transactions that cannot be unblinded
+    ///
+    /// By default, transactions where none of the wallet inputs or outputs could be
+    /// unblinded are excluded, since they carry no balance information and are usually
+    /// uninteresting. Set this to `true` to include them.
+    pub with_cannot_unblind: bool,
 }
 
 impl TxsOpt {

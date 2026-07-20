@@ -13,6 +13,7 @@ pub type Height = u32;
 pub type Timestamp = u32;
 
 const TXIDS_KEY: &str = "wollet:txids";
+const CANNOT_UNBLIND_TXIDS_KEY: &str = "wollet:cannot_unblind_txids";
 
 fn tx_key(txid: &Txid) -> String {
     format!("wollet:tx:{}", txid)
@@ -45,6 +46,13 @@ pub struct Cache {
     /// unblinded values
     unblinded: HashMap<OutPoint, TxOutSecrets>,
 
+    /// txids of wallet txs where none of the wallet-owned inputs or outputs could be
+    /// unblinded, i.e. `unblinded` has no entry for any of their relevant outpoints.
+    ///
+    /// Such transactions carry no balance information and are excluded by default from
+    /// [`crate::Wollet::txs()`].
+    cannot_unblind_txids: HashSet<Txid>,
+
     /// height and hash of tip of the blockchain
     pub tip: (Height, BlockHash),
 
@@ -69,6 +77,7 @@ impl Default for Cache {
             sorted_txids: vec![],
             unspent: HashMap::new(),
             unblinded: HashMap::default(),
+            cannot_unblind_txids: HashSet::default(),
             tip: (0, BlockHash::all_zeros()),
             last_unused_internal: 0.into(),
             last_unused_external: 0.into(),
@@ -268,6 +277,40 @@ impl Cache {
         self.txids.extend(txids);
     }
 
+    /// Load the "cannot unblind" txids computed in previous sessions.
+    ///
+    /// This is a single store read of a persisted snapshot (see [`Self::persist_cannot_unblind`]),
+    /// as opposed to recomputing it by fetching every transaction from `txs_store`.
+    pub fn add_cannot_unblind_from_store(&mut self) {
+        let txids: HashSet<Txid> = self
+            .txs_store
+            .get(CANNOT_UNBLIND_TXIDS_KEY)
+            .ok()
+            .flatten()
+            .and_then(|b| serde_json::from_slice::<Vec<String>>(&b).ok())
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|s| s.parse().ok())
+            .collect();
+        self.cannot_unblind_txids.extend(txids);
+    }
+
+    /// Persist the current "cannot unblind" txids snapshot, so it can be loaded back with
+    /// [`Self::add_cannot_unblind_from_store`] without recomputing it from `txs_store`.
+    fn persist_cannot_unblind(&self) -> Result<(), Error> {
+        let txids = serde_json::to_vec(
+            &self
+                .cannot_unblind_txids
+                .iter()
+                .map(|t| t.to_string())
+                .collect::<Vec<_>>(),
+        )
+        .map_err(Error::from)?;
+        self.txs_store
+            .put(CANNOT_UNBLIND_TXIDS_KEY, &txids)
+            .map_err(Error::StoreError)
+    }
+
     pub fn txs_store_is_persisted(&self) -> bool {
         self.txs_store.is_persisted()
     }
@@ -364,6 +407,73 @@ impl Cache {
         self.heights.extend(new.iter().copied());
     }
 
+    /// Set whether `tx` cannot be unblinded, i.e. none of its outputs nor the previous
+    /// outputs of its inputs have an entry in `self.unblinded`.
+    ///
+    /// Returns whether this actually changed `self.cannot_unblind_txids`.
+    fn set_cannot_unblind(&mut self, txid: &Txid, tx: &Transaction) -> bool {
+        let has_unblinded = (0..tx.output.len()).any(|vout| {
+            self.unblinded
+                .contains_key(&OutPoint::new(*txid, vout as u32))
+        }) || tx
+            .input
+            .iter()
+            .any(|i| self.unblinded.contains_key(&i.previous_output));
+        if has_unblinded {
+            self.cannot_unblind_txids.remove(txid)
+        } else {
+            self.cannot_unblind_txids.insert(*txid)
+        }
+    }
+
+    /// Update the "cannot unblind" txids using only the given `txs`, without touching
+    /// `txs_store` for reads, and persist the resulting snapshot if it changed.
+    ///
+    /// This is called on every applied update, including when replaying persisted updates
+    /// on wallet restore. In that case `txs` is empty, since the transactions are not
+    /// carried by the update once they've already been persisted (see
+    /// [`crate::update::UpdatesPersister::persist`]) and this is a no-op: restore instead
+    /// loads the up to date snapshot in one shot via [`Self::add_cannot_unblind_from_store`],
+    /// which avoids a `txs_store` read per transaction.
+    fn update_cannot_unblind(&mut self, txs: &[(Txid, Transaction)]) -> Result<(), Error> {
+        let mut changed = false;
+        for (txid, tx) in txs {
+            changed |= self.set_cannot_unblind(txid, tx);
+        }
+        if changed {
+            self.persist_cannot_unblind()?;
+        }
+        Ok(())
+    }
+
+    /// Recompute the "cannot unblind" status of the given `txids`, fetching each transaction
+    /// from the store, and persist the resulting snapshot if it changed.
+    ///
+    /// Used after unblinding info changes outside of the normal update flow, e.g.
+    /// [`crate::Wollet::reunblind()`]. Unlike [`Self::update_cannot_unblind`] this does hit
+    /// `txs_store`, which is fine since callers of this already scan every wallet transaction.
+    pub(crate) fn refresh_cannot_unblind(
+        &mut self,
+        txids: impl IntoIterator<Item = Txid>,
+    ) -> Result<(), Error> {
+        let mut changed = false;
+        for txid in txids {
+            if let Some(tx) = self.tx(&txid) {
+                changed |= self.set_cannot_unblind(&txid, &tx);
+            }
+        }
+        if changed {
+            self.persist_cannot_unblind()?;
+        }
+        Ok(())
+    }
+
+    /// Whether `txid` cannot be unblinded, i.e. none of its wallet-owned inputs or outputs
+    /// could be unblinded.
+    pub fn cannot_unblind(&self, txid: &Txid) -> bool {
+        self.cannot_unblind_txids.contains(txid)
+    }
+
     fn extend_all_txs(&mut self, txs: &[(Txid, Transaction)]) -> Result<(), Error> {
         for (txid, tx) in txs {
             self.txs_store
@@ -403,6 +513,7 @@ impl Cache {
             self.txids
                 .extend(txid_height_new.iter().map(|(txid, _)| *txid));
         }
+        self.update_cannot_unblind(txs)?;
         self.rebuild_sorted_txids();
         if use_unspent_snapshot || utxo_only {
             self.update_unspent_from_snapshot(unspent, txs);

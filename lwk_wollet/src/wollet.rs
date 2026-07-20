@@ -909,6 +909,11 @@ impl Wollet {
             }
         }
         self.cache.extend_unblinded(new);
+        // Newly unblinded outpoints can also affect the "cannot unblind" status of the
+        // transactions that spend them as inputs, so refresh all of them rather than just
+        // the transactions that own the outpoints above.
+        let all_txids: Vec<Txid> = self.cache.all_txids().iter().cloned().collect();
+        self.cache.refresh_cannot_unblind(all_txids)?;
         Ok(txos)
     }
 

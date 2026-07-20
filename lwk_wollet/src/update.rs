@@ -406,6 +406,7 @@ impl Wollet {
         if self.cache.all_txids().is_empty() {
             self.cache.add_txids_from_txs_store();
         }
+        self.cache.add_cannot_unblind_from_store();
         Ok(())
     }
 }

@@ -99,7 +99,7 @@ pub use pset::{PsetBuilder, PsetInputBuilder, PsetOutputBuilder};
 pub use pset_details::{Issuance, PsetDetails};
 pub use store::{ForeignStore, ForeignStoreLink};
 pub use test_env::{LwkTestEnv, LwkTestStore};
-pub use tx_builder::TxBuilder;
+pub use tx_builder::{IssuanceRequest, TxBuilder};
 pub use update::Update;
 
 uniffi::setup_scaffolding!();

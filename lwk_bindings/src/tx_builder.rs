@@ -160,6 +160,22 @@ impl TxBuilder {
         Ok(())
     }
 
+    /// Issue an asset, or several assets by calling this multiple times in the same transaction
+    ///
+    /// `request` sets the asset/token amounts, receivers, and contract; see
+    /// [`IssuanceRequest`] for details.
+    ///
+    /// Can't be used if `reissue_asset` has been called
+    pub fn add_issuance(&self, request: &IssuanceRequest) -> Result<(), LwkError> {
+        let request = request.clone_inner()?;
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.add_issuance(request)?);
+        Ok(())
+    }
+
+    // TODO: add `pin_input` to `IssuanceRequest` once wrapper for `set_inputs_order` exists
+
     /// Reissue an asset
     ///
     /// reissue the asset defined by `asset_to_reissue`, provided the reissuance token is owned
@@ -270,5 +286,61 @@ impl TxBuilder {
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock = Some(inner.add_validated_recipient(recipient));
         Ok(())
+    }
+}
+
+/// Wrapper over [`lwk_wollet::IssuanceRequest`]
+///
+/// Used to build a request passed to [`TxBuilder::add_issuance()`]
+#[derive(uniffi::Object, Debug)]
+pub struct IssuanceRequest {
+    inner: Mutex<Option<lwk_wollet::IssuanceRequest>>,
+}
+
+#[uniffi::export]
+impl IssuanceRequest {
+    /// Construct a builder for an issuance of `satoshi_asset` asset units and `satoshi_token`
+    /// reissuance tokens (at least one of the two must be greater than zero)
+    #[uniffi::constructor]
+    pub fn new(satoshi_asset: u64, satoshi_token: u64) -> Self {
+        IssuanceRequest {
+            inner: Mutex::new(Some(lwk_wollet::IssuanceRequest::new(
+                satoshi_asset,
+                satoshi_token,
+            ))),
+        }
+    }
+
+    /// Sets the address receiving the issued asset units; if not called, they are sent
+    /// to an address of the wallet generating the issuance
+    pub fn address_asset(&self, address: &Address) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.address_asset(address.into()));
+        Ok(())
+    }
+
+    /// Sets the address receiving the reissuance tokens; if not called, they are sent
+    /// to an address of the wallet generating the issuance
+    pub fn address_token(&self, address: &Address) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.address_token(address.into()));
+        Ok(())
+    }
+
+    /// Sets the contract whose metadata will be committed in the generated asset id
+    pub fn contract(&self, contract: &Contract) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.contract(contract.into()));
+        Ok(())
+    }
+}
+
+impl IssuanceRequest {
+    fn clone_inner(&self) -> Result<lwk_wollet::IssuanceRequest, LwkError> {
+        let lock = self.inner.lock()?;
+        lock.clone().ok_or(LwkError::ObjectConsumed)
     }
 }

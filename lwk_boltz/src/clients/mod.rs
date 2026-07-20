@@ -1,6 +1,7 @@
 #[cfg(feature = "blocking")]
 mod electrum;
 mod esplora;
+mod waterfalls;
 
 use std::fmt::Display;
 use std::future::Future;
@@ -10,6 +11,7 @@ use std::time::Duration;
 #[cfg(feature = "blocking")]
 pub use electrum::ElectrumClient;
 pub use esplora::EsploraClient;
+pub use waterfalls::WaterfallsClient;
 
 use async_trait::async_trait;
 use boltz_client::{

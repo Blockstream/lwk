@@ -2517,7 +2517,7 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
         .set_wallet_utxos(vec![utxos[0].outpoint, utxos[0].outpoint])
         .finish()
         .unwrap_err();
-    assert!(matches!(err, Error::DuplicatedOutpoint(_)));
+    assert!(matches!(err, Error::DuplicatedOutpoint(_, _)));
 
     let signers = [&AnySigner::Software(signer.clone())];
     let (asset, token) = w.issueasset(&signers, 10, 1, None, None);
@@ -2669,7 +2669,7 @@ fn test_inputs_order() {
         .set_inputs_order(vec![utxo_small, utxo_small])
         .finish()
         .unwrap_err();
-    assert!(matches!(err, Error::DuplicatedOutpoint(o) if o == utxo_small));
+    assert!(matches!(err, Error::DuplicatedOutpoint(o, _) if o == utxo_small));
 
     // inputs_order requires set_wallet_utxos to be set too
     let err = w
@@ -2744,7 +2744,7 @@ fn test_inputs_order() {
     let tx = serialize(&tx);
     assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
 
-    // Issuing a new asset together with a manual input order is rejected
+    // Issuing a new asset together with a manual input order is rejected, unless pinned
     let err = w
         .tx_builder()
         .issue_asset(10, None, 1, None, None)
@@ -2753,7 +2753,7 @@ fn test_inputs_order() {
         .set_inputs_order(vec![utxo_big])
         .finish()
         .unwrap_err();
-    assert!(matches!(err, Error::IssuanceUnsupportedWithInputsOrder));
+    assert!(matches!(err, Error::InputsOrderRequiresPinnedIssuance));
     // Issue an asset (without inputs_order) so we can test reissuance + inputs_order
     let signers = [&AnySigner::Software(signer.clone())];
     let (asset, token) = w.issueasset(&signers, 10, 1, None, None);
@@ -2830,6 +2830,277 @@ fn test_inputs_order() {
     );
     assert_eq!(in0, token_utxo);
     signer.sign(&mut pset).unwrap();
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let tx = serialize(&tx);
+    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+}
+
+// TODO: move to lwk_wollet::issuance
+#[test]
+fn test_multiple_issuances() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &desc);
+
+    let policy_asset = w.policy_asset();
+
+    // Fund the wallet with 2 L-BTC UTXOs
+    w.fund(&env, 100_000, None, None);
+    w.fund(&env, 500_000, None, None);
+    env.elementsd_generate(1);
+
+    let utxos: Vec<_> = w
+        .wollet
+        .utxos()
+        .unwrap()
+        .iter()
+        .map(|u| u.outpoint)
+        .collect();
+    assert_eq!(utxos.len(), 2);
+
+    let dummy_asset = elements::AssetId::from_slice(&[1u8; 32]).unwrap();
+    let dummy_outpoint = OutPoint::null();
+
+    // Issuance and reissuance are mutually exclusive, in both orders
+    let err = w
+        .tx_builder()
+        .issue_asset(10, None, 1, None, None)
+        .unwrap()
+        .reissue_asset(dummy_asset, 5, None, None)
+        .unwrap_err();
+    assert!(matches!(err, Error::IssuanceReissuanceMutuallyExclusive));
+
+    let err = w
+        .tx_builder()
+        .reissue_asset(dummy_asset, 5, None, None)
+        .unwrap()
+        .issue_asset(10, None, 1, None, None)
+        .unwrap_err();
+    assert!(matches!(err, Error::IssuanceReissuanceMutuallyExclusive));
+
+    let err = w
+        .tx_builder()
+        .add_issuance(IssuanceRequest::new(10, 1).pin_input(dummy_outpoint))
+        .unwrap()
+        .reissue_asset(dummy_asset, 5, None, None)
+        .unwrap_err();
+    assert!(matches!(err, Error::IssuanceReissuanceMutuallyExclusive));
+
+    let err = w
+        .tx_builder()
+        .reissue_asset(dummy_asset, 5, None, None)
+        .unwrap()
+        .add_issuance(IssuanceRequest::new(10, 1).pin_input(dummy_outpoint))
+        .unwrap_err();
+    assert!(matches!(err, Error::IssuanceReissuanceMutuallyExclusive));
+
+    // Pinned and non-pinned issuances can't be mixed, in both orders
+    let err = w
+        .tx_builder()
+        .issue_asset(10, None, 1, None, None)
+        .unwrap()
+        .add_issuance(IssuanceRequest::new(10, 1).pin_input(dummy_outpoint))
+        .unwrap_err();
+    assert!(matches!(err, Error::IssuanceModesMixing));
+
+    let err = w
+        .tx_builder()
+        .add_issuance(IssuanceRequest::new(10, 1).pin_input(dummy_outpoint))
+        .unwrap()
+        .issue_asset(10, None, 1, None, None)
+        .unwrap_err();
+    assert!(matches!(err, Error::IssuanceModesMixing));
+
+    // Repeated calls of the same kind accumulate instead of erroring
+    w.tx_builder()
+        .issue_asset(10, None, 1, None, None)
+        .unwrap()
+        .issue_asset(10, None, 1, None, None)
+        .unwrap();
+    w.tx_builder()
+        .add_issuance(IssuanceRequest::new(10, 1).pin_input(dummy_outpoint))
+        .unwrap()
+        .add_issuance(IssuanceRequest::new(10, 1).pin_input(OutPoint::new(
+            <elements::Txid as elements::hashes::Hash>::all_zeros(),
+            1,
+        )))
+        .unwrap();
+
+    // More issuances than transaction inputs
+    let err = w
+        .tx_builder()
+        .issue_asset(10, None, 1, None, None)
+        .unwrap()
+        .issue_asset(20, None, 2, None, None)
+        .unwrap()
+        .set_wallet_utxos(vec![utxos[0]])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::IssuanceInputCountMismatch));
+
+    // Two issuances in the same transaction, assigned sequentially to the inputs
+    let mut pset = w
+        .tx_builder()
+        .issue_asset(10, None, 1, None, None)
+        .unwrap()
+        .issue_asset(20, None, 2, None, None)
+        .unwrap()
+        .set_wallet_utxos(utxos)
+        .finish()
+        .unwrap();
+    assert_eq!(pset.inputs().len(), 2);
+    assert_eq!(pset.inputs()[0].issuance_value_amount, Some(10));
+    assert_eq!(pset.inputs()[0].issuance_inflation_keys, Some(1));
+    assert_eq!(pset.inputs()[1].issuance_value_amount, Some(20));
+    assert_eq!(pset.inputs()[1].issuance_inflation_keys, Some(2));
+    let (asset0, token0) = pset.inputs()[0].issuance_ids();
+    let (asset1, token1) = pset.inputs()[1].issuance_ids();
+    assert_ne!(asset0, asset1);
+
+    let details = w.wollet.get_details(&pset).unwrap();
+    assert_eq!(n_issuances(&details), 2);
+    assert_eq!(n_reissuances(&details), 0);
+
+    signer.sign(&mut pset).unwrap();
+    w.send(&mut pset);
+    assert_eq!(w.balance(&asset0), 10);
+    assert_eq!(w.balance(&token0), 1);
+    assert_eq!(w.balance(&asset1), 20);
+    assert_eq!(w.balance(&token1), 2);
+    env.elementsd_generate(1);
+
+    // Fund again so the wallet has 2 L-BTC UTXOs for the pinned issuance cases
+    w.fund(&env, 100_000, None, None);
+    env.elementsd_generate(1);
+    let lbtc: Vec<_> = w
+        .wollet
+        .utxos()
+        .unwrap()
+        .iter()
+        .filter(|u| u.unblinded.asset == policy_asset)
+        .map(|u| u.outpoint)
+        .collect();
+    assert_eq!(lbtc.len(), 2);
+
+    // Pinning an issuance requires a manual inputs order
+    let err = w
+        .tx_builder()
+        .add_issuance(IssuanceRequest::new(10, 1).pin_input(lbtc[0]))
+        .unwrap()
+        .set_wallet_utxos(vec![lbtc[0]])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::IssuancePinRequiresInputsOrder));
+
+    // Pinning to an outpoint not present in the inputs order
+    let err = w
+        .tx_builder()
+        .add_issuance(IssuanceRequest::new(10, 1).pin_input(lbtc[0]))
+        .unwrap()
+        .set_wallet_utxos(vec![lbtc[1]])
+        .set_inputs_order(vec![lbtc[1]])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::IssuanceOutpointNotInInputsOrder(o) if o == lbtc[0]));
+
+    // Two issuances pinned to the same outpoint
+    let err = w
+        .tx_builder()
+        .add_issuance(IssuanceRequest::new(10, 1).pin_input(lbtc[0]))
+        .unwrap()
+        .add_issuance(IssuanceRequest::new(20, 2).pin_input(lbtc[0]))
+        .unwrap()
+        .set_wallet_utxos(vec![lbtc[0], lbtc[1]])
+        .set_inputs_order(vec![lbtc[0], lbtc[1]])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::DuplicatedOutpoint(o, _) if o == lbtc[0]));
+
+    // More pinned issuances than inputs
+    let err = w
+        .tx_builder()
+        .add_issuance(IssuanceRequest::new(10, 1).pin_input(lbtc[0]))
+        .unwrap()
+        .add_issuance(IssuanceRequest::new(20, 2).pin_input(lbtc[1]))
+        .unwrap()
+        .set_wallet_utxos(vec![lbtc[0]])
+        .set_inputs_order(vec![lbtc[0]])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::IssuanceInputCountMismatch));
+
+    // Pin an issuance to the input placed second, leaving the first input without issuance
+    let mut pset = w
+        .tx_builder()
+        .add_issuance(IssuanceRequest::new(30, 3).pin_input(lbtc[1]))
+        .unwrap()
+        .set_wallet_utxos(vec![lbtc[0], lbtc[1]])
+        .set_inputs_order(vec![lbtc[0], lbtc[1]])
+        .finish()
+        .unwrap();
+    assert_eq!(pset.inputs().len(), 2);
+    let in1 = OutPoint::new(
+        pset.inputs()[1].previous_txid,
+        pset.inputs()[1].previous_output_index,
+    );
+    assert_eq!(in1, lbtc[1]);
+    assert_eq!(pset.inputs()[0].issuance_value_amount, None);
+    assert_eq!(pset.inputs()[1].issuance_value_amount, Some(30));
+    assert_eq!(pset.inputs()[1].issuance_inflation_keys, Some(3));
+    let (asset2, token2) = pset.inputs()[1].issuance_ids();
+
+    signer.sign(&mut pset).unwrap();
+    w.send(&mut pset);
+    assert_eq!(w.balance(&asset2), 30);
+    assert_eq!(w.balance(&token2), 3);
+    env.elementsd_generate(1);
+
+    // An issuance can also be pinned to an external input
+    let signer2 = generate_signer();
+    let view_key2 = generate_view_key();
+    let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer2.xpub());
+    let client2 = test_client_electrum(&env.electrum_url());
+    let mut w2 = TestWollet::new(client2, &desc2);
+    w2.fund(&env, 200_000, None, None);
+    env.elementsd_generate(1);
+    let external_utxo = w2.make_external(&w2.wollet.utxos().unwrap()[0]);
+    let external_outpoint = external_utxo.outpoint;
+
+    let lbtc_utxo = w
+        .wollet
+        .utxos()
+        .unwrap()
+        .iter()
+        .find(|u| u.unblinded.asset == policy_asset)
+        .unwrap()
+        .outpoint;
+
+    let mut pset = w
+        .tx_builder()
+        .add_issuance(IssuanceRequest::new(40, 4).pin_input(external_outpoint))
+        .unwrap()
+        .set_wallet_utxos(vec![lbtc_utxo])
+        .add_external_utxos(vec![external_utxo])
+        .unwrap()
+        .set_inputs_order(vec![lbtc_utxo, external_outpoint])
+        .finish()
+        .unwrap();
+    assert_eq!(pset.inputs().len(), 2);
+    assert_eq!(pset.inputs()[0].issuance_value_amount, None);
+    assert_eq!(pset.inputs()[1].issuance_value_amount, Some(40));
+
+    w2.wollet.add_details(&mut pset).unwrap();
+    let mixed_signers = [
+        &AnySigner::Software(signer.clone()),
+        &AnySigner::Software(signer2),
+    ];
+    for s in mixed_signers {
+        w.sign(s, &mut pset);
+    }
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
     assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
@@ -3346,6 +3617,7 @@ fn test_singlekey() {
     assert!(balance_before > balance_after);
 }
 
+// TODO: move to lwk_wollet::issuance
 #[test]
 fn test_issuance_amount_limits() {
     let env = TestEnvBuilder::from_env().with_electrum().build();

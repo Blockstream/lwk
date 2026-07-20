@@ -94,6 +94,7 @@ pub enum AnyClient {
     #[cfg(feature = "blocking")]
     Electrum(Arc<ElectrumClient>),
     Esplora(Arc<EsploraClient>),
+    Waterfalls(Arc<WaterfallsClient>),
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
@@ -104,6 +105,7 @@ impl LiquidClient for AnyClient {
             #[cfg(feature = "blocking")]
             AnyClient::Electrum(client) => client.get_tx(txid).await,
             AnyClient::Esplora(client) => client.get_tx(txid).await,
+            AnyClient::Waterfalls(client) => client.get_tx(txid).await,
         }
     }
 
@@ -115,6 +117,7 @@ impl LiquidClient for AnyClient {
             #[cfg(feature = "blocking")]
             AnyClient::Electrum(client) => client.get_address_utxo(address).await,
             AnyClient::Esplora(client) => client.get_address_utxo(address).await,
+            AnyClient::Waterfalls(client) => client.get_address_utxo(address).await,
         }
     }
 
@@ -123,6 +126,7 @@ impl LiquidClient for AnyClient {
             #[cfg(feature = "blocking")]
             AnyClient::Electrum(client) => client.get_genesis_hash().await,
             AnyClient::Esplora(client) => client.get_genesis_hash().await,
+            AnyClient::Waterfalls(client) => client.get_genesis_hash().await,
         }
     }
 
@@ -131,6 +135,7 @@ impl LiquidClient for AnyClient {
             #[cfg(feature = "blocking")]
             AnyClient::Electrum(client) => client.broadcast_tx(signed_tx).await,
             AnyClient::Esplora(client) => client.broadcast_tx(signed_tx).await,
+            AnyClient::Waterfalls(client) => client.broadcast_tx(signed_tx).await,
         }
     }
 
@@ -139,6 +144,7 @@ impl LiquidClient for AnyClient {
             #[cfg(feature = "blocking")]
             AnyClient::Electrum(client) => client.network(),
             AnyClient::Esplora(client) => client.network(),
+            AnyClient::Waterfalls(client) => client.network(),
         }
     }
 }

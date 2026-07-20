@@ -206,8 +206,24 @@ pub enum Error {
         update_status: u64,
     },
 
-    #[error("An issuance has already being set on this tx builder")]
-    IssuanceAlreadySet,
+    #[error("Issuance and reissuance are mutually exclusive")]
+    IssuanceReissuanceMutuallyExclusive,
+
+    // TODO: remove once reissuance supports multiple calls like issuance does.
+    #[error("A reissuance has already been set on this transaction")]
+    ReissuanceAlreadySet,
+
+    #[error("Cannot mix pinned and non-pinned issuances in the same transaction")]
+    IssuanceModesMixing,
+
+    #[error("More issuances than inputs")]
+    IssuanceInputCountMismatch,
+
+    #[error("Issuance pinned to outpoint {0} not present in the manual inputs order")]
+    IssuanceOutpointNotInInputsOrder(OutPoint),
+
+    #[error("Pinning issuance to input requires manual inputs order")]
+    IssuancePinRequiresInputsOrder,
 
     #[error("Blockchain backend have not implemented waterfalls method")]
     WaterfallsUnimplemented,
@@ -231,8 +247,8 @@ pub enum Error {
     #[error("Missing wallet UTXO {0}")]
     MissingWalletUtxo(OutPoint),
 
-    #[error("Duplicated outpoint {0}")]
-    DuplicatedOutpoint(OutPoint),
+    #[error("Duplicated outpoint {0} in {1}")]
+    DuplicatedOutpoint(OutPoint, String),
 
     #[error("Manual inputs order requires `set_wallet_utxos` to be set too")]
     InputsOrderRequiresWalletUtxos,
@@ -248,8 +264,8 @@ pub enum Error {
     #[error("Reissuance token {0} utxo not found in the wallet")]
     MissingReissuanceTokenUtxo(crate::elements::AssetId),
 
-    #[error("Issuing a new asset is not supported together with a manual input order")]
-    IssuanceUnsupportedWithInputsOrder,
+    #[error("Manual inputs order requires issuances to be pinned to inputs")]
+    InputsOrderRequiresPinnedIssuance,
 
     #[error("LiquiDEX make/take is not supported together with a manual inputs order")]
     LiquidexUnsupportedWithInputsOrder,

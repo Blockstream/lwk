@@ -15,14 +15,6 @@ use std::collections::HashMap;
 
 pub const SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS: usize = 256;
 
-#[derive(Debug)]
-// We make issuance and reissuance are mutually exclusive for simplicity
-pub enum IssuanceRequest {
-    None,
-    Issuance(u64, Option<Address>, u64, Option<Address>, Option<Contract>),
-    Reissuance(AssetId, u64, Option<Address>, Option<Transaction>),
-}
-
 impl Wollet {
     fn get_tx(&self, txid: &Txid) -> Result<Transaction, Error> {
         self.cache.tx(txid).ok_or(Error::MissingTransaction)

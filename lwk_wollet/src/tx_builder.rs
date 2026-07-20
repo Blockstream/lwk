@@ -1,10 +1,14 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::{
+    collections::{BTreeMap, HashMap, HashSet},
+    vec,
+};
 
 use crate::{
     hashes::Hash,
+    issuance::{IssuanceRequest, Issuances, ReissuanceRequest},
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
-    pset_create::{validate_address, IssuanceRequest, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS},
+    pset_create::{validate_address, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS},
     Contract, DownloadTxResult, Error, LiquidexProposal, Network, UnvalidatedRecipient, Update,
     WalletTxOut, Wollet, EC,
 };
@@ -171,7 +175,8 @@ pub struct TxBuilder {
     recipients: Vec<Recipient>,
     fee_rate: f32,
     ct_discount: bool,
-    issuance_request: IssuanceRequest,
+    reissuances: ReissuanceRequest,
+    issuances: Issuances,
     drain_lbtc: bool,
     drain_to: Option<Address>,
     external_utxos: Vec<ExternalUtxo>,
@@ -194,7 +199,8 @@ impl TxBuilder {
             recipients: vec![],
             fee_rate: 100.0,
             ct_discount: true,
-            issuance_request: IssuanceRequest::None,
+            reissuances: ReissuanceRequest::None,
+            issuances: Issuances::None,
             drain_lbtc: false,
             drain_to: None,
             external_utxos: vec![],
@@ -349,32 +355,69 @@ impl TxBuilder {
     ///
     /// Can't be used if `reissue_asset` has been called
     pub fn issue_asset(
-        mut self,
+        self,
         asset_sats: u64,
         asset_receiver: Option<Address>,
         token_sats: u64,
         token_receiver: Option<Address>,
         contract: Option<Contract>,
     ) -> Result<Self, Error> {
-        if !matches!(self.issuance_request, IssuanceRequest::None) {
-            return Err(Error::IssuanceAlreadySet);
+        let mut request = IssuanceRequest::new(asset_sats, token_sats);
+
+        if let Some(a) = asset_receiver {
+            request = request.address_asset(a);
         }
-        if let Some(addr) = asset_receiver.as_ref() {
-            validate_address(&addr.to_string(), self.network())?;
+        if let Some(a) = token_receiver {
+            request = request.address_token(a);
         }
-        if let Some(addr) = token_receiver.as_ref() {
-            validate_address(&addr.to_string(), self.network())?;
+        if let Some(c) = contract {
+            request = request.contract(c);
         }
-        if asset_sats == 0 && token_sats == 0 {
+
+        self.add_issuance(request)
+    }
+
+    /// Issue an asset
+    ///
+    /// There will be `asset_sats` units of this asset that will be received by
+    /// `asset_receiver` if it's set, otherwise to an address of the wallet generating the issuance.
+    ///
+    /// There will be `token_sats` reissuance tokens that allow token holder to reissue the created
+    /// asset. Reissuance token will be received by `token_receiver` if it's some, or to an
+    /// address of the wallet generating the issuance if none.
+    ///
+    /// If a `contract` is provided, it's metadata will be committed in the generated asset id.
+    ///
+    /// Optionally, pin the issuance to a specific input via [`IssuanceRequest::pin_input()`].
+    ///
+    /// Can be called multiple times to issue several assets in the same transaction.
+    ///
+    /// Can't be used if `reissue_asset` has been called
+    pub fn add_issuance(mut self, request: IssuanceRequest) -> Result<Self, Error> {
+        if !matches!(self.reissuances, ReissuanceRequest::None) {
+            return Err(Error::IssuanceReissuanceMutuallyExclusive);
+        }
+
+        if let Some(address) = request.address_asset.as_ref() {
+            validate_address(&address.to_string(), self.network)?;
+        }
+        if let Some(address) = request.address_token.as_ref() {
+            validate_address(&address.to_string(), self.network)?;
+        }
+        if request.satoshi_asset == 0 && request.satoshi_token == 0 {
             return Err(Error::InvalidAmount);
         }
-        self.issuance_request = IssuanceRequest::Issuance(
-            asset_sats,
-            asset_receiver,
-            token_sats,
-            token_receiver,
-            contract,
-        );
+
+        match (&mut self.issuances, request.pinned_input) {
+            (Issuances::None, Some(input)) => {
+                self.issuances = Issuances::Pinned(vec![(request, input)])
+            }
+            (Issuances::None, None) => self.issuances = Issuances::Sequential(vec![request]),
+            (Issuances::Pinned(requests), Some(input)) => requests.push((request, input)),
+            (Issuances::Sequential(requests), None) => requests.push(request),
+            _ => return Err(Error::IssuanceModesMixing),
+        }
+
         Ok(self)
     }
 
@@ -396,8 +439,13 @@ impl TxBuilder {
         asset_receiver: Option<Address>,
         issuance_tx: Option<Transaction>,
     ) -> Result<Self, Error> {
-        if !matches!(self.issuance_request, IssuanceRequest::None) {
-            return Err(Error::IssuanceAlreadySet);
+        if !matches!(self.issuances, Issuances::None) {
+            return Err(Error::IssuanceReissuanceMutuallyExclusive);
+        }
+        // TODO: temporary guard while reissuance stays single-shot; remove once
+        // ReissuanceRequest is restructured to accumulate like Issuances
+        if !matches!(self.reissuances, ReissuanceRequest::None) {
+            return Err(Error::ReissuanceAlreadySet);
         }
         if let Some(addr) = asset_receiver.as_ref() {
             validate_address(&addr.to_string(), self.network())?;
@@ -405,10 +453,10 @@ impl TxBuilder {
         if satoshi_to_reissue == 0 {
             return Err(Error::InvalidAmount);
         }
-        self.issuance_request = IssuanceRequest::Reissuance(
+        self.reissuances = ReissuanceRequest::Reissuance(
             asset_to_reissue,
             satoshi_to_reissue,
-            asset_receiver,
+            Box::new(asset_receiver),
             issuance_tx,
         );
         Ok(self)
@@ -897,7 +945,10 @@ impl TxBuilder {
 
             for &outpoint in selected_outpoints {
                 if !outpoints_set.insert(outpoint) {
-                    return Err(Error::DuplicatedOutpoint(outpoint));
+                    return Err(Error::DuplicatedOutpoint(
+                        outpoint,
+                        "manual coin selection".to_string(),
+                    ));
                 }
             }
         }
@@ -911,7 +962,10 @@ impl TxBuilder {
             let mut ordered = HashSet::new();
             for &outpoint in inputs_order {
                 if !ordered.insert(outpoint) {
-                    return Err(Error::DuplicatedOutpoint(outpoint));
+                    return Err(Error::DuplicatedOutpoint(
+                        outpoint,
+                        "manual inputs order".to_string(),
+                    ));
                 }
             }
 
@@ -1132,50 +1186,104 @@ impl TxBuilder {
             }
         }
 
-        // Set (re)issuance data
-        match self.issuance_request {
-            IssuanceRequest::None => {}
-            IssuanceRequest::Issuance(
-                satoshi_asset,
-                address_asset,
-                satoshi_token,
-                address_token,
-                contract,
-            ) => {
-                // TODO: remove once issuance can be pinned to a specific input
+        let mut set_issuance = |idx: usize,
+                                request: IssuanceRequest,
+                                pset: &mut PartiallySignedTransaction|
+         -> Result<(), Error> {
+            let (asset, token) = wollet.set_issuance(
+                pset,
+                idx,
+                request.satoshi_asset,
+                request.satoshi_token,
+                request.contract,
+            )?;
+
+            if request.satoshi_asset > 0 {
+                let addressee = match request.address_asset {
+                    Some(address) => {
+                        Recipient::from_address(request.satoshi_asset, &address, asset)
+                    }
+                    None => wollet.addressee_external(
+                        request.satoshi_asset,
+                        asset,
+                        &mut last_unused_external,
+                    )?,
+                };
+                wollet.add_output(pset, &addressee)?;
+            }
+
+            if request.satoshi_token > 0 {
+                let addressee = match request.address_token {
+                    Some(address) => {
+                        Recipient::from_address(request.satoshi_token, &address, token)
+                    }
+                    None => wollet.addressee_external(
+                        request.satoshi_token,
+                        token,
+                        &mut last_unused_external,
+                    )?,
+                };
+                wollet.add_output(pset, &addressee)?;
+            }
+
+            Ok(())
+        };
+
+        match self.issuances {
+            Issuances::None => {}
+            Issuances::Sequential(requests) => {
                 if self.inputs_order.is_some() {
-                    return Err(Error::IssuanceUnsupportedWithInputsOrder);
-                }
-                // At least a L-BTC input for the fee was added.
-                let idx = 0;
-                let (asset, token) =
-                    wollet.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token, contract)?;
-
-                if satoshi_asset > 0 {
-                    let addressee = match address_asset {
-                        Some(address) => Recipient::from_address(satoshi_asset, &address, asset),
-                        None => wollet.addressee_external(
-                            satoshi_asset,
-                            asset,
-                            &mut last_unused_external,
-                        )?,
-                    };
-                    wollet.add_output(&mut pset, &addressee)?;
+                    return Err(Error::InputsOrderRequiresPinnedIssuance);
                 }
 
-                if satoshi_token > 0 {
-                    let addressee = match address_token {
-                        Some(address) => Recipient::from_address(satoshi_token, &address, token),
-                        None => wollet.addressee_external(
-                            satoshi_token,
-                            token,
-                            &mut last_unused_external,
-                        )?,
-                    };
-                    wollet.add_output(&mut pset, &addressee)?;
+                if requests.len() > pset.n_inputs() {
+                    return Err(Error::IssuanceInputCountMismatch);
+                }
+
+                for (idx, request) in requests.into_iter().enumerate() {
+                    set_issuance(idx, request, &mut pset)?;
                 }
             }
-            IssuanceRequest::Reissuance(asset, satoshi_asset, address_asset, issuance_tx) => {
+            Issuances::Pinned(requests) => {
+                let Some(inputs_order) = self.inputs_order.as_ref() else {
+                    return Err(Error::IssuancePinRequiresInputsOrder);
+                };
+
+                if inputs_order.len() < requests.len() {
+                    return Err(Error::IssuanceInputCountMismatch);
+                }
+
+                let mut pinned_outpoints = HashSet::new();
+                for (_, outpoint) in &requests {
+                    if !pinned_outpoints.insert(*outpoint) {
+                        return Err(Error::DuplicatedOutpoint(
+                            *outpoint,
+                            "pinned issuances".to_string(),
+                        ));
+                    }
+                }
+
+                let inputs_idx_map = inputs_order
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, outpoint)| (outpoint, idx))
+                    .collect::<HashMap<_, _>>();
+
+                for (request, outpoint) in requests {
+                    let idx = inputs_idx_map
+                        .get(&outpoint)
+                        .ok_or(Error::IssuanceOutpointNotInInputsOrder(outpoint))?;
+
+                    set_issuance(*idx, request, &mut pset)?;
+                }
+            }
+        }
+
+        // Set (re)issuance data
+        match self.reissuances {
+            ReissuanceRequest::None => {}
+
+            ReissuanceRequest::Reissuance(asset, satoshi_asset, address_asset, issuance_tx) => {
                 let issuance = if let Some(issuance_tx) = issuance_tx {
                     extract_issuances(&issuance_tx)
                         .iter()
@@ -1235,7 +1343,7 @@ impl TxBuilder {
                     &issuance.entropy,
                 )?;
 
-                let addressee = match address_asset {
+                let addressee = match *address_asset {
                     Some(address) => Recipient::from_address(satoshi_asset, &address, asset),
                     None => wollet.addressee_external(
                         satoshi_asset,
@@ -1637,6 +1745,14 @@ impl<'a> WolletTxBuilder<'a> {
                 token_receiver,
                 contract,
             )?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::add_issuance()`]
+    pub fn add_issuance(self, request_builder: IssuanceRequest) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.add_issuance(request_builder)?,
         })
     }
 

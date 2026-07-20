@@ -101,13 +101,13 @@ mod descriptor;
 mod domain;
 mod elements_wallet;
 mod error;
+mod issuance;
 mod liquidex;
 mod model;
 pub mod pegin;
-mod tx_details;
-
 #[cfg(feature = "prices")]
 mod pos;
+mod tx_details;
 
 mod pset_create;
 #[cfg(feature = "registry")]
@@ -139,6 +139,7 @@ pub use crate::tx_details::{TxDetails, TxOpt, TxOutDetails, TxsOpt};
 pub use crate::wollet::DirectoryIdHash;
 
 // Re-export store types from lwk_common
+pub use crate::issuance::IssuanceRequest;
 pub use crate::tx_builder::{BuiltTx, TxBuilder, WolletTxBuilder};
 pub use crate::update::{DownloadTxResult, Update};
 pub use crate::util::EC;

@@ -8,6 +8,7 @@ use std::{
 use crate::{
     blockdata::address::BitcoinAddress, store::ForeignStoreLink, Address, Bolt11Invoice,
     ElectrumClient, EsploraClient, Invoice, LightningPayment, LwkError, Mnemonic, Network,
+    WaterfallsClient,
 };
 use log::{Level, Metadata, Record};
 use lwk_boltz::{
@@ -300,6 +301,7 @@ impl QuoteBuilder {
 pub enum AnyClient {
     Electrum(Arc<ElectrumClient>),
     Esplora(Arc<EsploraClient>),
+    Waterfalls(Arc<WaterfallsClient>),
 }
 
 #[uniffi::export]
@@ -312,6 +314,12 @@ impl AnyClient {
     #[uniffi::constructor]
     pub fn from_esplora(client: Arc<EsploraClient>) -> Self {
         AnyClient::Esplora(client)
+    }
+
+    /// Create a generic client backed by Waterfalls.
+    #[uniffi::constructor]
+    pub fn from_waterfalls(client: Arc<WaterfallsClient>) -> Self {
+        AnyClient::Waterfalls(client)
     }
 }
 
@@ -326,6 +334,7 @@ impl BoltzSession {
         let client_arc = match client {
             AnyClient::Electrum(c) => Arc::new(AnyClient::Electrum(c.clone())),
             AnyClient::Esplora(c) => Arc::new(AnyClient::Esplora(c.clone())),
+            AnyClient::Waterfalls(c) => Arc::new(AnyClient::Waterfalls(c.clone())),
         };
         let builder = BoltzSessionBuilder {
             network: Arc::new(*network),
@@ -386,6 +395,13 @@ impl BoltzSession {
                     network_value,
                 );
                 lwk_boltz::clients::AnyClient::Esplora(Arc::new(boltz_client))
+            }
+            AnyClient::Waterfalls(client) => {
+                let boltz_client = lwk_boltz::clients::WaterfallsClient::from_client(
+                    Arc::new(client.clone_async_client()?),
+                    network_value,
+                );
+                lwk_boltz::clients::AnyClient::Waterfalls(Arc::new(boltz_client))
             }
         };
 

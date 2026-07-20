@@ -25,6 +25,9 @@ pub struct EsploraClient {
 #[derive(uniffi::Object, Debug)]
 pub struct WaterfallsClient {
     pub(crate) inner: Mutex<blocking::WaterfallsClient>,
+
+    /// The builder used to create the client, used to create a new client with the same configuration.
+    pub(crate) builder: lwk_wollet::clients::WaterfallsClientBuilder,
 }
 
 /// A blocking Waterfalls descriptor subscription stream.
@@ -330,9 +333,10 @@ impl WaterfallsClient {
     #[uniffi::constructor]
     pub fn new(url: &str, network: &Network) -> Result<Arc<Self>, LwkError> {
         let builder = lwk_wollet::clients::WaterfallsClientBuilder::new(url, network.into());
-        let client = builder.build_blocking()?;
+        let client = builder.clone().build_blocking()?;
         Ok(Arc::new(Self {
             inner: Mutex::new(client),
+            builder,
         }))
     }
 
@@ -340,9 +344,10 @@ impl WaterfallsClient {
     #[uniffi::constructor]
     pub fn from_builder(builder: WaterfallsClientBuilder) -> Result<Arc<Self>, LwkError> {
         let builder = lwk_wollet::clients::WaterfallsClientBuilder::from(builder);
-        let client = builder.build_blocking()?;
+        let client = builder.clone().build_blocking()?;
         Ok(Arc::new(Self {
             inner: Mutex::new(client),
+            builder,
         }))
     }
 
@@ -419,6 +424,13 @@ impl EsploraClient {
     /// Create a new esplora async client with the same connection parameters
     #[allow(unused)] // TODO remove once lwk_boltz is integrated
     pub(crate) fn clone_async_client(&self) -> Result<asyncr::EsploraClient, LwkError> {
+        Ok(self.builder.clone().build()?)
+    }
+}
+
+impl WaterfallsClient {
+    /// Create a new Waterfalls async client with the same connection parameters.
+    pub(crate) fn clone_async_client(&self) -> Result<asyncr::WaterfallsClient, LwkError> {
         Ok(self.builder.clone().build()?)
     }
 }

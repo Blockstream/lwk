@@ -120,3 +120,39 @@ wollet.wait_for_tx(txid, client)
 
 assert(wollet.balance()[asset_id] == issued_asset + reissue_asset - burn_asset)
 
+# Issue two assets in the same transaction
+txid = node.send_to_address(wollet.address(2).address(), funded_satoshi, asset=None)
+wollet.wait_for_tx(txid, client)
+
+lbtc_utxos = [u for u in wollet.utxos() if u.unblinded().asset() == policy_asset]
+assert len(lbtc_utxos) == 2
+
+builder = network.tx_builder()
+builder.add_issuance(IssuanceRequest(30, 3))
+builder.add_issuance(IssuanceRequest(40, 4))
+builder.set_wallet_utxos([u.outpoint() for u in lbtc_utxos])
+unsigned_pset = builder.finish(wollet)
+
+assert len(unsigned_pset.inputs()) == 2
+issuance0 = unsigned_pset.inputs()[0].issuance()
+issuance1 = unsigned_pset.inputs()[1].issuance()
+assert issuance0.asset_satoshi() == 30
+assert issuance0.token_satoshi() == 3
+assert issuance1.asset_satoshi() == 40
+assert issuance1.token_satoshi() == 4
+
+multi_asset0, multi_token0 = issuance0.asset(), issuance0.token()
+multi_asset1, multi_token1 = issuance1.asset(), issuance1.token()
+assert multi_asset0 != multi_asset1
+
+signed_pset = signer.sign(unsigned_pset)
+finalized_pset = wollet.finalize(signed_pset)
+tx = finalized_pset.extract_tx()
+txid = client.broadcast(tx)
+wollet.wait_for_tx(txid, client)
+
+assert(wollet.balance()[multi_asset0] == 30)
+assert(wollet.balance()[multi_token0] == 3)
+assert(wollet.balance()[multi_asset1] == 40)
+assert(wollet.balance()[multi_token1] == 4)
+

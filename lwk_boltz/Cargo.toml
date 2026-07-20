@@ -37,6 +37,9 @@ bech32 = { version = "0.9.1", default-features = false } # can't find a way in n
 [target.'cfg(all(target_family = "wasm", target_os = "unknown"))'.dependencies]
 wasm-bindgen-futures = "0.4.50"
 
+[target.'cfg(not(all(target_family = "wasm", target_os = "unknown")))'.dependencies]
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+
 [dev-dependencies]
 reqwest = { version = "0.12", default-features = false, features = ["json"] }
 base64 = "0.22"

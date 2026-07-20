@@ -171,6 +171,11 @@ impl BoltzSession {
         random_preimages: bool,
         store: Option<Arc<dyn DynStore>>,
     ) -> Result<Self, Error> {
+        // Some downstream dependency graphs enable both rustls crypto providers. Select ring
+        // explicitly before constructing the Electrum, HTTP, or WebSocket clients.
+        #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+        let _ = rustls::crypto::ring::default_provider().install_default();
+
         let liquid_chain = elements_network_to_liquid_chain(network);
 
         // TODO for the sake of wasm compilation this is temporarily feature gated

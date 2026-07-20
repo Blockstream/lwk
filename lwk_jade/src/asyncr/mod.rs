@@ -3,19 +3,21 @@ use std::{collections::HashMap, io::ErrorKind};
 
 use crate::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant};
 use crate::protocol::{
-    AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams, GenericMethod,
-    GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, IsAuthResult, Request,
-    SignMessageParams, UpdatePinserverParams, VersionInfoResult,
+    AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams, FullRequest, GenericMethod,
+    GetExtendedDataParams, GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams,
+    IsAuthResult, Request, Response, SignMessageParams, UpdatePinserverParams, VersionInfoResult,
 };
 use crate::register_multisig::{
     GetRegisteredMultisigParams, RegisterMultisigParams, RegisteredMultisig,
     RegisteredMultisigDetails,
 };
-use crate::sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
+use crate::sign_liquid_tx::{SignLiquidTxParams, SignPsbtParams, TxInputParams};
 use crate::{json_to_cbor, try_parse_response, vec_to_derivation_path, Error, Result};
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
+use elements::pset::PartiallySignedTransaction;
 use elements_miniscript::slip77;
 use lwk_common::{Network, Stream};
+use rand::RngCore;
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
 use tokio::sync::Mutex;
@@ -25,7 +27,7 @@ mod sign_pset;
 #[derive(Debug)]
 pub struct Jade<S: Stream> {
     /// Jade working via emulator(tcp), physical(serial/bluetooth)
-    stream: S,
+    stream: Mutex<S>,
 
     /// The network
     network: Network,
@@ -75,10 +77,38 @@ impl Jade<JadeTcpStream> {
     }
 }
 
+async fn read_loop<S: Stream<Error = Error>, T>(stream: &S) -> Result<Response<T>>
+where
+    T: std::fmt::Debug + DeserializeOwned,
+{
+    let mut rx = [0u8; 4096];
+    let mut total = 0;
+    loop {
+        match stream.read(&mut rx[total..]).await {
+            Ok(0) => {
+                return Err(Error::IoError(std::io::Error::new(
+                    ErrorKind::UnexpectedEof,
+                    "connection closed or buffer full",
+                )))
+            }
+
+            Ok(len) => {
+                total += len;
+                let reader = &rx[..total];
+                if let Some(value) = try_parse_response::<T>(reader) {
+                    return value;
+                }
+            }
+            Err(Error::IoError(e)) if e.kind() == ErrorKind::Interrupted => (),
+            Err(e) => return Err(e),
+        }
+    }
+}
+
 impl<S: Stream<Error = Error>> Jade<S> {
     pub fn new(stream: S, network: Network) -> Self {
         Self {
-            stream,
+            stream: Mutex::new(stream),
             network,
             cached_xpubs: Mutex::new(HashMap::new()),
             multisigs_details: Mutex::new(None),
@@ -323,8 +353,87 @@ impl<S: Stream<Error = Error>> Jade<S> {
         self.network
     }
 
+    pub async fn sign_psbt(&self, params: SignPsbtParams) -> Result<Vec<u8>> {
+        let stream = self.stream.lock().await;
+        self.check_network(params.network)?;
+
+        let msgid = rand::thread_rng().next_u32().to_string();
+
+        let request = FullRequest {
+            id: msgid.clone(),
+            method: "sign_psbt".to_string(),
+            params: Request::SignPsbt(params),
+        };
+
+        let buf = serde_cbor::to_vec(&request)?;
+        stream.write(&buf).await?;
+
+        let mut result = vec![];
+        let mut newid = msgid.clone();
+
+        loop {
+            let resp: Response<ByteBuf> = read_loop(&*stream).await?;
+
+            if resp.id != newid {
+                return Err(Error::Generic(format!(
+                    "reply id mismatch: expected {newid}, got {}",
+                    resp.id
+                )));
+            }
+
+            if let Some(error) = resp.error {
+                return Err(Error::JadeError(error));
+            }
+            if let Some(chunk) = resp.result {
+                result.extend_from_slice(&chunk);
+            }
+            let seqnum = resp.seqnum.unwrap_or(1);
+            let seqlen = resp.seqlen.unwrap_or(1);
+
+            if seqnum >= seqlen {
+                break;
+            }
+
+            newid = rand::thread_rng().next_u32().to_string();
+            let ext_request = FullRequest {
+                id: newid.clone(),
+                method: "get_extended_data".to_string(),
+                params: Request::GetExtendedData(GetExtendedDataParams {
+                    origid: msgid.clone(),
+                    orig: "sign_psbt".to_string(),
+                    seqnum: seqnum + 1,
+                    seqlen,
+                }),
+            };
+            let buf = serde_cbor::to_vec(&ext_request)?;
+            stream.write(&buf).await?;
+        }
+
+        Ok(result)
+    }
+
+    /// Sign a PSET using Jade's `sign_psbt` RPC method.
+    ///
+    /// This is an alternative to [`Self::sign`] that uses Jade's
+    /// `sign_psbt` API instead of the `sign_liquid_tx` protocol.
+    pub async fn sign_v2(
+        &self,
+        pset: &PartiallySignedTransaction,
+    ) -> Result<PartiallySignedTransaction> {
+        let pset_bytes = elements::encode::serialize(pset);
+        let params = SignPsbtParams {
+            network: self.network,
+            psbt: pset_bytes,
+            additional_info: None,
+        };
+        let signed_bytes = self.sign_psbt(params).await?;
+        let signed_pset: PartiallySignedTransaction = elements::encode::deserialize(&signed_bytes)
+            .map_err(|e| Error::Generic(e.to_string()))?;
+        Ok(signed_pset)
+    }
+
     /// Returns a reference to the underlying transport stream.
-    pub fn stream(&self) -> &S {
+    pub fn stream(&self) -> &Mutex<S> {
         &self.stream
     }
 
@@ -345,32 +454,19 @@ impl<S: Stream<Error = Error>> Jade<S> {
     where
         T: std::fmt::Debug + DeserializeOwned,
     {
+        let stream = self.stream.lock().await;
         if let Some(network) = request.network() {
             self.check_network(network)?;
         }
         let buf = request.serialize()?;
 
-        self.stream.write(&buf).await?;
+        stream.write(&buf).await?;
 
-        let mut rx = [0u8; 4096];
-
-        let mut total = 0;
-        loop {
-            match self.stream.read(&mut rx[total..]).await {
-                Ok(len) => {
-                    total += len;
-                    let reader = &rx[..total];
-
-                    if let Some(value) = try_parse_response(reader) {
-                        return value;
-                    }
-                }
-                Err(Error::IoError(e)) if e.kind() == ErrorKind::Interrupted => (),
-
-                Err(e) => {
-                    return Err(e);
-                }
-            }
+        let resp: Response<T> = read_loop(&*stream).await?;
+        match (resp.result, resp.error) {
+            (Some(result), _) => Ok(result),
+            (_, Some(error)) => Err(Error::JadeError(error)),
+            _ => Err(Error::JadeNeitherErrorNorResult),
         }
     }
 }

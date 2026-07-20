@@ -57,11 +57,8 @@ impl JadeWebSocket {
 
     pub async fn disconnect(&self) -> Result<(), Error> {
         let _ = self.inner.logout().await;
-        self.inner
-            .stream()
-            .websocket()
-            .close()
-            .map_err(Error::JsVal)?;
+        let stream = self.inner.stream().lock().await;
+        stream.websocket().close().map_err(Error::JsVal)?;
         Ok(())
     }
 

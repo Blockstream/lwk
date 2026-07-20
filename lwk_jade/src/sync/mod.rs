@@ -5,15 +5,15 @@ use std::{collections::HashMap, io::ErrorKind};
 
 use crate::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant};
 use crate::protocol::{
-    AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams, GenericMethod,
-    GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, IsAuthResult, Request,
-    SignMessageParams, UpdatePinserverParams, VersionInfoResult,
+    AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams, FullRequest, GenericMethod,
+    GetExtendedDataParams, GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams,
+    IsAuthResult, Request, Response, SignMessageParams, UpdatePinserverParams, VersionInfoResult,
 };
 use crate::register_multisig::{
     GetRegisteredMultisigParams, RegisterMultisigParams, RegisteredMultisig,
     RegisteredMultisigDetails,
 };
-use crate::sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
+use crate::sign_liquid_tx::{SignLiquidTxParams, SignPsbtParams, TxInputParams};
 use crate::{
     derivation_path_to_vec, json_to_cbor, try_parse_response, vec_to_derivation_path, Error, Result,
 };
@@ -23,6 +23,7 @@ use elements::bitcoin::sign_message::MessageSignature;
 use elements::pset::PartiallySignedTransaction;
 use elements_miniscript::slip77::{self, MasterBlindingKey};
 use lwk_common::{Network, Signer};
+use rand::RngCore;
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
 
@@ -51,6 +52,36 @@ pub struct Jade {
 
     /// Cached multisigs details
     multisigs_details: Mutex<Option<Vec<RegisteredMultisigDetails>>>,
+}
+
+fn read_loop<T>(conn: &mut Connection) -> Result<Response<T>>
+where
+    T: std::fmt::Debug + DeserializeOwned,
+{
+    let mut rx = [0u8; 4096];
+    let mut total = 0;
+    loop {
+        match conn.read(&mut rx[total..]) {
+            Ok(0) => {
+                return Err(Error::IoError(std::io::Error::new(
+                    ErrorKind::UnexpectedEof,
+                    "connection closed or buffer full",
+                )))
+            }
+            Ok(len) => {
+                total += len;
+                let reader = &rx[..total];
+                if let Some(value) = try_parse_response::<T>(reader) {
+                    return value;
+                }
+            }
+            Err(e) => {
+                if e.kind() != ErrorKind::Interrupted {
+                    return Err(Error::IoError(e));
+                }
+            }
+        }
+    }
 }
 
 impl Jade {
@@ -357,6 +388,84 @@ impl Jade {
         self.network
     }
 
+    pub fn sign_psbt(&self, params: SignPsbtParams) -> Result<Vec<u8>> {
+        self.check_network(params.network)?;
+
+        let mut rng = rand::thread_rng();
+        let msgid = rng.next_u32().to_string();
+
+        let request = FullRequest {
+            id: msgid.clone(),
+            method: "sign_psbt".to_string(),
+            params: Request::SignPsbt(params),
+        };
+
+        let mut conn = self.conn.lock()?;
+        let buf = serde_cbor::to_vec(&request)?;
+        log::debug!("sign_psbt request: {buf_len} bytes", buf_len = buf.len());
+        conn.write_all(&buf)?;
+
+        let mut result = vec![];
+        let mut newid = msgid.clone();
+
+        loop {
+            let resp = read_loop::<ByteBuf>(&mut conn)?;
+
+            if resp.id != newid {
+                return Err(Error::Generic(format!(
+                    "reply id mismatch: expected {newid}, got {}",
+                    resp.id
+                )));
+            }
+
+            if let Some(error) = resp.error {
+                return Err(Error::JadeError(error));
+            }
+            if let Some(chunk) = resp.result {
+                result.extend_from_slice(&chunk);
+            }
+            let seqnum = resp.seqnum.unwrap_or(1);
+            let seqlen = resp.seqlen.unwrap_or(1);
+
+            if seqnum >= seqlen {
+                break;
+            }
+
+            newid = rng.next_u32().to_string();
+            let ext_request = FullRequest {
+                id: newid.clone(),
+                method: "get_extended_data".to_string(),
+                params: Request::GetExtendedData(GetExtendedDataParams {
+                    origid: msgid.clone(),
+                    orig: "sign_psbt".to_string(),
+                    seqnum: seqnum + 1,
+                    seqlen,
+                }),
+            };
+            let buf = serde_cbor::to_vec(&ext_request)?;
+            conn.write_all(&buf)?;
+        }
+
+        Ok(result)
+    }
+
+    /// Sign a PSET using Jade's `sign_psbt` RPC method.
+    ///
+    /// This is an alternative to [`Self::sign`] that uses Jade's
+    /// `sign_psbt` API instead of the `sign_liquid_tx` protocol.
+    pub fn sign_v2(&self, pset: &PartiallySignedTransaction) -> Result<PartiallySignedTransaction> {
+        let pset_bytes = elements::encode::serialize(pset);
+        let params = SignPsbtParams {
+            network: self.network,
+            psbt: pset_bytes,
+            additional_info: None,
+        };
+        let signed_bytes = self.sign_psbt(params)?;
+        let signed_pset: PartiallySignedTransaction = elements::encode::deserialize(&signed_bytes)
+            .map_err(|e| Error::Generic(e.to_string()))?;
+        Ok(signed_pset)
+    }
+
     pub(crate) fn send<T>(&self, request: Request) -> Result<T>
     where
         T: std::fmt::Debug + DeserializeOwned,
@@ -370,25 +479,11 @@ impl Jade {
 
         conn.write_all(&buf)?;
 
-        let mut rx = [0u8; 4096];
-
-        let mut total = 0;
-        loop {
-            match conn.read(&mut rx[total..]) {
-                Ok(len) => {
-                    total += len;
-                    let reader = &rx[..total];
-
-                    if let Some(value) = try_parse_response(reader) {
-                        return value;
-                    }
-                }
-                Err(e) => {
-                    if e.kind() != ErrorKind::Interrupted {
-                        return Err(Error::IoError(e));
-                    }
-                }
-            }
+        let resp = read_loop::<T>(&mut conn)?;
+        match (resp.result, resp.error) {
+            (Some(result), _) => Ok(result),
+            (_, Some(error)) => Err(Error::JadeError(error)),
+            _ => Err(Error::JadeNeitherErrorNorResult),
         }
     }
 }

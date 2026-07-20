@@ -96,6 +96,8 @@ mod test {
             id: "0".to_string(),
             result: Some(text.clone()),
             error: None,
+            seqnum: None,
+            seqlen: None,
         };
         let mut data = Vec::new();
         serde_cbor::to_writer(&mut data, &resp).unwrap();

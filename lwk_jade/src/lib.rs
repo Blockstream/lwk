@@ -71,25 +71,19 @@ pub const JADE_DEVICE_IDS: [(u16, u16); 6] = [
 
 const CHANGE_CHAIN: ChildNumber = ChildNumber::Normal { index: 1 };
 
-fn try_parse_response<T>(reader: &[u8]) -> Option<Result<T>>
+fn try_parse_response<T>(reader: &[u8]) -> Option<Result<protocol::Response<T>>>
 where
     T: std::fmt::Debug + serde::de::DeserializeOwned,
 {
     match serde_cbor::from_reader::<protocol::Response<T>, &[u8]>(reader) {
         Ok(r) => {
-            if let Some(result) = r.result {
-                log::debug!(
-                    "\n<---\t{:?}\n\t({} bytes) {}",
-                    &result,
-                    reader.len(),
-                    hex::encode(reader)
-                );
-                return Some(Ok(result));
-            }
-            if let Some(error) = r.error {
-                return Some(Err(Error::JadeError(error)));
-            }
-            return Some(Err(Error::JadeNeitherErrorNorResult));
+            log::debug!(
+                "\n<---\t{:?}\n\t({} bytes) {}",
+                &r,
+                reader.len(),
+                hex::encode(reader)
+            );
+            return Some(Ok(r));
         }
 
         Err(e) => {

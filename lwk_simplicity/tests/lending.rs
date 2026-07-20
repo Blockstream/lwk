@@ -235,7 +235,7 @@ async fn test_borrow_flow() {
     let mut pset = accept.into_inner();
     lender_signer.sign(&mut pset).unwrap();
     let tx = lender_session.finalize(&mut pset).unwrap();
-    client.broadcast(&tx).unwrap();
+    let acceptance_txid = client.broadcast(&tx).unwrap();
 
     env.elementsd_generate(1);
 
@@ -259,5 +259,33 @@ async fn test_borrow_flow() {
     assert!(
         found_active,
         "Offer did not become Active within the timeout"
+    );
+    // Claim principal as borrower
+    borrower_session.sync().unwrap();
+
+    let claim = borrower_session
+        .claim_principal(
+            ClaimPrincipalDetails {
+                acceptance_txid,
+                protocol_fee_keeper_asset_id,
+            },
+            100.0,
+        )
+        .unwrap();
+
+    let mut pset = claim.into_inner();
+    borrower_signer.sign(&mut pset).unwrap();
+    let tx = borrower_session.finalize(&mut pset).unwrap();
+    client.broadcast(&tx).unwrap();
+
+    env.elementsd_generate(1);
+
+    borrower_session.sync().unwrap();
+
+    let balance = borrower_session.wollet().balance().unwrap();
+    let principal_balance = balance.get(&principal_asset_id).copied().unwrap_or(0);
+    assert!(
+        principal_balance >= 10000,
+        "borrower should have received the principal: got {principal_balance}, expected at least 10000"
     );
 }

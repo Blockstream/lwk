@@ -20,6 +20,7 @@ use simplex::transaction::{
 };
 
 use lending_contracts::programs::{
+    asset_auth::{AssetAuth, AssetAuthParameters, AssetAuthWitnessParams},
     issuance_factory::{IssuanceFactory, IssuanceFactoryParameters},
     lending::{LendingOfferParameters, OfferParameters},
 };
@@ -532,6 +533,158 @@ impl LendingSession {
         Ok(AcceptOfferTransaction { pset })
     }
 
+    /// Claim the principal asset locked in the AssetAuth output created during acceptance.
+    ///
+    /// The borrower uses borrower NFT to unlock the AssetAuth covenant, receiving
+    /// both the borrower NFT back and the principal asset.
+    ///
+    /// # Errors
+    /// Returns an error if the wallet has no suitable fee UTXO, the acceptance or creation
+    /// transaction cannot be fetched, or the transaction construction fails.
+    pub fn claim_principal(
+        &mut self,
+        details: ClaimPrincipalDetails,
+        fee_rate: f32,
+    ) -> Result<ClaimPrincipalTransaction, LendingError> {
+        const PRINCIPAL_ASSET_AUTH_VOUT: u32 = 1;
+        const BORROWER_NFT_OUTPUT_INDEX: u32 = 0;
+        const BORROWER_NFT_INPUT_INDEX: u32 = 1;
+
+        const FEE_ESTIMATE: u64 = 250;
+
+        let policy_asset = *self.network.policy_asset();
+        let simplex_network = to_simplicity_network(self.network);
+
+        let acceptance_tx = self
+            .client
+            .get_transaction(details.acceptance_txid)
+            .map_err(|e| LendingError::Generic(format!("failed to fetch acceptance tx: {e}")))?;
+
+        let creation_txid = acceptance_tx
+            .input
+            .first()
+            .ok_or_else(|| LendingError::Generic("acceptance tx has no inputs".into()))?
+            .previous_output
+            .txid;
+
+        let creation_tx = self
+            .client
+            .get_transaction(creation_txid)
+            .map_err(|e| LendingError::Generic(format!("failed to fetch creation tx: {e}")))?;
+
+        let offer = LendingOffer::try_from_tx(
+            &creation_tx,
+            details.protocol_fee_keeper_asset_id,
+            simplex_network,
+        )
+        .map_err(|e| {
+            LendingError::Generic(format!(
+                "failed to parse pending offer from creation tx: {e}"
+            ))
+        })?;
+
+        let offer_params = *offer.get_parameters();
+
+        let principal_auth_txout = acceptance_tx
+            .output
+            .get(PRINCIPAL_ASSET_AUTH_VOUT as usize)
+            .ok_or_else(|| LendingError::Generic("principal AssetAuth output not found".into()))?
+            .clone();
+
+        let principal_auth_utxo = UTXO {
+            outpoint: OutPoint {
+                txid: details.acceptance_txid,
+                vout: PRINCIPAL_ASSET_AUTH_VOUT,
+            },
+            txout: principal_auth_txout,
+            secrets: None,
+        };
+
+        let asset_auth = AssetAuth::new(AssetAuthParameters {
+            asset_id: offer_params.borrower_nft_asset_id,
+            asset_amount: 1,
+            with_asset_burn: false,
+            network: simplex_network,
+        });
+
+        let borrower_nft_utxo =
+            self.get_explicit_utxo(offer_params.borrower_nft_asset_id, 1, &[])?;
+
+        let fee_funding_utxo =
+            self.get_utxo(policy_asset, FEE_ESTIMATE, &[borrower_nft_utxo.outpoint])?;
+
+        let change_addr = self.wollet.change(None)?;
+        let change_script = change_addr.address().script_pubkey();
+        let change_blinding =
+            change_addr
+                .address()
+                .blinding_pubkey
+                .ok_or(LendingError::Generic(
+                    "change address has no blinding key".into(),
+                ))?;
+        let change_pk = bitcoin::PublicKey::from(change_blinding);
+
+        let user_addr = self.wollet.address(None)?;
+        let user_script = user_addr.address().script_pubkey();
+        let user_blinding = user_addr
+            .address()
+            .blinding_pubkey
+            .ok_or(LendingError::Generic(
+                "user address has no blinding key".into(),
+            ))?;
+
+        let user_pk = bitcoin::PublicKey::from(user_blinding);
+
+        let mut ft = FinalTransaction::new();
+
+        asset_auth.attach_unlocking(
+            &mut ft,
+            principal_auth_utxo,
+            AssetAuthWitnessParams::new(BORROWER_NFT_INPUT_INDEX, BORROWER_NFT_OUTPUT_INDEX),
+        );
+
+        ft.add_input(
+            PartialInput::new(borrower_nft_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        ft.add_input(
+            PartialInput::new(fee_funding_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        ft.add_output(PartialOutput::new(
+            user_script.clone(),
+            1,
+            offer_params.borrower_nft_asset_id,
+        ));
+
+        ft.add_output(
+            PartialOutput::new(
+                user_script,
+                offer_params.offer_parameters.principal_amount,
+                offer_params.principal_asset_id,
+            )
+            .with_blinding_key(user_pk),
+        );
+
+        let _ = self.add_fee(&mut ft, change_script, change_pk, fee_rate)?;
+
+        let (mut pset, inp_txout_sec) = ft.extract_pst();
+
+        let mut rng = thread_rng();
+        pset.blind_last(&mut rng, &EC, &inp_txout_sec)
+            .map_err(|e| LendingError::Generic(format!("blinding error: {e}")))?;
+
+        self.wollet
+            .add_details(&mut pset)
+            .map_err(LendingError::Wallet)?;
+
+        self.finalize_program_inputs(&ft, &mut pset)?;
+
+        Ok(ClaimPrincipalTransaction { pset })
+    }
+
     pub fn claim_partial_repayment(&self) -> Result<(), LendingError> {
         todo!()
     }
@@ -645,6 +798,37 @@ impl LendingSession {
         })
     }
 
+    /// Return simplex [`UTXO`] for an explicit (non-confidential) UTXO with given asset ID and a amount higher than given sats.
+    /// Searches for suitable UTXO inside wallet cache and could be used to discover explicit NFTs
+    ///
+    /// # Errors
+    ///
+    /// Return an error if suitable UTXO not found.
+    fn get_explicit_utxo(
+        &self,
+        asset_id: AssetId,
+        sats: u64,
+        excluded: &[OutPoint],
+    ) -> Result<UTXO, LendingError> {
+        let utxos = self.wollet.explicit_utxos().map_err(LendingError::Wallet)?;
+        let utxo = utxos
+            .into_iter()
+            .filter(|u| {
+                u.unblinded.asset == asset_id
+                    && u.unblinded.value >= sats
+                    && !excluded.contains(&u.outpoint)
+            })
+            .min_by_key(|u| u.unblinded.value)
+            .ok_or(LendingError::Generic(format!(
+                "No suitable explicit UTXO found for {asset_id} with amount {sats}"
+            )))?;
+        Ok(UTXO {
+            outpoint: utxo.outpoint,
+            txout: utxo.txout,
+            secrets: Some(utxo.unblinded),
+        })
+    }
+
     // TODO: should we add more policy_asset inputs here if fee is not fully covered?
     /// Estimate the fee for the given [`FinalTransaction`] and adds fee and change output.
     /// `fee_rate` is fee rate in sats/kvb.
@@ -696,6 +880,10 @@ impl LendingSession {
         }
 
         Ok(fee)
+    }
+
+    pub fn wollet(&self) -> &Wollet {
+        &self.wollet
     }
 }
 
@@ -814,6 +1002,11 @@ pub struct RepaymentDetails {
     pub amount_to_repay: u64,
 }
 
+pub struct ClaimPrincipalDetails {
+    pub acceptance_txid: Txid,
+    pub protocol_fee_keeper_asset_id: AssetId,
+}
+
 pub struct BorrowerAccountParams {}
 
 pub struct BorrowerAccountCreationResult {
@@ -850,6 +1043,20 @@ pub struct AcceptOfferTransaction {
 }
 
 impl AcceptOfferTransaction {
+    pub fn inner(&self) -> &PartiallySignedTransaction {
+        &self.pset
+    }
+
+    pub fn into_inner(self) -> PartiallySignedTransaction {
+        self.pset
+    }
+}
+
+pub struct ClaimPrincipalTransaction {
+    pset: PartiallySignedTransaction,
+}
+
+impl ClaimPrincipalTransaction {
     pub fn inner(&self) -> &PartiallySignedTransaction {
         &self.pset
     }

@@ -1,6 +1,7 @@
 mod amp0;
 #[cfg(feature = "amp2")]
 mod amp2;
+mod auth;
 mod blinders;
 mod blockchain_backend;
 mod elements_wallet;
@@ -4834,83 +4835,4 @@ fn test_miniscript_and_threshold() {
     wallet.send(&mut pset);
     let balance_after = wallet.balance_btc();
     assert_eq!(balance_after, balance_before - satoshi - fee);
-}
-
-/// Authenticated Explorer API: one call through the real auth path (Keycloak-issued
-/// `client_credentials` token, validated by the APISIX `openid-connect` plugin, proxied to the
-/// regtest Esplora). Also proves the gateway rejects unauthenticated calls.
-#[cfg(feature = "esplora")]
-#[tokio::test]
-#[ignore = "requires docker and the blockstream/apisix image"]
-async fn test_esplora_authenticated() {
-    let env = TestEnvBuilder::from_env()
-        .with_esplora()
-        .with_auth()
-        .build();
-    let gateway_url = env.esplora_gateway_url();
-    let network = Network::default_regtest();
-
-    // without a token the gateway rejects the call
-    let mut client = clients::asyncr::EsploraClientBuilder::new(&gateway_url, network)
-        .build()
-        .unwrap();
-    assert!(client.tip().await.is_err());
-
-    // with the token provider the token is fetched from keycloak and the call is served
-    let token_provider = clients::TokenProvider::Blockstream {
-        url: env.oidc_token_url(),
-        client_id: lwk_test_util::AUTH_CLIENT_ID.to_string(),
-        client_secret: lwk_test_util::AUTH_CLIENT_SECRET.to_string(),
-    };
-    let mut client = clients::asyncr::EsploraClientBuilder::new(&gateway_url, network)
-        .token_provider(token_provider)
-        .build()
-        .unwrap();
-    let tip = client.tip().await.unwrap();
-    assert_eq!(tip.height, 101);
-}
-
-/// Authenticated Waterfalls API through the gateway with the production plugin chain
-/// (openid-connect → oidc-identity-extractor → credit-checker): a funded wallet syncs via
-/// the waterfalls endpoint with a Keycloak token, and exhausted credits deny the calls
-/// (402 Payment Required).
-#[cfg(feature = "esplora")]
-#[test]
-#[ignore = "requires docker and the blockstream/apisix image"]
-fn test_esplora_authenticated_waterfalls() {
-    let env = TestEnvBuilder::from_env()
-        .with_waterfalls()
-        .with_auth()
-        .build();
-    let network = Network::default_regtest();
-
-    let token_provider = || clients::TokenProvider::Blockstream {
-        url: env.oidc_token_url(),
-        client_id: lwk_test_util::AUTH_CLIENT_ID.to_string(),
-        client_secret: lwk_test_util::AUTH_CLIENT_SECRET.to_string(),
-    };
-    let client = clients::WaterfallsClientBuilder::new(&env.gateway_url(), network)
-        .token_provider(token_provider())
-        .build_blocking()
-        .unwrap();
-
-    let signer = generate_signer();
-    let view_key = generate_view_key();
-    let desc = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer.xpub());
-    let mut wallet = TestWollet::new(client, &desc);
-
-    // funding syncs the wallet through the authenticated gateway
-    wallet.fund_btc(&env);
-
-    // valid token but exhausted credits -> denied with 402 Payment Required
-    env.set_credits(0);
-    let mut denied_client = clients::WaterfallsClientBuilder::new(&env.gateway_url(), network)
-        .token_provider(token_provider())
-        .build_blocking()
-        .unwrap();
-    let err = denied_client.full_scan(&wallet.wollet).unwrap_err();
-    assert!(
-        matches!(err, Error::EsploraHttpError { status: 402, .. }),
-        "expected an EsploraHttpError with status 402, got: {err:?}"
-    );
 }

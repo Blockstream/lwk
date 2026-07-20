@@ -127,10 +127,12 @@ impl TestEnvBuilder {
         self
     }
 
-    /// Start an authenticated gateway (Keycloak + redis + APISIX) fronting the Esplora
-    /// server, or the Waterfalls server when `with_waterfalls()` is also set
+    /// Start an authenticated gateway (Keycloak + redis, plus APISIX fronting the Esplora
+    /// or the Waterfalls server when one is enabled, plus the Electrum RPC proxy when
+    /// `with_electrum()` is set)
     ///
-    /// Requires `with_esplora()` and docker.
+    /// Requires docker and at least one of `with_esplora()`, `with_waterfalls()` (not
+    /// both) or `with_electrum()`.
     pub fn with_auth(mut self) -> Self {
         self.with_auth = true;
         self
@@ -161,8 +163,8 @@ impl TestEnvBuilder {
         if self.amp2_exec.is_empty() && self.with_amp2 {
             panic!("AMP2_MOCK_EXEC must be set");
         }
-        if self.with_auth && !self.with_esplora && !self.with_waterfalls {
-            panic!("auth gateway requires esplora or waterfalls, call 'with_esplora()' or 'with_waterfalls()'");
+        if self.with_auth && !self.with_esplora && !self.with_waterfalls && !self.with_electrum {
+            panic!("auth gateway requires an upstream: call 'with_esplora()', 'with_waterfalls()' or 'with_electrum()'");
         }
         if self.with_auth && self.with_esplora && self.with_waterfalls {
             panic!("auth gateway fronts either esplora or waterfalls, not both (yet): enable only one of them with 'with_auth()'");
@@ -313,38 +315,68 @@ impl TestEnvBuilder {
             None
         };
 
+        // Plain endpoint urls as served by the processes themselves; with auth (below)
+        // the gateway replaces the one it fronts.
+        let mut esplora_url = electrsd
+            .as_ref()
+            .and_then(|e| e.esplora_url.as_ref())
+            .map(|url| format!("http://{url}"));
+        let mut waterfalls_url = waterfallsd.as_ref().map(|w| w.waterfalls_url().to_string());
+        let mut electrum_url = electrsd
+            .as_ref()
+            .map(|e| format!("tcp://{}", e.electrum_url));
+
         let auth = if self.with_auth {
-            // The gateway fronts the Waterfalls server when it runs (its API is a superset
-            // used by the waterfalls clients), the plain Esplora server otherwise.
-            let upstream_url = match waterfallsd.as_ref() {
-                Some(waterfallsd) => waterfallsd.waterfalls_url().to_string(),
-                None => electrsd
-                    .as_ref()
-                    .unwrap()
-                    .esplora_url
-                    .as_ref()
-                    .unwrap()
-                    .to_string(),
+            let parse_port = |url: &str| -> u16 {
+                url.rsplit(':')
+                    .next()
+                    .and_then(|p| p.parse().ok())
+                    .unwrap_or_else(|| panic!("cannot parse port from '{url}'"))
             };
-            let upstream_port: u16 = upstream_url
-                .rsplit(':')
-                .next()
-                .and_then(|p| p.parse().ok())
-                .unwrap_or_else(|| panic!("cannot parse upstream port from '{upstream_url}'"));
-            Some(AuthStack::new(upstream_port))
+            // The gateway fronts the Waterfalls server when it runs (its API is a superset
+            // used by the waterfalls clients), the plain Esplora server when that is
+            // enabled (both together are rejected above); with neither (electrum-only),
+            // the APISIX side is skipped.
+            let upstream_port = waterfalls_url
+                .as_deref()
+                .or(esplora_url.as_deref())
+                .map(parse_port);
+            // With an Electrum server the stack also fronts it with the RPC proxy.
+            let electrum_upstream_port = if self.with_electrum {
+                electrum_url.as_deref().map(parse_port)
+            } else {
+                None
+            };
+            Some(AuthStack::new(upstream_port, electrum_upstream_port))
         } else {
             None
         };
+
+        if let Some(auth) = &auth {
+            // Tests must reach the servers through the gateways: replace the endpoint the
+            // gateway fronts (waterfalls or esplora, whichever produced `upstream_port`
+            // above) and the electrum endpoint. The raw electrum port is not exposed
+            // without `with_electrum()`, since using it would bypass auth.
+            if waterfalls_url.is_some() {
+                waterfalls_url = Some(auth.gateway_url());
+            } else if esplora_url.is_some() {
+                esplora_url = Some(auth.gateway_url());
+            }
+            electrum_url = self.with_electrum.then(|| auth.electrum_gateway_url());
+        }
 
         TestEnv {
             elementsd,
             bitcoind,
             electrsd,
-            waterfallsd,
+            _waterfallsd: waterfallsd,
             registryd,
             amp2d,
             zmq_endpoint,
             auth,
+            esplora_url,
+            waterfalls_url,
+            electrum_url,
         }
     }
 }
@@ -356,11 +388,17 @@ pub struct TestEnv {
     elementsd: BitcoinD,
     bitcoind: Option<BitcoinD>,
     electrsd: Option<ElectrsD>,
-    waterfallsd: Option<WaterfallsD>,
+    /// Kept for its `Drop`, which stops the waterfalls server process.
+    _waterfallsd: Option<WaterfallsD>,
     registryd: Option<RegistryD>,
     amp2d: Option<Amp2D>,
     zmq_endpoint: Option<String>,
     auth: Option<AuthStack>,
+    /// Public endpoint urls, resolved once in `TestEnvBuilder::build`: the gateway url
+    /// when the auth stack fronts the endpoint, the plain server url otherwise.
+    esplora_url: Option<String>,
+    waterfalls_url: Option<String>,
+    electrum_url: Option<String>,
 }
 
 impl TestEnv {
@@ -368,28 +406,28 @@ impl TestEnv {
         self.zmq_endpoint.as_ref().unwrap().clone()
     }
 
+    /// Url of the Electrum server; with `with_auth` it is the authenticated RPC proxy
+    /// fronting it
     pub fn electrum_url(&self) -> String {
-        let url = &self.electrsd.as_ref().unwrap().electrum_url;
-        format!("tcp://{url}")
+        self.electrum_url
+            .clone()
+            .expect("electrum is not enabled, call 'with_electrum()'")
     }
 
+    /// Url of the Esplora server; with `with_auth` it is the authenticated gateway
+    /// fronting it
     pub fn esplora_url(&self) -> String {
-        let url = &self
-            .electrsd
-            .as_ref()
-            .unwrap()
-            .esplora_url
-            .as_ref()
-            .unwrap();
-        format!("http://{url}")
+        self.esplora_url
+            .clone()
+            .expect("esplora is not enabled, call 'with_esplora()'")
     }
 
+    /// Url of the Waterfalls server; with `with_auth` it is the authenticated gateway
+    /// fronting it
     pub fn waterfalls_url(&self) -> String {
-        self.waterfallsd
-            .as_ref()
-            .unwrap()
-            .waterfalls_url()
-            .to_string()
+        self.waterfalls_url
+            .clone()
+            .expect("waterfalls is not enabled, call 'with_waterfalls()'")
     }
 
     pub fn registry_url(&self) -> String {
@@ -403,20 +441,15 @@ impl TestEnv {
         self.amp2d.as_ref().unwrap().url().to_string()
     }
 
-    /// Base url of the authenticated gateway fronting the Esplora server (requires `with_auth`)
-    pub fn esplora_gateway_url(&self) -> String {
-        self.gateway_url()
-    }
-
-    /// Base url of the authenticated gateway (requires `with_auth`); it fronts the Waterfalls
-    /// server when `with_waterfalls` is set, the Esplora server otherwise
-    pub fn gateway_url(&self) -> String {
-        self.auth.as_ref().unwrap().gateway_url()
-    }
-
     /// The OAuth2 token endpoint of the auth gateway (requires `with_auth`)
     pub fn oidc_token_url(&self) -> String {
         self.auth.as_ref().unwrap().token_url()
+    }
+
+    /// Fetch a `client_credentials` access token from the auth gateway's Keycloak
+    /// (requires `with_auth`)
+    pub fn fetch_oidc_token(&self) -> String {
+        self.auth.as_ref().unwrap().fetch_token()
     }
 
     /// Set the credit balance of the test user on the auth gateway (requires `with_auth`)

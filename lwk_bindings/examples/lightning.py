@@ -62,10 +62,10 @@ def get_balance(wollet):
             print(f"Asset {asset}: {amount}")
     return balance
 
-def update_balance(wollet, esplora_client, desc):
+def update_balance(wollet, waterfalls_client, desc):
     """Update balance by performing full scan"""
     print("Updating balance...")
-    update = esplora_client.full_scan(wollet)
+    update = waterfalls_client.full_scan(wollet)
     wollet.apply_update(update)
     print("Balance updated.")
     return get_balance(wollet)
@@ -224,7 +224,7 @@ def show_invoice(boltz_session, wollet):
     thread.start()
     print("Started thread to monitor invoice payment.")
 
-def pay_bolt12_offer(boltz_session, wollet, esplora_client, signer, skip_completion_thread=False):
+def pay_bolt12_offer(boltz_session, wollet, waterfalls_client, signer, skip_completion_thread=False):
     """Pay a bolt12 offer"""
     try:
         lightning_payment = read_lightning_payment("Enter BOLT12 offer: ")
@@ -271,7 +271,7 @@ def pay_bolt12_offer(boltz_session, wollet, esplora_client, signer, skip_complet
         tx = finalized_pset.extract_tx()
 
         # Broadcast the transaction
-        txid = esplora_client.broadcast(tx)
+        txid = waterfalls_client.broadcast(tx)
         print(f"Transaction broadcasted! TXID: {txid}")
 
         # Return early if skip_completion_thread is True
@@ -342,7 +342,7 @@ def resolve_lnurl():
     except Exception as e:
         print(f"Error resolving LNURL: {e}")
 
-def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_thread=False):
+def pay_invoice(boltz_session, wollet, waterfalls_client, signer, skip_completion_thread=False):
     """Pay a bolt11 invoice"""
     try:
         lightning_payment = read_lightning_payment("Enter bolt11 invoice: ")
@@ -385,7 +385,7 @@ def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_t
         tx = finalized_pset.extract_tx()
 
         # Broadcast the transaction
-        txid = esplora_client.broadcast(tx)
+        txid = waterfalls_client.broadcast(tx)
         print(f"Transaction broadcasted! TXID: {txid}")
 
 
@@ -421,7 +421,7 @@ def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_t
         tx = finalized_pset.extract_tx()
 
         # Broadcast the transaction
-        txid = esplora_client.broadcast(tx)
+        txid = waterfalls_client.broadcast(tx)
         print(f"Direct payment transaction broadcasted! TXID: {txid}")
         return
 
@@ -793,7 +793,7 @@ def get_quote(boltz_session):
         else:
             print(f"Error getting quote: {e}")
 
-def lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer):
+def lbtc_to_btc_swap(boltz_session, wollet, waterfalls_client, signer):
     """Create a swap to convert LBTC to BTC"""
     amount = read_positive_amount("Enter amount in satoshis to swap from LBTC to BTC: ")
 
@@ -843,7 +843,7 @@ def lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer):
         tx = finalized_pset.extract_tx()
 
         # Broadcast the transaction
-        txid = esplora_client.broadcast(tx)
+        txid = waterfalls_client.broadcast(tx)
         print(f"Transaction broadcasted! TXID: {txid}")
 
         # Start thread to monitor swap completion
@@ -924,7 +924,7 @@ def main():
         network=network,
         utxo_only=True,
     )
-    esplora_client = WaterfallsClient.from_builder(b)
+    waterfalls_client = WaterfallsClient.from_builder(b)
 
     signer = Signer(mnemonic, network)
     desc = signer.wpkh_slip77_descriptor()
@@ -950,7 +950,7 @@ def main():
     else:
         mnemonic_derivation_index = 26589
     mnemonic_lightning = signer.derive_bip85_mnemonic(mnemonic_derivation_index, 12) # for security reasons using a different mnemonic for the lightning session
-    lightning_client = AnyClient.from_esplora(esplora_client)
+    lightning_client = AnyClient.from_waterfalls(waterfalls_client)
     logger = MyLogger()
 
     # Use blockstream electrum instance for bitcoin, without specifying this, bull bitcoin electrum instances will be used
@@ -977,7 +977,7 @@ def main():
     boltz_session = BoltzSession.from_builder(builder)
 
     # Initial balance update
-    update_balance(wollet, esplora_client, desc)
+    update_balance(wollet, waterfalls_client, desc)
 
     # Find and restore unfinished swaps from the store
     print("Checking for unfinished swaps...")
@@ -1071,16 +1071,16 @@ def main():
 
         if choice == '1':
             print("\n=== Updating Balance ===")
-            update_balance(wollet, esplora_client, desc)
+            update_balance(wollet, waterfalls_client, desc)
         elif choice == '2':
             print("\n=== Creating Invoice ===")
             show_invoice(boltz_session, wollet)
         elif choice == '3':
             print("\n=== Paying Invoice ===")
-            pay_invoice(boltz_session, wollet, esplora_client, signer)
+            pay_invoice(boltz_session, wollet, waterfalls_client, signer)
         elif choice == '4':
             print("\n=== Paying Invoice (but don't start completion thread) ===")
-            pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_thread=True)
+            pay_invoice(boltz_session, wollet, waterfalls_client, signer, skip_completion_thread=True)
         elif choice == '5':
             print("\n=== Generating Rescue File ===")
             try:
@@ -1115,7 +1115,7 @@ def main():
             show_swaps_info(boltz_session)
         elif choice == '12':
             print("\n=== Swapping LBTC to BTC ===")
-            lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer)
+            lbtc_to_btc_swap(boltz_session, wollet, waterfalls_client, signer)
         elif choice == '13':
             print("\n=== Swapping BTC to LBTC ===")
             btc_to_lbtc_swap(boltz_session, wollet)
@@ -1171,7 +1171,7 @@ def main():
                 print("No swap ID provided")
         elif choice == '18':
             print("\n=== Paying BOLT12 Offer ===")
-            pay_bolt12_offer(boltz_session, wollet, esplora_client, signer)
+            pay_bolt12_offer(boltz_session, wollet, waterfalls_client, signer)
         elif choice == '19':
             print("\n=== Resolving BIP353 to BOLT12 Offer ===")
             resolve_bip353_offer()

@@ -336,15 +336,46 @@ impl BlockchainBackend for WaterfallsClient {
 
 #[cfg(test)]
 mod tests {
-    use std::{sync::Arc, thread};
+    use std::{
+        io::{Read, Write},
+        net::TcpListener,
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
+        thread,
+    };
 
     use crate::{
-        clients::{blocking::WaterfallsClient, WaterfallsSubscriptionEventKind},
+        clients::{
+            blocking::WaterfallsClient, WaterfallsSubscriptionEventKind,
+            WaterfallsSubscriptionUpdate,
+        },
         Network, WolletDescriptor,
     };
 
     fn descriptor() -> WolletDescriptor {
         lwk_test_util::TEST_DESCRIPTOR.parse().unwrap()
+    }
+
+    fn serve_sequential_responses(responses: Vec<&'static str>) -> (String, Arc<AtomicUsize>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let accepted = Arc::new(AtomicUsize::new(0));
+        let thread_accepted = Arc::clone(&accepted);
+
+        thread::spawn(move || {
+            for response in responses {
+                let (mut stream, _) = listener.accept().unwrap();
+                thread_accepted.fetch_add(1, Ordering::Relaxed);
+
+                let mut request = [0u8; 1024];
+                let _ = stream.read(&mut request);
+                let _ = stream.write_all(response.as_bytes());
+            }
+        });
+
+        (format!("http://{addr}"), accepted)
     }
 
     #[test]
@@ -383,5 +414,29 @@ mod tests {
         subscription.close();
 
         assert!(worker.join().unwrap().is_none());
+    }
+
+    #[test]
+    fn blocking_subscribe_reconnecting_recovers_after_error() {
+        let (base_url, accepted) = serve_sequential_responses(vec![
+            "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n: ready\n\n",
+            "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+            "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n: ready\n\n",
+        ]);
+        let mut client = WaterfallsClient::new(&base_url, Network::Liquid).unwrap();
+        client.avoid_encryption();
+
+        let subscription = client.subscribe_reconnecting(&descriptor()).unwrap();
+
+        assert_eq!(
+            subscription.next_update().unwrap(),
+            Some(WaterfallsSubscriptionUpdate::Disconnected { error: None })
+        );
+        assert!(subscription.next_update().is_err());
+        assert_eq!(
+            subscription.next_update().unwrap(),
+            Some(WaterfallsSubscriptionUpdate::Reconnected)
+        );
+        assert_eq!(accepted.load(Ordering::Relaxed), 3);
     }
 }

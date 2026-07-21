@@ -1580,6 +1580,110 @@ impl TxBuilder {
     }
 }
 
+impl Wollet {
+    /// Blind an externally-constructed PSET whose confidential inputs belong to this wallet.
+    ///
+    /// This is the counterpart of [`TxBuilder::finish`] for the case where the transaction
+    /// skeleton (input selection and outputs) is assembled elsewhere and only the blinding
+    /// and signing metadata are missing. The wallet alone holds the input blinding secrets,
+    /// so blinding of a spend of its confidential UTXOs must happen here.
+    ///
+    /// The provided PSET is expected to be *unblinded*:
+    /// * every input references a wallet-owned UTXO by outpoint;
+    /// * every output carries explicit `asset` and `amount`;
+    /// * every output that must be confidential carries a `blinding_key` (the explicit fee
+    ///   output, and any other explicit output, must not).
+    ///
+    /// The input side is rebuilt from wallet state (so the blinding proofs and secrets are
+    /// produced by the wallet rather than trusted from the caller), the outputs are preserved
+    /// as given, the outputs are blinded so the commitments balance, and the descriptor
+    /// signing metadata is filled in. The returned PSET is ready to be signed and finalized.
+    ///
+    /// Errors if any input does not correspond to a wallet UTXO or if the values do not
+    /// balance.
+    pub fn blind(
+        &self,
+        pset: &PartiallySignedTransaction,
+    ) -> Result<PartiallySignedTransaction, Error> {
+        let utxos = self.utxos_map()?;
+
+        let mut out_pset = PartiallySignedTransaction::new_v2();
+        set_genesis_hash(&mut out_pset, &self.network());
+
+        let mut inp_txout_sec: HashMap<usize, TxOutSecrets> = HashMap::new();
+        let mut inp_weight = 0usize;
+
+        for input in pset.inputs() {
+            let outpoint = OutPoint::new(input.previous_txid, input.previous_output_index);
+            let utxo = utxos
+                .get(&outpoint)
+                .ok_or(Error::MissingWalletUtxo(outpoint))?;
+            let idx = self.add_input(
+                &mut out_pset,
+                &mut inp_txout_sec,
+                &mut inp_weight,
+                utxo,
+                true,
+            )?;
+            // Preserve a caller-requested sighash, if any.
+            if input.sighash_type.is_some() {
+                out_pset.inputs_mut()[idx].sighash_type = input.sighash_type;
+            }
+        }
+
+        for output in pset.outputs() {
+            let mut output = output.clone();
+            // A confidential output needs a blinder assigned; default to the first input.
+            if output.blinding_key.is_some() && output.blinder_index.is_none() {
+                output.blinder_index = Some(0);
+            }
+            out_pset.add_output(output);
+        }
+
+        // Blind the transaction. Same elements 0.26 path used by `finish_inner`, since
+        // `blind_last` is only usable there until elements-miniscript catches up to 0.26.
+        let mut rng = thread_rng();
+        use elements26::confidential::{
+            AssetBlindingFactor as Abf26, ValueBlindingFactor as Vbf26,
+        };
+        use elements26::pset::PartiallySignedTransaction as Pset26;
+        use std::str::FromStr;
+        let mut pset26 = Pset26::from_str(&out_pset.to_string()).expect("from elements25");
+        let inp_txout_sec: HashMap<usize, elements26::TxOutSecrets> = inp_txout_sec
+            .iter()
+            .map(|(i, s)| {
+                let asset = elements26::AssetId::from_slice(s.asset.into_inner().as_ref())
+                    .expect("from elements25");
+                let abf =
+                    Abf26::from_slice(s.asset_bf.into_inner().as_ref()).expect("from elements25");
+                let vbf =
+                    Vbf26::from_slice(s.value_bf.into_inner().as_ref()).expect("from elements25");
+                let s = elements26::TxOutSecrets::new(asset, abf, s.value, vbf);
+                (*i, s)
+            })
+            .collect();
+        pset26
+            .blind_last(&mut rng, &EC, &inp_txout_sec)
+            .map_err(|e| Error::Generic(format!("elements26 blind error: {e}")))?;
+        // erase all non witness utxo surjection and range proofs
+        // this appears to be necessary for pre-segwit inputs
+        for input in pset26.inputs_mut() {
+            if let Some(ref mut tx) = &mut input.non_witness_utxo {
+                for output in &mut tx.output {
+                    output.witness = Default::default();
+                }
+            }
+        }
+        let mut out_pset =
+            PartiallySignedTransaction::from_str(&pset26.to_string()).expect("from elements25");
+
+        // Fill in bip32 derivation / key origin so the PSET can be signed.
+        self.add_details(&mut out_pset)?;
+
+        Ok(out_pset)
+    }
+}
+
 /// Transaction with metadata
 ///
 /// **Experimental**: this API might change without notice.

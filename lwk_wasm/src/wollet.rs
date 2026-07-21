@@ -189,6 +189,19 @@ impl Wollet {
         Ok(pset.into())
     }
 
+    /// Blind an externally-constructed PSET whose confidential inputs belong to this wallet.
+    ///
+    /// The PSET must be unblinded: every input references a wallet UTXO by outpoint, every
+    /// output carries explicit asset and amount, and every output that must be confidential
+    /// carries a blinding key (the explicit fee output must not). The wallet supplies the
+    /// input blinding secrets it alone holds and blinds the outputs so the commitments
+    /// balance, returning a PSET ready to be signed and finalized.
+    pub fn blind(&self, pset: &Pset) -> Result<Pset, Error> {
+        let pset: PartiallySignedTransaction = pset.clone().into();
+        let blinded = self.inner.blind(&pset)?;
+        Ok(blinded.into())
+    }
+
     /// Get the PSET details with respect to the wallet
     #[wasm_bindgen(js_name = psetDetails)]
     pub fn pset_details(&self, pset: &Pset) -> Result<PsetDetails, Error> {

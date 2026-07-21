@@ -395,6 +395,9 @@ impl Cache {
         // TODO: cleanup this functions
         self.extend_all_txs(txs)?;
         self.update_heights(txid_height_new, deleted_txids);
+        // Unlike client delta updates, a persisted v5 update is a snapshot and
+        // must reconstruct txids without transaction payloads, which are already
+        // available in the txs store.
         if use_unspent_snapshot {
             self.txids.extend(deleted_txids.iter().copied());
             self.txids

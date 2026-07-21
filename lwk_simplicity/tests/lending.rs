@@ -97,13 +97,13 @@ async fn test_borrow_flow() {
     );
 
     // Create lending session for borrower
-    let mut borrower_session = LendingSession::builder(network, borrower_wd)
+    let mut borrower_session = LendingSession::builder(network, borrower_wd.clone())
         .set_indexer_url(indexer_url.clone())
         .set_electrum_client(client)
         .build()
         .unwrap();
 
-    let client = electrum_client(&env);
+    let mut client = electrum_client(&env);
 
     // sync to fetch fee transaction
     borrower_session.sync().unwrap();
@@ -183,9 +183,12 @@ async fn test_borrow_flow() {
     let tx = borrower_session.finalize(&mut pset).unwrap();
 
     // broadcast
-    let txid = client.broadcast(&tx).unwrap();
+    let creation_txid = client.broadcast(&tx).unwrap();
 
     env.elementsd_generate(1);
+
+    // Sync to pick up L-BTC and collateral change from creation tx
+    borrower_session.sync().unwrap();
 
     // Check if indexer is showing our factory by script_pubkey
     let mut found_offers = None;
@@ -209,13 +212,13 @@ async fn test_borrow_flow() {
     let item = items.first().expect("items for list_offers is empty");
 
     assert_eq!(item.issuance_factory_id, factory.id);
-    assert_eq!(item.created_at_txid, txid);
+    assert_eq!(item.created_at_txid, creation_txid);
 
     let lender_client = electrum_client(&env);
 
     // create LendingSession for lender
     let mut lender_session = LendingSession::builder(network, lender_wd)
-        .set_indexer_url(indexer_url)
+        .set_indexer_url(indexer_url.clone())
         .set_electrum_client(lender_client)
         .build()
         .unwrap();
@@ -225,7 +228,7 @@ async fn test_borrow_flow() {
     let accept = lender_session
         .accept_offer(
             AcceptOfferDetails {
-                pending_offer_creation_txid: txid,
+                pending_offer_creation_txid: creation_txid,
                 protocol_fee_keeper_asset_id: PROTOCOL_FEE_KEEPER_ASSET_ID,
             },
             100.0,
@@ -260,6 +263,7 @@ async fn test_borrow_flow() {
         found_active,
         "Offer did not become Active within the timeout"
     );
+
     // Claim principal as borrower
     borrower_session.sync().unwrap();
 
@@ -287,5 +291,60 @@ async fn test_borrow_flow() {
     assert!(
         principal_balance >= 10000,
         "borrower should have received the principal: got {principal_balance}, expected at least 10000"
+    );
+
+    // Repay the loan
+    // Fund borrower with principal asset for repayment
+    fund_wollet(
+        &mut borrower_wollet,
+        &mut client,
+        &env,
+        100_000,
+        Some(principal_asset_id),
+    );
+
+    borrower_session.sync().unwrap();
+
+    let covenant_outpoint = lwk_wollet::elements::OutPoint {
+        txid: acceptance_txid,
+        vout: 0,
+    };
+
+    let repay = borrower_session
+        .fully_repay_loan(
+            RepaymentDetails {
+                active_covenant_outpoint: covenant_outpoint,
+                protocol_fee_keeper_asset_id,
+            },
+            100.0,
+        )
+        .unwrap();
+
+    let mut pset = repay.into_inner();
+    borrower_signer.sign(&mut pset).unwrap();
+    let tx = borrower_session.finalize(&mut pset).unwrap();
+    client.broadcast(&tx).unwrap();
+
+    env.elementsd_generate(1);
+
+    let mut found_repaid = false;
+    for _ in 0..20 {
+        let offers = indexer_client
+            .list_offers(&OfferFiltersRequest::default())
+            .await
+            .unwrap();
+
+        if let Some(o) = offers.items.iter().find(|o| o.id == item.id) {
+            if o.status == OfferStatus::Repaid {
+                found_repaid = true;
+                break;
+            }
+        }
+
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+    assert!(
+        found_repaid,
+        "Offer did not become Repaid within the timeout"
     );
 }

@@ -35,7 +35,7 @@ use std::{
     collections::{HashMap, HashSet},
     io::Write,
     str::FromStr,
-    sync::atomic,
+    sync::{atomic, Arc},
 };
 
 mod waterfalls;
@@ -47,7 +47,7 @@ pub use waterfalls::WaterfallsSubscription;
 // the max page size in the response, so we know when we have to request another page
 const WATERFALLS_MAX_ADDRESSES: usize = 1_000;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// A blockchain backend implementation based on the
 /// [esplora HTTP API](https://github.com/blockstream/esplora/blob/master/API.md)
 /// But can also use the [waterfalls](https://github.com/RCasatta/waterfalls) endpoint to speed up the scan if supported by the server.
@@ -74,14 +74,14 @@ pub struct EsploraClient {
     network: Network,
 
     /// Number of network requests made by this client
-    requests: AtomicUsize,
+    requests: Arc<AtomicUsize>,
 
     /// The token provider
     token_provider: TokenProvider,
 
     /// The cached token for authenticated services, it will be Some only when
     /// the token provider is `TokenProvider::Blockstream`
-    token: Mutex<Option<String>>,
+    token: Arc<Mutex<Option<String>>>,
 }
 
 impl EsploraClient {
@@ -1127,13 +1127,13 @@ impl EsploraClientBuilder {
             waterfalls_avoid_encryption: false,
             network: self.network,
             concurrency: self.concurrency.unwrap_or(1),
-            requests: AtomicUsize::new(0),
+            requests: Arc::new(AtomicUsize::new(0)),
             waterfalls_encrypted_descriptors: HashMap::new(),
             token_provider: self.token_provider,
             #[cfg(not(target_arch = "wasm32"))]
-            token: tokio::sync::Mutex::new(None),
+            token: Arc::new(tokio::sync::Mutex::new(None)),
             #[cfg(target_arch = "wasm32")]
-            token: futures::lock::Mutex::new(None),
+            token: Arc::new(futures::lock::Mutex::new(None)),
         })
     }
 }

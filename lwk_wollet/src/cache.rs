@@ -359,18 +359,9 @@ impl Cache {
         self.unspent = unspent;
     }
 
-    fn update_heights(
-        &mut self,
-        new: &[(Txid, Option<u32>)],
-        to_delete: &[Txid],
-        update_txids: bool,
-    ) {
+    fn update_heights(&mut self, new: &[(Txid, Option<u32>)], to_delete: &[Txid]) {
         self.heights.retain(|k, _| !to_delete.contains(k));
         self.heights.extend(new.iter().copied());
-        if update_txids {
-            self.txids.extend(to_delete.iter().copied());
-            self.txids.extend(new.iter().map(|(txid, _)| *txid));
-        }
     }
 
     fn extend_all_txs(&mut self, txs: &[(Txid, Transaction)]) -> Result<(), Error> {
@@ -403,7 +394,12 @@ impl Cache {
     ) -> Result<(), Error> {
         // TODO: cleanup this functions
         self.extend_all_txs(txs)?;
-        self.update_heights(txid_height_new, deleted_txids, use_unspent_snapshot);
+        self.update_heights(txid_height_new, deleted_txids);
+        if use_unspent_snapshot {
+            self.txids.extend(deleted_txids.iter().copied());
+            self.txids
+                .extend(txid_height_new.iter().map(|(txid, _)| *txid));
+        }
         self.rebuild_sorted_txids();
         if use_unspent_snapshot || utxo_only {
             self.update_unspent_from_snapshot(unspent, txs);

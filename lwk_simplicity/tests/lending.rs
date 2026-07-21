@@ -2,6 +2,7 @@ use indexer::PROTOCOL_FEE_KEEPER_ASSET_ID;
 use lwk_common::Signer;
 use std::str::FromStr;
 use std::time::Duration;
+use uuid::Uuid;
 
 use elements::hex::ToHex;
 use lwk_simplicity::lending::*;
@@ -27,6 +28,34 @@ pub fn fund_wollet<S: BlockchainBackend>(
     let txid = env.elementsd_sendtoaddress(address.address(), satoshi, asset_id);
     env.elementsd_generate(1);
     wait_for_tx(wollet, client, &txid);
+}
+
+async fn wait_offer(
+    status: OfferStatus,
+    id: Option<Uuid>,
+    indexer: &IndexerClient,
+) -> OfferListItem {
+    for _ in 0..20 {
+        let offers = indexer
+            .list_offers(&OfferFiltersRequest::default())
+            .await
+            .unwrap();
+
+        let offer = if let Some(id) = id {
+            offers.items.iter().find(|o| o.id == id)
+        } else {
+            offers.items.first()
+        };
+
+        if let Some(o) = offer {
+            if o.status == status {
+                return o.clone();
+            }
+        }
+
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+    panic!("Offer with status {status} was not found in indexer");
 }
 
 #[tokio::test]
@@ -191,25 +220,8 @@ async fn test_borrow_flow() {
     borrower_session.sync().unwrap();
 
     // Check if indexer is showing our factory by script_pubkey
-    let mut found_offers = None;
-
-    for _ in 0..20 {
-        let offers = indexer_client
-            .list_offers(&OfferFiltersRequest::default())
-            .await
-            .unwrap();
-
-        if !offers.items.is_empty() {
-            found_offers = Some(offers);
-            break;
-        }
-
-        tokio::time::sleep(Duration::from_millis(500)).await;
-    }
-
-    let items = found_offers.expect("offer not found").items;
-
-    let item = items.first().expect("items for list_offers is empty");
+    let offer = wait_offer(OfferStatus::Pending, None, &indexer_client).await;
+    let item = offer;
 
     assert_eq!(item.issuance_factory_id, factory.id);
     assert_eq!(item.created_at_txid, creation_txid);
@@ -243,26 +255,7 @@ async fn test_borrow_flow() {
     env.elementsd_generate(1);
 
     // Verify the offer status changed to Active in the indexer
-    let mut found_active = false;
-    for _ in 0..20 {
-        let offers = indexer_client
-            .list_offers(&OfferFiltersRequest::default())
-            .await
-            .unwrap();
-
-        if let Some(o) = offers.items.iter().find(|o| o.id == item.id) {
-            if o.status == OfferStatus::Active {
-                found_active = true;
-                break;
-            }
-        }
-
-        tokio::time::sleep(Duration::from_millis(500)).await;
-    }
-    assert!(
-        found_active,
-        "Offer did not become Active within the timeout"
-    );
+    wait_offer(OfferStatus::Active, Some(item.id), &indexer_client).await;
 
     // Claim principal as borrower
     borrower_session.sync().unwrap();
@@ -326,25 +319,5 @@ async fn test_borrow_flow() {
     client.broadcast(&tx).unwrap();
 
     env.elementsd_generate(1);
-
-    let mut found_repaid = false;
-    for _ in 0..20 {
-        let offers = indexer_client
-            .list_offers(&OfferFiltersRequest::default())
-            .await
-            .unwrap();
-
-        if let Some(o) = offers.items.iter().find(|o| o.id == item.id) {
-            if o.status == OfferStatus::Repaid {
-                found_repaid = true;
-                break;
-            }
-        }
-
-        tokio::time::sleep(Duration::from_millis(500)).await;
-    }
-    assert!(
-        found_repaid,
-        "Offer did not become Repaid within the timeout"
-    );
+    wait_offer(OfferStatus::Repaid, Some(item.id), &indexer_client).await;
 }

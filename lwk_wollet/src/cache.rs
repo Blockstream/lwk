@@ -399,13 +399,13 @@ impl Cache {
         txs: &[(Txid, Transaction)],
         utxo_only: bool,
         unspent: Vec<(OutPoint, Script)>,
-        unspent_is_authoritative: bool,
+        use_unspent_snapshot: bool,
     ) -> Result<(), Error> {
         // TODO: cleanup this functions
         self.extend_all_txs(txs)?;
-        self.update_heights(txid_height_new, deleted_txids, unspent_is_authoritative);
+        self.update_heights(txid_height_new, deleted_txids, use_unspent_snapshot);
         self.rebuild_sorted_txids();
-        if unspent_is_authoritative || utxo_only {
+        if use_unspent_snapshot || utxo_only {
             self.update_unspent_from_snapshot(unspent, txs);
         } else {
             self.update_unspent(txid_height_new, deleted_txids, txs);

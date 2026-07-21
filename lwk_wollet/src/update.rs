@@ -629,6 +629,10 @@ impl Wollet {
     /// Persist an update to the store using an indexed key
     fn persist_update(&self, mut update: Update) -> Result<(), Error> {
         if self.cache.txs_store_is_persisted() {
+            // Clients produce v4 updates because WolletState does not expose the
+            // unspent set. Before persisting, upgrade the update to v5 and add the
+            // latest unspent snapshot from the cache, allowing restores to provide
+            // UTXOs without reading every transaction from the txs store.
             update.version = update.version.max(5);
             update.unspent = self
                 .cache

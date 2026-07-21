@@ -95,7 +95,10 @@ impl boltz_client::network::LiquidClient for WaterfallsClient {
             .get_headers(&[0], &HashMap::new())
             .await
             .map_err(|e| Error::Protocol(e.to_string()))?;
-        Ok(headers[0].block_hash())
+        headers
+            .first()
+            .map(|header| header.block_hash())
+            .ok_or_else(|| Error::Protocol("missing genesis block header".to_owned()))
     }
 
     async fn broadcast_tx(&self, signed_tx: &elements::Transaction) -> Result<String, Error> {

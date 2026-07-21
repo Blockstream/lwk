@@ -19,7 +19,9 @@ mod waterfalls;
 #[cfg(feature = "esplora")]
 pub use esplora::EsploraClient;
 #[cfg(feature = "esplora")]
-pub use waterfalls::{WaterfallsClient, WaterfallsSubscription};
+pub use waterfalls::{
+    WaterfallsClient, WaterfallsReconnectingSubscription, WaterfallsSubscription,
+};
 
 #[cfg(feature = "elements_rpc")]
 pub use elements_rpc_client::ElementsRpcClient;

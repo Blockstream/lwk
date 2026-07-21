@@ -2135,6 +2135,80 @@ mod tests {
     }
 
     #[test]
+    fn test_blind_external_pset() {
+        use crate::bitcoin::PublicKey as BitcoinPublicKey;
+        use crate::{Update, WolletDescriptor};
+
+        // A synced watch-only CT wallet with real UTXOs (testnet fixture).
+        let descriptor: WolletDescriptor = lwk_test_util::wollet_descriptor_many_transactions()
+            .parse()
+            .unwrap();
+        let update =
+            Update::deserialize(&lwk_test_util::update_test_vector_many_transactions()).unwrap();
+        let mut wollet = WolletBuilder::new(Network::TestnetLiquid, descriptor)
+            .build()
+            .unwrap();
+        wollet.apply_update(update).unwrap();
+
+        let policy = wollet.policy_asset();
+        let utxos = wollet.utxos().unwrap();
+        let coin = utxos
+            .iter()
+            .find(|u| u.unblinded.asset == policy)
+            .expect("a policy-asset utxo");
+        assert!(coin.unblinded.value > 500);
+
+        let fee = 500u64;
+        let send = coin.unblinded.value - fee;
+
+        // Own confidential address for the value output.
+        let address = wollet.address(Some(0)).unwrap().address().clone();
+        let blinding_pubkey = address.blinding_pubkey.expect("confidential address");
+
+        // The UNBLINDED skeleton a dapp would build: one input (outpoint only — the wallet fills in
+        // the rest), one confidential value output to our own address, one explicit fee output.
+        let mut pset = PartiallySignedTransaction::new_v2();
+        pset.add_input(elements::pset::Input::from_prevout(coin.outpoint));
+        pset.add_output(Output {
+            script_pubkey: address.script_pubkey(),
+            amount: Some(send),
+            asset: Some(policy),
+            blinding_key: Some(BitcoinPublicKey::new(blinding_pubkey)),
+            blinder_index: Some(0),
+            ..Default::default()
+        });
+        pset.add_output(Output {
+            amount: Some(fee),
+            asset: Some(policy),
+            ..Default::default()
+        });
+
+        let blinded = wollet.blind(&pset).expect("blind succeeds");
+
+        // Same shape, but the wallet has rebuilt the input side and blinded the value output.
+        assert_eq!(blinded.inputs().len(), 1);
+        assert_eq!(blinded.outputs().len(), 2);
+        let input = &blinded.inputs()[0];
+        assert!(
+            input.witness_utxo.is_some(),
+            "input prevout filled in from wallet state"
+        );
+        assert!(
+            !input.bip32_derivation.is_empty(),
+            "descriptor signing metadata added"
+        );
+        // The value output is now blinded (carries a value commitment); the fee output stays explicit.
+        assert!(
+            blinded.outputs()[0].amount_comm.is_some(),
+            "value output blinded"
+        );
+        assert!(
+            blinded.outputs()[1].script_pubkey.is_empty(),
+            "explicit fee output"
+        );
+    }
+
+    #[test]
     fn test_builttx_update_keeps_wollet_last_unused() {
         let desc: crate::WolletDescriptor =
             lwk_test_util::wollet_descriptor_string().parse().unwrap();

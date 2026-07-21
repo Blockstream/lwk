@@ -200,4 +200,22 @@ fn test_txs_cannot_unblind() {
     let opt = TxsOpt::default();
     assert_eq!(w1.wollet.txs(&opt).unwrap().len(), 1);
     assert_eq!(w2.wollet.txs(&opt).unwrap().len(), 1);
+
+    // Simulate an app restart
+    let descriptor = w1.wollet.wollet_descriptor();
+    let path = w1.path();
+    let network = Network::default_regtest();
+    let reloaded = WolletBuilder::new(network, descriptor)
+        .with_legacy_fs_store(&path)
+        .unwrap()
+        .build()
+        .unwrap();
+
+    assert_eq!(reloaded.txs(&opt).unwrap().len(), 1);
+
+    let with_cannot_unblind_opt = TxsOpt {
+        with_cannot_unblind: true,
+        ..Default::default()
+    };
+    assert_eq!(reloaded.txs(&with_cannot_unblind_opt).unwrap().len(), 2);
 }

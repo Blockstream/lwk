@@ -359,8 +359,151 @@ impl LendingSession {
         Ok(CreateBorrowTransaction { pset })
     }
 
-    pub fn fully_repay_loan(&self, _details: RepaymentDetails) -> Result<(), LendingError> {
-        todo!()
+    /// Fully repay an active loan.
+    ///
+    /// Spends the active covenant UTXO and the borrower's NFT to finalize the repayment,
+    /// returning the collateral to the borrower's wallet.
+    ///
+    /// # Errors
+    /// Returns an error if the wallet has no suitable principal or fee UTXOs, the acceptance or
+    /// creation transaction cannot be fetched, or the lending transaction construction fails.
+    pub fn fully_repay_loan(
+        &mut self,
+        details: RepaymentDetails,
+        fee_rate: f32,
+    ) -> Result<RepayOfferTransaction, LendingError> {
+        const FEE_ESTIMATE: u64 = 250;
+
+        let policy_asset = *self.network.policy_asset();
+        let simplex_network = to_simplicity_network(self.network);
+
+        let acceptance_tx = self
+            .client
+            .get_transaction(details.active_covenant_outpoint.txid)
+            .map_err(|e| LendingError::Generic(format!("failed to fetch acceptance tx: {e}")))?;
+
+        // We should pass creation TXID instead of fetching it from the acceptance transaction
+        let creation_txid = acceptance_tx
+            .input
+            .first()
+            .ok_or_else(|| LendingError::Generic("acceptance tx has no inputs".into()))?
+            .previous_output
+            .txid;
+
+        let creation_tx = self
+            .client
+            .get_transaction(creation_txid)
+            .map_err(|e| LendingError::Generic(format!("failed to fetch creation tx: {e}")))?;
+
+        let offer = LendingOffer::try_from_tx(
+            &creation_tx,
+            details.protocol_fee_keeper_asset_id,
+            simplex_network,
+        )
+        .map_err(|e| {
+            LendingError::Generic(format!(
+                "failed to parse pending offer from creation tx: {e}"
+            ))
+        })?;
+
+        let offer_params = *offer.get_parameters();
+        let total_debt = offer_params.offer_parameters.get_total_amount_to_repay();
+        let mut offer = LendingOffer::new_active(offer_params, total_debt);
+
+        let covenant_txout = acceptance_tx
+            .output
+            .get(details.active_covenant_outpoint.vout as usize)
+            .ok_or_else(|| {
+                LendingError::Generic("covenant output not found in acceptance tx".into())
+            })?
+            .clone();
+
+        let active_covenant_utxo = UTXO {
+            outpoint: details.active_covenant_outpoint,
+            txout: covenant_txout,
+            secrets: None,
+        };
+
+        let borrower_nft_utxo =
+            self.get_explicit_utxo(offer_params.borrower_nft_asset_id, 1, &[])?;
+
+        let principal_utxo = self.get_utxo(
+            offer_params.principal_asset_id,
+            total_debt,
+            &[borrower_nft_utxo.outpoint],
+        )?;
+
+        let fee_funding_utxo = self.get_utxo(
+            policy_asset,
+            FEE_ESTIMATE,
+            &[borrower_nft_utxo.outpoint, principal_utxo.outpoint],
+        )?;
+
+        let change_addr = self.wollet.change(None)?;
+        let change_script = change_addr.address().script_pubkey();
+        let change_blinding =
+            change_addr
+                .address()
+                .blinding_pubkey
+                .ok_or(LendingError::Generic(
+                    "change address has no blinding key".into(),
+                ))?;
+        let change_pk = bitcoin::PublicKey::from(change_blinding);
+
+        let user_addr = self.wollet.address(None)?;
+        let user_script = user_addr.address().script_pubkey();
+
+        let mut ft = FinalTransaction::new();
+
+        ft.add_input(
+            PartialInput::new(borrower_nft_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        offer.attach_full_repayment(&mut ft, active_covenant_utxo, None, None);
+
+        ft.add_input(
+            PartialInput::new(principal_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        ft.add_input(
+            PartialInput::new(fee_funding_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        ft.add_output(PartialOutput::new(
+            user_script,
+            offer_params.offer_parameters.collateral_amount,
+            offer_params.collateral_asset_id,
+        ));
+
+        if principal_utxo.amount() > total_debt {
+            ft.add_output(
+                PartialOutput::new(
+                    change_script.clone(),
+                    principal_utxo.amount() - total_debt,
+                    offer_params.principal_asset_id,
+                )
+                .with_blinding_key(change_pk),
+            );
+        }
+
+        let _ = self.add_fee(&mut ft, change_script, change_pk, fee_rate)?;
+
+        let (mut pset, inp_txout_sec) = ft.extract_pst();
+
+        let mut rng = thread_rng();
+        pset.blind_last(&mut rng, &EC, &inp_txout_sec)
+            .map_err(|e| LendingError::Generic(format!("blinding error: {e}")))?;
+
+        self.wollet
+            .add_details(&mut pset)
+            .map_err(LendingError::Wallet)?;
+
+        self.finalize_program_inputs(&ft, &mut pset)?;
+
+        Ok(RepayOfferTransaction { pset })
     }
 
     pub fn partially_repay_loan(&self, _details: RepaymentDetails) -> Result<(), LendingError> {
@@ -999,7 +1142,8 @@ pub struct AcceptOfferDetails {
 }
 
 pub struct RepaymentDetails {
-    pub amount_to_repay: u64,
+    pub active_covenant_outpoint: OutPoint,
+    pub protocol_fee_keeper_asset_id: AssetId,
 }
 
 pub struct ClaimPrincipalDetails {
@@ -1043,6 +1187,20 @@ pub struct AcceptOfferTransaction {
 }
 
 impl AcceptOfferTransaction {
+    pub fn inner(&self) -> &PartiallySignedTransaction {
+        &self.pset
+    }
+
+    pub fn into_inner(self) -> PartiallySignedTransaction {
+        self.pset
+    }
+}
+
+pub struct RepayOfferTransaction {
+    pset: PartiallySignedTransaction,
+}
+
+impl RepayOfferTransaction {
     pub fn inner(&self) -> &PartiallySignedTransaction {
         &self.pset
     }

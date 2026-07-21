@@ -17,6 +17,8 @@ pub use core::CreateBorrowTransaction;
 pub use core::LendingSession;
 pub use core::LendingSessionBuilder;
 pub use core::OfferDetails;
+pub use core::RepayOfferTransaction;
+pub use core::RepaymentDetails;
 pub use error::LendingError;
 
 pub use network::to_simplicity_network;

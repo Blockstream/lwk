@@ -1,4 +1,5 @@
 use crate::test_wollet::*;
+use elements::Txid;
 use lwk_signer::*;
 use lwk_test_util::*;
 use lwk_wollet::*;
@@ -218,4 +219,83 @@ fn test_txs_cannot_unblind() {
         ..Default::default()
     };
     assert_eq!(reloaded.txs(&with_cannot_unblind_opt).unwrap().len(), 2);
+}
+
+#[test]
+fn test_txs_pagination_with_cannot_unblind() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let s = generate_signer();
+
+    let view_key = generate_view_key();
+    let d = format!("ct({view_key},elwpkh({}/*))", s.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &d);
+
+    // Foreign wallet sharing the same xpub (hence the same scripts) but a different view
+    // key, used to fund `w`'s addresses with outputs `w` downloads but cannot unblind.
+    let foreign_view_key = generate_view_key();
+    let foreign_d = format!("ct({foreign_view_key},elwpkh({}/*))", s.xpub());
+    let foreign_client = test_client_electrum(&env.electrum_url());
+    let mut foreign = TestWollet::new(foreign_client, &foreign_d);
+
+    let mut height = w.wollet.tip().height();
+
+    fn gen_block(height: &mut u32, w: &mut TestWollet<ElectrumClient>, env: &TestEnv) {
+        env.elementsd_generate(1);
+        *height += 1;
+        w.wait_height(*height);
+    }
+
+    let txid10 = w.fund_btc(&env);
+    gen_block(&mut height, &mut w, &env);
+    let txid9 = w.fund_btc(&env);
+    gen_block(&mut height, &mut w, &env);
+    let txid8 = w.fund_btc(&env);
+    gen_block(&mut height, &mut w, &env);
+    let txid7 = w.fund_btc(&env);
+    gen_block(&mut height, &mut w, &env);
+    // txid6 cannot unblind
+    let txid6 = foreign.fund_btc(&env);
+    w.wait_for_tx_outside_list(&txid6);
+    gen_block(&mut height, &mut w, &env);
+    let txid5 = w.fund_btc(&env);
+    gen_block(&mut height, &mut w, &env);
+    let txid4 = w.fund_btc(&env);
+    gen_block(&mut height, &mut w, &env);
+    let txid3 = w.fund_btc(&env);
+    gen_block(&mut height, &mut w, &env);
+    // txid2 cannot unblind
+    let txid2 = foreign.fund_btc(&env);
+    w.wait_for_tx_outside_list(&txid2);
+    gen_block(&mut height, &mut w, &env);
+    let txid1 = w.fund_btc(&env);
+
+    let opt = TxsOpt::default();
+    assert_eq!(w.wollet.txs(&opt).unwrap().len(), 8);
+
+    let with_cannot_unblind_opt = TxsOpt {
+        with_cannot_unblind: true,
+        ..Default::default()
+    };
+    assert_eq!(w.wollet.txs(&with_cannot_unblind_opt).unwrap().len(), 10);
+
+    let page_size = 3usize;
+    let page = |n| -> Vec<Txid> {
+        let offset = n * page_size;
+        w.wollet
+            .txs(&TxsOpt {
+                offset: Some(offset),
+                limit: Some(page_size),
+                ..Default::default()
+            })
+            .unwrap()
+            .iter()
+            .map(|t| t.txid())
+            .collect()
+    };
+
+    assert_eq!(page(0), vec![txid1, txid3, txid4]);
+    assert_eq!(page(1), vec![txid5, txid7, txid8]);
+    assert_eq!(page(2), vec![txid9, txid10]);
 }

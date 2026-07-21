@@ -295,11 +295,14 @@ impl Wollet {
         let mut txs = vec![];
         let offset = opt.offset.unwrap_or(0);
         let limit = opt.limit.unwrap_or(usize::MAX);
-        for (txid, height) in self.cache.sorted_txids().skip(offset).take(limit) {
-            if !opt.with_cannot_unblind && self.cache.cannot_unblind(txid) {
-                // Transaction carries no balance information, ignore it by default
-                continue;
-            }
+        // Filter out transactions that cannot be unblinded (unless requested otherwise)
+        // before applying offset/limit, so that pagination is computed over the same list
+        // of transactions that is actually returned.
+        let filtered = self
+            .cache
+            .sorted_txids()
+            .filter(|(txid, _)| opt.with_cannot_unblind || !self.cache.cannot_unblind(txid));
+        for (txid, height) in filtered.skip(offset).take(limit) {
             if let Some(tx) = self.tx_details_inner(txid, *height, unspent, opt.without_tx)? {
                 txs.push(tx);
             }

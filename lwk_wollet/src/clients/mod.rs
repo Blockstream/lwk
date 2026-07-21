@@ -31,6 +31,7 @@ mod waterfalls;
 #[cfg(feature = "esplora")]
 pub use waterfalls::{
     WaterfallsSubscriptionEvent, WaterfallsSubscriptionEventKind, WaterfallsSubscriptionTip,
+    WaterfallsSubscriptionUpdate,
 };
 
 /// A builder for the [`crate::clients::asyncr::EsploraClient`] or [`crate::clients::blocking::EsploraClient`]

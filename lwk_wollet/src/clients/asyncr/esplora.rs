@@ -41,7 +41,7 @@ use std::{
 mod waterfalls;
 pub use waterfalls::WaterfallsClient;
 #[cfg(not(target_arch = "wasm32"))]
-pub use waterfalls::WaterfallsSubscription;
+pub use waterfalls::{WaterfallsReconnectingSubscription, WaterfallsSubscription};
 
 // TODO: Perhaps the waterfalls server's MAX_ADDRESSES could be configurable and return
 // the max page size in the response, so we know when we have to request another page

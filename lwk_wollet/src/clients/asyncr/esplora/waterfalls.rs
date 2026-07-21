@@ -17,7 +17,10 @@ use crate::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 use crate::{
-    clients::{waterfalls::WaterfallsSseParser, Capability, Data, WaterfallsSubscriptionEvent},
+    clients::{
+        waterfalls::WaterfallsSseParser, Capability, Data, WaterfallsSubscriptionEvent,
+        WaterfallsSubscriptionUpdate,
+    },
     wollet::WolletState,
 };
 
@@ -35,6 +38,18 @@ pub struct WaterfallsSubscription {
     response: Response,
     parser: WaterfallsSseParser,
     pending: VecDeque<WaterfallsSubscriptionEvent>,
+}
+
+/// A Waterfalls descriptor subscription stream that can reopen itself.
+///
+/// The stream emits local lifecycle updates when the underlying SSE connection
+/// closes and when it is reopened. Callers should run a normal scan after a
+/// reconnect because updates may have been missed while disconnected.
+#[cfg(not(target_arch = "wasm32"))]
+pub struct WaterfallsReconnectingSubscription {
+    client: WaterfallsClient,
+    url: String,
+    subscription: Option<WaterfallsSubscription>,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -58,7 +73,32 @@ impl WaterfallsSubscription {
     }
 }
 
-#[derive(Debug)]
+#[cfg(not(target_arch = "wasm32"))]
+impl WaterfallsReconnectingSubscription {
+    /// Return the next reconnecting Waterfalls subscription update.
+    pub async fn next_update(&mut self) -> Result<WaterfallsSubscriptionUpdate, Error> {
+        let Some(subscription) = self.subscription.as_mut() else {
+            self.subscription = Some(self.client.subscribe_url(&self.url).await?);
+            return Ok(WaterfallsSubscriptionUpdate::Reconnected);
+        };
+
+        match subscription.next_update().await {
+            Ok(Some(event)) => Ok(WaterfallsSubscriptionUpdate::Event(event)),
+            Ok(None) => {
+                self.subscription = None;
+                Ok(WaterfallsSubscriptionUpdate::Disconnected { error: None })
+            }
+            Err(err) => {
+                self.subscription = None;
+                Ok(WaterfallsSubscriptionUpdate::Disconnected {
+                    error: Some(err.to_string()),
+                })
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 /// A blockchain backend implementation based on the
 /// [Waterfalls HTTP API](https://github.com/RCasatta/waterfalls).
 ///
@@ -138,6 +178,20 @@ impl WaterfallsClient {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    async fn subscribe_url(&self, url: &str) -> Result<WaterfallsSubscription, Error> {
+        let response = self.inner.get_with_retry(url).await?;
+        if !response.status().is_success() {
+            return Err(error_for_status(url, response).await);
+        }
+
+        Ok(WaterfallsSubscription {
+            response,
+            parser: WaterfallsSseParser::default(),
+            pending: VecDeque::new(),
+        })
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) async fn get_history_waterfalls<S: WolletState>(
         &mut self,
         descriptor: &WolletDescriptor,
@@ -187,15 +241,26 @@ impl WaterfallsClient {
         descriptor: &WolletDescriptor,
     ) -> Result<WaterfallsSubscription, Error> {
         let url = self.waterfalls_subscribe_url(descriptor).await?;
-        let response = self.inner.get_with_retry(&url).await?;
-        if !response.status().is_success() {
-            return Err(error_for_status(&url, response).await);
-        }
+        self.subscribe_url(&url).await
+    }
 
-        Ok(WaterfallsSubscription {
-            response,
-            parser: WaterfallsSseParser::default(),
-            pending: VecDeque::new(),
+    /// Subscribe to Waterfalls descriptor updates and reopen the stream after disconnects.
+    ///
+    /// This preserves the normal subscription event stream and adds local
+    /// `Disconnected` and `Reconnected` lifecycle updates. A reconnect is an
+    /// invalidation hint: callers should run a normal scan because server events
+    /// may have been missed while the stream was disconnected.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn subscribe_reconnecting(
+        &mut self,
+        descriptor: &WolletDescriptor,
+    ) -> Result<WaterfallsReconnectingSubscription, Error> {
+        let url = self.waterfalls_subscribe_url(descriptor).await?;
+        let subscription = self.subscribe_url(&url).await?;
+        Ok(WaterfallsReconnectingSubscription {
+            client: self.clone(),
+            url,
+            subscription: Some(subscription),
         })
     }
 

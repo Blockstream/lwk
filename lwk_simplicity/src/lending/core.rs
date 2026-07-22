@@ -399,12 +399,7 @@ impl LendingSession {
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
             simplex_network,
-        )
-        .map_err(|e| {
-            LendingError::Generic(format!(
-                "failed to parse pending offer from creation tx: {e}"
-            ))
-        })?;
+        )?;
 
         let offer_params = *offer.get_parameters();
         let total_debt = offer_params.offer_parameters.get_total_amount_to_repay();
@@ -540,12 +535,7 @@ impl LendingSession {
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
             to_simplicity_network(self.network),
-        )
-        .map_err(|e| {
-            LendingError::Generic(format!(
-                "failed to parse pending offer from creation tx: {e}"
-            ))
-        })?;
+        )?;
 
         let offer_params = *offer.get_parameters();
 
@@ -719,12 +709,7 @@ impl LendingSession {
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
             simplex_network,
-        )
-        .map_err(|e| {
-            LendingError::Generic(format!(
-                "failed to parse pending offer from creation tx: {e}"
-            ))
-        })?;
+        )?;
 
         let offer_params = *offer.get_parameters();
 

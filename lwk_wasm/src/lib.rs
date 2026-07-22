@@ -132,7 +132,7 @@ pub use signer::Signer;
 pub use store::{JsStorage, JsStoreLink, JsTestStore};
 #[cfg(feature = "simplicity")]
 pub use tweak::Tweak;
-pub use tx_builder::TxBuilder;
+pub use tx_builder::{IssuanceRequest, TxBuilder};
 pub use update::Update;
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]

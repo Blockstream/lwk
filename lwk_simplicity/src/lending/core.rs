@@ -116,7 +116,6 @@ impl LendingSession {
             RequiredSignature::NativeEcdsa,
         );
 
-        let (change_script, change_pk) = self.get_spk_bk(true)?;
         let (user_script, _) = self.get_spk_bk(false)?;
 
         ft.add_output(PartialOutput::new(
@@ -131,7 +130,7 @@ impl LendingSession {
             ISSUANCE_FACTORY_AMOUNT,
         );
 
-        let _ = self.add_fee(&mut ft, change_script, change_pk, fee_rate)?;
+        let _ = self.add_fee(&mut ft, fee_rate)?;
 
         let (mut pset, inp_txout_sec) = ft.extract_pst();
         let mut rng = thread_rng();
@@ -310,7 +309,7 @@ impl LendingSession {
         }
 
         // Add fee
-        let _ = self.add_fee(&mut ft, change_script, change_pk, fee_rate)?;
+        let _ = self.add_fee(&mut ft, fee_rate)?;
 
         // Extract
         let (mut pset, inp_txout_sec) = ft.extract_pst();
@@ -438,7 +437,7 @@ impl LendingSession {
             );
         }
 
-        let _ = self.add_fee(&mut ft, change_script, change_pk, fee_rate)?;
+        let _ = self.add_fee(&mut ft, fee_rate)?;
 
         let (mut pset, inp_txout_sec) = ft.extract_pst();
 
@@ -583,8 +582,7 @@ impl LendingSession {
         }
 
         // Add fee
-        // Optionaly change output for policy asset
-        let _ = self.add_fee(&mut ft, change_script, change_pk, fee_rate)?;
+        let _ = self.add_fee(&mut ft, fee_rate)?;
 
         // Extract PSET, blind, add wallet details
         let (mut pset, inp_txout_sec) = ft.extract_pst();
@@ -672,7 +670,6 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[borrower_nft_utxo.outpoint])?;
 
-        let (change_script, change_pk) = self.get_spk_bk(true)?;
         let (user_script, user_pk) = self.get_spk_bk(false)?;
 
         let mut ft = FinalTransaction::new();
@@ -708,7 +705,7 @@ impl LendingSession {
             .with_blinding_key(user_pk),
         );
 
-        let _ = self.add_fee(&mut ft, change_script, change_pk, fee_rate)?;
+        let _ = self.add_fee(&mut ft, fee_rate)?;
 
         let (mut pset, inp_txout_sec) = ft.extract_pst();
 
@@ -874,13 +871,7 @@ impl LendingSession {
     /// `fee_rate` is fee rate in sats/kvb.
     ///
     /// Returns the computed fee in satoshis, or an error if funds are insufficient.
-    fn add_fee(
-        &self,
-        ft: &mut FinalTransaction,
-        change_script: Script,
-        change_pk: bitcoin::PublicKey,
-        fee_rate: f32,
-    ) -> Result<u64, LendingError> {
+    fn add_fee(&self, ft: &mut FinalTransaction, fee_rate: f32) -> Result<u64, LendingError> {
         let simplex_network = to_simplicity_network(self.network);
         let policy_asset = *self.network.policy_asset();
 
@@ -913,6 +904,8 @@ impl LendingSession {
 
         ft.add_output(PartialOutput::new(Script::default(), fee, policy_asset));
         if change != 0 {
+            let (change_script, change_pk) = self.get_spk_bk(true)?;
+
             ft.add_output(
                 PartialOutput::new(change_script, change, policy_asset)
                     .with_blinding_key(change_pk),

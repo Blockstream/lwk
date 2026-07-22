@@ -29,6 +29,16 @@ The `add_burn()` method takes the following arguments:
 
 </section>
 
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/issue_asset.js:burn_asset}}
+```
+
+</section>
+
 <div slot="title">Go</div>
 <section>
 

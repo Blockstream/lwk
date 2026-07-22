@@ -145,8 +145,8 @@ test_wollet:
     - .base
     - .coverage_mixin
   script:
-    - docker pull xenoky/local-jade-emulator:1.0.27
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    - docker pull $JADE_EMULATOR_IMAGE_NAME:$JADE_EMULATOR_IMAGE_VERSION
     - cargo build -p amp2_mock && export AMP2_MOCK_EXEC=$PWD/target/debug/amp2_mock
     - ls $PWD/target/debug
     - nproc
@@ -162,7 +162,8 @@ test_jade:
       TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
   script:
     - docker pull tulipan81/blind_pin_server:v0.0.7
-    - docker pull xenoky/local-jade-emulator:1.0.27
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    - docker pull $JADE_EMULATOR_IMAGE_NAME:$JADE_EMULATOR_IMAGE_VERSION
     - cargo test -p lwk_jade --features asyncr
 
 # Authenticated Explorer API tests: Keycloak + APISIX (openid-connect) fronting the TestEnv

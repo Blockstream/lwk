@@ -11,6 +11,8 @@ use std::{
 
 use lwk_wollet::elements;
 
+use serde::Serialize;
+use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 
 /// A valid asset identifier.
@@ -184,7 +186,12 @@ impl AssetIds {
         format!("{self}")
     }
 
-    // TODO: implement entries()
+    /// Returns the asset identifiers as a JavaScript array of asset identifiers.
+    pub fn values(&self) -> Result<JsValue, Error> {
+        let serializer = Serializer::new().serialize_large_number_types_as_bigints(true);
+
+        Ok(self.inner.serialize(&serializer)?)
+    }
 }
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {

@@ -41,6 +41,7 @@ use boltz_client::boltz::SwapStatus;
 use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
 use boltz_client::boltz::BOLTZ_REGTEST;
 use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
+use boltz_client::fees::Fee;
 #[cfg(feature = "blocking")]
 use boltz_client::network::electrum::ElectrumBitcoinClient;
 #[cfg(feature = "blocking")]
@@ -90,6 +91,28 @@ use lwk_wollet::hashes::Hash;
 pub use boltz_client::boltz::SwapRestoreType as SwapType;
 
 pub(crate) const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs(5);
+const MAX_BITCOIN_FEE_RATE: f64 = 50.0;
+const MIN_LIQUID_FEE_RATE: f64 = 0.1;
+
+pub(crate) async fn fallback_swap_fee(api: &BoltzApiClientV2, chain: Chain) -> Result<Fee, Error> {
+    match chain {
+        Chain::Liquid(_) => Ok(Fee::Relative(MIN_LIQUID_FEE_RATE)),
+        Chain::Bitcoin(_) => {
+            let fee_rate = api.get_fee_estimation().await?.btc;
+            if !fee_rate.is_finite() || fee_rate <= 0.0 {
+                return Err(Error::Generic(format!(
+                    "Boltz returned invalid Bitcoin fee rate {fee_rate}"
+                )));
+            }
+            if fee_rate > MAX_BITCOIN_FEE_RATE {
+                log::warn!(
+                    "Bitcoin fee rate {fee_rate} exceeds maximum, capping at {MAX_BITCOIN_FEE_RATE} sat/vByte"
+                );
+            }
+            Ok(Fee::Relative(fee_rate.min(MAX_BITCOIN_FEE_RATE)))
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct SwapInfo {

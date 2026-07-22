@@ -2997,6 +2997,7 @@ dependencies = [
  "aes-gcm-siv",
  "age",
  "base64 0.21.7",
+ "bech32 0.11.0",
  "bip39",
  "bitcoincore-rpc",
  "cbc",

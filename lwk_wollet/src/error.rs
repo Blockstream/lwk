@@ -69,6 +69,9 @@ pub enum Error {
     Secp256k1(#[from] crate::secp256k1::Error),
 
     #[error(transparent)]
+    SilentPayment(#[from] crate::silent_payments::SilentPaymentError),
+
+    #[error(transparent)]
     HexToBytesError(#[from] crate::hashes::hex::HexToBytesError),
 
     #[error(transparent)]

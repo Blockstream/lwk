@@ -136,6 +136,11 @@ pub fn serve_http_response(
     format!("http://{addr}")
 }
 
+/// The BIP352 send and receive test vectors, as published in the BIPs repository
+pub fn bip352_test_vectors() -> &'static str {
+    include_str!("../test_data/bip0352_send_and_receive_test_vectors.json")
+}
+
 pub fn liquid_block_1() -> Block {
     let raw = include_bytes!(
         "../test_data/afafbbdfc52a45e51a3b634f391f952f6bdfd14ef74b34925954b4e20d0ad639.raw"

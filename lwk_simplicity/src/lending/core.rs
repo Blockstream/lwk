@@ -183,15 +183,8 @@ impl LendingSession {
         let issuance_factory = IssuanceFactory::new(issuance_factory_params);
 
         // Fetch the prepare transaction to obtain the raw txouts for the factory utxos.
-        let prepare_tx = self
-            .client
-            .get_transaction(factory.auth_utxo.txid)
-            .map_err(|e| LendingError::Generic(format!("failed to fetch prepare tx: {e}")))?;
-
-        let program_tx = self
-            .client
-            .get_transaction(factory.program_utxo.txid)
-            .map_err(|e| LendingError::Generic(format!("failed to fetch program tx: {e}")))?;
+        let prepare_tx = self.get_transaction(&factory.auth_utxo.txid)?;
+        let program_tx = self.get_transaction(&factory.program_utxo.txid)?;
 
         let auth_txout = prepare_tx
             .output
@@ -355,10 +348,7 @@ impl LendingSession {
         let policy_asset = *self.network.policy_asset();
         let simplex_network = to_simplicity_network(self.network);
 
-        let acceptance_tx = self
-            .client
-            .get_transaction(details.active_covenant_outpoint.txid)
-            .map_err(|e| LendingError::Generic(format!("failed to fetch acceptance tx: {e}")))?;
+        let acceptance_tx = self.get_transaction(&details.active_covenant_outpoint.txid)?;
 
         // We should pass creation TXID instead of fetching it from the acceptance transaction
         let creation_txid = acceptance_tx
@@ -368,10 +358,7 @@ impl LendingSession {
             .previous_output
             .txid;
 
-        let creation_tx = self
-            .client
-            .get_transaction(creation_txid)
-            .map_err(|e| LendingError::Generic(format!("failed to fetch creation tx: {e}")))?;
+        let creation_tx = self.get_transaction(&creation_txid)?;
 
         let offer = LendingOffer::try_from_tx(
             &creation_tx,
@@ -493,9 +480,7 @@ impl LendingSession {
         let policy_asset = *self.network.policy_asset();
 
         // Fetch the pending offer creation transaction
-        let creation_tx = self
-            .client
-            .get_transaction(details.pending_offer_creation_txid)?;
+        let creation_tx = self.get_transaction(&details.pending_offer_creation_txid)?;
 
         // Reconstruct the LendingOffer from the creation transaction
         let mut offer = LendingOffer::try_from_tx(
@@ -640,10 +625,7 @@ impl LendingSession {
         let policy_asset = *self.network.policy_asset();
         let simplex_network = to_simplicity_network(self.network);
 
-        let acceptance_tx = self
-            .client
-            .get_transaction(details.acceptance_txid)
-            .map_err(|e| LendingError::Generic(format!("failed to fetch acceptance tx: {e}")))?;
+        let acceptance_tx = self.get_transaction(&details.acceptance_txid)?;
 
         let creation_txid = acceptance_tx
             .input
@@ -652,10 +634,7 @@ impl LendingSession {
             .previous_output
             .txid;
 
-        let creation_tx = self
-            .client
-            .get_transaction(creation_txid)
-            .map_err(|e| LendingError::Generic(format!("failed to fetch creation tx: {e}")))?;
+        let creation_tx = self.get_transaction(&creation_txid)?;
 
         let offer = LendingOffer::try_from_tx(
             &creation_tx,
@@ -956,6 +935,17 @@ impl LendingSession {
             .ok_or(LendingError::Generic("address has no blinding key".into()))?;
         let pk = bitcoin::PublicKey::from(blinding);
         Ok((script, pk))
+    }
+
+    /// Get transaction by the Txid.
+    ///
+    /// Firstly we trying to extract transaction from Wallet, if that failed we fallback to client.
+    fn get_transaction(&self, txid: &Txid) -> Result<Transaction, LendingError> {
+        if let Ok(Some(wollet_tx)) = self.wollet.transaction(txid) {
+            Ok(wollet_tx.tx)
+        } else {
+            self.client.get_transaction(*txid).map_err(|e| e.into())
+        }
     }
 
     pub fn wollet(&self) -> &Wollet {

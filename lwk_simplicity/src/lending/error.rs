@@ -19,4 +19,7 @@ pub enum LendingError {
 
     #[error("Cannot parse factory data: {0}")]
     CannotParseFactory(String),
+
+    #[error("Lending offer error: {0}")]
+    LendingOfferError(#[from] lending_contracts::programs::lending::LendingOfferError),
 }

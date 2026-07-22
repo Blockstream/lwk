@@ -116,19 +116,7 @@ impl LendingSession {
             RequiredSignature::NativeEcdsa,
         );
 
-        let change_addr = self.wollet.change(None)?;
-        let change_script = change_addr.address().script_pubkey();
-        let change_blinding =
-            change_addr
-                .address()
-                .blinding_pubkey
-                .ok_or(LendingError::Generic(
-                    "change address has no blinding key".into(),
-                ))?;
-        let change_pk = bitcoin::PublicKey::from(change_blinding);
-
-        let user_addr = self.wollet.address(None)?;
-        let user_script = user_addr.address().script_pubkey();
+        let (user_script, _) = self.get_spk_bk(false)?;
 
         ft.add_output(PartialOutput::new(
             user_script,
@@ -142,7 +130,7 @@ impl LendingSession {
             ISSUANCE_FACTORY_AMOUNT,
         );
 
-        let _ = self.add_fee(&mut ft, change_script, change_pk, fee_rate)?;
+        let _ = self.add_fee(&mut ft, fee_rate)?;
 
         let (mut pset, inp_txout_sec) = ft.extract_pst();
         let mut rng = thread_rng();
@@ -194,15 +182,8 @@ impl LendingSession {
         let issuance_factory = IssuanceFactory::new(issuance_factory_params);
 
         // Fetch the prepare transaction to obtain the raw txouts for the factory utxos.
-        let prepare_tx = self
-            .client
-            .get_transaction(factory.auth_utxo.txid)
-            .map_err(|e| LendingError::Generic(format!("failed to fetch prepare tx: {e}")))?;
-
-        let program_tx = self
-            .client
-            .get_transaction(factory.program_utxo.txid)
-            .map_err(|e| LendingError::Generic(format!("failed to fetch program tx: {e}")))?;
+        let prepare_tx = self.get_transaction(&factory.auth_utxo.txid)?;
+        let program_tx = self.get_transaction(&factory.program_utxo.txid)?;
 
         let auth_txout = prepare_tx
             .output
@@ -223,19 +204,8 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[collateral_utxo.outpoint])?;
 
-        let change_addr = self.wollet.change(None)?;
-        let change_script = change_addr.address().script_pubkey();
-        let change_blinding =
-            change_addr
-                .address()
-                .blinding_pubkey
-                .ok_or(LendingError::Generic(
-                    "change address has no blinding key".into(),
-                ))?;
-        let change_pk = bitcoin::PublicKey::from(change_blinding);
-
-        let user_addr = self.wollet.address(None)?;
-        let user_script = user_addr.address().script_pubkey();
+        let (change_script, change_pk) = self.get_spk_bk(true)?;
+        let (user_script, _) = self.get_spk_bk(false)?;
 
         // Use shared entropy for both NFTs
         let nfts_entropy = get_random_seed();
@@ -339,7 +309,7 @@ impl LendingSession {
         }
 
         // Add fee
-        let _ = self.add_fee(&mut ft, change_script, change_pk, fee_rate)?;
+        let _ = self.add_fee(&mut ft, fee_rate)?;
 
         // Extract
         let (mut pset, inp_txout_sec) = ft.extract_pst();
@@ -359,8 +329,129 @@ impl LendingSession {
         Ok(CreateBorrowTransaction { pset })
     }
 
-    pub fn fully_repay_loan(&self, _details: RepaymentDetails) -> Result<(), LendingError> {
-        todo!()
+    /// Fully repay an active loan.
+    ///
+    /// Spends the active covenant UTXO and the borrower's NFT to finalize the repayment,
+    /// returning the collateral to the borrower's wallet.
+    ///
+    /// # Errors
+    /// Returns an error if the wallet has no suitable principal or fee UTXOs, the acceptance or
+    /// creation transaction cannot be fetched, or the lending transaction construction fails.
+    pub fn fully_repay_loan(
+        &mut self,
+        details: RepaymentDetails,
+        fee_rate: f32,
+    ) -> Result<RepayOfferTransaction, LendingError> {
+        const FEE_ESTIMATE: u64 = 250;
+
+        let policy_asset = *self.network.policy_asset();
+        let simplex_network = to_simplicity_network(self.network);
+
+        let acceptance_tx = self.get_transaction(&details.active_covenant_outpoint.txid)?;
+
+        // We should pass creation TXID instead of fetching it from the acceptance transaction
+        let creation_txid = acceptance_tx
+            .input
+            .first()
+            .ok_or_else(|| LendingError::Generic("acceptance tx has no inputs".into()))?
+            .previous_output
+            .txid;
+
+        let creation_tx = self.get_transaction(&creation_txid)?;
+
+        let offer = LendingOffer::try_from_tx(
+            &creation_tx,
+            details.protocol_fee_keeper_asset_id,
+            simplex_network,
+        )?;
+
+        let offer_params = *offer.get_parameters();
+        let total_debt = offer_params.offer_parameters.get_total_amount_to_repay();
+        let mut offer = LendingOffer::new_active(offer_params, total_debt);
+
+        let covenant_txout = acceptance_tx
+            .output
+            .get(details.active_covenant_outpoint.vout as usize)
+            .ok_or_else(|| {
+                LendingError::Generic("covenant output not found in acceptance tx".into())
+            })?
+            .clone();
+
+        let active_covenant_utxo = UTXO {
+            outpoint: details.active_covenant_outpoint,
+            txout: covenant_txout,
+            secrets: None,
+        };
+
+        let borrower_nft_utxo =
+            self.get_explicit_utxo(offer_params.borrower_nft_asset_id, 1, &[])?;
+
+        let principal_utxo = self.get_utxo(
+            offer_params.principal_asset_id,
+            total_debt,
+            &[borrower_nft_utxo.outpoint],
+        )?;
+
+        let fee_funding_utxo = self.get_utxo(
+            policy_asset,
+            FEE_ESTIMATE,
+            &[borrower_nft_utxo.outpoint, principal_utxo.outpoint],
+        )?;
+
+        let (change_script, change_pk) = self.get_spk_bk(true)?;
+        let (user_script, _) = self.get_spk_bk(false)?;
+
+        let mut ft = FinalTransaction::new();
+
+        ft.add_input(
+            PartialInput::new(borrower_nft_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        offer.attach_full_repayment(&mut ft, active_covenant_utxo, None, None);
+
+        ft.add_input(
+            PartialInput::new(principal_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        ft.add_input(
+            PartialInput::new(fee_funding_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        ft.add_output(PartialOutput::new(
+            user_script,
+            offer_params.offer_parameters.collateral_amount,
+            offer_params.collateral_asset_id,
+        ));
+
+        if principal_utxo.amount() > total_debt {
+            ft.add_output(
+                PartialOutput::new(
+                    change_script.clone(),
+                    principal_utxo.amount() - total_debt,
+                    offer_params.principal_asset_id,
+                )
+                .with_blinding_key(change_pk),
+            );
+        }
+
+        let _ = self.add_fee(&mut ft, fee_rate)?;
+
+        let (mut pset, inp_txout_sec) = ft.extract_pst();
+
+        let mut rng = thread_rng();
+        pset.blind_last(&mut rng, &EC, &inp_txout_sec)
+            .map_err(|e| LendingError::Generic(format!("blinding error: {e}")))?;
+
+        self.wollet
+            .add_details(&mut pset)
+            .map_err(LendingError::Wallet)?;
+
+        self.finalize_program_inputs(&ft, &mut pset)?;
+
+        Ok(RepayOfferTransaction { pset })
     }
 
     pub fn partially_repay_loan(&self, _details: RepaymentDetails) -> Result<(), LendingError> {
@@ -388,21 +479,14 @@ impl LendingSession {
         let policy_asset = *self.network.policy_asset();
 
         // Fetch the pending offer creation transaction
-        let creation_tx = self
-            .client
-            .get_transaction(details.pending_offer_creation_txid)?;
+        let creation_tx = self.get_transaction(&details.pending_offer_creation_txid)?;
 
         // Reconstruct the LendingOffer from the creation transaction
         let mut offer = LendingOffer::try_from_tx(
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
             to_simplicity_network(self.network),
-        )
-        .map_err(|e| {
-            LendingError::Generic(format!(
-                "failed to parse pending offer from creation tx: {e}"
-            ))
-        })?;
+        )?;
 
         let offer_params = *offer.get_parameters();
 
@@ -454,23 +538,8 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[principal_utxo.outpoint])?;
 
-        // Derive change address
-        let change_addr = self.wollet.change(None)?;
-        let change_script = change_addr.address().script_pubkey();
-        let change_blinding =
-            change_addr
-                .address()
-                .blinding_pubkey
-                .ok_or(LendingError::Generic(
-                    "change address has no blinding key".into(),
-                ))?;
-
-        let change_pk = bitcoin::PublicKey::from(change_blinding);
-
-        // Derive user address for NFT
-        // We could use change address but it's technically is not a change.
-        let user_addr = self.wollet.address(None)?;
-        let user_script = user_addr.address().script_pubkey();
+        let (change_script, change_pk) = self.get_spk_bk(true)?;
+        let (user_script, _) = self.get_spk_bk(false)?;
 
         // Build transaction
         let mut ft = FinalTransaction::new();
@@ -513,8 +582,7 @@ impl LendingSession {
         }
 
         // Add fee
-        // Optionaly change output for policy asset
-        let _ = self.add_fee(&mut ft, change_script, change_pk, fee_rate)?;
+        let _ = self.add_fee(&mut ft, fee_rate)?;
 
         // Extract PSET, blind, add wallet details
         let (mut pset, inp_txout_sec) = ft.extract_pst();
@@ -555,10 +623,7 @@ impl LendingSession {
         let policy_asset = *self.network.policy_asset();
         let simplex_network = to_simplicity_network(self.network);
 
-        let acceptance_tx = self
-            .client
-            .get_transaction(details.acceptance_txid)
-            .map_err(|e| LendingError::Generic(format!("failed to fetch acceptance tx: {e}")))?;
+        let acceptance_tx = self.get_transaction(&details.acceptance_txid)?;
 
         let creation_txid = acceptance_tx
             .input
@@ -567,21 +632,13 @@ impl LendingSession {
             .previous_output
             .txid;
 
-        let creation_tx = self
-            .client
-            .get_transaction(creation_txid)
-            .map_err(|e| LendingError::Generic(format!("failed to fetch creation tx: {e}")))?;
+        let creation_tx = self.get_transaction(&creation_txid)?;
 
         let offer = LendingOffer::try_from_tx(
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
             simplex_network,
-        )
-        .map_err(|e| {
-            LendingError::Generic(format!(
-                "failed to parse pending offer from creation tx: {e}"
-            ))
-        })?;
+        )?;
 
         let offer_params = *offer.get_parameters();
 
@@ -613,27 +670,7 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[borrower_nft_utxo.outpoint])?;
 
-        let change_addr = self.wollet.change(None)?;
-        let change_script = change_addr.address().script_pubkey();
-        let change_blinding =
-            change_addr
-                .address()
-                .blinding_pubkey
-                .ok_or(LendingError::Generic(
-                    "change address has no blinding key".into(),
-                ))?;
-        let change_pk = bitcoin::PublicKey::from(change_blinding);
-
-        let user_addr = self.wollet.address(None)?;
-        let user_script = user_addr.address().script_pubkey();
-        let user_blinding = user_addr
-            .address()
-            .blinding_pubkey
-            .ok_or(LendingError::Generic(
-                "user address has no blinding key".into(),
-            ))?;
-
-        let user_pk = bitcoin::PublicKey::from(user_blinding);
+        let (user_script, user_pk) = self.get_spk_bk(false)?;
 
         let mut ft = FinalTransaction::new();
 
@@ -668,7 +705,7 @@ impl LendingSession {
             .with_blinding_key(user_pk),
         );
 
-        let _ = self.add_fee(&mut ft, change_script, change_pk, fee_rate)?;
+        let _ = self.add_fee(&mut ft, fee_rate)?;
 
         let (mut pset, inp_txout_sec) = ft.extract_pst();
 
@@ -834,13 +871,7 @@ impl LendingSession {
     /// `fee_rate` is fee rate in sats/kvb.
     ///
     /// Returns the computed fee in satoshis, or an error if funds are insufficient.
-    fn add_fee(
-        &self,
-        ft: &mut FinalTransaction,
-        change_script: Script,
-        change_pk: bitcoin::PublicKey,
-        fee_rate: f32,
-    ) -> Result<u64, LendingError> {
+    fn add_fee(&self, ft: &mut FinalTransaction, fee_rate: f32) -> Result<u64, LendingError> {
         let simplex_network = to_simplicity_network(self.network);
         let policy_asset = *self.network.policy_asset();
 
@@ -873,6 +904,8 @@ impl LendingSession {
 
         ft.add_output(PartialOutput::new(Script::default(), fee, policy_asset));
         if change != 0 {
+            let (change_script, change_pk) = self.get_spk_bk(true)?;
+
             ft.add_output(
                 PartialOutput::new(change_script, change, policy_asset)
                     .with_blinding_key(change_pk),
@@ -880,6 +913,32 @@ impl LendingSession {
         }
 
         Ok(fee)
+    }
+
+    fn get_spk_bk(&self, is_change: bool) -> Result<(Script, bitcoin::PublicKey), LendingError> {
+        let addr = if is_change {
+            self.wollet.change(None)?
+        } else {
+            self.wollet.address(None)?
+        };
+        let script = addr.address().script_pubkey();
+        let blinding = addr
+            .address()
+            .blinding_pubkey
+            .ok_or(LendingError::Generic("address has no blinding key".into()))?;
+        let pk = bitcoin::PublicKey::from(blinding);
+        Ok((script, pk))
+    }
+
+    /// Get transaction by the Txid.
+    ///
+    /// Firstly we trying to extract transaction from Wallet, if that failed we fallback to client.
+    fn get_transaction(&self, txid: &Txid) -> Result<Transaction, LendingError> {
+        if let Ok(Some(wollet_tx)) = self.wollet.transaction(txid) {
+            Ok(wollet_tx.tx)
+        } else {
+            self.client.get_transaction(*txid).map_err(|e| e.into())
+        }
     }
 
     pub fn wollet(&self) -> &Wollet {
@@ -999,7 +1058,8 @@ pub struct AcceptOfferDetails {
 }
 
 pub struct RepaymentDetails {
-    pub amount_to_repay: u64,
+    pub active_covenant_outpoint: OutPoint,
+    pub protocol_fee_keeper_asset_id: AssetId,
 }
 
 pub struct ClaimPrincipalDetails {
@@ -1043,6 +1103,20 @@ pub struct AcceptOfferTransaction {
 }
 
 impl AcceptOfferTransaction {
+    pub fn inner(&self) -> &PartiallySignedTransaction {
+        &self.pset
+    }
+
+    pub fn into_inner(self) -> PartiallySignedTransaction {
+        self.pset
+    }
+}
+
+pub struct RepayOfferTransaction {
+    pset: PartiallySignedTransaction,
+}
+
+impl RepayOfferTransaction {
     pub fn inner(&self) -> &PartiallySignedTransaction {
         &self.pset
     }

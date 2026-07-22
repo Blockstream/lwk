@@ -242,11 +242,16 @@ impl Wollet {
                 } else if tx.output.iter().any(|o| o.script_pubkey == burn_script) {
                     "burn".to_string()
                 } else if !fees.is_empty()
-                    && balance.len() == fees.len()
                     && fees
                         .iter()
                         .all(|(asset, fee)| balance.get(asset) == Some(&-(*fee as i64)))
+                    && balance
+                        .iter()
+                        .all(|(asset, bal)| fees.contains_key(asset) || *bal == 0)
                 {
+                    // Every fee-charged asset nets to exactly `-fee`, and every other asset
+                    // touched by the tx (if any, e.g. another asset redeposited alongside
+                    // the policy asset) nets to exactly 0.
                     "redeposit".to_string()
                 } else if balance.is_empty() {
                     "unknown".to_string()

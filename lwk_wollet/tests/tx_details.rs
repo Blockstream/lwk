@@ -299,3 +299,38 @@ fn test_txs_pagination_with_cannot_unblind() {
     assert_eq!(page(1), vec![txid5, txid7, txid8]);
     assert_eq!(page(2), vec![txid9, txid10]);
 }
+
+#[test]
+fn test_txs_asset_redeposit() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let s = generate_signer();
+
+    let view_key = generate_view_key();
+    let d = format!("ct({view_key},elwpkh({}/*))", s.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &d);
+    let signers = [&AnySigner::Software(s.clone())];
+
+    w.fund_btc(&env);
+    env.elementsd_generate(1);
+    let (asset, _token) = w.issueasset(&signers, 10, 1, None, None);
+    env.elementsd_generate(1);
+
+    // asset redeposit
+    let mut pset = w
+        .tx_builder()
+        .add_recipient(&w.address(), 10, asset)
+        .unwrap()
+        .finish()
+        .unwrap();
+    w.sign(&s, &mut pset);
+    w.send(&mut pset);
+    env.elementsd_generate(1);
+
+    let txsopt = TxsOpt::default();
+    let txs = w.wollet.txs(&txsopt).unwrap();
+    assert_eq!(txs[2].tx_type(), "incoming");
+    assert_eq!(txs[1].tx_type(), "issuance");
+    assert_eq!(txs[0].tx_type(), "redeposit");
+}

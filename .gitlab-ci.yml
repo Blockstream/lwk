@@ -167,13 +167,12 @@ test_jade:
     - cargo test -p lwk_jade --features asyncr
 
 # Authenticated Explorer API tests: Keycloak + APISIX (openid-connect) fronting the TestEnv
-# esplora. Tests are #[ignore] so they only run here (they need docker and the
-# closed-source blockstream/apisix image). Non-blocking while the container->job networking
-# is proven on this runner.
+# esplora, plus the Electrum RPC proxy. Tests are #[ignore] so they only run here (they need
+# docker and the closed-source rpcproxy/apisix images). Blocking now that the container->job
+# networking is proven on this runner.
 test_auth:
   stage: test
   needs: []
-  allow_failure: true
   extends:
     - .base
     - .coverage_mixin

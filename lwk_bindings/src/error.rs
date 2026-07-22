@@ -41,6 +41,13 @@ pub enum LwkError {
         status: u16,
         body: Option<String>,
     },
+
+    #[error("{url} returned HTTP {status}{body:?}")]
+    Amp2HttpError {
+        url: String,
+        status: u16,
+        body: Option<String>,
+    },
 }
 
 impl From<lwk_wollet::Error> for LwkError {
@@ -48,6 +55,9 @@ impl From<lwk_wollet::Error> for LwkError {
         match value {
             lwk_wollet::Error::EsploraHttpError { url, status, body } => {
                 LwkError::EsploraHttpError { url, status, body }
+            }
+            lwk_wollet::Error::Amp2HttpError { url, status, body } => {
+                LwkError::Amp2HttpError { url, status, body }
             }
             other => LwkError::Generic {
                 msg: format!("{other:?}"),

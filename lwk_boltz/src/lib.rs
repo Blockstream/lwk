@@ -94,22 +94,26 @@ pub(crate) const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs
 const MAX_BITCOIN_FEE_RATE: f64 = 50.0;
 const MIN_LIQUID_FEE_RATE: f64 = 0.1;
 
+fn validate_bitcoin_fee_rate(fee_rate: f64) -> Result<f64, Error> {
+    if !fee_rate.is_finite() || fee_rate <= 0.0 {
+        return Err(Error::Generic(format!(
+            "Boltz returned invalid Bitcoin fee rate {fee_rate}"
+        )));
+    }
+    if fee_rate > MAX_BITCOIN_FEE_RATE {
+        log::warn!(
+            "Bitcoin fee rate {fee_rate} exceeds maximum, capping at {MAX_BITCOIN_FEE_RATE} sat/vByte"
+        );
+    }
+    Ok(fee_rate.min(MAX_BITCOIN_FEE_RATE))
+}
+
 pub(crate) async fn fallback_swap_fee(api: &BoltzApiClientV2, chain: Chain) -> Result<Fee, Error> {
     match chain {
         Chain::Liquid(_) => Ok(Fee::Relative(MIN_LIQUID_FEE_RATE)),
         Chain::Bitcoin(_) => {
-            let fee_rate = api.get_fee_estimation().await?.btc;
-            if !fee_rate.is_finite() || fee_rate <= 0.0 {
-                return Err(Error::Generic(format!(
-                    "Boltz returned invalid Bitcoin fee rate {fee_rate}"
-                )));
-            }
-            if fee_rate > MAX_BITCOIN_FEE_RATE {
-                log::warn!(
-                    "Bitcoin fee rate {fee_rate} exceeds maximum, capping at {MAX_BITCOIN_FEE_RATE} sat/vByte"
-                );
-            }
-            Ok(Fee::Relative(fee_rate.min(MAX_BITCOIN_FEE_RATE)))
+            let fee_rate = validate_bitcoin_fee_rate(api.get_fee_estimation().await?.btc)?;
+            Ok(Fee::Relative(fee_rate))
         }
     }
 }
@@ -1050,6 +1054,14 @@ mod tests {
     use lwk_wollet::bitcoin::NetworkKind;
 
     use crate::derive_xpub_from_mnemonic;
+
+    #[test]
+    fn test_validate_bitcoin_fee_rate() {
+        assert_eq!(crate::validate_bitcoin_fee_rate(25.0).unwrap(), 25.0);
+        assert_eq!(crate::validate_bitcoin_fee_rate(250.0).unwrap(), 50.0);
+        assert!(crate::validate_bitcoin_fee_rate(0.0).is_err());
+        assert!(crate::validate_bitcoin_fee_rate(f64::NAN).is_err());
+    }
 
     #[test]
     fn test_elements_network_to_liquid_chain() {

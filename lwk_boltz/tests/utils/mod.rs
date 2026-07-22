@@ -252,6 +252,19 @@ pub async fn send_to_address(
         .ok_or_else(|| "Invalid response".into())
 }
 
+pub async fn boltz_bitcoin_fee_rate() -> Result<f64, Box<dyn Error>> {
+    let response = Client::new()
+        .get(format!("{BOLTZ_REGTEST}/chain/fees"))
+        .send()
+        .await?
+        .error_for_status()?
+        .json::<Value>()
+        .await?;
+    response["BTC"]
+        .as_f64()
+        .ok_or_else(|| "Boltz response is missing the BTC fee rate".into())
+}
+
 pub async fn generate_invoice_lnd(amount_sat: u64) -> Result<String, Box<dyn Error>> {
     let response = lnd_request("v1/invoices", json!({ "value": amount_sat })).await?;
     response["payment_request"]
@@ -395,6 +408,36 @@ pub async fn find_unspent_vout_by_address(
 pub async fn is_txout_unspent(chain: Chain, txid: &str, vout: u32) -> Result<bool, Box<dyn Error>> {
     let result = json_rpc_request(chain, "gettxout", json!([txid, vout, true])).await?;
     Ok(!result.is_null())
+}
+
+pub async fn bitcoin_transaction_fee_rate(
+    txid: &str,
+    input_sats: u64,
+) -> Result<f64, Box<dyn Error>> {
+    let transaction = json_rpc_request(
+        Chain::Bitcoin(BitcoinChain::BitcoinRegtest),
+        "getrawtransaction",
+        json!([txid, true]),
+    )
+    .await?;
+    let vsize = transaction["vsize"].as_u64().ok_or("Missing vsize")?;
+    let output_sats = transaction["vout"]
+        .as_array()
+        .ok_or("Missing vout")?
+        .iter()
+        .map(|output| {
+            output["value"]
+                .as_f64()
+                .map(|value| (value * 100_000_000.0).round() as u64)
+                .ok_or("Missing output value")
+        })
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .sum::<u64>();
+    let fee = input_sats
+        .checked_sub(output_sats)
+        .ok_or("Outputs exceed inputs")?;
+    Ok(fee as f64 / vsize as f64)
 }
 
 fn json_contains_str(value: &Value, needle: &str) -> bool {

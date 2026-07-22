@@ -2,6 +2,7 @@ use std::{
     collections::{HashMap, HashSet},
     sync::{mpsc, Mutex},
     thread,
+    time::Duration,
 };
 
 use age::x25519::Recipient;
@@ -13,6 +14,7 @@ use crate::{
     cache::Height,
     clients::{
         asyncr, Capability, Data, History, WaterfallsClientBuilder, WaterfallsSubscriptionEvent,
+        WaterfallsSubscriptionUpdate,
     },
     wollet::WolletState,
     Error, Network, WolletDescriptor,
@@ -47,6 +49,16 @@ pub struct WaterfallsClient {
 /// [`Self::close`] to stop the worker and interrupt a blocked [`Self::next_update`].
 pub struct WaterfallsSubscription {
     updates: Mutex<mpsc::Receiver<Result<Option<WaterfallsSubscriptionEvent>, Error>>>,
+    close: Mutex<Option<oneshot::Sender<()>>>,
+    worker: Mutex<Option<thread::JoinHandle<()>>>,
+}
+
+/// A blocking Waterfalls descriptor subscription stream that can reopen itself.
+///
+/// The stream owns a worker thread that reads the async SSE stream. Use
+/// [`Self::close`] to stop the worker and interrupt a blocked [`Self::next_update`].
+pub struct WaterfallsReconnectingSubscription {
+    updates: Mutex<mpsc::Receiver<Result<Option<WaterfallsSubscriptionUpdate>, Error>>>,
     close: Mutex<Option<oneshot::Sender<()>>>,
     worker: Mutex<Option<thread::JoinHandle<()>>>,
 }
@@ -129,6 +141,84 @@ impl Drop for WaterfallsSubscription {
     }
 }
 
+impl WaterfallsReconnectingSubscription {
+    fn new(subscription: asyncr::WaterfallsReconnectingSubscription) -> Result<Self, Error> {
+        let (updates_tx, updates_rx) = mpsc::channel();
+        let (close_tx, mut close_rx) = oneshot::channel();
+        let rt = Runtime::new()?;
+        let worker = thread::spawn(move || {
+            rt.block_on(async move {
+                let mut subscription = subscription;
+                loop {
+                    tokio::select! {
+                        _ = &mut close_rx => break,
+                        update = subscription.next_update() => {
+                            match update {
+                                Ok(update) => {
+                                    if updates_tx.send(Ok(Some(update))).is_err() {
+                                        break;
+                                    }
+                                }
+                                Err(err) => {
+                                    if updates_tx.send(Err(err)).is_err() {
+                                        break;
+                                    }
+                                    tokio::select! {
+                                        _ = &mut close_rx => break,
+                                        _ = tokio::time::sleep(Duration::from_secs(1)) => {}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        Ok(Self {
+            updates: Mutex::new(updates_rx),
+            close: Mutex::new(Some(close_tx)),
+            worker: Mutex::new(Some(worker)),
+        })
+    }
+
+    /// Return the next reconnecting Waterfalls subscription update.
+    ///
+    /// Returns `Ok(None)` when [`Self::close`] is called.
+    pub fn next_update(&self) -> Result<Option<WaterfallsSubscriptionUpdate>, Error> {
+        match self
+            .updates
+            .lock()
+            .map_err(|_| Error::Generic("subscription receiver mutex poisoned".to_string()))?
+            .recv()
+        {
+            Ok(update) => update,
+            Err(_) => Ok(None),
+        }
+    }
+
+    /// Stop the subscription stream and release its worker thread.
+    pub fn close(&self) {
+        if let Ok(mut close) = self.close.lock() {
+            if let Some(close) = close.take() {
+                let _ = close.send(());
+            }
+        }
+
+        if let Ok(mut worker) = self.worker.lock() {
+            if let Some(worker) = worker.take() {
+                let _ = worker.join();
+            }
+        }
+    }
+}
+
+impl Drop for WaterfallsReconnectingSubscription {
+    fn drop(&mut self) {
+        self.close();
+    }
+}
+
 impl WaterfallsClient {
     /// Create a new Waterfalls client.
     pub fn new(url: &str, network: Network) -> Result<Self, Error> {
@@ -184,6 +274,17 @@ impl WaterfallsClient {
         let subscription = self.rt.block_on(self.client.subscribe(descriptor))?;
         WaterfallsSubscription::new(subscription)
     }
+
+    /// Subscribe to Waterfalls descriptor updates and reopen the stream after disconnects.
+    pub fn subscribe_reconnecting(
+        &mut self,
+        descriptor: &WolletDescriptor,
+    ) -> Result<WaterfallsReconnectingSubscription, Error> {
+        let subscription = self
+            .rt
+            .block_on(self.client.subscribe_reconnecting(descriptor))?;
+        WaterfallsReconnectingSubscription::new(subscription)
+    }
 }
 
 impl BlockchainBackend for WaterfallsClient {
@@ -235,15 +336,46 @@ impl BlockchainBackend for WaterfallsClient {
 
 #[cfg(test)]
 mod tests {
-    use std::{sync::Arc, thread};
+    use std::{
+        io::{Read, Write},
+        net::TcpListener,
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
+        thread,
+    };
 
     use crate::{
-        clients::{blocking::WaterfallsClient, WaterfallsSubscriptionEventKind},
+        clients::{
+            blocking::WaterfallsClient, WaterfallsSubscriptionEventKind,
+            WaterfallsSubscriptionUpdate,
+        },
         Network, WolletDescriptor,
     };
 
     fn descriptor() -> WolletDescriptor {
         lwk_test_util::TEST_DESCRIPTOR.parse().unwrap()
+    }
+
+    fn serve_sequential_responses(responses: Vec<&'static str>) -> (String, Arc<AtomicUsize>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let accepted = Arc::new(AtomicUsize::new(0));
+        let thread_accepted = Arc::clone(&accepted);
+
+        thread::spawn(move || {
+            for response in responses {
+                let (mut stream, _) = listener.accept().unwrap();
+                thread_accepted.fetch_add(1, Ordering::Relaxed);
+
+                let mut request = [0u8; 1024];
+                let _ = stream.read(&mut request);
+                let _ = stream.write_all(response.as_bytes());
+            }
+        });
+
+        (format!("http://{addr}"), accepted)
     }
 
     #[test]
@@ -282,5 +414,29 @@ mod tests {
         subscription.close();
 
         assert!(worker.join().unwrap().is_none());
+    }
+
+    #[test]
+    fn blocking_subscribe_reconnecting_recovers_after_error() {
+        let (base_url, accepted) = serve_sequential_responses(vec![
+            "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n: ready\n\n",
+            "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+            "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n: ready\n\n",
+        ]);
+        let mut client = WaterfallsClient::new(&base_url, Network::Liquid).unwrap();
+        client.avoid_encryption();
+
+        let subscription = client.subscribe_reconnecting(&descriptor()).unwrap();
+
+        assert_eq!(
+            subscription.next_update().unwrap(),
+            Some(WaterfallsSubscriptionUpdate::Disconnected { error: None })
+        );
+        assert!(subscription.next_update().is_err());
+        assert_eq!(
+            subscription.next_update().unwrap(),
+            Some(WaterfallsSubscriptionUpdate::Reconnected)
+        );
+        assert_eq!(accepted.load(Ordering::Relaxed), 3);
     }
 }

@@ -17,7 +17,10 @@ use crate::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 use crate::{
-    clients::{waterfalls::WaterfallsSseParser, Capability, Data, WaterfallsSubscriptionEvent},
+    clients::{
+        waterfalls::WaterfallsSseParser, Capability, Data, WaterfallsSubscriptionEvent,
+        WaterfallsSubscriptionUpdate,
+    },
     wollet::WolletState,
 };
 
@@ -35,6 +38,18 @@ pub struct WaterfallsSubscription {
     response: Response,
     parser: WaterfallsSseParser,
     pending: VecDeque<WaterfallsSubscriptionEvent>,
+}
+
+/// A Waterfalls descriptor subscription stream that can reopen itself.
+///
+/// The stream emits local lifecycle updates when the underlying SSE connection
+/// closes and when it is reopened. Callers should run a normal scan after a
+/// reconnect because updates may have been missed while disconnected.
+#[cfg(not(target_arch = "wasm32"))]
+pub struct WaterfallsReconnectingSubscription {
+    client: WaterfallsClient,
+    url: String,
+    subscription: Option<WaterfallsSubscription>,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -58,7 +73,32 @@ impl WaterfallsSubscription {
     }
 }
 
-#[derive(Debug)]
+#[cfg(not(target_arch = "wasm32"))]
+impl WaterfallsReconnectingSubscription {
+    /// Return the next reconnecting Waterfalls subscription update.
+    pub async fn next_update(&mut self) -> Result<WaterfallsSubscriptionUpdate, Error> {
+        let Some(subscription) = self.subscription.as_mut() else {
+            self.subscription = Some(self.client.subscribe_url(&self.url).await?);
+            return Ok(WaterfallsSubscriptionUpdate::Reconnected);
+        };
+
+        match subscription.next_update().await {
+            Ok(Some(event)) => Ok(WaterfallsSubscriptionUpdate::Event(event)),
+            Ok(None) => {
+                self.subscription = None;
+                Ok(WaterfallsSubscriptionUpdate::Disconnected { error: None })
+            }
+            Err(err) => {
+                self.subscription = None;
+                Ok(WaterfallsSubscriptionUpdate::Disconnected {
+                    error: Some(err.to_string()),
+                })
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 /// A blockchain backend implementation based on the
 /// [Waterfalls HTTP API](https://github.com/RCasatta/waterfalls).
 ///
@@ -138,6 +178,20 @@ impl WaterfallsClient {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    async fn subscribe_url(&self, url: &str) -> Result<WaterfallsSubscription, Error> {
+        let response = self.inner.get_with_retry(url).await?;
+        if !response.status().is_success() {
+            return Err(error_for_status(url, response).await);
+        }
+
+        Ok(WaterfallsSubscription {
+            response,
+            parser: WaterfallsSseParser::default(),
+            pending: VecDeque::new(),
+        })
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) async fn get_history_waterfalls<S: WolletState>(
         &mut self,
         descriptor: &WolletDescriptor,
@@ -187,15 +241,26 @@ impl WaterfallsClient {
         descriptor: &WolletDescriptor,
     ) -> Result<WaterfallsSubscription, Error> {
         let url = self.waterfalls_subscribe_url(descriptor).await?;
-        let response = self.inner.get_with_retry(&url).await?;
-        if !response.status().is_success() {
-            return Err(error_for_status(&url, response).await);
-        }
+        self.subscribe_url(&url).await
+    }
 
-        Ok(WaterfallsSubscription {
-            response,
-            parser: WaterfallsSseParser::default(),
-            pending: VecDeque::new(),
+    /// Subscribe to Waterfalls descriptor updates and reopen the stream after disconnects.
+    ///
+    /// This preserves the normal subscription event stream and adds local
+    /// `Disconnected` and `Reconnected` lifecycle updates. A reconnect is an
+    /// invalidation hint: callers should run a normal scan because server events
+    /// may have been missed while the stream was disconnected.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn subscribe_reconnecting(
+        &mut self,
+        descriptor: &WolletDescriptor,
+    ) -> Result<WaterfallsReconnectingSubscription, Error> {
+        let url = self.waterfalls_subscribe_url(descriptor).await?;
+        let subscription = self.subscribe_url(&url).await?;
+        Ok(WaterfallsReconnectingSubscription {
+            client: self.clone(),
+            url,
+            subscription: Some(subscription),
         })
     }
 
@@ -264,13 +329,56 @@ impl WaterfallsClientBuilder {
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        io::{Read, Write},
+        net::TcpListener,
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
+        thread,
+        time::Duration,
+    };
+
     use crate::{
-        clients::{asyncr::WaterfallsClientBuilder, WaterfallsSubscriptionEventKind},
+        clients::{
+            asyncr::WaterfallsClientBuilder, WaterfallsSubscriptionEventKind,
+            WaterfallsSubscriptionUpdate,
+        },
         Error, Network, WolletDescriptor,
     };
 
     fn descriptor() -> WolletDescriptor {
         lwk_test_util::TEST_DESCRIPTOR.parse().unwrap()
+    }
+
+    fn serve_sequential_sse_responses(
+        responses: Vec<(&'static str, bool)>,
+    ) -> (String, Arc<AtomicUsize>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let accepted = Arc::new(AtomicUsize::new(0));
+        let thread_accepted = Arc::clone(&accepted);
+
+        thread::spawn(move || {
+            for (body, keep_open) in responses {
+                let (mut stream, _) = listener.accept().unwrap();
+                thread_accepted.fetch_add(1, Ordering::Relaxed);
+
+                let mut request = [0u8; 1024];
+                let _ = stream.read(&mut request);
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n{body}"
+                );
+                let _ = stream.write_all(response.as_bytes());
+
+                if keep_open {
+                    thread::sleep(Duration::from_secs(30));
+                }
+            }
+        });
+
+        (format!("http://{addr}"), accepted)
     }
 
     #[tokio::test]
@@ -295,6 +403,77 @@ mod tests {
         assert_eq!(second.kind, WaterfallsSubscriptionEventKind::Mempool);
 
         assert!(subscription.next_update().await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn subscribe_reconnecting_reopens_after_eof() {
+        let (base_url, accepted) = serve_sequential_sse_responses(vec![
+            (
+                ": ready\n\nevent: update\ndata: {\"type\":\"tip\"}\n\n",
+                false,
+            ),
+            (
+                ": ready\n\nevent: update\ndata: {\"type\":\"mempool\"}\n\n",
+                true,
+            ),
+        ]);
+        let mut client = WaterfallsClientBuilder::new(&base_url, Network::Liquid)
+            .build()
+            .unwrap();
+        client.avoid_encryption();
+
+        let mut subscription = client.subscribe_reconnecting(&descriptor()).await.unwrap();
+
+        match subscription.next_update().await.unwrap() {
+            WaterfallsSubscriptionUpdate::Event(event) => {
+                assert_eq!(event.kind, WaterfallsSubscriptionEventKind::Tip);
+            }
+            other => panic!("expected tip event, got {other:?}"),
+        }
+
+        assert_eq!(
+            subscription.next_update().await.unwrap(),
+            WaterfallsSubscriptionUpdate::Disconnected { error: None }
+        );
+        assert_eq!(
+            subscription.next_update().await.unwrap(),
+            WaterfallsSubscriptionUpdate::Reconnected
+        );
+
+        match subscription.next_update().await.unwrap() {
+            WaterfallsSubscriptionUpdate::Event(event) => {
+                assert_eq!(event.kind, WaterfallsSubscriptionEventKind::Mempool);
+            }
+            other => panic!("expected mempool event, got {other:?}"),
+        }
+
+        assert_eq!(accepted.load(Ordering::Relaxed), 2);
+    }
+
+    /// Run with:
+    ///
+    /// `RUST_LOG=info direnv exec . cargo test -p lwk_wollet --lib manual_subscribe_reconnecting_production_testnet -- --ignored --nocapture`
+    #[tokio::test]
+    #[ignore = "manual hanging test for toggling network connectivity"]
+    async fn manual_subscribe_reconnecting_production_testnet() {
+        lwk_test_util::init_logging();
+
+        let base_url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+        let mut client = WaterfallsClientBuilder::new(base_url, Network::TestnetLiquid)
+            .build()
+            .unwrap();
+        let mut subscription = client.subscribe_reconnecting(&descriptor()).await.unwrap();
+
+        log::info!("subscribed to {base_url}; toggle Wi-Fi off and on, or press Ctrl-C to stop");
+        loop {
+            match subscription.next_update().await {
+                Ok(update) => log::info!("subscription update: {update:?}"),
+                Err(err) => {
+                    log::info!("reconnect attempt failed: {err}; retrying in one second");
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+            }
+        }
     }
 
     #[tokio::test]

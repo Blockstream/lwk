@@ -21,6 +21,28 @@ pub struct WaterfallsSubscriptionEvent {
     pub tip: Option<WaterfallsSubscriptionTip>,
 }
 
+/// An item returned by a reconnecting Waterfalls descriptor subscription.
+///
+/// `Event` wraps server-sent Waterfalls updates. `Disconnected` and
+/// `Reconnected` are local lifecycle notifications emitted by the client.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum WaterfallsSubscriptionUpdate {
+    /// A Waterfalls server update event.
+    Event(WaterfallsSubscriptionEvent),
+
+    /// The subscription stream disconnected.
+    Disconnected {
+        /// The error that caused the disconnect, if any.
+        error: Option<String>,
+    },
+
+    /// The subscription stream was reopened.
+    ///
+    /// Callers should run a normal scan after this update because server events
+    /// may have been missed while disconnected.
+    Reconnected,
+}
+
 /// The kind of Waterfalls subscription event.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]

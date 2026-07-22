@@ -116,19 +116,8 @@ impl LendingSession {
             RequiredSignature::NativeEcdsa,
         );
 
-        let change_addr = self.wollet.change(None)?;
-        let change_script = change_addr.address().script_pubkey();
-        let change_blinding =
-            change_addr
-                .address()
-                .blinding_pubkey
-                .ok_or(LendingError::Generic(
-                    "change address has no blinding key".into(),
-                ))?;
-        let change_pk = bitcoin::PublicKey::from(change_blinding);
-
-        let user_addr = self.wollet.address(None)?;
-        let user_script = user_addr.address().script_pubkey();
+        let (change_script, change_pk) = self.get_spk_bk(true)?;
+        let (user_script, _) = self.get_spk_bk(false)?;
 
         ft.add_output(PartialOutput::new(
             user_script,
@@ -223,19 +212,8 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[collateral_utxo.outpoint])?;
 
-        let change_addr = self.wollet.change(None)?;
-        let change_script = change_addr.address().script_pubkey();
-        let change_blinding =
-            change_addr
-                .address()
-                .blinding_pubkey
-                .ok_or(LendingError::Generic(
-                    "change address has no blinding key".into(),
-                ))?;
-        let change_pk = bitcoin::PublicKey::from(change_blinding);
-
-        let user_addr = self.wollet.address(None)?;
-        let user_script = user_addr.address().script_pubkey();
+        let (change_script, change_pk) = self.get_spk_bk(true)?;
+        let (user_script, _) = self.get_spk_bk(false)?;
 
         // Use shared entropy for both NFTs
         let nfts_entropy = get_random_seed();
@@ -434,19 +412,8 @@ impl LendingSession {
             &[borrower_nft_utxo.outpoint, principal_utxo.outpoint],
         )?;
 
-        let change_addr = self.wollet.change(None)?;
-        let change_script = change_addr.address().script_pubkey();
-        let change_blinding =
-            change_addr
-                .address()
-                .blinding_pubkey
-                .ok_or(LendingError::Generic(
-                    "change address has no blinding key".into(),
-                ))?;
-        let change_pk = bitcoin::PublicKey::from(change_blinding);
-
-        let user_addr = self.wollet.address(None)?;
-        let user_script = user_addr.address().script_pubkey();
+        let (change_script, change_pk) = self.get_spk_bk(true)?;
+        let (user_script, _) = self.get_spk_bk(false)?;
 
         let mut ft = FinalTransaction::new();
 
@@ -587,23 +554,8 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[principal_utxo.outpoint])?;
 
-        // Derive change address
-        let change_addr = self.wollet.change(None)?;
-        let change_script = change_addr.address().script_pubkey();
-        let change_blinding =
-            change_addr
-                .address()
-                .blinding_pubkey
-                .ok_or(LendingError::Generic(
-                    "change address has no blinding key".into(),
-                ))?;
-
-        let change_pk = bitcoin::PublicKey::from(change_blinding);
-
-        // Derive user address for NFT
-        // We could use change address but it's technically is not a change.
-        let user_addr = self.wollet.address(None)?;
-        let user_script = user_addr.address().script_pubkey();
+        let (change_script, change_pk) = self.get_spk_bk(true)?;
+        let (user_script, _) = self.get_spk_bk(false)?;
 
         // Build transaction
         let mut ft = FinalTransaction::new();
@@ -741,27 +693,8 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[borrower_nft_utxo.outpoint])?;
 
-        let change_addr = self.wollet.change(None)?;
-        let change_script = change_addr.address().script_pubkey();
-        let change_blinding =
-            change_addr
-                .address()
-                .blinding_pubkey
-                .ok_or(LendingError::Generic(
-                    "change address has no blinding key".into(),
-                ))?;
-        let change_pk = bitcoin::PublicKey::from(change_blinding);
-
-        let user_addr = self.wollet.address(None)?;
-        let user_script = user_addr.address().script_pubkey();
-        let user_blinding = user_addr
-            .address()
-            .blinding_pubkey
-            .ok_or(LendingError::Generic(
-                "user address has no blinding key".into(),
-            ))?;
-
-        let user_pk = bitcoin::PublicKey::from(user_blinding);
+        let (change_script, change_pk) = self.get_spk_bk(true)?;
+        let (user_script, user_pk) = self.get_spk_bk(false)?;
 
         let mut ft = FinalTransaction::new();
 
@@ -1008,6 +941,21 @@ impl LendingSession {
         }
 
         Ok(fee)
+    }
+
+    fn get_spk_bk(&self, is_change: bool) -> Result<(Script, bitcoin::PublicKey), LendingError> {
+        let addr = if is_change {
+            self.wollet.change(None)?
+        } else {
+            self.wollet.address(None)?
+        };
+        let script = addr.address().script_pubkey();
+        let blinding = addr
+            .address()
+            .blinding_pubkey
+            .ok_or(LendingError::Generic("address has no blinding key".into()))?;
+        let pk = bitcoin::PublicKey::from(blinding);
+        Ok((script, pk))
     }
 
     pub fn wollet(&self) -> &Wollet {

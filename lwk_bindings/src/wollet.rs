@@ -159,17 +159,17 @@ impl Wollet {
         let opt = lwk_wollet::TxsOpt {
             offset: Some(offset as usize),
             limit: Some(limit as usize),
+            // skip transactions that cannot be unblinded by the wollet (default)
+            with_cannot_unblind: false,
             ..Default::default()
         };
-        let mut txs: Vec<WalletTx> = self
+        let txs: Vec<WalletTx> = self
             .inner
             .lock()?
             .txs(&opt)?
             .into_iter()
             .map(TryInto::try_into)
             .collect::<Result<_, _>>()?;
-        // Filter to preserve the behavior of `Wollet::transactions_paginated()`.
-        txs.retain(WalletTx::is_relevant);
         Ok(txs.into_iter().map(Arc::new).collect())
     }
 

@@ -167,9 +167,15 @@ fn fake_persisted_txs_store_restore_reloads_last_unused() {
     assert_eq!(persisted_update.last_unused.external, 1);
     assert_eq!(persisted_update.last_unused.internal, 0);
 
+    // allow for indexing keys
+    let persisted = true;
+    let exceptions = vec![
+        "wollet:txids".to_string(),
+        "wollet:cannot_unblind_txids".to_string(),
+    ];
     let wollet2 = WolletBuilder::new(network, wd)
         .with_updates_store(updates_store)
-        .with_txs_store(Arc::new(PanicStore::new_persisted()))
+        .with_txs_store(Arc::new(PanicStore::new(persisted, exceptions)))
         .set_encryption_txs_store(false)
         .with_merge_threshold(Some(1))
         .build()

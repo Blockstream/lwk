@@ -519,8 +519,10 @@ Expected:
 
 ==Reference implementation==
 
-[https://github.com/Blockstream/lwk Liquid Wallet Kit], in the <code>silent_payments</code> module of the <code>lwk_wollet</code> crate.
-It implements the address encoding, the key derivation, the input eligibility rules, the sender and receiver derivations and the blinding key derivation, and it is checked against both the BIP-352 test vectors and the vectors of this document.
+[https://github.com/Blockstream/lwk Liquid Wallet Kit], in the <code>silent_payments</code> module of the <code>lwk_wollet</code> crate, proposed in [https://github.com/Blockstream/lwk/pull/170 pull request 170].
+
+It implements the address encoding, the key derivation, the input eligibility rules, the sender and receiver derivations and the blinding key derivation.
+It is checked against the [https://github.com/bitcoin/bips/blob/master/bip-0352/send_and_receive_test_vectors.json BIP-352 test vectors], sending and receiving, against the test vectors of this document, and against transactions built, blinded and signed as a wallet would build them, which is what covers the blinding.
 
 ==Footnotes==
 

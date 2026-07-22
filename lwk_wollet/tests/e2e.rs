@@ -4669,6 +4669,66 @@ fn test_issue_asset() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
+fn op_return() {
+    // Build, sign and broadcast a transaction carrying an `OP_RETURN` output with a
+    // data payload, then check the explicit zero-value output landed on-chain.
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc_str = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut wallet = TestWollet::new(client, &desc_str);
+    let signers: [&AnySigner; 1] = [&AnySigner::Software(signer)];
+
+    wallet.fund_btc(&env);
+    let balance_before = wallet.balance_btc();
+
+    let data = b"lwk op_return";
+    let mut pset = wallet
+        .tx_builder()
+        .add_op_return(data)
+        .unwrap()
+        .finish()
+        .unwrap();
+    // Round-trip through the b64 string form (as PSETs are passed around in practice)
+    // to catch any (de)serialization issue introduced by the OP_RETURN output.
+    pset = pset_rt(&pset);
+
+    // The OP_RETURN output carries zero value, so only the fee is spent.
+    let details = wallet.wollet.get_details(&pset).unwrap();
+    let fee = details.balance.fees_in(&wallet.policy_asset()) as i64;
+    assert!(fee > 0);
+    assert_eq!(
+        *details
+            .balance
+            .balances
+            .get(&wallet.policy_asset())
+            .unwrap(),
+        -fee
+    );
+
+    for signer in &signers {
+        wallet.sign(signer, &mut pset);
+    }
+    let txid = wallet.send(&mut pset);
+
+    // The OP_RETURN output is not owned by the wallet, so it appears only in the raw
+    // transaction, as an explicit (unblinded) zero-value output.
+    let expected = elements::Script::new_op_return(data);
+    let tx = wallet.get_tx(&txid).tx;
+    let op_return = tx
+        .output
+        .iter()
+        .find(|o| o.script_pubkey == expected)
+        .expect("op_return output not found in broadcast tx");
+    assert!(op_return.script_pubkey.is_op_return());
+    assert_eq!(op_return.value.explicit(), Some(0));
+    assert!(op_return.nonce.is_null()); // unblinded
+
+    assert!(wallet.balance_btc() < balance_before);
+}
+
+#[test]
 fn test_zmq_endpoint() {
     let env = TestEnvBuilder::from_env().with_zmq().build();
     let zmq_url = env.zmq_endpoint();

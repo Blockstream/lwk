@@ -33,6 +33,15 @@ The methods take the following arguments:
 
 </section>
 
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/drain_lbtc.js:drain_lbtc_wallet}}
+```
+
+</section>
+
 <div slot="title">Go</div>
 <section>
 

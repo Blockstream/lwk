@@ -31,6 +31,15 @@ The `reissue_asset()` method takes the following arguments:
 
 </section>
 
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/issue_asset.js:reissue_asset}}
+```
+
+</section>
+
 <div slot="title">Go</div>
 <section>
 

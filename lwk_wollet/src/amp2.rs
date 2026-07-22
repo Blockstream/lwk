@@ -161,13 +161,12 @@ impl Amp2 {
         let body = RegisterRequest {
             descriptor: desc.descriptor().to_string(),
         };
-        let j: RegisterResponse = reqwest::Client::new()
-            .post(format!("{}/wallets/register", self.url))
-            .json(&body)
-            .send()
-            .await?
-            .json()
-            .await?;
+        let url = format!("{}/wallets/register", self.url);
+        let response = reqwest::Client::new().post(&url).json(&body).send().await?;
+        if !response.status().is_success() {
+            return Err(error_for_status(&url, response).await);
+        }
+        let j: RegisterResponse = response.json().await?;
         Ok(j)
     }
 
@@ -180,11 +179,15 @@ impl Amp2 {
         let body = RegisterRequest {
             descriptor: desc.descriptor().to_string(),
         };
-        let j: RegisterResponse = reqwest::blocking::Client::new()
-            .post(format!("{}/wallets/register", self.url))
+        let url = format!("{}/wallets/register", self.url);
+        let response = reqwest::blocking::Client::new()
+            .post(&url)
             .json(&body)
-            .send()?
-            .json()?;
+            .send()?;
+        if !response.status().is_success() {
+            return Err(error_for_status_blocking(&url, response));
+        }
+        let j: RegisterResponse = response.json()?;
         Ok(j)
     }
 
@@ -196,13 +199,12 @@ impl Amp2 {
         let body = CosignRequest {
             pset: pset.to_string(),
         };
-        let j: CosignResponseInner = reqwest::Client::new()
-            .post(format!("{}/wallets/sign", self.url))
-            .json(&body)
-            .send()
-            .await?
-            .json()
-            .await?;
+        let url = format!("{}/wallets/sign", self.url);
+        let response = reqwest::Client::new().post(&url).json(&body).send().await?;
+        if !response.status().is_success() {
+            return Err(error_for_status(&url, response).await);
+        }
+        let j: CosignResponseInner = response.json().await?;
         j.try_into()
     }
 
@@ -215,12 +217,43 @@ impl Amp2 {
         let body = CosignRequest {
             pset: pset.to_string(),
         };
-        let j: CosignResponseInner = reqwest::blocking::Client::new()
-            .post(format!("{}/wallets/sign", self.url))
+        let url = format!("{}/wallets/sign", self.url);
+        let response = reqwest::blocking::Client::new()
+            .post(&url)
             .json(&body)
-            .send()?
-            .json()?;
+            .send()?;
+        if !response.status().is_success() {
+            return Err(error_for_status_blocking(&url, response));
+        }
+        let j: CosignResponseInner = response.json()?;
         j.try_into()
+    }
+}
+
+/// Builds an [`crate::Error`] describing an unsuccessful AMP2 HTTP response, including the
+/// status code and (a bounded prefix of) the response body, so failures like a rejected
+/// registration or cosign request are reported clearly rather than as a downstream JSON
+/// parsing error.
+async fn error_for_status(url: &str, response: reqwest::Response) -> crate::Error {
+    let status = response.status().as_u16();
+    let body = response.text().await.unwrap_or_default();
+    let snippet: String = body.trim().chars().take(500).collect();
+    crate::Error::Amp2HttpError {
+        url: url.to_string(),
+        status,
+        body: (!snippet.is_empty()).then_some(snippet),
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn error_for_status_blocking(url: &str, response: reqwest::blocking::Response) -> crate::Error {
+    let status = response.status().as_u16();
+    let body = response.text().unwrap_or_default();
+    let snippet: String = body.trim().chars().take(500).collect();
+    crate::Error::Amp2HttpError {
+        url: url.to_string(),
+        status,
+        body: (!snippet.is_empty()).then_some(snippet),
     }
 }
 

@@ -111,6 +111,14 @@ pub enum Error {
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
 
+    #[cfg(feature = "amp2")]
+    #[error("AMP2 server at {url} returned HTTP {status}{}", .body.as_deref().map(|b| format!(": {b}")).unwrap_or_default())]
+    Amp2HttpError {
+        url: String,
+        status: u16,
+        body: Option<String>,
+    },
+
     #[error("Address must be explicit")]
     NotExplicitAddress,
 

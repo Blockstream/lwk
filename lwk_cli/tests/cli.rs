@@ -1933,16 +1933,7 @@ fn test_auth_err() {
     let cli = format!("cli --addr {addr} -n regtest");
     let params = format!("--datadir {datadir} {server_url}");
 
-    let err = sh_err(&format!(
-        "{cli} server start {params} --auth-token-url https://login --auth-client-id client_id --auth-client-secret secret"
-    ));
-    assert!(err.contains("Authentication is not supported with Electrum server type"));
-
-    let err = sh_err(&format!(
-        "{cli} server start {params} --auth-static-token token"
-    ));
-    assert!(err.contains("Authentication is not supported with Electrum server type"));
-
+    // Blockstream auth requires all three fields set together (regardless of server type).
     let err = sh_err(&format!(
         "{cli} server start {params} --auth-token-url https://login --auth-client-id client_id"
     ));
@@ -1978,6 +1969,24 @@ fn test_auth_success() {
     let params = format!(
         "--datadir {datadir} --server-url {} --server-type esplora --auth-token-url https://login --auth-client-id client_id --auth-client-secret secret",
         env.esplora_url()
+    );
+
+    let t = {
+        let cli = cli.clone();
+        std::thread::spawn(move || {
+            sh(&format!("{cli} server start {params}"));
+        })
+    };
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+
+    // Auth is also accepted with the Electrum server type (a Blockstream OAuth provider on
+    // Electrum needs the `electrum_oidc` feature, enabled for lwk_app).
+    let params = format!(
+        "--datadir {datadir} --server-url {} --server-type electrum --auth-token-url https://login --auth-client-id client_id --auth-client-secret secret",
+        env.electrum_url()
     );
 
     let t = {

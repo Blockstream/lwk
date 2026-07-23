@@ -6,7 +6,7 @@ use lwk_jade::TIMEOUT;
 use lwk_wollet::amp2::Amp2;
 use lwk_wollet::asyncr::{EsploraClientBuilder, WaterfallsClientBuilder};
 use lwk_wollet::clients::TokenProvider;
-use lwk_wollet::{amp2, ElectrumClient};
+use lwk_wollet::{amp2, ElectrumClientBuilder};
 use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -135,8 +135,9 @@ impl Config {
         // TODO cache it instead of recreating every time
         match self.server_type.as_ref() {
             "electrum" => {
-                let electrum_url = self.server_url.parse().map_err(lwk_wollet::Error::Url)?;
-                let electrum_client = ElectrumClient::new(&electrum_url)?;
+                let electrum_client = ElectrumClientBuilder::new(&self.server_url)
+                    .token_provider(self.token_provider.clone())
+                    .build()?;
                 Ok(BlockchainClient::Electrum(electrum_client))
             }
             "esplora" => {

@@ -11,7 +11,7 @@ documentation = "https://docs.rs/lwk_app"
 lwk_common = { version = "0.18.0", features = ["sqlite"] }
 lwk_jade = { version = "0.18.0" }
 lwk_signer = { version = "0.18.0" }
-lwk_wollet = { version = "0.18.0" }
+lwk_wollet = { version = "0.18.0", features = ["electrum_oidc"] }
 lwk_rpc_model = { version = "0.18.0" }
 lwk_tiny_jrpc = { version = "0.18.0" }
 

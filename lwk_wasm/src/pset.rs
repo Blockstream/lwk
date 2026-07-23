@@ -168,6 +168,19 @@ impl PsetInput {
             .map(|txout| txout.script_pubkey.clone().into())
     }
 
+    /// Prevout (witness) UTXO of the input, if present.
+    // Gated on `simplicity` because the wasm `TxOut` wrapper is only compiled with
+    // that feature; its motivating use is assembling the prevout set for
+    // `SimplicityProgram.finalizeTransaction`.
+    #[cfg(feature = "simplicity")]
+    #[wasm_bindgen(js_name = witnessUtxo)]
+    pub fn witness_utxo(&self) -> Option<TxOut> {
+        self.inner
+            .witness_utxo
+            .as_ref()
+            .map(|txout| txout.clone().into())
+    }
+
     /// Redeem script of the input
     #[wasm_bindgen(js_name = redeemScript)]
     pub fn redeem_script(&self) -> Option<Script> {

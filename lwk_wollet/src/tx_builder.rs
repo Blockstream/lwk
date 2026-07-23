@@ -271,6 +271,17 @@ impl TxBuilder {
         self.add_unvalidated_recipient(&rec)
     }
 
+    /// Add an `OP_RETURN` output carrying arbitrary `data`, with zero value.
+    pub fn add_op_return(mut self, data: &[u8]) -> Result<Self, Error> {
+        self.recipients.push(Recipient {
+            satoshi: 0,
+            script_pubkey: Script::new_op_return(data),
+            blinding_pubkey: None,
+            asset: *self.network().policy_asset(),
+        });
+        Ok(self)
+    }
+
     /// Add explicit output
     pub fn add_explicit_recipient(
         mut self,
@@ -1677,6 +1688,14 @@ impl<'a> WolletTxBuilder<'a> {
         Ok(Self {
             wollet: self.wollet,
             inner: self.inner.add_burn(satoshi, asset_id)?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::add_op_return()`]
+    pub fn add_op_return(self, data: &[u8]) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.add_op_return(data)?,
         })
     }
 

@@ -139,7 +139,7 @@ async fn test_borrow_flow() {
 
     // borrower_prepare, which selects fee UTXO and builds transaction
     let prepared = borrower_session
-        .borrower_prepare(BorrowerAccountParams {}, 100.0)
+        .borrower_prepare(BorrowerAccountParams {})
         .unwrap();
     let mut pset = prepared.inner().clone();
 
@@ -200,7 +200,7 @@ async fn test_borrow_flow() {
     borrower_session.sync().unwrap();
 
     let create = borrower_session
-        .borrower_create_offer(borrow_details, factory.clone().try_into().unwrap(), 100.0)
+        .borrower_create_offer(borrow_details, factory.clone().try_into().unwrap())
         .unwrap();
 
     let mut pset = create.into_inner();
@@ -238,13 +238,10 @@ async fn test_borrow_flow() {
     lender_session.sync().unwrap();
 
     let accept = lender_session
-        .accept_offer(
-            AcceptOfferDetails {
-                pending_offer_creation_txid: creation_txid,
-                protocol_fee_keeper_asset_id: PROTOCOL_FEE_KEEPER_ASSET_ID,
-            },
-            100.0,
-        )
+        .accept_offer(AcceptOfferDetails {
+            pending_offer_creation_txid: creation_txid,
+            protocol_fee_keeper_asset_id: PROTOCOL_FEE_KEEPER_ASSET_ID,
+        })
         .unwrap();
 
     let mut pset = accept.into_inner();
@@ -261,13 +258,10 @@ async fn test_borrow_flow() {
     borrower_session.sync().unwrap();
 
     let claim = borrower_session
-        .claim_principal(
-            ClaimPrincipalDetails {
-                acceptance_txid,
-                protocol_fee_keeper_asset_id,
-            },
-            100.0,
-        )
+        .claim_principal(ClaimPrincipalDetails {
+            acceptance_txid,
+            protocol_fee_keeper_asset_id,
+        })
         .unwrap();
 
     let mut pset = claim.into_inner();
@@ -304,13 +298,10 @@ async fn test_borrow_flow() {
     };
 
     let repay = borrower_session
-        .fully_repay_loan(
-            RepaymentDetails {
-                active_covenant_outpoint: covenant_outpoint,
-                protocol_fee_keeper_asset_id,
-            },
-            100.0,
-        )
+        .fully_repay_loan(RepaymentDetails {
+            active_covenant_outpoint: covenant_outpoint,
+            protocol_fee_keeper_asset_id,
+        })
         .unwrap();
 
     let mut pset = repay.into_inner();

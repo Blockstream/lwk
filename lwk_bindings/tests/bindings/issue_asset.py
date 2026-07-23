@@ -128,8 +128,20 @@ lbtc_utxos = [u for u in wollet.utxos() if u.unblinded().asset() == policy_asset
 assert len(lbtc_utxos) == 2
 
 builder = network.tx_builder()
-builder.add_issuance(IssuanceRequest(30, 3))
-builder.add_issuance(IssuanceRequest(40, 4))
+
+asset_receiver0 = wollet.address(4).address()
+token_receiver0 = wollet.address(5).address()
+request0 = IssuanceRequest(30, 3)
+request0.address_asset(asset_receiver0)
+request0.address_token(token_receiver0)
+builder.add_issuance(request0)
+
+asset_receiver1 = wollet.address(6).address()
+request1 = IssuanceRequest(40, 4)
+request1.address_asset(asset_receiver1)
+request1.contract(contract)
+builder.add_issuance(request1)
+
 builder.set_wallet_utxos([u.outpoint() for u in lbtc_utxos])
 unsigned_pset = builder.finish(wollet)
 
@@ -155,4 +167,56 @@ assert(wollet.balance()[multi_asset0] == 30)
 assert(wollet.balance()[multi_token0] == 3)
 assert(wollet.balance()[multi_asset1] == 40)
 assert(wollet.balance()[multi_token1] == 4)
+
+# Pin two issuances, each to a different input, in an explicit inputs order
+txid = node.send_to_address(wollet.address(3).address(), funded_satoshi, asset=None)
+wollet.wait_for_tx(txid, client)
+
+lbtc_utxos = [u for u in wollet.utxos() if u.unblinded().asset() == policy_asset]
+assert len(lbtc_utxos) == 2
+first_outpoint = lbtc_utxos[0].outpoint()
+second_outpoint = lbtc_utxos[1].outpoint()
+
+# ANCHOR: pin_input
+request0 = IssuanceRequest(50, 5)
+request0.pin_input(first_outpoint)
+request1 = IssuanceRequest(60, 6)
+request1.pin_input(second_outpoint)
+
+builder = network.tx_builder()
+builder.set_wallet_utxos([first_outpoint, second_outpoint])
+builder.set_inputs_order([first_outpoint, second_outpoint])
+builder.add_issuance(request0)
+builder.add_issuance(request1)
+unsigned_pset = builder.finish(wollet)
+# ANCHOR_END: pin_input
+
+pinned_inputs = unsigned_pset.inputs()
+assert len(pinned_inputs) == 2
+assert str(pinned_inputs[0].previous_txid()) == str(first_outpoint.txid())
+assert pinned_inputs[0].previous_vout() == first_outpoint.vout()
+assert str(pinned_inputs[1].previous_txid()) == str(second_outpoint.txid())
+assert pinned_inputs[1].previous_vout() == second_outpoint.vout()
+
+pinned_issuance0 = pinned_inputs[0].issuance()
+pinned_issuance1 = pinned_inputs[1].issuance()
+assert pinned_issuance0.asset_satoshi() == 50
+assert pinned_issuance0.token_satoshi() == 5
+assert pinned_issuance1.asset_satoshi() == 60
+assert pinned_issuance1.token_satoshi() == 6
+
+pinned_asset0, pinned_token0 = pinned_issuance0.asset(), pinned_issuance0.token()
+pinned_asset1, pinned_token1 = pinned_issuance1.asset(), pinned_issuance1.token()
+assert pinned_asset0 != pinned_asset1
+
+signed_pset = signer.sign(unsigned_pset)
+finalized_pset = wollet.finalize(signed_pset)
+tx = finalized_pset.extract_tx()
+txid = client.broadcast(tx)
+wollet.wait_for_tx(txid, client)
+
+assert(wollet.balance()[pinned_asset0] == 50)
+assert(wollet.balance()[pinned_token0] == 5)
+assert(wollet.balance()[pinned_asset1] == 60)
+assert(wollet.balance()[pinned_token1] == 6)
 

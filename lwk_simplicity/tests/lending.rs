@@ -7,7 +7,6 @@ use elements::hex::ToHex;
 use lwk_simplicity::lending::*;
 use lwk_test_util::*;
 use lwk_wollet::blocking::BlockchainBackend;
-use lwk_wollet::elements::AssetId;
 use lwk_wollet::*;
 
 mod common;
@@ -15,19 +14,6 @@ mod indexer;
 use common::*;
 
 use testcontainers::clients::Cli;
-
-pub fn fund_wollet<S: BlockchainBackend>(
-    wollet: &mut Wollet,
-    client: &mut S,
-    env: &TestEnv,
-    satoshi: u64,
-    asset_id: Option<AssetId>,
-) {
-    let address = wollet.address(None).unwrap();
-    let txid = env.elementsd_sendtoaddress(address.address(), satoshi, asset_id);
-    env.elementsd_generate(1);
-    wait_for_tx(wollet, client, &txid);
-}
 
 #[tokio::test]
 async fn test_borrow_flow() {

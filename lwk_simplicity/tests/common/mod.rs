@@ -1,6 +1,9 @@
+// The p2pk and lending modules are using this module together
+// so it would complain if either of them is not using something from here.
+#![allow(dead_code)]
 use std::str::FromStr;
 
-use elements::Txid;
+use elements::{AssetId, Txid};
 
 use lwk_signer::*;
 use lwk_test_util::*;
@@ -22,6 +25,19 @@ pub fn sync<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S) {
     if let Some(update) = update {
         wollet.apply_update(update).unwrap();
     }
+}
+
+pub fn fund_wollet<S: BlockchainBackend>(
+    wollet: &mut Wollet,
+    client: &mut S,
+    env: &TestEnv,
+    satoshi: u64,
+    asset_id: Option<AssetId>,
+) {
+    let address = wollet.address(None).unwrap();
+    let txid = env.elementsd_sendtoaddress(address.address(), satoshi, asset_id);
+    env.elementsd_generate(1);
+    wait_for_tx(wollet, client, &txid);
 }
 
 pub fn wait_for_tx<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S, txid: &Txid) {

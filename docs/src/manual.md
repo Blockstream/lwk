@@ -32,6 +32,15 @@ Before selecting UTXOs manually, you need to retrieve the list of available UTXO
 
 </section>
 
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/manual_coin_selection.js:get_utxos}}
+```
+
+</section>
+
 <div slot="title">Go</div>
 <section>
 
@@ -61,6 +70,15 @@ The simplest use case is selecting specific L-BTC UTXOs for a transaction:
 
 ```python
 {{#include ../../lwk_bindings/tests/bindings/manual_coin_selection.py:manual_coin_selection}}
+```
+
+</section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/manual_coin_selection.js:manual_coin_selection}}
 ```
 
 </section>

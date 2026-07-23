@@ -14,6 +14,7 @@ for f in "$DIR"/*.js; do
         echo "FAIL $name"
         FAILED=1
     fi
+    sleep 1
 done
 
 if [ "$FAILED" -eq 1 ]; then

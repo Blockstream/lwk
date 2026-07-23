@@ -59,6 +59,15 @@ Amounts expressed in satoshi are always whole numbers without any decimal places
 
 </section>
 
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/issue_asset.js:contract}}
+```
+
+</section>
+
 <div slot="title">Go</div>
 <section>
 
@@ -88,6 +97,15 @@ To issue an asset, use `TxBuilder::issue_asset()` before calling `finish()`. You
 
 ```python
 {{#include ../../lwk_bindings/tests/bindings/issue_asset.py:issue_asset}}
+```
+
+</section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/issue_asset.js:issue_asset}}
 ```
 
 </section>
@@ -125,6 +143,15 @@ After creating the issuance PSET, you can extract the asset ID and reissuance to
 
 </section>
 
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/issue_asset.js:issuance_ids}}
+```
+
+</section>
+
 <div slot="title">Go</div>
 <section>
 
@@ -154,6 +181,15 @@ Here's a complete example that issues an asset, signs it, and broadcasts it:
 
 ```python
 {{#include ../../lwk_bindings/tests/bindings/issue_asset.py:test_issue_asset}}
+```
+
+</section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/issue_asset.js:test_issue_asset}}
 ```
 
 </section>

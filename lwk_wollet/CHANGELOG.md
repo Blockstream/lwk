@@ -3,6 +3,8 @@
 ## Unreleased
 
 * Add Waterfalls descriptor subscriptions, returning `tip`, `mempool`, `block`, and `reorg` events that callers can use as wallet rescan hints.
+* Esplora client: address transaction history now follows esplora's confirmed-transactions paging — previously an address with more confirmed transactions than one esplora page (25 on Blockstream esplora) got a silently truncated history, which could also evict the missing transactions from the scan cache.
+* Esplora client: address history requests within a scan batch run concurrently, honoring `EsploraClientBuilder::concurrency` (default 1, so behavior is unchanged unless opted in).
 
 ## 0.18.0
 

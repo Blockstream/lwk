@@ -27,7 +27,7 @@ use futures::lock::Mutex;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::Mutex;
 
-use futures::stream::{iter, StreamExt};
+use futures::stream::{iter, StreamExt, TryStreamExt};
 use reqwest::{Response, StatusCode};
 use serde::Deserialize;
 use std::sync::atomic::AtomicUsize;
@@ -212,29 +212,109 @@ impl EsploraClient {
         }
     }
 
+    /// The txid of the oldest confirmed transaction in an esplora history
+    /// page (pages are sorted newest first), used as the paging cursor.
+    /// `None` when the page has no confirmed transactions. Unconfirmed
+    /// entries carry a non-positive height (see
+    /// [`crate::clients::History::height`]).
+    fn last_confirmed_txid(page: &[History]) -> Option<Txid> {
+        page.iter().rev().find(|h| h.height > 0).map(|h| h.txid)
+    }
+
     async fn get_scripts_history_esplora(
         &self,
         addresses: &[Address],
     ) -> Result<Vec<Vec<History>>, Error> {
-        let mut result = vec![];
-        for address in addresses.iter() {
-            let url = format!("{}/address/{}/txs", self.base_url, address);
-            // TODO must handle paging -> https://github.com/blockstream/esplora/blob/master/API.md#addresses
-            let response = self.get_with_retry(&url).await?;
+        // `buffered` (not `buffer_unordered`) so results keep the input
+        // order: callers map histories back to derivation indices
+        // positionally (see `get_history`). `try_collect` stops at the
+        // first error, dropping in-flight requests, matching the failure
+        // semantics of the previous sequential loop.
+        //
+        // The futures are instantiated eagerly (they stay inert until
+        // polled; `buffered` still caps concurrent polling) so the stream
+        // holds concrete futures rather than an `&Address`-borrowing
+        // closure — the closure form trips rustc's higher-ranked `FnOnce`
+        // limitation (rust-lang/rust#89976) when downstream `async_trait`
+        // users such as lwk_boltz must prove the resulting future `Send`.
+        let futures: Vec<_> = addresses
+            .iter()
+            .map(|address| self.get_address_history(address))
+            .collect();
+        iter(futures).buffered(self.concurrency).try_collect().await
+    }
 
-            // TODO going through string and then json is not as efficient as it could be but we prioritize debugging for now
-            let text = response.text().await?;
-            let json: Vec<EsploraTx> = match serde_json::from_str(&text) {
-                Ok(e) => e,
-                Err(e) => {
-                    log::warn!("error {e:?} in converting following text:\n{text}");
-                    return Err(e.into());
-                }
-            };
-            let history: Vec<History> = json.into_iter().map(Into::into).collect();
-            result.push(history)
+    /// Fetch the confirmed transaction history of a single address plus its
+    /// first page of mempool transactions, following esplora's
+    /// confirmed-transactions paging.
+    ///
+    /// The first page returns mempool transactions plus the newest confirmed
+    /// ones, with implementation-dependent page sizes (Blockstream esplora
+    /// returns up to 25 confirmed plus up to 50 mempool; other
+    /// implementations share a single budget between the two). Older
+    /// confirmed transactions require paging via
+    /// `/txs/chain/{last_seen_txid}`, so the loop keeps requesting from the
+    /// last confirmed txid until a page with no confirmed transactions
+    /// arrives — the only termination condition every implementation
+    /// guarantees. Without the paging, an address with more confirmed
+    /// transactions than one page holds gets a silently truncated history.
+    /// Mempool transactions beyond esplora's first-page window are still
+    /// not returned (the API offers no mempool paging).
+    /// <https://github.com/blockstream/esplora/blob/master/API.md#addresses>
+    async fn get_address_history(&self, address: &Address) -> Result<Vec<History>, Error> {
+        let url = format!("{}/address/{}/txs", self.base_url, address);
+        let mut history = self.get_history_page(&url).await?;
+
+        let mut cursor = match Self::last_confirmed_txid(&history) {
+            Some(txid) => Some(txid),
+            None if !history.is_empty() => {
+                // The first page contains transactions but none confirmed:
+                // implementations sharing one first-page budget can fill it
+                // entirely with mempool entries, so ask for the newest
+                // confirmed page explicitly before concluding there is no
+                // confirmed history.
+                let url = format!("{}/address/{}/txs/chain", self.base_url, address);
+                let page = self.get_history_page(&url).await?;
+                let cursor = Self::last_confirmed_txid(&page);
+                history.extend(page);
+                cursor
+            }
+            None => None,
+        };
+
+        // Guards the loop against a server that ignores the cursor or
+        // cycles pages: a repeated cursor means no progress was made.
+        let mut seen_cursors = HashSet::new();
+        while let Some(last_seen) = cursor {
+            if !seen_cursors.insert(last_seen) {
+                return Err(Error::Generic(format!(
+                    "address history paging did not advance past txid {last_seen}"
+                )));
+            }
+            let url = format!(
+                "{}/address/{}/txs/chain/{}",
+                self.base_url, address, last_seen
+            );
+            let page = self.get_history_page(&url).await?;
+            cursor = Self::last_confirmed_txid(&page);
+            history.extend(page);
         }
-        Ok(result)
+        Ok(history)
+    }
+
+    async fn get_history_page(&self, url: &str) -> Result<Vec<History>, Error> {
+        let response = self.get_with_retry(url).await?;
+
+        // TODO going through string and then json is not as efficient as it could be but we prioritize debugging for now
+        let text = response.text().await?;
+        let json: Vec<EsploraTx> = match serde_json::from_str(&text) {
+            Ok(e) => e,
+            Err(e) => {
+                log::warn!("error {e:?} in converting following text:\n{text}");
+                return Err(e.into());
+            }
+        };
+        Ok(json.into_iter().map(Into::into).collect())
     }
 
     async fn get_scripts_history_waterfalls(
@@ -1314,6 +1394,29 @@ mod tests {
         let client = EsploraClient::new(Network::Liquid, base_url);
         let response = client.get_with_retry(&url).await.unwrap();
         elements::Block::consensus_decode(&response.bytes().await.unwrap()[..]).unwrap()
+    }
+
+    #[test]
+    fn test_last_confirmed_txid() {
+        use elements::Txid;
+        let txid = |n: u8| Txid::from_str(&format!("{n:064x}")).unwrap();
+        let h = |height: i32, n: u8| History {
+            txid: txid(n),
+            height,
+            block_hash: None,
+            block_timestamp: None,
+            v: 0,
+        };
+        // Pages are sorted newest first: the cursor must be the OLDEST
+        // confirmed entry, skipping unconfirmed ones (height -1/0) anywhere
+        // in the page.
+        let page = [h(-1, 1), h(0, 2), h(100, 3), h(90, 4), h(-1, 5)];
+        assert_eq!(EsploraClient::last_confirmed_txid(&page), Some(txid(4)));
+        assert_eq!(
+            EsploraClient::last_confirmed_txid(&[h(-1, 1), h(0, 2)]),
+            None
+        );
+        assert_eq!(EsploraClient::last_confirmed_txid(&[]), None);
     }
 
     #[ignore = "Should be integration test, but it is testing private function"]

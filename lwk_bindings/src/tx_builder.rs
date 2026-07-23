@@ -138,7 +138,7 @@ impl TxBuilder {
     ///
     /// If a `contract` is provided, it's metadata will be committed in the generated asset id.
     ///
-    /// Can't be used if `reissue_asset` has been called
+    /// Can't be used if [`TxBuilder::reissue_asset`] has been called
     pub fn issue_asset(
         &self,
         asset_sats: u64,
@@ -173,7 +173,7 @@ impl TxBuilder {
     /// must agree on pinning: either every issuance is pinned (each to a different input) or
     /// none are — mixing pinned and unpinned issuances errors.
     ///
-    /// Can't be used if `reissue_asset` has been called
+    /// Can't be used if [`TxBuilder::reissue_asset`] has been called
     pub fn add_issuance(&self, request: &IssuanceRequest) -> Result<(), LwkError> {
         let request = request.clone_inner()?;
         let mut lock = self.inner.lock()?;
@@ -193,6 +193,8 @@ impl TxBuilder {
     ///
     /// If the issuance transaction does not involve this wallet,
     /// pass the issuance transaction in `issuance_tx`.
+    ///
+    /// Can't be used if [`TxBuilder::issue_asset`] or [`TxBuilder::add_issuance`] has been called
     pub fn reissue_asset(
         &self,
         asset_to_reissue: AssetId,
@@ -238,8 +240,8 @@ impl TxBuilder {
     ///
     /// **Experimental**: this API might change without notice.
     ///
-    /// If this is called, `set_wallet_utxos` must be called too.
-    /// The outpoints passed to this method, must be the union of the outpoints passed to `set_wallet_utxos` and `add_external_utxos`.
+    /// If this is called, [`TxBuilder::set_wallet_utxos`] must be called too.
+    /// The outpoints passed to this method, must be the union of the outpoints passed to [`TxBuilder::set_wallet_utxos`] and [`TxBuilder::add_external_utxos`].
     pub fn set_inputs_order(&self, inputs_order: &[Arc<OutPoint>]) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;

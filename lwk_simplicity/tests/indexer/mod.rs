@@ -1,3 +1,5 @@
+use lwk_simplicity::lending::*;
+use lwk_test_util::TestEnv;
 use lwk_wollet::elements::AssetId;
 use lwk_wollet::hashes::sha256;
 use std::path::Path;
@@ -6,6 +8,65 @@ use std::time::Duration;
 use testcontainers::clients::Cli;
 use testcontainers::images::postgres::Postgres;
 use testcontainers::RunnableImage;
+use uuid::Uuid;
+
+pub async fn wait_offer(
+    status: OfferStatus,
+    id: Option<Uuid>,
+    indexer: &IndexerClient,
+) -> OfferListItem {
+    for _ in 0..20 {
+        let offers = indexer
+            .list_offers(&OfferFiltersRequest::default())
+            .await
+            .unwrap();
+
+        let offer = if let Some(id) = id {
+            offers.items.iter().find(|o| o.id == id)
+        } else {
+            offers.items.first()
+        };
+
+        if let Some(o) = offer {
+            if o.status == status {
+                return o.clone();
+            }
+        }
+
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+    panic!("Offer with status {status} was not found in indexer");
+}
+
+pub async fn wait_factory(spk: String, indexer: &IndexerClient) -> FactoryDetails {
+    for _ in 0..20 {
+        let factories = indexer.get_factories_by_script(&spk).await.unwrap();
+
+        if let Some(factory) = factories.into_iter().next() {
+            return factory.try_into().unwrap();
+        }
+
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+
+    panic!("Factory for given {spk} was not found in indexer");
+}
+
+pub async fn launch_indexer<'a>(
+    env: &TestEnv,
+    cli: &'a Cli,
+) -> (IndexerClient, IndexerContext<'a>) {
+    let binary = std::fs::canonicalize(
+        std::env::var("LENDING_INDEXER_EXEC").expect("LENDING_INDEXER_EXEC must be set"),
+    )
+    .expect("LENDING_INDEXER_EXEC path does not exist");
+
+    let indexer = start_indexer(env, cli, &binary, 8081).await;
+    let indexer_client = IndexerClient::builder(indexer.api_url().to_string())
+        .build()
+        .unwrap();
+    (indexer_client, indexer)
+}
 
 /// Test protocol fee keeper asset id
 pub const PROTOCOL_FEE_KEEPER_ASSET_ID: AssetId = AssetId::from_inner(sha256::Midstate([1; 32]));

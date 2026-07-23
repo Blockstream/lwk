@@ -70,6 +70,7 @@ pub struct LendingSession {
     indexer_url: String,
     wollet: Wollet,
     client: AnyClient,
+    fee_rate: f32,
 }
 
 impl LendingSession {
@@ -89,7 +90,6 @@ impl LendingSession {
     pub fn borrower_prepare(
         &self,
         _params: BorrowerAccountParams,
-        fee_rate: f32,
     ) -> Result<BorrowerAccountCreationResult, LendingError> {
         const ISSUANCE_AMOUNT: u64 = 2;
         const FACTORY_AUTH_AMOUNT: u64 = 1;
@@ -130,7 +130,7 @@ impl LendingSession {
             ISSUANCE_FACTORY_AMOUNT,
         );
 
-        let _ = self.add_fee(&mut ft, fee_rate)?;
+        let _ = self.add_fee(&mut ft)?;
 
         let (mut pset, inp_txout_sec) = ft.extract_pst();
         let mut rng = thread_rng();
@@ -157,7 +157,6 @@ impl LendingSession {
     }
 
     // TODO: we shouldn't have so many network calls in this function
-    // TODO: we should attach fee rate to the function/struct
     /// Create a borrow offer
     ///
     /// # Errors
@@ -167,7 +166,6 @@ impl LendingSession {
         &mut self,
         details: OfferDetails,
         factory: FactoryDetails,
-        fee_rate: f32,
     ) -> Result<CreateBorrowTransaction, LendingError> {
         const NFT_AMOUNT: u64 = 1;
         const FEE_ESTIMATE: u64 = 250;
@@ -309,7 +307,7 @@ impl LendingSession {
         }
 
         // Add fee
-        let _ = self.add_fee(&mut ft, fee_rate)?;
+        let _ = self.add_fee(&mut ft)?;
 
         // Extract
         let (mut pset, inp_txout_sec) = ft.extract_pst();
@@ -340,7 +338,6 @@ impl LendingSession {
     pub fn fully_repay_loan(
         &mut self,
         details: RepaymentDetails,
-        fee_rate: f32,
     ) -> Result<RepayOfferTransaction, LendingError> {
         const FEE_ESTIMATE: u64 = 250;
 
@@ -437,7 +434,7 @@ impl LendingSession {
             );
         }
 
-        let _ = self.add_fee(&mut ft, fee_rate)?;
+        let _ = self.add_fee(&mut ft)?;
 
         let (mut pset, inp_txout_sec) = ft.extract_pst();
 
@@ -470,7 +467,6 @@ impl LendingSession {
     pub fn accept_offer(
         &mut self,
         details: AcceptOfferDetails,
-        fee_rate: f32,
     ) -> Result<AcceptOfferTransaction, LendingError> {
         const FEE_ESTIMATE: u64 = 250;
         const LENDER_NFT_VOUT: usize = 3;
@@ -582,7 +578,7 @@ impl LendingSession {
         }
 
         // Add fee
-        let _ = self.add_fee(&mut ft, fee_rate)?;
+        let _ = self.add_fee(&mut ft)?;
 
         // Extract PSET, blind, add wallet details
         let (mut pset, inp_txout_sec) = ft.extract_pst();
@@ -612,7 +608,6 @@ impl LendingSession {
     pub fn claim_principal(
         &mut self,
         details: ClaimPrincipalDetails,
-        fee_rate: f32,
     ) -> Result<ClaimPrincipalTransaction, LendingError> {
         const PRINCIPAL_ASSET_AUTH_VOUT: u32 = 1;
         const BORROWER_NFT_OUTPUT_INDEX: u32 = 0;
@@ -705,7 +700,7 @@ impl LendingSession {
             .with_blinding_key(user_pk),
         );
 
-        let _ = self.add_fee(&mut ft, fee_rate)?;
+        let _ = self.add_fee(&mut ft)?;
 
         let (mut pset, inp_txout_sec) = ft.extract_pst();
 
@@ -736,6 +731,10 @@ impl LendingSession {
             self.wollet.apply_update(update)?;
         }
         Ok(())
+    }
+
+    pub fn set_fee_rate(&mut self, fee_rate: f32) {
+        self.fee_rate = fee_rate;
     }
 
     /// Finalizes PSET with wollet
@@ -871,7 +870,7 @@ impl LendingSession {
     /// `fee_rate` is fee rate in sats/kvb.
     ///
     /// Returns the computed fee in satoshis, or an error if funds are insufficient.
-    fn add_fee(&self, ft: &mut FinalTransaction, fee_rate: f32) -> Result<u64, LendingError> {
+    fn add_fee(&self, ft: &mut FinalTransaction) -> Result<u64, LendingError> {
         let simplex_network = to_simplicity_network(self.network);
         let policy_asset = *self.network.policy_asset();
 
@@ -887,7 +886,7 @@ impl LendingSession {
         let tx = pset.extract_tx().map_err(lwk_wollet::Error::from)?;
 
         let weight = tx.discount_weight();
-        let fee = calculate_fee(weight, fee_rate);
+        let fee = calculate_fee(weight, self.fee_rate);
 
         let available_delta =
             u64::try_from(ft.calculate_fee_delta(&simplex_network)).map_err(|_| {
@@ -952,6 +951,7 @@ pub struct LendingSessionBuilder {
     indexer_url: Option<String>,
     descriptor: WolletDescriptor,
     client: Option<AnyClient>,
+    fee_rate: f32,
 }
 
 impl LendingSessionBuilder {
@@ -962,6 +962,7 @@ impl LendingSessionBuilder {
             descriptor,
             indexer_url: None,
             client: None,
+            fee_rate: 100.0,
         }
     }
 
@@ -977,6 +978,11 @@ impl LendingSessionBuilder {
 
     pub fn set_esplora_client(mut self, client: EsploraClient) -> Self {
         self.client = Some(AnyClient::Esplora(client));
+        self
+    }
+
+    pub fn set_fee_rate(mut self, fee_rate: f32) -> Self {
+        self.fee_rate = fee_rate;
         self
     }
 
@@ -998,6 +1004,7 @@ impl LendingSessionBuilder {
             wollet,
             indexer_url,
             client,
+            fee_rate: self.fee_rate,
         })
     }
 }

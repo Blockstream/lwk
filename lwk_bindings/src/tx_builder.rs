@@ -165,6 +165,12 @@ impl TxBuilder {
     /// `request` sets the asset/token amounts, receivers, and contract; see
     /// [`IssuanceRequest`] for details.
     ///
+    /// Optionally, pin the issuance to a specific input via [`IssuanceRequest::pin_input()`].
+    ///
+    /// Can be called multiple times to issue several assets in the same transaction. All calls
+    /// must agree on pinning: either every issuance is pinned (each to a different input) or
+    /// none are — mixing pinned and unpinned issuances errors.
+    ///
     /// Can't be used if `reissue_asset` has been called
     pub fn add_issuance(&self, request: &IssuanceRequest) -> Result<(), LwkError> {
         let request = request.clone_inner()?;
@@ -348,6 +354,20 @@ impl IssuanceRequest {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock = Some(inner.contract(contract.into()));
+        Ok(())
+    }
+
+    /// Pin this issuance to a specific input
+    ///
+    /// Requires manual inputs order: `input` must be one of the outpoints passed to
+    /// [`TxBuilder::set_inputs_order()`], otherwise [`TxBuilder::finish()`] will error.
+    ///
+    /// If multiple issuances in the same transaction are pinned, each must target a different
+    /// input: pinning two issuances to the same outpoint errors at finish time.
+    pub fn pin_input(&self, input: &OutPoint) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.pin_input(input.into()));
         Ok(())
     }
 }

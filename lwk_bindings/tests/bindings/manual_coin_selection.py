@@ -46,3 +46,28 @@ tx = finalized_pset.extract_tx()
 # Broadcast the transaction
 txid = client.broadcast(tx)
 wollet.wait_for_tx(txid, client)
+
+utxos = wollet.utxos()
+assert len(utxos) == 2
+outpoints = [u.outpoint() for u in utxos]
+reversed_outpoints = list(reversed(outpoints))
+
+# ANCHOR: set_inputs_order
+builder = network.tx_builder()
+builder.add_lbtc_recipient(node_address, sent_satoshi)
+builder.set_wallet_utxos(outpoints)
+builder.set_inputs_order(reversed_outpoints)
+unsigned_pset = builder.finish(wollet)
+# ANCHOR_END: set_inputs_order
+
+pset_inputs = unsigned_pset.inputs()
+assert len(pset_inputs) == 2
+for pset_input, outpoint in zip(pset_inputs, reversed_outpoints):
+    assert str(pset_input.previous_txid()) == str(outpoint.txid())
+    assert pset_input.previous_vout() == outpoint.vout()
+
+signed_pset = signer.sign(unsigned_pset)
+finalized_pset = wollet.finalize(signed_pset)
+tx = finalized_pset.extract_tx()
+txid = client.broadcast(tx)
+wollet.wait_for_tx(txid, client)

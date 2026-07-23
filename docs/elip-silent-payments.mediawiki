@@ -1,0 +1,533 @@
+<pre>
+  ELIP: ?
+  Layer: Wallet
+  Title: Silent Payments for Elements
+  Author: Maheswaran Velmurugan <maheswar141203@gmail.com>
+  Comments-Summary: No comments yet.
+  Comments-URI: https://github.com/ElementsProject/elips/wiki/Comments:ELIP-????
+  Status: Draft
+  Type: Standards Track
+  Created: 2026-07-23
+  License: BSD-3-Clause
+</pre>
+
+==Introduction==
+
+===Abstract===
+
+This document describes how [https://github.com/bitcoin/bips/blob/master/bip-0352.mediawiki BIP-352] silent payments can be used on Elements based chains, where transaction outputs are confidential.
+
+A silent payment address is a static address that can be published without giving up privacy.
+The sender derives a fresh taproot output from the address and from the inputs it is spending, and only the receiver can recognize it.
+Nothing is added to the transaction, so the receiver has to scan the chain.
+
+Key derivation is unchanged from BIP-352.
+What Elements adds is blinding: an output is confidential, so the sender must blind it to a key that the receiver is able to compute back.
+This document defines that key as a tagged hash of the same ECDH shared secret used to derive the output key, so that no data other than the transaction itself is needed to receive a payment.
+
+It also defines the address encoding, which is the BIP-352 encoding with an Elements specific human readable part, the rules that decide which inputs contribute to the shared secret on a chain that has peg-ins and issuances, and the client and server side of the "Tweak Server" model of the [https://github.com/silent-payments/BIP0352-index-server-specification BIP-352 index server specification], which is how a wallet is expected to scan.
+
+===Copyright===
+
+This document is licensed under the 3-clause BSD license.
+
+===Motivation===
+
+Receiving on Elements based chains today means either reusing an address or handing out a fresh one for every payment.
+
+Address reuse is bad for privacy: confidential transactions hide the amount and the asset, but not the <code>scriptPubKey</code>, so anybody can see that two payments went to the same script, and anybody who has been given that address can watch it.
+This is not a corner case: it is what happens whenever an address is published, embedded in a donation page, or printed on an invoice that is paid more than once.
+
+Handing out a fresh address per payment avoids the problem but requires an interaction with the receiver at payment time, which is not always possible, and it puts the burden of gap limits and address recovery on the wallet.
+
+Silent payments remove the interaction: one static address, one output per payment, no on chain link between payments.
+The cost is that the receiver has to scan, which is why this document also specifies how a wallet scans without downloading every block.
+
+Elements cannot use BIP-352 as is, because a BIP-352 output is a plain taproot output while an Elements output is normally confidential.
+A confidential output is blinded to a public key chosen by the sender: unless the receiver can derive the corresponding secret key it cannot unblind the output, and an output it cannot unblind is an output it cannot spend<ref>
+Knowing the secret key of an output is not enough to spend it on Elements: to build a valid transaction the wallet needs the asset and value blinding factors of the outputs it is spending, which are recovered by rewinding the range proof with the blinding secret key.
+</ref>.
+This document fills exactly that gap, and resolves the ambiguities that a chain with peg-ins, issuances and explicit fee outputs introduces in the BIP-352 rules.
+
+==Design==
+
+===Overview===
+
+Three things are added to BIP-352, everything else is unchanged:
+
+# A '''blinding key derivation'''. The sender blinds the output to <code>blinding_key<sub>k</sub>·G</code>, where <code>blinding_key<sub>k</sub></code> is a tagged hash of the ECDH shared secret and the output counter. The receiver derives the same key while scanning and unblinds the output.
+# An '''address encoding''' with an Elements specific human readable part, so that a Bitcoin silent payment address cannot be paid on Liquid and vice versa.
+# '''Input eligibility rules''' for the inputs that only exist on Elements: peg-ins never contribute their public key, and the outpoint of an input is serialized with the peg-in and issuance flags cleared.
+
+For receiving, this document specifies the "Tweak Server" model of the BIP-352 index server specification: the wallet asks a server for the per transaction tweak data of each block, derives locally the scripts it would be paid to, and only downloads a block when a compact block filter says that one of those scripts is in it.
+The wallet never shares its keys with the server.
+
+===Drawbacks===
+
+Deriving the blinding key from the shared secret means that whoever knows the scan secret key can unblind every payment received by that wallet, not just detect it.
+On Bitcoin, sharing the scan key with a scanning service reveals which outputs belong to the wallet; on Elements it would also reveal every amount and asset.
+This is the reason why this document specifies the Tweak Server model, in which the scan key never leaves the wallet, and why the "Remote Scanner" model of the index server specification is '''not''' recommended here.
+
+The sender can unblind the outputs it creates. This is inherent to confidential transactions: the sender picks the ephemeral key used to blind the output, so it already knows the amount and the asset of what it sends, whatever the blinding key derivation is.
+
+Scanning cost is proportional to the number of blocks since the wallet birthday, not to the number of payments received. A wallet restored from a backup that only contains the seed must scan from the taproot activation height.
+
+Labels have to be backed up, or payments received on a labelled address are not detected on recovery. This is the same drawback as BIP-352.
+
+==Specification==
+
+===Notation===
+
+All the arithmetic is on the secp256k1 curve, with generator <code>G</code> and group order <code>n</code>.
+
+{| class="wikitable"
+! Notation !! Meaning
+|-
+| <code>ser<sub>P</sub>(P)</code> || the 33 byte compressed serialization of the point <code>P</code>
+|-
+| <code>ser<sub>32</sub>(i)</code> || the 4 byte big endian serialization of the integer <code>i</code>
+|-
+| <code>ser<sub>256</sub>(x)</code> || the 32 byte big endian serialization of the scalar <code>x</code>
+|-
+| <code>hash<sub>tag</sub>(x)</code> || the [https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki#design BIP-340 tagged hash] of <code>x</code> with tag <code>tag</code>
+|}
+
+Inside a formula, <code>||</code> denotes concatenation.
+
+An operation that yields <code>0</code> or a value not smaller than <code>n</code>, or that yields the point at infinity, MUST be treated as a failure wherever it appears below.
+
+===Keys===
+
+A silent payment wallet is defined by two key pairs:
+
+* the '''scan key''' <code>b<sub>scan</sub></code>, <code>B<sub>scan</sub> = b<sub>scan</sub>·G</code>, used to detect the payments;
+* the '''spend key''' <code>b<sub>spend</sub></code>, <code>B<sub>spend</sub> = b<sub>spend</sub>·G</code>, used to spend them.
+
+A watch only wallet holds <code>b<sub>scan</sub></code> and <code>B<sub>spend</sub></code>: it detects and unblinds the payments but cannot spend them.
+
+When the keys are derived from a BIP-32 seed, the derivation of BIP-352 is used, with the Elements coin type:
+
+<pre>
+  scan_key:  m / 352' / coin_type' / account' / 1' / 0
+  spend_key: m / 352' / coin_type' / account' / 0' / 0
+</pre>
+
+where <code>coin_type</code> is <code>1776</code> on Liquid and <code>1</code> on any test network, as in [https://github.com/satoshilabs/slips/blob/master/slip-0044.md SLIP-44].
+
+===Address encoding===
+
+A silent payment address is encoded as in BIP-352: bech32m<ref>
+Bech32m and not bech32, for every version, unlike segwit addresses. This is what BIP-352 does.
+</ref>, with a version character followed by the payload, and a maximum length of 1023 characters.
+
+The payload of a version 0 address is exactly 66 bytes:
+
+<pre>
+  ser_P(B_scan) || ser_P(B_m)
+</pre>
+
+where <code>B<sub>m</sub></code> is the spend public key, tweaked by a label if the address is labelled (see [[#Labels|Labels]]).
+
+The human readable part identifies the chain:
+
+{| class="wikitable"
+! Chain !! HRP !! Example prefix
+|-
+| Liquid || <code>lqsp</code> || <code>lqsp1q</code>
+|-
+| Liquid testnet || <code>tlqsp</code> || <code>tlqsp1q</code>
+|-
+| Elements regtest || <code>elsp</code> || <code>elsp1q</code>
+|}
+
+A wallet MUST reject an address whose human readable part is not the one of the chain it is operating on.
+
+A wallet MUST reject version 31 (<code>l</code>), which BIP-352 reserves to signal a backward incompatible change.
+For a version between 1 and 30 a wallet MUST accept a payload of 66 bytes or more and use the first 66 bytes, ignoring the rest; for version 0 the payload MUST be exactly 66 bytes.
+
+===Transaction eligibility===
+
+A transaction can pay to a silent payment address, and MUST be scanned by a receiver, if and only if all of the following hold:
+
+* it has at least one output that is a taproot output;
+* it has at least one eligible input, as defined below, and the public keys of its eligible inputs do not sum to the point at infinity;
+* none of its inputs spends an output whose script is a witness program of version greater than 1<ref>
+As in BIP-352: skipping the transactions that spend a script this version of the protocol does not understand leaves a clean upgrade path, since a wallet will never have to scan the same transaction once with the rules of this document and once with the rules of a future one.
+</ref>.
+
+A sender MUST NOT select an input that spends a witness program of version greater than 1, and MUST use a sighash flag that commits to all the inputs: if the inputs change after the outputs have been derived, the receiver computes a different shared secret and the payment is lost.
+
+===Input eligibility===
+
+An input is '''eligible''' if it contributes its public key to the shared secret. The rules of BIP-352 apply, with the peg-in rule added.
+
+An input is eligible if and only if the output it spends has one of the following scripts, and the corresponding public key is compressed or x-only:
+
+{| class="wikitable"
+! Spent script !! Public key
+|-
+| P2TR || the output key, read from the spent <code>scriptPubKey</code>, lifted with even Y
+|-
+| P2WPKH || the last element of the witness
+|-
+| P2SH-P2WPKH || the last element of the witness, if the <code>scriptSig</code> is a single push of a P2WPKH redeem script
+|-
+| P2PKH || the 33 byte push in the <code>scriptSig</code> whose HASH160 is the one committed in the spent script<ref>
+The <code>scriptSig</code> of a P2PKH input can be malleated by anybody, so the public key cannot simply be taken from the last push: it is found by scanning the <code>scriptSig</code> backwards for a push that hashes to the committed value.
+</ref>
+|}
+
+An input is '''not''' eligible if:
+
+* it is a '''peg-in''' input. The output it spends is on the Bitcoin chain, so a wallet scanning Elements cannot read the script that would tell how to extract the key. Its outpoint is still taken into account when looking for the smallest one.
+* it spends a P2TR output through a script path whose control block reveals the BIP-341 NUMS point <code>H = lift_x(0x50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0)</code> as internal key, in which case nobody knows the corresponding secret key. The annex, if present, is removed before looking at the control block.
+* its public key is uncompressed.
+* it spends anything else, in particular a P2WSH or a bare P2SH output.
+
+An input carrying an asset issuance or reissuance is eligible under the rules above: an issuance does not change how the input is spent.
+
+===Outpoint serialization===
+
+BIP-352 commits to the smallest outpoint of the transaction. On Elements the <code>vout</code> field of an input carries, in its two most significant bits, the peg-in and issuance flags<ref>
+See <code>CTxIn</code> in Elements: the flags are set when the transaction is serialized and are stripped when it is parsed, so a wallet that hashes the parsed outpoint and a wallet that hashes the raw bytes would compute different values.
+</ref>.
+
+An outpoint MUST be serialized as:
+
+<pre>
+  txid (32 bytes, as in the transaction) || vout (4 bytes, little endian)
+</pre>
+
+where <code>vout</code> is the index '''with the peg-in flag (2<sup>30</sup>) and the issuance flag (2<sup>31</sup>) cleared''', that is the value obtained after parsing the transaction.
+The <code>vout</code> of a coinbase input, <code>0xffffffff</code>, is not masked, as it carries no flags.
+
+<code>outpoint<sub>L</sub></code> is the lexicographically smallest of the serializations of '''all''' the outpoints of the transaction, including the ones of inputs that are not eligible.
+
+===Shared secret===
+
+Let <code>A = A<sub>1</sub> + ... + A<sub>i</sub></code> be the sum of the public keys of the eligible inputs of the transaction, and
+
+<pre>
+  input_hash = hash_BIP0352/Inputs(outpoint_L || ser_P(A))
+</pre>
+
+The shared secret between the sender, which knows <code>a = a<sub>1</sub> + ... + a<sub>i</sub></code>, and the receiver, which knows <code>b<sub>scan</sub></code>, is
+
+<pre>
+  ecdh_shared_secret = input_hash · a · B_scan       (sender)
+                     = input_hash · b_scan · A       (receiver)
+</pre>
+
+A transaction with no eligible input, or whose eligible input keys sum to the point at infinity, cannot pay to a silent payment address.
+An intermediate sum equal to zero is not a failure, only the final one is.
+
+The receiver does not need <code>A</code> and <code>input_hash</code> separately: <code>input_hash · A</code>, called the '''tweak data''' of the transaction, is enough, which is what makes the light client model of [[#Receiving|Receiving]] possible.
+
+===Output derivation===
+
+For every output paid to the same <code>B<sub>scan</sub></code> in a transaction, with a counter <code>k</code> starting at <code>0</code>:
+
+<pre>
+  t_k = hash_BIP0352/SharedSecret(ser_P(ecdh_shared_secret) || ser_32(k))
+  P_k = B_m + t_k·G
+</pre>
+
+The <code>scriptPubKey</code> of the output is <code>P<sub>k</sub></code> encoded as a taproot output:
+
+<pre>
+  OP_1 OP_PUSHBYTES_32 <x-only(P_k)>
+</pre>
+
+<code>P<sub>k</sub></code> is the output key itself: the BIP-341 tweak is '''not''' applied<ref>
+This is what BIP-352 does, and it is why a received output cannot be described by an <code>eltr()</code> descriptor, see [[#Representation of a received output|Representation of a received output]].
+</ref>.
+
+A transaction MUST NOT contain more than <code>K<sub>max</sub> = 2323</code> outputs paying to the same <code>B<sub>scan</sub></code>.
+
+===Blinding key derivation===
+
+This is the part that Elements adds.
+
+The output MUST be blinded to the public key <code>C<sub>k</sub> = c<sub>k</sub>·G</code>, where
+
+<pre>
+  c_k = hash_Silent-Payment-Blinding-Key/1.0(ser_P(ecdh_shared_secret) || ser_32(k))
+</pre>
+
+with the same <code>k</code> used to derive <code>P<sub>k</sub></code>.
+
+The sender blinds the output as usual, using <code>C<sub>k</sub></code> as the blinding public key of the receiver, which is the same as paying to the confidential address made of <code>C<sub>k</sub></code> and of the <code>scriptPubKey</code> above.
+The receiver, once it has detected the output, derives <code>c<sub>k</sub></code> and unblinds the output by rewinding its range proof, recovering the asset, the value and the blinding factors.
+
+A sender MUST blind the output.
+A receiver MUST also detect an output that is not blinded<ref>
+An explicit output is valid on Elements, and it is spendable by the receiver without any unblinding. Detecting it costs nothing, since detection only looks at the <code>scriptPubKey</code>, and not detecting it would make the funds unrecoverable.
+</ref>, and SHOULD warn that the amount and the asset of that payment are public.
+
+===Labels===
+
+Labels are unchanged from BIP-352. For an integer <code>m ≥ 0</code>:
+
+<pre>
+  label_tweak_m = hash_BIP0352/Label(ser_256(b_scan) || ser_32(m))
+  B_m           = B_spend + label_tweak_m·G
+</pre>
+
+<code>B<sub>0</sub></code> is reserved for the change of the wallet and MUST NOT be published.
+
+A wallet detects a payment to a labelled address only if it knows the label, so the set of labels in use is part of the wallet backup.
+
+===Sending===
+
+To pay a set of recipients:
+
+# Choose the inputs of the transaction. Every eligible input contributes its secret key <code>a<sub>i</sub></code>; for a P2TR input whose public key has odd Y, <code>a<sub>i</sub></code> is negated.
+# Compute <code>outpoint<sub>L</sub></code> over all the inputs, then <code>a</code>, <code>A</code>, <code>input_hash</code> and, for each distinct <code>B<sub>scan</sub></code> among the recipients, <code>ecdh_shared_secret</code>.
+# Group the recipients by <code>B<sub>scan</sub></code>. Within a group, derive one output per recipient entry with <code>k = 0, 1, ...</code>. Paying the same address twice is allowed and produces two different outputs.
+# Blind each output to <code>C<sub>k</sub></code> and finish the transaction as usual.
+
+The set of inputs MUST be final before the outputs are derived, because the output scripts commit to it.
+A wallet that selects inputs to cover an amount therefore has to select the inputs first and derive the outputs after, and it MUST re-derive the outputs if the input set changes<ref>
+This is the same constraint as in BIP-352 and the reason why [https://github.com/bitcoin/bips/blob/master/bip-0375.mediawiki BIP-375] adds silent payment fields to PSBT. Nothing prevents an equivalent PSET extension, which this document leaves to a future proposal: a wallet that builds and signs the whole transaction, which is the common case, does not need it.
+</ref>.
+
+The fee output of the transaction, which has an empty <code>scriptPubKey</code>, is never a silent payment output.
+
+===Receiving===
+
+A receiver detects the payments of a transaction from its tweak data and its outputs, without any other information about the sender.
+
+Given the tweak data of a transaction, the receiver computes <code>ecdh_shared_secret = b<sub>scan</sub> · tweak_data</code> and then, for <code>k = 0, 1, ...</code> up to <code>K<sub>max</sub></code>:
+
+# Compute <code>t<sub>k</sub></code> and <code>P<sub>k</sub> = B<sub>spend</sub> + t<sub>k</sub>·G</code>.
+# If a taproot output of the transaction, not already matched, has <code>x-only(P<sub>k</sub>)</code> as output key, it is a payment to the address of this wallet.
+# Otherwise, for each taproot output not already matched, with output key <code>O</code>, compute <code>label = O' − P<sub>k</sub></code> for <code>O'</code> equal to <code>lift_x(O)</code> and to <code>−lift_x(O)</code>. If <code>label</code> is <code>label_tweak<sub>m</sub>·G</code> for a known label <code>m</code>, it is a payment to the address labelled <code>m</code>, and the tweak of the output is <code>t<sub>k</sub> + label_tweak<sub>m</sub></code>.
+# If no output matched, stop. Otherwise remove the matched output, derive its blinding key <code>c<sub>k</sub></code>, unblind it, increment <code>k</code> and repeat.
+
+The decision to continue MUST be based on whether an output matched cryptographically, not on whether the wallet considers it spendable or worth its dust threshold.
+
+The secret key spending an output found with tweak <code>t</code> is
+
+<pre>
+  d = (b_spend + t) mod n
+</pre>
+
+and the output is spent as a taproot key path spend with <code>d</code>, without applying the BIP-341 tweak.
+
+===Scanning with a Tweak Server===
+
+A wallet is expected to obtain the tweak data from an index server implementing the "Tweak Server" stack of the [https://github.com/silent-payments/BIP0352-index-server-specification BIP-352 index server specification].
+The wallet does not share its keys with the server, and the server does not learn which transactions the wallet is interested in.
+
+====Server====
+
+For every transaction that satisfies [[#Transaction eligibility|Transaction eligibility]], the server computes and stores its tweak data <code>ser<sub>P</sub>(input_hash · A)</code>, 33 bytes.
+A server needs the outputs spent by a transaction to do so, which is why a wallet cannot compute this from the block alone.
+
+The server MUST index from the height at which taproot activated, which on Liquid is block 1,663,200<ref>
+Block <code>1aea43f7205bd02c03b081f3c6de4604756bc1a37ae2ca6e34b1936137756870</code>, mined on 2022-01-16. No transaction before it can have a taproot output, so no transaction before it can pay to a silent payment address.
+</ref>.
+
+The following endpoints are defined, as a profile of the index server specification:
+
+<code>GET /getinfo</code>
+
+<pre>
+{
+  "version": "1.0.0",
+  "network": "liquidv1" | "liquidtestnet" | "elementsregtest",
+  "block_height": 3984398,
+  "dust_limit": 0,
+  "filter_spent": "optional"
+}
+</pre>
+
+<code>dust_limit</code> MUST be <code>0</code>.
+Amounts on Elements are confidential, so a server cannot tell a dust output from any other one, and the dust filtering of the index server specification does not apply.
+
+<code>GET /tweaks/:blockheight</code>, with the optional query parameter <code>filterSpent</code>
+
+<pre>
+{
+  "height": 3984398,
+  "hash": "…",
+  "dust_limit": 0,
+  "filter_spent": 0,
+  "tweaks": ["03398173f560782d934ddf4f5a291c47fd0866d6e26a97a7407b810e1873e34777", …]
+}
+</pre>
+
+One tweak per silent payment eligible transaction of the block.
+When <code>filterSpent</code> is set, the server omits the transactions all of whose taproot outputs have already been spent, which a wallet that is catching up after a long time can use to skip outputs it would only receive to see them spent<ref>
+Spending is visible on Elements even though amounts are not, so this optimization applies unchanged.
+</ref>.
+
+<code>GET /filters/:blockheight</code>
+
+<pre>
+{
+  "height": 3984398,
+  "hash": "…",
+  "filter_type": 0,
+  "filter": "…"
+}
+</pre>
+
+The BIP-158 basic filter of the block, as computed by Elements<ref>
+Elements computes the basic filter as Bitcoin does: it contains the <code>scriptPubKey</code> of every output that is neither empty nor an <code>OP_RETURN</code>, and the <code>scriptPubKey</code> of every output spent by the block. Fee outputs have an empty <code>scriptPubKey</code> and are therefore not in the filter, and confidential outputs are, since a <code>scriptPubKey</code> is never confidential.
+</ref>, keyed as in BIP-158 on the hash of the block.
+A wallet MAY obtain the same filter from any other source, for instance from an Elements node run with <code>-blockfilterindex=basic</code>.
+
+A server MAY implement <code>GET /compute-index/:blockheight</code> as defined in the index server specification, which returns the txid of each eligible transaction along with its tweak. It is not needed by the algorithm below.
+
+====Client====
+
+For each block from the wallet birthday to the tip:
+
+# <code>GET /tweaks/:height</code>.
+# For each tweak, derive the '''candidate scripts''': the taproot script of <code>P<sub>0</sub></code>, plus one for each known label <code>m</code>, of <code>P<sub>0</sub> + label_tweak<sub>m</sub>·G</code>.
+# Test all the candidate scripts of the block against the block filter. If none matches, the block contains no payment for this wallet: continue from the next height.
+# Otherwise download the block. For each tweak whose candidate script is the <code>scriptPubKey</code> of an output of a transaction of the block, run the algorithm of [[#Receiving|Receiving]] on that transaction with that tweak, and record the outputs found.
+# Record the height as scanned.
+
+A wallet MUST re-scan the blocks that a reorganization disconnected, and MUST drop the outputs it had found in them.
+
+A payment is detected only once it is in a block: the tweak of a transaction in the mempool is not served by a tweak server, and asking for it would tell the server which transactions the wallet is interested in.
+
+The candidate scripts only cover <code>k = 0</code>, but a transaction paying to this wallet always contains the <code>k = 0</code> output, so a payment is never missed; the transaction is then scanned for all the values of <code>k</code>.
+The tweaks do not have to be matched to a transaction by position: a tweak is matched to the transaction that contains one of its candidate scripts.
+
+A wallet SHOULD verify the tweaks it receives, by recomputing them from the block it has downloaded whenever it has the spent outputs it needs, and SHOULD compare the filter against the block it downloaded.
+A server that omits a tweak makes the wallet miss a payment; it cannot make the wallet accept an output that is not its own, because every output is verified against the keys of the wallet before being recorded.
+
+Since the tweak data of a block is 33 bytes per eligible transaction, and Liquid produces one block per minute, a wallet that scans every block downloads at most <code>33 · t · 1440</code> bytes per day, where <code>t</code> is the number of eligible transactions per block: with the 6.5 transactions per block measured on Liquid around height 3,984,390, and in the worst case in which all of them are eligible, that is about 310 kB per day, plus one filter per block.
+
+===Representation of a received output===
+
+A received output is an ordinary confidential taproot output, described by:
+
+* its <code>scriptPubKey</code>,
+* its blinding secret key <code>c<sub>k</sub></code>, needed to unblind it,
+* its tweak <code>t</code>, needed to spend it, together with <code>b<sub>spend</sub></code>.
+
+A wallet MUST persist the outputs it discovers, or it has to scan again from the birthday.
+
+An [https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki ELIP-150] CT descriptor cannot describe such an output today: the descriptor <code>ct(c<sub>k</sub>,eltr(P<sub>k</sub>))</code> would apply the BIP-341 tweak to <code>P<sub>k</sub></code> and produce a different script.
+A <code>rawtr()</code> equivalent for Elements, that is a key spend only taproot descriptor that uses its key as the output key, would make <code>ct(c<sub>k</sub>,elrawtr(P<sub>k</sub>))</code> the natural representation of a received output; adding it is left to a separate proposal.
+
+==Rationale==
+
+'''Why derive the blinding key from the shared secret?'''
+The alternative is to publish a third key in the address and blind to it, or to a tweak of it.
+It would not hide anything more from the sender, which picks the ephemeral key used to blind the output and therefore knows the amount it is sending in any case, and it would make the address longer and incompatible with the BIP-352 encoding.
+It would, however, separate the ability to detect a payment from the ability to unblind it, which is only useful in a model where the scan key is shared with a third party. This document recommends against that model, so the simpler derivation was chosen.
+
+'''Why a separate tag instead of reusing <code>t<sub>k</sub></code>?'''
+Using <code>t<sub>k</sub></code> as the blinding key would tie two unrelated secrets together: anybody learning the blinding key of an output, for instance because the receiver revealed it to prove a payment<ref>
+Revealing the blinding key of an output is the usual way to prove to a third party what was received, since it lets them unblind that single output.
+</ref>, would also learn the tweak, and with the spend public key they could compute the output key. A separate tagged hash keeps the two independent.
+
+'''Why a different human readable part?'''
+A silent payment address does not commit to a chain in any other way.
+Paying a Bitcoin address on Liquid, or the reverse, would create an output that the receiver cannot detect and that the sender cannot recover.
+The prefixes are the Elements address prefixes, <code>lq</code>, <code>tlq</code> and <code>el</code>, with <code>sp</code> appended.
+
+'''Why are peg-ins not eligible?'''
+The output a peg-in spends lives on the Bitcoin chain: the scanning wallet would need Bitcoin data to know which of the rules of [[#Input eligibility|Input eligibility]] applies, which defeats the purpose of a light client.
+Their outpoints are still part of <code>outpoint<sub>L</sub></code>, because they are part of the transaction and both sides can read them from it.
+
+'''Why clear the flags in the outpoint?'''
+The alternative, hashing the outpoint as it appears in the serialized transaction, would make the value depend on whether the input carries an issuance, which is unrelated to the payment, and would be easy to get wrong: a wallet naturally works with parsed transactions, where the flags have already been stripped.
+The same choice makes the derivation identical to BIP-352 for the transactions that have no peg-in and no issuance.
+
+'''Why the Tweak Server model?'''
+As explained in [[#Drawbacks|Drawbacks]], on Elements the scan key unblinds as well as detects, so the models of the index server specification in which the scan key is shared with a service would give that service every amount and every asset of the wallet. The Tweak Server model does not share any key.
+
+'''Why only taproot outputs?'''
+As in BIP-352. A silent payment output is a fresh key that has never been published, so there is nothing to gain from a script, and restricting to one output type keeps the scanning work of the receiver proportional to the taproot outputs of a block.
+
+'''Interaction with discounted fees.'''
+A silent payment output is an ordinary confidential taproot output, so [https://github.com/ElementsProject/ELIPs/blob/main/elip-0200.mediawiki ELIP-200] discounted fees apply to it unchanged.
+
+==Backwards compatibility==
+
+This document does not change consensus rules and does not require any change to Elements: it describes how existing outputs are derived and found.
+A silent payment transaction is an ordinary transaction, and it is indistinguishable from any other transaction with taproot outputs.
+
+A wallet that does not implement this document cannot pay to a silent payment address: the address is a new format, and parsing it fails, so funds cannot be sent to a script that nobody can spend.
+
+A wallet that implements this document can receive from any sender that does, and can spend the outputs it receives with any signer able to produce a taproot key path signature for a given secret key.
+
+Scanning requires the tweak data of every transaction, which no Elements node exposes today.
+Until an index server is available, a wallet can compute the tweak data itself from the full blocks and from the outputs those blocks spend, which is only practical for a node or for a wallet with a short scanning range.
+
+==Test vectors==
+
+The BIP-352 [https://github.com/bitcoin/bips/blob/master/bip-0352/send_and_receive_test_vectors.json send and receive test vectors] apply unchanged to everything that is not blinding: the address encoding, the input eligibility, the tweak data, the output derivation and the labels.
+An implementation SHOULD run them, encoding the addresses with the Bitcoin human readable part for the purpose of the comparison.
+
+The vectors below cover what is specific to this document.
+
+===Keys and addresses===
+
+All of them are derived from the BIP-39 mnemonic
+
+<pre>
+abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about
+</pre>
+
+with an empty passphrase, account <code>0</code>.
+
+* Liquid, <code>m/352'/1776'/0'/{1,0}'/0</code>
+** scan secret key: <code>e4284c50d48a373098d44638e3c9d6f6eca770aaa54562eb8cdc0cff8cd3b550</code>
+** spend secret key: <code>ca29645fc7167f2810c909fa52bcd177b82aa3bfbe999ef579a6607926dc7f93</code>
+** address: <code>lqsp1qqgvh6dnt5eyvw54a0dvt4er7tkq0hdefm39sta8adph4vufq650tcqc9sw44xujvc7ejg4w5lt4zxpvc3fk446qdcrrmsgg9cnax8ujj7spnvlwq</code>
+** change address, label 0: <code>lqsp1qqgvh6dnt5eyvw54a0dvt4er7tkq0hdefm39sta8adph4vufq650tcqmujrcapnql6np3dpdjwswdwdcs0h3rs637agjsaeac6thmlcfpyy2eg0eh</code>
+** address labelled 1: <code>lqsp1qqgvh6dnt5eyvw54a0dvt4er7tkq0hdefm39sta8adph4vufq650tcq3789yp3lv5nvyyvhucjttyanypmzdg7qpadykuz7xd9zenvh6dwylcw0sj</code>
+* Liquid testnet, <code>m/352'/1'/0'/{1,0}'/0</code>
+** scan secret key: <code>38658693c017c46fd6b8bb94b8766c123cd5baf6026338305b6f59f82b36f9c0</code>
+** spend secret key: <code>9fd37137e760930c7208fa905e991c78c522689d237a220b2820c3ddb4c745a8</code>
+** address: <code>tlqsp1qqdpels3srq45dlezqvk20t3dlueftry6p5thc7msjm0s6jm3g84jzq5rxzzunfck6d45va2jcqxk429agt3e4klf3vzmcgp3zqthryhhqgu2k23l</code>
+** change address, label 0: <code>tlqsp1qqdpels3srq45dlezqvk20t3dlueftry6p5thc7msjm0s6jm3g84jzq4y0sngs4cjaw6cxuy7p6rlslx6h54lmppe9kx4r2ylf63tkem26qqt6u7t</code>
+** address labelled 1: <code>tlqsp1qqdpels3srq45dlezqvk20t3dlueftry6p5thc7msjm0s6jm3g84jzqknp3yhxtxhcvkczk4vfvdx0z8pfff3n78nelgppy4l2sss3famcgq974m5</code>
+* Elements regtest, <code>m/352'/1'/0'/{1,0}'/0</code>, same keys as testnet
+** address: <code>elsp1qqdpels3srq45dlezqvk20t3dlueftry6p5thc7msjm0s6jm3g84jzq5rxzzunfck6d45va2jcqxk429agt3e4klf3vzmcgp3zqthryhhqgd4lgkm</code>
+** change address, label 0: <code>elsp1qqdpels3srq45dlezqvk20t3dlueftry6p5thc7msjm0s6jm3g84jzq4y0sngs4cjaw6cxuy7p6rlslx6h54lmppe9kx4r2ylf63tkem26q35n7e0</code>
+** address labelled 1: <code>elsp1qqdpels3srq45dlezqvk20t3dlueftry6p5thc7msjm0s6jm3g84jzqknp3yhxtxhcvkczk4vfvdx0z8pfff3n78nelgppy4l2sss3famcg36hhus</code>
+
+===A payment===
+
+A transaction on Liquid spending one P2WPKH input and paying to the Liquid address above.
+
+Given:
+
+* input outpoint: <code>f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16:0</code>
+* input secret key: <code>0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b</code>
+* input public key: <code>02552c630b64b54bf50210c9e253d38bd4949c72e22873500f6285c2bede312a84</code>
+* spent <code>scriptPubKey</code>: <code>0014db3f00d429f2715383cc594258ec11d6de526697</code>
+* recipient: <code>lqsp1qqgvh6dnt5eyvw54a0dvt4er7tkq0hdefm39sta8adph4vufq650tcqc9sw44xujvc7ejg4w5lt4zxpvc3fk446qdcrrmsgg9cnax8ujj7spnvlwq</code>
+
+Expected:
+
+* tweak data, <code>input_hash · A</code>: <code>03398173f560782d934ddf4f5a291c47fd0866d6e26a97a7407b810e1873e34777</code>
+* output tweak, <code>t<sub>0</sub></code>: <code>a4c41218034595e818fce768dded0e52409abfe23501fb94e6787c32debad2bd</code>
+* output <code>scriptPubKey</code>: <code>512092a9d712661ac4c1ebd5e3953a5af8a60037fb69e7c559ecacbce41a050262d7</code>
+* blinding secret key, <code>c<sub>0</sub></code>: <code>f01c7948615e9ead2e612cf325857a605346bdd240896263ec888d2d4b7d1e27</code>
+* blinding public key, <code>C<sub>0</sub></code>: <code>0368c38c6542751c6c8778c31f60043d3dd5efa3dd03ccc1dff7b7c4ab6ae3afb8</code>
+* confidential address of the output: <code>lq1pqd5v8rr9gf63cmy80rp37cqy857atmarm5pueswl77muf2m2uwhm3y4f6ufxvxkyc84atcu48fd03fsqxlakne79t8k2e08yrgzsyckhf2sstv683ytv</code>
+* secret key spending the output, <code>b<sub>spend</sub> + t<sub>0</sub></code>: <code>6eed7677ca5c151029c5f16330a9dfcb3e1686bb4452fa4ea04c7e1f3561110f</code>
+
+==Reference implementation==
+
+[https://github.com/Blockstream/lwk Liquid Wallet Kit], in the <code>silent_payments</code> module of the <code>lwk_wollet</code> crate, proposed in [https://github.com/Blockstream/lwk/pull/170 pull request 170].
+
+It implements the address encoding, the key derivation, the input eligibility rules, the sender and receiver derivations and the blinding key derivation.
+It is checked against the [https://github.com/bitcoin/bips/blob/master/bip-0352/send_and_receive_test_vectors.json BIP-352 test vectors], sending and receiving, against the test vectors of this document, and against transactions built, blinded and signed as a wallet would build them, which is what covers the blinding.
+
+==Footnotes==
+
+<references />
+
+==Acknowledgments==
+
+Silent payments were designed by Ruben Somsen and Josie Baker in BIP-352; this document only adapts their work to confidential transactions.

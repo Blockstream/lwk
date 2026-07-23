@@ -112,6 +112,7 @@ mod tx_details;
 mod pset_create;
 #[cfg(feature = "registry")]
 pub mod registry;
+pub mod silent_payments;
 mod tx_builder;
 mod update;
 mod util;
@@ -135,6 +136,10 @@ pub use crate::model::{
 pub use crate::pegin::fed_peg_script;
 #[cfg(feature = "registry")]
 pub use crate::registry::RegistryAssetData;
+pub use crate::silent_payments::{
+    SilentPaymentAddress, SilentPaymentKeys, SilentPaymentScanner, SilentPaymentTxOut,
+    SilentPaymentWollet,
+};
 pub use crate::tx_details::{TxDetails, TxOpt, TxOutDetails, TxsOpt};
 pub use crate::wollet::DirectoryIdHash;
 

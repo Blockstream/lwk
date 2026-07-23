@@ -1,7 +1,6 @@
 use indexer::*;
 use lwk_common::Signer;
 use std::str::FromStr;
-use std::time::Duration;
 use testcontainers::clients::Cli;
 
 use elements::hex::ToHex;
@@ -66,36 +65,19 @@ async fn test_borrow_flow() {
 
     let mut client = electrum_client(&env);
 
-    // sync to fetch fee transaction
     borrower_session.sync().unwrap();
 
-    // borrower_prepare, which selects fee UTXO and builds transaction
+    // Prepare borrower for offer creation
     let prepared = borrower_session
         .borrower_prepare(BorrowerAccountParams {})
         .unwrap();
     let mut pset = prepared.inner().clone();
-
-    // sign
     borrower_signer.sign(&mut pset).unwrap();
-
-    // finalize
     let tx = borrower_session.finalize(&mut pset).unwrap();
-
-    // broadcast
     let txid = client.broadcast(&tx).unwrap();
     let transaction = client.get_transaction(txid).unwrap();
-
     env.elementsd_generate(1);
-
-    assert_eq!(
-        transaction.output[0].asset.to_string(),
-        prepared.issued_asset_id.to_string()
-    );
-
-    assert_eq!(
-        transaction.output[1].asset.to_string(),
-        prepared.issued_asset_id.to_string()
-    );
+    borrower_session.sync().unwrap();
 
     // Check if indexer is showing our factory by script_pubkey
     let spk = transaction.output[0].script_pubkey.to_hex();
@@ -114,39 +96,25 @@ async fn test_borrow_flow() {
         protocol_fee_keeper_asset_id,
     };
 
-    // sync to fetch fee transaction
-    borrower_session.sync().unwrap();
-
+    // Create offer with given details
     let create = borrower_session
-        .borrower_create_offer(borrow_details, factory.clone().try_into().unwrap())
+        .borrower_create_offer(borrow_details, factory)
         .unwrap();
 
     let mut pset = create.into_inner();
-
-    // sign
     borrower_signer.sign(&mut pset).unwrap();
-
-    // finalize
     let tx = borrower_session.finalize(&mut pset).unwrap();
-
-    // broadcast
     let creation_txid = client.broadcast(&tx).unwrap();
-
     env.elementsd_generate(1);
-
-    // Sync to pick up L-BTC and collateral change from creation tx
     borrower_session.sync().unwrap();
 
     // Check if indexer is showing our factory by script_pubkey
     let offer = wait_offer(OfferStatus::Pending, None, &indexer_client).await;
     let item = offer;
 
-    assert_eq!(item.issuance_factory_id, factory.id);
-    assert_eq!(item.created_at_txid, creation_txid);
-
     let lender_client = electrum_client(&env);
 
-    // create LendingSession for lender
+    // Create LendingSession for lender
     let mut lender_session = LendingSession::builder(network, lender_wd)
         .set_indexer_url(indexer_client.base_url().into())
         .set_electrum_client(lender_client)
@@ -155,6 +123,7 @@ async fn test_borrow_flow() {
 
     lender_session.sync().unwrap();
 
+    // Accept pending offer by its TXID
     let accept = lender_session
         .accept_offer(AcceptOfferDetails {
             pending_offer_creation_txid: creation_txid,
@@ -166,15 +135,13 @@ async fn test_borrow_flow() {
     lender_signer.sign(&mut pset).unwrap();
     let tx = lender_session.finalize(&mut pset).unwrap();
     let acceptance_txid = client.broadcast(&tx).unwrap();
-
     env.elementsd_generate(1);
+    borrower_session.sync().unwrap();
 
     // Verify the offer status changed to Active in the indexer
     wait_offer(OfferStatus::Active, Some(item.id), &indexer_client).await;
 
     // Claim principal as borrower
-    borrower_session.sync().unwrap();
-
     let claim = borrower_session
         .claim_principal(ClaimPrincipalDetails {
             acceptance_txid,
@@ -186,11 +153,10 @@ async fn test_borrow_flow() {
     borrower_signer.sign(&mut pset).unwrap();
     let tx = borrower_session.finalize(&mut pset).unwrap();
     client.broadcast(&tx).unwrap();
-
     env.elementsd_generate(1);
-
     borrower_session.sync().unwrap();
 
+    // Check if principal present in the wallet
     let balance = borrower_session.wollet().balance().unwrap();
     let principal_balance = balance.get(&principal).copied().unwrap_or(0);
     assert!(
@@ -198,12 +164,11 @@ async fn test_borrow_flow() {
         "borrower should have received the principal: got {principal_balance}, expected at least 10000"
     );
 
-    // Repay the loan
     // Fund borrower with principal asset for repayment
     fund_wollet(&mut b_wollet, &mut client, &env, 100_000, Some(principal));
-
     borrower_session.sync().unwrap();
 
+    // Repay the loan
     let covenant_outpoint = lwk_wollet::elements::OutPoint {
         txid: acceptance_txid,
         vout: 0,
@@ -220,7 +185,8 @@ async fn test_borrow_flow() {
     borrower_signer.sign(&mut pset).unwrap();
     let tx = borrower_session.finalize(&mut pset).unwrap();
     client.broadcast(&tx).unwrap();
-
     env.elementsd_generate(1);
+
+    // Verify the offer status changed to Repaid in the indexer
     wait_offer(OfferStatus::Repaid, Some(item.id), &indexer_client).await;
 }

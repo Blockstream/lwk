@@ -1,4 +1,5 @@
 use lwk_simplicity::lending::*;
+use lwk_test_util::TestEnv;
 use lwk_wollet::elements::AssetId;
 use lwk_wollet::hashes::sha256;
 use std::path::Path;
@@ -35,6 +36,22 @@ pub async fn wait_offer(
         tokio::time::sleep(Duration::from_millis(500)).await;
     }
     panic!("Offer with status {status} was not found in indexer");
+}
+
+pub async fn launch_indexer<'a>(
+    env: &TestEnv,
+    cli: &'a Cli,
+) -> (IndexerClient, IndexerContext<'a>) {
+    let binary = std::fs::canonicalize(
+        std::env::var("LENDING_INDEXER_EXEC").expect("LENDING_INDEXER_EXEC must be set"),
+    )
+    .expect("LENDING_INDEXER_EXEC path does not exist");
+
+    let indexer = start_indexer(env, cli, &binary, 8081).await;
+    let indexer_client = IndexerClient::builder(indexer.api_url().to_string())
+        .build()
+        .unwrap();
+    (indexer_client, indexer)
 }
 
 /// Test protocol fee keeper asset id

@@ -1,7 +1,8 @@
-use indexer::{wait_offer, PROTOCOL_FEE_KEEPER_ASSET_ID};
+use indexer::*;
 use lwk_common::Signer;
 use std::str::FromStr;
 use std::time::Duration;
+use testcontainers::clients::Cli;
 
 use elements::hex::ToHex;
 use lwk_simplicity::lending::*;
@@ -13,27 +14,15 @@ mod common;
 mod indexer;
 use common::*;
 
-use testcontainers::clients::Cli;
-
 #[tokio::test]
 async fn test_borrow_flow() {
-    let binary = std::fs::canonicalize(
-        std::env::var("LENDING_INDEXER_EXEC").expect("LENDING_INDEXER_EXEC must be set"),
-    )
-    .expect("LENDING_INDEXER_EXEC path does not exist");
-
     let env = TestEnvBuilder::from_env()
         .with_electrum()
         .with_esplora()
         .build();
     let mut client = electrum_client(&env);
-
-    // Start postgres, run migrations, launch indexer
     let cli = Cli::default();
-    let indexer = indexer::start_indexer(&env, &cli, &binary, 8081).await;
-    let indexer_url = indexer.api_url().to_string();
-    let indexer_client = IndexerClient::builder(indexer_url.clone()).build().unwrap();
-
+    let (indexer_client, _indexer_ctx) = launch_indexer(&env, &cli).await;
     let network = env.elementsd_network();
 
     // Create borrower
@@ -84,7 +73,7 @@ async fn test_borrow_flow() {
 
     // Create lending session for borrower
     let mut borrower_session = LendingSession::builder(network, borrower_wd.clone())
-        .set_indexer_url(indexer_url.clone())
+        .set_indexer_url(indexer_client.base_url().into())
         .set_electrum_client(client)
         .build()
         .unwrap();
@@ -187,7 +176,7 @@ async fn test_borrow_flow() {
 
     // create LendingSession for lender
     let mut lender_session = LendingSession::builder(network, lender_wd)
-        .set_indexer_url(indexer_url.clone())
+        .set_indexer_url(indexer_client.base_url().into())
         .set_electrum_client(lender_client)
         .build()
         .unwrap();

@@ -99,21 +99,7 @@ async fn test_borrow_flow() {
 
     // Check if indexer is showing our factory by script_pubkey
     let spk = transaction.output[0].script_pubkey.to_hex();
-    let mut found_factory = None;
-
-    for _ in 0..20 {
-        let factories = indexer_client.get_factories_by_script(&spk).await.unwrap();
-
-        // If we get an element, store it and break out of the loop
-        if let Some(factory) = factories.into_iter().next() {
-            found_factory = Some(factory);
-            break;
-        }
-
-        tokio::time::sleep(Duration::from_millis(500)).await;
-    }
-
-    let factory = found_factory.expect("Factory was not found within the timeout");
+    let factory = wait_factory(spk, &indexer_client).await;
 
     // Create borrow details
     let borrow_details = OfferDetails {

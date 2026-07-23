@@ -15,6 +15,7 @@ pub use core::BorrowerAccountParams;
 pub use core::ClaimPrincipalDetails;
 pub use core::ClaimPrincipalTransaction;
 pub use core::CreateBorrowTransaction;
+pub use core::FactoryDetails;
 pub use core::LendingSession;
 pub use core::LendingSessionBuilder;
 pub use core::OfferDetails;

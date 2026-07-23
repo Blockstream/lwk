@@ -38,6 +38,20 @@ pub async fn wait_offer(
     panic!("Offer with status {status} was not found in indexer");
 }
 
+pub async fn wait_factory(spk: String, indexer: &IndexerClient) -> FactoryDetails {
+    for _ in 0..20 {
+        let factories = indexer.get_factories_by_script(&spk).await.unwrap();
+
+        if let Some(factory) = factories.into_iter().next() {
+            return factory.try_into().unwrap();
+        }
+
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+
+    panic!("Factory for given {spk} was not found in indexer");
+}
+
 pub async fn launch_indexer<'a>(
     env: &TestEnv,
     cli: &'a Cli,

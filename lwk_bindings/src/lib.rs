@@ -82,7 +82,7 @@ pub use crate::wollet::{Wollet, WolletBuilder};
 pub use chain::Chain;
 pub use currency_code::CurrencyCode;
 pub use desc::{get_path, WolletDescriptor};
-pub use electrum_client::ElectrumClient;
+pub use electrum_client::{ElectrumClient, ElectrumClientBuilder};
 pub use error::LwkError;
 pub use esplora_client::{
     EsploraClient, EsploraClientBuilder, TokenProvider, WaterfallsClient, WaterfallsClientBuilder,

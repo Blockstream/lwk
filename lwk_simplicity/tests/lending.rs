@@ -30,7 +30,7 @@ async fn test_borrow_flow() {
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, borrower_signer.xpub());
     let borrower_wd = WolletDescriptor::from_str(&desc).unwrap();
-    let mut borrower_wollet = WolletBuilder::new(network, borrower_wd.clone())
+    let mut b_wollet = WolletBuilder::new(network, borrower_wd.clone())
         .build()
         .unwrap();
 
@@ -39,37 +39,23 @@ async fn test_borrow_flow() {
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, lender_signer.xpub());
     let lender_wd = WolletDescriptor::from_str(&desc).unwrap();
-    let mut lender_wollet = WolletBuilder::new(network, lender_wd.clone())
+    let mut l_wollet = WolletBuilder::new(network, lender_wd.clone())
         .build()
         .unwrap();
 
-    // Fund the borrower wallet with L-BTC
-    fund_wollet(&mut borrower_wollet, &mut client, &env, 500_000, None);
-
     // Issue assets
-    let collateral_asset_id = env.elementsd_issueasset(1_000_000);
-    let principal_asset_id = env.elementsd_issueasset(1_000_000);
+    let collateral = env.elementsd_issueasset(1_000_000);
+    let principal = env.elementsd_issueasset(1_000_000);
     // this is separate NFT for protocol fee keeper (service/indexer maintainer)
     let protocol_fee_keeper_asset_id = PROTOCOL_FEE_KEEPER_ASSET_ID;
 
-    // Fund borrower with collateral asset
-    fund_wollet(
-        &mut borrower_wollet,
-        &mut client,
-        &env,
-        500_000,
-        Some(collateral_asset_id),
-    );
+    // Fund borrower with L-BTC and collateral asset
+    fund_wollet(&mut b_wollet, &mut client, &env, 500_000, Some(collateral));
+    fund_wollet(&mut b_wollet, &mut client, &env, 500_000, None);
 
     // Fund lender with L-BTC and principal asset
-    fund_wollet(&mut lender_wollet, &mut client, &env, 500_000, None);
-    fund_wollet(
-        &mut lender_wollet,
-        &mut client,
-        &env,
-        100_000,
-        Some(principal_asset_id),
-    );
+    fund_wollet(&mut l_wollet, &mut client, &env, 500_000, None);
+    fund_wollet(&mut l_wollet, &mut client, &env, 100_000, Some(principal));
 
     // Create lending session for borrower
     let mut borrower_session = LendingSession::builder(network, borrower_wd.clone())
@@ -131,9 +117,9 @@ async fn test_borrow_flow() {
 
     // Create borrow details
     let borrow_details = OfferDetails {
-        principal_asset_id,
+        principal_asset_id: principal,
         principal_amount: 10000,
-        collateral_asset_id,
+        collateral_asset_id: collateral,
         collateral_amount: 200000,
         // 60 blocks after the current one
         loan_expiration_time: env.elementsd_height() as u32 + 60,
@@ -220,7 +206,7 @@ async fn test_borrow_flow() {
     borrower_session.sync().unwrap();
 
     let balance = borrower_session.wollet().balance().unwrap();
-    let principal_balance = balance.get(&principal_asset_id).copied().unwrap_or(0);
+    let principal_balance = balance.get(&principal).copied().unwrap_or(0);
     assert!(
         principal_balance >= 10000,
         "borrower should have received the principal: got {principal_balance}, expected at least 10000"
@@ -228,13 +214,7 @@ async fn test_borrow_flow() {
 
     // Repay the loan
     // Fund borrower with principal asset for repayment
-    fund_wollet(
-        &mut borrower_wollet,
-        &mut client,
-        &env,
-        100_000,
-        Some(principal_asset_id),
-    );
+    fund_wollet(&mut b_wollet, &mut client, &env, 100_000, Some(principal));
 
     borrower_session.sync().unwrap();
 

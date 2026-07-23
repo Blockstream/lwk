@@ -68,6 +68,8 @@ async fn test_borrow_flow() {
     borrower_session.sync().unwrap();
 
     // Prepare borrower for offer creation
+    // This would create a 'Factory' simplicity covenant as a standalone asset,
+    // which would ensure that offers would be created properly, eliminating the risk of locking coins.
     let prepared = borrower_session
         .borrower_prepare(BorrowerAccountParams {})
         .unwrap();
@@ -86,17 +88,24 @@ async fn test_borrow_flow() {
     // Create borrow details
     let borrow_details = OfferDetails {
         principal_asset_id: principal,
-        principal_amount: 10000,
+        principal_amount: 10_000,
         collateral_asset_id: collateral,
-        collateral_amount: 200000,
+        collateral_amount: 200_000,
         // 60 blocks after the current one
         loan_expiration_time: env.elementsd_height() as u32 + 60,
         // 20 % interest rate
         principal_interest_rate: 2_000,
+        // Asset ID of the indexer maintainer, which serves as authentication.
+        // Some percentage of the repaid principal (right now it is 10%) would be locked
+        // in the simplicity covenant, which can be unlocked only with this asset ID.
+        // Without that, the indexer wouldn't see an offer.
         protocol_fee_keeper_asset_id,
     };
 
-    // Create offer with given details
+    // Create an offer with given details. This would create a borrower NFT, which would be sent
+    // to the borrower's address, and a lender NFT, which would be locked with a simplicity covenant
+    // until the offer is accepted. Locked collateral from the borrower locked to the Lending
+    // simplicity covenant.
     let create = borrower_session
         .borrower_create_offer(borrow_details, factory)
         .unwrap();
@@ -108,7 +117,7 @@ async fn test_borrow_flow() {
     env.elementsd_generate(1);
     borrower_session.sync().unwrap();
 
-    // Check if indexer is showing our factory by script_pubkey
+    // Check if indexer is showing our offer.
     let offer = wait_offer(OfferStatus::Pending, None, &indexer_client).await;
     let item = offer;
 
@@ -123,7 +132,11 @@ async fn test_borrow_flow() {
 
     lender_session.sync().unwrap();
 
-    // Accept pending offer by its TXID
+    // Accept pending offer by its TXID.
+    // This would lock the principal with a simplicity covenant, which could be unlocked with the borrower
+    // NFT, send a lender NFT to the lender's address and change the offer status of the Lending
+    // simplicity covenant to Active.
+    // Note that we don't need a borrower to accept.
     let accept = lender_session
         .accept_offer(AcceptOfferDetails {
             pending_offer_creation_txid: creation_txid,
@@ -141,7 +154,7 @@ async fn test_borrow_flow() {
     // Verify the offer status changed to Active in the indexer
     wait_offer(OfferStatus::Active, Some(item.id), &indexer_client).await;
 
-    // Claim principal as borrower
+    // Claim principal as the borrower which would send principal to the borrower's address.
     let claim = borrower_session
         .claim_principal(ClaimPrincipalDetails {
             acceptance_txid,
@@ -168,7 +181,9 @@ async fn test_borrow_flow() {
     fund_wollet(&mut b_wollet, &mut client, &env, 100_000, Some(principal));
     borrower_session.sync().unwrap();
 
-    // Repay the loan
+    // Fully repay the loan as a borrower.
+    // This would send principal to the lender vault, protocol fee keeper vault and return
+    // locked collateral to the borrower.
     let covenant_outpoint = lwk_wollet::elements::OutPoint {
         txid: acceptance_txid,
         vout: 0,

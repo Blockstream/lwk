@@ -35,6 +35,10 @@ jobs:
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
           echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/aarch64-linux-gnu-gcc" >> $GITHUB_ENV
 
+      - name: Install NASM
+        if: matrix.target == 'i686-pc-windows-msvc'
+        uses: ilammy/setup-nasm@72793074d3c8cdda771dba85f6deafe00623038b # v1.5.2
+
       - name: Checkout
         uses: actions/checkout@v6
       - run: rm rust-toolchain.toml # otherwise try to use version specified in it

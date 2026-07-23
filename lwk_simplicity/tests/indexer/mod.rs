@@ -1,3 +1,4 @@
+use lwk_simplicity::lending::*;
 use lwk_wollet::elements::AssetId;
 use lwk_wollet::hashes::sha256;
 use std::path::Path;
@@ -6,6 +7,35 @@ use std::time::Duration;
 use testcontainers::clients::Cli;
 use testcontainers::images::postgres::Postgres;
 use testcontainers::RunnableImage;
+use uuid::Uuid;
+
+pub async fn wait_offer(
+    status: OfferStatus,
+    id: Option<Uuid>,
+    indexer: &IndexerClient,
+) -> OfferListItem {
+    for _ in 0..20 {
+        let offers = indexer
+            .list_offers(&OfferFiltersRequest::default())
+            .await
+            .unwrap();
+
+        let offer = if let Some(id) = id {
+            offers.items.iter().find(|o| o.id == id)
+        } else {
+            offers.items.first()
+        };
+
+        if let Some(o) = offer {
+            if o.status == status {
+                return o.clone();
+            }
+        }
+
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+    panic!("Offer with status {status} was not found in indexer");
+}
 
 /// Test protocol fee keeper asset id
 pub const PROTOCOL_FEE_KEEPER_ASSET_ID: AssetId = AssetId::from_inner(sha256::Midstate([1; 32]));

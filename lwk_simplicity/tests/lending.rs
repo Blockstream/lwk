@@ -1,8 +1,7 @@
-use indexer::PROTOCOL_FEE_KEEPER_ASSET_ID;
+use indexer::{wait_offer, PROTOCOL_FEE_KEEPER_ASSET_ID};
 use lwk_common::Signer;
 use std::str::FromStr;
 use std::time::Duration;
-use uuid::Uuid;
 
 use elements::hex::ToHex;
 use lwk_simplicity::lending::*;
@@ -28,34 +27,6 @@ pub fn fund_wollet<S: BlockchainBackend>(
     let txid = env.elementsd_sendtoaddress(address.address(), satoshi, asset_id);
     env.elementsd_generate(1);
     wait_for_tx(wollet, client, &txid);
-}
-
-async fn wait_offer(
-    status: OfferStatus,
-    id: Option<Uuid>,
-    indexer: &IndexerClient,
-) -> OfferListItem {
-    for _ in 0..20 {
-        let offers = indexer
-            .list_offers(&OfferFiltersRequest::default())
-            .await
-            .unwrap();
-
-        let offer = if let Some(id) = id {
-            offers.items.iter().find(|o| o.id == id)
-        } else {
-            offers.items.first()
-        };
-
-        if let Some(o) = offer {
-            if o.status == status {
-                return o.clone();
-            }
-        }
-
-        tokio::time::sleep(Duration::from_millis(500)).await;
-    }
-    panic!("Offer with status {status} was not found in indexer");
 }
 
 #[tokio::test]

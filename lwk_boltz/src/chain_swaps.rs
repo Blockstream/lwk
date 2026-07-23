@@ -602,12 +602,13 @@ impl LockupResponse {
     async fn build_and_broadcast_refund(&mut self) -> Result<(), Error> {
         let swap_id = self.swap_id().to_string();
         sleep(WAIT_TIME).await;
+        let fee = crate::fallback_swap_fee(&self.api, self.data.from_chain).await?;
         let tx = self
             .lockup_script
             .construct_refund(SwapTransactionParams {
                 keys: self.data.refund_keys,
                 output_address: self.data.refund_address.clone(),
-                fee: Fee::Relative(1.0),
+                fee,
                 swap_id: swap_id.clone(),
                 chain_client: &self.chain_client,
                 boltz_client: &self.api,
@@ -839,7 +840,7 @@ impl LockupResponse {
                 };
                 Fee::Absolute(claim_fee + extra)
             }
-            None => Fee::Relative(1.0),
+            None => crate::fallback_swap_fee(&self.api, self.data.to_chain).await?,
         };
 
         let tx = self

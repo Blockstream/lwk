@@ -9,7 +9,6 @@ use boltz_client::boltz::{
     BoltzApiClientV2, CreateSubmarineRequest, CreateSubmarineResponse, RefundDetails,
     SubSwapStates, SwapRestoreResponse, SwapRestoreType, SwapStatus, Webhook,
 };
-use boltz_client::fees::Fee;
 use boltz_client::network::Chain;
 use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams};
@@ -717,12 +716,13 @@ impl PreparePayResponse {
     }
 
     async fn make_refund_tx(&mut self) -> Result<boltz_client::swaps::BtcLikeTransaction, Error> {
+        let fee = crate::fallback_swap_fee(&self.api, self.data.from_chain).await?;
         Ok(self
             .swap_script
             .construct_refund(SwapTransactionParams {
                 keys: self.data.our_keys,
                 output_address: self.data.refund_address.to_string(),
-                fee: Fee::Relative(0.12), // TODO make it configurable
+                fee,
                 swap_id: self.swap_id().to_string(),
                 chain_client: &self.chain_client,
                 boltz_client: &self.api,

@@ -417,10 +417,11 @@ mod tests {
 
         assert_eq!(prepare_pay_response.from_chain(), BTC_CHAIN.into());
 
+        let lockup_amount = prepare_pay_response.uri_amount() - 1;
         utils::send_to_address(
             BTC_CHAIN.into(),
             prepare_pay_response.lockup_address(),
-            prepare_pay_response.uri_amount() - 1,
+            lockup_amount,
         )
         .await
         .unwrap();
@@ -429,6 +430,17 @@ mod tests {
         assert!(
             prepare_pay_response.refund_txid().is_some(),
             "refund_txid should be set after BTC underpay refund transaction is broadcasted"
+        );
+        let boltz_fee_rate = utils::boltz_bitcoin_fee_rate().await.unwrap();
+        let refund_fee_rate = utils::bitcoin_transaction_fee_rate(
+            prepare_pay_response.refund_txid().unwrap(),
+            lockup_amount,
+        )
+        .await
+        .unwrap();
+        assert!(
+            refund_fee_rate >= boltz_fee_rate.min(50.0),
+            "Refund fee rate {refund_fee_rate} should use Boltz rate {boltz_fee_rate}"
         );
 
         mining_handle.abort();

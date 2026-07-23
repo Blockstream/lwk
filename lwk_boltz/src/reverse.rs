@@ -466,7 +466,7 @@ impl InvoiceResponse {
                 };
                 Fee::Absolute(claim_fee + extra)
             }
-            None => Fee::Relative(0.12),
+            None => crate::fallback_swap_fee(&self.api, self.data.to_chain).await?,
         };
 
         let tx = self

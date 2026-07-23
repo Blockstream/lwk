@@ -162,6 +162,8 @@ impl TxBuilder {
 
     /// Issue an asset, or several assets by calling this multiple times in the same transaction
     ///
+    /// **Experimental**: this API might change without notice.
+    ///
     /// `request` sets the asset/token amounts, receivers, and contract; see
     /// [`IssuanceRequest`] for details.
     ///
@@ -179,8 +181,6 @@ impl TxBuilder {
         *lock = Some(inner.add_issuance(request)?);
         Ok(())
     }
-
-    // TODO: add `pin_input` to `IssuanceRequest` once wrapper for `set_inputs_order` exists
 
     /// Reissue an asset
     ///

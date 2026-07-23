@@ -160,6 +160,8 @@ impl TxBuilder {
 
     /// Issue an asset
     ///
+    /// **Experimental**: this API might change without notice.
+    ///
     /// There will be `asset_sats` units of the asset, received by the address set via
     /// [`IssuanceRequest::address_asset`] if any, otherwise by an address of the wallet
     /// generating the issuance.
@@ -231,6 +233,8 @@ impl TxBuilder {
     }
 
     /// Set the exact order in which selected wallet and external inputs are added.
+    ///
+    /// **Experimental**: this API might change without notice.
     #[wasm_bindgen(js_name = setInputsOrder)]
     pub fn set_inputs_order(self, outpoints: Vec<OutPoint>) -> TxBuilder {
         let outpoints: Vec<elements::OutPoint> = outpoints.into_iter().map(Into::into).collect();

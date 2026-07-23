@@ -379,6 +379,8 @@ impl TxBuilder {
 
     /// Issue an asset
     ///
+    /// **Experimental**: this API might change without notice.
+    ///
     /// There will be `asset_sats` units of this asset that will be received by
     /// `asset_receiver` if it's set, otherwise to an address of the wallet generating the issuance.
     ///
@@ -499,6 +501,8 @@ impl TxBuilder {
     }
 
     /// Orders inputs selected with manual coin selection and external utxos
+    ///
+    /// **Experimental**: this API might change without notice.
     ///
     /// If this is called, `set_wallet_utxos` must be called too.
     /// The outpoints passed to this method, must be the union of the outpoints passed to `set_wallet_utxos` and `set_external_utxos`.
@@ -1749,6 +1753,8 @@ impl<'a> WolletTxBuilder<'a> {
     }
 
     /// Wrapper of [`TxBuilder::add_issuance()`]
+    ///
+    /// **Experimental**: this API might change without notice.
     pub fn add_issuance(self, request_builder: IssuanceRequest) -> Result<Self, Error> {
         Ok(Self {
             wollet: self.wollet,
@@ -1808,6 +1814,8 @@ impl<'a> WolletTxBuilder<'a> {
     }
 
     /// Wrapper of [`TxBuilder::set_inputs_order()`]
+    ///
+    /// **Experimental**: this API might change without notice.
     pub fn set_inputs_order(self, inputs_order: Vec<OutPoint>) -> Self {
         Self {
             wollet: self.wollet,

@@ -228,8 +228,22 @@ impl TxBuilder {
         Ok(())
     }
 
-    // TODO: add wrapper for `set_inputs_order`
-    // TODO: add python test once the wrapper above exists
+    /// Orders inputs selected with manual coin selection and external utxos
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// If this is called, `set_wallet_utxos` must be called too.
+    /// The outpoints passed to this method, must be the union of the outpoints passed to `set_wallet_utxos` and `add_external_utxos`.
+    pub fn set_inputs_order(&self, inputs_order: &[Arc<OutPoint>]) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        let inputs = inputs_order
+            .iter()
+            .map(|arc| elements::OutPoint::from(arc.as_ref()))
+            .collect();
+        *lock = Some(inner.set_inputs_order(inputs));
+        Ok(())
+    }
 
     /// Adds external UTXOs
     ///

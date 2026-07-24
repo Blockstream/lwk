@@ -664,8 +664,108 @@ impl LendingSession {
         Ok(ClaimPrincipalTransaction { pset })
     }
 
-    pub fn claim_partial_repayment(&self) -> Result<(), LendingError> {
-        todo!()
+    /// Claim funds from the finalized lender vault after the borrower has repaid.
+    ///
+    /// After a full repayment, the lender vault transitions to a finalized state.
+    /// The lender withdraws all funds using their lender NFT as authorization.
+    ///
+    /// # Errors
+    /// Returns an error if the wallet has no suitable lender NFT or fee UTXO, the creation or
+    /// repayment transaction cannot be fetched, or the transaction construction fails.
+    pub fn lender_final_claim(
+        &mut self,
+        details: ClaimRepaymentDetails,
+    ) -> Result<ClaimRepaymentTransaction, LendingError> {
+        const FEE_ESTIMATE: u64 = 250;
+        const LENDER_NFT_INPUT_INDEX: u32 = 1;
+        const LENDER_NFT_BURN_OUTPUT_INDEX: u32 = 0;
+        const LENDER_VAULT_VOUT: u32 = 1;
+
+        let policy_asset = *self.network.policy_asset();
+        let simplex_network = to_simplicity_network(self.network);
+
+        let creation_tx = self.get_transaction(&details.lending_creation_txid)?;
+        let offer = LendingOffer::try_from_tx(
+            &creation_tx,
+            details.protocol_fee_keeper_asset_id,
+            simplex_network,
+        )?;
+        let offer_params = *offer.get_parameters();
+
+        let finalized_vault = offer_params.get_finalized_lender_vault();
+
+        let repayment_tx = self.get_transaction(&details.repayment_txid)?;
+        let vault_txout = repayment_tx
+            .output
+            .get(LENDER_VAULT_VOUT as usize)
+            .cloned()
+            .ok_or_else(|| {
+                LendingError::Generic(
+                    "finalized lender vault output not found in repayment tx".into(),
+                )
+            })?;
+
+        let vault_amount = vault_txout
+            .value
+            .explicit()
+            .ok_or(LendingError::Generic("vault amount is not explicit".into()))?;
+
+        let vault_utxo = UTXO {
+            outpoint: OutPoint {
+                txid: details.repayment_txid,
+                vout: LENDER_VAULT_VOUT,
+            },
+            txout: vault_txout,
+            secrets: Some(TxOutSecrets {
+                asset: offer_params.principal_asset_id,
+                asset_bf: AssetBlindingFactor::zero(),
+                value: vault_amount,
+                value_bf: ValueBlindingFactor::zero(),
+            }),
+        };
+
+        let lender_nft_utxo = self.get_explicit_utxo(offer_params.lender_nft_asset_id, 1, &[])?;
+
+        let fee_funding_utxo =
+            self.get_utxo(policy_asset, FEE_ESTIMATE, &[lender_nft_utxo.outpoint])?;
+
+        let (user_script, user_pk) = self.get_spk_bk(false)?;
+
+        let mut ft = FinalTransaction::new();
+
+        finalized_vault.attach_withdrawing_all(
+            &mut ft,
+            vault_utxo,
+            LENDER_NFT_INPUT_INDEX,
+            LENDER_NFT_BURN_OUTPUT_INDEX,
+        );
+
+        ft.add_input(
+            PartialInput::new(lender_nft_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        ft.add_output(PartialOutput::new(
+            Script::new_op_return(b"burn"),
+            1,
+            offer_params.lender_nft_asset_id,
+        ));
+
+        ft.add_input(
+            PartialInput::new(fee_funding_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        ft.add_output(
+            PartialOutput::new(user_script, vault_amount, offer_params.principal_asset_id)
+                .with_blinding_key(user_pk),
+        );
+
+        let _ = self.add_fee(&mut ft)?;
+
+        let pset = self.blind_and_finalize(&mut ft)?;
+
+        Ok(ClaimRepaymentTransaction { pset })
     }
 
     pub fn liquidate_offer(&self) -> Result<(), LendingError> {
@@ -1037,6 +1137,12 @@ pub struct ClaimPrincipalDetails {
     pub protocol_fee_keeper_asset_id: AssetId,
 }
 
+pub struct ClaimRepaymentDetails {
+    pub lending_creation_txid: Txid,
+    pub repayment_txid: Txid,
+    pub protocol_fee_keeper_asset_id: AssetId,
+}
+
 pub struct BorrowerAccountParams {}
 
 pub struct BorrowerAccountCreationResult {
@@ -1101,6 +1207,20 @@ pub struct ClaimPrincipalTransaction {
 }
 
 impl ClaimPrincipalTransaction {
+    pub fn inner(&self) -> &PartiallySignedTransaction {
+        &self.pset
+    }
+
+    pub fn into_inner(self) -> PartiallySignedTransaction {
+        self.pset
+    }
+}
+
+pub struct ClaimRepaymentTransaction {
+    pset: PartiallySignedTransaction,
+}
+
+impl ClaimRepaymentTransaction {
     pub fn inner(&self) -> &PartiallySignedTransaction {
         &self.pset
     }

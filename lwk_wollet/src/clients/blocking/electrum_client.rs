@@ -20,7 +20,7 @@ use super::BlockchainBackend;
 /// Shared cache of the OAuth token minted by the [`AuthProvider`] closure, so the client
 /// can invalidate it when the server denies a call with an authentication error.
 #[cfg(feature = "electrum_oidc")]
-type TokenCache = Arc<std::sync::Mutex<Option<String>>>;
+type AuthTokenCache = Arc<std::sync::Mutex<Option<String>>>;
 
 /// A client to issue TCP requests to an electrum server.
 pub struct ElectrumClient {
@@ -34,7 +34,7 @@ pub struct ElectrumClient {
     /// closure, so an authentication denial can invalidate the token and the retried call
     /// mints a fresh one. `None` for the other providers.
     #[cfg(feature = "electrum_oidc")]
-    token_cache: Option<TokenCache>,
+    token_cache: Option<AuthTokenCache>,
 }
 
 impl Debug for ElectrumClient {
@@ -143,6 +143,10 @@ impl ElectrumClient {
 /// directly, so this checks the wrapped errors too.
 #[cfg(feature = "electrum_oidc")]
 fn is_auth_denied(error: &electrum_client::Error) -> bool {
+    // TODO: the proxy JSON-RPC denial codes (-32004 auth, -32000 credits, ...) and this
+    // check are duplicated here, in lwk_test_util, and the e2e tests. Share them (exporting
+    // from the proxy crate is awkward, so at least a shared set of constants in lwk) so they
+    // stay in sync.
     const AUTHENTICATION_REQUIRED: i64 = -32004;
     match error {
         electrum_client::Error::Protocol(value) => {
@@ -380,7 +384,7 @@ struct ElectrumAuth {
     /// electrum-client `retry` override (`None` keeps its default of 1).
     retry: Option<u8>,
     #[cfg(feature = "electrum_oidc")]
-    token_cache: Option<TokenCache>,
+    token_cache: Option<AuthTokenCache>,
 }
 
 impl ElectrumAuth {
@@ -409,52 +413,62 @@ fn token_provider_auth(token_provider: &TokenProvider) -> Result<ElectrumAuth, E
                 Arc::new(move || Some(header.clone())) as AuthProvider,
             )))
         }
-        #[cfg(feature = "electrum_oidc")]
         TokenProvider::Blockstream {
             url,
             client_id,
             client_secret,
         } => {
-            use crate::clients::oauth::fetch_oauth_token_blocking;
+            #[cfg(not(feature = "electrum_oidc"))]
+            {
+                let _ = (url, client_id, client_secret);
+                Err(Error::Generic(
+                    "TokenProvider::Blockstream for the Electrum client requires the `electrum_oidc` cargo feature; enable it or use TokenProvider::Static".to_string(),
+                ))
+            }
+            #[cfg(feature = "electrum_oidc")]
+            {
+                use crate::clients::oauth::fetch_oauth_token_blocking;
 
-            // Mint the first token now: the connection's first message needs it anyway.
-            let token = fetch_oauth_token_blocking(url, client_id, client_secret)?;
-            let token_cache: TokenCache = Arc::new(std::sync::Mutex::new(Some(token)));
+                // Mint the first token now: the connection's first message needs it anyway.
+                let token = fetch_oauth_token_blocking(url, client_id, client_secret)?;
+                let token_cache: AuthTokenCache = Arc::new(std::sync::Mutex::new(Some(token)));
 
-            let cache = token_cache.clone();
-            let url = url.clone();
-            let client_id = client_id.clone();
-            let client_secret = client_secret.clone();
-            // Invoked by electrum-client before each request: returns the cached token,
-            // minting a new one after the client invalidated it on an authentication
-            // denial. If the mint fails the request is sent without a token, so the
-            // server's denial surfaces to the caller (the failure itself is only logged).
-            let provider = Arc::new(move || {
-                let mut guard = cache.lock().ok()?;
-                if guard.is_none() {
-                    log::debug!("fetching authentication token");
-                    match fetch_oauth_token_blocking(&url, &client_id, &client_secret) {
-                        Ok(token) => *guard = Some(token),
-                        Err(e) => log::warn!("failed to fetch the authentication token: e='{e}'"),
+                let cache = token_cache.clone();
+                let url = url.clone();
+                let client_id = client_id.clone();
+                let client_secret = client_secret.clone();
+                // Invoked by electrum-client before each request: returns the cached token,
+                // minting a new one after the client invalidated it on an authentication
+                // denial. If the mint fails the request is sent without a token, so the
+                // server's denial surfaces to the caller (the failure itself is only logged).
+                let provider = Arc::new(move || {
+                    let mut guard = cache.lock().ok()?;
+                    if guard.is_none() {
+                        log::debug!("fetching authentication token");
+                        match fetch_oauth_token_blocking(&url, &client_id, &client_secret) {
+                            Ok(token) => *guard = Some(token),
+                            Err(e) => {
+                                log::warn!("failed to fetch the authentication token: e='{e}'")
+                            }
+                        }
                     }
-                }
-                guard.as_ref().map(|token| format!("Bearer {token}"))
-            }) as AuthProvider;
+                    guard.as_ref().map(|token| format!("Bearer {token}"))
+                }) as AuthProvider;
 
-            Ok(ElectrumAuth {
-                provider: Some(provider),
-                // electrum-client drops the reconnect's error when its retry budget is
-                // exhausted (returning `AllAttemptsErrored` without it), so the -32004 from
-                // the reconnect's `server.version` handshake is only surfaced with retry >= 2:
-                // one attempt is spent on the dead connection, the next carries the -32004.
-                retry: Some(2),
-                token_cache: Some(token_cache),
-            })
+                Ok(ElectrumAuth {
+                    provider: Some(provider),
+                    // electrum-client drops the reconnect's error when its retry budget is
+                    // exhausted (returning `AllAttemptsErrored` without it), so the -32004
+                    // from the reconnect's `server.version` handshake is only surfaced with
+                    // retry >= 2: one attempt is spent on the dead connection, the next
+                    // carries the -32004.
+                    // TODO: drop this workaround (back to the default retry) once the upstream
+                    // fix lands: https://github.com/bitcoindevkit/rust-electrum-client/issues/221
+                    retry: Some(2),
+                    token_cache: Some(token_cache),
+                })
+            }
         }
-        #[cfg(not(feature = "electrum_oidc"))]
-        TokenProvider::Blockstream { .. } => Err(Error::Generic(
-            "TokenProvider::Blockstream for the Electrum client requires the `electrum_oidc` cargo feature; enable it or use TokenProvider::Static".to_string(),
-        )),
     }
 }
 

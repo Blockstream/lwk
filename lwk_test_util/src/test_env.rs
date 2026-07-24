@@ -446,12 +446,6 @@ impl TestEnv {
         self.auth.as_ref().unwrap().token_url()
     }
 
-    /// Fetch a `client_credentials` access token from the auth gateway's Keycloak
-    /// (requires `with_auth`)
-    pub fn fetch_oidc_token(&self) -> String {
-        self.auth.as_ref().unwrap().fetch_token()
-    }
-
     /// Fetch a `client_credentials` access token for the given client from the auth
     /// gateway's Keycloak, e.g. [`crate::AUTH_SHORT_CLIENT_ID`] for a five-second token
     /// (requires `with_auth`)

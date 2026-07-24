@@ -37,8 +37,9 @@ const KEYCLOAK_PORT: u16 = 8_080;
 const KEYCLOAK_TLS_PORT: u16 = 8_443;
 const APISIX_PORT: u16 = 9_081;
 const RPC_PROXY_PORT: u16 = 50_001;
-/// The proxy's metrics/health port, serving `/readyz` (200 once JWKS is loaded and the proxy
-/// can validate tokens, see the rpcproxy `#43`/readyz work).
+/// The proxy's metrics/health port, serving `/readyz`. The proxy binds its Electrum listener
+/// before loading its JWKS, so `/readyz` returns 200 only once it can actually validate tokens
+/// (a plain TCP check would be premature).
 const RPC_PROXY_METRICS_PORT: u16 = 9_090;
 
 /// Lean test realm modeled on the production one (`blockstream/keycloak-public`,
@@ -584,18 +585,18 @@ impl AuthStack {
         let token_url = self.token_url();
         let client_id = client_id.to_string();
         let client_secret = client_secret.to_string();
-        std::thread::spawn(move || Self::fetch_token_inner(token_url, client_id, client_secret))
+        std::thread::spawn(move || Self::fetch_token_inner(&token_url, &client_id, &client_secret))
             .join()
             .expect("fetch_token thread panicked")
     }
 
-    fn fetch_token_inner(token_url: String, client_id: String, client_secret: String) -> String {
+    fn fetch_token_inner(token_url: &str, client_id: &str, client_secret: &str) -> String {
         let client = reqwest::blocking::Client::new();
         let response = client
             .post(token_url)
             .form(&[
-                ("client_id", client_id.as_str()),
-                ("client_secret", client_secret.as_str()),
+                ("client_id", client_id),
+                ("client_secret", client_secret),
                 ("grant_type", "client_credentials"),
                 ("scope", "openid"),
             ])
@@ -708,6 +709,8 @@ fn upstream_host(network: &str) -> String {
 /// which would strand the client (and `restart_electrum_gateway`) on the old port. There is a
 /// small window before the container binds it, which the serial auth tests accept (as the
 /// bitcoind/electrs test helpers do).
+///
+/// TODO(#427): other test helpers pick free ports the same way; share a single helper.
 fn free_port() -> u16 {
     std::net::TcpListener::bind("0.0.0.0:0")
         .expect("bind ephemeral port")
@@ -849,14 +852,8 @@ mod test {
             if status == 401 {
                 break;
             }
-            assert_eq!(
-                status, 200,
-                "unexpected status while waiting for the expiry"
-            );
-            assert!(
-                start.elapsed() < Duration::from_secs(240),
-                "the five-second token was not denied within 240s"
-            );
+            assert_eq!(status, 200);
+            assert!(start.elapsed() < Duration::from_secs(240));
         }
         println!("short token denied after {:?}", start.elapsed());
     }

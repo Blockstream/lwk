@@ -223,6 +223,22 @@ impl TxBuilder {
             .into())
     }
 
+    /// Reissue an asset, or several assets by calling this multiple times in the same transaction
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// `request` sets the asset to reissue, amount, receiver, and issuance transaction; see
+    /// [`ReissuanceRequest`] for details.
+    ///
+    /// Can be called multiple times to reissue several assets in the same transaction, as long
+    /// as each call targets a different asset.
+    ///
+    /// Can't be used if [`TxBuilder::issue_asset`] or [`TxBuilder::add_issuance`] has been called
+    #[wasm_bindgen(js_name = addReissuance)]
+    pub fn add_reissuance(self, request: &ReissuanceRequest) -> Result<TxBuilder, Error> {
+        Ok(self.inner.add_reissuance(request.inner.clone())?.into())
+    }
+
     /// Switch to manual coin selection by giving a list of internal UTXOs to use.
     ///
     /// All passed UTXOs are added to the transaction.
@@ -364,6 +380,51 @@ impl IssuanceRequest {
     }
 }
 
+/// A request to reissue an existing asset, passed to [`TxBuilder::add_reissuance`]
+#[wasm_bindgen]
+#[derive(Debug)]
+pub struct ReissuanceRequest {
+    inner: lwk_wollet::ReissuanceRequest,
+}
+
+impl From<lwk_wollet::ReissuanceRequest> for ReissuanceRequest {
+    fn from(value: lwk_wollet::ReissuanceRequest) -> Self {
+        Self { inner: value }
+    }
+}
+
+impl From<ReissuanceRequest> for lwk_wollet::ReissuanceRequest {
+    fn from(value: ReissuanceRequest) -> Self {
+        value.inner
+    }
+}
+
+#[wasm_bindgen]
+impl ReissuanceRequest {
+    /// Creates a request to reissue `satoshi_to_reissue` units of `asset_to_reissue`, provided
+    /// the reissuance token is owned by the wallet generating the reissuance
+    #[wasm_bindgen(constructor)]
+    pub fn new(asset_to_reissue: &AssetId, satoshi_to_reissue: u64) -> ReissuanceRequest {
+        ReissuanceRequest {
+            inner: lwk_wollet::ReissuanceRequest::new(asset_to_reissue.into(), satoshi_to_reissue),
+        }
+    }
+
+    /// Sets the address receiving the reissued asset units; if not called, they are sent
+    /// to an address of the wallet generating the reissuance
+    #[wasm_bindgen(js_name = assetReceiver)]
+    pub fn asset_receiver(self, address: Address) -> ReissuanceRequest {
+        self.inner.asset_receiver(address.into()).into()
+    }
+
+    /// Sets the transaction containing the original issuance of the reissued asset; only
+    /// needed if that issuance transaction does not involve this wallet
+    #[wasm_bindgen(js_name = issuanceTx)]
+    pub fn issuance_tx(self, tx: Transaction) -> ReissuanceRequest {
+        self.inner.issuance_tx(tx.into()).into()
+    }
+}
+
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use wasm_bindgen_test::*;
@@ -380,26 +441,26 @@ mod tests {
         let policy = network.policy_asset();
 
         let mut builder = TxBuilder::new(&network);
-        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [], fee_rate: 100.0, ct_discount: true, reissuances: None, issuances: None, drain_lbtc: false, drain_to: None, external_utxos: [], selected_utxos: None, inputs_order: None, add_input_rangeproofs: true, is_liquidex_make: false, liquidex_proposals: [] }");
+        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [], fee_rate: 100.0, ct_discount: true, reissuances: Reissuances { requests: [] }, issuances: None, drain_lbtc: false, drain_to: None, external_utxos: [], selected_utxos: None, inputs_order: None, add_input_rangeproofs: true, is_liquidex_make: false, liquidex_proposals: [] }");
 
         builder = builder.fee_rate(Some(200.0));
-        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [], fee_rate: 200.0, ct_discount: true, reissuances: None, issuances: None, drain_lbtc: false, drain_to: None, external_utxos: [], selected_utxos: None, inputs_order: None, add_input_rangeproofs: true, is_liquidex_make: false, liquidex_proposals: [] }");
+        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [], fee_rate: 200.0, ct_discount: true, reissuances: Reissuances { requests: [] }, issuances: None, drain_lbtc: false, drain_to: None, external_utxos: [], selected_utxos: None, inputs_order: None, add_input_rangeproofs: true, is_liquidex_make: false, liquidex_proposals: [] }");
 
         builder = builder.add_burn(1000, &policy);
-        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [Recipient { satoshi: 1000, script_pubkey: Script(OP_RETURN), blinding_pubkey: None, asset: 6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d }], fee_rate: 200.0, ct_discount: true, reissuances: None, issuances: None, drain_lbtc: false, drain_to: None, external_utxos: [], selected_utxos: None, inputs_order: None, add_input_rangeproofs: true, is_liquidex_make: false, liquidex_proposals: [] }");
+        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [Recipient { satoshi: 1000, script_pubkey: Script(OP_RETURN), blinding_pubkey: None, asset: 6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d }], fee_rate: 200.0, ct_discount: true, reissuances: Reissuances { requests: [] }, issuances: None, drain_lbtc: false, drain_to: None, external_utxos: [], selected_utxos: None, inputs_order: None, add_input_rangeproofs: true, is_liquidex_make: false, liquidex_proposals: [] }");
 
         let o = OutPoint::new(
             "[elements]b93dbfb3fa1929b6f82ed46c4a5d8e1c96239ca8b3d9fce00c321d7dadbdf6e0:0",
         )
         .unwrap();
         builder = builder.set_wallet_utxos(vec![o]);
-        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [Recipient { satoshi: 1000, script_pubkey: Script(OP_RETURN), blinding_pubkey: None, asset: 6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d }], fee_rate: 200.0, ct_discount: true, reissuances: None, issuances: None, drain_lbtc: false, drain_to: None, external_utxos: [], selected_utxos: Some([OutPoint { txid: b93dbfb3fa1929b6f82ed46c4a5d8e1c96239ca8b3d9fce00c321d7dadbdf6e0, vout: 0 }]), inputs_order: None, add_input_rangeproofs: true, is_liquidex_make: false, liquidex_proposals: [] }");
+        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [Recipient { satoshi: 1000, script_pubkey: Script(OP_RETURN), blinding_pubkey: None, asset: 6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d }], fee_rate: 200.0, ct_discount: true, reissuances: Reissuances { requests: [] }, issuances: None, drain_lbtc: false, drain_to: None, external_utxos: [], selected_utxos: Some([OutPoint { txid: b93dbfb3fa1929b6f82ed46c4a5d8e1c96239ca8b3d9fce00c321d7dadbdf6e0, vout: 0 }]), inputs_order: None, add_input_rangeproofs: true, is_liquidex_make: false, liquidex_proposals: [] }");
 
         let o2 = OutPoint::new(
             "[elements]b93dbfb3fa1929b6f82ed46c4a5d8e1c96239ca8b3d9fce00c321d7dadbdf6e0:0",
         )
         .unwrap();
         builder = builder.set_inputs_order(vec![o2]);
-        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [Recipient { satoshi: 1000, script_pubkey: Script(OP_RETURN), blinding_pubkey: None, asset: 6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d }], fee_rate: 200.0, ct_discount: true, reissuances: None, issuances: None, drain_lbtc: false, drain_to: None, external_utxos: [], selected_utxos: Some([OutPoint { txid: b93dbfb3fa1929b6f82ed46c4a5d8e1c96239ca8b3d9fce00c321d7dadbdf6e0, vout: 0 }]), inputs_order: Some([OutPoint { txid: b93dbfb3fa1929b6f82ed46c4a5d8e1c96239ca8b3d9fce00c321d7dadbdf6e0, vout: 0 }]), add_input_rangeproofs: true, is_liquidex_make: false, liquidex_proposals: [] }");
+        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [Recipient { satoshi: 1000, script_pubkey: Script(OP_RETURN), blinding_pubkey: None, asset: 6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d }], fee_rate: 200.0, ct_discount: true, reissuances: Reissuances { requests: [] }, issuances: None, drain_lbtc: false, drain_to: None, external_utxos: [], selected_utxos: Some([OutPoint { txid: b93dbfb3fa1929b6f82ed46c4a5d8e1c96239ca8b3d9fce00c321d7dadbdf6e0, vout: 0 }]), inputs_order: Some([OutPoint { txid: b93dbfb3fa1929b6f82ed46c4a5d8e1c96239ca8b3d9fce00c321d7dadbdf6e0, vout: 0 }]), add_input_rangeproofs: true, is_liquidex_make: false, liquidex_proposals: [] }");
     }
 }

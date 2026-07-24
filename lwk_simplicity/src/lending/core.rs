@@ -132,15 +132,7 @@ impl LendingSession {
 
         let _ = self.add_fee(&mut ft)?;
 
-        let (mut pset, inp_txout_sec) = ft.extract_pst();
-        let mut rng = thread_rng();
-
-        pset.blind_last(&mut rng, &EC, &inp_txout_sec)
-            .map_err(|e| LendingError::Generic(format!("blinding error: {e}")))?;
-
-        self.wollet
-            .add_details(&mut pset)
-            .map_err(LendingError::Wallet)?;
+        let pset = self.blind_and_finalize(&mut ft)?;
 
         let factory_address = lwk_wollet::elements::Address::from_script(
             &issuance_factory.get_script_pubkey(),
@@ -309,20 +301,7 @@ impl LendingSession {
         // Add fee
         let _ = self.add_fee(&mut ft)?;
 
-        // Extract
-        let (mut pset, inp_txout_sec) = ft.extract_pst();
-
-        // Blind, add details
-        let mut rng = thread_rng();
-        pset.blind_last(&mut rng, &EC, &inp_txout_sec)
-            .map_err(|e| LendingError::Generic(format!("blinding error: {e}")))?;
-
-        self.wollet
-            .add_details(&mut pset)
-            .map_err(LendingError::Wallet)?;
-
-        // Finalize Simplicity program inputs on the PSET
-        self.finalize_program_inputs(&ft, &mut pset)?;
+        let pset = self.blind_and_finalize(&mut ft)?;
 
         Ok(CreateBorrowTransaction { pset })
     }
@@ -436,17 +415,7 @@ impl LendingSession {
 
         let _ = self.add_fee(&mut ft)?;
 
-        let (mut pset, inp_txout_sec) = ft.extract_pst();
-
-        let mut rng = thread_rng();
-        pset.blind_last(&mut rng, &EC, &inp_txout_sec)
-            .map_err(|e| LendingError::Generic(format!("blinding error: {e}")))?;
-
-        self.wollet
-            .add_details(&mut pset)
-            .map_err(LendingError::Wallet)?;
-
-        self.finalize_program_inputs(&ft, &mut pset)?;
+        let pset = self.blind_and_finalize(&mut ft)?;
 
         Ok(RepayOfferTransaction { pset })
     }
@@ -580,19 +549,7 @@ impl LendingSession {
         // Add fee
         let _ = self.add_fee(&mut ft)?;
 
-        // Extract PSET, blind, add wallet details
-        let (mut pset, inp_txout_sec) = ft.extract_pst();
-
-        let mut rng = thread_rng();
-        pset.blind_last(&mut rng, &EC, &inp_txout_sec)
-            .map_err(|e| LendingError::Generic(format!("blinding error: {e}")))?;
-
-        self.wollet
-            .add_details(&mut pset)
-            .map_err(LendingError::Wallet)?;
-
-        // Finalize Simplicity program inputs on the PSET
-        self.finalize_program_inputs(&ft, &mut pset)?;
+        let pset = self.blind_and_finalize(&mut ft)?;
 
         Ok(AcceptOfferTransaction { pset })
     }
@@ -702,17 +659,7 @@ impl LendingSession {
 
         let _ = self.add_fee(&mut ft)?;
 
-        let (mut pset, inp_txout_sec) = ft.extract_pst();
-
-        let mut rng = thread_rng();
-        pset.blind_last(&mut rng, &EC, &inp_txout_sec)
-            .map_err(|e| LendingError::Generic(format!("blinding error: {e}")))?;
-
-        self.wollet
-            .add_details(&mut pset)
-            .map_err(LendingError::Wallet)?;
-
-        self.finalize_program_inputs(&ft, &mut pset)?;
+        let pset = self.blind_and_finalize(&mut ft)?;
 
         Ok(ClaimPrincipalTransaction { pset })
     }
@@ -738,13 +685,29 @@ impl LendingSession {
     }
 
     /// Finalizes PSET with wollet
-    ///
-    /// In the future, this method would also append required witness for simplicity outputs.
     pub fn finalize(
         &self,
         pset: &mut PartiallySignedTransaction,
     ) -> Result<Transaction, LendingError> {
         self.wollet.finalize(pset).map_err(LendingError::Wallet)
+    }
+
+    /// Extracts PSET, blind, add details, append required witness for simplicity outputs for given
+    /// FinalTransaction
+    fn blind_and_finalize(
+        &self,
+        ft: &mut FinalTransaction,
+    ) -> Result<PartiallySignedTransaction, LendingError> {
+        let mut rng = thread_rng();
+
+        let (mut pset, inp_txout_sec) = ft.extract_pst();
+        pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
+
+        self.wollet.add_details(&mut pset)?;
+
+        self.finalize_program_inputs(ft, &mut pset)?;
+
+        Ok(pset)
     }
 
     /// Finalize Simplicity program inputs on the PSET.

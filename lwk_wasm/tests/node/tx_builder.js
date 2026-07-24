@@ -1,27 +1,38 @@
 const assert = require('assert');
-const fs = require('fs');
 const lwk = require('lwk_node');
+const { fundAddress, waitForTx, WATERFALLS_URL } = require('./scripts/utils');
 
-// TODO: migrate to the regtest setup 
+// Issues an asset from `utxo` and returns the new asset UTXO and its L-BTC change UTXO.
+async function issueAssetGetUtxos(network, signer, wollet, client, utxo) {
+    const request = new lwk.IssuanceRequest(BigInt(1000), BigInt(0));
+    let builder = new lwk.TxBuilder(network);
+    builder = builder.addIssuance(request);
+    builder = builder.setWalletUtxos([utxo.outpoint()]);
+    let pset = builder.finish(wollet);
+    pset = signer.sign(pset);
+    pset = wollet.finalize(pset);
+    const txid = await client.broadcastTx(pset.extractTx());
+    await waitForTx(wollet, client, txid);
 
-function runManualCoinSelectionTest() {
+    const policyAsset = network.policyAsset();
+    const utxos = wollet.utxos().filter((u) => u.outpoint().txid().toString() === txid.toString());
+    const lbtcUtxo = utxos.find((u) => u.unblinded().asset().toString() === policyAsset.toString());
+    const assetUtxo = utxos.find((u) => u.unblinded().asset().toString() !== policyAsset.toString());
+    return { assetUtxo, lbtcUtxo };
+}
+
+async function runManualCoinSelectionTest() {
     try {
-        const descriptorString = fs
-            .readFileSync(`${__dirname}/../../test_data/update_with_mnemonic/descriptor.txt`, 'utf8')
-            .trim();
-        const encryptedUpdate = fs
-            .readFileSync(
-                `${__dirname}/../../test_data/update_with_mnemonic/update_serialized_encrypted.txt`,
-                'utf8'
-            )
-            .trim();
+        const network = lwk.Network.regtestDefault();
+        const client = new lwk.WaterfallsClient(network, WATERFALLS_URL);
 
-        const network = lwk.Network.testnet();
-        const descriptor = new lwk.WolletDescriptor(descriptorString);
-        const update = lwk.Update.deserializeDecryptedBase64(encryptedUpdate, descriptor);
+        const mnemonic = lwk.Mnemonic.fromRandom(12);
+        const signer = new lwk.Signer(mnemonic, network);
+        const desc = signer.wpkhSlip77Descriptor();
+        const wollet = new lwk.Wollet(network, desc);
 
-        const wollet = new lwk.WolletBuilder(network, descriptor).build();
-        wollet.applyUpdate(update);
+        const fundTxid = await fundAddress(wollet.address(0).address(), BigInt(100_000), network, client);
+        await waitForTx(wollet, client, fundTxid);
 
         const utxo = wollet.utxos()[0];
         const addr = wollet.address(null).address();
@@ -39,29 +50,27 @@ function runManualCoinSelectionTest() {
     }
 }
 
-function runInputOrderTest() {
+async function runInputOrderTest() {
     try {
-        const descriptorString = fs
-            .readFileSync(`${__dirname}/../../test_data/update_with_mnemonic/descriptor2.txt`, 'utf8')
-            .trim();
-        const encryptedUpdate = fs
-            .readFileSync(
-                `${__dirname}/../../test_data/update_with_mnemonic/update_serialized_encrypted2.txt`,
-                'utf8'
-            )
-            .trim();
-
-        const network = lwk.Network.testnet();
-        const descriptor = new lwk.WolletDescriptor(descriptorString);
-        const update = lwk.Update.deserializeDecryptedBase64(encryptedUpdate, descriptor);
-
-        const wollet = new lwk.WolletBuilder(network, descriptor).build();
-        wollet.applyUpdate(update);
-
-        const utxos = wollet.utxos();
+        const network = lwk.Network.regtestDefault();
+        const client = new lwk.WaterfallsClient(network, WATERFALLS_URL);
         const policyAsset = network.policyAsset();
-        const lbtcUtxo = utxos.find((u) => u.unblinded().asset().toString() === policyAsset.toString());
-        const assetUtxo = utxos.find((u) => u.unblinded().asset().toString() !== policyAsset.toString());
+
+        const mnemonic = lwk.Mnemonic.fromRandom(12);
+        const signer = new lwk.Signer(mnemonic, network);
+        const desc = signer.wpkhSlip77Descriptor();
+        const wollet = new lwk.Wollet(network, desc);
+
+        const fundTxid = await fundAddress(wollet.address(0).address(), BigInt(100_000), network, client);
+        await waitForTx(wollet, client, fundTxid);
+
+        const { assetUtxo, lbtcUtxo } = await issueAssetGetUtxos(
+            network,
+            signer,
+            wollet,
+            client,
+            wollet.utxos()[0]
+        );
         const addr = wollet.address(null).address();
 
         let builder = new lwk.TxBuilder(network);
@@ -81,38 +90,33 @@ function runInputOrderTest() {
     }
 }
 
-function runIssueAssetTest() {
+async function runIssueAssetTest() {
     try {
-        const descriptorString = fs
-            .readFileSync(`${__dirname}/../../test_data/update_with_mnemonic/descriptor2.txt`, 'utf8')
-            .trim();
-        const encryptedUpdate = fs
-            .readFileSync(
-                `${__dirname}/../../test_data/update_with_mnemonic/update_serialized_encrypted2.txt`,
-                'utf8'
-            )
-            .trim();
+        const network = lwk.Network.regtestDefault();
+        const client = new lwk.WaterfallsClient(network, WATERFALLS_URL);
 
-        const network = lwk.Network.testnet();
-        const descriptor = new lwk.WolletDescriptor(descriptorString);
-        const update = lwk.Update.deserializeDecryptedBase64(encryptedUpdate, descriptor);
+        const mnemonic = lwk.Mnemonic.fromRandom(12);
+        const signer = new lwk.Signer(mnemonic, network);
+        const desc = signer.wpkhSlip77Descriptor();
+        const wollet = new lwk.Wollet(network, desc);
 
-        const wollet = new lwk.WolletBuilder(network, descriptor).build();
-        wollet.applyUpdate(update);
+        const fundTxid0 = await fundAddress(wollet.address(0).address(), BigInt(100_000), network, client);
+        await waitForTx(wollet, client, fundTxid0);
+        const fundTxid1 = await fundAddress(wollet.address(1).address(), BigInt(100_000), network, client);
+        await waitForTx(wollet, client, fundTxid1);
+        const fundTxid2 = await fundAddress(wollet.address(2).address(), BigInt(100_000), network, client);
+        await waitForTx(wollet, client, fundTxid2);
 
         const utxos = wollet.utxos();
-        assert.strictEqual(utxos.length, 2);
-        const policyAsset = network.policyAsset();
-        const lbtcUtxo = utxos.find((u) => u.unblinded().asset().toString() === policyAsset.toString());
-        const assetUtxo = utxos.find((u) => u.unblinded().asset().toString() !== policyAsset.toString());
+        assert.strictEqual(utxos.length, 3);
 
-        // Two issuances in the same transaction, sequentially assigned to the wallet's two UTXOs
+        // Two issuances in the same transaction, sequentially assigned to two of the wallet's UTXOs
         const request1 = new lwk.IssuanceRequest(BigInt(1000), BigInt(1));
         const request2 = new lwk.IssuanceRequest(BigInt(2000), BigInt(2));
         let builder = new lwk.TxBuilder(network);
         builder = builder.addIssuance(request1);
         builder = builder.addIssuance(request2);
-        builder = builder.setWalletUtxos(utxos.map((u) => u.outpoint()));
+        builder = builder.setWalletUtxos([utxos[0].outpoint(), utxos[1].outpoint()]);
         const pset = builder.finish(wollet);
 
         const inputs = pset.inputs();
@@ -131,7 +135,10 @@ function runIssueAssetTest() {
             issuanceInputs[1].issuanceAsset().toString()
         );
 
-        // Two issuances in the same transaction, each pinned to a different one of the wallet's two UTXOs
+        // Two issuances in the same transaction, each pinned to a different input: a fresh
+        // asset UTXO (issued from the wallet's third UTXO) and its L-BTC change
+        const { assetUtxo, lbtcUtxo } = await issueAssetGetUtxos(network, signer, wollet, client, utxos[2]);
+
         const request3 = new lwk.IssuanceRequest(BigInt(3000), BigInt(5));
         const request4 = new lwk.IssuanceRequest(BigInt(4000), BigInt(6));
         let pinnedBuilder = new lwk.TxBuilder(network);
@@ -164,15 +171,16 @@ function runIssueAssetTest() {
     }
 }
 
-function runTxBuilderTest() {
-    runManualCoinSelectionTest();
-    runInputOrderTest();
-    runIssueAssetTest();
+async function runTxBuilderTest() {
+    await runManualCoinSelectionTest();
+    await runInputOrderTest();
+    await runIssueAssetTest();
 }
 
 if (require.main === module) {
-    runTxBuilderTest();
-    console.log("tx_builder.js: all tests passed");
+    runTxBuilderTest().then(() => {
+        console.log("tx_builder.js: all tests passed");
+    });
 }
 
 module.exports = { runTxBuilderTest };

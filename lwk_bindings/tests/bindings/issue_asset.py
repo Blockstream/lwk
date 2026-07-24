@@ -220,3 +220,34 @@ assert(wollet.balance()[pinned_token0] == 5)
 assert(wollet.balance()[pinned_asset1] == 60)
 assert(wollet.balance()[pinned_token1] == 6)
 
+# Reissue two assets in the same transaction
+reissue_multi_asset0 = 7
+reissue_multi_asset1 = 8
+
+request0 = ReissuanceRequest(multi_asset0, reissue_multi_asset0)
+request0.asset_receiver(wollet.address(8).address())
+request1 = ReissuanceRequest(multi_asset1, reissue_multi_asset1)
+
+builder = network.tx_builder()
+builder.add_reissuance(request0)
+builder.add_reissuance(request1)
+unsigned_pset = builder.finish(wollet)
+
+multi_reissuance0 = next(e.issuance() for e in unsigned_pset.inputs() if e.issuance() and e.issuance().asset() == multi_asset0)
+multi_reissuance1 = next(e.issuance() for e in unsigned_pset.inputs() if e.issuance() and e.issuance().asset() == multi_asset1)
+assert not multi_reissuance0.is_issuance()
+assert multi_reissuance0.is_reissuance()
+assert multi_reissuance0.asset_satoshi() == reissue_multi_asset0
+assert not multi_reissuance1.is_issuance()
+assert multi_reissuance1.is_reissuance()
+assert multi_reissuance1.asset_satoshi() == reissue_multi_asset1
+
+signed_pset = signer.sign(unsigned_pset)
+finalized_pset = wollet.finalize(signed_pset)
+tx = finalized_pset.extract_tx()
+txid = client.broadcast(tx)
+wollet.wait_for_tx(txid, client)
+
+assert(wollet.balance()[multi_asset0] == 30 + reissue_multi_asset0)
+assert(wollet.balance()[multi_asset1] == 40 + reissue_multi_asset1)
+

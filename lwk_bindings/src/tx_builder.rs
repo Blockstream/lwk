@@ -214,6 +214,25 @@ impl TxBuilder {
         Ok(())
     }
 
+    /// Reissue an asset, or several assets by calling this multiple times in the same transaction
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// `request` sets the asset to reissue, amount, receiver, and issuance transaction; see
+    /// [`ReissuanceRequest`] for details.
+    ///
+    /// Can be called multiple times to reissue several assets in the same transaction, as long
+    /// as each call targets a different asset.
+    ///
+    /// Can't be used if [`TxBuilder::issue_asset`] or [`TxBuilder::add_issuance`] has been called
+    pub fn add_reissuance(&self, request: &ReissuanceRequest) -> Result<(), LwkError> {
+        let request = request.clone_inner()?;
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.add_reissuance(request)?);
+        Ok(())
+    }
+
     /// Switch to manual coin selection by giving a list of internal UTXOs to use.
     ///
     /// All passed UTXOs are added to the transaction.
@@ -376,6 +395,54 @@ impl IssuanceRequest {
 
 impl IssuanceRequest {
     fn clone_inner(&self) -> Result<lwk_wollet::IssuanceRequest, LwkError> {
+        let lock = self.inner.lock()?;
+        lock.clone().ok_or(LwkError::ObjectConsumed)
+    }
+}
+
+/// Wrapper over [`lwk_wollet::ReissuanceRequest`]
+///
+/// Used to build a request passed to [`TxBuilder::add_reissuance()`]
+#[derive(uniffi::Object, Debug)]
+pub struct ReissuanceRequest {
+    inner: Mutex<Option<lwk_wollet::ReissuanceRequest>>,
+}
+
+#[uniffi::export]
+impl ReissuanceRequest {
+    /// Construct a request to reissue `satoshi_to_reissue` units of `asset_to_reissue`, provided
+    /// the reissuance token is owned by the wallet generating the reissuance
+    #[uniffi::constructor]
+    pub fn new(asset_to_reissue: AssetId, satoshi_to_reissue: u64) -> Self {
+        ReissuanceRequest {
+            inner: Mutex::new(Some(lwk_wollet::ReissuanceRequest::new(
+                asset_to_reissue.into(),
+                satoshi_to_reissue,
+            ))),
+        }
+    }
+
+    /// Sets the address receiving the reissued asset units; if not called, they are sent
+    /// to an address of the wallet generating the reissuance
+    pub fn asset_receiver(&self, address: &Address) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.asset_receiver(address.into()));
+        Ok(())
+    }
+
+    /// Sets the transaction containing the original issuance of the reissued asset; only
+    /// needed if that issuance transaction does not involve this wallet
+    pub fn issuance_tx(&self, tx: &Transaction) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.issuance_tx(tx.into()));
+        Ok(())
+    }
+}
+
+impl ReissuanceRequest {
+    fn clone_inner(&self) -> Result<lwk_wollet::ReissuanceRequest, LwkError> {
         let lock = self.inner.lock()?;
         lock.clone().ok_or(LwkError::ObjectConsumed)
     }

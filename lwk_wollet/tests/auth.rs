@@ -187,10 +187,14 @@ async fn test_esplora_token_expiry_authenticated() {
         match denied_client.tip().await {
             Ok(_) => {} // the token is still accepted, keep waiting for the expiry
             Err(e) => {
-                let msg = e.to_string();
+                // The esplora client retries the 401 to exhaustion (a static token can't
+                // refresh) and collapses it into a Generic "too many retries" error, so
+                // there is no structured HTTP status to match on here (unlike the 402 case,
+                // which returns a structured error). Surfacing a structured error through
+                // retry-exhaustion is tracked in #398.
                 assert!(
-                    msg.contains("401"),
-                    "expected a 401 denial once the token expires, got: {msg}"
+                    matches!(&e, Error::Generic(m) if m.contains("401")),
+                    "expected a 401 denial once the token expires, got: {e:?}"
                 );
                 break;
             }

@@ -177,7 +177,6 @@ assert len(lbtc_utxos) == 2
 first_outpoint = lbtc_utxos[0].outpoint()
 second_outpoint = lbtc_utxos[1].outpoint()
 
-# ANCHOR: pin_input
 request0 = IssuanceRequest(50, 5)
 request0.pin_input(first_outpoint)
 request1 = IssuanceRequest(60, 6)
@@ -189,7 +188,6 @@ builder.set_inputs_order([first_outpoint, second_outpoint])
 builder.add_issuance(request0)
 builder.add_issuance(request1)
 unsigned_pset = builder.finish(wollet)
-# ANCHOR_END: pin_input
 
 pinned_inputs = unsigned_pset.inputs()
 assert len(pinned_inputs) == 2

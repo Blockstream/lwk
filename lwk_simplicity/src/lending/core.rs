@@ -208,12 +208,7 @@ impl LendingSession {
             PartialInput::new(UTXO {
                 outpoint: factory.auth_utxo,
                 txout: auth_txout,
-                secrets: Some(TxOutSecrets {
-                    asset: factory.factory_asset_id,
-                    asset_bf: AssetBlindingFactor::zero(),
-                    value: 1,
-                    value_bf: ValueBlindingFactor::zero(),
-                }),
+                secrets: None,
             }),
             RequiredSignature::NativeEcdsa,
         );
@@ -233,12 +228,7 @@ impl LendingSession {
             UTXO {
                 outpoint: factory.program_utxo,
                 txout: program_txout,
-                secrets: Some(TxOutSecrets {
-                    asset: factory.factory_asset_id,
-                    asset_bf: AssetBlindingFactor::zero(),
-                    value: 1,
-                    value_bf: ValueBlindingFactor::zero(),
-                }),
+                secrets: None,
             },
             program_issuance,
         );

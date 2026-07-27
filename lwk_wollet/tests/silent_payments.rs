@@ -2,6 +2,7 @@
 //! transaction paying to a silent payment address, the receiver scans it and can unblind and
 //! spend what it received.
 
+use elements::bitcoin::bip158::{BlockFilter, GcsFilterWriter};
 use elements::bitcoin::PublicKey as BitcoinPublicKey;
 use elements::confidential::{Asset, AssetBlindingFactor, Value, ValueBlindingFactor};
 use elements::encode::serialize;
@@ -9,11 +10,12 @@ use elements::hashes::Hash;
 use elements::secp256k1_zkp::{Message, PublicKey, SecretKey};
 use elements::sighash::SighashCache;
 use elements::{
-    Address, AddressParams, AssetId, EcdsaSighashType, LockTime, OutPoint, Script, Sequence,
-    Transaction, TxIn, TxInWitness, TxOut, TxOutSecrets, Txid,
+    Address, AddressParams, AssetId, BlockHash, EcdsaSighashType, LockTime, OutPoint, Script,
+    Sequence, Transaction, TxIn, TxInWitness, TxOut, TxOutSecrets, Txid,
 };
 use lwk_wollet::silent_payments::{
-    derive_outputs, transaction_inputs, SilentPaymentInput, SilentPaymentKeys, SilentPaymentWollet,
+    derive_outputs, filter_matches, transaction_inputs, tweak_data, SilentPaymentInput,
+    SilentPaymentKeys, SilentPaymentWollet,
 };
 use lwk_wollet::{Chain, Network, WolletDescriptor, EC};
 use std::str::FromStr;
@@ -25,6 +27,10 @@ const OTHER_MNEMONIC: &str =
 const FUNDED: u64 = 100_000;
 const SENT: u64 = 90_000;
 const FEE: u64 = 10_000;
+
+/// The Golomb-Rice parameters of a BIP158 basic filter
+const FILTER_M: u64 = 784_931;
+const FILTER_P: u8 = 19;
 
 /// The wallet of the sender: a single p2wpkh output it can spend
 struct Sender {
@@ -523,4 +529,103 @@ fn elip_test_vectors() {
         "6eed7677ca5c151029c5f16330a9dfcb3e1686bb4452fa4ea04c7e1f3561110f"
     );
     assert_eq!(found[0].unblinded().unwrap().value, SENT);
+}
+
+/// The BIP158 basic filter over the given scripts, as an Elements node builds it
+fn block_filter(block_hash: &BlockHash, scripts: &[&Script]) -> BlockFilter {
+    let key = block_hash.to_byte_array();
+    let k0 = u64::from_le_bytes(key[..8].try_into().unwrap());
+    let k1 = u64::from_le_bytes(key[8..16].try_into().unwrap());
+
+    let mut content = Vec::new();
+    let mut writer = GcsFilterWriter::new(&mut content, k0, k1, FILTER_M, FILTER_P);
+    for script in scripts {
+        writer.add_element(script.as_bytes());
+    }
+    writer.finish().unwrap();
+    BlockFilter::new(&content)
+}
+
+/// The full "Tweak Server" receive flow: the wallet asks for the tweaks of a block, derives
+/// the scripts it could be paid to, matches them against the block filter, and scans only on
+/// a match.
+#[test]
+fn tweak_server_scan_flow() {
+    let network = Network::default_regtest();
+    let (_, asset, sender, _, mut wollet) = setup();
+    let inputs = vec![(sender.input(), Some(sender.secret_key))];
+
+    let outputs =
+        derive_outputs(&inputs, &[wollet.address().to_string().parse().unwrap()]).unwrap();
+    let tx = sender.pay(
+        asset,
+        outputs[0].script_pubkey().clone(),
+        outputs[0].blinding_public_key(),
+    );
+
+    // a payment to somebody else, in the same block
+    let other_keys = SilentPaymentKeys::from_mnemonic(OTHER_MNEMONIC, network, 0).unwrap();
+    let other_outputs = derive_outputs(
+        &inputs,
+        &[other_keys.address(network).to_string().parse().unwrap()],
+    )
+    .unwrap();
+    let other_tx = sender.pay(
+        asset,
+        other_outputs[0].script_pubkey().clone(),
+        other_outputs[0].blinding_public_key(),
+    );
+
+    let block = [tx.clone(), other_tx.clone()];
+    let prevouts = [sender.script_pubkey.clone()];
+
+    // the tweak data the server serves for this block
+    let tweaks: Vec<_> = block
+        .iter()
+        .map(|tx| {
+            let inputs = transaction_inputs(tx, &prevouts).unwrap();
+            tweak_data(&inputs).unwrap().unwrap()
+        })
+        .collect();
+
+    // the client derives one candidate script per tweak and tests them against the filter
+    let candidates = wollet.candidate_script_pubkeys(&tweaks).unwrap();
+    assert_eq!(candidates.len(), tweaks.len());
+
+    let block_hash = BlockHash::from_slice(&[3u8; 32]).unwrap();
+    let scripts: Vec<_> = block
+        .iter()
+        .flat_map(|tx| tx.output.iter())
+        .map(|txout| &txout.script_pubkey)
+        .filter(|script| !script.is_empty())
+        .collect();
+    assert!(filter_matches(
+        &block_filter(&block_hash, &scripts),
+        &block_hash,
+        &candidates
+    ));
+
+    // a block without them must not match, otherwise every block gets downloaded
+    let unrelated = Script::from(vec![0x6a]);
+    assert!(!filter_matches(
+        &block_filter(&block_hash, &[&unrelated]),
+        &block_hash,
+        &candidates
+    ));
+
+    // on a match the block is scanned, and only the payment to this wallet is found
+    let found = wollet.scan_block(&tweaks, &block).unwrap();
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].script_pubkey(), outputs[0].script_pubkey());
+    assert_eq!(found[0].unblinded().unwrap().value, SENT);
+
+    // rescanning the same block does not add the output twice
+    assert!(wollet.scan_block(&tweaks, &block).unwrap().is_empty());
+    assert_eq!(wollet.outputs().count(), 1);
+
+    // the other wallet finds its own payment in the same block, and only that one
+    let mut other = SilentPaymentWollet::from_keys(network, &other_keys);
+    let found = other.scan_block(&tweaks, &block).unwrap();
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].script_pubkey(), other_outputs[0].script_pubkey());
 }

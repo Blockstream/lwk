@@ -58,6 +58,8 @@
 use elements::OutPoint;
 
 mod address;
+#[cfg(feature = "tweak_server")]
+mod client;
 mod hashes;
 mod inputs;
 mod keys;
@@ -69,6 +71,10 @@ mod wollet;
 mod test_vectors;
 
 pub use address::{SilentPaymentAddress, SilentPaymentNetwork};
+#[cfg(all(feature = "tweak_server", not(target_arch = "wasm32")))]
+pub use client::BlockingTweakServerClient;
+#[cfg(feature = "tweak_server")]
+pub use client::{filter_matches, BlockTweaks, ServerInfo, TweakServerClient};
 pub use inputs::{transaction_inputs, tweak_data, tweak_data_from_tx, SilentPaymentInput};
 pub use keys::SilentPaymentKeys;
 pub use scan::{SilentPaymentScanner, SilentPaymentTxOut, CHANGE_LABEL, K_MAX};

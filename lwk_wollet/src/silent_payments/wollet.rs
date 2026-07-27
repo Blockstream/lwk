@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use elements::{OutPoint, Script, Transaction};
 use lwk_common::Network;
@@ -91,6 +91,53 @@ impl SilentPaymentWollet {
         let found = self
             .scanner
             .scan_transaction_with_tweak_data(tx, tweak_data)?;
+        Ok(self.insert(found))
+    }
+
+    /// The scripts a block with the given tweak data could pay this wallet to, one set per
+    /// tweak, to be matched against the block filter before downloading the block.
+    ///
+    /// See [`SilentPaymentScanner::candidate_script_pubkeys`].
+    pub fn candidate_script_pubkeys(
+        &self,
+        tweaks: &[PublicKey],
+    ) -> Result<Vec<Script>, SilentPaymentError> {
+        let mut scripts = Vec::with_capacity(tweaks.len());
+        for tweak in tweaks {
+            scripts.extend(self.scanner.candidate_script_pubkeys(tweak)?);
+        }
+        Ok(scripts)
+    }
+
+    /// Scan a block for payments to this wallet, given the tweak data of its transactions.
+    ///
+    /// A tweak is matched to the transaction containing one of the scripts it can derive, so
+    /// `tweaks` does not have to be in any particular order, and transactions that no tweak
+    /// matches are skipped without deriving anything further.
+    ///
+    /// Returns the outputs discovered by this call, outputs already known are not returned.
+    pub fn scan_block(
+        &mut self,
+        tweaks: &[PublicKey],
+        txs: &[Transaction],
+    ) -> Result<Vec<SilentPaymentTxOut>, SilentPaymentError> {
+        let mut candidates = HashMap::new();
+        for tweak in tweaks {
+            for script in self.scanner.candidate_script_pubkeys(tweak)? {
+                candidates.insert(script, *tweak);
+            }
+        }
+
+        let mut found = vec![];
+        for tx in txs {
+            let tweak = tx
+                .output
+                .iter()
+                .find_map(|txout| candidates.get(&txout.script_pubkey));
+            if let Some(tweak) = tweak {
+                found.extend(self.scanner.scan_transaction_with_tweak_data(tx, tweak)?);
+            }
+        }
         Ok(self.insert(found))
     }
 

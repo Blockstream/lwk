@@ -65,6 +65,8 @@ async function runIssueAssetTest() {
 
     await waitForTx(wollet, client, txid);
 
+    console.assert(wollet.assetsOwned().values().includes(issuance.asset().toString()) == true);
+
     console.assert(wollet.balance().entries().get(assetId.toString()) === issuedAsset);
     console.assert(wollet.balance().entries().get(tokenId.toString()) === reissuanceTokens);
 

@@ -31,7 +31,7 @@ sha256t_hash_newtype! {
 
 sha256t_hash_newtype! {
     /// The tag of the [`BlindingHash`]
-    pub struct BlindingTag = hash_str("Silent-Payment-Blinding-Key/1.0");
+    pub struct BlindingTag = hash_str("LiquidSilentPayments/Blind");
 
     /// Derives the blinding key of a silent payment output, this is the Liquid specific part
     /// of the protocol: the sender blinds the output to a key that the receiver can compute
@@ -71,7 +71,7 @@ impl SharedSecretHash {
 }
 
 impl BlindingHash {
-    /// `blinding_key = hash_Silent-Payment-Blinding-Key/1.0(ser_P(ecdh_shared_secret) || ser32(k))`
+    /// `blinding_key = hash_LiquidSilentPayments/Blind(ser_P(ecdh_shared_secret) || ser32(k))`
     pub fn compute(shared_secret: &[u8; 33], k: u32) -> Self {
         let mut engine = Self::engine();
         engine.input(shared_secret);
@@ -109,7 +109,7 @@ mod tests {
         );
         assert_eq!(
             BlindingTag::engine().midstate().to_byte_array(),
-            midstate("Silent-Payment-Blinding-Key/1.0")
+            midstate("LiquidSilentPayments/Blind")
         );
     }
 }

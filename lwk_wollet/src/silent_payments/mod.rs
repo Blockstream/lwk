@@ -11,7 +11,7 @@
 //! The key derivation is unchanged, what Liquid adds is blinding. Outputs are confidential, so
 //! the sender must blind them to a key the receiver can compute back: that key is derived from
 //! the same shared secret used for the output key, with the tag
-//! `Silent-Payment-Blinding-Key/1.0`.
+//! `LiquidSilentPayments/Blind`.
 //!
 //! Addresses use the same encoding of BIP352 with a different human readable part, so that an
 //! address of the wrong chain cannot be paid by mistake: `lqsp` for Liquid, `tlqsp` for Liquid

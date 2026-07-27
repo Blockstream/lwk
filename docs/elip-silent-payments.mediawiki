@@ -251,7 +251,7 @@ This is the part that Elements adds.
 The output MUST be blinded to the public key <code>C<sub>k</sub> = c<sub>k</sub>·G</code>, where
 
 <pre>
-  c_k = hash_Silent-Payment-Blinding-Key/1.0(ser_P(ecdh_shared_secret) || ser_32(k))
+  c_k = hash_LiquidSilentPayments/Blind(ser_P(ecdh_shared_secret) || ser_32(k))
 </pre>
 
 with the same <code>k</code> used to derive <code>P<sub>k</sub></code>.
@@ -512,9 +512,9 @@ Expected:
 * tweak data, <code>input_hash · A</code>: <code>03398173f560782d934ddf4f5a291c47fd0866d6e26a97a7407b810e1873e34777</code>
 * output tweak, <code>t<sub>0</sub></code>: <code>a4c41218034595e818fce768dded0e52409abfe23501fb94e6787c32debad2bd</code>
 * output <code>scriptPubKey</code>: <code>512092a9d712661ac4c1ebd5e3953a5af8a60037fb69e7c559ecacbce41a050262d7</code>
-* blinding secret key, <code>c<sub>0</sub></code>: <code>f01c7948615e9ead2e612cf325857a605346bdd240896263ec888d2d4b7d1e27</code>
-* blinding public key, <code>C<sub>0</sub></code>: <code>0368c38c6542751c6c8778c31f60043d3dd5efa3dd03ccc1dff7b7c4ab6ae3afb8</code>
-* confidential address of the output: <code>lq1pqd5v8rr9gf63cmy80rp37cqy857atmarm5pueswl77muf2m2uwhm3y4f6ufxvxkyc84atcu48fd03fsqxlakne79t8k2e08yrgzsyckhf2sstv683ytv</code>
+* blinding secret key, <code>c<sub>0</sub></code>: <code>807c22b1cb486e8de84f7f2c7a97c72559ef0f5bcd0033eb071c17a63762146e</code>
+* blinding public key, <code>C<sub>0</sub></code>: <code>02bd12b91875000fdbff57302ac8f22ce20010061ef626899c569c6059098d3af3</code>
+* confidential address of the output: <code>lq1pq2739wgcw5qqlkll2ucz4j8j9n3qqyqxrmmzdzvu26wxqkgf35a08y4f6ufxvxkyc84atcu48fd03fsqxlakne79t8k2e08yrgzsyckhf736l4spplpl</code>
 * secret key spending the output, <code>b<sub>spend</sub> + t<sub>0</sub></code>: <code>6eed7677ca5c151029c5f16330a9dfcb3e1686bb4452fa4ea04c7e1f3561110f</code>
 
 ==Reference implementation==

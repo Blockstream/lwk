@@ -477,11 +477,11 @@ fn elip_test_vectors() {
     );
     assert_eq!(
         outputs[0].blinding_public_key().to_string(),
-        "0368c38c6542751c6c8778c31f60043d3dd5efa3dd03ccc1dff7b7c4ab6ae3afb8"
+        "02bd12b91875000fdbff57302ac8f22ce20010061ef626899c569c6059098d3af3"
     );
     assert_eq!(
         outputs[0].address(&AddressParams::LIQUID).to_string(),
-        "lq1pqd5v8rr9gf63cmy80rp37cqy857atmarm5pueswl77muf2m2uwhm3y4f6ufxvxkyc84atcu48fd03fsqxlakne79t8k2e08yrgzsyckhf2sstv683ytv"
+        "lq1pq2739wgcw5qqlkll2ucz4j8j9n3qqyqxrmmzdzvu26wxqkgf35a08y4f6ufxvxkyc84atcu48fd03fsqxlakne79t8k2e08yrgzsyckhf736l4spplpl"
     );
 
     // and what the receiver derives when it finds the output
@@ -512,7 +512,7 @@ fn elip_test_vectors() {
     );
     assert_eq!(
         found[0].blinding_key().display_secret().to_string(),
-        "f01c7948615e9ead2e612cf325857a605346bdd240896263ec888d2d4b7d1e27"
+        "807c22b1cb486e8de84f7f2c7a97c72559ef0f5bcd0033eb071c17a63762146e"
     );
     assert_eq!(
         found[0]

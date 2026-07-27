@@ -1,4 +1,4 @@
-use elements::OutPoint;
+use elements::{AssetId, OutPoint};
 
 /// Error type for the whole crate.
 #[derive(thiserror::Error, Debug)]
@@ -217,10 +217,6 @@ pub enum Error {
     #[error("Issuance and reissuance are mutually exclusive")]
     IssuanceReissuanceMutuallyExclusive,
 
-    // TODO: remove once reissuance supports multiple calls like issuance does.
-    #[error("A reissuance has already been set on this transaction")]
-    ReissuanceAlreadySet,
-
     #[error("Cannot mix pinned and non-pinned issuances in the same transaction")]
     IssuanceModesMixing,
 
@@ -257,6 +253,9 @@ pub enum Error {
 
     #[error("Duplicated outpoint {0} in {1}")]
     DuplicatedOutpoint(OutPoint, String),
+
+    #[error("Duplicated reissued asset {0}")]
+    DuplicatedReissuanceAsset(AssetId),
 
     #[error("Manual inputs order requires `set_wallet_utxos` to be set too")]
     InputsOrderRequiresWalletUtxos,

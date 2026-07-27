@@ -3107,6 +3107,125 @@ fn test_multiple_issuances() {
     assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
 }
 
+// TODO: move to lwk_wollet::issuance
+#[test]
+fn test_multiple_reissuances() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &desc);
+
+    // Fund the wallet with 2 L-BTC UTXOs, one per issuance
+    w.fund(&env, 100_000, None, None);
+    w.fund(&env, 500_000, None, None);
+    env.elementsd_generate(1);
+
+    let utxos: Vec<_> = w
+        .wollet
+        .utxos()
+        .unwrap()
+        .iter()
+        .map(|u| u.outpoint)
+        .collect();
+    assert_eq!(utxos.len(), 2);
+
+    // Issue two assets, each with its reissuance token, in a single transaction, so that the
+    // wallet owns both tokens
+    let mut pset = w
+        .tx_builder()
+        .issue_asset(10, None, 1, None, None)
+        .unwrap()
+        .issue_asset(20, None, 2, None, None)
+        .unwrap()
+        .set_wallet_utxos(utxos)
+        .finish()
+        .unwrap();
+    assert_eq!(pset.inputs().len(), 2);
+    let (asset0, token0) = pset.inputs()[0].issuance_ids();
+    let (asset1, token1) = pset.inputs()[1].issuance_ids();
+    signer.sign(&mut pset).unwrap();
+    w.send(&mut pset);
+    assert_eq!(w.balance(&asset0), 10);
+    assert_eq!(w.balance(&token0), 1);
+    assert_eq!(w.balance(&asset1), 20);
+    assert_eq!(w.balance(&token1), 2);
+    env.elementsd_generate(1);
+
+    // Reissuing the same asset twice in the same transaction is rejected
+    let err = w
+        .tx_builder()
+        .add_reissuance(ReissuanceRequest::new(asset0, 5))
+        .unwrap()
+        .add_reissuance(ReissuanceRequest::new(asset0, 7))
+        .unwrap_err();
+    assert!(matches!(err, Error::DuplicatedReissuanceAsset(a) if a == asset0));
+
+    // Reissuing zero units is rejected
+    let err = w
+        .tx_builder()
+        .add_reissuance(ReissuanceRequest::new(asset0, 0))
+        .unwrap_err();
+    assert!(matches!(err, Error::InvalidAmount));
+
+    // Two reissuances in the same transaction, the second one received by another wallet
+    let signer2 = generate_signer();
+    let view_key2 = generate_view_key();
+    let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer2.xpub());
+    let client2 = test_client_electrum(&env.electrum_url());
+    let mut w2 = TestWollet::new(client2, &desc2);
+
+    let mut pset = w
+        .tx_builder()
+        .add_reissuance(ReissuanceRequest::new(asset0, 5))
+        .unwrap()
+        .add_reissuance(ReissuanceRequest::new(asset1, 7).asset_receiver(w2.address()))
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let details = w.wollet.get_details(&pset).unwrap();
+    assert_eq!(n_issuances(&details), 0);
+    assert_eq!(n_reissuances(&details), 2);
+
+    // Each reissuance is assigned to the input holding the matching token, whose position depends
+    // on coin selection, so compare them as a set rather than positionally
+    let mut reissued: Vec<_> = details
+        .issuances
+        .iter()
+        .filter(|e| e.is_reissuance())
+        .map(|e| {
+            (
+                e.asset().unwrap(),
+                e.token().unwrap(),
+                e.asset_satoshi().unwrap(),
+            )
+        })
+        .collect();
+    reissued.sort();
+    let mut expected = vec![(asset0, token0, 5u64), (asset1, token1, 7u64)];
+    expected.sort();
+    assert_eq!(reissued, expected);
+
+    // The first asset units are received by this wallet, the second ones are not, while both
+    // tokens are spent and given back
+    assert_eq!(*details.balance.balances.get(&asset0).unwrap(), 5);
+    assert!(!details.balance.balances.contains_key(&asset1));
+    assert!(!details.balance.balances.contains_key(&token0));
+    assert!(!details.balance.balances.contains_key(&token1));
+
+    signer.sign(&mut pset).unwrap();
+    w.send(&mut pset);
+    w2.sync();
+    assert_eq!(w.balance(&asset0), 15);
+    assert_eq!(w.balance(&asset1), 20);
+    assert_eq!(w2.balance(&asset1), 7);
+    assert_eq!(w.balance(&token0), 1);
+    assert_eq!(w.balance(&token1), 2);
+}
+
 #[ignore = "This test connects to liquid testnet"]
 #[test]
 fn test_liquid_testnet() {

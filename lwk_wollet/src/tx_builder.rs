@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     hashes::Hash,
-    issuance::{IssuanceRequest, Issuances, ReissuanceRequest},
+    issuance::{IssuanceRequest, Issuances, ReissuanceRequest, Reissuances},
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
     pset_create::{validate_address, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS},
@@ -175,7 +175,7 @@ pub struct TxBuilder {
     recipients: Vec<Recipient>,
     fee_rate: f32,
     ct_discount: bool,
-    reissuances: ReissuanceRequest,
+    reissuances: Reissuances,
     issuances: Issuances,
     drain_lbtc: bool,
     drain_to: Option<Address>,
@@ -199,7 +199,7 @@ impl TxBuilder {
             recipients: vec![],
             fee_rate: 100.0,
             ct_discount: true,
-            reissuances: ReissuanceRequest::None,
+            reissuances: Reissuances::default(),
             issuances: Issuances::None,
             drain_lbtc: false,
             drain_to: None,
@@ -407,7 +407,7 @@ impl TxBuilder {
     ///
     /// Can't be used if [`TxBuilder::reissue_asset`] has been called
     pub fn add_issuance(mut self, request: IssuanceRequest) -> Result<Self, Error> {
-        if !matches!(self.reissuances, ReissuanceRequest::None) {
+        if !self.reissuances.requests.is_empty() {
             return Err(Error::IssuanceReissuanceMutuallyExclusive);
         }
 
@@ -448,32 +448,49 @@ impl TxBuilder {
     ///
     /// Can't be used if [`TxBuilder::issue_asset`] or [`TxBuilder::add_issuance`] has been called
     pub fn reissue_asset(
-        mut self,
+        self,
         asset_to_reissue: AssetId,
         satoshi_to_reissue: u64,
         asset_receiver: Option<Address>,
         issuance_tx: Option<Transaction>,
     ) -> Result<Self, Error> {
+        let mut reissuance_request = ReissuanceRequest::new(asset_to_reissue, satoshi_to_reissue);
+
+        if let Some(address) = asset_receiver {
+            reissuance_request = reissuance_request.asset_receiver(address);
+        }
+        if let Some(tx) = issuance_tx {
+            reissuance_request = reissuance_request.issuance_tx(tx);
+        }
+
+        self.add_reissuance(reissuance_request)
+    }
+
+    /// Reissue an asset, or several assets by calling this multiple times in the same transaction
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// `request` sets the asset to reissue, amount, receiver, and issuance transaction; see
+    /// [`ReissuanceRequest`] for details.
+    ///
+    /// Can be called multiple times to reissue several assets in the same transaction, as long
+    /// as each call targets a different asset.
+    ///
+    /// Can't be used if [`TxBuilder::issue_asset`] or [`TxBuilder::add_issuance`] has been called
+    pub fn add_reissuance(mut self, reissuance_request: ReissuanceRequest) -> Result<Self, Error> {
         if !matches!(self.issuances, Issuances::None) {
             return Err(Error::IssuanceReissuanceMutuallyExclusive);
         }
-        // TODO: temporary guard while reissuance stays single-shot; remove once
-        // ReissuanceRequest is restructured to accumulate like Issuances
-        if !matches!(self.reissuances, ReissuanceRequest::None) {
-            return Err(Error::ReissuanceAlreadySet);
-        }
-        if let Some(addr) = asset_receiver.as_ref() {
+
+        if let Some(addr) = reissuance_request.asset_receiver.as_ref() {
             validate_address(&addr.to_string(), self.network())?;
         }
-        if satoshi_to_reissue == 0 {
+        if reissuance_request.satoshi_to_reissue == 0 {
             return Err(Error::InvalidAmount);
         }
-        self.reissuances = ReissuanceRequest::Reissuance(
-            asset_to_reissue,
-            satoshi_to_reissue,
-            Box::new(asset_receiver),
-            issuance_tx,
-        );
+
+        self.reissuances.add(reissuance_request)?;
+
         Ok(self)
     }
 
@@ -1296,80 +1313,84 @@ impl TxBuilder {
             }
         }
 
+        let mut set_reissuance = |request: ReissuanceRequest,
+                                  pset: &mut PartiallySignedTransaction|
+         -> Result<(), Error> {
+            let issuance = if let Some(issuance_tx) = request.issuance_tx {
+                extract_issuances(&issuance_tx)
+                    .iter()
+                    .find(|i| i.asset == request.asset_to_reissue)
+                    .ok_or_else(|| Error::MissingIssuance)?
+                    .clone()
+            } else {
+                wollet.issuance(&request.asset_to_reissue)?
+            };
+            let token = issuance.token;
+            // Find or add input for the token
+            let (idx, token_asset_bf) = match inp_txout_sec.iter().find(|(_, u)| u.asset == token) {
+                Some((idx, u)) => (*idx, u.asset_bf),
+                None => {
+                    if self.inputs_order.is_some() {
+                        // The token utxo isn't among the pinned inputs, and
+                        // `inputs_order` forbids adding any input beyond them.
+                        return Err(Error::TokenUtxoNotInInputsOrder(token));
+                    }
+                    // Add an input sending the token,
+                    let utxos_token: Vec<_> = utxos
+                        .values()
+                        .filter(|u| u.unblinded.asset == token)
+                        .collect();
+                    let utxo_token = utxos_token
+                        .first()
+                        .ok_or_else(|| Error::MissingReissuanceTokenUtxo(token))?;
+
+                    let idx = wollet.add_input(
+                        pset,
+                        &mut inp_txout_sec,
+                        &mut inp_weight,
+                        utxo_token,
+                        self.add_input_rangeproofs,
+                    )?;
+
+                    // and an outpout receiving the token
+                    let satoshi_token = utxo_token.unblinded.value;
+                    let addressee =
+                        wollet.addressee_change(satoshi_token, token, &mut last_unused_internal)?;
+                    wollet.add_output(pset, &addressee)?;
+
+                    (idx, utxo_token.unblinded.asset_bf)
+                }
+            };
+
+            // Set reissuance data
+            wollet.set_reissuance(
+                pset,
+                idx,
+                request.satoshi_to_reissue,
+                &token_asset_bf,
+                &issuance.entropy,
+            )?;
+
+            let addressee = match request.asset_receiver {
+                Some(address) => Recipient::from_address(
+                    request.satoshi_to_reissue,
+                    &address,
+                    request.asset_to_reissue,
+                ),
+                None => wollet.addressee_external(
+                    request.satoshi_to_reissue,
+                    request.asset_to_reissue,
+                    &mut last_unused_external,
+                )?,
+            };
+            wollet.add_output(pset, &addressee)?;
+
+            Ok(())
+        };
+
         // Set (re)issuance data
-        match self.reissuances {
-            ReissuanceRequest::None => {}
-
-            ReissuanceRequest::Reissuance(asset, satoshi_asset, address_asset, issuance_tx) => {
-                let issuance = if let Some(issuance_tx) = issuance_tx {
-                    extract_issuances(&issuance_tx)
-                        .iter()
-                        .find(|i| i.asset == asset)
-                        .ok_or_else(|| Error::MissingIssuance)?
-                        .clone()
-                } else {
-                    wollet.issuance(&asset)?
-                };
-                let token = issuance.token;
-                // Find or add input for the token
-                let (idx, token_asset_bf) =
-                    match inp_txout_sec.iter().find(|(_, u)| u.asset == token) {
-                        Some((idx, u)) => (*idx, u.asset_bf),
-                        None => {
-                            if self.inputs_order.is_some() {
-                                // The token utxo isn't among the pinned inputs, and
-                                // `inputs_order` forbids adding any input beyond them.
-                                return Err(Error::TokenUtxoNotInInputsOrder(token));
-                            }
-                            // Add an input sending the token,
-                            let utxos_token: Vec<_> = utxos
-                                .values()
-                                .filter(|u| u.unblinded.asset == token)
-                                .collect();
-                            let utxo_token = utxos_token
-                                .first()
-                                .ok_or_else(|| Error::MissingReissuanceTokenUtxo(token))?;
-
-                            let idx = wollet.add_input(
-                                &mut pset,
-                                &mut inp_txout_sec,
-                                &mut inp_weight,
-                                utxo_token,
-                                self.add_input_rangeproofs,
-                            )?;
-
-                            // and an outpout receiving the token
-                            let satoshi_token = utxo_token.unblinded.value;
-                            let addressee = wollet.addressee_change(
-                                satoshi_token,
-                                token,
-                                &mut last_unused_internal,
-                            )?;
-                            wollet.add_output(&mut pset, &addressee)?;
-
-                            (idx, utxo_token.unblinded.asset_bf)
-                        }
-                    };
-
-                // Set reissuance data
-                wollet.set_reissuance(
-                    &mut pset,
-                    idx,
-                    satoshi_asset,
-                    &token_asset_bf,
-                    &issuance.entropy,
-                )?;
-
-                let addressee = match *address_asset {
-                    Some(address) => Recipient::from_address(satoshi_asset, &address, asset),
-                    None => wollet.addressee_external(
-                        satoshi_asset,
-                        asset,
-                        &mut last_unused_external,
-                    )?,
-                };
-                wollet.add_output(&mut pset, &addressee)?;
-            }
+        for request in self.reissuances.requests {
+            set_reissuance(request, &mut pset)?;
         }
 
         // Add a temporary fee, and always add a change or drain output,
@@ -1799,6 +1820,16 @@ impl<'a> WolletTxBuilder<'a> {
                 asset_receiver,
                 issuance_tx,
             )?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::add_reissuance()`]
+    ///
+    /// **Experimental**: this API might change without notice.
+    pub fn add_reissuance(self, reissuance_request: ReissuanceRequest) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.add_reissuance(reissuance_request)?,
         })
     }
 

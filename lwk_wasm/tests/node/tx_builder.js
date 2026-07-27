@@ -171,10 +171,71 @@ async function runIssueAssetTest() {
     }
 }
 
+async function runReissueAssetTest() {
+    try {
+        const network = lwk.Network.regtestDefault();
+        const client = new lwk.WaterfallsClient(network, WATERFALLS_URL);
+
+        const mnemonic = lwk.Mnemonic.fromRandom(12);
+        const signer = new lwk.Signer(mnemonic, network);
+        const desc = signer.wpkhSlip77Descriptor();
+        const wollet = new lwk.Wollet(network, desc);
+
+        const fundTxid0 = await fundAddress(wollet.address(0).address(), BigInt(100_000), network, client);
+        await waitForTx(wollet, client, fundTxid0);
+        const fundTxid1 = await fundAddress(wollet.address(1).address(), BigInt(100_000), network, client);
+        await waitForTx(wollet, client, fundTxid1);
+
+        const utxos = wollet.utxos();
+        assert.strictEqual(utxos.length, 2);
+
+        // Issue two assets in the same transaction, each with a reissuance token, and
+        // broadcast so the wallet actually owns the tokens needed to reissue them
+        const issuanceRequest0 = new lwk.IssuanceRequest(BigInt(1000), BigInt(1));
+        const issuanceRequest1 = new lwk.IssuanceRequest(BigInt(2000), BigInt(1));
+        let builder = new lwk.TxBuilder(network);
+        builder = builder.addIssuance(issuanceRequest0);
+        builder = builder.addIssuance(issuanceRequest1);
+        builder = builder.setWalletUtxos([utxos[0].outpoint(), utxos[1].outpoint()]);
+        let pset = builder.finish(wollet);
+
+        const issuanceInputs = pset.inputs().filter((i) => i.issuance() !== undefined);
+        const asset0 = issuanceInputs[0].issuanceAsset();
+        const asset1 = issuanceInputs[1].issuanceAsset();
+
+        pset = signer.sign(pset);
+        pset = wollet.finalize(pset);
+        const issuanceTxid = await client.broadcastTx(pset.extractTx());
+        await waitForTx(wollet, client, issuanceTxid);
+
+        // Reissue both assets in the same transaction
+        const reissuanceRequest0 = new lwk.ReissuanceRequest(asset0, BigInt(500));
+        const reissuanceRequest1 = new lwk.ReissuanceRequest(asset1, BigInt(700));
+        let reissuanceBuilder = new lwk.TxBuilder(network);
+        reissuanceBuilder = reissuanceBuilder.addReissuance(reissuanceRequest0);
+        reissuanceBuilder = reissuanceBuilder.addReissuance(reissuanceRequest1);
+        const reissuancePset = reissuanceBuilder.finish(wollet);
+
+        const reissuanceInputs = reissuancePset.inputs().filter((i) => i.issuance() !== undefined);
+        assert.strictEqual(reissuanceInputs.length, 2);
+        for (const input of reissuanceInputs) {
+            assert.strictEqual(input.issuance().isIssuance(), false);
+            assert.strictEqual(input.issuance().isReissuance(), true);
+        }
+        const reissuedAssets = reissuanceInputs.map((i) => i.issuanceAsset().toString()).sort();
+        const expectedAssets = [asset0.toString(), asset1.toString()].sort();
+        assert.deepStrictEqual(reissuedAssets, expectedAssets);
+    } catch (error) {
+        console.error("Reissue asset test failed:", error);
+        throw error;
+    }
+}
+
 async function runTxBuilderTest() {
     await runManualCoinSelectionTest();
     await runInputOrderTest();
     await runIssueAssetTest();
+    await runReissueAssetTest();
 }
 
 if (require.main === module) {

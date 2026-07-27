@@ -42,6 +42,11 @@ impl WolletDescriptor {
         self.inner.is_mainnet()
     }
 
+    /// Return the [ELIP152](https://github.com/ElementsProject/ELIPs/blob/main/elip-0152.mediawiki) deterministic wallet identifier.
+    pub fn dwid(&self, network: &Network) -> Result<String, LwkError> {
+        Ok(self.inner.dwid(network.into())?)
+    }
+
     /// Derive the private blinding key
     pub fn derive_blinding_key(&self, script_pubkey: &Script) -> Option<Arc<SecretKey>> {
         self.inner

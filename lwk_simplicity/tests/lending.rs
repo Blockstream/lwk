@@ -54,7 +54,7 @@ async fn test_borrow_flow() {
 
     // Fund lender with L-BTC and principal asset
     fund_wollet(&mut l_wollet, &mut client, &env, 500_000, None);
-    fund_wollet(&mut l_wollet, &mut client, &env, 100_000, Some(principal));
+    fund_wollet(&mut l_wollet, &mut client, &env, 10_000, Some(principal));
 
     // Create lending session for borrower
     let mut borrower_session = LendingSession::builder(network, borrower_wd.clone())
@@ -199,9 +199,36 @@ async fn test_borrow_flow() {
     let mut pset = repay.into_inner();
     borrower_signer.sign(&mut pset).unwrap();
     let tx = borrower_session.finalize(&mut pset).unwrap();
-    client.broadcast(&tx).unwrap();
+    let repayment_txid = client.broadcast(&tx).unwrap();
     env.elementsd_generate(1);
 
     // Verify the offer status changed to Repaid in the indexer
     wait_offer(OfferStatus::Repaid, Some(item.id), &indexer_client).await;
+
+    // Lender claims the principal from the finalized vault after full repayment
+    lender_session.sync().unwrap();
+
+    let claim_repayment = lender_session
+        .lender_final_claim(ClaimRepaymentDetails {
+            lending_creation_txid: creation_txid,
+            repayment_txid,
+            protocol_fee_keeper_asset_id,
+        })
+        .unwrap();
+
+    let mut pset = claim_repayment.into_inner();
+    lender_signer.sign(&mut pset).unwrap();
+    let tx = lender_session.finalize(&mut pset).unwrap();
+    client.broadcast(&tx).unwrap();
+    env.elementsd_generate(1);
+    lender_session.sync().unwrap();
+
+    let balance = lender_session.wollet().balance().unwrap();
+    let principal_balance = balance.get(&principal).copied().unwrap_or(0);
+    assert_eq!(
+        principal_balance,
+        // starting principal amount + 20% interest rate - 10% from interest for protocol keeper
+        11800,
+        "lender should have received principal from the finalized vault"
+    );
 }

@@ -22,4 +22,7 @@ pub enum LendingError {
 
     #[error("Lending offer error: {0}")]
     LendingOfferError(#[from] lending_contracts::programs::lending::LendingOfferError),
+
+    #[error("Blinding error: {0}")]
+    BlindingError(#[from] lwk_wollet::elements::pset::PsetBlindError),
 }

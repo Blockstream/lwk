@@ -6,6 +6,7 @@ mod blinders;
 mod blockchain_backend;
 mod elements_wallet;
 mod fees;
+mod issuance;
 mod pegin;
 mod prune;
 #[cfg(feature = "registry")]

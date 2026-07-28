@@ -406,6 +406,8 @@ mod tests {
             .find(|swap| swap.id == response.swap_id())
             .unwrap();
         assert_eq!(swaps[0].created_at, Some(restored_swap.created_at));
+        assert!(!session.is_lockup_unspent(swaps[0]).await.unwrap());
+        assert!(!response.is_lockup_unspent().await.unwrap());
 
         let swap_id = response.swap_id().to_string();
         let lockup_address = response.lockup_address().to_string();
@@ -440,19 +442,19 @@ mod tests {
         log::info!("Found {} restorable chain swaps", restorable.len());
 
         // Find our swap in the restorable list
-        let our_swap: lwk_boltz::ChainSwapDataSerializable = restorable
+        let our_swap = restorable
             .into_iter()
-            .map(|data| data.into())
-            .find(|data: &lwk_boltz::ChainSwapDataSerializable| {
-                data.create_chain_response.id == *swap_id
-            })
+            .find(|data| data.create_chain_response.id == *swap_id)
             .expect("Our swap should be in the restorable list");
+        assert!(session.is_lockup_unspent(&our_swap).await.unwrap());
+        let our_swap: lwk_boltz::ChainSwapDataSerializable = our_swap.into();
         let restored_created_at = our_swap.created_at;
         assert!(restored_created_at.is_some());
 
         // Restore and complete the swap
         let response = session.restore_lockup(our_swap).await.unwrap();
         assert_eq!(response.created_at(), restored_created_at);
+        assert!(response.is_lockup_unspent().await.unwrap());
 
         let success = response.complete().await.unwrap();
         assert!(
@@ -1780,6 +1782,10 @@ mod tests {
         assert!(
             data.refund_txid.is_none(),
             "Boltz restore data should not already contain our Liquid refund txid"
+        );
+        assert!(
+            !session.is_lockup_unspent(&data).await.unwrap(),
+            "refunded Liquid lockup should be spent"
         );
 
         let data: lwk_boltz::ChainSwapDataSerializable = data.into();

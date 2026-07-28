@@ -219,23 +219,59 @@ impl EsploraClient {
     ) -> Result<Vec<Vec<History>>, Error> {
         let mut result = vec![];
         for address in addresses.iter() {
-            let url = format!("{}/address/{}/txs", self.base_url, address);
-            // TODO must handle paging -> https://github.com/blockstream/esplora/blob/master/API.md#addresses
-            let response = self.get_with_retry(&url).await?;
-
-            // TODO going through string and then json is not as efficient as it could be but we prioritize debugging for now
-            let text = response.text().await?;
-            let json: Vec<EsploraTx> = match serde_json::from_str(&text) {
-                Ok(e) => e,
-                Err(e) => {
-                    log::warn!("error {e:?} in converting following text:\n{text}");
-                    return Err(e.into());
-                }
-            };
-            let history: Vec<History> = json.into_iter().map(Into::into).collect();
-            result.push(history)
+            result.push(self.get_address_history(address).await?);
         }
         Ok(result)
+    }
+
+    /// Fetch an address' unconfirmed transactions plus its full confirmed history.
+    ///
+    /// Unconfirmed transactions precede confirmed ones in the returned history.
+    ///
+    /// Esplora API doc: <https://github.com/blockstream/esplora/blob/master/API.md#addresses>
+    async fn get_address_history(&self, address: &Address) -> Result<Vec<History>, Error> {
+        // Separate endpoints avoid the ambiguity between `/address/:address/txs` implementations,
+        // which differ in how they budget confirmed vs unconfirmed txs
+        let unconfirmed = format!("{}/address/{}/txs/mempool", self.base_url, address);
+        let mut history = self.get_history_page(&unconfirmed).await?;
+
+        let confirmed = format!("{}/address/{}/txs/chain", self.base_url, address);
+        let mut page = self.get_history_page(&confirmed).await?;
+
+        // A repeated cursor means the page did not advance
+        let mut seen_cursors = HashSet::new();
+
+        // Loop until a page comes back empty: page size is not constant across implementations
+        while let Some(last_seen) = page.last().map(|h| h.txid) {
+            if !seen_cursors.insert(last_seen) {
+                return Err(Error::Generic(format!(
+                    "address history paging did not advance past txid {last_seen}"
+                )));
+            }
+            history.extend(page);
+            let url = format!(
+                "{}/address/{}/txs/chain/{}",
+                self.base_url, address, last_seen
+            );
+            page = self.get_history_page(&url).await?;
+        }
+
+        Ok(history)
+    }
+
+    async fn get_history_page(&self, url: &str) -> Result<Vec<History>, Error> {
+        let response = self.get_with_retry(url).await?;
+
+        // TODO going through string and then json is not as efficient as it could be but we prioritize debugging for now
+        let text = response.text().await?;
+        let json: Vec<EsploraTx> = match serde_json::from_str(&text) {
+            Ok(e) => e,
+            Err(e) => {
+                log::warn!("error {e:?} in converting following text:\n{text}");
+                return Err(e.into());
+            }
+        };
+        Ok(json.into_iter().map(Into::into).collect())
     }
 
     async fn get_scripts_history_waterfalls(

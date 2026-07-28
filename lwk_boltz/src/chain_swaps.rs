@@ -905,3 +905,34 @@ impl LockupResponse {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn chain_restore_preserves_created_at() {
+        let data = include_str!("../tests/data/swap_restore_response.json");
+        let swaps: Vec<SwapRestoreResponse> = serde_json::from_str(data).unwrap();
+        let restored = swaps
+            .iter()
+            .find(|swap| matches!(swap.swap_type, SwapRestoreType::Chain))
+            .unwrap();
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+
+        let typed = convert_swap_restore_response_to_chain_swap_data(
+            restored,
+            &mnemonic,
+            "claim-address",
+            "refund-address",
+        )
+        .unwrap();
+
+        assert_eq!(typed.created_at, Some(restored.created_at));
+        let serializable = ChainSwapDataSerializable::from(typed);
+        assert_eq!(serializable.created_at, Some(restored.created_at));
+    }
+}

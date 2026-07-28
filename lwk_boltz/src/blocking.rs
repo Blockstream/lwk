@@ -403,6 +403,11 @@ impl PreparePayResponse {
         self.inner.boltz_fee()
     }
 
+    /// See [`crate::PreparePayResponse::created_at()`]
+    pub fn created_at(&self) -> Option<u64> {
+        self.inner.created_at()
+    }
+
     /// See [`crate::PreparePayResponse::lockup_txid()`]
     pub fn lockup_txid(&self) -> Option<&str> {
         self.inner.lockup_txid()

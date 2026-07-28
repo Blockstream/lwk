@@ -219,6 +219,7 @@ impl BoltzSession {
             data: PreparePayData {
                 last_state: SwapState::InvoiceSet,
                 swap_type: SwapType::Submarine,
+                created_at: None,
                 lockup_txid: None,
                 refund_txid: None,
                 fee: Some(fee),
@@ -501,6 +502,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
     Ok(PreparePayData {
         last_state,
         swap_type: SwapType::Submarine,
+        created_at: Some(e.created_at),
         lockup_txid: None,
         refund_txid: None,
         fee: None,            // Fee information not available in restore response
@@ -824,6 +826,11 @@ impl PreparePayResponse {
         self.data.boltz_fee
     }
 
+    /// Boltz-provided Unix timestamp in seconds when the swap was created.
+    pub fn created_at(&self) -> Option<u64> {
+        self.data.created_at
+    }
+
     /// The txid of the lockup transaction
     pub fn lockup_txid(&self) -> Option<&str> {
         self.data.lockup_txid.as_deref()
@@ -848,7 +855,14 @@ impl PreparePayResponse {
 
 #[cfg(test)]
 mod tests {
+    use boltz_client::network::LiquidChain;
+
     use super::*;
+
+    fn test_mnemonic() -> Mnemonic {
+        Mnemonic::from_str("damp cart merit asset obvious idea chef traffic absent armed road link")
+            .unwrap()
+    }
 
     #[test]
     fn submarine_restore_filter_matches_pair_direction() {
@@ -874,5 +888,27 @@ mod tests {
             &btc_submarine,
             "L-BTC"
         ));
+    }
+
+    #[test]
+    fn submarine_restore_preserves_created_at() {
+        let data = include_str!("../tests/data/swap_restore_response.json");
+        let swaps: Vec<SwapRestoreResponse> = serde_json::from_str(data).unwrap();
+        let restored = swaps
+            .iter()
+            .find(|swap| matches!(swap.swap_type, SwapRestoreType::Submarine))
+            .unwrap();
+
+        let typed = convert_swap_restore_response_to_prepare_pay_data(
+            restored,
+            &test_mnemonic(),
+            "refund-address",
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+        )
+        .unwrap();
+
+        assert_eq!(typed.created_at, Some(restored.created_at));
+        let serializable = PreparePayDataSerializable::from(typed);
+        assert_eq!(serializable.created_at, Some(restored.created_at));
     }
 }

@@ -167,3 +167,18 @@ impl ChainSwapDataSerializable {
         Ok(serde_json::from_str(data)?)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ChainSwapDataSerializable;
+
+    #[test]
+    fn deserialize_legacy_chain_swap_without_created_at() {
+        let json = include_str!("../tests/data/chain_data_serializable_legacy.json");
+
+        let data = ChainSwapDataSerializable::deserialize(json).unwrap();
+
+        assert_eq!(data.create_chain_response.id, "legacy-swap");
+        assert_eq!(data.created_at, None);
+    }
+}

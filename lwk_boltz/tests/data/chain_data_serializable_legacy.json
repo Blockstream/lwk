@@ -1,0 +1,55 @@
+{
+  "last_state": "swap.created",
+  "swap_type": "chain",
+  "fee": null,
+  "boltz_fee": null,
+  "claim_fee": null,
+  "create_chain_response": {
+    "id": "legacy-swap",
+    "claimDetails": {
+      "swapTree": {
+        "claimLeaf": {
+          "output": "",
+          "version": 196
+        },
+        "refundLeaf": {
+          "output": "",
+          "version": 196
+        }
+      },
+      "lockupAddress": "claim-lockup-address",
+      "serverPublicKey": "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "timeoutBlockHeight": 100,
+      "amount": 49000
+    },
+    "lockupDetails": {
+      "swapTree": {
+        "claimLeaf": {
+          "output": "",
+          "version": 196
+        },
+        "refundLeaf": {
+          "output": "",
+          "version": 196
+        }
+      },
+      "lockupAddress": "user-lockup-address",
+      "serverPublicKey": "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "timeoutBlockHeight": 200,
+      "amount": 50000
+    }
+  },
+  "claim_key_index": 0,
+  "refund_key_index": 1,
+  "lockup_address": "user-lockup-address",
+  "expected_lockup_amount": 50000,
+  "claim_address": "claim-address",
+  "refund_address": "refund-address",
+  "mnemonic_identifier": "e92cd0870c080a91a063345362b7e76d4ad3a4b4",
+  "from_chain": "BTC",
+  "to_chain": "L-BTC",
+  "preimage": null,
+  "claim_txid": null,
+  "lockup_txid": null,
+  "refund_txid": null
+}

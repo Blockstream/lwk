@@ -1041,6 +1041,64 @@ async fn wait_update_with_txs(
 
 #[cfg(feature = "esplora")]
 #[tokio::test]
+async fn test_esplora_address_history_paging() {
+    const TXS: usize = 60;
+
+    let env = TestEnvBuilder::from_env().with_esplora().build();
+    let url = env.esplora_url();
+    let network = env.elementsd_network();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc_str = format!("ct({view_key},elwpkh({}/<0;1>/*))", signer.xpub());
+    let desc: WolletDescriptor = desc_str.parse().unwrap();
+    let mut wollet = WolletBuilder::new(network, desc).build().unwrap();
+
+    let address = wollet.address(None).unwrap();
+    for i in 0..TXS {
+        env.elementsd_sendtoaddress(address.address(), 10_000, None);
+        if i % 10 == 9 {
+            env.elementsd_generate(1);
+        }
+    }
+
+    // sanity check whether page size of used esplora server is bigger than test parameter
+    let first_page: Vec<serde_json::Value> = reqwest::Client::new()
+        .get(format!("{url}/address/{}/txs/chain", address.address()))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(
+        TXS > first_page.len(),
+        "fixture of {TXS} txs must exceed one page ({}) to exercise paging",
+        first_page.len()
+    );
+
+    let mut client = clients::asyncr::EsploraClient::new(network, &url);
+    for _ in 0..50 {
+        if let Some(update) = client.full_scan(&wollet).await.unwrap() {
+            wollet.apply_update(update).unwrap();
+        }
+        if wollet.transactions().unwrap().len() == TXS {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    let txs = wollet.transactions().unwrap();
+    assert_eq!(txs.len(), TXS);
+    // unconfirmed txs come from another endpoint with its own budget, any left in
+    // the mempool would mask truncation
+    assert!(
+        txs.iter().all(|tx| tx.height.is_some()),
+        "every tx must be confirmed for this test to exercise confirmed-history paging"
+    );
+}
+
+#[cfg(feature = "esplora")]
+#[tokio::test]
 async fn test_esplora_requests_counter() {
     use std::collections::HashMap;
 

@@ -407,6 +407,11 @@ mod tests {
             .unwrap();
         assert_eq!(swaps[0].created_at, Some(restored_swap.created_at));
         assert!(!session.is_lockup_unspent(swaps[0]).await.unwrap());
+        let serialized_swap: lwk_boltz::ChainSwapDataSerializable = swaps[0].clone().into();
+        assert!(!session
+            .is_serialized_lockup_unspent(&serialized_swap)
+            .await
+            .unwrap());
         assert!(!response.is_lockup_unspent().await.unwrap());
 
         let swap_id = response.swap_id().to_string();
@@ -448,6 +453,10 @@ mod tests {
             .expect("Our swap should be in the restorable list");
         assert!(session.is_lockup_unspent(&our_swap).await.unwrap());
         let our_swap: lwk_boltz::ChainSwapDataSerializable = our_swap.into();
+        assert!(session
+            .is_serialized_lockup_unspent(&our_swap)
+            .await
+            .unwrap());
         let restored_created_at = our_swap.created_at;
         assert!(restored_created_at.is_some());
 

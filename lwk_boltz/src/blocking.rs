@@ -290,6 +290,15 @@ impl BoltzSession {
         self.runtime.block_on(self.inner.is_lockup_unspent(data))
     }
 
+    /// See [`crate::BoltzSession::is_serialized_lockup_unspent()`]
+    pub fn is_serialized_lockup_unspent(
+        &self,
+        data: &ChainSwapDataSerializable,
+    ) -> Result<bool, Error> {
+        self.runtime
+            .block_on(self.inner.is_serialized_lockup_unspent(data))
+    }
+
     pub fn swap_restore(&self) -> Result<Vec<SwapRestoreResponse>, Error> {
         let inner = self.runtime.block_on(self.inner.swap_restore())?;
         Ok(inner)

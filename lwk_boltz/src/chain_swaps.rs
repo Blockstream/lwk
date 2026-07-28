@@ -362,6 +362,15 @@ impl BoltzSession {
         )
         .await
     }
+
+    /// Whether the user's lockup output for serialized chain swap data is currently unspent.
+    pub async fn is_serialized_lockup_unspent(
+        &self,
+        data: &ChainSwapDataSerializable,
+    ) -> Result<bool, Error> {
+        let from_chain = chain_from_str(&data.from_chain, Some(&data.create_chain_response.id))?;
+        is_lockup_unspent(self.chain_client.as_ref(), from_chain, &data.lockup_address).await
+    }
 }
 
 async fn fetch_lockup_txid(api: &BoltzApiClientV2, swap_id: &str) -> Option<String> {

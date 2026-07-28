@@ -301,6 +301,7 @@ mod tests {
             .btc_to_lbtc(50_000, &refund_address, &claim_address, None)
             .await
             .unwrap();
+        assert_eq!(response.created_at(), None);
 
         // Serialize and drop
         let serialized_data = response.serialize().unwrap();
@@ -319,6 +320,7 @@ mod tests {
             .unwrap();
 
         let data = lwk_boltz::ChainSwapDataSerializable::deserialize(&serialized_data).unwrap();
+        assert_eq!(data.created_at, None);
         assert!(data.preimage.is_none());
         assert_eq!(
             data.mnemonic_identifier.to_string(),
@@ -326,6 +328,7 @@ mod tests {
         );
 
         let response = session.restore_lockup(data).await.unwrap();
+        assert_eq!(response.created_at(), None);
 
         log::info!(
             "Restored BTC to LBTC swap - Lockup address: {}",
@@ -398,6 +401,11 @@ mod tests {
 
         // Every swaps is now restored, independently of the status of the swap.
         assert_eq!(swaps.len(), 1);
+        let restored_swap = swap_list
+            .iter()
+            .find(|swap| swap.id == response.swap_id())
+            .unwrap();
+        assert_eq!(swaps[0].created_at, Some(restored_swap.created_at));
 
         let swap_id = response.swap_id().to_string();
         let lockup_address = response.lockup_address().to_string();
@@ -439,9 +447,12 @@ mod tests {
                 data.create_chain_response.id == *swap_id
             })
             .expect("Our swap should be in the restorable list");
+        let restored_created_at = our_swap.created_at;
+        assert!(restored_created_at.is_some());
 
         // Restore and complete the swap
         let response = session.restore_lockup(our_swap).await.unwrap();
+        assert_eq!(response.created_at(), restored_created_at);
 
         let success = response.complete().await.unwrap();
         assert!(

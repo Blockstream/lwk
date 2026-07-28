@@ -18,6 +18,8 @@ use crate::{derive_keypair, mnemonic_identifier};
 pub struct ChainSwapData {
     pub last_state: SwapState,
     pub swap_type: SwapType,
+    /// Boltz-provided Unix timestamp in seconds when the swap was created.
+    pub created_at: Option<u64>,
     pub fee: Option<u64>,
     pub boltz_fee: Option<u64>,
     /// The claim transaction fee estimate from Boltz API (in satoshis)
@@ -47,6 +49,9 @@ pub struct ChainSwapData {
 pub struct ChainSwapDataSerializable {
     pub last_state: SwapState,
     pub swap_type: SwapType,
+    /// Boltz-provided Unix timestamp in seconds when the swap was created.
+    #[serde(default)]
+    pub created_at: Option<u64>,
     pub fee: Option<u64>,
     pub boltz_fee: Option<u64>,
     pub claim_fee: Option<u64>,
@@ -74,6 +79,7 @@ impl From<ChainSwapData> for ChainSwapDataSerializable {
         ChainSwapDataSerializable {
             last_state: data.last_state,
             swap_type: data.swap_type,
+            created_at: data.created_at,
             fee: data.fee,
             boltz_fee: data.boltz_fee,
             claim_fee: data.claim_fee,
@@ -132,6 +138,7 @@ pub fn to_chain_data(
     Ok(ChainSwapData {
         last_state: data.last_state,
         swap_type: data.swap_type,
+        created_at: data.created_at,
         fee: data.fee,
         boltz_fee: data.boltz_fee,
         claim_fee: data.claim_fee,

@@ -512,6 +512,11 @@ impl LockupResponse {
         self.inner.boltz_fee()
     }
 
+    /// See [`crate::LockupResponse::created_at()`]
+    pub fn created_at(&self) -> Option<u64> {
+        self.inner.created_at()
+    }
+
     /// See [`crate::LockupResponse::claim_txid()`]
     pub fn claim_txid(&self) -> Option<&str> {
         self.inner.claim_txid()

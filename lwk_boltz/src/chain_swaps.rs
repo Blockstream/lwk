@@ -193,6 +193,7 @@ impl BoltzSession {
             data: ChainSwapData {
                 last_state,
                 swap_type: SwapType::Chain,
+                created_at: None,
                 fee: Some(fee),
                 boltz_fee,
                 claim_fee,
@@ -502,6 +503,7 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
     Ok(ChainSwapData {
         last_state,
         swap_type: SwapType::Chain,
+        created_at: Some(e.created_at),
         fee: None, // Fee information not available in restore response
         boltz_fee: None,
         claim_fee: None, // Not available in restore response, will use fallback fee rate
@@ -526,6 +528,11 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
 }
 
 impl LockupResponse {
+    /// Boltz-provided Unix timestamp in seconds when the swap was created.
+    pub fn created_at(&self) -> Option<u64> {
+        self.data.created_at
+    }
+
     pub fn claim_txid(&self) -> Option<&str> {
         self.data.claim_txid.as_deref()
     }

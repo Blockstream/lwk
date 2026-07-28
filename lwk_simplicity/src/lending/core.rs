@@ -1190,6 +1190,7 @@ impl TryFrom<FactoryDetailsResponse> for FactoryDetails {
     }
 }
 
+// TODO: add conversion from [`crate::lending::indexer::OfferListItem`]
 pub struct OfferDetails {
     pub principal_asset_id: AssetId,
     pub principal_amount: u64,

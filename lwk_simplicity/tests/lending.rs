@@ -232,3 +232,101 @@ async fn test_borrow_flow() {
         "lender should have received principal from the finalized vault"
     );
 }
+
+#[tokio::test]
+async fn test_cancel_offer() {
+    let env = TestEnvBuilder::from_env()
+        .with_electrum()
+        .with_esplora()
+        .build();
+    let mut client = electrum_client(&env);
+    let cli = Cli::default();
+    let (indexer_client, _indexer_ctx) = launch_indexer(&env, &cli).await;
+    let network = env.elementsd_network();
+
+    let borrower_signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, borrower_signer.xpub());
+    let borrower_wd = WolletDescriptor::from_str(&desc).unwrap();
+    let mut b_wollet = WolletBuilder::new(network, borrower_wd.clone())
+        .build()
+        .unwrap();
+
+    let collateral = env.elementsd_issueasset(1_000_000);
+    let principal = env.elementsd_issueasset(1_000_000);
+    let protocol_fee_keeper_asset_id = PROTOCOL_FEE_KEEPER_ASSET_ID;
+
+    fund_wollet(&mut b_wollet, &mut client, &env, 200_000, Some(collateral));
+    fund_wollet(&mut b_wollet, &mut client, &env, 500_000, None);
+
+    let mut borrower_session = LendingSession::builder(network, borrower_wd.clone())
+        .set_indexer_url(indexer_client.base_url().into())
+        .set_electrum_client(client)
+        .build()
+        .unwrap();
+
+    let client = electrum_client(&env);
+
+    borrower_session.sync().unwrap();
+
+    let prepared = borrower_session
+        .borrower_prepare(BorrowerAccountParams {})
+        .unwrap();
+    let mut pset = prepared.inner().clone();
+    borrower_signer.sign(&mut pset).unwrap();
+    let tx = borrower_session.finalize(&mut pset).unwrap();
+    let txid = client.broadcast(&tx).unwrap();
+    let transaction = client.get_transaction(txid).unwrap();
+    env.elementsd_generate(1);
+    borrower_session.sync().unwrap();
+
+    let spk = transaction.output[0].script_pubkey.to_hex();
+    let factory = wait_factory(spk, &indexer_client).await;
+
+    let borrow_details = OfferDetails {
+        principal_asset_id: principal,
+        principal_amount: 10_000,
+        collateral_asset_id: collateral,
+        collateral_amount: 200_000,
+        loan_expiration_time: env.elementsd_height() as u32 + 60,
+        principal_interest_rate: 2_000,
+        protocol_fee_keeper_asset_id,
+    };
+
+    let create = borrower_session
+        .borrower_create_offer(borrow_details, factory)
+        .unwrap();
+    let mut pset = create.into_inner();
+    borrower_signer.sign(&mut pset).unwrap();
+    let tx = borrower_session.finalize(&mut pset).unwrap();
+    let creation_txid = client.broadcast(&tx).unwrap();
+    env.elementsd_generate(1);
+    borrower_session.sync().unwrap();
+
+    let item = wait_offer(OfferStatus::Pending, None, &indexer_client).await;
+
+    // Cancel the pending offer
+    let cancel = borrower_session
+        .cancel_offer(CancelOfferDetails {
+            creation_txid,
+            protocol_fee_keeper_asset_id,
+        })
+        .unwrap();
+    let mut pset = cancel.into_inner();
+    borrower_signer.sign(&mut pset).unwrap();
+    let tx = borrower_session.finalize(&mut pset).unwrap();
+    client.broadcast(&tx).unwrap();
+    env.elementsd_generate(1);
+    borrower_session.sync().unwrap();
+
+    // Verify collateral is back
+    let balance = borrower_session.wollet().balance().unwrap();
+    let collateral_balance = balance.get(&collateral).copied().unwrap_or(0);
+    assert!(
+        collateral_balance >= 200_000,
+        "borrower should have received collateral back after cancellation"
+    );
+
+    // Verify the offer status changed to Cancelled
+    wait_offer(OfferStatus::Cancelled, Some(item.id), &indexer_client).await;
+}

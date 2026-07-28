@@ -117,7 +117,6 @@ impl LendingSession {
         );
 
         let (user_script, _) = self.get_spk_bk(false)?;
-
         ft.add_output(PartialOutput::new(
             user_script,
             FACTORY_AUTH_AMOUNT,
@@ -194,9 +193,6 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[collateral_utxo.outpoint])?;
 
-        let (change_script, change_pk) = self.get_spk_bk(true)?;
-        let (user_script, _) = self.get_spk_bk(false)?;
-
         // Use shared entropy for both NFTs
         let nfts_entropy = get_random_seed();
 
@@ -234,6 +230,7 @@ impl LendingSession {
         );
 
         // Output 2: borrower NFT to user (from the factory issuance)
+        let (user_script, _) = self.get_spk_bk(false)?;
         ft.add_output(PartialOutput::new(
             user_script.clone(),
             NFT_AMOUNT,
@@ -278,6 +275,7 @@ impl LendingSession {
 
         // Add collateral change output
         if collateral_utxo.amount() > details.collateral_amount {
+            let (change_script, change_pk) = self.get_spk_bk(true)?;
             ft.add_output(
                 PartialOutput::new(
                     change_script.clone(),
@@ -364,9 +362,6 @@ impl LendingSession {
             &[borrower_nft_utxo.outpoint, principal_utxo.outpoint],
         )?;
 
-        let (change_script, change_pk) = self.get_spk_bk(true)?;
-        let (user_script, _) = self.get_spk_bk(false)?;
-
         let mut ft = FinalTransaction::new();
 
         ft.add_input(
@@ -386,6 +381,7 @@ impl LendingSession {
             RequiredSignature::NativeEcdsa,
         );
 
+        let (user_script, _) = self.get_spk_bk(false)?;
         ft.add_output(PartialOutput::new(
             user_script,
             offer_params.offer_parameters.collateral_amount,
@@ -393,6 +389,7 @@ impl LendingSession {
         ));
 
         if principal_utxo.amount() > total_debt {
+            let (change_script, change_pk) = self.get_spk_bk(true)?;
             ft.add_output(
                 PartialOutput::new(
                     change_script.clone(),
@@ -493,9 +490,6 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[principal_utxo.outpoint])?;
 
-        let (change_script, change_pk) = self.get_spk_bk(true)?;
-        let (user_script, _) = self.get_spk_bk(false)?;
-
         // Build transaction
         let mut ft = FinalTransaction::new();
 
@@ -518,6 +512,7 @@ impl LendingSession {
         );
 
         // Output 2: Return lender NFT to lender
+        let (user_script, _) = self.get_spk_bk(false)?;
         ft.add_output(PartialOutput::new(
             user_script.clone(),
             1,
@@ -526,6 +521,7 @@ impl LendingSession {
 
         // Optionaly change output for principal_asset_id
         if principal_utxo.amount() > offer_params.offer_parameters.principal_amount {
+            let (change_script, change_pk) = self.get_spk_bk(true)?;
             ft.add_output(
                 PartialOutput::new(
                     change_script.clone(),
@@ -612,8 +608,6 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[borrower_nft_utxo.outpoint])?;
 
-        let (user_script, user_pk) = self.get_spk_bk(false)?;
-
         let mut ft = FinalTransaction::new();
 
         asset_auth.attach_unlocking(
@@ -632,6 +626,7 @@ impl LendingSession {
             RequiredSignature::NativeEcdsa,
         );
 
+        let (user_script, user_pk) = self.get_spk_bk(false)?;
         ft.add_output(PartialOutput::new(
             user_script.clone(),
             1,
@@ -719,8 +714,6 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[lender_nft_utxo.outpoint])?;
 
-        let (user_script, user_pk) = self.get_spk_bk(false)?;
-
         let mut ft = FinalTransaction::new();
 
         finalized_vault.attach_withdrawing_all(
@@ -746,6 +739,7 @@ impl LendingSession {
             RequiredSignature::NativeEcdsa,
         );
 
+        let (user_script, user_pk) = self.get_spk_bk(false)?;
         ft.add_output(
             PartialOutput::new(user_script, vault_amount, offer_params.principal_asset_id)
                 .with_blinding_key(user_pk),

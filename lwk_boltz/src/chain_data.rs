@@ -50,7 +50,6 @@ pub struct ChainSwapDataSerializable {
     pub last_state: SwapState,
     pub swap_type: SwapType,
     /// Boltz-provided Unix timestamp in seconds when the swap was created.
-    #[serde(default)]
     pub created_at: Option<u64>,
     pub fee: Option<u64>,
     pub boltz_fee: Option<u64>,

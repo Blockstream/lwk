@@ -599,7 +599,9 @@ def restorable_btc_to_lbtc_swaps(boltz_session, wollet):
             print(json.dumps(swap_data, indent=2))
             print()
 
-            if should_start_completion_thread(swap_data):
+            if not boltz_session.is_lockup_unspent(data):
+                print("Skipped swap because its user lockup is spent.")
+            elif should_start_completion_thread(swap_data):
                 lockup_response = boltz_session.restore_lockup(data)
                 thread = threading.Thread(target=lockup_thread, args=(lockup_response,))
                 thread.daemon = True
@@ -639,7 +641,9 @@ def restorable_lbtc_to_btc_swaps(boltz_session, wollet):
             print(json.dumps(swap_data, indent=2))
             print()
 
-            if should_start_completion_thread(swap_data):
+            if not boltz_session.is_lockup_unspent(data):
+                print("Skipped swap because its user lockup is spent.")
+            elif should_start_completion_thread(swap_data):
                 lockup_response = boltz_session.restore_lockup(data)
                 thread = threading.Thread(target=lockup_thread, args=(lockup_response,))
                 thread.daemon = True

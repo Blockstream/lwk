@@ -452,6 +452,11 @@ impl InvoiceResponse {
         self.inner.boltz_fee()
     }
 
+    /// See [`crate::InvoiceResponse::created_at()`]
+    pub fn created_at(&self) -> Option<u64> {
+        self.inner.created_at()
+    }
+
     /// See [`crate::InvoiceResponse::claim_txid()`]
     pub fn claim_txid(&self) -> Option<&str> {
         self.inner.claim_txid()

@@ -1,0 +1,34 @@
+{
+  "last_state": "swap.created",
+  "swap_type": "reverse",
+  "fee": null,
+  "boltz_fee": null,
+  "claim_fee": null,
+  "claim_txid": null,
+  "lockup_txid": null,
+  "create_reverse_response": {
+    "id": "legacy-reverse-swap",
+    "invoice": null,
+    "swapTree": {
+      "claimLeaf": {
+        "output": "",
+        "version": 196
+      },
+      "refundLeaf": {
+        "output": "",
+        "version": 196
+      }
+    },
+    "lockupAddress": "legacy-lockup-address",
+    "refundPublicKey": "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+    "timeoutBlockHeight": 100,
+    "onchainAmount": 50000,
+    "blindingKey": null
+  },
+  "key_index": 0,
+  "claim_address": "legacy-claim-address",
+  "to_chain": "L-BTC",
+  "mnemonic_identifier": "e92cd0870c080a91a063345362b7e76d4ad3a4b4",
+  "claim_broadcasted": false,
+  "preimage": null
+}

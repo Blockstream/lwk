@@ -19,6 +19,8 @@ use crate::SwapType;
 pub struct InvoiceData {
     pub last_state: SwapState,
     pub swap_type: SwapType,
+    /// Boltz-provided Unix timestamp in seconds when the swap was created.
+    pub created_at: Option<u64>,
     pub claim_broadcasted: bool,
 
     /// The fee of the swap provider and the network fee if known
@@ -50,6 +52,8 @@ pub struct InvoiceData {
 pub struct InvoiceDataSerializable {
     pub last_state: SwapState,
     pub swap_type: SwapType,
+    /// Boltz-provided Unix timestamp in seconds when the swap was created.
+    pub created_at: Option<u64>,
     pub fee: Option<u64>,
     pub boltz_fee: Option<u64>,
     pub claim_fee: Option<u64>,
@@ -91,6 +95,7 @@ pub fn to_invoice_data(
     Ok(InvoiceData {
         last_state: i.last_state,
         swap_type: i.swap_type,
+        created_at: i.created_at,
         fee: i.fee,
         boltz_fee: i.boltz_fee,
         claim_fee: i.claim_fee,
@@ -113,6 +118,7 @@ impl From<InvoiceData> for InvoiceDataSerializable {
         InvoiceDataSerializable {
             last_state: i.last_state,
             swap_type: i.swap_type,
+            created_at: i.created_at,
             fee: i.fee,
             boltz_fee: i.boltz_fee,
             claim_fee: i.claim_fee,
@@ -221,5 +227,15 @@ mod tests {
             invoice_data.preimage.to_string().unwrap(),
             "51db385909dc689c2e93a539d449d753de26e450ec5f5a14e27b8c5e7c25befd".to_string()
         );
+    }
+
+    #[test]
+    fn deserialize_legacy_invoice_data_without_created_at() {
+        let json = include_str!("../tests/data/invoice_data_serializable_legacy.json");
+
+        let data = InvoiceDataSerializable::deserialize(json).unwrap();
+
+        assert_eq!(data.create_reverse_response.id, "legacy-reverse-swap");
+        assert_eq!(data.created_at, None);
     }
 }

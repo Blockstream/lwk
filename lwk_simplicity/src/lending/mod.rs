@@ -12,6 +12,8 @@ pub use core::AcceptOfferDetails;
 pub use core::AcceptOfferTransaction;
 pub use core::BorrowerAccountCreationResult;
 pub use core::BorrowerAccountParams;
+pub use core::CancelOfferDetails;
+pub use core::CancelOfferTransaction;
 pub use core::ClaimPrincipalDetails;
 pub use core::ClaimPrincipalTransaction;
 pub use core::ClaimRepaymentDetails;

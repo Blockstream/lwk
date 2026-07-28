@@ -411,8 +411,102 @@ impl LendingSession {
         todo!()
     }
 
-    pub fn cancel_offer(&self) -> Result<(), LendingError> {
-        todo!()
+    /// Cancel a pending borrow offer.
+    ///
+    /// The borrower recovers their locked collateral and burns both the borrower and
+    /// lender NFTs. The offer must still be in a pending state.
+    ///
+    /// # Errors
+    /// Returns an error if the wallet has no suitable NFT or fee UTXOs, the creation
+    /// transaction cannot be fetched, or the transaction construction fails.
+    pub fn cancel_offer(
+        &mut self,
+        details: CancelOfferDetails,
+    ) -> Result<CancelOfferTransaction, LendingError> {
+        const FEE_ESTIMATE: u64 = 250;
+        const PENDING_COVENANT_VOUT: usize = 5;
+        const LENDER_NFT_VOUT: usize = 3;
+
+        let policy_asset = *self.network.policy_asset();
+        let simplex_network = to_simplicity_network(self.network);
+
+        let creation_tx = self.get_transaction(&details.creation_txid)?;
+        let offer = LendingOffer::try_from_tx(
+            &creation_tx,
+            details.protocol_fee_keeper_asset_id,
+            simplex_network,
+        )?;
+        let offer_params = *offer.get_parameters();
+
+        let covenant_txout = creation_tx
+            .output
+            .get(PENDING_COVENANT_VOUT)
+            .ok_or_else(|| {
+                LendingError::Generic("pending covenant output not found in creation tx".into())
+            })?
+            .clone();
+
+        let pending_offer_utxo = UTXO {
+            outpoint: OutPoint {
+                txid: details.creation_txid,
+                vout: PENDING_COVENANT_VOUT as u32,
+            },
+            txout: covenant_txout,
+            secrets: None,
+        };
+
+        let lender_nft_txout = creation_tx
+            .output
+            .get(LENDER_NFT_VOUT)
+            .ok_or_else(|| {
+                LendingError::Generic("lender NFT output not found in creation tx".into())
+            })?
+            .clone();
+
+        let lender_nft_utxo = UTXO {
+            outpoint: OutPoint {
+                txid: details.creation_txid,
+                vout: LENDER_NFT_VOUT as u32,
+            },
+            txout: lender_nft_txout,
+            secrets: None,
+        };
+
+        let borrower_nft_utxo =
+            self.get_explicit_utxo(offer_params.borrower_nft_asset_id, 1, &[])?;
+
+        let fee_funding_utxo =
+            self.get_utxo(policy_asset, FEE_ESTIMATE, &[borrower_nft_utxo.outpoint])?;
+
+        let mut ft = FinalTransaction::new();
+
+        offer.attach_cancellation(&mut ft, pending_offer_utxo, lender_nft_utxo);
+
+        ft.add_input(
+            PartialInput::new(borrower_nft_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        ft.add_input(
+            PartialInput::new(fee_funding_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        let (user_script, user_pk) = self.get_spk_bk(false)?;
+        ft.add_output(
+            PartialOutput::new(
+                user_script,
+                offer_params.offer_parameters.collateral_amount,
+                offer_params.collateral_asset_id,
+            )
+            .with_blinding_key(user_pk),
+        );
+
+        let _ = self.add_fee(&mut ft)?;
+
+        let pset = self.blind_and_finalize(&mut ft)?;
+
+        Ok(CancelOfferTransaction { pset })
     }
 
     /// Accept a pending borrow offer as a lender.
@@ -1111,6 +1205,11 @@ pub struct AcceptOfferDetails {
     pub protocol_fee_keeper_asset_id: AssetId,
 }
 
+pub struct CancelOfferDetails {
+    pub creation_txid: Txid,
+    pub protocol_fee_keeper_asset_id: AssetId,
+}
+
 pub struct RepaymentDetails {
     pub active_covenant_outpoint: OutPoint,
     pub protocol_fee_keeper_asset_id: AssetId,
@@ -1163,6 +1262,20 @@ pub struct AcceptOfferTransaction {
 }
 
 impl AcceptOfferTransaction {
+    pub fn inner(&self) -> &PartiallySignedTransaction {
+        &self.pset
+    }
+
+    pub fn into_inner(self) -> PartiallySignedTransaction {
+        self.pset
+    }
+}
+
+pub struct CancelOfferTransaction {
+    pset: PartiallySignedTransaction,
+}
+
+impl CancelOfferTransaction {
     pub fn inner(&self) -> &PartiallySignedTransaction {
         &self.pset
     }

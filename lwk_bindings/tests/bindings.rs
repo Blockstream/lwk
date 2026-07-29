@@ -30,6 +30,7 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/fallback_client.py",
     "tests/bindings/serde_roundtrip.py",
     "tests/bindings/authenticated_esplora_client.py",
+    "tests/bindings/authenticated_electrum_client.py",
     "tests/bindings/subscribe.py",
     "tests/bindings/xpub.py",
 );

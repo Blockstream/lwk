@@ -998,6 +998,12 @@ pub struct AuthConfig {
     /// Static token for authenticated Esplora
     #[arg(long, env)]
     pub auth_static_token: Option<String>,
+
+    /// Allow sending the token over a plaintext (`tcp://`) Electrum connection. Insecure; only
+    /// for a localhost proxy or an already-tunneled connection. Off by default, so a token on a
+    /// `tcp://` Electrum url is refused.
+    #[arg(long)]
+    pub auth_allow_plaintext_with_token: bool,
 }
 
 #[allow(dead_code)] // the same issue as CliCommand

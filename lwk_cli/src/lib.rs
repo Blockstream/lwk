@@ -127,6 +127,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     config.addr = addr;
                     config.with_experimental_blinders = with_experimental_blinders;
 
+                    config.allow_plaintext_with_token = auth.auth_allow_plaintext_with_token;
                     config.token_provider = auth.token_provider()?;
 
                     let mut app = lwk_app::App::new(config)?;

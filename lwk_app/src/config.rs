@@ -33,6 +33,10 @@ pub struct Config {
     pub with_experimental_blinders: bool,
 
     pub token_provider: TokenProvider,
+
+    /// Allow sending the token over a plaintext (`tcp://`) Electrum connection (insecure;
+    /// only for a localhost proxy or an already-tunneled connection).
+    pub allow_plaintext_with_token: bool,
 }
 
 impl Config {
@@ -51,6 +55,7 @@ impl Config {
             amp2_keyorigin_xpub: amp2::KEYORIGIN_XPUB_TESTNET.into(),
             with_experimental_blinders: false,
             token_provider: TokenProvider::None,
+            allow_plaintext_with_token: false,
         }
     }
 
@@ -69,6 +74,7 @@ impl Config {
             amp2_keyorigin_xpub: "".into(),
             with_experimental_blinders: false,
             token_provider: TokenProvider::None,
+            allow_plaintext_with_token: false,
         }
     }
 
@@ -90,6 +96,7 @@ impl Config {
             amp2_keyorigin_xpub: "".into(),
             with_experimental_blinders: false,
             token_provider: TokenProvider::None,
+            allow_plaintext_with_token: false,
         }
     }
 
@@ -137,6 +144,7 @@ impl Config {
             "electrum" => {
                 let electrum_client = ElectrumClientBuilder::new(&self.server_url)
                     .token_provider(self.token_provider.clone())
+                    .allow_plaintext_with_token(self.allow_plaintext_with_token)
                     .build()?;
                 Ok(BlockchainClient::Electrum(electrum_client))
             }

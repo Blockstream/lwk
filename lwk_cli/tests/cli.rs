@@ -1983,9 +1983,10 @@ fn test_auth_success() {
     t.join().unwrap();
 
     // Auth is also accepted with the Electrum server type (a Blockstream OAuth provider on
-    // Electrum needs the `electrum_oidc` feature, enabled for lwk_app).
+    // Electrum needs the `electrum_oidc` feature, enabled for lwk_app). A token over a
+    // plaintext `tcp://` url additionally needs `--auth-allow-plaintext-with-token`.
     let params = format!(
-        "--datadir {datadir} --server-url {} --server-type electrum --auth-token-url https://login --auth-client-id client_id --auth-client-secret secret",
+        "--datadir {datadir} --server-url {} --server-type electrum --auth-token-url https://login --auth-client-id client_id --auth-client-secret secret --auth-allow-plaintext-with-token",
         env.electrum_url()
     );
 

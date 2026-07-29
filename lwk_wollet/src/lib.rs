@@ -132,7 +132,9 @@ pub use crate::model::{
     AddressResult, ExternalUtxo, IssuanceDetails, Recipient, UnvalidatedRecipient, WalletTx,
     WalletTxOut,
 };
-pub use crate::pegin::fed_peg_script;
+#[cfg(not(target_arch = "wasm32"))]
+pub use crate::pegin::fetch_fed_peg;
+pub use crate::pegin::{fed_peg_script, FedPeg, PeginAddressType};
 #[cfg(feature = "registry")]
 pub use crate::registry::RegistryAssetData;
 pub use crate::tx_details::{TxDetails, TxOpt, TxOutDetails, TxsOpt};

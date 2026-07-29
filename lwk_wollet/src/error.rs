@@ -190,6 +190,9 @@ pub enum Error {
     #[error("Descriptor not supported: unknown segwit version")]
     UnsupportedDescriptorSegwitUnknownVersion,
 
+    #[error("Invalid federation peg: {0}")]
+    InvalidFedPeg(String),
+
     #[error("Missing PSET")]
     MissingPset,
 

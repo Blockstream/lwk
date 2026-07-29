@@ -191,6 +191,69 @@ impl FedPeg {
     }
 }
 
+/// A Bitcoin pegin address together with all data needed to identify its claim.
+///
+/// The embedded [`FedPeg`] preserves the exact federation parameters and
+/// validity window used to derive the address.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PeginAddress {
+    address: bitcoin::Address,
+    claim_script: elements::Script,
+    derivation_index: u32,
+    fed_peg: FedPeg,
+}
+
+impl PeginAddress {
+    pub(crate) fn new(
+        address: bitcoin::Address,
+        claim_script: elements::Script,
+        derivation_index: u32,
+        fed_peg: FedPeg,
+    ) -> Self {
+        Self {
+            address,
+            claim_script,
+            derivation_index,
+            fed_peg,
+        }
+    }
+
+    /// Return the Bitcoin deposit address.
+    pub fn address(&self) -> &bitcoin::Address {
+        &self.address
+    }
+
+    /// Return the Liquid claim script committed to by the deposit address.
+    pub fn claim_script(&self) -> &elements::Script {
+        &self.claim_script
+    }
+
+    /// Return the wallet derivation index used for the claim script.
+    pub fn derivation_index(&self) -> u32 {
+        self.derivation_index
+    }
+
+    /// Return the federation snapshot used to derive this address.
+    pub fn fed_peg(&self) -> &FedPeg {
+        &self.fed_peg
+    }
+
+    /// Return the Bitcoin address type.
+    pub fn address_type(&self) -> PeginAddressType {
+        self.fed_peg.address_type()
+    }
+
+    /// Return the inclusive Liquid block-height validity window.
+    pub fn validity_window(&self) -> std::ops::RangeInclusive<u32> {
+        self.fed_peg.validity_window()
+    }
+
+    /// Return whether this address can be claimed at the given Liquid height.
+    pub fn is_valid_at(&self, height: u32) -> bool {
+        self.fed_peg.is_valid_at(height)
+    }
+}
+
 fn classify_fedpeg_program(
     program: &bitcoin::Script,
     script: &bitcoin::Script,
@@ -318,6 +381,39 @@ mod test {
             PeginAddressType::P2shP2wsh
         );
         assert!(classify_fedpeg_program(&bitcoin::ScriptBuf::new(), &script).is_err());
+    }
+
+    #[test]
+    fn p2sh_wrapped_pegin_address() {
+        let header = lwk_test_util::liquid_block_header_2_963_520();
+        let mut fed_peg = FedPeg::from_block_header(Network::TestnetLiquid, &header).unwrap();
+        let native_program = bitcoin::ScriptBuf::new_p2wsh(&fed_peg.script.wscript_hash());
+        fed_peg.program = bitcoin::ScriptBuf::new_p2sh(&native_program.script_hash());
+        fed_peg.address_type = PeginAddressType::P2shP2wsh;
+
+        let descriptor: crate::WolletDescriptor = lwk_test_util::PEGIN_TEST_DESC.parse().unwrap();
+        let address = descriptor.pegin_address(0, &fed_peg).unwrap();
+        assert_eq!(address.address_type(), PeginAddressType::P2shP2wsh);
+        assert_eq!(
+            address.address().address_type(),
+            Some(bitcoin::AddressType::P2sh)
+        );
+    }
+
+    #[test]
+    fn pegin_address_rejects_nested_claim_script() {
+        let header = lwk_test_util::liquid_block_header_2_963_520();
+        let fed_peg = FedPeg::from_block_header(Network::TestnetLiquid, &header).unwrap();
+        let nested = format!(
+            "{})",
+            lwk_test_util::PEGIN_TEST_DESC.replace("elwpkh(", "elsh(wpkh(")
+        );
+        let descriptor: crate::WolletDescriptor = nested.parse().unwrap();
+
+        assert!(matches!(
+            descriptor.pegin_address(0, &fed_peg),
+            Err(crate::Error::UnsupportedPeginClaimScript)
+        ));
     }
 
     #[test]

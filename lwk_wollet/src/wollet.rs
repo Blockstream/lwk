@@ -8,9 +8,8 @@ use crate::elements::secp256k1_zkp::ZERO_TWEAK;
 use crate::elements::{AssetId, BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::hashes::{sha256t_hash_newtype, Hash};
-use crate::model::{
-    AddressResult, BitcoinAddressResult, ExternalUtxo, IssuanceDetails, WalletTx, WalletTxOut,
-};
+use crate::model::{AddressResult, ExternalUtxo, IssuanceDetails, WalletTx, WalletTxOut};
+use crate::pegin::{FedPeg, PeginAddress};
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::update::UpdatesPersister;
 use crate::util::EC;
@@ -19,7 +18,7 @@ use crate::{BlindingPublicKey, WolletDescriptor};
 use elements::bitcoin::bip32::ChildNumber;
 use elements::{bitcoin, Address};
 use elements_miniscript::psbt::PsbtExt;
-use elements_miniscript::{BtcDescriptor, ForEachKey};
+use elements_miniscript::ForEachKey;
 use elements_miniscript::{
     ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey,
 };
@@ -580,25 +579,25 @@ impl Wollet {
 
     /// Get a wallet pegin address
     ///
-    /// A pegin address is a bitcoin address, funds sent to this address are
-    /// converted to liquid bitcoins.
+    /// A pegin address is a Bitcoin address whose funds can be claimed as
+    /// Liquid Bitcoin.
     ///
     /// If Some return the address at the given index,
     /// otherwise the last unused address.
     pub fn pegin_address(
         &self,
         index: Option<u32>,
-        fed_desc: BtcDescriptor<bitcoin::PublicKey>,
-    ) -> Result<BitcoinAddressResult, Error> {
-        let index = self.unwrap_or_last_unused(index);
-        let network = match self.network() {
-            Network::Liquid => bitcoin::Network::Bitcoin,
-            Network::TestnetLiquid => bitcoin::Network::Testnet,
-            Network::CustomElements(_) => bitcoin::Network::Regtest,
-        };
+        fed_peg: &FedPeg,
+    ) -> Result<PeginAddress, Error> {
+        if self.network() != fed_peg.network() {
+            return Err(Error::PeginNetworkMismatch {
+                wallet: self.network().as_str(),
+                fed_peg: fed_peg.network().as_str(),
+            });
+        }
 
-        let address = self.descriptor.pegin_address(index, network, fed_desc)?;
-        Ok(BitcoinAddressResult::new(address, index))
+        let index = self.unwrap_or_last_unused(index);
+        self.descriptor.pegin_address(index, fed_peg)
     }
 
     pub(crate) fn last_unused_external(&self) -> u32 {
@@ -1795,12 +1794,19 @@ mod tests {
 
     #[test]
     fn test_wollet_pegin_address() {
-        let fed_desc: BtcDescriptor<bitcoin::PublicKey> =
-            BtcDescriptor::<bitcoin::PublicKey>::from_str(lwk_test_util::FED_PEG_DESC).unwrap();
         let wollet = new_wollet(lwk_test_util::PEGIN_TEST_DESC);
-        let addr = wollet.pegin_address(Some(0), fed_desc).unwrap();
-        assert_eq!(addr.tweak_index(), 0);
+        let header = lwk_test_util::liquid_block_header_2_963_520();
+        let fed_peg = FedPeg::from_block_header(Network::TestnetLiquid, &header).unwrap();
+        let addr = wollet.pegin_address(Some(0), &fed_peg).unwrap();
+        assert_eq!(addr.derivation_index(), 0);
         assert_eq!(addr.address().to_string(), lwk_test_util::PEGIN_TEST_ADDR);
+        assert_eq!(addr.fed_peg(), &fed_peg);
+
+        let mainnet_fed_peg = FedPeg::from_block_header(Network::Liquid, &header).unwrap();
+        assert!(matches!(
+            wollet.pegin_address(Some(0), &mainnet_fed_peg),
+            Err(Error::PeginNetworkMismatch { .. })
+        ));
     }
 
     #[test]

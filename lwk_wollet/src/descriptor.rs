@@ -5,7 +5,6 @@ use elements::bitcoin::secp256k1::SecretKey;
 use elements::bitcoin::{bip32::ChildNumber, WitnessVersion};
 use elements::hashes::{sha256t_hash_newtype, Hash};
 use elements::{bitcoin, Address, AddressParams, Script};
-use elements_miniscript::BtcDescriptor;
 use elements_miniscript::DefiniteDescriptorKey;
 use elements_miniscript::{
     confidential::Key,
@@ -15,7 +14,7 @@ use elements_miniscript::{
 use lwk_common::cipher_from_key_bytes;
 use serde::{Deserialize, Serialize};
 
-use crate::{Error, EC};
+use crate::{Error, FedPeg, PeginAddress, PeginAddressType, EC};
 
 sha256t_hash_newtype! {
     /// The tag of the hash
@@ -622,20 +621,36 @@ impl WolletDescriptor {
         }
     }
 
-    /// Return a bitcoin pegin address, btc sent to this address can be redeemed as lbtc
-    pub fn pegin_address(
-        &self,
-        index: u32,
-        network: bitcoin::Network,
-        fed_desc: BtcDescriptor<bitcoin::PublicKey>,
-    ) -> Result<bitcoin::Address, Error> {
+    /// Return a Bitcoin pegin address and its claim data.
+    pub fn pegin_address(&self, index: u32, fed_peg: &FedPeg) -> Result<PeginAddress, Error> {
         let our_desc = self
             .definite_descriptor(Chain::External, index)?
             .derived_descriptor(&EC)?;
-        let pegin = elements_miniscript::descriptor::pegin::Pegin::new(fed_desc, our_desc);
+        let claim_script = match &our_desc {
+            Descriptor::Wpkh(_) | Descriptor::Wsh(_) => our_desc.script_pubkey(),
+            _ => return Err(Error::UnsupportedPeginClaimScript),
+        };
+
+        let pegin = elements_miniscript::descriptor::pegin::Pegin::new(
+            fed_peg.descriptor().clone(),
+            our_desc,
+        );
         let pegin_script = pegin.bitcoin_witness_script(&EC)?;
-        let pegin_address = bitcoin::Address::p2wsh(&pegin_script, network);
-        Ok(pegin_address)
+        let address = match fed_peg.address_type() {
+            PeginAddressType::P2wsh => {
+                bitcoin::Address::p2wsh(&pegin_script, fed_peg.bitcoin_network())
+            }
+            PeginAddressType::P2shP2wsh => {
+                bitcoin::Address::p2shwsh(&pegin_script, fed_peg.bitcoin_network())
+            }
+        };
+
+        Ok(PeginAddress::new(
+            address,
+            claim_script,
+            index,
+            fed_peg.clone(),
+        ))
     }
 
     pub(crate) fn as_single_descriptors(&self) -> Result<Vec<WolletDescriptor>, Error> {
@@ -828,7 +843,7 @@ mod test {
 
     use crate::{
         descriptor::{remove_checksum_if_any, url_encode_descriptor},
-        Chain, WolletDescriptor, EC,
+        Chain, FedPeg, Network, WolletDescriptor, EC,
     };
 
     #[track_caller]
@@ -1096,10 +1111,9 @@ mod test {
 
     #[test]
     fn get_pegin_address() {
-        let d: BtcDescriptor<bitcoin::PublicKey> =
-            BtcDescriptor::<bitcoin::PublicKey>::from_str(lwk_test_util::FED_PEG_DESC).unwrap();
-
         let desc: WolletDescriptor = lwk_test_util::PEGIN_TEST_DESC.parse().unwrap();
+        let header = lwk_test_util::liquid_block_header_2_963_520();
+        let fed_peg = FedPeg::from_block_header(Network::TestnetLiquid, &header).unwrap();
 
         let desc_vec = desc
             .descriptor()
@@ -1108,7 +1122,7 @@ mod test {
             .into_single_descriptors()
             .unwrap();
         let pegin = elements_miniscript::descriptor::pegin::Pegin::new(
-            d.clone(),
+            fed_peg.descriptor().clone(),
             desc_vec[0].derived_descriptor(&EC, 0).unwrap(),
         );
         let pegin_script = pegin.bitcoin_witness_script(&EC).unwrap();
@@ -1117,8 +1131,10 @@ mod test {
         let expected = lwk_test_util::PEGIN_TEST_ADDR;
         assert_eq!(pegin_address.to_string(), expected);
 
-        let pegin_address_api = desc.pegin_address(0, bitcoin::Network::Testnet, d).unwrap();
-        assert_eq!(pegin_address_api.to_string(), expected);
+        let pegin_address_api = desc.pegin_address(0, &fed_peg).unwrap();
+        assert_eq!(pegin_address_api.address().to_string(), expected);
+        let expected_claim_script = desc.script_pubkey(Chain::External, 0).unwrap();
+        assert_eq!(pegin_address_api.claim_script(), &expected_claim_script);
     }
 
     #[test]
@@ -1265,9 +1281,9 @@ mod test {
         assert!(desc.definite_descriptor(Chain::External, 0).is_err());
         assert!(desc.single_bitcoin_descriptors().is_err());
         assert!(desc.dwid(lwk_common::Network::Liquid).is_err());
-        let d: BtcDescriptor<bitcoin::PublicKey> =
-            BtcDescriptor::<bitcoin::PublicKey>::from_str(lwk_test_util::FED_PEG_DESC).unwrap();
-        assert!(desc.pegin_address(0, bitcoin::Network::Testnet, d).is_err());
+        let header = lwk_test_util::liquid_block_header_2_963_520();
+        let fed_peg = FedPeg::from_block_header(Network::TestnetLiquid, &header).unwrap();
+        assert!(desc.pegin_address(0, &fed_peg).is_err());
 
         assert!(!desc.is_elip151());
         assert!(!desc.has_wildcard());

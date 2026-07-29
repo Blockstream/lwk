@@ -193,6 +193,15 @@ pub enum Error {
     #[error("Invalid federation peg: {0}")]
     InvalidFedPeg(String),
 
+    #[error("Pegin claim script must be a native segwit v0 wallet script")]
+    UnsupportedPeginClaimScript,
+
+    #[error("Federation peg network {fed_peg} does not match wallet network {wallet}")]
+    PeginNetworkMismatch {
+        wallet: &'static str,
+        fed_peg: &'static str,
+    },
+
     #[error("Missing PSET")]
     MissingPset,
 

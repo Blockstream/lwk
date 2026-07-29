@@ -846,8 +846,93 @@ impl LendingSession {
         Ok(ClaimRepaymentTransaction { pset })
     }
 
-    pub fn liquidate_offer(&self) -> Result<(), LendingError> {
-        todo!()
+    /// Liquidate an expired active offer.
+    ///
+    /// Called by the lender after the loan expiration time has passed. The lender
+    /// claims the collateral and burns their lender NFT.
+    ///
+    /// # Errors
+    /// Returns an error if the wallet has no suitable lender NFT or fee UTXO, the
+    /// acceptance or creation transaction cannot be fetched, or the transaction
+    /// construction fails.
+    pub fn liquidate_offer(
+        &mut self,
+        details: LiquidateOfferDetails,
+    ) -> Result<LiquidateOfferTransaction, LendingError> {
+        const FEE_ESTIMATE: u64 = 250;
+
+        let policy_asset = *self.network.policy_asset();
+        let simplex_network = to_simplicity_network(self.network);
+
+        let acceptance_tx = self.get_transaction(&details.active_covenant_outpoint.txid)?;
+
+        let creation_txid = acceptance_tx
+            .input
+            .first()
+            .ok_or_else(|| LendingError::Generic("acceptance tx has no inputs".into()))?
+            .previous_output
+            .txid;
+
+        let creation_tx = self.get_transaction(&creation_txid)?;
+
+        let offer = LendingOffer::try_from_tx(
+            &creation_tx,
+            details.protocol_fee_keeper_asset_id,
+            simplex_network,
+        )?;
+
+        let offer_params = *offer.get_parameters();
+        let total_debt = offer_params.offer_parameters.get_total_amount_to_repay();
+        let offer = LendingOffer::new_active(offer_params, total_debt);
+
+        let covenant_txout = acceptance_tx
+            .output
+            .get(details.active_covenant_outpoint.vout as usize)
+            .ok_or_else(|| {
+                LendingError::Generic("covenant output not found in acceptance tx".into())
+            })?
+            .clone();
+
+        let active_offer_utxo = UTXO {
+            outpoint: details.active_covenant_outpoint,
+            txout: covenant_txout,
+            secrets: None,
+        };
+
+        let lender_nft_utxo = self.get_explicit_utxo(offer_params.lender_nft_asset_id, 1, &[])?;
+
+        let fee_funding_utxo =
+            self.get_utxo(policy_asset, FEE_ESTIMATE, &[lender_nft_utxo.outpoint])?;
+
+        let mut ft = FinalTransaction::new();
+
+        offer.attach_liquidation(&mut ft, active_offer_utxo);
+
+        ft.add_input(
+            PartialInput::new(lender_nft_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        ft.add_input(
+            PartialInput::new(fee_funding_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        let (user_script, user_pk) = self.get_spk_bk(false)?;
+        ft.add_output(
+            PartialOutput::new(
+                user_script,
+                offer_params.offer_parameters.collateral_amount,
+                offer_params.collateral_asset_id,
+            )
+            .with_blinding_key(user_pk),
+        );
+
+        let _ = self.add_fee(&mut ft)?;
+
+        let pset = self.blind_and_finalize(&mut ft)?;
+
+        Ok(LiquidateOfferTransaction { pset })
     }
 
     pub fn sync(&mut self) -> Result<(), LendingError> {
@@ -1211,6 +1296,11 @@ pub struct CancelOfferDetails {
     pub protocol_fee_keeper_asset_id: AssetId,
 }
 
+pub struct LiquidateOfferDetails {
+    pub active_covenant_outpoint: OutPoint,
+    pub protocol_fee_keeper_asset_id: AssetId,
+}
+
 pub struct RepaymentDetails {
     pub active_covenant_outpoint: OutPoint,
     pub protocol_fee_keeper_asset_id: AssetId,
@@ -1291,6 +1381,20 @@ pub struct RepayOfferTransaction {
 }
 
 impl RepayOfferTransaction {
+    pub fn inner(&self) -> &PartiallySignedTransaction {
+        &self.pset
+    }
+
+    pub fn into_inner(self) -> PartiallySignedTransaction {
+        self.pset
+    }
+}
+
+pub struct LiquidateOfferTransaction {
+    pset: PartiallySignedTransaction,
+}
+
+impl LiquidateOfferTransaction {
     pub fn inner(&self) -> &PartiallySignedTransaction {
         &self.pset
     }

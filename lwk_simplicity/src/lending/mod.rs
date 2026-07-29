@@ -22,6 +22,8 @@ pub use core::CreateBorrowTransaction;
 pub use core::FactoryDetails;
 pub use core::LendingSession;
 pub use core::LendingSessionBuilder;
+pub use core::LiquidateOfferDetails;
+pub use core::LiquidateOfferTransaction;
 pub use core::OfferDetails;
 pub use core::RepayOfferTransaction;
 pub use core::RepaymentDetails;

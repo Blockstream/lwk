@@ -117,7 +117,6 @@ impl LendingSession {
         );
 
         let (user_script, _) = self.get_spk_bk(false)?;
-
         ft.add_output(PartialOutput::new(
             user_script,
             FACTORY_AUTH_AMOUNT,
@@ -194,9 +193,6 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[collateral_utxo.outpoint])?;
 
-        let (change_script, change_pk) = self.get_spk_bk(true)?;
-        let (user_script, _) = self.get_spk_bk(false)?;
-
         // Use shared entropy for both NFTs
         let nfts_entropy = get_random_seed();
 
@@ -208,12 +204,7 @@ impl LendingSession {
             PartialInput::new(UTXO {
                 outpoint: factory.auth_utxo,
                 txout: auth_txout,
-                secrets: Some(TxOutSecrets {
-                    asset: factory.factory_asset_id,
-                    asset_bf: AssetBlindingFactor::zero(),
-                    value: 1,
-                    value_bf: ValueBlindingFactor::zero(),
-                }),
+                secrets: None,
             }),
             RequiredSignature::NativeEcdsa,
         );
@@ -233,17 +224,13 @@ impl LendingSession {
             UTXO {
                 outpoint: factory.program_utxo,
                 txout: program_txout,
-                secrets: Some(TxOutSecrets {
-                    asset: factory.factory_asset_id,
-                    asset_bf: AssetBlindingFactor::zero(),
-                    value: 1,
-                    value_bf: ValueBlindingFactor::zero(),
-                }),
+                secrets: None,
             },
             program_issuance,
         );
 
         // Output 2: borrower NFT to user (from the factory issuance)
+        let (user_script, _) = self.get_spk_bk(false)?;
         ft.add_output(PartialOutput::new(
             user_script.clone(),
             NFT_AMOUNT,
@@ -288,6 +275,7 @@ impl LendingSession {
 
         // Add collateral change output
         if collateral_utxo.amount() > details.collateral_amount {
+            let (change_script, change_pk) = self.get_spk_bk(true)?;
             ft.add_output(
                 PartialOutput::new(
                     change_script.clone(),
@@ -374,9 +362,6 @@ impl LendingSession {
             &[borrower_nft_utxo.outpoint, principal_utxo.outpoint],
         )?;
 
-        let (change_script, change_pk) = self.get_spk_bk(true)?;
-        let (user_script, _) = self.get_spk_bk(false)?;
-
         let mut ft = FinalTransaction::new();
 
         ft.add_input(
@@ -396,6 +381,7 @@ impl LendingSession {
             RequiredSignature::NativeEcdsa,
         );
 
+        let (user_script, _) = self.get_spk_bk(false)?;
         ft.add_output(PartialOutput::new(
             user_script,
             offer_params.offer_parameters.collateral_amount,
@@ -403,6 +389,7 @@ impl LendingSession {
         ));
 
         if principal_utxo.amount() > total_debt {
+            let (change_script, change_pk) = self.get_spk_bk(true)?;
             ft.add_output(
                 PartialOutput::new(
                     change_script.clone(),
@@ -424,8 +411,102 @@ impl LendingSession {
         todo!()
     }
 
-    pub fn cancel_offer(&self) -> Result<(), LendingError> {
-        todo!()
+    /// Cancel a pending borrow offer.
+    ///
+    /// The borrower recovers their locked collateral and burns both the borrower and
+    /// lender NFTs. The offer must still be in a pending state.
+    ///
+    /// # Errors
+    /// Returns an error if the wallet has no suitable NFT or fee UTXOs, the creation
+    /// transaction cannot be fetched, or the transaction construction fails.
+    pub fn cancel_offer(
+        &mut self,
+        details: CancelOfferDetails,
+    ) -> Result<CancelOfferTransaction, LendingError> {
+        const FEE_ESTIMATE: u64 = 250;
+        const PENDING_COVENANT_VOUT: usize = 5;
+        const LENDER_NFT_VOUT: usize = 3;
+
+        let policy_asset = *self.network.policy_asset();
+        let simplex_network = to_simplicity_network(self.network);
+
+        let creation_tx = self.get_transaction(&details.creation_txid)?;
+        let offer = LendingOffer::try_from_tx(
+            &creation_tx,
+            details.protocol_fee_keeper_asset_id,
+            simplex_network,
+        )?;
+        let offer_params = *offer.get_parameters();
+
+        let covenant_txout = creation_tx
+            .output
+            .get(PENDING_COVENANT_VOUT)
+            .ok_or_else(|| {
+                LendingError::Generic("pending covenant output not found in creation tx".into())
+            })?
+            .clone();
+
+        let pending_offer_utxo = UTXO {
+            outpoint: OutPoint {
+                txid: details.creation_txid,
+                vout: PENDING_COVENANT_VOUT as u32,
+            },
+            txout: covenant_txout,
+            secrets: None,
+        };
+
+        let lender_nft_txout = creation_tx
+            .output
+            .get(LENDER_NFT_VOUT)
+            .ok_or_else(|| {
+                LendingError::Generic("lender NFT output not found in creation tx".into())
+            })?
+            .clone();
+
+        let lender_nft_utxo = UTXO {
+            outpoint: OutPoint {
+                txid: details.creation_txid,
+                vout: LENDER_NFT_VOUT as u32,
+            },
+            txout: lender_nft_txout,
+            secrets: None,
+        };
+
+        let borrower_nft_utxo =
+            self.get_explicit_utxo(offer_params.borrower_nft_asset_id, 1, &[])?;
+
+        let fee_funding_utxo =
+            self.get_utxo(policy_asset, FEE_ESTIMATE, &[borrower_nft_utxo.outpoint])?;
+
+        let mut ft = FinalTransaction::new();
+
+        offer.attach_cancellation(&mut ft, pending_offer_utxo, lender_nft_utxo);
+
+        ft.add_input(
+            PartialInput::new(borrower_nft_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        ft.add_input(
+            PartialInput::new(fee_funding_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        let (user_script, user_pk) = self.get_spk_bk(false)?;
+        ft.add_output(
+            PartialOutput::new(
+                user_script,
+                offer_params.offer_parameters.collateral_amount,
+                offer_params.collateral_asset_id,
+            )
+            .with_blinding_key(user_pk),
+        );
+
+        let _ = self.add_fee(&mut ft)?;
+
+        let pset = self.blind_and_finalize(&mut ft)?;
+
+        Ok(CancelOfferTransaction { pset })
     }
 
     /// Accept a pending borrow offer as a lender.
@@ -503,9 +584,6 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[principal_utxo.outpoint])?;
 
-        let (change_script, change_pk) = self.get_spk_bk(true)?;
-        let (user_script, _) = self.get_spk_bk(false)?;
-
         // Build transaction
         let mut ft = FinalTransaction::new();
 
@@ -528,6 +606,7 @@ impl LendingSession {
         );
 
         // Output 2: Return lender NFT to lender
+        let (user_script, _) = self.get_spk_bk(false)?;
         ft.add_output(PartialOutput::new(
             user_script.clone(),
             1,
@@ -536,6 +615,7 @@ impl LendingSession {
 
         // Optionaly change output for principal_asset_id
         if principal_utxo.amount() > offer_params.offer_parameters.principal_amount {
+            let (change_script, change_pk) = self.get_spk_bk(true)?;
             ft.add_output(
                 PartialOutput::new(
                     change_script.clone(),
@@ -622,8 +702,6 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[borrower_nft_utxo.outpoint])?;
 
-        let (user_script, user_pk) = self.get_spk_bk(false)?;
-
         let mut ft = FinalTransaction::new();
 
         asset_auth.attach_unlocking(
@@ -642,6 +720,7 @@ impl LendingSession {
             RequiredSignature::NativeEcdsa,
         );
 
+        let (user_script, user_pk) = self.get_spk_bk(false)?;
         ft.add_output(PartialOutput::new(
             user_script.clone(),
             1,
@@ -729,8 +808,6 @@ impl LendingSession {
         let fee_funding_utxo =
             self.get_utxo(policy_asset, FEE_ESTIMATE, &[lender_nft_utxo.outpoint])?;
 
-        let (user_script, user_pk) = self.get_spk_bk(false)?;
-
         let mut ft = FinalTransaction::new();
 
         finalized_vault.attach_withdrawing_all(
@@ -756,6 +833,7 @@ impl LendingSession {
             RequiredSignature::NativeEcdsa,
         );
 
+        let (user_script, user_pk) = self.get_spk_bk(false)?;
         ft.add_output(
             PartialOutput::new(user_script, vault_amount, offer_params.principal_asset_id)
                 .with_blinding_key(user_pk),
@@ -768,8 +846,93 @@ impl LendingSession {
         Ok(ClaimRepaymentTransaction { pset })
     }
 
-    pub fn liquidate_offer(&self) -> Result<(), LendingError> {
-        todo!()
+    /// Liquidate an expired active offer.
+    ///
+    /// Called by the lender after the loan expiration time has passed. The lender
+    /// claims the collateral and burns their lender NFT.
+    ///
+    /// # Errors
+    /// Returns an error if the wallet has no suitable lender NFT or fee UTXO, the
+    /// acceptance or creation transaction cannot be fetched, or the transaction
+    /// construction fails.
+    pub fn liquidate_offer(
+        &mut self,
+        details: LiquidateOfferDetails,
+    ) -> Result<LiquidateOfferTransaction, LendingError> {
+        const FEE_ESTIMATE: u64 = 250;
+
+        let policy_asset = *self.network.policy_asset();
+        let simplex_network = to_simplicity_network(self.network);
+
+        let acceptance_tx = self.get_transaction(&details.active_covenant_outpoint.txid)?;
+
+        let creation_txid = acceptance_tx
+            .input
+            .first()
+            .ok_or_else(|| LendingError::Generic("acceptance tx has no inputs".into()))?
+            .previous_output
+            .txid;
+
+        let creation_tx = self.get_transaction(&creation_txid)?;
+
+        let offer = LendingOffer::try_from_tx(
+            &creation_tx,
+            details.protocol_fee_keeper_asset_id,
+            simplex_network,
+        )?;
+
+        let offer_params = *offer.get_parameters();
+        let total_debt = offer_params.offer_parameters.get_total_amount_to_repay();
+        let offer = LendingOffer::new_active(offer_params, total_debt);
+
+        let covenant_txout = acceptance_tx
+            .output
+            .get(details.active_covenant_outpoint.vout as usize)
+            .ok_or_else(|| {
+                LendingError::Generic("covenant output not found in acceptance tx".into())
+            })?
+            .clone();
+
+        let active_offer_utxo = UTXO {
+            outpoint: details.active_covenant_outpoint,
+            txout: covenant_txout,
+            secrets: None,
+        };
+
+        let lender_nft_utxo = self.get_explicit_utxo(offer_params.lender_nft_asset_id, 1, &[])?;
+
+        let fee_funding_utxo =
+            self.get_utxo(policy_asset, FEE_ESTIMATE, &[lender_nft_utxo.outpoint])?;
+
+        let mut ft = FinalTransaction::new();
+
+        offer.attach_liquidation(&mut ft, active_offer_utxo);
+
+        ft.add_input(
+            PartialInput::new(lender_nft_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        ft.add_input(
+            PartialInput::new(fee_funding_utxo.clone()),
+            RequiredSignature::NativeEcdsa,
+        );
+
+        let (user_script, user_pk) = self.get_spk_bk(false)?;
+        ft.add_output(
+            PartialOutput::new(
+                user_script,
+                offer_params.offer_parameters.collateral_amount,
+                offer_params.collateral_asset_id,
+            )
+            .with_blinding_key(user_pk),
+        );
+
+        let _ = self.add_fee(&mut ft)?;
+
+        let pset = self.blind_and_finalize(&mut ft)?;
+
+        Ok(LiquidateOfferTransaction { pset })
     }
 
     pub fn sync(&mut self) -> Result<(), LendingError> {
@@ -1112,6 +1275,7 @@ impl TryFrom<FactoryDetailsResponse> for FactoryDetails {
     }
 }
 
+// TODO: add conversion from [`crate::lending::indexer::OfferListItem`]
 pub struct OfferDetails {
     pub principal_asset_id: AssetId,
     pub principal_amount: u64,
@@ -1124,6 +1288,16 @@ pub struct OfferDetails {
 
 pub struct AcceptOfferDetails {
     pub pending_offer_creation_txid: Txid,
+    pub protocol_fee_keeper_asset_id: AssetId,
+}
+
+pub struct CancelOfferDetails {
+    pub creation_txid: Txid,
+    pub protocol_fee_keeper_asset_id: AssetId,
+}
+
+pub struct LiquidateOfferDetails {
+    pub active_covenant_outpoint: OutPoint,
     pub protocol_fee_keeper_asset_id: AssetId,
 }
 
@@ -1188,11 +1362,39 @@ impl AcceptOfferTransaction {
     }
 }
 
+pub struct CancelOfferTransaction {
+    pset: PartiallySignedTransaction,
+}
+
+impl CancelOfferTransaction {
+    pub fn inner(&self) -> &PartiallySignedTransaction {
+        &self.pset
+    }
+
+    pub fn into_inner(self) -> PartiallySignedTransaction {
+        self.pset
+    }
+}
+
 pub struct RepayOfferTransaction {
     pset: PartiallySignedTransaction,
 }
 
 impl RepayOfferTransaction {
+    pub fn inner(&self) -> &PartiallySignedTransaction {
+        &self.pset
+    }
+
+    pub fn into_inner(self) -> PartiallySignedTransaction {
+        self.pset
+    }
+}
+
+pub struct LiquidateOfferTransaction {
+    pset: PartiallySignedTransaction,
+}
+
+impl LiquidateOfferTransaction {
     pub fn inner(&self) -> &PartiallySignedTransaction {
         &self.pset
     }

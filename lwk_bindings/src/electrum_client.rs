@@ -10,7 +10,9 @@ use crate::{BlockHeader, LwkError, TokenProvider, Transaction, Txid, Update, Wol
 pub struct ElectrumClient {
     inner: Arc<Mutex<lwk_wollet::ElectrumClient>>,
 
-    url: lwk_wollet::ElectrumUrl,
+    /// The builder used to create the client, kept so the client can be re-created with the
+    /// same configuration (url, token provider, timeout, ...), e.g. by `clone_client`.
+    builder: lwk_wollet::ElectrumClientBuilder,
 }
 
 /// A builder for the [`ElectrumClient`], to set a token provider (for authenticated Electrum
@@ -59,23 +61,22 @@ impl ElectrumClient {
     ) -> Result<Arc<Self>, LwkError> {
         let url = lwk_wollet::ElectrumUrl::new(electrum_url, tls, validate_domain)
             .map_err(lwk_wollet::Error::Url)?;
-        let client = lwk_wollet::ElectrumClient::new(&url)?;
+        let builder = lwk_wollet::ElectrumClientBuilder::new(&url.to_string());
+        let client = builder.clone().build()?;
         Ok(Arc::new(Self {
             inner: Arc::new(Mutex::new(client)),
-            url,
+            builder,
         }))
     }
 
     #[uniffi::constructor]
     /// Construct an electrum client from an Electrum URL
     pub fn from_url(electrum_url: &str) -> Result<Arc<Self>, LwkError> {
-        let url = electrum_url
-            .parse::<lwk_wollet::ElectrumUrl>()
-            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
-        let client = lwk_wollet::ElectrumClient::new(&url)?;
+        let builder = lwk_wollet::ElectrumClientBuilder::new(electrum_url);
+        let client = builder.clone().build()?;
         Ok(Arc::new(Self {
             inner: Arc::new(Mutex::new(client)),
-            url,
+            builder,
         }))
     }
 
@@ -83,14 +84,11 @@ impl ElectrumClient {
     /// provider for an authenticated Electrum RPC proxy.
     #[uniffi::constructor]
     pub fn from_builder(builder: ElectrumClientBuilder) -> Result<Arc<Self>, LwkError> {
-        let url = builder
-            .url
-            .parse::<lwk_wollet::ElectrumUrl>()
-            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
-        let client = lwk_wollet::ElectrumClientBuilder::from(builder).build()?;
+        let builder = lwk_wollet::ElectrumClientBuilder::from(builder);
+        let client = builder.clone().build()?;
         Ok(Arc::new(Self {
             inner: Arc::new(Mutex::new(client)),
-            url,
+            builder,
         }))
     }
 
@@ -161,6 +159,6 @@ impl ElectrumClient {
     /// Create a new electrum client with the same connection parameters
     #[allow(unused)] // TODO remove once lwk_boltz is integrated
     pub(crate) fn clone_client(&self) -> Result<lwk_wollet::ElectrumClient, LwkError> {
-        Ok(lwk_wollet::ElectrumClient::new(&self.url)?)
+        Ok(self.builder.clone().build()?)
     }
 }

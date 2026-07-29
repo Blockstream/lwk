@@ -149,14 +149,14 @@ impl Network {
         }
     }
 
-    /// Return the dynamic epoch length of this network
+    /// Return the number of epochs for which a federation peg script is valid.
     pub fn total_valid_epochs(&self) -> u32 {
         // taken from elements chainparams.cpp
         // TODO upstream to rust elements
         match self {
             Network::Liquid => 2,
-            Network::TestnetLiquid => 0,
-            Network::CustomElements(_) => 0,
+            Network::TestnetLiquid => 2,
+            Network::CustomElements(_) => 2,
         }
     }
 }
@@ -253,6 +253,13 @@ mod tests {
             Network::default_regtest().genesis_hash().to_string(),
             "00902a6b70c2ca83b5d9c815d96a0e2f4202179316970d14ea1847dae5b1ca21"
         );
+
+        assert_eq!(Network::Liquid.dynamic_epoch_length(), 20_160);
+        assert_eq!(Network::TestnetLiquid.dynamic_epoch_length(), 1_000);
+        assert_eq!(Network::default_regtest().dynamic_epoch_length(), 10);
+        assert_eq!(Network::Liquid.total_valid_epochs(), 2);
+        assert_eq!(Network::TestnetLiquid.total_valid_epochs(), 2);
+        assert_eq!(Network::default_regtest().total_valid_epochs(), 2);
     }
 
     #[test]

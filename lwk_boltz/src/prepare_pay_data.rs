@@ -17,6 +17,8 @@ use crate::{derive_keypair, mnemonic_identifier};
 pub struct PreparePayData {
     pub last_state: SwapState,
     pub swap_type: SwapType,
+    /// Boltz-provided Unix timestamp in seconds when the swap was created.
+    pub created_at: Option<u64>,
     pub lockup_txid: Option<String>,
     pub refund_txid: Option<String>,
 
@@ -38,6 +40,8 @@ pub struct PreparePayData {
 pub struct PreparePayDataSerializable {
     pub last_state: SwapState,
     pub swap_type: SwapType,
+    /// Boltz-provided Unix timestamp in seconds when the swap was created.
+    pub created_at: Option<u64>,
     pub lockup_txid: Option<String>,
     pub refund_txid: Option<String>,
     pub fee: Option<u64>,
@@ -60,6 +64,7 @@ impl From<PreparePayData> for PreparePayDataSerializable {
         PreparePayDataSerializable {
             last_state: data.last_state,
             swap_type: data.swap_type,
+            created_at: data.created_at,
             lockup_txid: data.lockup_txid,
             refund_txid: data.refund_txid,
             fee: data.fee,
@@ -108,6 +113,7 @@ pub fn to_prepare_pay_data(
     Ok(PreparePayData {
         last_state: data.last_state,
         swap_type: data.swap_type,
+        created_at: data.created_at,
         lockup_txid: data.lockup_txid,
         refund_txid: data.refund_txid,
         fee: data.fee,
@@ -197,6 +203,16 @@ mod tests {
             prepare_pay_data.our_keys.secret_bytes().to_hex(),
             "70f75e954300859f9b32dfea93dfc5667e6cf71d1fad77602d6d6757fd347b01"
         );
+    }
+
+    #[test]
+    fn deserialize_legacy_prepare_pay_data_without_created_at() {
+        let json = include_str!("../tests/data/prepare_pay_data_serializable_legacy.json");
+
+        let data = PreparePayDataSerializable::deserialize(json).unwrap();
+
+        assert_eq!(data.create_swap_response.id, "legacy-submarine-swap");
+        assert_eq!(data.created_at, None);
     }
 
     #[test]

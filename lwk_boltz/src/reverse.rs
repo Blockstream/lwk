@@ -198,6 +198,7 @@ impl BoltzSession {
             data: InvoiceData {
                 last_state,
                 swap_type: SwapType::Reverse,
+                created_at: None,
                 fee: Some(fee),
                 boltz_fee,
                 claim_fee,
@@ -392,6 +393,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
     Ok(InvoiceData {
         last_state,
         swap_type: SwapType::Reverse,
+        created_at: Some(e.created_at),
         fee: None, // Fee information not available in restore response
         boltz_fee: None,
         claim_fee: None, // Not available in restore response, will use fallback fee rate
@@ -516,6 +518,11 @@ impl InvoiceResponse {
         self.data.boltz_fee
     }
 
+    /// Boltz-provided Unix timestamp in seconds when the swap was created.
+    pub fn created_at(&self) -> Option<u64> {
+        self.data.created_at
+    }
+
     /// The txid of the claim transaction of the swap
     pub fn claim_txid(&self) -> Option<&str> {
         self.data.claim_txid.as_deref()
@@ -632,7 +639,14 @@ impl InvoiceResponse {
 
 #[cfg(test)]
 mod tests {
+    use boltz_client::network::LiquidChain;
+
     use super::*;
+
+    fn test_mnemonic() -> Mnemonic {
+        Mnemonic::from_str("damp cart merit asset obvious idea chef traffic absent armed road link")
+            .unwrap()
+    }
 
     #[test]
     fn reverse_restore_filter_matches_pair_direction() {
@@ -655,5 +669,27 @@ mod tests {
 
         assert!(is_reverse_restore_for_to_chain(&btc_reverse, "BTC"));
         assert!(!is_reverse_restore_for_to_chain(&btc_reverse, "L-BTC"));
+    }
+
+    #[test]
+    fn reverse_restore_preserves_created_at() {
+        let data = include_str!("../tests/data/swap_restore_response.json");
+        let swaps: Vec<SwapRestoreResponse> = serde_json::from_str(data).unwrap();
+        let restored = swaps
+            .iter()
+            .find(|swap| matches!(swap.swap_type, SwapRestoreType::Reverse))
+            .unwrap();
+
+        let typed = convert_swap_restore_response_to_invoice_data(
+            restored,
+            &test_mnemonic(),
+            "claim-address",
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+        )
+        .unwrap();
+
+        assert_eq!(typed.created_at, Some(restored.created_at));
+        let serializable = InvoiceDataSerializable::from(typed);
+        assert_eq!(serializable.created_at, Some(restored.created_at));
     }
 }

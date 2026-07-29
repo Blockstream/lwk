@@ -285,6 +285,20 @@ impl BoltzSession {
         Ok(inner)
     }
 
+    /// See [`crate::BoltzSession::is_lockup_unspent()`]
+    pub fn is_lockup_unspent(&self, data: &ChainSwapData) -> Result<bool, Error> {
+        self.runtime.block_on(self.inner.is_lockup_unspent(data))
+    }
+
+    /// See [`crate::BoltzSession::is_serialized_lockup_unspent()`]
+    pub fn is_serialized_lockup_unspent(
+        &self,
+        data: &ChainSwapDataSerializable,
+    ) -> Result<bool, Error> {
+        self.runtime
+            .block_on(self.inner.is_serialized_lockup_unspent(data))
+    }
+
     pub fn swap_restore(&self) -> Result<Vec<SwapRestoreResponse>, Error> {
         let inner = self.runtime.block_on(self.inner.swap_restore())?;
         Ok(inner)
@@ -515,6 +529,11 @@ impl LockupResponse {
     /// See [`crate::LockupResponse::created_at()`]
     pub fn created_at(&self) -> Option<u64> {
         self.inner.created_at()
+    }
+
+    /// See [`crate::LockupResponse::is_lockup_unspent()`]
+    pub fn is_lockup_unspent(&self) -> Result<bool, Error> {
+        self.runtime.block_on(self.inner.is_lockup_unspent())
     }
 
     /// See [`crate::LockupResponse::claim_txid()`]

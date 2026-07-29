@@ -820,6 +820,12 @@ impl BoltzSession {
         Ok(data)
     }
 
+    /// Whether the user's lockup output for serialized chain swap data is currently unspent.
+    pub fn is_lockup_unspent(&self, data: &str) -> Result<bool, LwkError> {
+        let data = ChainSwapDataSerializable::deserialize(data)?;
+        Ok(self.inner.is_serialized_lockup_unspent(&data)?)
+    }
+
     /// Fetch informations, such as min and max amounts, about the reverse and submarine pairs from the boltz api.
     pub fn fetch_swaps_info(&self) -> Result<String, LwkError> {
         let (reverse, submarine, chain) = self.inner.fetch_swaps_info()?;
@@ -1259,6 +1265,16 @@ impl LockupResponse {
             .as_ref()
             .ok_or(LwkError::ObjectConsumed)?
             .boltz_fee())
+    }
+
+    /// Whether the user's lockup output is currently unspent.
+    pub fn is_lockup_unspent(&self) -> Result<bool, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .is_lockup_unspent()?)
     }
 
     /// The txid of the claim transaction of the swap

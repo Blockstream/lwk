@@ -352,6 +352,25 @@ impl BoltzSession {
             })
             .collect()
     }
+
+    /// Whether the user's lockup output for a restorable chain swap is currently unspent.
+    pub async fn is_lockup_unspent(&self, data: &ChainSwapData) -> Result<bool, Error> {
+        is_lockup_unspent(
+            self.chain_client.as_ref(),
+            data.from_chain,
+            &data.lockup_address,
+        )
+        .await
+    }
+
+    /// Whether the user's lockup output for serialized chain swap data is currently unspent.
+    pub async fn is_serialized_lockup_unspent(
+        &self,
+        data: &ChainSwapDataSerializable,
+    ) -> Result<bool, Error> {
+        let from_chain = chain_from_str(&data.from_chain, Some(&data.create_chain_response.id))?;
+        is_lockup_unspent(self.chain_client.as_ref(), from_chain, &data.lockup_address).await
+    }
 }
 
 async fn fetch_lockup_txid(api: &BoltzApiClientV2, swap_id: &str) -> Option<String> {
@@ -368,6 +387,39 @@ async fn fetch_lockup_txid(api: &BoltzApiClientV2, swap_id: &str) -> Option<Stri
         Err(err) => {
             log::warn!("[swap:{swap_id}] failed to fetch chain lockup txid: {err}");
             None
+        }
+    }
+}
+
+async fn is_lockup_unspent(
+    chain_client: &ChainClient,
+    from_chain: Chain,
+    lockup_address: &str,
+) -> Result<bool, Error> {
+    match from_chain {
+        Chain::Bitcoin(_) => {
+            let address = bitcoin::Address::from_str(lockup_address)
+                .map_err(|e| {
+                    Error::Generic(format!(
+                        "Invalid Bitcoin lockup address {lockup_address}: {e}"
+                    ))
+                })?
+                .assume_checked();
+            let utxos = chain_client
+                .bitcoin_client()
+                .ok_or_else(|| Error::Generic("Expected Bitcoin client".to_string()))?
+                .get_address_utxos(&address)
+                .await?;
+            Ok(!utxos.is_empty())
+        }
+        Chain::Liquid(_) => {
+            let address = elements::Address::from_str(lockup_address)?;
+            let utxo = chain_client
+                .liquid_client()
+                .ok_or(Error::MissingLiquidClient)?
+                .get_address_utxo(&address)
+                .await?;
+            Ok(utxo.is_some())
         }
     }
 }
@@ -604,6 +656,16 @@ impl LockupResponse {
     /// It is equal to the swap amount multiplied by the boltz fee rate.
     pub fn boltz_fee(&self) -> Option<u64> {
         self.data.boltz_fee
+    }
+
+    /// Whether the user's lockup output is currently unspent.
+    pub async fn is_lockup_unspent(&self) -> Result<bool, Error> {
+        is_lockup_unspent(
+            self.chain_client.as_ref(),
+            self.data.from_chain,
+            self.lockup_address(),
+        )
+        .await
     }
 
     async fn build_and_broadcast_refund(&mut self) -> Result<(), Error> {

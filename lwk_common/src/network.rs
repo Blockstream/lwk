@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use elements::hashes::{sha256, Hash};
-use elements::{AddressParams, AssetId, BlockHash};
+use elements::{bitcoin, AddressParams, AssetId, BlockHash};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::Error;
@@ -36,6 +36,7 @@ pub const GENESIS_LIQUID_REGTEST: [u8; 32] = [
 pub struct ElementsParamsBuilder {
     policy_asset: Option<AssetId>,
     genesis_hash: Option<BlockHash>,
+    parent_genesis_hash: Option<bitcoin::BlockHash>,
 }
 
 impl ElementsParamsBuilder {
@@ -56,6 +57,12 @@ impl ElementsParamsBuilder {
         self
     }
 
+    /// Specify the parent-chain genesis block hash.
+    pub fn with_parent_genesis_hash(mut self, genesis_hash: bitcoin::BlockHash) -> Self {
+        self.parent_genesis_hash = Some(genesis_hash);
+        self
+    }
+
     /// Build Elements network parameters.
     ///
     /// Unspecified values would defined as default Liquid regtest parameters
@@ -65,6 +72,11 @@ impl ElementsParamsBuilder {
             genesis_hash: self
                 .genesis_hash
                 .unwrap_or(BlockHash::from_byte_array(GENESIS_LIQUID_REGTEST)),
+            parent_genesis_hash: self.parent_genesis_hash.unwrap_or_else(|| {
+                bitcoin::constants::genesis_block(bitcoin::Network::Regtest)
+                    .header
+                    .block_hash()
+            }),
         })
     }
 }
@@ -74,6 +86,7 @@ impl ElementsParamsBuilder {
 pub struct ElementsParams {
     policy_asset: AssetId,
     genesis_hash: BlockHash,
+    parent_genesis_hash: bitcoin::BlockHash,
 }
 
 /// The network of the elements blockchain.
@@ -109,6 +122,18 @@ impl Network {
             Network::TestnetLiquid => BlockHash::from_byte_array(GENESIS_LIQUID_TESTNET),
             Network::CustomElements(params) => params.genesis_hash,
         }
+    }
+
+    /// Return the parent-chain genesis block hash for this network.
+    pub fn parent_genesis_hash(&self) -> bitcoin::BlockHash {
+        let parent_network = match self {
+            Network::Liquid => bitcoin::Network::Bitcoin,
+            Network::TestnetLiquid => bitcoin::Network::Testnet,
+            Network::CustomElements(params) => return params.parent_genesis_hash,
+        };
+        bitcoin::constants::genesis_block(parent_network)
+            .header
+            .block_hash()
     }
 
     /// Return the address parameters for this network to generate addresses compatible for this network.
@@ -253,6 +278,36 @@ mod tests {
             Network::default_regtest().genesis_hash().to_string(),
             "00902a6b70c2ca83b5d9c815d96a0e2f4202179316970d14ea1847dae5b1ca21"
         );
+
+        assert_eq!(
+            Network::Liquid.parent_genesis_hash(),
+            bitcoin::constants::genesis_block(bitcoin::Network::Bitcoin)
+                .header
+                .block_hash()
+        );
+        assert_eq!(
+            Network::TestnetLiquid.parent_genesis_hash(),
+            bitcoin::constants::genesis_block(bitcoin::Network::Testnet)
+                .header
+                .block_hash()
+        );
+        assert_eq!(
+            Network::default_regtest().parent_genesis_hash(),
+            bitcoin::constants::genesis_block(bitcoin::Network::Regtest)
+                .header
+                .block_hash()
+        );
+
+        let custom_parent = bitcoin::constants::genesis_block(bitcoin::Network::Signet)
+            .header
+            .block_hash();
+        let custom = Network::CustomElements(
+            ElementsParamsBuilder::new()
+                .with_parent_genesis_hash(custom_parent)
+                .build()
+                .unwrap(),
+        );
+        assert_eq!(custom.parent_genesis_hash(), custom_parent);
 
         assert_eq!(Network::Liquid.dynamic_epoch_length(), 20_160);
         assert_eq!(Network::TestnetLiquid.dynamic_epoch_length(), 1_000);

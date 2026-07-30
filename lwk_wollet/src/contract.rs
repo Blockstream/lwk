@@ -78,6 +78,36 @@ impl Contract {
         Ok(serde_json::from_value(value.clone())?)
     }
 
+    /// The issuer public key.
+    pub fn issuer_pubkey(&self) -> &[u8] {
+        &self.issuer_pubkey
+    }
+
+    /// The entity of the asset, such as the domain of the issuer.
+    pub fn entity(&self) -> &Entity {
+        &self.entity
+    }
+
+    /// The name of the asset.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// The precision of the asset.
+    pub fn precision(&self) -> u8 {
+        self.precision
+    }
+
+    /// The ticker of the asset.
+    pub fn ticker(&self) -> &str {
+        &self.ticker
+    }
+
+    /// The version of the contract.
+    pub fn version(&self) -> u8 {
+        self.version
+    }
+
     /// Validate the contract against the rules of the registry
     ///
     /// If this method doesn't error the contract is semantically valid.

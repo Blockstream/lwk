@@ -214,6 +214,9 @@ pub enum Error {
     #[error("Pegin transaction output index {vout} does not fit in an outpoint")]
     PeginOutputIndexOverflow { vout: usize },
 
+    #[error("Pegin transaction output index {vout} conflicts with Elements input flags")]
+    PeginVoutConflictsWithFlags { vout: u32 },
+
     #[error("Invalid pegin txout proof: {0}")]
     InvalidPeginProof(String),
 

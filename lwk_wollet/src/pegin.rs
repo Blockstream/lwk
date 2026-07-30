@@ -2,6 +2,7 @@
 //!
 //! A Peg-in is a way to convert bitcoin (BTC) on the mainchain to liquid bitcoin (L-BTC).
 
+use elements::hashes::Hash;
 use elements::{bitcoin, BlockHeader};
 use elements_miniscript::{BtcDescriptor, BtcMiniscript, BtcSegwitv0};
 
@@ -462,6 +463,41 @@ impl PeginInput {
     pub fn pegin_witness(&self) -> &[Vec<u8>] {
         &self.pegin_witness
     }
+
+    /// Construct a standalone PSET input containing this pegin claim.
+    pub fn to_pset_input(&self) -> Result<elements::pset::Input, Error> {
+        // See Elements' COutPoint::{OUTPOINT_PEGIN_FLAG, OUTPOINT_ISSUANCE_FLAG}.
+        const PEGIN_FLAG: u32 = 1 << 30;
+        const ISSUANCE_FLAG: u32 = 1 << 31;
+
+        let bitcoin_outpoint = self.funding.deposit().outpoint();
+        if bitcoin_outpoint.vout & (PEGIN_FLAG | ISSUANCE_FLAG) != 0 {
+            return Err(Error::PeginVoutConflictsWithFlags {
+                vout: bitcoin_outpoint.vout,
+            });
+        }
+
+        let txid = elements::Txid::from_byte_array(bitcoin_outpoint.txid.to_byte_array());
+        let outpoint = elements::OutPoint::new(txid, bitcoin_outpoint.vout | PEGIN_FLAG);
+        let mut input = elements::pset::Input::from_prevout(outpoint);
+        input.pegin_tx = Some(self.funding.deposit().transaction().clone());
+        input.pegin_txout_proof = Some(bitcoin::consensus::serialize(self.funding.txout_proof()));
+        input.pegin_genesis_hash = Some(elements::BlockHash::from_byte_array(
+            self.parent_genesis_hash.to_byte_array(),
+        ));
+        input.pegin_claim_script = Some(
+            self.funding
+                .deposit()
+                .pegin_address()
+                .claim_script()
+                .clone(),
+        );
+        input.pegin_value = Some(self.funding.deposit().amount().to_sat());
+        input.pegin_witness = Some(self.pegin_witness.clone());
+        input.asset = Some(self.pegged_asset);
+        input.amount = Some(self.funding.deposit().amount().to_sat());
+        Ok(input)
+    }
 }
 
 fn classify_fedpeg_program(
@@ -767,6 +803,75 @@ mod test {
             bitcoin::consensus::serialize(&proof)
         );
         assert_eq!(pegin_data.referenced_block, funding.referenced_block());
+    }
+
+    #[test]
+    fn pegin_input_constructs_pset_input() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address, transaction.clone()).unwrap();
+        let proof = test_txout_proof(txid);
+        let funding = super::PeginFunding::new(deposit, proof.clone()).unwrap();
+        let input = super::PeginInput::from(funding.clone());
+        let pset_input = input.to_pset_input().unwrap();
+
+        assert!(pset_input.is_pegin());
+        assert_eq!(
+            pset_input.previous_txid.to_byte_array(),
+            funding.deposit().outpoint().txid.to_byte_array()
+        );
+        assert_eq!(
+            pset_input.previous_output_index,
+            funding.deposit().outpoint().vout | (1 << 30)
+        );
+        assert_eq!(pset_input.pegin_tx.as_ref(), Some(&transaction));
+        assert_eq!(
+            pset_input.pegin_txout_proof,
+            Some(bitcoin::consensus::serialize(&proof))
+        );
+        assert_eq!(
+            pset_input.pegin_genesis_hash,
+            Some(elements::BlockHash::from_byte_array(
+                input.parent_genesis_hash().to_byte_array()
+            ))
+        );
+        assert_eq!(
+            pset_input.pegin_claim_script.as_ref(),
+            Some(funding.deposit().pegin_address().claim_script())
+        );
+        assert_eq!(
+            pset_input.pegin_value,
+            Some(funding.deposit().amount().to_sat())
+        );
+        assert_eq!(
+            pset_input.pegin_witness.as_deref(),
+            Some(input.pegin_witness())
+        );
+        assert_eq!(pset_input.asset, Some(input.pegged_asset()));
+        assert_eq!(pset_input.amount, Some(funding.deposit().amount().to_sat()));
+
+        let mut pset = elements::pset::PartiallySignedTransaction::new_v2();
+        pset.add_input(pset_input.clone());
+        let roundtrip: elements::pset::PartiallySignedTransaction =
+            pset.to_string().parse().unwrap();
+        assert_eq!(&roundtrip.inputs()[0], &pset_input);
+    }
+
+    #[test]
+    fn pegin_input_rejects_vout_flag_collision() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address, transaction).unwrap();
+        let funding = super::PeginFunding::new(deposit, test_txout_proof(txid)).unwrap();
+        let mut input = super::PeginInput::from(funding);
+        input.funding.deposit.outpoint.vout = 1 << 30;
+
+        assert!(matches!(
+            input.to_pset_input(),
+            Err(Error::PeginVoutConflictsWithFlags { vout }) if vout == 1 << 30
+        ));
     }
 
     #[test]

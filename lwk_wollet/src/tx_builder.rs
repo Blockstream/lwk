@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     hashes::Hash,
-    issuance::{IssuanceRequest, Issuances, ReissuanceRequest, Reissuances},
+    issuance::{IssuanceOutput, IssuanceRequest, Issuances, ReissuanceRequest, Reissuances},
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
     pset_create::{validate_address, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS},
@@ -22,6 +22,46 @@ use elements::{
 };
 use lwk_common::{calculate_fee, set_genesis_hash};
 use rand::thread_rng;
+
+/// Validates the outputs receiving `total` (re)issued satoshi, filling in the default single
+/// output to the wallet generating the (re)issuance if the caller added none
+fn validate_outputs(
+    outputs: &mut Vec<IssuanceOutput>,
+    total: u64,
+    network: Network,
+) -> Result<(), Error> {
+    if outputs.is_empty() {
+        if total > 0 {
+            outputs.push(IssuanceOutput {
+                satoshi: total,
+                address: None,
+            });
+        }
+        return Ok(());
+    }
+
+    let mut sum: u64 = 0;
+    for output in outputs.iter() {
+        if output.satoshi == 0 {
+            return Err(Error::InvalidAmount);
+        }
+        if let Some(address) = output.address.as_ref() {
+            validate_address(&address.to_string(), network)?;
+        }
+        sum = sum
+            .checked_add(output.satoshi)
+            .ok_or(Error::InvalidAmount)?;
+    }
+
+    if sum != total {
+        return Err(Error::IssuanceOutputsAmountMismatch {
+            expected: total,
+            found: sum,
+        });
+    }
+
+    Ok(())
+}
 
 pub fn extract_issuances(tx: &Transaction) -> Vec<IssuanceDetails> {
     let mut r = vec![];
@@ -375,11 +415,11 @@ impl TxBuilder {
     ) -> Result<Self, Error> {
         let mut request = IssuanceRequest::new(asset_sats, token_sats);
 
-        if let Some(a) = asset_receiver {
-            request = request.address_asset(a);
+        if asset_sats > 0 {
+            request = request.add_asset_output(asset_sats, asset_receiver);
         }
-        if let Some(a) = token_receiver {
-            request = request.address_token(a);
+        if token_sats > 0 {
+            request = request.add_token_output(token_sats, token_receiver);
         }
         if let Some(c) = contract {
             request = request.contract(c);
@@ -388,38 +428,33 @@ impl TxBuilder {
         self.add_issuance(request)
     }
 
-    /// Issue an asset
+    /// Issue an asset, or several assets by calling this multiple times in the same transaction
     ///
     /// **Experimental**: this API might change without notice.
     ///
-    /// There will be `asset_sats` units of this asset that will be received by
-    /// `asset_receiver` if it's set, otherwise to an address of the wallet generating the issuance.
-    ///
-    /// There will be `token_sats` reissuance tokens that allow token holder to reissue the created
-    /// asset. Reissuance token will be received by `token_receiver` if it's some, or to an
-    /// address of the wallet generating the issuance if none.
-    ///
-    /// If a `contract` is provided, it's metadata will be committed in the generated asset id.
-    ///
-    /// Optionally, pin the issuance to a specific input via [`IssuanceRequest::pin_input()`].
-    ///
-    /// Can be called multiple times to issue several assets in the same transaction.
+    /// `request` sets the asset/token amounts, receivers, contract and pinning; see
+    /// [`IssuanceRequest`] for details.
     ///
     /// Can't be used if [`TxBuilder::reissue_asset`] has been called
-    pub fn add_issuance(mut self, request: IssuanceRequest) -> Result<Self, Error> {
+    pub fn add_issuance(mut self, mut request: IssuanceRequest) -> Result<Self, Error> {
         if !self.reissuances.requests.is_empty() {
             return Err(Error::IssuanceReissuanceMutuallyExclusive);
         }
 
-        if let Some(address) = request.address_asset.as_ref() {
-            validate_address(&address.to_string(), self.network)?;
-        }
-        if let Some(address) = request.address_token.as_ref() {
-            validate_address(&address.to_string(), self.network)?;
-        }
         if request.satoshi_asset == 0 && request.satoshi_token == 0 {
             return Err(Error::InvalidAmount);
         }
+
+        validate_outputs(
+            &mut request.asset_outputs,
+            request.satoshi_asset,
+            self.network,
+        )?;
+        validate_outputs(
+            &mut request.token_outputs,
+            request.satoshi_token,
+            self.network,
+        )?;
 
         match (&mut self.issuances, request.pinned_input) {
             (Issuances::None, Some(input)) => {
@@ -454,11 +489,9 @@ impl TxBuilder {
         asset_receiver: Option<Address>,
         issuance_tx: Option<Transaction>,
     ) -> Result<Self, Error> {
-        let mut reissuance_request = ReissuanceRequest::new(asset_to_reissue, satoshi_to_reissue);
+        let mut reissuance_request = ReissuanceRequest::new(asset_to_reissue, satoshi_to_reissue)
+            .add_asset_output(satoshi_to_reissue, asset_receiver);
 
-        if let Some(address) = asset_receiver {
-            reissuance_request = reissuance_request.asset_receiver(address);
-        }
         if let Some(tx) = issuance_tx {
             reissuance_request = reissuance_request.issuance_tx(tx);
         }
@@ -470,24 +503,30 @@ impl TxBuilder {
     ///
     /// **Experimental**: this API might change without notice.
     ///
-    /// `request` sets the asset to reissue, amount, receiver, and issuance transaction; see
+    /// `request` sets the asset to reissue, amount, receivers, and issuance transaction; see
     /// [`ReissuanceRequest`] for details.
     ///
     /// Can be called multiple times to reissue several assets in the same transaction, as long
     /// as each call targets a different asset.
     ///
     /// Can't be used if [`TxBuilder::issue_asset`] or [`TxBuilder::add_issuance`] has been called
-    pub fn add_reissuance(mut self, reissuance_request: ReissuanceRequest) -> Result<Self, Error> {
+    pub fn add_reissuance(
+        mut self,
+        mut reissuance_request: ReissuanceRequest,
+    ) -> Result<Self, Error> {
         if !matches!(self.issuances, Issuances::None) {
             return Err(Error::IssuanceReissuanceMutuallyExclusive);
         }
 
-        if let Some(addr) = reissuance_request.asset_receiver.as_ref() {
-            validate_address(&addr.to_string(), self.network())?;
-        }
         if reissuance_request.satoshi_to_reissue == 0 {
             return Err(Error::InvalidAmount);
         }
+
+        validate_outputs(
+            &mut reissuance_request.asset_outputs,
+            reissuance_request.satoshi_to_reissue,
+            self.network(),
+        )?;
 
         self.reissuances.add(reissuance_request)?;
 
@@ -1232,13 +1271,11 @@ impl TxBuilder {
                 request.contract,
             )?;
 
-            if request.satoshi_asset > 0 {
-                let addressee = match request.address_asset {
-                    Some(address) => {
-                        Recipient::from_address(request.satoshi_asset, &address, asset)
-                    }
+            for output in request.asset_outputs {
+                let addressee = match output.address {
+                    Some(address) => Recipient::from_address(output.satoshi, &address, asset),
                     None => wollet.addressee_external(
-                        request.satoshi_asset,
+                        output.satoshi,
                         asset,
                         &mut last_unused_external,
                     )?,
@@ -1246,13 +1283,11 @@ impl TxBuilder {
                 wollet.add_output(pset, &addressee)?;
             }
 
-            if request.satoshi_token > 0 {
-                let addressee = match request.address_token {
-                    Some(address) => {
-                        Recipient::from_address(request.satoshi_token, &address, token)
-                    }
+            for output in request.token_outputs {
+                let addressee = match output.address {
+                    Some(address) => Recipient::from_address(output.satoshi, &address, token),
                     None => wollet.addressee_external(
-                        request.satoshi_token,
+                        output.satoshi,
                         token,
                         &mut last_unused_external,
                     )?,
@@ -1371,19 +1406,19 @@ impl TxBuilder {
                 &issuance.entropy,
             )?;
 
-            let addressee = match request.asset_receiver {
-                Some(address) => Recipient::from_address(
-                    request.satoshi_to_reissue,
-                    &address,
-                    request.asset_to_reissue,
-                ),
-                None => wollet.addressee_external(
-                    request.satoshi_to_reissue,
-                    request.asset_to_reissue,
-                    &mut last_unused_external,
-                )?,
-            };
-            wollet.add_output(pset, &addressee)?;
+            for output in request.asset_outputs {
+                let addressee = match output.address {
+                    Some(address) => {
+                        Recipient::from_address(output.satoshi, &address, request.asset_to_reissue)
+                    }
+                    None => wollet.addressee_external(
+                        output.satoshi,
+                        request.asset_to_reissue,
+                        &mut last_unused_external,
+                    )?,
+                };
+                wollet.add_output(pset, &addressee)?;
+            }
 
             Ok(())
         };

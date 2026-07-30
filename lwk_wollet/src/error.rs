@@ -229,6 +229,9 @@ pub enum Error {
     #[error("Pinning issuance to input requires manual inputs order")]
     IssuancePinRequiresInputsOrder,
 
+    #[error("The (re)issuance outputs sum up to {found} satoshi, but {expected} are (re)issued")]
+    IssuanceOutputsAmountMismatch { expected: u64, found: u64 },
+
     #[error("Blockchain backend have not implemented waterfalls method")]
     WaterfallsUnimplemented,
 

@@ -343,23 +343,23 @@ impl RegistryData {
     ///
     /// 100 satoshi of an assets with precision 2 is shown as "1.00"
     pub fn precision(&self) -> u8 {
-        self.contract.precision
+        self.contract.precision()
     }
 
     /// Get the ticker of the asset as specified in the contract.
     pub fn ticker(&self) -> &str {
-        &self.contract.ticker
+        self.contract.ticker()
     }
 
     /// Get the name of the asset as specified in the contract.
     pub fn name(&self) -> &str {
-        &self.contract.name
+        self.contract.name()
     }
 
     /// Get the domain of the asset as specified in the contract.
     /// The registry doesn't allow to publish an asset with a domain without a proof on the domain itself.
     pub fn domain(&self) -> &str {
-        match &self.contract.entity {
+        match &self.contract.entity() {
             Entity::Domain(domain) => domain,
         }
     }
@@ -659,7 +659,7 @@ mod tests {
                 .unwrap();
         let registry = blocking::Registry::default_for_network(Network::Liquid).unwrap();
         let registry_data = registry.fetch(tether_asset_id).unwrap();
-        assert_eq!(registry_data.contract.ticker, "USDt");
+        assert_eq!(registry_data.contract.ticker(), "USDt");
 
         let hard_coded_usdt = usdt();
         assert_eq!(hard_coded_usdt.0, tether_asset_id);
@@ -698,8 +698,8 @@ mod tests {
                 .unwrap();
         let cache = RegistryCache::new(registry, &[asset_id], 1).await;
         let data = cache.get(asset_id).unwrap();
-        assert_eq!(data.contract.ticker, "EURx");
-        assert_eq!(data.contract.precision, 8);
+        assert_eq!(data.contract.ticker(), "EURx");
+        assert_eq!(data.contract.precision(), 8);
         assert_eq!(
             data.contract.contract_hash().unwrap().to_string(),
             "e90594cf35ff894158967d4bec6df0b4f2841818ea5df6a94ca8ef50e9546a27"

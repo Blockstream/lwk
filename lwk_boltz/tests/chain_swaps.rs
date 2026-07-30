@@ -1793,8 +1793,8 @@ mod tests {
             "Boltz restore data should not already contain our Liquid refund txid"
         );
         assert!(
-            !session.is_lockup_unspent(&data).await.unwrap(),
-            "refunded Liquid lockup should be spent"
+            session.is_lockup_unspent(&data).await.unwrap(),
+            "Liquid lockup should remain unspent until the client refund is broadcast"
         );
 
         let data: lwk_boltz::ChainSwapDataSerializable = data.into();
@@ -1847,6 +1847,10 @@ mod tests {
         assert!(
             refund_balance > 0,
             "Expected new Liquid refund address to receive funds, got {refund_balance} sats"
+        );
+        assert!(
+            !response.is_lockup_unspent().await.unwrap(),
+            "Liquid lockup should be spent after the client refund is broadcast"
         );
 
         if let Some(vout) = lockup_vout {

@@ -114,6 +114,11 @@ impl Contract {
         let value = serde_json::to_value(self)?;
         contract_json_hash(&value)
     }
+
+    /// Create a builder for constructing a Contract.
+    pub fn builder() -> ContractBuilder {
+        ContractBuilder::new()
+    }
 }
 
 impl FromStr for Contract {
@@ -124,6 +129,75 @@ impl FromStr for Contract {
         let contract = Contract::from_value(&contract)?;
         contract.validate()?;
         Ok(contract)
+    }
+}
+
+pub struct ContractBuilder {
+    entity: Option<Entity>,
+    issuer_pubkey: Option<Vec<u8>>,
+    name: Option<String>,
+    precision: Option<u8>,
+    ticker: Option<String>,
+    version: Option<u8>,
+}
+
+impl Default for ContractBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ContractBuilder {
+    pub fn new() -> Self {
+        Self {
+            entity: None,
+            issuer_pubkey: None,
+            name: None,
+            precision: None,
+            ticker: None,
+            version: None,
+        }
+    }
+
+    pub fn entity(mut self, entity: Entity) -> Self {
+        self.entity = Some(entity);
+        self
+    }
+
+    pub fn issuer_pubkey(mut self, pk: Vec<u8>) -> Self {
+        self.issuer_pubkey = Some(pk);
+        self
+    }
+
+    pub fn name(mut self, name: String) -> Self {
+        self.name = Some(name);
+        self
+    }
+
+    pub fn precision(mut self, precision: u8) -> Self {
+        self.precision = Some(precision);
+        self
+    }
+
+    pub fn ticker(mut self, ticker: String) -> Self {
+        self.ticker = Some(ticker);
+        self
+    }
+
+    pub fn version(mut self, version: u8) -> Self {
+        self.version = Some(version);
+        self
+    }
+
+    pub fn build(self) -> Result<Contract, Error> {
+        Ok(Contract {
+            entity: self.entity.unwrap_or(Entity::Domain(String::new())),
+            issuer_pubkey: self.issuer_pubkey.unwrap_or_default(),
+            name: self.name.unwrap_or_default(),
+            precision: self.precision.unwrap_or(0),
+            ticker: self.ticker.unwrap_or_default(),
+            version: self.version.unwrap_or(0),
+        })
     }
 }
 

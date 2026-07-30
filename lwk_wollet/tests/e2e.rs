@@ -3239,7 +3239,7 @@ fn test_multiple_reissuances() {
         .tx_builder()
         .add_reissuance(ReissuanceRequest::new(asset0, 5))
         .unwrap()
-        .add_reissuance(ReissuanceRequest::new(asset1, 7).asset_receiver(w2.address()))
+        .add_reissuance(ReissuanceRequest::new(asset1, 7).add_asset_output(7, Some(w2.address())))
         .unwrap()
         .finish()
         .unwrap();

@@ -223,6 +223,9 @@ pub enum Error {
     #[error("Pegin transaction {txid} is not included in the txout proof")]
     PeginTransactionNotInProof { txid: crate::bitcoin::Txid },
 
+    #[error("Pegin inputs cannot be used with {0}")]
+    PeginUnsupportedBuilderMode(&'static str),
+
     #[error("Missing PSET")]
     MissingPset,
 

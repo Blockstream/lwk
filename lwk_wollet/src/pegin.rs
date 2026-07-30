@@ -580,7 +580,7 @@ mod test {
     use elements::bitcoin;
     use elements::bitcoin::hashes::Hash;
 
-    use crate::{Error, Network};
+    use crate::{Error, Network, WolletBuilder};
 
     use super::{
         classify_fedpeg_program, fed_peg_script, height_with_fed_peg_script, FedPeg,
@@ -658,6 +658,15 @@ mod test {
             nonce: 0,
         };
         bitcoin::MerkleBlock::from_header_txids_with_predicate(&header, &[txid], |_| true)
+    }
+
+    fn test_pegin_input() -> super::PeginInput {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address, transaction).unwrap();
+        let funding = super::PeginFunding::new(deposit, test_txout_proof(txid)).unwrap();
+        super::PeginInput::from(funding)
     }
 
     #[test]
@@ -891,6 +900,73 @@ mod test {
         assert!(matches!(
             input.to_pset_input(),
             Err(Error::PeginVoutConflictsWithFlags { vout }) if vout == 1 << 30
+        ));
+    }
+
+    #[test]
+    fn tx_builder_adds_pegin_as_lbtc() {
+        let descriptor: crate::WolletDescriptor = lwk_test_util::PEGIN_TEST_DESC.parse().unwrap();
+        let wollet = WolletBuilder::new(Network::TestnetLiquid, descriptor)
+            .build()
+            .unwrap();
+        let recipient = wollet.address(Some(1)).unwrap();
+        let input = test_pegin_input();
+        let amount = input.funding().deposit().amount().to_sat();
+
+        let pset = wollet
+            .tx_builder()
+            .add_pegin_input(input)
+            .unwrap()
+            .add_lbtc_recipient(recipient.address(), amount / 2)
+            .unwrap()
+            .finish()
+            .unwrap();
+
+        assert_eq!(pset.inputs().len(), 1);
+        let input = &pset.inputs()[0];
+        assert!(input.is_pegin());
+        assert_eq!(input.asset, Some(*Network::TestnetLiquid.policy_asset()));
+        assert_eq!(input.amount, Some(amount));
+        assert!(!input.bip32_derivation.is_empty());
+    }
+
+    #[test]
+    fn tx_builder_rejects_duplicate_pegin() {
+        let input = test_pegin_input();
+        let builder = crate::TxBuilder::new(Network::TestnetLiquid)
+            .add_pegin_input(input.clone())
+            .unwrap();
+
+        assert!(matches!(
+            builder.add_pegin_input(input),
+            Err(Error::DuplicatedOutpoint(_, context)) if context == "pegin inputs"
+        ));
+    }
+
+    #[test]
+    fn tx_builder_rejects_pegin_network_mismatch() {
+        assert!(matches!(
+            crate::TxBuilder::new(Network::Liquid).add_pegin_input(test_pegin_input()),
+            Err(Error::PeginNetworkMismatch { .. })
+        ));
+    }
+
+    #[test]
+    fn tx_builder_rejects_ordered_pegin_inputs() {
+        let descriptor: crate::WolletDescriptor = lwk_test_util::PEGIN_TEST_DESC.parse().unwrap();
+        let wollet = WolletBuilder::new(Network::TestnetLiquid, descriptor)
+            .build()
+            .unwrap();
+
+        assert!(matches!(
+            wollet
+                .tx_builder()
+                .add_pegin_input(test_pegin_input())
+                .unwrap()
+                .set_wallet_utxos(vec![])
+                .set_inputs_order(vec![])
+                .finish(),
+            Err(Error::PeginUnsupportedBuilderMode("manual inputs order"))
         ));
     }
 

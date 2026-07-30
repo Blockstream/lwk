@@ -479,23 +479,33 @@ impl PeginInput {
 
         let txid = elements::Txid::from_byte_array(bitcoin_outpoint.txid.to_byte_array());
         let outpoint = elements::OutPoint::new(txid, bitcoin_outpoint.vout | PEGIN_FLAG);
+        let claim_script = self
+            .funding
+            .deposit()
+            .pegin_address()
+            .claim_script()
+            .clone();
+        let amount = self.funding.deposit().amount().to_sat();
         let mut input = elements::pset::Input::from_prevout(outpoint);
+        // Elements treats a pegin as spending this synthetic output. Including
+        // it lets standard PSET signers resolve the claim script and amount.
+        input.witness_utxo = Some(elements::TxOut {
+            asset: elements::confidential::Asset::Explicit(self.pegged_asset),
+            value: elements::confidential::Value::Explicit(amount),
+            nonce: elements::confidential::Nonce::Null,
+            script_pubkey: claim_script.clone(),
+            witness: Default::default(),
+        });
         input.pegin_tx = Some(self.funding.deposit().transaction().clone());
         input.pegin_txout_proof = Some(bitcoin::consensus::serialize(self.funding.txout_proof()));
         input.pegin_genesis_hash = Some(elements::BlockHash::from_byte_array(
             self.parent_genesis_hash.to_byte_array(),
         ));
-        input.pegin_claim_script = Some(
-            self.funding
-                .deposit()
-                .pegin_address()
-                .claim_script()
-                .clone(),
-        );
-        input.pegin_value = Some(self.funding.deposit().amount().to_sat());
+        input.pegin_claim_script = Some(claim_script);
+        input.pegin_value = Some(amount);
         input.pegin_witness = Some(self.pegin_witness.clone());
         input.asset = Some(self.pegged_asset);
-        input.amount = Some(self.funding.deposit().amount().to_sat());
+        input.amount = Some(amount);
         Ok(input)
     }
 }
@@ -824,6 +834,16 @@ mod test {
         assert_eq!(
             pset_input.previous_output_index,
             funding.deposit().outpoint().vout | (1 << 30)
+        );
+        assert_eq!(
+            pset_input.witness_utxo,
+            Some(elements::TxOut {
+                asset: elements::confidential::Asset::Explicit(input.pegged_asset()),
+                value: elements::confidential::Value::Explicit(funding.deposit().amount().to_sat()),
+                nonce: elements::confidential::Nonce::Null,
+                script_pubkey: funding.deposit().pegin_address().claim_script().clone(),
+                witness: Default::default(),
+            })
         );
         assert_eq!(pset_input.pegin_tx.as_ref(), Some(&transaction));
         assert_eq!(

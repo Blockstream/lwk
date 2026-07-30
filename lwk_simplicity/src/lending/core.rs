@@ -1188,7 +1188,7 @@ impl LendingSessionBuilder {
             descriptor,
             indexer_url: None,
             client: None,
-            fee_rate: 100.0,
+            fee_rate: lwk_common::DEFAULT_FEE_RATE,
         }
     }
 

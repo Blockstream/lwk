@@ -50,6 +50,9 @@ pub enum Error {
     #[error(transparent)]
     ElementsEncode(#[from] crate::elements::encode::Error),
 
+    #[error(transparent)]
+    BitcoinEncode(#[from] crate::bitcoin::consensus::encode::Error),
+
     #[error("Hex Error: {0}")]
     ElementsHex(crate::elements::hex::Error),
 

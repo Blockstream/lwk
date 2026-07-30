@@ -372,6 +372,18 @@ impl PeginFunding {
         })
     }
 
+    /// Decode and validate pegin funding from consensus-encoded Bitcoin data.
+    pub fn from_raw(
+        pegin_address: PeginAddress,
+        transaction: &[u8],
+        txout_proof: &[u8],
+    ) -> Result<Self, Error> {
+        let transaction = bitcoin::consensus::deserialize(transaction)?;
+        let txout_proof = bitcoin::consensus::deserialize(txout_proof)?;
+        let deposit = PeginDeposit::new(pegin_address, transaction)?;
+        Self::new(deposit, txout_proof)
+    }
+
     /// Return the authenticated pegin deposit.
     pub fn deposit(&self) -> &PeginDeposit {
         &self.deposit
@@ -622,6 +634,37 @@ mod test {
             Err(Error::PeginTransactionNotInProof {
                 txid: unmatched_txid
             }) if unmatched_txid == txid
+        ));
+    }
+
+    #[test]
+    fn pegin_funding_decodes_consensus_data() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let proof = test_txout_proof(txid);
+        let transaction_bytes = bitcoin::consensus::serialize(&transaction);
+        let proof_bytes = bitcoin::consensus::serialize(&proof);
+
+        let funding =
+            super::PeginFunding::from_raw(pegin_address, &transaction_bytes, &proof_bytes).unwrap();
+
+        assert_eq!(funding.deposit().transaction(), &transaction);
+        assert_eq!(funding.deposit().outpoint().txid, txid);
+        assert_eq!(
+            bitcoin::consensus::serialize(funding.txout_proof()),
+            proof_bytes
+        );
+        assert_eq!(funding.referenced_block(), proof.header.block_hash());
+    }
+
+    #[test]
+    fn pegin_funding_rejects_invalid_consensus_data() {
+        let pegin_address = test_pegin_address();
+
+        assert!(matches!(
+            super::PeginFunding::from_raw(pegin_address, &[0xff], &[0xff]),
+            Err(Error::BitcoinEncode(_))
         ));
     }
 

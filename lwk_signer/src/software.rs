@@ -306,11 +306,27 @@ fn p2pkh(xpub: &Xpub) -> bitcoin::Address {
     bitcoin::Address::p2pkh(bitcoin_pubkey, xpub.network)
 }
 
+fn extract_sighash_tx(
+    pset: &PartiallySignedTransaction,
+) -> Result<elements_miniscript::elements::Transaction, SignError> {
+    const PEGIN_FLAG: u32 = 1 << 30;
+
+    let mut tx = pset.extract_tx()?;
+    for input in &mut tx.input {
+        if input.is_pegin() {
+            // TODO: Remove once https://github.com/ElementsProject/rust-elements/issues/292
+            // is fixed. Elements Core masks this flag from the in-memory outpoint.
+            input.previous_output.vout &= !PEGIN_FLAG;
+        }
+    }
+    Ok(tx)
+}
+
 impl Signer for SwSigner {
     type Error = SignError;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
-        let tx = pset.extract_tx()?;
+        let tx = extract_sighash_tx(pset)?;
         let mut sighash_cache = SighashCache::new(&tx);
         let mut signature_added = 0;
 
@@ -464,7 +480,7 @@ pub fn sign_with_seckey(
     let signing_pk = seckey.public_key(&secp);
     let signing_pk = bitcoin::key::PublicKey::new(signing_pk);
 
-    let tx = pset.extract_tx()?;
+    let tx = extract_sighash_tx(pset)?;
     let mut sighash_cache = SighashCache::new(&tx);
     let mut signature_added = 0;
     let genesis_hash = elements_miniscript::elements::BlockHash::all_zeros();
@@ -499,7 +515,7 @@ pub fn sign_with_seckey(
 
 #[cfg(test)]
 mod tests {
-    use elements_miniscript::elements::hex::ToHex;
+    use elements_miniscript::elements::{hex::ToHex, OutPoint, Txid};
 
     use super::*;
 
@@ -528,6 +544,21 @@ mod tests {
         let xpub = signer.derive_xpub(&path).unwrap();
         let secp = Secp256k1::new();
         assert_eq!(xpub, Xpub::from_priv(&secp, &xprv));
+    }
+
+    #[test]
+    fn pegin_sighash_tx_masks_outpoint_flag() {
+        const PEGIN_FLAG: u32 = 1 << 30;
+
+        let mut pset = PartiallySignedTransaction::new_v2();
+        let outpoint = OutPoint::new(Txid::all_zeros(), 7 | PEGIN_FLAG);
+        pset.add_input(elements_miniscript::elements::pset::Input::from_prevout(
+            outpoint,
+        ));
+
+        let tx = extract_sighash_tx(&pset).unwrap();
+        assert!(tx.input[0].is_pegin());
+        assert_eq!(tx.input[0].previous_output.vout, 7);
     }
 
     #[test]

@@ -135,7 +135,7 @@ pub use crate::model::{
 #[cfg(not(target_arch = "wasm32"))]
 pub use crate::pegin::fetch_fed_peg;
 pub use crate::pegin::{
-    fed_peg_script, FedPeg, PeginAddress, PeginAddressType, PeginDeposit, PeginFunding,
+    fed_peg_script, FedPeg, PeginAddress, PeginAddressType, PeginDeposit, PeginFunding, PeginInput,
 };
 #[cfg(feature = "registry")]
 pub use crate::registry::RegistryAssetData;

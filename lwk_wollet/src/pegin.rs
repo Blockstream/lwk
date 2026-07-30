@@ -400,6 +400,70 @@ impl PeginFunding {
     }
 }
 
+/// Claim data prepared from authenticated pegin funding.
+///
+/// This type constructs the canonical pegin witness from the funding data and
+/// the network parameters retained by its [`PeginAddress`]. It does not
+/// establish that the referenced Bitcoin header is in the best chain or that
+/// the deposit has enough confirmations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PeginInput {
+    funding: PeginFunding,
+    pegged_asset: elements::AssetId,
+    parent_genesis_hash: bitcoin::BlockHash,
+    pegin_witness: Vec<Vec<u8>>,
+}
+
+impl From<PeginFunding> for PeginInput {
+    fn from(funding: PeginFunding) -> Self {
+        let network = funding.deposit().pegin_address().fed_peg().network();
+        let pegged_asset = *network.policy_asset();
+        let parent_genesis_hash = network.parent_genesis_hash();
+        let transaction = bitcoin::consensus::serialize(funding.deposit().transaction());
+        let txout_proof = bitcoin::consensus::serialize(funding.txout_proof());
+        let pegin_data = elements::PeginData {
+            outpoint: funding.deposit().outpoint(),
+            value: funding.deposit().amount().to_sat(),
+            asset: pegged_asset,
+            genesis_hash: parent_genesis_hash,
+            claim_script: funding.deposit().pegin_address().claim_script().as_bytes(),
+            tx: &transaction,
+            merkle_proof: &txout_proof,
+            referenced_block: funding.referenced_block(),
+        };
+        let pegin_witness = pegin_data.to_pegin_witness();
+
+        Self {
+            funding,
+            pegged_asset,
+            parent_genesis_hash,
+            pegin_witness,
+        }
+    }
+}
+
+impl PeginInput {
+    /// Return the authenticated funding used by this input.
+    pub fn funding(&self) -> &PeginFunding {
+        &self.funding
+    }
+
+    /// Return the asset created by claiming this pegin.
+    pub fn pegged_asset(&self) -> elements::AssetId {
+        self.pegged_asset
+    }
+
+    /// Return the parent-chain genesis hash committed to by this input.
+    pub fn parent_genesis_hash(&self) -> bitcoin::BlockHash {
+        self.parent_genesis_hash
+    }
+
+    /// Return the canonical six-element pegin witness.
+    pub fn pegin_witness(&self) -> &[Vec<u8>] {
+        &self.pegin_witness
+    }
+}
+
 fn classify_fedpeg_program(
     program: &bitcoin::Script,
     script: &bitcoin::Script,
@@ -666,6 +730,43 @@ mod test {
             super::PeginFunding::from_raw(pegin_address, &[0xff], &[0xff]),
             Err(Error::BitcoinEncode(_))
         ));
+    }
+
+    #[test]
+    fn pegin_input_constructs_claim_witness() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address, transaction.clone()).unwrap();
+        let proof = test_txout_proof(txid);
+        let funding = super::PeginFunding::new(deposit, proof.clone()).unwrap();
+        let input = super::PeginInput::from(funding.clone());
+        let pegin_data = elements::PeginData::from_pegin_witness(
+            input.pegin_witness(),
+            funding.deposit().outpoint(),
+        )
+        .unwrap();
+
+        assert_eq!(input.funding(), &funding);
+        assert_eq!(input.pegged_asset(), *Network::TestnetLiquid.policy_asset());
+        assert_eq!(
+            input.parent_genesis_hash(),
+            Network::TestnetLiquid.parent_genesis_hash()
+        );
+        assert_eq!(pegin_data.outpoint, funding.deposit().outpoint());
+        assert_eq!(pegin_data.value, funding.deposit().amount().to_sat());
+        assert_eq!(pegin_data.asset, input.pegged_asset());
+        assert_eq!(pegin_data.genesis_hash, input.parent_genesis_hash());
+        assert_eq!(
+            pegin_data.claim_script,
+            funding.deposit().pegin_address().claim_script().as_bytes()
+        );
+        assert_eq!(pegin_data.parse_tx().unwrap(), transaction);
+        assert_eq!(
+            bitcoin::consensus::serialize(&pegin_data.parse_merkle_proof().unwrap()),
+            bitcoin::consensus::serialize(&proof)
+        );
+        assert_eq!(pegin_data.referenced_block, funding.referenced_block());
     }
 
     #[test]

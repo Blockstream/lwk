@@ -10,7 +10,7 @@ documentation = "https://docs.rs/lwk_bindings"
 [dependencies]
 lwk_common = { version = "0.18.1" }
 lwk_signer = { version = "0.18.1" }
-lwk_wollet = { version = "0.18.1", features = ["electrum_oidc"] }
+lwk_wollet = { version = "0.18.1" }
 lwk_test_util = { version = "0.18.0" }
 lwk_payment_instructions = { version = "0.18.1" }
 lwk_boltz = { version = "0.18.0", optional = true }

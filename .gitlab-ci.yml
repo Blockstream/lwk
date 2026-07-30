@@ -191,9 +191,9 @@ test_auth:
     # (scoped to the e2e binary: the lib has ignored `authenticated` tests hitting real
     # staging/prod endpoints)
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    # electrum_oidc enables TokenProvider::Blockstream for the Electrum client (its expiry
-    # e2e is gated on the feature)
-    - cargo test -p lwk_wollet --features electrum_oidc --test e2e authenticated -- --ignored
+    # the authenticated-Electrum expiry e2e (TokenProvider::Blockstream) is gated on the
+    # electrum_oidc feature, now enabled by default
+    - cargo test -p lwk_wollet --test e2e authenticated -- --ignored
     # authenticated Electrum end to end through the CLI: funds a wallet through the proxy
     # (lwk_app enables electrum_oidc, so the CLI's Blockstream provider works)
     - cargo test -p lwk_cli test_auth_electrum_authenticated -- --ignored

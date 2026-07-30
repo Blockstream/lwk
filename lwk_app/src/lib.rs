@@ -1225,16 +1225,15 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         }
         Method::AssetContract => {
             let r: request::AssetContract = serde_json::from_value(params)?;
-            let c = lwk_wollet::Contract {
-                entity: lwk_wollet::Entity::Domain(r.domain),
-                issuer_pubkey: Vec::<u8>::from_hex(&r.issuer_pubkey)?,
-                name: r.name,
-                precision: r.precision,
-                ticker: r.ticker,
-                version: r.version,
-            };
+            let c = lwk_wollet::Contract::builder()
+                .entity(lwk_wollet::Entity::Domain(r.domain))
+                .issuer_pubkey(Vec::<u8>::from_hex(&r.issuer_pubkey)?)
+                .name(r.name)
+                .precision(r.precision)
+                .ticker(r.ticker)
+                .version(r.version)
+                .build()?;
             c.validate()?; // TODO: validation should be done at Contract creation
-
             Response::result(request.id, serde_json::to_value(c)?)
         }
         Method::AssetDetails => {
@@ -1355,7 +1354,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 let response = client.post(url).json(&data).send()?;
                 let mut result = response.text()?;
                 if result.contains("failed verifying linked entity") {
-                    let domain = contract.entity.domain();
+                    let domain = contract.entity().domain();
                     result = format!("https://{domain}/.well-known/liquid-asset-proof-{asset_id} must contain the following 'Authorize linking the domain name {domain} to the Liquid asset {asset_id}'");
                 }
                 Response::result(

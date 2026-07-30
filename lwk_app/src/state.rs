@@ -139,9 +139,9 @@ impl AppAsset {
     pub fn name(&self) -> String {
         match self {
             AppAsset::PolicyAsset(_) => "liquid bitcoin".into(),
-            AppAsset::RegistryAsset(d) => d.contract().name.clone(),
+            AppAsset::RegistryAsset(d) => d.contract().name().to_string(),
             AppAsset::ReissuanceToken(d) => {
-                format!("reissuance token for {}", d.contract().name)
+                format!("reissuance token for {}", d.contract().name())
             }
         }
     }
@@ -149,9 +149,9 @@ impl AppAsset {
     pub fn ticker(&self) -> String {
         match self {
             AppAsset::PolicyAsset(_) => "L-BTC".into(),
-            AppAsset::RegistryAsset(d) => d.contract().ticker.clone(),
+            AppAsset::RegistryAsset(d) => d.contract().ticker().to_string(),
             AppAsset::ReissuanceToken(d) => {
-                format!("reissuance token for {}", d.contract().ticker)
+                format!("reissuance token for {}", d.contract().ticker())
             }
         }
     }

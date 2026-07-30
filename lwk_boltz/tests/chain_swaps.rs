@@ -451,7 +451,17 @@ mod tests {
             .into_iter()
             .find(|data| data.create_chain_response.id == *swap_id)
             .expect("Our swap should be in the restorable list");
-        assert!(session.is_lockup_unspent(&our_swap).await.unwrap());
+        let mut attempts = 1;
+        let mut lockup_unspent = session.is_lockup_unspent(&our_swap).await.unwrap();
+        while !lockup_unspent && attempts < 30 {
+            sleep(Duration::from_secs(1)).await;
+            attempts += 1;
+            lockup_unspent = session.is_lockup_unspent(&our_swap).await.unwrap();
+        }
+        assert!(
+            lockup_unspent,
+            "lockup should be unspent after 30 Electrum indexing attempts"
+        );
         let our_swap: lwk_boltz::ChainSwapDataSerializable = our_swap.into();
         assert!(session
             .is_serialized_lockup_unspent(&our_swap)

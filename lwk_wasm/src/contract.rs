@@ -40,14 +40,14 @@ impl Contract {
         ticker: &str,
         version: u8,
     ) -> Result<Contract, Error> {
-        let inner = lwk_wollet::Contract {
-            entity: lwk_wollet::Entity::Domain(domain.to_string()),
-            issuer_pubkey: Vec::<u8>::from_hex(issuer_pubkey)?,
-            name: name.to_string(),
-            precision,
-            ticker: ticker.to_string(),
-            version,
-        };
+        let inner = lwk_wollet::Contract::builder()
+            .entity(lwk_wollet::Entity::Domain(domain.to_string()))
+            .issuer_pubkey(Vec::<u8>::from_hex(issuer_pubkey)?)
+            .name(name.to_string())
+            .precision(precision)
+            .ticker(ticker.to_string())
+            .version(version)
+            .build()?;
         inner.validate()?; // TODO validate should be the constructor
         Ok(Self { inner })
     }
@@ -61,7 +61,7 @@ impl Contract {
 
     /// Return the domain of the issuer of the contract.
     pub fn domain(&self) -> String {
-        self.inner.entity.domain().to_string()
+        self.inner.entity().domain().to_string()
     }
 
     /// Make a copy of the contract.

@@ -202,6 +202,15 @@ pub enum Error {
         fed_peg: &'static str,
     },
 
+    #[error("Pegin transaction does not pay the expected address")]
+    PeginOutputNotFound,
+
+    #[error("Pegin transaction pays the expected address more than once")]
+    PeginOutputAmbiguous,
+
+    #[error("Pegin transaction output index {vout} does not fit in an outpoint")]
+    PeginOutputIndexOverflow { vout: usize },
+
     #[error("Missing PSET")]
     MissingPset,
 

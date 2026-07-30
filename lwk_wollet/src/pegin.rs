@@ -270,6 +270,73 @@ impl PeginAddress {
     }
 }
 
+/// A Bitcoin transaction output paying a [`PeginAddress`].
+///
+/// Construction finds the output paying the exact Bitcoin script pubkey
+/// derived for the pegin and rejects transactions with zero or multiple
+/// matching outputs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PeginDeposit {
+    pegin_address: PeginAddress,
+    transaction: bitcoin::Transaction,
+    outpoint: bitcoin::OutPoint,
+    output: bitcoin::TxOut,
+}
+
+impl PeginDeposit {
+    /// Create and validate a pegin deposit.
+    pub fn new(
+        pegin_address: PeginAddress,
+        transaction: bitcoin::Transaction,
+    ) -> Result<Self, Error> {
+        let expected_script = pegin_address.address().script_pubkey();
+        let mut matching_outputs = transaction
+            .output
+            .iter()
+            .enumerate()
+            .filter(|(_, output)| output.script_pubkey == expected_script);
+        let (vout, output) = matching_outputs.next().ok_or(Error::PeginOutputNotFound)?;
+        if matching_outputs.next().is_some() {
+            return Err(Error::PeginOutputAmbiguous);
+        }
+        let output = output.clone();
+        let vout = u32::try_from(vout).map_err(|_| Error::PeginOutputIndexOverflow { vout })?;
+
+        let outpoint = bitcoin::OutPoint::new(transaction.compute_txid(), vout);
+        Ok(Self {
+            pegin_address,
+            transaction,
+            outpoint,
+            output,
+        })
+    }
+
+    /// Return the pegin address paid by this deposit.
+    pub fn pegin_address(&self) -> &PeginAddress {
+        &self.pegin_address
+    }
+
+    /// Return the Bitcoin transaction containing this deposit.
+    pub fn transaction(&self) -> &bitcoin::Transaction {
+        &self.transaction
+    }
+
+    /// Return the Bitcoin outpoint identifying this deposit.
+    pub fn outpoint(&self) -> bitcoin::OutPoint {
+        self.outpoint
+    }
+
+    /// Return the Bitcoin transaction output containing the deposited amount.
+    pub fn output(&self) -> &bitcoin::TxOut {
+        &self.output
+    }
+
+    /// Return the deposited amount.
+    pub fn amount(&self) -> bitcoin::Amount {
+        self.output.value
+    }
+}
+
 fn classify_fedpeg_program(
     program: &bitcoin::Script,
     script: &bitcoin::Script,
@@ -339,7 +406,7 @@ pub fn fetch_fed_peg<B: crate::clients::blocking::BlockchainBackend>(
 mod test {
     use elements::bitcoin;
 
-    use crate::Network;
+    use crate::{Error, Network};
 
     use super::{
         classify_fedpeg_program, fed_peg_script, height_with_fed_peg_script, FedPeg,
@@ -380,6 +447,69 @@ mod test {
         assert!(fed_peg.is_guaranteed_valid_at(2_963_520));
         assert!(fed_peg.is_guaranteed_valid_at(3_003_839));
         assert!(!fed_peg.is_guaranteed_valid_at(3_003_840));
+    }
+
+    fn test_pegin_address() -> super::PeginAddress {
+        let header = lwk_test_util::liquid_block_header_2_963_520();
+        let fed_peg = FedPeg::from_block_header(Network::TestnetLiquid, &header).unwrap();
+        let descriptor: crate::WolletDescriptor = lwk_test_util::PEGIN_TEST_DESC.parse().unwrap();
+        descriptor.pegin_address(0, &fed_peg).unwrap()
+    }
+
+    fn test_deposit_transaction(pegin_address: &super::PeginAddress) -> bitcoin::Transaction {
+        bitcoin::Transaction {
+            version: bitcoin::transaction::Version::TWO,
+            lock_time: bitcoin::absolute::LockTime::ZERO,
+            input: vec![],
+            output: vec![
+                bitcoin::TxOut {
+                    value: bitcoin::Amount::from_sat(1),
+                    script_pubkey: bitcoin::ScriptBuf::new(),
+                },
+                bitcoin::TxOut {
+                    value: bitcoin::Amount::from_sat(100_000),
+                    script_pubkey: pegin_address.address().script_pubkey(),
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn pegin_deposit_validates_output() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address.clone(), transaction.clone()).unwrap();
+
+        assert_eq!(deposit.pegin_address(), &pegin_address);
+        assert_eq!(deposit.transaction(), &transaction);
+        assert_eq!(deposit.outpoint(), bitcoin::OutPoint::new(txid, 1));
+        assert_eq!(deposit.output(), &transaction.output[1]);
+        assert_eq!(deposit.amount(), bitcoin::Amount::from_sat(100_000));
+    }
+
+    #[test]
+    fn pegin_deposit_rejects_missing_output() {
+        let pegin_address = test_pegin_address();
+        let mut transaction = test_deposit_transaction(&pegin_address);
+        transaction.output.pop();
+
+        assert!(matches!(
+            super::PeginDeposit::new(pegin_address, transaction),
+            Err(Error::PeginOutputNotFound)
+        ));
+    }
+
+    #[test]
+    fn pegin_deposit_rejects_ambiguous_output() {
+        let pegin_address = test_pegin_address();
+        let mut transaction = test_deposit_transaction(&pegin_address);
+        transaction.output.push(transaction.output[1].clone());
+
+        assert!(matches!(
+            super::PeginDeposit::new(pegin_address, transaction),
+            Err(Error::PeginOutputAmbiguous)
+        ));
     }
 
     #[test]

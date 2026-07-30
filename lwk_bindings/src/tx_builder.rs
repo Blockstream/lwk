@@ -164,10 +164,8 @@ impl TxBuilder {
     ///
     /// **Experimental**: this API might change without notice.
     ///
-    /// `request` sets the asset/token amounts, receivers, and contract; see
+    /// `request` sets the asset/token amounts, receivers, contract and pinning; see
     /// [`IssuanceRequest`] for details.
-    ///
-    /// Optionally, pin the issuance to a specific input via [`IssuanceRequest::pin_input()`].
     ///
     /// Can be called multiple times to issue several assets in the same transaction. All calls
     /// must agree on pinning: either every issuance is pinned (each to a different input) or
@@ -218,7 +216,7 @@ impl TxBuilder {
     ///
     /// **Experimental**: this API might change without notice.
     ///
-    /// `request` sets the asset to reissue, amount, receiver, and issuance transaction; see
+    /// `request` sets the asset to reissue, amount, receivers, and issuance transaction; see
     /// [`ReissuanceRequest`] for details.
     ///
     /// Can be called multiple times to reissue several assets in the same transaction, as long
@@ -341,7 +339,9 @@ pub struct IssuanceRequest {
 #[uniffi::export]
 impl IssuanceRequest {
     /// Construct a builder for an issuance of `satoshi_asset` asset units and `satoshi_token`
-    /// reissuance tokens (at least one of the two must be greater than zero)
+    /// reissuance tokens
+    ///
+    /// At least one of the two amounts must be greater than zero.
     #[uniffi::constructor]
     pub fn new(satoshi_asset: u64, satoshi_token: u64) -> Self {
         IssuanceRequest {
@@ -352,21 +352,51 @@ impl IssuanceRequest {
         }
     }
 
-    /// Sets the address receiving the issued asset units; if not called, they are sent
-    /// to an address of the wallet generating the issuance
-    pub fn address_asset(&self, address: &Address) -> Result<(), LwkError> {
+    /// Adds an output receiving `satoshi` of the issued asset units
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// The units are sent to `address` if some, or to an address of the wallet generating the
+    /// issuance if none.
+    ///
+    /// Call this multiple times to split the issued units across several outputs: the amounts of
+    /// all the added outputs must sum up to the issued amount, otherwise
+    /// [`TxBuilder::add_issuance()`] errors.
+    ///
+    /// If not called, the issued units are sent to a single address of the wallet generating the
+    /// issuance.
+    pub fn add_asset_output(
+        &self,
+        satoshi: u64,
+        address: Option<Arc<Address>>,
+    ) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
-        *lock = Some(inner.address_asset(address.into()));
+        *lock = Some(inner.add_asset_output(satoshi, address.map(|a| a.as_ref().into())));
         Ok(())
     }
 
-    /// Sets the address receiving the reissuance tokens; if not called, they are sent
-    /// to an address of the wallet generating the issuance
-    pub fn address_token(&self, address: &Address) -> Result<(), LwkError> {
+    /// Adds an output receiving `satoshi` reissuance tokens
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// The tokens are sent to `address` if some, or to an address of the wallet generating the
+    /// issuance if none.
+    ///
+    /// Call this multiple times to split the reissuance tokens across several outputs: the amounts
+    /// of all the added outputs must sum up to the issued token amount, otherwise
+    /// [`TxBuilder::add_issuance()`] errors.
+    ///
+    /// If not called, the reissuance tokens are sent to a single address of the wallet generating
+    /// the issuance.
+    pub fn add_token_output(
+        &self,
+        satoshi: u64,
+        address: Option<Arc<Address>>,
+    ) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
-        *lock = Some(inner.address_token(address.into()));
+        *lock = Some(inner.add_token_output(satoshi, address.map(|a| a.as_ref().into())));
         Ok(())
     }
 
@@ -410,8 +440,9 @@ pub struct ReissuanceRequest {
 
 #[uniffi::export]
 impl ReissuanceRequest {
-    /// Construct a request to reissue `satoshi_to_reissue` units of `asset_to_reissue`, provided
-    /// the reissuance token is owned by the wallet generating the reissuance
+    /// Construct a request to reissue `satoshi_to_reissue` units of `asset_to_reissue`
+    ///
+    /// Requires the reissuance token to be owned by the wallet generating the reissuance.
     #[uniffi::constructor]
     pub fn new(asset_to_reissue: AssetId, satoshi_to_reissue: u64) -> Self {
         ReissuanceRequest {
@@ -422,17 +453,33 @@ impl ReissuanceRequest {
         }
     }
 
-    /// Sets the address receiving the reissued asset units; if not called, they are sent
-    /// to an address of the wallet generating the reissuance
-    pub fn asset_receiver(&self, address: &Address) -> Result<(), LwkError> {
+    /// Adds an output receiving `satoshi` of the reissued asset units
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// The units are sent to `address` if some, or to an address of the wallet generating the
+    /// reissuance if none.
+    ///
+    /// Call this multiple times to split the reissued units across several outputs: the amounts of
+    /// all the added outputs must sum up to the reissued amount, otherwise
+    /// [`TxBuilder::add_reissuance()`] errors.
+    ///
+    /// If not called, the reissued units are sent to a single address of the wallet generating the
+    /// reissuance.
+    pub fn add_asset_output(
+        &self,
+        satoshi: u64,
+        address: Option<Arc<Address>>,
+    ) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
-        *lock = Some(inner.asset_receiver(address.into()));
+        *lock = Some(inner.add_asset_output(satoshi, address.map(|a| a.as_ref().into())));
         Ok(())
     }
 
-    /// Sets the transaction containing the original issuance of the reissued asset; only
-    /// needed if that issuance transaction does not involve this wallet
+    /// Sets the transaction containing the original issuance of the reissued asset
+    ///
+    /// Only needed if that issuance transaction does not involve this wallet.
     pub fn issuance_tx(&self, tx: &Transaction) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;

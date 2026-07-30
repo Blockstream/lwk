@@ -46,3 +46,4 @@ str(lwk.Network.mainnet())
 * [Multisig](../lwk_bindings/tests/bindings/multisig.py) demonstrates multisignature wallet setup and usage
 * [PSET details](../lwk_bindings/tests/bindings/pset_details.py) shows how to inspect and work with Partially Signed Elements Transactions
 * [Authenticated Esplora](../lwk_bindings/tests/bindings/authenticated_esplora_client.py) connects to an authenticated Esplora/Waterfalls backend using OAuth2, a static token, or custom headers
+* [Authenticated Electrum](../lwk_bindings/tests/bindings/authenticated_electrum_client.py) connects to an authenticated Electrum RPC proxy using OAuth2 or a static token

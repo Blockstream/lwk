@@ -4629,6 +4629,30 @@ fn blocking_clients() -> Result<(), Box<dyn std::error::Error>> {
     let tip = client.tip().unwrap();
     assert!(tip.height > 100);
 
+    // ANCHOR: authenticated_electrum_client
+    use lwk_wollet::clients::TokenProvider;
+    use lwk_wollet::ElectrumClientBuilder;
+
+    let url = "ssl://enterprise.blockstream.info:50002";
+    let client_id = "your_client_id";
+    let client_secret = "your_client_secret";
+    let client_id = std::env::var("CLIENT_ID").unwrap(); // ANCHOR: ignore
+    let client_secret = std::env::var("CLIENT_SECRET").unwrap(); // ANCHOR: ignore
+    let login_url =
+        "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
+
+    // The token provider needs the `electrum_oidc` cargo feature.
+    let mut client = ElectrumClientBuilder::new(url)
+        .token_provider(TokenProvider::Blockstream {
+            url: login_url.to_string(),
+            client_id: client_id.to_string(),
+            client_secret: client_secret.to_string(),
+        })
+        .build()?;
+    // ANCHOR_END: authenticated_electrum_client
+    let tip = client.tip().unwrap();
+    assert!(tip.height > 100);
+
     Ok(())
 }
 

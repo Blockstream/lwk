@@ -69,6 +69,44 @@ This client is recommended for desktop, mobile, and server applications where in
 </section>
 </custom-tabs>
 
+### Authenticated Electrum
+
+Electrum RPC proxies can also require authentication, e.g. [Blockstream Enterprise](https://blockstream.info/explorer-api). LWK supports the same OAuth2 token provider as the Esplora client, with automatic refresh; it needs the `electrum_oidc` cargo feature.
+
+The token is only sent over an encrypted `ssl://` connection. On a plaintext `tcp://` url it is refused unless explicitly allowed (for a localhost or already-tunneled proxy: `allow_plaintext_with_token` in the bindings builder, or `--auth-allow-plaintext-with-token` in `lwk_cli`).
+
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:authenticated_electrum_client}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+{{#include ../../lwk_bindings/tests/bindings/authenticated_electrum_client.py:authenticated_electrum_client}}
+```
+</section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+```
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+```
+</section>
+</custom-tabs>
+
 ## Esplora
 
 The Esplora client is based on the [Esplora API](https://github.com/Blockstream/esplora/blob/master/API.md), a popular HTTP-based blockchain explorer API.

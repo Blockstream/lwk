@@ -164,22 +164,12 @@ impl TxBuilder {
             .into())
     }
 
-    /// Issue an asset
+    /// Issue an asset, or several assets by calling this multiple times in the same transaction
     ///
     /// **Experimental**: this API might change without notice.
     ///
-    /// There will be `asset_sats` units of the asset, received by the address set via
-    /// [`IssuanceRequest::address_asset`] if any, otherwise by an address of the wallet
-    /// generating the issuance.
-    ///
-    /// There will be `token_sats` reissuance tokens that allow the token holder to reissue the
-    /// created asset, received by the address set via [`IssuanceRequest::address_token`]
-    /// if any, otherwise by an address of the wallet generating the issuance.
-    ///
-    /// If a contract is set via [`IssuanceRequest::contract`], its metadata will be
-    /// committed in the generated asset id.
-    ///
-    /// Optionally, pin the issuance to a specific input via [`IssuanceRequest::pin_input`].
+    /// `request` sets the asset/token amounts, receivers, contract and pinning; see
+    /// [`IssuanceRequest`] for details.
     ///
     /// Can be called multiple times to issue several assets in the same transaction. All calls
     /// must agree on pinning: either every issuance is pinned (each to a different input) or
@@ -227,7 +217,7 @@ impl TxBuilder {
     ///
     /// **Experimental**: this API might change without notice.
     ///
-    /// `request` sets the asset to reissue, amount, receiver, and issuance transaction; see
+    /// `request` sets the asset to reissue, amount, receivers, and issuance transaction; see
     /// [`ReissuanceRequest`] for details.
     ///
     /// Can be called multiple times to reissue several assets in the same transaction, as long
@@ -340,7 +330,9 @@ impl From<IssuanceRequest> for lwk_wollet::IssuanceRequest {
 #[wasm_bindgen]
 impl IssuanceRequest {
     /// Creates a builder for an issuance of `satoshi_asset` asset units and `satoshi_token`
-    /// reissuance tokens (at least one of the two must be greater than zero)
+    /// reissuance tokens
+    ///
+    /// At least one of the two amounts must be greater than zero.
     #[wasm_bindgen(constructor)]
     pub fn new(satoshi_asset: u64, satoshi_token: u64) -> IssuanceRequest {
         IssuanceRequest {
@@ -348,18 +340,43 @@ impl IssuanceRequest {
         }
     }
 
-    /// Sets the address receiving the issued asset units; if not called, they are sent
-    /// to an address of the wallet generating the issuance
-    #[wasm_bindgen(js_name = addressAsset)]
-    pub fn address_asset(self, address: Address) -> IssuanceRequest {
-        self.inner.address_asset(address.into()).into()
+    /// Adds an output receiving `satoshi` of the issued asset units
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// The units are sent to `address` if some, or to an address of the wallet generating the
+    /// issuance if none.
+    ///
+    /// Call this multiple times to split the issued units across several outputs: the amounts of
+    /// all the added outputs must sum up to the issued amount, otherwise `addIssuance` errors.
+    ///
+    /// If not called, the issued units are sent to a single address of the wallet generating the
+    /// issuance.
+    #[wasm_bindgen(js_name = addAssetOutput)]
+    pub fn add_asset_output(self, satoshi: u64, address: Option<Address>) -> IssuanceRequest {
+        self.inner
+            .add_asset_output(satoshi, address.map(Into::into))
+            .into()
     }
 
-    /// Sets the address receiving the reissuance tokens; if not called, they are sent
-    /// to an address of the wallet generating the issuance
-    #[wasm_bindgen(js_name = addressToken)]
-    pub fn address_token(self, address: Address) -> IssuanceRequest {
-        self.inner.address_token(address.into()).into()
+    /// Adds an output receiving `satoshi` reissuance tokens
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// The tokens are sent to `address` if some, or to an address of the wallet generating the
+    /// issuance if none.
+    ///
+    /// Call this multiple times to split the reissuance tokens across several outputs: the amounts
+    /// of all the added outputs must sum up to the issued token amount, otherwise `addIssuance`
+    /// errors.
+    ///
+    /// If not called, the reissuance tokens are sent to a single address of the wallet generating
+    /// the issuance.
+    #[wasm_bindgen(js_name = addTokenOutput)]
+    pub fn add_token_output(self, satoshi: u64, address: Option<Address>) -> IssuanceRequest {
+        self.inner
+            .add_token_output(satoshi, address.map(Into::into))
+            .into()
     }
 
     /// Sets the contract whose metadata will be committed in the generated asset id
@@ -401,8 +418,9 @@ impl From<ReissuanceRequest> for lwk_wollet::ReissuanceRequest {
 
 #[wasm_bindgen]
 impl ReissuanceRequest {
-    /// Creates a request to reissue `satoshi_to_reissue` units of `asset_to_reissue`, provided
-    /// the reissuance token is owned by the wallet generating the reissuance
+    /// Creates a request to reissue `satoshi_to_reissue` units of `asset_to_reissue`
+    ///
+    /// Requires the reissuance token to be owned by the wallet generating the reissuance.
     #[wasm_bindgen(constructor)]
     pub fn new(asset_to_reissue: &AssetId, satoshi_to_reissue: u64) -> ReissuanceRequest {
         ReissuanceRequest {
@@ -410,15 +428,28 @@ impl ReissuanceRequest {
         }
     }
 
-    /// Sets the address receiving the reissued asset units; if not called, they are sent
-    /// to an address of the wallet generating the reissuance
-    #[wasm_bindgen(js_name = assetReceiver)]
-    pub fn asset_receiver(self, address: Address) -> ReissuanceRequest {
-        self.inner.asset_receiver(address.into()).into()
+    /// Adds an output receiving `satoshi` of the reissued asset units
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// The units are sent to `address` if some, or to an address of the wallet generating the
+    /// reissuance if none.
+    ///
+    /// Call this multiple times to split the reissued units across several outputs: the amounts of
+    /// all the added outputs must sum up to the reissued amount, otherwise `addReissuance` errors.
+    ///
+    /// If not called, the reissued units are sent to a single address of the wallet generating the
+    /// reissuance.
+    #[wasm_bindgen(js_name = addAssetOutput)]
+    pub fn add_asset_output(self, satoshi: u64, address: Option<Address>) -> ReissuanceRequest {
+        self.inner
+            .add_asset_output(satoshi, address.map(Into::into))
+            .into()
     }
 
-    /// Sets the transaction containing the original issuance of the reissued asset; only
-    /// needed if that issuance transaction does not involve this wallet
+    /// Sets the transaction containing the original issuance of the reissued asset
+    ///
+    /// Only needed if that issuance transaction does not involve this wallet.
     #[wasm_bindgen(js_name = issuanceTx)]
     pub fn issuance_tx(self, tx: Transaction) -> ReissuanceRequest {
         self.inner.issuance_tx(tx.into()).into()

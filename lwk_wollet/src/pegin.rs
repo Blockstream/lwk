@@ -337,6 +337,57 @@ impl PeginDeposit {
     }
 }
 
+/// A pegin deposit authenticated by a Bitcoin transaction inclusion proof.
+///
+/// Construction verifies the partial Merkle tree against its block header and
+/// requires the deposit transaction among the matched transactions. It does
+/// not establish that the header belongs to the best Bitcoin chain or that the
+/// deposit has enough confirmations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PeginFunding {
+    deposit: PeginDeposit,
+    txout_proof: bitcoin::MerkleBlock,
+    referenced_block: bitcoin::BlockHash,
+}
+
+impl PeginFunding {
+    /// Create and validate proven pegin funding.
+    pub fn new(deposit: PeginDeposit, txout_proof: bitcoin::MerkleBlock) -> Result<Self, Error> {
+        let mut matched_txids = Vec::new();
+        let mut matched_indexes = Vec::new();
+        txout_proof
+            .extract_matches(&mut matched_txids, &mut matched_indexes)
+            .map_err(|e| Error::InvalidPeginProof(e.to_string()))?;
+
+        let txid = deposit.outpoint().txid;
+        if !matched_txids.contains(&txid) {
+            return Err(Error::PeginTransactionNotInProof { txid });
+        }
+
+        let referenced_block = txout_proof.header.block_hash();
+        Ok(Self {
+            deposit,
+            txout_proof,
+            referenced_block,
+        })
+    }
+
+    /// Return the authenticated pegin deposit.
+    pub fn deposit(&self) -> &PeginDeposit {
+        &self.deposit
+    }
+
+    /// Return the Bitcoin transaction inclusion proof.
+    pub fn txout_proof(&self) -> &bitcoin::MerkleBlock {
+        &self.txout_proof
+    }
+
+    /// Return the Bitcoin block header hash committed to by the proof.
+    pub fn referenced_block(&self) -> bitcoin::BlockHash {
+        self.referenced_block
+    }
+}
+
 fn classify_fedpeg_program(
     program: &bitcoin::Script,
     script: &bitcoin::Script,
@@ -405,6 +456,7 @@ pub fn fetch_fed_peg<B: crate::clients::blocking::BlockchainBackend>(
 #[cfg(test)]
 mod test {
     use elements::bitcoin;
+    use elements::bitcoin::hashes::Hash;
 
     use crate::{Error, Network};
 
@@ -474,6 +526,18 @@ mod test {
         }
     }
 
+    fn test_txout_proof(txid: bitcoin::Txid) -> bitcoin::MerkleBlock {
+        let header = bitcoin::block::Header {
+            version: bitcoin::block::Version::ONE,
+            prev_blockhash: bitcoin::BlockHash::all_zeros(),
+            merkle_root: bitcoin::TxMerkleNode::from_raw_hash(txid.to_raw_hash()),
+            time: 0,
+            bits: bitcoin::CompactTarget::from_consensus(0),
+            nonce: 0,
+        };
+        bitcoin::MerkleBlock::from_header_txids_with_predicate(&header, &[txid], |_| true)
+    }
+
     #[test]
     fn pegin_deposit_validates_output() {
         let pegin_address = test_pegin_address();
@@ -509,6 +573,55 @@ mod test {
         assert!(matches!(
             super::PeginDeposit::new(pegin_address, transaction),
             Err(Error::PeginOutputAmbiguous)
+        ));
+    }
+
+    #[test]
+    fn pegin_funding_validates_txout_proof() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address, transaction).unwrap();
+        let proof = test_txout_proof(txid);
+        let referenced_block = proof.header.block_hash();
+        let funding = super::PeginFunding::new(deposit.clone(), proof.clone()).unwrap();
+
+        assert_eq!(funding.deposit(), &deposit);
+        assert_eq!(funding.txout_proof(), &proof);
+        assert_eq!(funding.referenced_block(), referenced_block);
+    }
+
+    #[test]
+    fn pegin_funding_rejects_invalid_txout_proof() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address, transaction).unwrap();
+        let mut proof = test_txout_proof(txid);
+        proof.header.merkle_root = bitcoin::TxMerkleNode::all_zeros();
+
+        assert!(matches!(
+            super::PeginFunding::new(deposit, proof),
+            Err(Error::InvalidPeginProof(_))
+        ));
+    }
+
+    #[test]
+    fn pegin_funding_rejects_unmatched_transaction() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address, transaction).unwrap();
+        let mut other_transaction = test_deposit_transaction(deposit.pegin_address());
+        other_transaction.output[0].value = bitcoin::Amount::from_sat(2);
+        let other_txid = other_transaction.compute_txid();
+        let proof = test_txout_proof(other_txid);
+
+        assert!(matches!(
+            super::PeginFunding::new(deposit, proof),
+            Err(Error::PeginTransactionNotInProof {
+                txid: unmatched_txid
+            }) if unmatched_txid == txid
         ));
     }
 

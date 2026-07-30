@@ -211,6 +211,12 @@ pub enum Error {
     #[error("Pegin transaction output index {vout} does not fit in an outpoint")]
     PeginOutputIndexOverflow { vout: usize },
 
+    #[error("Invalid pegin txout proof: {0}")]
+    InvalidPeginProof(String),
+
+    #[error("Pegin transaction {txid} is not included in the txout proof")]
+    PeginTransactionNotInProof { txid: crate::bitcoin::Txid },
+
     #[error("Missing PSET")]
     MissingPset,
 

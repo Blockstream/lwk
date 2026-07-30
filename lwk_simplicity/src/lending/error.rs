@@ -25,4 +25,10 @@ pub enum LendingError {
 
     #[error("Blinding error: {0}")]
     BlindingError(#[from] lwk_wollet::elements::pset::PsetBlindError),
+
+    #[error("Cannot liquidate offer: current height {current_height}, but offer can be liquidated after {loan_expiration_height}")]
+    CannotLiquidate {
+        current_height: u32,
+        loan_expiration_height: u32,
+    },
 }

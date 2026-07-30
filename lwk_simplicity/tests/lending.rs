@@ -374,7 +374,7 @@ async fn test_liquidate_offer() {
         .build()
         .unwrap();
 
-    let client = electrum_client(&env);
+    let mut client = electrum_client(&env);
 
     borrower_session.sync().unwrap();
 
@@ -444,21 +444,29 @@ async fn test_liquidate_offer() {
         vout: 0,
     };
 
-    // TODO: should we check expiration time inside LendingSession?
     // liquidate before expiration should fail to broadcast
-    let liquidate = lender_session
+    lender_session
         .liquidate_offer(LiquidateOfferDetails {
             active_covenant_outpoint: covenant_outpoint,
             protocol_fee_keeper_asset_id,
         })
-        .unwrap();
-    let mut pset = liquidate.into_inner();
-    lender_signer.sign(&mut pset).unwrap();
-    let tx = lender_session.finalize(&mut pset).unwrap();
-    client.broadcast(&tx).unwrap_err();
+        .err()
+        .expect("Liquidation should fail before expiration time");
 
     // Mine blocks past the expiration height
     env.elementsd_generate(15);
+    lender_session.sync().unwrap();
+
+    // Wait for the client to fetch new mined blocks, because we are relying on this info in
+    // liquidation method.
+    let current_height = env.elementsd_height() as u32;
+    for _ in 0..20 {
+        let tip = client.tip().unwrap();
+        if tip.height == current_height {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
 
     let liquidate = lender_session
         .liquidate_offer(LiquidateOfferDetails {

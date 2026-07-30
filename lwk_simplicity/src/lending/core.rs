@@ -63,6 +63,13 @@ impl AnyClient {
             AnyClient::Esplora(c) => c.get_transaction(txid),
         }
     }
+
+    fn tip(&mut self) -> Result<lwk_wollet::elements::BlockHeader, lwk_wollet::Error> {
+        match self {
+            AnyClient::Electrum(c) => c.tip(),
+            AnyClient::Esplora(c) => c.tip(),
+        }
+    }
 }
 
 pub struct LendingSession {
@@ -882,6 +889,15 @@ impl LendingSession {
         )?;
 
         let offer_params = *offer.get_parameters();
+        let tip = self.client.tip()?;
+
+        if tip.height <= offer_params.offer_parameters.loan_expiration_time {
+            return Err(LendingError::CannotLiquidate {
+                current_height: tip.height,
+                loan_expiration_height: offer_params.offer_parameters.loan_expiration_time,
+            });
+        }
+
         let total_debt = offer_params.offer_parameters.get_total_amount_to_repay();
         let offer = LendingOffer::new_active(offer_params, total_debt);
 

@@ -249,3 +249,26 @@ wollet.wait_for_tx(txid, client)
 assert(wollet.balance()[multi_asset0] == 30 + reissue_multi_asset0)
 assert(wollet.balance()[multi_asset1] == 40 + reissue_multi_asset1)
 
+# Split a single issuance across multiple outputs
+request = IssuanceRequest(2, 1)
+request.add_asset_output(1, None)
+request.add_asset_output(1, None)
+
+builder = network.tx_builder()
+builder.add_issuance(request)
+unsigned_pset = builder.finish(wollet)
+
+split_asset = next(e.issuance().asset() for e in unsigned_pset.inputs() if e.issuance())
+
+signed_pset = signer.sign(unsigned_pset)
+finalized_pset = wollet.finalize(signed_pset)
+tx = finalized_pset.extract_tx()
+txid = client.broadcast(tx)
+wollet.wait_for_tx(txid, client)
+
+split_outputs = [u for u in wollet.utxos() if u.unblinded().asset() == split_asset]
+assert len(split_outputs) == 2
+assert all(u.unblinded().value() == 1 for u in split_outputs)
+# Outputs without an explicit address get a fresh address each
+assert str(split_outputs[0].script_pubkey()) != str(split_outputs[1].script_pubkey())
+

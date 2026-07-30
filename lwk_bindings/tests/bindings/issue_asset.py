@@ -132,13 +132,13 @@ builder = network.tx_builder()
 asset_receiver0 = wollet.address(4).address()
 token_receiver0 = wollet.address(5).address()
 request0 = IssuanceRequest(30, 3)
-request0.address_asset(asset_receiver0)
-request0.address_token(token_receiver0)
+request0.add_asset_output(30, asset_receiver0)
+request0.add_token_output(3, token_receiver0)
 builder.add_issuance(request0)
 
 asset_receiver1 = wollet.address(6).address()
 request1 = IssuanceRequest(40, 4)
-request1.address_asset(asset_receiver1)
+request1.add_asset_output(40, asset_receiver1)
 request1.contract(contract)
 builder.add_issuance(request1)
 
@@ -223,7 +223,7 @@ reissue_multi_asset0 = 7
 reissue_multi_asset1 = 8
 
 request0 = ReissuanceRequest(multi_asset0, reissue_multi_asset0)
-request0.asset_receiver(wollet.address(8).address())
+request0.add_asset_output(reissue_multi_asset0, wollet.address(8).address())
 request1 = ReissuanceRequest(multi_asset1, reissue_multi_asset1)
 
 builder = network.tx_builder()

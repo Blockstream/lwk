@@ -40,6 +40,7 @@ pub struct TestEnvBuilder {
     with_amp2: bool,
     with_zmq: bool,
     with_auth: bool,
+    fedpeg_script: Option<String>,
 }
 
 impl TestEnvBuilder {
@@ -75,6 +76,7 @@ impl TestEnvBuilder {
             with_amp2: false,
             with_zmq: false,
             with_auth: false,
+            fedpeg_script: None,
         }
     }
 
@@ -93,6 +95,12 @@ impl TestEnvBuilder {
     /// Start a Bitcoin node
     pub fn with_bitcoind(mut self) -> Self {
         self.with_bitcoind = true;
+        self
+    }
+
+    /// Configure the federation peg script used by Elements
+    pub fn with_fedpeg_script(mut self, fedpeg_script: impl Into<String>) -> Self {
+        self.fedpeg_script = Some(fedpeg_script.into());
         self
     }
 
@@ -217,6 +225,11 @@ impl TestEnvBuilder {
         } else {
             args.push("-validatepegin=0");
         };
+        if let Some(fedpeg_script) = self.fedpeg_script {
+            args.push(string_to_static_str(format!(
+                "-fedpegscript={fedpeg_script}"
+            )));
+        }
 
         let zmq_endpoint = if self.with_zmq {
             let addr = TcpListener::bind("0.0.0.0:0")

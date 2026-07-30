@@ -3284,6 +3284,170 @@ fn test_multiple_reissuances() {
     assert_eq!(w.balance(&token1), 2);
 }
 
+// TODO: move to lwk_wollet::issuance
+#[test]
+fn test_multiple_issuance_outputs() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &desc);
+
+    w.fund(&env, 100_000, None, None);
+    env.elementsd_generate(1);
+
+    // The outputs receiving the asset units must sum up to the issued amount
+    let err = w
+        .tx_builder()
+        .add_issuance(IssuanceRequest::new(2, 1).add_asset_output(1, None))
+        .unwrap_err();
+    assert!(matches!(
+        err,
+        Error::IssuanceOutputsAmountMismatch {
+            expected: 2,
+            found: 1
+        }
+    ));
+
+    // The same holds for the outputs receiving the reissuance tokens
+    let err = w
+        .tx_builder()
+        .add_issuance(
+            IssuanceRequest::new(2, 1)
+                .add_token_output(1, None)
+                .add_token_output(1, None),
+        )
+        .unwrap_err();
+    assert!(matches!(
+        err,
+        Error::IssuanceOutputsAmountMismatch {
+            expected: 1,
+            found: 2
+        }
+    ));
+
+    // Outputs receiving nothing are rejected
+    let err = w
+        .tx_builder()
+        .add_issuance(
+            IssuanceRequest::new(2, 1)
+                .add_asset_output(2, None)
+                .add_asset_output(0, None),
+        )
+        .unwrap_err();
+    assert!(matches!(err, Error::InvalidAmount));
+
+    let asset_outputs = |tx: &WalletTx, asset: elements::AssetId| -> Vec<WalletTxOut> {
+        tx.outputs
+            .iter()
+            .flatten()
+            .filter(|o| o.unblinded.asset == asset)
+            .cloned()
+            .collect()
+    };
+
+    // Issue 2 asset units, split across two outputs of 1 unit each
+    let mut pset = w
+        .tx_builder()
+        .add_issuance(
+            IssuanceRequest::new(2, 1)
+                .add_asset_output(1, None)
+                .add_asset_output(1, None),
+        )
+        .unwrap()
+        .finish()
+        .unwrap();
+    let (asset, token) = pset.inputs()[0].issuance_ids();
+    assert_eq!(pset.inputs()[0].issuance_value_amount, Some(2));
+    assert_eq!(pset.inputs()[0].issuance_inflation_keys, Some(1));
+
+    signer.sign(&mut pset).unwrap();
+    let txid = w.send(&mut pset);
+    env.elementsd_generate(1);
+
+    let tx = w.get_tx(&txid);
+    let outputs = asset_outputs(&tx, asset);
+    assert_eq!(outputs.len(), 2);
+    assert!(outputs.iter().all(|o| o.unblinded.value == 1));
+    // Outputs without an explicit address get a fresh address each
+    assert_ne!(outputs[0].script_pubkey, outputs[1].script_pubkey);
+    // The reissuance token is not split, so it lands on a single output
+    assert_eq!(asset_outputs(&tx, token).len(), 1);
+    assert_eq!(w.balance(&asset), 2);
+    assert_eq!(w.balance(&token), 1);
+
+    // Issue 2 reissuance tokens, split across two outputs of 1 token each, while the asset units
+    // are received by an explicit address
+    let asset_address = w.address();
+    let mut pset = w
+        .tx_builder()
+        .add_issuance(
+            IssuanceRequest::new(1, 2)
+                .add_asset_output(1, Some(asset_address.clone()))
+                .add_token_output(1, None)
+                .add_token_output(1, None),
+        )
+        .unwrap()
+        .finish()
+        .unwrap();
+    let (asset_2, token_2) = pset.inputs()[0].issuance_ids();
+    assert_eq!(pset.inputs()[0].issuance_value_amount, Some(1));
+    assert_eq!(pset.inputs()[0].issuance_inflation_keys, Some(2));
+
+    signer.sign(&mut pset).unwrap();
+    let txid = w.send(&mut pset);
+    env.elementsd_generate(1);
+
+    let tx = w.get_tx(&txid);
+    let outputs = asset_outputs(&tx, token_2);
+    assert_eq!(outputs.len(), 2);
+    assert!(outputs.iter().all(|o| o.unblinded.value == 1));
+    assert_ne!(outputs[0].script_pubkey, outputs[1].script_pubkey);
+    let outputs = asset_outputs(&tx, asset_2);
+    assert_eq!(outputs.len(), 1);
+    assert_eq!(outputs[0].script_pubkey, asset_address.script_pubkey());
+    assert_eq!(w.balance(&asset_2), 1);
+    assert_eq!(w.balance(&token_2), 2);
+
+    // The outputs receiving the reissued units must sum up to the reissued amount too
+    let err = w
+        .tx_builder()
+        .add_reissuance(ReissuanceRequest::new(asset, 2).add_asset_output(1, None))
+        .unwrap_err();
+    assert!(matches!(
+        err,
+        Error::IssuanceOutputsAmountMismatch {
+            expected: 2,
+            found: 1
+        }
+    ));
+
+    // Reissue 2 units of the first asset, split across two outputs of 1 unit each
+    let mut pset = w
+        .tx_builder()
+        .add_reissuance(
+            ReissuanceRequest::new(asset, 2)
+                .add_asset_output(1, None)
+                .add_asset_output(1, None),
+        )
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    signer.sign(&mut pset).unwrap();
+    let txid = w.send(&mut pset);
+
+    let tx = w.get_tx(&txid);
+    let outputs = asset_outputs(&tx, asset);
+    assert_eq!(outputs.len(), 2);
+    assert!(outputs.iter().all(|o| o.unblinded.value == 1));
+    assert_ne!(outputs[0].script_pubkey, outputs[1].script_pubkey);
+    assert_eq!(w.balance(&asset), 4);
+    assert_eq!(w.balance(&token), 1);
+}
+
 #[ignore = "This test connects to liquid testnet"]
 #[test]
 fn test_liquid_testnet() {

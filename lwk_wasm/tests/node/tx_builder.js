@@ -231,11 +231,60 @@ async function runReissueAssetTest() {
     }
 }
 
+async function runIssuanceOutputsTest() {
+    try {
+        const network = lwk.Network.regtestDefault();
+        const client = new lwk.WaterfallsClient(network, WATERFALLS_URL);
+
+        const mnemonic = lwk.Mnemonic.fromRandom(12);
+        const signer = new lwk.Signer(mnemonic, network);
+        const desc = signer.wpkhSlip77Descriptor();
+        const wollet = new lwk.Wollet(network, desc);
+
+        const fundTxid = await fundAddress(wollet.address(0).address(), BigInt(100_000), network, client);
+        await waitForTx(wollet, client, fundTxid);
+
+        // Issue 2 asset units, split across two outputs of 1 unit each
+        const request = new lwk.IssuanceRequest(BigInt(2), BigInt(1))
+            .addAssetOutput(BigInt(1), null)
+            .addAssetOutput(BigInt(1), null);
+        let builder = new lwk.TxBuilder(network);
+        builder = builder.addIssuance(request);
+        let pset = builder.finish(wollet);
+
+        const issuanceInput = pset.inputs().filter((i) => i.issuance() !== undefined)[0];
+        const asset = issuanceInput.issuanceAsset();
+
+        pset = signer.sign(pset);
+        pset = wollet.finalize(pset);
+        const txid = await client.broadcastTx(pset.extractTx());
+        await waitForTx(wollet, client, txid);
+
+        const assetOutputs = wollet.utxos().filter((u) =>
+            u.outpoint().txid().toString() === txid.toString() &&
+            u.unblinded().asset().toString() === asset.toString()
+        );
+        assert.strictEqual(assetOutputs.length, 2);
+        for (const output of assetOutputs) {
+            assert.strictEqual(output.unblinded().value(), BigInt(1));
+        }
+        // Outputs without an explicit address get a fresh address each
+        assert.notStrictEqual(
+            assetOutputs[0].scriptPubkey().toString(),
+            assetOutputs[1].scriptPubkey().toString()
+        );
+    } catch (error) {
+        console.error("Issuance outputs test failed:", error);
+        throw error;
+    }
+}
+
 async function runTxBuilderTest() {
     await runManualCoinSelectionTest();
     await runInputOrderTest();
     await runIssueAssetTest();
     await runReissueAssetTest();
+    await runIssuanceOutputsTest();
 }
 
 if (require.main === module) {

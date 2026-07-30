@@ -399,14 +399,15 @@ impl RegistryData {
 fn lbtc() -> (AssetId, RegistryData) {
     let asset_id = *lwk_common::Network::Liquid.policy_asset();
     let data = RegistryData {
-        contract: Contract {
-            entity: Entity::Domain("".to_string()),
-            issuer_pubkey: vec![2; 33],
-            name: "Liquid Bitcoin".to_string(),
-            precision: 8,
-            ticker: "LBTC".to_string(),
-            version: 0,
-        },
+        contract: Contract::builder()
+            .entity(Entity::Domain("".to_string()))
+            .issuer_pubkey(vec![2; 33])
+            .name("Liquid Bitcoin".to_string())
+            .precision(8)
+            .ticker("LBTC".to_string())
+            .version(0)
+            .build()
+            .expect("static"),
         issuance_txin: TxIn {
             txid: Txid::from_str(
                 "0000000000000000000000000000000000000000000000000000000000000000",
@@ -429,14 +430,15 @@ fn lbtc() -> (AssetId, RegistryData) {
 fn tlbtc() -> (AssetId, RegistryData) {
     let asset_id = *lwk_common::Network::TestnetLiquid.policy_asset();
     let data = RegistryData {
-        contract: Contract {
-            entity: Entity::Domain("".to_string()),
-            issuer_pubkey: vec![2; 33],
-            name: "Testnet Liquid Bitcoin".to_string(),
-            precision: 8,
-            ticker: "tLBTC".to_string(),
-            version: 0,
-        },
+        contract: Contract::builder()
+            .entity(Entity::Domain("".to_string()))
+            .issuer_pubkey(vec![2; 33])
+            .name("Testnet Liquid Bitcoin".to_string())
+            .precision(8)
+            .ticker("tLBTC".to_string())
+            .version(0)
+            .build()
+            .expect("static"),
         issuance_txin: TxIn {
             txid: Txid::from_str(
                 "0000000000000000000000000000000000000000000000000000000000000000",
@@ -459,14 +461,15 @@ fn tlbtc() -> (AssetId, RegistryData) {
 fn rlbtc() -> (AssetId, RegistryData) {
     let asset_id = *lwk_common::Network::default_regtest().policy_asset();
     let data = RegistryData {
-        contract: Contract {
-            entity: Entity::Domain("".to_string()),
-            issuer_pubkey: vec![2; 33],
-            name: "Regtest Liquid Bitcoin".to_string(),
-            precision: 8,
-            ticker: "rLBTC".to_string(),
-            version: 0,
-        },
+        contract: Contract::builder()
+            .entity(Entity::Domain("".to_string()))
+            .issuer_pubkey(vec![2; 33])
+            .name("Regtest Liquid Bitcoin".to_string())
+            .precision(8)
+            .ticker("rLBTC".to_string())
+            .version(0)
+            .build()
+            .expect("static"),
         issuance_txin: TxIn {
             txid: Txid::from_str(
                 "0000000000000000000000000000000000000000000000000000000000000000",
@@ -490,17 +493,18 @@ fn usdt() -> (AssetId, RegistryData) {
         AssetId::from_str("ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2")
             .expect("static");
     let data = RegistryData {
-        contract: Contract {
-            entity: Entity::Domain("tether.to".to_string()),
-            issuer_pubkey: vec![
+        contract: Contract::builder()
+            .entity(Entity::Domain("tether.to".to_string()))
+            .issuer_pubkey(vec![
                 3, 55, 204, 238, 192, 190, 234, 2, 50, 235, 225, 76, 186, 1, 151, 169, 251, 212,
                 95, 207, 46, 201, 70, 116, 157, 233, 32, 231, 20, 52, 194, 185, 4,
-            ],
-            name: "Tether USD".to_string(),
-            precision: 8,
-            ticker: "USDt".to_string(),
-            version: 0,
-        },
+            ])
+            .name("Tether USD".to_string())
+            .precision(8)
+            .ticker("USDt".to_string())
+            .version(0)
+            .build()
+            .expect("static"),
         issuance_txin: TxIn {
             txid: Txid::from_str(
                 "abb4080d91849e933ee2ed65da6b436f7c385cf363fb4aa08399f1e27c58ff3d",

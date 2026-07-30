@@ -16,11 +16,13 @@ pub enum PeginAddressType {
     P2shP2wsh,
 }
 
-/// A snapshot of federation pegin parameters and their validity window.
+/// A snapshot of federation pegin parameters and their guaranteed validity window.
 ///
 /// A `FedPeg` is created from a full dynafed block header. It retains the exact
 /// federation script and program used to derive pegin addresses, so callers do
-/// not need to pass an unversioned federation descriptor around.
+/// not need to pass an unversioned federation descriptor around. The validity
+/// window is conservative: the same parameters may remain valid in later
+/// epochs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FedPeg {
     network: Network,
@@ -30,14 +32,15 @@ pub struct FedPeg {
     epoch: u32,
     epoch_start_height: u32,
     valid_from_height: u32,
-    valid_until_height: u32,
+    guaranteed_valid_until_height: u32,
     address_type: PeginAddressType,
 }
 
 impl FedPeg {
     /// Create a federation peg snapshot from a full dynafed block header.
     ///
-    /// The validity window uses the epoch parameters defined by `network`.
+    /// The guaranteed validity window uses the epoch parameters defined by
+    /// `network`.
     /// Use [`FedPeg::from_block_header_with_params`] when a custom Elements
     /// chain overrides those defaults.
     pub fn from_block_header(network: Network, header: &BlockHeader) -> Result<Self, Error> {
@@ -104,11 +107,11 @@ impl FedPeg {
         let epoch_start_height = epoch
             .checked_mul(epoch_length)
             .ok_or_else(|| Error::InvalidFedPeg("epoch start height overflow".to_string()))?;
-        let valid_until_height = epoch
+        let guaranteed_valid_until_height = epoch
             .checked_add(total_valid_epochs)
             .and_then(|epoch| epoch.checked_mul(epoch_length))
             .and_then(|height| height.checked_sub(1))
-            .ok_or_else(|| Error::InvalidFedPeg("validity window overflow".to_string()))?;
+            .ok_or_else(|| Error::InvalidFedPeg("validity horizon overflow".to_string()))?;
 
         Ok(Self {
             network,
@@ -118,7 +121,7 @@ impl FedPeg {
             epoch,
             epoch_start_height,
             valid_from_height: header.height,
-            valid_until_height,
+            guaranteed_valid_until_height,
             address_type,
         })
     }
@@ -156,19 +159,28 @@ impl FedPeg {
         self.valid_from_height
     }
 
-    /// Return the last block height at which this snapshot is valid.
-    pub fn valid_until_height(&self) -> u32 {
-        self.valid_until_height
+    /// Return the last block height through which this snapshot is guaranteed valid.
+    ///
+    /// The federation may retain the same pegin parameters in later epochs, so
+    /// a greater height does not prove that the snapshot has expired.
+    pub fn guaranteed_valid_until_height(&self) -> u32 {
+        self.guaranteed_valid_until_height
     }
 
-    /// Return the inclusive Liquid block-height validity window.
-    pub fn validity_window(&self) -> std::ops::RangeInclusive<u32> {
-        self.valid_from_height..=self.valid_until_height
+    /// Return the inclusive guaranteed Liquid block-height validity window.
+    ///
+    /// The federation may retain the same pegin parameters after this window.
+    pub fn guaranteed_validity_window(&self) -> std::ops::RangeInclusive<u32> {
+        self.valid_from_height..=self.guaranteed_valid_until_height
     }
 
-    /// Return whether this snapshot is valid at `height`.
-    pub fn is_valid_at(&self, height: u32) -> bool {
-        self.validity_window().contains(&height)
+    /// Return whether this snapshot is guaranteed valid at `height`.
+    ///
+    /// A false result does not prove that the snapshot has expired; determining
+    /// that requires comparison with the federation parameters valid at
+    /// `height`.
+    pub fn is_guaranteed_valid_at(&self, height: u32) -> bool {
+        self.guaranteed_validity_window().contains(&height)
     }
 
     /// Return the Bitcoin address type required by this federation snapshot.
@@ -194,7 +206,7 @@ impl FedPeg {
 /// A Bitcoin pegin address together with all data needed to identify its claim.
 ///
 /// The embedded [`FedPeg`] preserves the exact federation parameters and
-/// validity window used to derive the address.
+/// guaranteed validity window used to derive the address.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PeginAddress {
     address: bitcoin::Address,
@@ -243,14 +255,18 @@ impl PeginAddress {
         self.fed_peg.address_type()
     }
 
-    /// Return the inclusive Liquid block-height validity window.
-    pub fn validity_window(&self) -> std::ops::RangeInclusive<u32> {
-        self.fed_peg.validity_window()
+    /// Return the inclusive guaranteed Liquid block-height validity window.
+    ///
+    /// The federation may retain the same pegin parameters after this window.
+    pub fn guaranteed_validity_window(&self) -> std::ops::RangeInclusive<u32> {
+        self.fed_peg.guaranteed_validity_window()
     }
 
-    /// Return whether this address can be claimed at the given Liquid height.
-    pub fn is_valid_at(&self, height: u32) -> bool {
-        self.fed_peg.is_valid_at(height)
+    /// Return whether this address is guaranteed claimable at the given Liquid height.
+    ///
+    /// A false result does not prove that the address has expired.
+    pub fn is_guaranteed_valid_at(&self, height: u32) -> bool {
+        self.fed_peg.is_guaranteed_valid_at(height)
     }
 }
 
@@ -359,11 +375,11 @@ mod test {
         assert_eq!(fed_peg.epoch(), 147);
         assert_eq!(fed_peg.epoch_start_height(), 2_963_520);
         assert_eq!(fed_peg.valid_from_height(), 2_963_520);
-        assert_eq!(fed_peg.valid_until_height(), 3_003_839);
-        assert!(!fed_peg.is_valid_at(2_963_519));
-        assert!(fed_peg.is_valid_at(2_963_520));
-        assert!(fed_peg.is_valid_at(3_003_839));
-        assert!(!fed_peg.is_valid_at(3_003_840));
+        assert_eq!(fed_peg.guaranteed_valid_until_height(), 3_003_839);
+        assert!(!fed_peg.is_guaranteed_valid_at(2_963_519));
+        assert!(fed_peg.is_guaranteed_valid_at(2_963_520));
+        assert!(fed_peg.is_guaranteed_valid_at(3_003_839));
+        assert!(!fed_peg.is_guaranteed_valid_at(3_003_840));
     }
 
     #[test]

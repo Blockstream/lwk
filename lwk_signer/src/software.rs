@@ -53,6 +53,36 @@ pub enum SignError {
 
     #[error("BIP85 derivation failed: {0}")]
     Bip85Derivation(String),
+
+    /// Errors specific to silent-payment signing.
+    #[cfg(feature = "silentpayments")]
+    #[error("Invalid tweak: tweaked key is out of range (e.g. sums to zero)")]
+    InvalidTweak,
+
+    #[cfg(feature = "silentpayments")]
+    #[error("Taproot key-spend sighash requires every input's witness_utxo")]
+    MissingWitnessUtxo,
+
+    #[cfg(feature = "silentpayments")]
+    #[error(transparent)]
+    TaprootSighash(#[from] elements_miniscript::elements::sighash::Error),
+
+    #[cfg(feature = "silentpayments")]
+    #[error(transparent)]
+    Secp256k1(#[from] elements_miniscript::bitcoin::secp256k1::Error),
+
+    /// Invalid untrusted silent-payment PSET metadata.
+    #[cfg(feature = "silentpayments")]
+    #[error(transparent)]
+    SilentPaymentMeta(#[from] lwk_common::silentpayments::SilentPaymentPsetMetaError),
+
+    #[cfg(feature = "silentpayments")]
+    #[error("Silent payment input names an account whose B_spend this signer does not derive")]
+    SilentPaymentSpendPubkeyMismatch,
+
+    #[cfg(feature = "silentpayments")]
+    #[error("Silent payment tweak does not produce the Taproot output being spent")]
+    SilentPaymentOutputMismatch,
 }
 
 /// Possible errors when creating a new software signer [`SwSigner`]
@@ -415,6 +445,11 @@ impl Signer for SwSigner {
                     }
                 }
             }
+        }
+
+        #[cfg(feature = "silentpayments")]
+        {
+            signature_added += self.sign_silent_payment_inputs(pset)?;
         }
 
         Ok(signature_added)

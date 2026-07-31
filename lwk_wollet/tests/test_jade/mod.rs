@@ -541,6 +541,26 @@ mod serial {
     }
 
     #[test]
+    #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
+    fn jade_elipamp2_flow() {
+        init_logging();
+        let env = TestEnvBuilder::from_env()
+            .with_electrum()
+            .with_amp2()
+            .build();
+        let network = lwk_common::Network::default_regtest();
+        let ports = Jade::available_ports_with_jade();
+        let port_name = &ports.first().unwrap().port_name;
+        let jade = Jade::from_serial(network, port_name, None).unwrap();
+        let id = jade.identifier().unwrap();
+        let jade_signer = AnySigner::Jade(jade, id);
+
+        // TODO: Jade shows change output: register multisig/descriptor on Jade to avoid it
+        // TODO: Confirm address on Jade (requires Jade to support view keys)
+        crate::amp2::elipamp2_flow(&env, &jade_signer);
+    }
+
+    #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial; confirm transaction on device screen"]
     fn jade_explicit() {
         init_logging();

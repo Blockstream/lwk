@@ -31,6 +31,18 @@ impl LwkTestEnv {
         LwkTestEnv { inner }
     }
 
+    /// Creates a new test environment with AMP2 mock
+    #[uniffi::constructor]
+    pub fn new_with_amp2() -> LwkTestEnv {
+        let inner = lwk_test_util::TestEnvBuilder::from_env()
+            .with_electrum()
+            .with_esplora()
+            .with_waterfalls()
+            .with_amp2()
+            .build();
+        LwkTestEnv { inner }
+    }
+
     /// Generate `blocks` blocks from the node
     pub fn generate(&self, blocks: u32) {
         self.inner.elementsd_generate(blocks);
@@ -71,6 +83,11 @@ impl LwkTestEnv {
     /// Get the Waterfalls URL of the test environment
     pub fn waterfalls_url(&self) -> String {
         self.inner.waterfalls_url()
+    }
+
+    /// Get the AMP2 URL of the test environment
+    pub fn amp2_url(&self) -> String {
+        self.inner.amp2_url()
     }
 
     /// Get the genesis block hash from the running node.

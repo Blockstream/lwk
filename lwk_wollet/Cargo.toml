@@ -19,6 +19,7 @@ lwk_signer = { version = "0.18.1", features = [
 ], optional = true }
 
 rand = "0.8"
+bech32 = { version = "0.11", optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 aes-gcm-siv = "0.11.0"
@@ -118,6 +119,7 @@ default = [
     "amp0",
     "prices",
     "registry",
+    "silentpayments",
 ]
 serial = ["lwk_jade/serial"] # this is a dev-dep feature
 esplora = ["reqwest", "age"]
@@ -148,6 +150,10 @@ amp0 = [
 ]
 prices = ["reqwest"]
 registry = ["reqwest"]
+# Silent Payments (BIP-352 on Liquid, per the Liquid silent payments ELIP).
+# The wallet feature scans, unblinds, and tracks outputs; signing remains in
+# `lwk_signer`'s separate `silentpayments` feature.
+silentpayments = ["bech32", "lwk_common/silentpayments"]
 
 # The e2e target requires the backend features it imports.
 [[test]]

@@ -152,7 +152,7 @@ async fn test_borrow_flow() {
     borrower_session.sync().unwrap();
 
     // Verify the offer status changed to Active in the indexer
-    wait_offer(OfferStatus::Active, Some(item.id), &indexer_client).await;
+    wait_offer(OfferStatus::Active, Some(item.id.clone()), &indexer_client).await;
 
     // Claim principal as the borrower which would send principal to the borrower's address.
     let claim = borrower_session
@@ -203,7 +203,7 @@ async fn test_borrow_flow() {
     env.elementsd_generate(1);
 
     // Verify the offer status changed to Repaid in the indexer
-    wait_offer(OfferStatus::Repaid, Some(item.id), &indexer_client).await;
+    wait_offer(OfferStatus::Repaid, Some(item.id.clone()), &indexer_client).await;
 
     // Lender claims the principal from the finalized vault after full repayment
     lender_session.sync().unwrap();
@@ -328,7 +328,12 @@ async fn test_cancel_offer() {
     );
 
     // Verify the offer status changed to Cancelled
-    wait_offer(OfferStatus::Cancelled, Some(item.id), &indexer_client).await;
+    wait_offer(
+        OfferStatus::Cancelled,
+        Some(item.id.clone()),
+        &indexer_client,
+    )
+    .await;
 }
 
 #[tokio::test]
@@ -437,7 +442,7 @@ async fn test_liquidate_offer() {
     env.elementsd_generate(1);
     lender_session.sync().unwrap();
 
-    wait_offer(OfferStatus::Active, Some(item.id), &indexer_client).await;
+    wait_offer(OfferStatus::Active, Some(item.id.clone()), &indexer_client).await;
 
     let covenant_outpoint = lwk_wollet::elements::OutPoint {
         txid: acceptance_txid,

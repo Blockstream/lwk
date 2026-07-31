@@ -24,7 +24,7 @@ uuid = { version = "~1.20", default-features = false, features = [
     "v4",
 ] }
 
-lending-contracts = {git = "https://github.com/gerau/simplicity-lending.git",  rev = "a7c286f13e7f148ee2a998aed7a899f82d508392", optional = true}
+lending-contracts = {git = "https://github.com/gerau/simplicity-lending.git",  rev = "79f67678d27fd768de13af288ebfad7dd0ba0396", optional = true}
 simplex = { package = "smplx-std", git = "https://github.com/gerau/smplx.git", rev = "da5a22da20293637473f67bd73a3645afda3a2a6", optional = true }
 
 rand = "0.8"

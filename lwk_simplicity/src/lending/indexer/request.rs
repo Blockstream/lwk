@@ -22,6 +22,7 @@ impl std::fmt::Display for SortDir {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OfferSortBy {
+    UpdatedAtHeight,
     CreatedAtHeight,
     CollateralAmount,
     PrincipalAmount,
@@ -32,6 +33,7 @@ pub enum OfferSortBy {
 impl std::fmt::Display for OfferSortBy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            OfferSortBy::UpdatedAtHeight => f.write_str("updated_at_height"),
             OfferSortBy::CreatedAtHeight => f.write_str("created_at_height"),
             OfferSortBy::CollateralAmount => f.write_str("collateral_amount"),
             OfferSortBy::PrincipalAmount => f.write_str("principal_amount"),
@@ -47,6 +49,9 @@ pub struct OfferFiltersRequest {
     pub collateral_asset: Option<String>,
     pub principal_asset: Option<String>,
     pub factory_id: Option<Uuid>,
+    pub exclude_participant_script: Option<String>,
+    pub exclude_participant_role: Option<String>,
+    pub not_expired: Option<bool>,
     pub limit: Option<u64>,
     pub offset: Option<u64>,
     pub sort_by: Option<OfferSortBy>,
@@ -86,6 +91,15 @@ impl OfferFiltersRequest {
         }
         if let Some(ref v) = self.sort_dir {
             params.push(("sort_dir".to_string(), v.to_string()));
+        }
+        if let Some(v) = self.not_expired {
+            params.push(("not_expired".to_string(), v.to_string()));
+        }
+        if let Some(ref v) = self.exclude_participant_script {
+            params.push(("exclude_participant_script".to_string(), v.clone()));
+        }
+        if let Some(ref v) = self.exclude_participant_role {
+            params.push(("exclude_participant_role".to_string(), v.clone()));
         }
         params
     }

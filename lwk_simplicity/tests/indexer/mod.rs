@@ -9,7 +9,6 @@ use std::time::Duration;
 use testcontainers::clients::Cli;
 use testcontainers::images::postgres::Postgres;
 use testcontainers::RunnableImage;
-use uuid::Uuid;
 
 fn random_port() -> u16 {
     TcpListener::bind("127.0.0.1:0")
@@ -21,7 +20,7 @@ fn random_port() -> u16 {
 
 pub async fn wait_offer(
     status: OfferStatus,
-    id: Option<Uuid>,
+    id: Option<String>,
     indexer: &IndexerClient,
 ) -> OfferListItem {
     for _ in 0..20 {
@@ -30,7 +29,7 @@ pub async fn wait_offer(
             .await
             .unwrap();
 
-        let offer = if let Some(id) = id {
+        let offer = if let Some(id) = id.clone() {
             offers.items.iter().find(|o| o.id == id)
         } else {
             offers.items.first()

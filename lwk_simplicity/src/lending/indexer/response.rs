@@ -6,7 +6,7 @@ use super::common::OfferStatus;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct OfferListItem {
-    pub id: Uuid,
+    pub id: String,
     pub issuance_factory_id: Uuid,
     pub status: OfferStatus,
     pub collateral_asset: AssetId,
@@ -15,9 +15,11 @@ pub struct OfferListItem {
     pub principal_amount: String,
     pub interest_rate: u32,
     pub loan_expiration_height: u32,
+    pub updated_at_height: u64,
     pub created_at_height: u64,
     pub created_at_txid: Txid,
     pub participants: Vec<ParticipantShort>,
+    #[serde(default)]
     pub borrower_principal_utxo: Option<OfferUtxoOutpointShort>,
 }
 

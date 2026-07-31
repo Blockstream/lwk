@@ -1,5 +1,6 @@
 use crate::test_wollet::*;
 use lwk_common::{Bip, Signer};
+use lwk_signer::AnySigner;
 use lwk_test_util::*;
 use lwk_wollet::amp2::Amp2;
 
@@ -37,6 +38,58 @@ fn test_amp2_flow() {
 
     let lbtc = w.policy_asset();
     w.fund_btc(&env);
+
+    let node_addr = env.elementsd_getnewaddress();
+    let mut pset = w
+        .tx_builder()
+        .add_recipient(&node_addr, 1000, lbtc)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    let cosign_resp = amp2.blocking_cosign(&pset).unwrap();
+    pset = cosign_resp.pset;
+
+    w.send(&mut pset);
+}
+
+#[test]
+fn test_elipamp2_flow() {
+    let env = TestEnvBuilder::from_env()
+        .with_electrum()
+        .with_amp2()
+        .build();
+    let signer = AnySigner::Software(generate_signer());
+    elipamp2_flow(&env, &signer);
+}
+
+// shared with Jade tests
+pub fn elipamp2_flow(env: &TestEnv, signer: &AnySigner) {
+    let amp2_url = env.amp2_url();
+
+    let resp: serde_json::Value = reqwest::blocking::get(format!("{amp2_url}/info/xpub-master"))
+        .unwrap()
+        .json()
+        .unwrap();
+    let server_keyorigin_xpub_master = resp["keyorigin_xpub"].as_str().unwrap();
+
+    let amp2 = Amp2::new(server_keyorigin_xpub_master.to_string(), amp2_url).unwrap();
+
+    let account = 0;
+    let amp2_desc = amp2.elipamp2_from_signer(signer, account).unwrap();
+
+    let register_resp = amp2.blocking_register(amp2_desc.clone()).unwrap();
+    assert!(!register_resp.wid.is_empty());
+
+    let desc = amp2_desc.descriptor().to_string();
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &desc);
+
+    let lbtc = w.policy_asset();
+    w.fund_btc(env);
 
     let node_addr = env.elementsd_getnewaddress();
     let mut pset = w

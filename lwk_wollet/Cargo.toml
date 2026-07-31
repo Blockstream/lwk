@@ -99,7 +99,7 @@ js-sys = { version = "0.3.68" }
 [dev-dependencies]
 lwk_jade = { version = "0.18.1", features = ["test_emulator"] }
 lwk_ledger = { version = "0.18.1", features = ["test_emulator"] }
-lwk_signer = { version = "0.18.1", features = ["jade", "ledger"] }
+lwk_signer = { version = "0.18.1", features = ["jade", "ledger", "silentpayments"] }
 lwk_containers = { version = "0.18.1" }
 lwk_test_util = { version = "0.18.0" }
 lwk_common = { version = "0.18.1", features = ["sqlite"]}
@@ -160,6 +160,11 @@ silentpayments = ["bech32", "lwk_common/silentpayments"]
 name = "e2e"
 path = "tests/e2e.rs"
 required-features = ["electrum", "esplora", "amp0"]
+
+[[test]]
+name = "silentpayments_e2e"
+path = "tests/silentpayments_e2e.rs"
+required-features = ["silentpayments", "esplora"]
 
 # Uses `ElectrumClient` and `full_scan_with_electrum_client`, both gated on `electrum`.
 [[example]]

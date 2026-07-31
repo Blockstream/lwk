@@ -2517,7 +2517,7 @@ dependencies = [
 [[package]]
 name = "lending-contracts"
 version = "0.1.0"
-source = "git+https://github.com/gerau/simplicity-lending.git?rev=a7c286f13e7f148ee2a998aed7a899f82d508392#a7c286f13e7f148ee2a998aed7a899f82d508392"
+source = "git+https://github.com/gerau/simplicity-lending.git?rev=79f67678d27fd768de13af288ebfad7dd0ba0396#79f67678d27fd768de13af288ebfad7dd0ba0396"
 dependencies = [
  "hex",
  "ring",

@@ -149,12 +149,16 @@ amp0 = [
 prices = ["reqwest"]
 registry = ["reqwest"]
 
+# The e2e target requires the backend features it imports.
 [[test]]
 name = "e2e"
 path = "tests/e2e.rs"
+required-features = ["electrum", "esplora", "amp0"]
 
+# Uses `ElectrumClient` and `full_scan_with_electrum_client`, both gated on `electrum`.
 [[example]]
 name = "list_transactions"
+required-features = ["electrum"]
 
 [package.metadata.docs.rs]
 all-features = true

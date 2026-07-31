@@ -220,6 +220,24 @@ pub struct Update {
     /// This lets wallet restore advance address indexes without reloading transactions from the
     /// tx store just to recompute them.
     pub last_unused: LastUnused,
+
+    /// Silent-payment discoveries and discovery progress from this scan.
+    ///
+    /// `None` means discovery did not run; an empty `found` list records a completed
+    /// scan with no matching outputs.
+    #[cfg(feature = "silentpayments")]
+    pub silent_payments: Option<SilentPaymentsUpdate>,
+}
+
+/// What a silent payment scan contributes to an [`Update`].
+#[cfg(feature = "silentpayments")]
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
+pub struct SilentPaymentsUpdate {
+    /// Discovered outputs with their unblinded secrets and spend tweaks.
+    pub found: Vec<(crate::silentpayments::SilentPaymentCacheEntry, TxOutSecrets)>,
+
+    /// Height through which discovery ran, including scans with no matches.
+    pub scanned_to: Height,
 }
 
 impl Update {
@@ -360,6 +378,28 @@ impl Update {
         // Update unspent to latest
         self.unspent = following.unspent;
 
+        // Silent payment discovery accumulates: the outputs found by each update are
+        // disjoint findings, and the scanned-to height only ever moves forward. Taking
+        // `following` wholesale (as `unspent` does) would discard everything the earlier
+        // update discovered, and a merged update is what a restore replays — so the loss
+        // would be permanent, not just in memory.
+        #[cfg(feature = "silentpayments")]
+        {
+            self.silent_payments = match (self.silent_payments.take(), following.silent_payments) {
+                (Some(mut a), Some(b)) => {
+                    a.found.extend(b.found);
+                    a.scanned_to = a.scanned_to.max(b.scanned_to);
+                    Some(a)
+                }
+                (a, b) => a.or(b),
+            };
+            // A merged update that carries discovery must be readable as one, even if
+            // `following` was an older-version update that did not.
+            if self.silent_payments.is_some() {
+                self.version = self.version.max(6);
+            }
+        }
+
         self.last_unused.external = self
             .last_unused
             .external
@@ -470,6 +510,10 @@ impl Wollet {
             tip: default_blockheader(),
             unspent,
             last_unused: self.last_unused(),
+            // Applying a single transaction locally is not a chain scan, so it makes no
+            // claim about silent payment discovery progress.
+            #[cfg(feature = "silentpayments")]
+            silent_payments: None,
         };
 
         self.apply_update_inner(update.clone())?;
@@ -531,6 +575,8 @@ impl Wollet {
             tip,
             unspent,
             last_unused,
+            #[cfg(feature = "silentpayments")]
+            silent_payments,
         } = update;
 
         let scripts_with_blinding_pubkey =
@@ -622,6 +668,23 @@ impl Wollet {
                     .last_unused_internal
                     .fetch_max(last_used_internal + 1, atomic::Ordering::Relaxed);
             }
+        }
+
+        // Applied after `cache.update()` above, which inserts the scan's transactions:
+        // a silent payment output needs its containing transaction present to have a
+        // confirmation height and spent/unspent bookkeeping to hang off.
+        #[cfg(feature = "silentpayments")]
+        if let Some(sp) = silent_payments {
+            for (entry, unblinded) in sp.found {
+                cache.insert_silent_payment(entry, unblinded);
+            }
+            // `fetch_max` in spirit: updates can be applied out of order (and merged
+            // updates replay old ones), so discovery progress must never move backwards.
+            let scanned_to = match cache.silent_payments_scanned_to {
+                Some(current) => current.max(sp.scanned_to),
+                None => sp.scanned_to,
+            };
+            cache.silent_payments_scanned_to = Some(scanned_to);
         }
 
         Ok(())
@@ -894,7 +957,110 @@ impl Encodable for Update {
             bytes_written += self.last_unused.internal.consensus_encode(&mut w)?;
         }
 
+        // A leading flag byte rather than a bare list, so "discovery never ran" stays
+        // distinguishable from "discovery ran and found nothing" — an empty list would
+        // conflate them and lose the scanned-to height.
+        #[cfg(feature = "silentpayments")]
+        if self.version >= 6 {
+            match self.silent_payments.as_ref() {
+                None => bytes_written += 0u8.consensus_encode(&mut w)?,
+                Some(sp) => {
+                    bytes_written += 1u8.consensus_encode(&mut w)?;
+                    bytes_written += sp.scanned_to.consensus_encode(&mut w)?;
+                    bytes_written +=
+                        elements::encode::VarInt(sp.found.len() as u64).consensus_encode(&mut w)?;
+                    for (entry, unblinded) in sp.found.iter() {
+                        bytes_written += entry.outpoint.consensus_encode(&mut w)?;
+                        bytes_written += entry.script_pubkey.consensus_encode(&mut w)?;
+                        bytes_written += entry.k.consensus_encode(&mut w)?;
+                        // u32::MAX is not a valid BIP-352 label (labels are small
+                        // counters), so it can stand in for "no label" without a
+                        // second byte.
+                        bytes_written +=
+                            entry.label.unwrap_or(u32::MAX).consensus_encode(&mut w)?;
+                        bytes_written +=
+                            entry.spend_tweak.to_be_bytes().consensus_encode(&mut w)?;
+                        bytes_written +=
+                            entry.blinding_pubkey.serialize().consensus_encode(&mut w)?;
+                        bytes_written += unblinded.asset.consensus_encode(&mut w)?;
+                        bytes_written += unblinded.value.consensus_encode(&mut w)?;
+                        bytes_written +=
+                            unblinded.asset_bf.into_inner().consensus_encode(&mut w)?;
+                        bytes_written +=
+                            unblinded.value_bf.into_inner().consensus_encode(&mut w)?;
+                    }
+                }
+            }
+        }
+
         Ok(bytes_written)
+    }
+}
+
+impl Update {
+    /// Decode the v6 silent payments section written by [`Update::consensus_encode()`].
+    ///
+    /// Kept apart from the main decoder so the version-gated block there stays one line;
+    /// the field-by-field reads below are only meaningful as the exact mirror of the
+    /// encoder, and interleaving them with the rest of the format obscures both.
+    #[cfg(feature = "silentpayments")]
+    fn decode_silent_payments<D: std::io::Read>(
+        mut d: D,
+    ) -> Result<Option<SilentPaymentsUpdate>, elements::encode::Error> {
+        use crate::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+        use crate::elements::{AssetId, OutPoint, Script, TxOutSecrets};
+        use crate::secp256k1::PublicKey;
+        use crate::silentpayments::SpendTweak;
+
+        let present = u8::consensus_decode(&mut d)?;
+        if present == 0 {
+            return Ok(None);
+        }
+
+        let scanned_to = Height::consensus_decode(&mut d)?;
+        let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
+        let mut found = Vec::with_capacity(len as usize);
+        for _ in 0..len {
+            let outpoint = OutPoint::consensus_decode(&mut d)?;
+            let script_pubkey = Script::consensus_decode(&mut d)?;
+            let k = u32::consensus_decode(&mut d)?;
+            let label = match u32::consensus_decode(&mut d)? {
+                u32::MAX => None,
+                l => Some(l),
+            };
+
+            let tweak_bytes: [u8; 32] = Decodable::consensus_decode(&mut d)?;
+            let spend_tweak = SpendTweak::from_be_bytes(tweak_bytes).ok_or(
+                elements::encode::Error::ParseFailed("invalid SP spend tweak"),
+            )?;
+
+            let blinding_bytes: [u8; 33] = Decodable::consensus_decode(&mut d)?;
+            let blinding_pubkey = PublicKey::from_slice(&blinding_bytes)
+                .map_err(|_| elements::encode::Error::ParseFailed("invalid SP blinding pubkey"))?;
+
+            let asset = AssetId::consensus_decode(&mut d)?;
+            let value = u64::consensus_decode(&mut d)?;
+            let asset_bf_bytes: [u8; 32] = Decodable::consensus_decode(&mut d)?;
+            let value_bf_bytes: [u8; 32] = Decodable::consensus_decode(&mut d)?;
+            let asset_bf = AssetBlindingFactor::from_slice(&asset_bf_bytes)
+                .map_err(|_| elements::encode::Error::ParseFailed("invalid SP asset bf"))?;
+            let value_bf = ValueBlindingFactor::from_slice(&value_bf_bytes)
+                .map_err(|_| elements::encode::Error::ParseFailed("invalid SP value bf"))?;
+
+            found.push((
+                crate::silentpayments::SilentPaymentCacheEntry {
+                    outpoint,
+                    script_pubkey,
+                    k,
+                    label,
+                    spend_tweak,
+                    blinding_pubkey,
+                },
+                TxOutSecrets::new(asset, asset_bf, value, value_bf),
+            ));
+        }
+
+        Ok(Some(SilentPaymentsUpdate { found, scanned_to }))
     }
 }
 
@@ -906,7 +1072,7 @@ impl Decodable for Update {
         }
 
         let version = u8::consensus_decode(&mut d)?;
-        if version > 5 {
+        if version > 6 {
             return Err(elements::encode::Error::ParseFailed("Unsupported version"));
         }
         let wollet_status = if version >= 1 {
@@ -1005,6 +1171,13 @@ impl Decodable for Update {
             LastUnused::default()
         };
 
+        #[cfg(feature = "silentpayments")]
+        let silent_payments = if version >= 6 {
+            Self::decode_silent_payments(&mut d)?
+        } else {
+            None
+        };
+
         Ok(Self {
             version,
             wollet_status,
@@ -1016,6 +1189,8 @@ impl Decodable for Update {
             tip,
             unspent,
             last_unused,
+            #[cfg(feature = "silentpayments")]
+            silent_payments,
         })
     }
 }
@@ -1064,6 +1239,8 @@ mod test {
             wollet_status: 1,
             unspent: Default::default(),
             last_unused: Default::default(),
+            #[cfg(feature = "silentpayments")]
+            silent_payments: None,
         };
         assert!(update.only_tip());
         update
@@ -1120,6 +1297,8 @@ mod test {
             wollet_status: 1,
             unspent: vec![],
             last_unused: Default::default(),
+            #[cfg(feature = "silentpayments")]
+            silent_payments: None,
         };
 
         let mut vec = vec![];
@@ -1158,6 +1337,8 @@ mod test {
                 external: 7,
                 internal: 11,
             },
+            #[cfg(feature = "silentpayments")]
+            silent_payments: None,
         };
 
         let mut vec = vec![];
@@ -1188,6 +1369,181 @@ mod test {
         assert_eq!(upd_from_v0, upd_from_v1);
     }
 
+    /// A v6 update must survive the wire intact — including the tweak, which is the one
+    /// field that cannot be recovered from anywhere else if it is lost or corrupted.
+    #[cfg(feature = "silentpayments")]
+    #[test]
+    fn silent_payments_survive_a_serialization_roundtrip() {
+        use super::SilentPaymentsUpdate;
+        use crate::elements::secp256k1_zkp::{PublicKey, SecretKey};
+        use crate::elements::OutPoint;
+        use crate::silentpayments::{SilentPaymentCacheEntry, SpendTweak};
+
+        let tweak = SpendTweak::from_be_bytes([0x42; 32]).unwrap();
+        let entry = SilentPaymentCacheEntry {
+            outpoint: OutPoint::new(lwk_test_util::txid_test_vector(), 3),
+            script_pubkey: Script::from(vec![0x51, 0x20, 0xab]),
+            k: 2,
+            label: Some(7),
+            spend_tweak: tweak,
+            blinding_pubkey: PublicKey::from_secret_key_global(
+                &SecretKey::from_slice(&[0x24; 32]).unwrap(),
+            ),
+        };
+        let secrets = lwk_test_util::tx_out_secrets_test_vector();
+
+        let tip = lwk_test_util::liquid_block_1().header;
+        let update = Update {
+            version: 6,
+            wollet_status: 1,
+            new_txs: DownloadTxResult::default(),
+            txid_height_new: vec![],
+            txid_height_delete: vec![],
+            timestamps: vec![],
+            scripts_with_blinding_pubkey: vec![],
+            tip,
+            unspent: vec![],
+            last_unused: Default::default(),
+            silent_payments: Some(SilentPaymentsUpdate {
+                found: vec![(entry.clone(), secrets)],
+                scanned_to: 900_123,
+            }),
+        };
+
+        let back = Update::deserialize(&update.serialize().unwrap()).unwrap();
+        assert_eq!(update, back);
+
+        let sp = back.silent_payments.unwrap();
+        assert_eq!(sp.scanned_to, 900_123);
+        assert_eq!(sp.found[0].0, entry);
+        // The tweak is what lets a signer spend the output; a silent corruption here
+        // would surface only when the user tried to spend.
+        assert_eq!(sp.found[0].0.spend_tweak, tweak);
+    }
+
+    /// "Discovery ran and found nothing" must not decay into "discovery never ran" — the
+    /// former carries a scanned-to height, and losing it would make every scan restart
+    /// from genesis.
+    #[cfg(feature = "silentpayments")]
+    #[test]
+    fn an_empty_scan_still_records_its_progress() {
+        use super::SilentPaymentsUpdate;
+        let tip = lwk_test_util::liquid_block_1().header;
+        let update = Update {
+            version: 6,
+            wollet_status: 1,
+            new_txs: DownloadTxResult::default(),
+            txid_height_new: vec![],
+            txid_height_delete: vec![],
+            timestamps: vec![],
+            scripts_with_blinding_pubkey: vec![],
+            tip,
+            unspent: vec![],
+            last_unused: Default::default(),
+            silent_payments: Some(SilentPaymentsUpdate {
+                found: vec![],
+                scanned_to: 555,
+            }),
+        };
+
+        let back = Update::deserialize(&update.serialize().unwrap()).unwrap();
+        let sp = back
+            .silent_payments
+            .expect("an empty scan is still a scan, and must not decode as `None`");
+        assert!(sp.found.is_empty());
+        assert_eq!(sp.scanned_to, 555);
+    }
+
+    /// Merging must accumulate discoveries. A merged update is what a restore replays, so
+    /// dropping the earlier update's findings would lose them permanently.
+    #[cfg(feature = "silentpayments")]
+    #[test]
+    fn merge_accumulates_silent_payments_and_advances_progress() {
+        use super::SilentPaymentsUpdate;
+        let tip = lwk_test_util::liquid_block_1().header;
+        let base = |scanned_to| Update {
+            version: 6,
+            wollet_status: 1,
+            new_txs: DownloadTxResult::default(),
+            txid_height_new: vec![],
+            txid_height_delete: vec![],
+            timestamps: vec![],
+            scripts_with_blinding_pubkey: vec![],
+            tip: tip.clone(),
+            unspent: vec![],
+            last_unused: Default::default(),
+            silent_payments: Some(SilentPaymentsUpdate {
+                found: vec![],
+                scanned_to,
+            }),
+        };
+
+        let mut first = base(100);
+        first.merge(base(200));
+        let sp = first.silent_payments.unwrap();
+        assert_eq!(sp.scanned_to, 200, "progress must move forward");
+
+        // Out-of-order merge: progress must never go backwards.
+        let mut later = base(200);
+        later.merge(base(100));
+        assert_eq!(later.silent_payments.unwrap().scanned_to, 200);
+    }
+
+    /// A v4 update merged into a v6 one must not erase the v6 discovery, and the result
+    /// must still identify as v6 so the trailing section is read back.
+    #[cfg(feature = "silentpayments")]
+    #[test]
+    fn merging_an_older_update_preserves_discovery() {
+        use super::SilentPaymentsUpdate;
+        let tip = lwk_test_util::liquid_block_1().header;
+        let mut with_sp = Update {
+            version: 6,
+            wollet_status: 1,
+            new_txs: DownloadTxResult::default(),
+            txid_height_new: vec![],
+            txid_height_delete: vec![],
+            timestamps: vec![],
+            scripts_with_blinding_pubkey: vec![],
+            tip: tip.clone(),
+            unspent: vec![],
+            last_unused: Default::default(),
+            silent_payments: Some(SilentPaymentsUpdate {
+                found: vec![],
+                scanned_to: 42,
+            }),
+        };
+
+        let plain_v4 = Update {
+            version: 4,
+            wollet_status: 1,
+            new_txs: DownloadTxResult::default(),
+            txid_height_new: vec![],
+            txid_height_delete: vec![],
+            timestamps: vec![],
+            scripts_with_blinding_pubkey: vec![],
+            tip,
+            unspent: vec![],
+            last_unused: Default::default(),
+            silent_payments: None,
+        };
+
+        with_sp.merge(plain_v4);
+
+        assert_eq!(
+            with_sp.silent_payments.as_ref().unwrap().scanned_to,
+            42,
+            "a later update without discovery must not erase earlier discovery"
+        );
+        assert_eq!(
+            with_sp.version, 6,
+            "the merged update still carries a silent payments section"
+        );
+
+        // And it must survive the wire, which is the situation that actually loses data.
+        let back = Update::deserialize(&with_sp.serialize().unwrap()).unwrap();
+        assert_eq!(back.silent_payments.unwrap().scanned_to, 42);
+    }
+
     #[test]
     fn test_merge_keeps_max_last_unused() {
         let tip = lwk_test_util::liquid_block_1().header;
@@ -1205,6 +1561,8 @@ mod test {
                 external: 2,
                 internal: 8,
             },
+            #[cfg(feature = "silentpayments")]
+            silent_payments: None,
         };
 
         let following_tip = lwk_test_util::liquid_block_header_2_963_520();
@@ -1222,6 +1580,8 @@ mod test {
                 external: 7,
                 internal: 3,
             },
+            #[cfg(feature = "silentpayments")]
+            silent_payments: None,
         };
 
         update.merge(following);
@@ -1249,6 +1609,8 @@ mod test {
             tip: super::default_blockheader(),
             unspent: vec![],
             last_unused: LastUnused::default(),
+            #[cfg(feature = "silentpayments")]
+            silent_payments: None,
         };
 
         let following = Update {
@@ -1265,6 +1627,8 @@ mod test {
                 external: 7,
                 internal: 11,
             },
+            #[cfg(feature = "silentpayments")]
+            silent_payments: None,
         };
 
         update.merge(following);
@@ -1298,6 +1662,8 @@ mod test {
                     external: 7,
                     internal: 11,
                 },
+                #[cfg(feature = "silentpayments")]
+                silent_payments: None,
             })
             .unwrap();
 
@@ -1318,6 +1684,8 @@ mod test {
                     external: 3,
                     internal: 5,
                 },
+                #[cfg(feature = "silentpayments")]
+                silent_payments: None,
             })
             .unwrap();
 

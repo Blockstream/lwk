@@ -269,6 +269,8 @@ pub trait BlockchainBackend {
                 tip,
                 unspent,
                 last_unused,
+                #[cfg(feature = "silentpayments")]
+                silent_payments: None,
             };
             Ok(Some(update))
         } else {

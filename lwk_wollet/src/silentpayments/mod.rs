@@ -11,6 +11,7 @@ pub mod block_tweaks;
 pub mod cache_entry;
 pub mod inputs;
 pub mod output;
+mod pset_annotate;
 pub mod receiver;
 pub mod recipient;
 pub mod scan_material;
@@ -35,6 +36,7 @@ pub use inputs::{
     SilentPaymentInputProvider, SilentPaymentInputs,
 };
 pub use output::SilentPaymentOutput;
+pub(crate) use pset_annotate::SilentPaymentPsetAnnotator;
 pub use receiver::{SilentPaymentReceiver, SpendTweak};
 pub use recipient::{ResolvedSilentPayment, SilentPaymentRecipient};
 pub use scan_material::{

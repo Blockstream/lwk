@@ -317,6 +317,22 @@ impl BlockchainBackend for WaterfallsClient {
         self.client.capabilities()
     }
 
+    /// Waterfalls wraps an Esplora client, so tweaks are computed from blocks exactly as
+    /// there. Forwarding is not optional: [`Self::capabilities()`] inherits
+    /// [`Capability::SilentPayments`] from the inner client, so without this the backend
+    /// would advertise discovery and then fail on the trait default.
+    ///
+    /// This is the client-side fallback, not the endgame — a Waterfalls *server* already
+    /// indexes every block and could serve tweaks directly, which is what would make
+    /// discovery cheap for browser wallets.
+    #[cfg(feature = "silentpayments")]
+    fn silent_payment_tweaks(
+        &self,
+        height: Height,
+    ) -> Result<Vec<(Txid, crate::silentpayments::PartialTweak)>, Error> {
+        self.rt.block_on(self.client.silent_payment_tweaks(height))
+    }
+
     fn get_history_waterfalls<S: WolletState>(
         &mut self,
         descriptor: &WolletDescriptor,

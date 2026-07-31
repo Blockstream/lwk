@@ -6,7 +6,7 @@ use crate::elements::{
 };
 use crate::secp256k1::SecretKey;
 use crate::silentpayments::{
-    SilentPaymentAddress, SilentPaymentScan, SilentPaymentScanMaterial,
+    PartialTweak, SilentPaymentAddress, SilentPaymentScan, SilentPaymentScanMaterial,
     SilentPaymentSender, SpTxOutBuilder,
 };
 use lwk_test_util::ElementsTestData;
@@ -44,6 +44,8 @@ pub(crate) struct SpPayment {
     pub(crate) tx: Transaction,
     /// The scriptPubKeys the transaction's inputs spend.
     pub(crate) prevouts: Vec<(OutPoint, Script)>,
+    /// `T = input_hash·A`, as a tweak server would publish it.
+    pub(crate) tweak: PartialTweak,
 }
 
 impl SpPayment {
@@ -116,6 +118,7 @@ impl SpPaymentBuilder {
         let sender = SilentPaymentSender::from_inputs(&self.inputs)
             .expect("the fixture's inputs must aggregate");
         let output = sender.derive_output(address, self.k);
+        let tweak = PartialTweak::from_observed(&sender.inputs().observed());
 
         let (sp_txout, _) =
             SpTxOutBuilder::build(&output, self.asset, self.value, &mut rand::thread_rng())
@@ -142,6 +145,7 @@ impl SpPaymentBuilder {
         SpPayment {
             prevouts: self.inputs.iter().map(Self::prevout).collect(),
             tx,
+            tweak,
         }
     }
 

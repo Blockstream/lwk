@@ -49,14 +49,8 @@ fn main() {
         .keyorigin_xpub(Bip::Bip87, false)
         .expect("failed to derive xpub");
 
-    let server_xpub = signer
-        .derive_xpub(
-            &"m/87h/1h/0h"
-                .parse()
-                .expect("failed to parse derivation path"),
-        )
-        .expect("failed to derive xpub")
-        .to_string();
+    let fingerprint = signer.fingerprint();
+    let keyorigin_xpub_master = format!("[{fingerprint}]{}", signer.xpub());
 
     let server = tiny_http::Server::http(&addr).expect("failed to bind");
     let actual_addr = server.server_addr().to_ip().expect("not an IP address");
@@ -73,7 +67,13 @@ fn main() {
                     };
                     (200, serde_json::to_string(&resp).unwrap())
                 }
-                "/wallets/register" => handle_register(&mut request, &server_xpub),
+                "/info/xpub-master" => {
+                    let resp = InfoXpub {
+                        keyorigin_xpub: keyorigin_xpub_master.clone(),
+                    };
+                    (200, serde_json::to_string(&resp).unwrap())
+                }
+                "/wallets/register" => handle_register(&mut request, &fingerprint.to_string()),
                 "/wallets/sign" => handle_sign(&mut request, &signer),
                 _ => (404, err_json("not found")),
             };
@@ -97,7 +97,7 @@ fn header(name: &str, value: &str) -> tiny_http::Header {
     tiny_http::Header::from_bytes(name.as_bytes(), value.as_bytes()).unwrap()
 }
 
-fn handle_register(request: &mut tiny_http::Request, server_xpub: &str) -> (u16, String) {
+fn handle_register(request: &mut tiny_http::Request, fingerprint: &str) -> (u16, String) {
     let mut body = String::new();
     if request.as_reader().read_to_string(&mut body).is_err() {
         return (400, err_json("failed to read request body"));
@@ -113,7 +113,8 @@ fn handle_register(request: &mut tiny_http::Request, server_xpub: &str) -> (u16,
         Err(e) => return (400, err_json(&format!("invalid descriptor: {e}"))),
     };
 
-    if !desc.to_string().contains(server_xpub) {
+    let desc_str = desc.to_string();
+    if !desc_str.contains(fingerprint) {
         return (400, err_json("descriptor does not contain the server key"));
     }
 

@@ -112,6 +112,9 @@ mod tx_details;
 mod pset_create;
 #[cfg(feature = "registry")]
 pub mod registry;
+#[cfg(feature = "silentpayments")]
+#[cfg_attr(docsrs, doc(cfg(feature = "silentpayments")))]
+pub mod silentpayments;
 mod tx_builder;
 mod update;
 mod util;

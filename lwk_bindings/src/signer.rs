@@ -140,6 +140,14 @@ impl Signer {
         Ok(self.inner.fingerprint().to_string())
     }
 
+    /// Derive an xpub at `path` and return it as a keyorigin xpub string
+    pub fn keyorigin_xpub_from_path(&self, path: &str) -> Result<String, LwkError> {
+        let path: elements::bitcoin::bip32::DerivationPath = path.parse()?;
+        let fingerprint = self.inner.fingerprint();
+        let xpub = lwk_common::Signer::derive_xpub(&self.inner, &path)?;
+        Ok(format!("[{fingerprint}/{path}]{xpub}"))
+    }
+
     /// Return the signer slip77 master blinding key
     pub fn slip77_master_blinding_key(&self) -> Result<String, LwkError> {
         let mbk = lwk_common::Signer::slip77_master_blinding_key(&self.inner)?;

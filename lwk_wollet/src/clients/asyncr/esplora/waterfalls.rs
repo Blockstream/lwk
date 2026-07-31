@@ -306,6 +306,20 @@ impl WaterfallsClient {
         self.inner.capabilities()
     }
 
+    /// Async version of [`crate::blocking::BlockchainBackend::silent_payment_tweaks()`],
+    /// delegating to the wrapped Esplora client.
+    ///
+    /// Waterfalls has no tweak endpoint of its own yet, so discovery costs the same
+    /// block downloads as plain Esplora here — the descriptor-side speedup does not
+    /// extend to silent payments, because no descriptor generates their scripts.
+    #[cfg(feature = "silentpayments")]
+    pub async fn silent_payment_tweaks(
+        &self,
+        height: Height,
+    ) -> Result<Vec<(Txid, crate::silentpayments::PartialTweak)>, Error> {
+        self.inner.silent_payment_tweaks(height).await
+    }
+
     /// Returns true if the wallet has any tx using the first gap limit addresses.
     pub async fn has_txs(
         &self,

@@ -24,6 +24,8 @@ default = ["jade", "amp0"]
 jade = ["lwk_jade"]
 ledger = ["lwk_ledger"]
 amp0 = []
+# BIP-352 silent-payment signing support and its optional signer errors.
+silentpayments = ["lwk_common/silentpayments"]
 
 [package.metadata.docs.rs]
 all-features = true

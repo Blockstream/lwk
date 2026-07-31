@@ -8,7 +8,14 @@
 
 mod software;
 pub use crate::software::{sign_with_seckey, NewError, SignError, SwSigner};
+#[cfg(feature = "silentpayments")]
+mod silentpayments;
+
 pub use bip39;
+#[cfg(feature = "silentpayments")]
+use lwk_common::silentpayments::{
+    SilentPaymentAccount, SilentPaymentScanMaterial, SilentPaymentSigner,
+};
 
 use elements_miniscript::bitcoin::bip32::{self, DerivationPath, Fingerprint};
 use elements_miniscript::bitcoin::sign_message::MessageSignature;
@@ -33,6 +40,17 @@ pub enum SignerError {
 
     #[error(transparent)]
     Bip32Error(#[from] bip32::Error),
+
+    /// A hardware signer was asked for a silent-payment operation.
+    ///
+    /// This is a protocol gap, not an oversight: BIP-352 spending needs the device
+    /// to combine its `b_spend` with a host-supplied tweak, and neither the Jade nor
+    /// the Ledger protocol exposes such an operation today. Refusing loudly is the
+    /// only honest answer — the alternative (deriving the key on the host) would
+    /// defeat the entire point of using a hardware signer.
+    #[cfg(feature = "silentpayments")]
+    #[error("This signer does not support silent payments")]
+    UnsupportedSilentPayments,
 }
 
 /// A signer that can be a software signer [`SwSigner`] or a [`lwk_jade::Jade`]
@@ -80,6 +98,31 @@ impl Signer for AnySigner {
         path: &DerivationPath,
     ) -> Result<MessageSignature, Self::Error> {
         Signer::sign_message(&self, message, path)
+    }
+}
+
+/// Dispatches silent-payment scan-material export to the only signer that supports it.
+///
+/// Implemented on `AnySigner` rather than folded into [`Signer`] so signers with no
+/// silent-payment support carry no dead state. Signing itself uses the single
+/// [`Signer::sign`] operation; software signers recognize SP metadata there, while
+/// hardware signers currently leave those unsupported inputs unsigned.
+#[cfg(feature = "silentpayments")]
+#[cfg_attr(docsrs, doc(cfg(feature = "silentpayments")))]
+impl SilentPaymentSigner for AnySigner {
+    fn silent_payment_scan_material(
+        &self,
+        account: SilentPaymentAccount,
+    ) -> Result<SilentPaymentScanMaterial, Self::Error> {
+        match self {
+            AnySigner::Software(s) => Ok(s.silent_payment_scan_material(account)?),
+
+            #[cfg(feature = "jade")]
+            AnySigner::Jade(_, _) => Err(SignerError::UnsupportedSilentPayments),
+
+            #[cfg(feature = "ledger")]
+            AnySigner::Ledger(_, _) => Err(SignerError::UnsupportedSilentPayments),
+        }
     }
 }
 

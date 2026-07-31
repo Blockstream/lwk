@@ -100,6 +100,17 @@ impl SpPaymentBuilder {
         self
     }
 
+    pub(crate) fn with_asset(mut self, asset: AssetId) -> Self {
+        self.asset = asset;
+        self
+    }
+
+    /// Emit only the silent-payment output.
+    pub(crate) fn without_extra_output(mut self) -> Self {
+        self.extra_output = false;
+        self
+    }
+
     /// Build a payment to `address`.
     pub(crate) fn build(self, address: &SilentPaymentAddress) -> SpPayment {
         let sender = SilentPaymentSender::from_inputs(&self.inputs)

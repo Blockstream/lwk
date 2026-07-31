@@ -20,7 +20,8 @@ fn tx_key(txid: &Txid) -> String {
 }
 
 /// `Cache` is a cache of wallet data, like wallet transactions.
-/// It is fully reconstructable from the CT Descriptor and the blockchain.
+///
+/// Silent-payment scan keys also contribute to persistent wallet status.
 pub struct Cache {
     /// Store for all wallet transactions
     txs_store: Arc<dyn DynStore>,
@@ -64,6 +65,14 @@ pub struct Cache {
 
     /// last unused index for internal addresses (changes) for current descriptor
     pub last_unused_internal: AtomicU32,
+
+    /// Discovered silent-payment outputs, keyed by script.
+    #[cfg(feature = "silentpayments")]
+    pub silent_payments: HashMap<Script, crate::silentpayments::SilentPaymentCacheEntry>,
+
+    /// Height through which silent-payment discovery has run.
+    #[cfg(feature = "silentpayments")]
+    pub silent_payments_scanned_to: Option<Height>,
 }
 
 impl Default for Cache {
@@ -82,6 +91,10 @@ impl Default for Cache {
             last_unused_internal: 0.into(),
             last_unused_external: 0.into(),
             timestamps: HashMap::default(),
+            #[cfg(feature = "silentpayments")]
+            silent_payments: HashMap::default(),
+            #[cfg(feature = "silentpayments")]
+            silent_payments_scanned_to: None,
         }
     }
 }
@@ -122,6 +135,20 @@ impl std::hash::Hash for Cache {
         self.last_unused_internal
             .load(Ordering::Relaxed)
             .hash(state);
+
+        // Skip empty state to preserve existing wallet status hashes.
+        #[cfg(feature = "silentpayments")]
+        if !self.silent_payments.is_empty() {
+            let mut vec: Vec<_> = self.silent_payments.keys().collect();
+            vec.sort();
+            vec.hash(state);
+        }
+
+        // Skip absent state to preserve existing wallet status hashes.
+        #[cfg(feature = "silentpayments")]
+        if let Some(height) = self.silent_payments_scanned_to {
+            height.hash(state);
+        }
     }
 }
 
@@ -326,6 +353,18 @@ impl Cache {
         self.sorted_txids = sorted;
     }
 
+    /// Whether the wallet owns `script`.
+    pub(crate) fn owns_script(&self, script: &Script) -> bool {
+        if self.paths.contains_key(script) {
+            return true;
+        }
+        #[cfg(feature = "silentpayments")]
+        if self.silent_payments.contains_key(script) {
+            return true;
+        }
+        false
+    }
+
     fn update_unspent(
         &mut self,
         txid_height_new: &[(Txid, Option<u32>)],
@@ -342,7 +381,7 @@ impl Cache {
                 self.outpoint_script(op, new_txs)
                     .map(|script| (*op, script))
             })
-            .filter(|(_, script)| self.paths.contains_key(script))
+            .filter(|(_, script)| self.owns_script(script))
             .collect();
 
         let inputs_new: HashSet<OutPoint> = txids_new
@@ -362,7 +401,7 @@ impl Cache {
                 self.outpoint_script(&op, new_txs)
                     .map(|script| (op, script))
             })
-            .filter(|(_, script)| self.paths.contains_key(script))
+            .filter(|(_, script)| self.owns_script(script))
             .collect();
 
         // Add outputs of new txs
@@ -539,6 +578,39 @@ impl Cache {
     }
 }
 
+/// Silent payment outputs in the cache.
+#[cfg(feature = "silentpayments")]
+impl Cache {
+    /// Records a discovered silent-payment output.
+    pub(crate) fn insert_silent_payment(
+        &mut self,
+        entry: crate::silentpayments::SilentPaymentCacheEntry,
+        unblinded: TxOutSecrets,
+    ) {
+        let outpoint = entry.outpoint;
+        let script = entry.script_pubkey.clone();
+        self.unblinded.insert(outpoint, unblinded);
+        self.silent_payments.insert(script.clone(), entry);
+        if !self.is_spent(&outpoint) {
+            self.unspent.insert(outpoint, script);
+        }
+    }
+
+    /// Whether a cached transaction spends `outpoint`.
+    fn is_spent(&self, outpoint: &OutPoint) -> bool {
+        self.all_txs()
+            .any(|(_, tx)| tx.input.iter().any(|i| i.previous_output == *outpoint))
+    }
+
+    /// The silent payment entry for `script`, if the wallet owns it.
+    pub(crate) fn silent_payment(
+        &self,
+        script: &Script,
+    ) -> Option<&crate::silentpayments::SilentPaymentCacheEntry> {
+        self.silent_payments.get(script)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{cache::Cache, WolletDescriptor};
@@ -601,6 +673,46 @@ mod tests {
         assert_eq!(12004253425667158821, hasher.finish());
 
         // TODO test other fields change the hash
+    }
+
+    /// Empty silent-payment state preserves the legacy status hash.
+    #[cfg(feature = "silentpayments")]
+    #[test]
+    fn silent_payments_hash_only_once_non_empty() {
+        use crate::silentpayments::SilentPaymentCacheEntry;
+
+        let hash_of = |cache: &Cache| {
+            let mut hasher = DefaultHasher::new();
+            cache.hash(&mut hasher);
+            hasher.finish()
+        };
+
+        let mut cache = Cache::default();
+        assert_eq!(
+            hash_of(&cache),
+            11565483422739161174,
+            "an empty silent payment set must hash exactly as before the field existed"
+        );
+
+        let script = elements::Script::from(vec![0x51, 0x20, 0xAB]);
+        cache.silent_payments.insert(
+            script.clone(),
+            SilentPaymentCacheEntry {
+                outpoint: elements::OutPoint::new(<Txid as elements::hashes::Hash>::all_zeros(), 0),
+                script_pubkey: script,
+                k: 0,
+                label: None,
+                spend_tweak: crate::silentpayments::SpendTweak::from_be_bytes([0x11; 32]).unwrap(),
+                blinding_pubkey: crate::secp256k1::SecretKey::from_slice(&[0x22; 32])
+                    .unwrap()
+                    .public_key(&crate::util::EC),
+            },
+        );
+        assert_ne!(
+            hash_of(&cache),
+            11565483422739161174,
+            "a found silent payment is cache content and must change the hash"
+        );
     }
 
     #[test]

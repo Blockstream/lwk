@@ -23,6 +23,9 @@ use elements::{
 use lwk_common::{calculate_fee, set_genesis_hash};
 use rand::thread_rng;
 
+#[cfg(feature = "silentpayments")]
+use crate::silentpayments::{SilentPaymentAddress, SilentPaymentRecipient};
+
 /// Validates the outputs receiving `total` (re)issued satoshi, filling in the default single
 /// output to the wallet generating the (re)issuance if the caller added none
 fn validate_outputs(
@@ -209,7 +212,7 @@ pub(crate) fn add_input_inner(
 ///   of the wallet in the finish methods because this it more friendly for bindings implementation.
 ///   Moreover, we could have an alternative finish which don't use a wallet at all.
 /// * We are consuming and returning self to build the tx with method chaining
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TxBuilder {
     network: Network,
     recipients: Vec<Recipient>,
@@ -229,6 +232,22 @@ pub struct TxBuilder {
     // LiquiDEX fields
     is_liquidex_make: bool,
     liquidex_proposals: Vec<LiquidexProposal<Validated>>,
+
+    /// Silent payment recipients, held apart from `recipients` because they cannot
+    /// be resolved until the transaction's inputs are known: the output key is
+    /// derived from a shared secret over the very inputs that fund it.
+    #[cfg(feature = "silentpayments")]
+    silent_payment_recipients: Vec<SilentPaymentRecipient>,
+
+    /// Silent payment outputs being spent *standalone* — found by a scan but not
+    /// applied to the wallet, so the cache cannot recognize them.
+    ///
+    /// Their funding side already travels as an `ExternalUtxo`; what an `ExternalUtxo`
+    /// has nowhere to carry is the spend tweak, and without it the resulting PSET input
+    /// is unsignable. Kept here so the tweak survives to `finish_inner`, where the one
+    /// annotation pass writes it into the PSET.
+    #[cfg(feature = "silentpayments")]
+    silent_payment_utxos: Vec<crate::silentpayments::SilentPaymentUtxo>,
 }
 
 impl TxBuilder {
@@ -249,6 +268,27 @@ impl TxBuilder {
             add_input_rangeproofs: true,
             is_liquidex_make: false,
             liquidex_proposals: vec![],
+            #[cfg(feature = "silentpayments")]
+            silent_payment_recipients: vec![],
+            #[cfg(feature = "silentpayments")]
+            silent_payment_utxos: vec![],
+        }
+    }
+
+    /// Refuse to build if silent payment recipients are still unresolved.
+    ///
+    /// Only exists under the feature: with it off there are no silent payment
+    /// recipients to check, so the call site is gated too rather than calling a
+    /// stub that would read as "checked, and fine" in a build where the concept
+    /// does not exist.
+    #[cfg(feature = "silentpayments")]
+    fn check_no_pending_silent_payments(&self) -> Result<(), Error> {
+        if self.silent_payment_recipients.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::SilentPaymentRequiresKeys(
+                self.silent_payment_recipients.len(),
+            ))
         }
     }
 
@@ -309,6 +349,64 @@ impl TxBuilder {
     pub fn add_burn(self, satoshi: u64, asset_id: AssetId) -> Result<Self, Error> {
         let rec = UnvalidatedRecipient::burn(asset_id.to_string(), satoshi);
         self.add_unvalidated_recipient(&rec)
+    }
+
+    /// Add a silent payment recipient (BIP-352 on Liquid).
+    ///
+    /// The receiver publishes one reusable `lqsp1...` address; every payment to it
+    /// still lands on a fresh, unlinkable output, and on Liquid the same shared
+    /// secret also blinds the output so the receiver can unblind it unaided.
+    ///
+    /// Unlike every other recipient, the on-chain output cannot be computed here: it
+    /// is derived from a shared secret over the transaction's **own inputs**, which
+    /// are not known until coin selection has run. It is therefore resolved when the
+    /// transaction is finalized — and because that derivation needs the inputs'
+    /// **private** keys, which a watch-only [`Wollet`] does not hold, a transaction
+    /// with silent payment recipients must be finished with
+    /// [`TxBuilder::finish_silent_payment()`] rather than [`TxBuilder::finish()`].
+    ///
+    /// ```rust
+    /// # use lwk_wollet::{TxBuilder, Network};
+    /// # use lwk_wollet::silentpayments::SilentPaymentAddress;
+    /// # fn main() -> Result<(), lwk_wollet::Error> {
+    /// # let network = Network::TestnetLiquid;
+    /// # let sp_address = "tlqsp1qq...";
+    /// # let asset = *network.policy_asset();
+    /// # let _ = |sp_address: &str| -> Result<(), lwk_wollet::Error> {
+    /// let builder = TxBuilder::new(network)
+    ///     .add_silent_payment_recipient(sp_address, 100_000, asset)?;
+    /// # Ok(()) };
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "silentpayments")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "silentpayments")))]
+    pub fn add_silent_payment_recipient(
+        self,
+        address: &str,
+        satoshi: u64,
+        asset: AssetId,
+    ) -> Result<Self, Error> {
+        let address = SilentPaymentAddress::parse(address, self.network())?;
+        Ok(
+            self.add_validated_silent_payment_recipient(SilentPaymentRecipient::new(
+                address, satoshi, asset,
+            )),
+        )
+    }
+
+    /// Add an already-parsed silent payment recipient.
+    ///
+    /// See [`TxBuilder::add_silent_payment_recipient()`] for the caveats on how and
+    /// when the output is derived.
+    #[cfg(feature = "silentpayments")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "silentpayments")))]
+    pub fn add_validated_silent_payment_recipient(
+        mut self,
+        recipient: SilentPaymentRecipient,
+    ) -> Self {
+        self.silent_payment_recipients.push(recipient);
+        self
     }
 
     /// Add an `OP_RETURN` output carrying arbitrary `data`, with zero value.
@@ -550,6 +648,37 @@ impl TxBuilder {
     /// Note: unblinded UTXOs with the same scriptpubkeys as the wallet, are considered external.
     pub fn add_external_utxos(mut self, utxos: Vec<ExternalUtxo>) -> Result<Self, Error> {
         self.external_utxos.extend(utxos);
+        Ok(self)
+    }
+
+    /// Spend silent payment outputs that have **not** been applied to the wallet.
+    ///
+    /// Use this for outputs from [`crate::Wollet::scan_silent_payments()`] that the
+    /// caller is holding itself. Outputs passed to
+    /// [`crate::Wollet::apply_silent_payments()`] need nothing special — they are
+    /// ordinary wallet money by then, and coin selection spends them like any other
+    /// UTXO.
+    ///
+    /// # Why this exists rather than `add_external_utxos`
+    ///
+    /// [`crate::silentpayments::SilentPaymentUtxo::external_utxo()`] describes how to
+    /// *fund* with the output, and that part an [`ExternalUtxo`] carries fine. What it
+    /// has nowhere to put is the spend tweak — the one thing a signer cannot rederive,
+    /// since a silent payment output has no derivation path. Passing such an output
+    /// through `add_external_utxos` alone therefore yields a PSET whose input no signer
+    /// can complete. This method keeps the tweak attached, and the builder writes it
+    /// into the PSET as proprietary metadata for a silent-payment aware signer.
+    ///
+    /// The funding side is registered for you; do not also pass `external_utxo()` for
+    /// the same output, or it would be added twice.
+    #[cfg(feature = "silentpayments")]
+    pub fn add_silent_payment_utxos(
+        mut self,
+        utxos: Vec<crate::silentpayments::SilentPaymentUtxo>,
+    ) -> Result<Self, Error> {
+        self.external_utxos
+            .extend(utxos.iter().map(|u| u.external_utxo()));
+        self.silent_payment_utxos.extend(utxos);
         Ok(self)
     }
 
@@ -984,6 +1113,12 @@ impl TxBuilder {
     }
 
     /// Finish building the transaction
+    ///
+    /// Fails if any silent payment recipient was added: deriving those outputs needs
+    /// the funding inputs' private keys, which a watch-only wallet does not have.
+    /// Use [`TxBuilder::finish_silent_payment()`] instead. Failing loudly here is
+    /// deliberate — silently dropping the recipient would produce a transaction that
+    /// looks fine but pays nobody.
     pub fn finish(self, wollet: &Wollet) -> Result<PartiallySignedTransaction, Error> {
         let BuiltTx { pset, .. } = self.finish_inner(wollet)?;
         Ok(pset)
@@ -998,7 +1133,96 @@ impl TxBuilder {
         self.finish_inner(wollet)
     }
 
+    /// Finish building a transaction containing silent-payment recipients.
+    ///
+    /// `keys` supplies private keys for the selected inputs.
+    #[cfg(feature = "silentpayments")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "silentpayments")))]
+    pub fn finish_silent_payment(
+        mut self,
+        wollet: &Wollet,
+        keys: &impl crate::silentpayments::SilentPaymentInputProvider,
+    ) -> Result<PartiallySignedTransaction, Error> {
+        use crate::silentpayments::SilentPaymentRecipient;
+
+        let pending = std::mem::take(&mut self.silent_payment_recipients);
+        if pending.is_empty() {
+            return self.finish(wollet);
+        }
+
+        let mut probe = self.clone_for_probe();
+        for r in &pending {
+            probe = probe.add_validated_recipient(Self::silent_payment_placeholder(r));
+        }
+        let probe_pset = probe.finish(wollet)?;
+
+        let outpoints: Vec<OutPoint> = probe_pset
+            .inputs()
+            .iter()
+            .map(|i| OutPoint::new(i.previous_txid, i.previous_output_index))
+            .collect();
+
+        // Preserve keyless outpoints in `outpoint_L`.
+        let mut eligible = Vec::new();
+        let mut extra = Vec::new();
+        for outpoint in &outpoints {
+            match keys.input_key(outpoint) {
+                crate::silentpayments::InputKeyResult::Eligible(key) => {
+                    eligible.push((*outpoint, key));
+                }
+                crate::silentpayments::InputKeyResult::Ineligible => extra.push(*outpoint),
+                crate::silentpayments::InputKeyResult::Missing => {
+                    return Err(crate::silentpayments::SilentPaymentInputError::MissingKey.into());
+                }
+            }
+        }
+        if eligible.is_empty() {
+            return Err(crate::silentpayments::SilentPaymentInputError::NoInputs.into());
+        }
+
+        let resolved = SilentPaymentRecipient::resolve_all(&pending, &eligible, &extra)?;
+        for r in &resolved {
+            self = self.add_validated_recipient(r.recipient.clone());
+        }
+
+        // Preserve the selected input set while rebuilding the real outputs.
+        let external: HashSet<OutPoint> = self.external_utxos.iter().map(|u| u.outpoint).collect();
+        let wallet_utxos: Vec<OutPoint> = outpoints
+            .into_iter()
+            .filter(|o| !external.contains(o))
+            .collect();
+
+        self.set_wallet_utxos(wallet_utxos).finish(wollet)
+    }
+
+    /// Creates a size-equivalent recipient for input selection.
+    #[cfg(feature = "silentpayments")]
+    fn silent_payment_placeholder(recipient: &SilentPaymentRecipient) -> Recipient {
+        Recipient {
+            satoshi: recipient.satoshi,
+            script_pubkey: Script::new_v1_p2tr_tweaked(elements::schnorr::TweakedPublicKey::new(
+                recipient.address.spend.x_only_public_key().0,
+            )),
+            blinding_pubkey: Some(recipient.address.scan),
+            asset: recipient.asset,
+        }
+    }
+
+    /// Copies the builder for the input-selection probe.
+    #[cfg(feature = "silentpayments")]
+    fn clone_for_probe(&self) -> Self {
+        let mut probe = self.clone();
+        probe.silent_payment_recipients.clear();
+        probe
+    }
+
     fn finish_inner(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
+        // Guard first: an unresolved silent payment recipient must never be silently
+        // dropped from the transaction, which would yield a plausible-looking PSET
+        // that pays nobody.
+        #[cfg(feature = "silentpayments")]
+        self.check_no_pending_silent_payments()?;
+
         if self.is_liquidex_make {
             if self.inputs_order.is_some() {
                 return Err(Error::LiquidexUnsupportedWithInputsOrder);
@@ -1532,6 +1756,24 @@ impl TxBuilder {
         // Add details to the pset from our descriptor, like bip32derivation and keyorigin
         wollet.add_details(&mut built_tx.pset)?;
 
+        // The same step for inputs the descriptor cannot describe. A silent payment
+        // output has no derivation path, so `add_details` above passes over it and a
+        // signer would meet an input it cannot recognize; this attaches the tweak that
+        // stands in for the missing `bip32_derivation`.
+        //
+        // One pass over the finished PSET, after every input has been added by whatever
+        // route — coin selection, pinned ordering, or the reissuance token path — so no
+        // route can be forgotten. Gated at the call site rather than behind a stub: with
+        // the feature off no input can be a silent payment, and a call here would read
+        // as a check that passed rather than a concept that does not exist.
+        #[cfg(feature = "silentpayments")]
+        if let Some(annotator) = crate::silentpayments::SilentPaymentPsetAnnotator::for_builder(
+            wollet,
+            &self.silent_payment_utxos,
+        )? {
+            annotator.annotate(&mut built_tx.pset)?;
+        }
+
         Ok(built_tx)
     }
 }
@@ -1653,6 +1895,10 @@ impl BuiltTx {
             tip: crate::update::default_blockheader(),
             unspent: vec![],
             last_unused: crate::wollet::WolletState::last_unused(wollet),
+            // Persisting a blinder is not a chain scan, so it claims no discovery
+            // progress.
+            #[cfg(feature = "silentpayments")]
+            silent_payments: None,
         };
         Ok(update)
     }
@@ -1692,6 +1938,60 @@ impl<'a> WolletTxBuilder<'a> {
     /// Alternative to `finish()` that returns more than a PSET.
     pub fn build(self) -> Result<BuiltTx, Error> {
         self.inner.build(self.wollet)
+    }
+
+    /// Wrapper of [`TxBuilder::finish_silent_payment()`]
+    ///
+    /// Use this instead of [`WolletTxBuilder::finish()`] whenever a silent payment
+    /// recipient was added: the derivation needs the funding inputs' private keys,
+    /// which `keys` supplies.
+    #[cfg(feature = "silentpayments")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "silentpayments")))]
+    pub fn finish_silent_payment(
+        self,
+        keys: &impl crate::silentpayments::SilentPaymentInputProvider,
+    ) -> Result<PartiallySignedTransaction, Error> {
+        self.inner.finish_silent_payment(self.wollet, keys)
+    }
+
+    /// Wrapper of [`TxBuilder::add_silent_payment_recipient()`]
+    #[cfg(feature = "silentpayments")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "silentpayments")))]
+    pub fn add_silent_payment_recipient(
+        self,
+        address: &str,
+        satoshi: u64,
+        asset: AssetId,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self
+                .inner
+                .add_silent_payment_recipient(address, satoshi, asset)?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::add_silent_payment_utxos()`]
+    #[cfg(feature = "silentpayments")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "silentpayments")))]
+    pub fn add_silent_payment_utxos(
+        self,
+        utxos: Vec<crate::silentpayments::SilentPaymentUtxo>,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.add_silent_payment_utxos(utxos)?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::add_validated_silent_payment_recipient()`]
+    #[cfg(feature = "silentpayments")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "silentpayments")))]
+    pub fn add_validated_silent_payment_recipient(self, recipient: SilentPaymentRecipient) -> Self {
+        Self {
+            wollet: self.wollet,
+            inner: self.inner.add_validated_silent_payment_recipient(recipient),
+        }
     }
 
     /// Wrapper of [`TxBuilder::add_recipient()`]
@@ -1942,6 +2242,137 @@ mod tests {
         clients::LastUnused, update::default_blockheader, DownloadTxResult, WolletBuilder,
     };
 
+    /// The probe placeholder must have the EXACT on-chain footprint of the real
+    /// silent payment output it stands in for.
+    ///
+    /// This underpins the two-pass build: pass 1 measures weight and picks coins
+    /// using placeholders, pass 2 swaps in the derived outputs. If the two differed
+    /// in size, the final transaction could come out underfunded or overpay fees,
+    /// and the pinned coin selection could no longer cover it.
+    #[cfg(feature = "silentpayments")]
+    #[test]
+    fn silent_payment_placeholder_matches_real_output_size() {
+        use crate::silentpayments::{
+            InputKey, SilentPaymentRecipient, SilentPaymentScan, SilentPaymentScanMaterial,
+            SilentPaymentSender,
+        };
+        use elements::secp256k1_zkp::SecretKey;
+
+        let sk = |b: u8| SecretKey::from_slice(&[b; 32]).unwrap();
+        let keys = SilentPaymentScanMaterial::new(
+            crate::silentpayments::SilentPaymentAccount::liquid_testnet(0),
+            sk(0x11),
+            sk(0x22).public_key(&crate::util::EC),
+        );
+        let asset = AssetId::from_slice(&[0x42u8; 32]).unwrap();
+        let recipient = SilentPaymentRecipient::new(keys.address(), 50_000, asset);
+
+        let placeholder = TxBuilder::silent_payment_placeholder(&recipient);
+
+        // The real output, derived from concrete inputs.
+        let outpoint = OutPoint::new(elements::Txid::from_byte_array([0x10; 32]), 0);
+        let sender =
+            SilentPaymentSender::from_input_keys(&[(outpoint, InputKey::Plain(sk(0x31)))], &[])
+                .unwrap();
+        let real = sender.derive_output(&keys.address(), 0);
+
+        assert_eq!(
+            placeholder.script_pubkey.len(),
+            real.script_pubkey().len(),
+            "placeholder scriptPubKey must be the same size as the real one"
+        );
+        assert!(
+            placeholder.script_pubkey.is_v1_p2tr(),
+            "placeholder must be a v1 taproot program, like the real output"
+        );
+        // Both confidential: a placeholder without a blinding key would make pass 1
+        // measure an explicit output and underestimate the weight.
+        assert!(placeholder.blinding_pubkey.is_some());
+        assert_eq!(placeholder.satoshi, 50_000);
+        assert_eq!(placeholder.asset, asset);
+
+        // It must NOT be mistaken for the real output: the placeholder is a stand-in
+        // and must always be replaced before the PSET is returned.
+        assert_ne!(placeholder.script_pubkey, real.script_pubkey());
+    }
+
+    /// `clone_for_probe` must carry every builder setting across, or pass 1 would
+    /// measure a different transaction than pass 2 builds — while dropping the
+    /// silent payment recipients, which the probe replaces with placeholders.
+    #[cfg(feature = "silentpayments")]
+    #[test]
+    fn probe_preserves_settings_but_drops_silent_payments() {
+        use crate::silentpayments::{
+            SilentPaymentRecipient, SilentPaymentScan, SilentPaymentScanMaterial,
+        };
+        use elements::secp256k1_zkp::SecretKey;
+
+        let keys = SilentPaymentScanMaterial::new(
+            crate::silentpayments::SilentPaymentAccount::liquid_testnet(0),
+            SecretKey::from_slice(&[0x11; 32]).unwrap(),
+            SecretKey::from_slice(&[0x22; 32])
+                .unwrap()
+                .public_key(&crate::util::EC),
+        );
+        let asset = AssetId::from_slice(&[0x42u8; 32]).unwrap();
+
+        let builder = TxBuilder::new(Network::default_regtest())
+            .fee_rate(Some(250.0))
+            .add_validated_silent_payment_recipient(SilentPaymentRecipient::new(
+                keys.address(),
+                1_000,
+                asset,
+            ));
+
+        let probe = builder.clone_for_probe();
+
+        assert!(
+            probe.silent_payment_recipients.is_empty(),
+            "probe must not carry unresolved silent payments"
+        );
+        // Settings that affect weight/fee must survive.
+        assert_eq!(probe.fee_rate, builder.fee_rate);
+        assert_eq!(probe.ct_discount, builder.ct_discount);
+        assert_eq!(probe.network, builder.network);
+    }
+
+    /// Finishing normally with a pending silent payment must FAIL, not silently drop
+    /// it. A dropped recipient would yield a perfectly valid transaction that simply
+    /// never pays the intended party.
+    #[cfg(feature = "silentpayments")]
+    #[test]
+    fn plain_finish_refuses_pending_silent_payments() {
+        use crate::silentpayments::{
+            SilentPaymentRecipient, SilentPaymentScan, SilentPaymentScanMaterial,
+        };
+        use elements::secp256k1_zkp::SecretKey;
+
+        let keys = SilentPaymentScanMaterial::new(
+            crate::silentpayments::SilentPaymentAccount::liquid_testnet(0),
+            SecretKey::from_slice(&[0x11; 32]).unwrap(),
+            SecretKey::from_slice(&[0x22; 32])
+                .unwrap()
+                .public_key(&crate::util::EC),
+        );
+        let asset = AssetId::from_slice(&[0x42u8; 32]).unwrap();
+
+        let builder = TxBuilder::new(Network::default_regtest());
+        assert!(
+            builder.check_no_pending_silent_payments().is_ok(),
+            "a builder with no silent payments must be unaffected"
+        );
+
+        let builder = builder.add_validated_silent_payment_recipient(SilentPaymentRecipient::new(
+            keys.address(),
+            1_000,
+            asset,
+        ));
+        assert!(matches!(
+            builder.check_no_pending_silent_payments(),
+            Err(Error::SilentPaymentRequiresKeys(1))
+        ));
+    }
+
     #[test]
     fn test_extract_issuances() {
         let tx_bytes = include_bytes!(
@@ -2012,6 +2443,8 @@ mod tests {
                     external: 7,
                     internal: 11,
                 },
+                #[cfg(feature = "silentpayments")]
+                silent_payments: None,
             })
             .unwrap();
 

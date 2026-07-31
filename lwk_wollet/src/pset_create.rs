@@ -62,7 +62,7 @@ impl Wollet {
             Some(self.get_tx(&utxo.outpoint.txid)?)
         };
 
-        add_input_inner(
+        let idx = add_input_inner(
             pset,
             inp_txout_sec,
             inp_weight,
@@ -70,10 +70,31 @@ impl Wollet {
             self.get_txout(&utxo.outpoint)?,
             tx,
             utxo.unblinded,
-            self.max_weight_to_satisfy(),
+            self.satisfaction_weight_for(utxo),
             false, // wallet inputs cannot be explicit
             add_input_rangeproofs,
-        )
+        )?;
+
+        Ok(idx)
+    }
+
+    /// Weight units this input's satisfaction will add.
+    ///
+    /// Normally the wallet-wide value derived from the CT descriptor, since every
+    /// descriptor-derived input is satisfied the same way. A silent payment output is
+    /// the exception: it is always a key-path Taproot spend regardless of what the
+    /// wallet descriptor is, so charging it the descriptor's weight would mis-estimate
+    /// the fee — under-paying on a wpkh wallet, which risks a transaction that will not
+    /// relay.
+    /// With silent payments compiled out every wallet input is descriptor-derived, so
+    /// the utxo carries no information the wallet-wide value does not already have.
+    #[cfg_attr(not(feature = "silentpayments"), allow(unused_variables))]
+    pub(crate) fn satisfaction_weight_for(&self, utxo: &WalletTxOut) -> usize {
+        #[cfg(feature = "silentpayments")]
+        if let Some(entry) = self.cache.silent_payment(&utxo.script_pubkey) {
+            return entry.max_weight_to_satisfy();
+        }
+        self.max_weight_to_satisfy()
     }
 
     pub(crate) fn set_issuance(
@@ -165,7 +186,7 @@ impl Wollet {
         let index = if self.descriptor.has_wildcard() {
             Some(*last_unused)
         } else if self.descriptor.spk_count().is_some() {
-            // For wollets without descriptor, for now we do a safe choice and internally always use the first scriptpubkey
+            // Use the first fixed script when no wildcard is available.
             Some(0)
         } else {
             // Descriptor wollet with no wildcard

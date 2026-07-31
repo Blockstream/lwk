@@ -3,7 +3,7 @@ use crate::elements::{Address, AssetId, OutPoint, Transaction};
 use crate::Error;
 use std::collections::HashSet;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Issuances {
     None,
     Sequential(Vec<IssuanceRequest>),
@@ -110,7 +110,7 @@ impl IssuanceRequest {
 }
 
 /// Accumulates the reissuance requests added via [`crate::TxBuilder::add_reissuance()`].
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Reissuances {
     pub(crate) requests: Vec<ReissuanceRequest>,
     /// Cache to check for duplicated assets

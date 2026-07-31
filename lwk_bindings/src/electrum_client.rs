@@ -1,15 +1,53 @@
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use lwk_wollet::clients::blocking::BlockchainBackend;
 
-use crate::{BlockHeader, LwkError, Transaction, Txid, Update, Wollet};
+use crate::{BlockHeader, LwkError, TokenProvider, Transaction, Txid, Update, Wollet};
 
 /// A client to issue TCP requests to an electrum server.
 #[derive(uniffi::Object, Debug)]
 pub struct ElectrumClient {
     inner: Arc<Mutex<lwk_wollet::ElectrumClient>>,
 
-    url: lwk_wollet::ElectrumUrl,
+    /// The builder used to create the client, kept so the client can be re-created with the
+    /// same configuration (url, token provider, timeout, ...), e.g. by `clone_client`.
+    builder: lwk_wollet::ElectrumClientBuilder,
+}
+
+/// A builder for the [`ElectrumClient`], to set a token provider (for authenticated Electrum
+/// RPC proxies) and other options.
+#[derive(uniffi::Record)]
+pub struct ElectrumClientBuilder {
+    /// The Electrum server url, e.g. `ssl://blockstream.info:995` or `tcp://host:50001`
+    url: String,
+    /// Request/connection timeout in seconds
+    #[uniffi(default = None)]
+    timeout: Option<u8>,
+    /// Token provider for authenticated Electrum RPC proxies
+    #[uniffi(default = None)]
+    token_provider: Option<TokenProvider>,
+    /// Allow sending the token over a plaintext (`tcp://`) connection. Insecure; only for a
+    /// localhost proxy or an already-tunneled connection. Off by default, so a token on a
+    /// `tcp://` url is refused.
+    #[uniffi(default = false)]
+    allow_plaintext_with_token: bool,
+}
+
+impl From<ElectrumClientBuilder> for lwk_wollet::ElectrumClientBuilder {
+    fn from(builder: ElectrumClientBuilder) -> Self {
+        let mut result = lwk_wollet::ElectrumClientBuilder::new(&builder.url);
+        if let Some(timeout) = builder.timeout {
+            result = result.timeout(Duration::from_secs(timeout as u64));
+        }
+        if let Some(token_provider) = builder.token_provider {
+            result = result.token_provider(token_provider.into());
+        }
+        if builder.allow_plaintext_with_token {
+            result = result.allow_plaintext_with_token(true);
+        }
+        result
+    }
 }
 
 #[uniffi::export]
@@ -23,23 +61,34 @@ impl ElectrumClient {
     ) -> Result<Arc<Self>, LwkError> {
         let url = lwk_wollet::ElectrumUrl::new(electrum_url, tls, validate_domain)
             .map_err(lwk_wollet::Error::Url)?;
-        let client = lwk_wollet::ElectrumClient::new(&url)?;
+        let builder = lwk_wollet::ElectrumClientBuilder::new(&url.to_string());
+        let client = builder.clone().build()?;
         Ok(Arc::new(Self {
             inner: Arc::new(Mutex::new(client)),
-            url,
+            builder,
         }))
     }
 
     #[uniffi::constructor]
     /// Construct an electrum client from an Electrum URL
     pub fn from_url(electrum_url: &str) -> Result<Arc<Self>, LwkError> {
-        let url = electrum_url
-            .parse::<lwk_wollet::ElectrumUrl>()
-            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
-        let client = lwk_wollet::ElectrumClient::new(&url)?;
+        let builder = lwk_wollet::ElectrumClientBuilder::new(electrum_url);
+        let client = builder.clone().build()?;
         Ok(Arc::new(Self {
             inner: Arc::new(Mutex::new(client)),
-            url,
+            builder,
+        }))
+    }
+
+    /// Construct an Electrum client from an `ElectrumClientBuilder`, e.g. to set a token
+    /// provider for an authenticated Electrum RPC proxy.
+    #[uniffi::constructor]
+    pub fn from_builder(builder: ElectrumClientBuilder) -> Result<Arc<Self>, LwkError> {
+        let builder = lwk_wollet::ElectrumClientBuilder::from(builder);
+        let client = builder.clone().build()?;
+        Ok(Arc::new(Self {
+            inner: Arc::new(Mutex::new(client)),
+            builder,
         }))
     }
 
@@ -110,6 +159,6 @@ impl ElectrumClient {
     /// Create a new electrum client with the same connection parameters
     #[allow(unused)] // TODO remove once lwk_boltz is integrated
     pub(crate) fn clone_client(&self) -> Result<lwk_wollet::ElectrumClient, LwkError> {
-        Ok(lwk_wollet::ElectrumClient::new(&self.url)?)
+        Ok(self.builder.clone().build()?)
     }
 }

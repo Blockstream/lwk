@@ -112,6 +112,7 @@ criterion = "0.5.1"
 default = [
     "esplora",
     "electrum",
+    "electrum_oidc",
     "elements_rpc",
     "amp2",
     "amp0",
@@ -121,10 +122,10 @@ default = [
 serial = ["lwk_jade/serial"] # this is a dev-dep feature
 esplora = ["reqwest", "age"]
 electrum = ["electrum-client"]
-# TokenProvider::Blockstream support for the Electrum client (OAuth2 token fetch and
-# refresh). Not for wasm: the token fetch bridges to async on a dedicated thread.
-# TODO: make this a default feature (it pulls no extra default dependencies). Kept off the
-# defaults for now so CI catches missing feature gating.
+# TokenProvider::Blockstream support for the Electrum client (OAuth2 token fetch and refresh).
+# A default feature: it pulls no extra default dependencies over esplora/electrum. Not compiled
+# for wasm, where the OAuth fetch (a dedicated thread bridging to async) is unavailable; the
+# wasm builds use `--no-default-features` and never enable it.
 electrum_oidc = ["electrum", "reqwest"]
 elements_rpc = ["bitcoincore-rpc"]
 bindings = []

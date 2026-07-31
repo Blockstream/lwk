@@ -998,11 +998,17 @@ pub struct AuthConfig {
     /// Static token for authenticated Esplora
     #[arg(long, env)]
     pub auth_static_token: Option<String>,
+
+    /// Allow sending the token over a plaintext (`tcp://`) Electrum connection. Insecure; only
+    /// for a localhost proxy or an already-tunneled connection. Off by default, so a token on a
+    /// `tcp://` Electrum url is refused.
+    #[arg(long)]
+    pub auth_allow_plaintext_with_token: bool,
 }
 
 #[allow(dead_code)] // the same issue as CliCommand
 impl AuthConfig {
-    pub fn token_provider(self, server_type: ServerType) -> Result<TokenProvider, anyhow::Error> {
+    pub fn token_provider(self) -> Result<TokenProvider, anyhow::Error> {
         let oauth_fields = [
             self.auth_token_url.clone(),
             self.auth_client_id.clone(),
@@ -1018,12 +1024,6 @@ impl AuthConfig {
                          --auth-client-id     or env: AUTH_CLIENT_ID\n\
                          --auth-client-secret or env: AUTH_CLIENT_SECRET"
             );
-        }
-
-        if (is_all_blockstream_present || self.auth_static_token.is_some())
-            && matches!(server_type, ServerType::Electrum)
-        {
-            anyhow::bail!("Authentication is not supported with Electrum server type");
         }
 
         if is_all_blockstream_present {

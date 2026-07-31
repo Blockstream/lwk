@@ -21,14 +21,18 @@ pub fn keyorigin_xpub_from_str(
         Some((keyorigin, xpub)) => (keyorigin, xpub),
     };
 
-    let (fingerprint, path) = keyorigin
-        .split_once('/')
-        .ok_or(InvalidKeyOriginXpub("unexpected format".to_string()))?;
+    let (fingerprint, path) = match keyorigin.split_once('/') {
+        // A master key has no further derivation steps, e.g. "[11a345ad]xpub..."
+        None => (keyorigin, DerivationPath::master()),
+        Some((fingerprint, path)) => {
+            let path = DerivationPath::from_str(&format!("m/{}", path))
+                .map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
+            (fingerprint, path)
+        }
+    };
 
     let fingerprint =
         Fingerprint::from_str(fingerprint).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
-    let path = DerivationPath::from_str(&format!("m/{}", path))
-        .map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
     let xpub = Xpub::from_str(xpub).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
 
     Ok((Some((fingerprint, path)), xpub))
@@ -48,12 +52,20 @@ mod test {
         keyorigin_xpub_from_str(s).unwrap();
         keyorigin_xpub_from_str(xpub).unwrap();
 
+        // A master key has no further derivation steps.
+        let (keysource, _) = keyorigin_xpub_from_str(&format!("[{fingerprint}]{xpub}")).unwrap();
+        let (parsed_fingerprint, parsed_path) = keysource.unwrap();
+        assert_eq!(
+            parsed_fingerprint,
+            Fingerprint::from_str(fingerprint).unwrap()
+        );
+        assert_eq!(parsed_path, DerivationPath::master());
+
         for s in [
             &format!("{fingerprint}/{path}]{xpub}"),
             &format!("[[{fingerprint}/{path}]{xpub}"),
             &format!("x[{fingerprint}/{path}]{xpub}"),
             &format!("[{fingerprint}/{path}]]{xpub}"),
-            &format!("[{fingerprint}]{xpub}"),
             &format!("[{fingerprint}-{path}]{xpub}"),
             &format!("[x1a345ad/{path}]{xpub}"),
             &format!("[{fingerprint}/x/{path}]{xpub}"),

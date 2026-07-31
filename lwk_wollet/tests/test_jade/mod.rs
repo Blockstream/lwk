@@ -484,6 +484,23 @@ fn emul_multi_multisig() {
     multi_multisig(&env, &jade_signer);
 }
 
+#[test]
+fn emul_elipamp2_flow() {
+    // Same e2e flow as `test_elipamp2_flow` in lwk_wollet/tests/amp2.rs, but signing with a
+    // Jade emulator instead of a software signer.
+    init_logging();
+    let env = TestEnvBuilder::from_env()
+        .with_electrum()
+        .with_amp2()
+        .build();
+    let docker = Cli::default();
+    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
+    let id = jade_init.jade.identifier().unwrap();
+    let jade_signer = AnySigner::Jade(jade_init.jade, id);
+
+    crate::amp2::elipamp2_flow(&env, &jade_signer);
+}
+
 #[cfg(feature = "serial")]
 mod serial {
     use super::*;

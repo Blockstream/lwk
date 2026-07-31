@@ -1,4 +1,4 @@
-use crate::{Error, Pset, WolletDescriptor};
+use crate::{Error, Pset, Signer, WolletDescriptor};
 
 use wasm_bindgen::prelude::*;
 
@@ -86,6 +86,49 @@ impl Amp2 {
         Ok(self
             .inner
             .descriptor_from_str(keyorigin_xpub, descriptor_blinding_key)?
+            .into())
+    }
+
+    /// Create an AMP2 descriptor ELIP-AMP2 compliant from a signer
+    #[wasm_bindgen(js_name = elipamp2FromSigner)]
+    pub fn elipamp2_from_signer(
+        &self,
+        signer: &Signer,
+        account: u32,
+    ) -> Result<Amp2Descriptor, Error> {
+        Ok(self
+            .inner
+            .elipamp2_from_signer(&signer.inner, account)?
+            .into())
+    }
+
+    /// ELIP-AMP2 `USER_PATH = m/purpose'/coin_type'/account'`
+    #[wasm_bindgen(js_name = elipamp2UserPath)]
+    pub fn elipamp2_user_path(&self, account: u32) -> Result<String, Error> {
+        Ok(self.inner.elipamp2_user_path(account)?.to_string())
+    }
+
+    /// ELIP-AMP2 `VIEW_PATH = m/purpose'/coin_type'/account'/server_fingerprint_masked'`
+    #[wasm_bindgen(js_name = elipamp2ViewPath)]
+    pub fn elipamp2_view_path(&self, account: u32) -> Result<String, Error> {
+        Ok(self.inner.elipamp2_view_path(account)?.to_string())
+    }
+
+    /// Create an AMP2 descriptor ELIP-AMP2 compliant from xpub strings.
+    ///
+    /// This is typically used when the signer is managed outside of LWK.
+    /// Derive the user xpub at [`Amp2::elipamp2_user_path()`] and
+    /// the view xpub at [`Amp2::elipamp2_view_path()`], and pass the
+    /// obtained keyorigin_xpub strings here.
+    #[wasm_bindgen(js_name = elipamp2FromStr)]
+    pub fn elipamp2_from_str(
+        &self,
+        user_keyorigin_xpub: &str,
+        view_keyorigin_xpub: &str,
+    ) -> Result<Amp2Descriptor, Error> {
+        Ok(self
+            .inner
+            .elipamp2_from_str(user_keyorigin_xpub, view_keyorigin_xpub)?
             .into())
     }
 

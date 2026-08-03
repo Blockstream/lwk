@@ -57,17 +57,17 @@ fn test_amp2_flow() {
 }
 
 #[test]
-fn test_elipamp2_flow() {
+fn test_elip153_flow() {
     let env = TestEnvBuilder::from_env()
         .with_electrum()
         .with_amp2()
         .build();
     let signer = AnySigner::Software(generate_signer());
-    elipamp2_flow(&env, &signer);
+    elip153_flow(&env, &signer);
 }
 
 // shared with Jade tests
-pub fn elipamp2_flow(env: &TestEnv, signer: &AnySigner) {
+pub fn elip153_flow(env: &TestEnv, signer: &AnySigner) {
     let amp2_url = env.amp2_url();
 
     let resp: serde_json::Value = reqwest::blocking::get(format!("{amp2_url}/info/xpub-master"))
@@ -79,7 +79,7 @@ pub fn elipamp2_flow(env: &TestEnv, signer: &AnySigner) {
     let amp2 = Amp2::new(server_keyorigin_xpub_master.to_string(), amp2_url).unwrap();
 
     let account = 0;
-    let amp2_desc = amp2.elipamp2_from_signer(signer, account).unwrap();
+    let amp2_desc = amp2.elip153_from_signer(signer, account).unwrap();
 
     let register_resp = amp2.blocking_register(amp2_desc.clone()).unwrap();
     assert!(!register_resp.wid.is_empty());

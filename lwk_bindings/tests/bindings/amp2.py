@@ -48,16 +48,16 @@ wollet.wait_for_tx(txid, client)
 custom_desc = "ct(1111111111111111111111111111111111111111111111111111111111111111,elwsh(and_v(v:pk(026a04ab98d9e4774ad806e302dddeb63bea16b5cb5f223ee77478e861bb583eb3),multi(2,[342c8926/87h/1h/0h]tpubDDWUA7YvBHxdurKUrYFkdjsB59koHqvGRJ3j9zDhwMycxXHXz1ujTfHMB66K4rEWDM8BoDKDdJx3rVGp2qUSPnXVpQXi8qtnXqa96nPnZAH/0/*,[af9e5bc2/87h/1h/0h]tpubDDRPayLs2vBkRkyQ9X2BEhojxCy9vvZpjhubEVosz5pi66LuuAuyZQiUtsPBN5wSfhWLoMYM3gqVqT3Po4GpcWGUfPh8514ZBB9hfWFNEUA/0/*,[57411aec/87h/1h/0h]tpubDDmweWcTcRb54kZqy3Gv5JF8SjAyuoK3uPYXp24uz6nfsKjJojxjdZAang5HXDmtS8tg5CJntUC4fzn4aY5Dsg6Aphvq42vK9edmgX83NFg/0/*))))";
 amp2_desc = Amp2Descriptor.new_with_custom_descriptor(WolletDescriptor(custom_desc))
 
-# e2e with elipamp2 desc
+# e2e with elip153 desc
 account = 0
-desc = amp2.elipamp2_from_signer(signer, account)
+desc = amp2.elip153_from_signer(signer, account)
 
 # getting the descriptor with signer managed externally leads to the same descriptor
-user_path = amp2.elipamp2_user_path(account)
-view_path = amp2.elipamp2_view_path(account)
+user_path = amp2.elip153_user_path(account)
+view_path = amp2.elip153_view_path(account)
 user_keyorigin_xpub = signer.keyorigin_xpub_from_path(user_path)
 view_keyorigin_xpub = signer.keyorigin_xpub_from_path(view_path)
-desc_from_str = amp2.elipamp2_from_str(user_keyorigin_xpub, view_keyorigin_xpub)
+desc_from_str = amp2.elip153_from_str(user_keyorigin_xpub, view_keyorigin_xpub)
 assert str(desc.descriptor()) == str(desc_from_str.descriptor())
 
 dwid = amp2.register_wallet(desc)

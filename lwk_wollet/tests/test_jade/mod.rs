@@ -485,8 +485,8 @@ fn emul_multi_multisig() {
 }
 
 #[test]
-fn emul_elipamp2_flow() {
-    // Same e2e flow as `test_elipamp2_flow` in lwk_wollet/tests/amp2.rs, but signing with a
+fn emul_elip153_flow() {
+    // Same e2e flow as `test_elip153_flow` in lwk_wollet/tests/amp2.rs, but signing with a
     // Jade emulator instead of a software signer.
     init_logging();
     let env = TestEnvBuilder::from_env()
@@ -498,7 +498,7 @@ fn emul_elipamp2_flow() {
     let id = jade_init.jade.identifier().unwrap();
     let jade_signer = AnySigner::Jade(jade_init.jade, id);
 
-    crate::amp2::elipamp2_flow(&env, &jade_signer);
+    crate::amp2::elip153_flow(&env, &jade_signer);
 }
 
 #[cfg(feature = "serial")]
@@ -542,7 +542,7 @@ mod serial {
 
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
-    fn jade_elipamp2_flow() {
+    fn jade_elip153_flow() {
         init_logging();
         let env = TestEnvBuilder::from_env()
             .with_electrum()
@@ -557,7 +557,7 @@ mod serial {
 
         // TODO: Jade shows change output: register multisig/descriptor on Jade to avoid it
         // TODO: Confirm address on Jade (requires Jade to support view keys)
-        crate::amp2::elipamp2_flow(&env, &jade_signer);
+        crate::amp2::elip153_flow(&env, &jade_signer);
     }
 
     #[test]

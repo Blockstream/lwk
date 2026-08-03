@@ -31,10 +31,9 @@ pub const KEYORIGIN_XPUB_TESTNET: &str = "[3d970d04/87h/1h/0h]tpubDC347GyKEGtyd4
 /// The URL of the AMP2 server for the testnet network.
 pub const URL_TESTNET: &str = "https://amp2.testnet.blockstream.com/";
 
-// TODO: once ELIP-AMP2 is assigned a number, replace elipamp2 references with that number
-/// The `purpose` field used to derive [`Amp2::elipamp2()`] keys: `1095585842`
+/// The `purpose` field used to derive [`Amp2::elip153()`] keys: `1095585842`
 /// (hex `0x414d5032`, bytes `b"AMP2"`).
-const ELIP_AMP2_PURPOSE: u32 = 0x414d_5032;
+const ELIP153_PURPOSE: u32 = 0x414d_5032;
 
 /// Context for actions interacting with AMP2
 #[derive(Debug)]
@@ -125,7 +124,7 @@ impl Amp2 {
 
         let (keysource, server_xpub) = keyorigin_xpub_from_str(&server_key)?;
         keysource.ok_or(crate::Error::MissingKeyorigin)?;
-        // TODO: per ELIP-AMP2 the server key should be the master xpub, allow it to have missing keyorigin
+        // TODO: per ELIP153 the server key should be the master xpub, allow it to have missing keyorigin
         // TODO: consider replacing server_key with server_keyorigin
 
         let is_mainnet = server_xpub.network.is_mainnet();
@@ -148,14 +147,14 @@ impl Amp2 {
         }
     }
 
-    /// Create an AMP2 descriptor ELIP-AMP2 compliant from an LWK Signer.
-    pub fn elipamp2_from_signer<S: Signer>(
+    /// Create an AMP2 descriptor ELIP153 compliant from an LWK Signer.
+    pub fn elip153_from_signer<S: Signer>(
         &self,
         signer: &S,
         account: u32,
     ) -> Result<Amp2Descriptor, crate::Error> {
-        let user_path = self.elipamp2_user_path(account)?;
-        let view_path = self.elipamp2_view_path(account)?;
+        let user_path = self.elip153_user_path(account)?;
+        let view_path = self.elip153_view_path(account)?;
 
         // TODO: map signer errors more nicely
         let fingerprint = signer
@@ -168,7 +167,7 @@ impl Amp2 {
             .derive_xpub(&view_path)
             .map_err(|e| crate::Error::Generic(format!("{e:?}")))?;
 
-        self.elipamp2(
+        self.elip153(
             (fingerprint, user_path),
             user_xpub,
             (fingerprint, view_path),
@@ -176,20 +175,20 @@ impl Amp2 {
         )
     }
 
-    /// ELIP-AMP2 `USER_PATH = m/purpose'/coin_type'/account'`
-    pub fn elipamp2_user_path(&self, account: u32) -> Result<DerivationPath, crate::Error> {
+    /// ELIP153 `USER_PATH = m/purpose'/coin_type'/account'`
+    pub fn elip153_user_path(&self, account: u32) -> Result<DerivationPath, crate::Error> {
         let coin_type = if self.is_mainnet { 1776 } else { 1 };
         Ok(DerivationPath::from(vec![
-            ChildNumber::from_hardened_idx(ELIP_AMP2_PURPOSE)?,
+            ChildNumber::from_hardened_idx(ELIP153_PURPOSE)?,
             ChildNumber::from_hardened_idx(coin_type)?,
             ChildNumber::from_hardened_idx(account)?,
         ]))
     }
 
-    /// ELIP-AMP2 `SERVER_PATH`
+    /// ELIP153 `SERVER_PATH`
     ///
-    /// `user_xpub` must be the xpub derived at [`Amp2::elipamp2_user_path()`].
-    fn elipamp2_server_path(&self, user_xpub: &Xpub) -> Result<DerivationPath, crate::Error> {
+    /// `user_xpub` must be the xpub derived at [`Amp2::elip153_user_path()`].
+    fn elip153_server_path(&self, user_xpub: &Xpub) -> Result<DerivationPath, crate::Error> {
         let user_pubkey_hash =
             sha256::Hash::hash(&user_xpub.public_key.serialize()).to_byte_array();
         let server_path: Vec<ChildNumber> = user_pubkey_hash[..12]
@@ -205,21 +204,21 @@ impl Amp2 {
         Ok(DerivationPath::from(server_path))
     }
 
-    /// ELIP-AMP2 `VIEW_PATH = m/purpose'/coin_type'/account'/server_fingerprint_masked'`
-    pub fn elipamp2_view_path(&self, account: u32) -> Result<DerivationPath, crate::Error> {
-        let user_path = self.elipamp2_user_path(account)?;
+    /// ELIP153 `VIEW_PATH = m/purpose'/coin_type'/account'/server_fingerprint_masked'`
+    pub fn elip153_view_path(&self, account: u32) -> Result<DerivationPath, crate::Error> {
+        let user_path = self.elip153_user_path(account)?;
         let server_fingerprint_masked =
             u32::from_be_bytes(self.server_xpub.fingerprint().to_bytes()) & 0x7FFF_FFFF;
         Ok(user_path.child(ChildNumber::from_hardened_idx(server_fingerprint_masked)?))
     }
 
-    /// Create an AMP2 descriptor ELIP-AMP2 compliant from xpub strings.
+    /// Create an AMP2 descriptor ELIP153 compliant from xpub strings.
     ///
     /// This is typically used when the signer is managed outside of LWK.
-    /// Derive the user xpub at [`Amp2::elipamp2_user_path()`] and
-    /// the view xpub at [`Amp2::elipamp2_view_path()`], and pass the
+    /// Derive the user xpub at [`Amp2::elip153_user_path()`] and
+    /// the view xpub at [`Amp2::elip153_view_path()`], and pass the
     /// obtained keyorigin_xpub strings here.
-    pub fn elipamp2_from_str(
+    pub fn elip153_from_str(
         &self,
         user_keyorigin_xpub: &str,
         view_keyorigin_xpub: &str,
@@ -228,10 +227,10 @@ impl Amp2 {
         let user_keysource = user_keysource.ok_or(crate::Error::MissingKeyorigin)?;
         let (view_keysource, view_xpub) = keyorigin_xpub_from_str(view_keyorigin_xpub)?;
         let view_keysource = view_keysource.ok_or(crate::Error::MissingKeyorigin)?;
-        self.elipamp2(user_keysource, user_xpub, view_keysource, view_xpub)
+        self.elip153(user_keysource, user_xpub, view_keysource, view_xpub)
     }
 
-    fn elipamp2(
+    fn elip153(
         &self,
         user_keysource: KeySource,
         user_xpub: Xpub,
@@ -240,7 +239,7 @@ impl Amp2 {
     ) -> Result<Amp2Descriptor, crate::Error> {
         // TODO: consider validating view_keysource
 
-        let server_path = self.elipamp2_server_path(&user_xpub)?;
+        let server_path = self.elip153_server_path(&user_xpub)?;
         let server_fingerprint = self.server_xpub.fingerprint();
         let server_derived_xpub = self.server_xpub.derive_pub(&EC, &server_path)?;
 
@@ -450,27 +449,27 @@ mod test {
         let amp2 = Amp2::new_testnet();
         let account = 0;
         let (user_keysource, user_xpub) =
-            derive(&signer, &amp2.elipamp2_user_path(account).unwrap());
+            derive(&signer, &amp2.elip153_user_path(account).unwrap());
         let (view_keysource, view_xpub) =
-            derive(&signer, &amp2.elipamp2_view_path(account).unwrap());
+            derive(&signer, &amp2.elip153_view_path(account).unwrap());
 
         let desc = amp2
-            .elipamp2(user_keysource, user_xpub, view_keysource, view_xpub)
+            .elip153(user_keysource, user_xpub, view_keysource, view_xpub)
             .unwrap();
 
         let expected = "ct(4d90c104f07e6f4c3f2c2ef1100b2a24b93093eb3bdf975a85fbe2be5ddf7abe,elwsh(multi(2,[7a3be1b3/2088330946/1132574986/2019598932]tpubDKX4imD1VZt8nMqqLWo2aBwJnJmw9kWhgob65LLKPd2UGcWZ2eCZXmVSM1uAzScUkFDVK3YdKZy49Qz7K1x2xEZ2AJhWaqnj25MbZSb4KYs/<0;1>/*,[73c5da0a/1095585842'/1'/0']tpubDDKAX9d8KBy2HJ5UTMg4xydwC7Jssy9qfnKrs5LTpM8PpBAiwqZ7k2GVA2P5kiWCPjnmHbDMxBng8FzDBHVqHpQkAwwc4VzXtGx1AY7zc9C/<0;1>/*)))#ywc7jzkz";
         assert_eq!(desc.descriptor().to_string(), expected);
 
-        // elipamp2_from_signer must produce the exact same descriptor as the manual,
+        // elip153_from_signer must produce the exact same descriptor as the manual,
         // hardware-signer-compatible flow above.
-        let desc_from_signer = amp2.elipamp2_from_signer(&signer, account).unwrap();
+        let desc_from_signer = amp2.elip153_from_signer(&signer, account).unwrap();
         assert_eq!(desc_from_signer.descriptor().to_string(), expected);
     }
 
     #[test]
-    fn test_elip_amp2_vectors() {
-        // Generate ELIP-AMP2 test vectors with
-        // cargo test -p lwk_wollet --features amp2 elip_amp2_vectors -- --nocapture
+    fn test_elip153_vectors() {
+        // Generate ELIP153 test vectors with
+        // cargo test -p lwk_wollet --features amp2 elip153_vectors -- --nocapture
         use lwk_signer::SwSigner;
 
         let user_mnemonic_1 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
@@ -538,11 +537,11 @@ mod test {
                 is_mainnet,
             };
             let (user_keysource, user_xpub) =
-                derive(&signer, &amp2.elipamp2_user_path(account).unwrap());
+                derive(&signer, &amp2.elip153_user_path(account).unwrap());
             let (view_keysource, view_xpub) =
-                derive(&signer, &amp2.elipamp2_view_path(account).unwrap());
+                derive(&signer, &amp2.elip153_view_path(account).unwrap());
             let desc = amp2
-                .elipamp2(user_keysource, user_xpub, view_keysource, view_xpub)
+                .elip153(user_keysource, user_xpub, view_keysource, view_xpub)
                 .unwrap();
             let dwid = desc.descriptor().dwid(network).unwrap();
             let network_str = match network {

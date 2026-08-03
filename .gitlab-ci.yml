@@ -367,6 +367,7 @@ bindings:
     JAVA_OPTS: "-Xmx2g"
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    - cargo build -p amp2_mock && export AMP2_MOCK_EXEC=$PWD/target/debug/amp2_mock
     - cargo test -p lwk_bindings --features foreign_bindings
 
 csharp:

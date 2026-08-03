@@ -116,10 +116,17 @@ mod tests {
         let sample_size = 10_000;
         let mut byte_counts = [0u64; 256];
         let mut bit_ones = 0u64;
+        let mut generated = std::collections::HashSet::with_capacity(sample_size);
 
         for _ in 0..sample_size {
             let mnemonic = Mnemonic::from_random(12).unwrap();
             let entropy = mnemonic.inner.to_entropy(); // 16 bytes (128 bits)
+            let entropy_bytes: [u8; 16] = entropy.clone().try_into().unwrap();
+
+            assert!(
+                generated.insert(entropy_bytes),
+                "Collision detected! Entropy source is deterministic or has low cardinality."
+            );
 
             for &byte in &entropy {
                 byte_counts[byte as usize] += 1;

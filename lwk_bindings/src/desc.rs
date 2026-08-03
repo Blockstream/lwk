@@ -123,6 +123,20 @@ pub fn get_path(
     Ok(path)
 }
 
+/// Convert a BIP32 derivation path from string to vector.
+#[uniffi::export]
+pub fn derivation_path_from_str(path: &str) -> Result<Vec<u32>, LwkError> {
+    let path = DerivationPath::from_str(path)?;
+    Ok(path.into_iter().map(|c| u32::from(*c)).collect())
+}
+
+/// Convert a BIP32 derivation path from vector to string.
+#[uniffi::export]
+pub fn derivation_path_to_str(path: &[u32]) -> String {
+    let path: DerivationPath = path.iter().map(|n| ChildNumber::from(*n)).collect();
+    path.to_string()
+}
+
 #[uniffi::export]
 impl WolletDescriptor {
     /// Descriptor from xpub

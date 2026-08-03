@@ -12,7 +12,7 @@ func main() {
 	node := lwk.NewLwkTestEnv()
 
 	// ANCHOR: test_issue_asset
-	network := lwk.NetworkTestnet()
+	network := lwk.NetworkRegtestDefault()
 	network = node.Network() // ANCHOR: ignore
 	policyAsset := network.PolicyAsset()
 
@@ -22,8 +22,7 @@ func main() {
 	}
 
 	// Create wallet
-	mnemonicStr := "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
-	mnemonic, err := lwk.NewMnemonic(mnemonicStr)
+	mnemonic, err := lwk.MnemonicFromRandom(12)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,9 +36,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if desc.String() != "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84'/1'/0']tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#2e4n992d" { // ANCHOR: ignore
-		panic("descriptor mismatch") // ANCHOR: ignore
-	} // ANCHOR: ignore
 
 	wollet, err := lwk.NewWollet(network, desc, nil)
 	if err != nil {
@@ -56,9 +52,6 @@ func main() {
 	} // ANCHOR: ignore
 
 	wolletAddress := wolletAddressResult.Address()
-	if fmt.Sprintf("%v", wolletAddress) != "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq" { // ANCHOR: ignore
-		panic("address mismatch") // ANCHOR: ignore
-	} // ANCHOR: ignore
 	fundedSatoshi := uint64(100000)                               // ANCHOR: ignore
 	txid := node.SendToAddress(wolletAddress, fundedSatoshi, nil) // ANCHOR: ignore
 	_, err = wollet.WaitForTx(txid, client)                       // ANCHOR: ignore

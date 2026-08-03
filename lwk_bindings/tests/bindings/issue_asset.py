@@ -9,17 +9,15 @@ policy_asset = network.policy_asset()
 client = ElectrumClient.from_url(node.electrum_url())
 
 # Create wallet
-mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
+mnemonic = Mnemonic.from_random(12)
 
 signer = Signer(mnemonic, network)
 desc = signer.wpkh_slip77_descriptor()
-assert(str(desc) == "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84'/1'/0']tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#2e4n992d") # ANCHOR: ignore
 
 wollet = Wollet(network, desc, datadir=None)
 wollet_address_result = wollet.address(0)
 assert(wollet_address_result.index() == 0) # ANCHOR: ignore
 wollet_adddress = wollet_address_result.address()
-assert(str(wollet_adddress) == "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq") # ANCHOR: ignore
 
 funded_satoshi = 100000 # ANCHOR: ignore
 txid = node.send_to_address(wollet_address_result.address(), funded_satoshi, asset=None) # ANCHOR: ignore

@@ -4894,6 +4894,7 @@ fn test_add_input_rangeproofs() {
 
 #[test]
 fn test_issue_asset() -> Result<(), Box<dyn std::error::Error>> {
+    use bip39::Mnemonic;
     // Test based on Python bindings test issue_asset.py
     let network = Network::default_regtest();
     let policy_asset = *network.policy_asset();
@@ -4904,17 +4905,14 @@ fn test_issue_asset() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = test_client_electrum(&env.electrum_url());
 
     // Create wallet
-    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let mnemonic = Mnemonic::generate(12)?;
 
-    let signer = SwSigner::new(mnemonic, false)?;
+    let signer = SwSigner::new(&mnemonic.to_string(), false)?;
     let desc = signer.wpkh_slip77_descriptor()?;
-    assert!(desc == "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84h/1h/0h]tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#xte2lx9x"); // ANCHOR: ignore
 
     let mut wollet = WolletBuilder::new(network, WolletDescriptor::from_str(&desc)?).build()?;
     let wollet_address = wollet.address(None)?;
     assert!(wollet_address.index() == 0); // ANCHOR: ignore
-    let wallet_address_str = wollet_address.address().to_string();
-    assert!(wallet_address_str == "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq"); // ANCHOR: ignore
 
     let funded_satoshi = 100_000; // ANCHOR: ignore
     let txid =

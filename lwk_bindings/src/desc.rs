@@ -118,9 +118,10 @@ pub fn get_path(
     network: &Network,
     account_type: &str,
     account_num: u32,
-) -> Result<Vec<u32>, LwkError> {
+) -> Result<String, LwkError> {
     let (path, _, _) = get_path_inner(network, account_type, account_num)?;
-    Ok(path)
+    let path: DerivationPath = path.into_iter().map(ChildNumber::from).collect();
+    Ok(path.to_string())
 }
 
 /// Convert a BIP32 derivation path from string to vector.

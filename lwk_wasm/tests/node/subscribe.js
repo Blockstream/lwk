@@ -1,5 +1,6 @@
 const lwk = require('lwk_node');
 const assert = require('node:assert/strict');
+const { fundAddress, waitForTx, WATERFALLS_URL } = require('./scripts/utils');
 
 const createdSources = [];
 
@@ -110,14 +111,18 @@ async function runSubscribeTest() {
     try {
         console.log("Starting subscribe test");
 
-        const mnemonic = new lwk.Mnemonic("uncle win diagram apple poverty sun cement rib opera barely april mountain");
-        const network = lwk.Network.testnet();
+        const network = lwk.Network.regtestDefault();
+        const client = new lwk.WaterfallsClient(network, WATERFALLS_URL);
+
+        const mnemonic = lwk.Mnemonic.fromRandom(12);
         const signer = new lwk.Signer(mnemonic, network);
         const desc = signer.wpkhSlip77Descriptor();
         const wollet = new lwk.Wollet(network, desc);
 
-        const url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
-        const client = new lwk.WaterfallsClient(network, url);
+        const fundAmount = BigInt(100_000);
+        const fundTxid = await fundAddress(wollet.address(null).address(), fundAmount, network, client);
+        await waitForTx(wollet, client, fundTxid);
+
         const updates = [];
         const errors = [];
         let waitForBroadcastMempool = false;
@@ -141,7 +146,7 @@ async function runSubscribeTest() {
         );
 
         assert.equal(createdSources.length, 1);
-        assert.match(createdSources[0].url, /^https:\/\/waterfalls\.liquidwebwallet\.org\/liquidtestnet\/api\/v1\/subscribe\?descriptor=/);
+        assert(createdSources[0].url.startsWith(`${WATERFALLS_URL}/v1/subscribe?descriptor=`));
 
         await withTimeout(createdSources[0].ready, 30_000);
         assert(createdSources[0].bytesRead > 0);

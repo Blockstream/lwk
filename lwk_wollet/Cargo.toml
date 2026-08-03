@@ -119,7 +119,6 @@ default = [
     "amp0",
     "prices",
     "registry",
-    "silentpayments",
 ]
 serial = ["lwk_jade/serial"] # this is a dev-dep feature
 esplora = ["reqwest", "age"]
@@ -152,7 +151,7 @@ prices = ["reqwest"]
 registry = ["reqwest"]
 # Silent Payments (BIP-352 on Liquid, per the Liquid silent payments ELIP).
 # The wallet feature scans, unblinds, and tracks outputs; signing remains in
-# `lwk_signer`'s separate `silentpayments` feature.
+# `lwk_signer`'s separate `silentpayments` feature. Opt-in while it settles.
 silentpayments = ["bech32", "lwk_common/silentpayments"]
 
 # The e2e target requires the backend features it imports.

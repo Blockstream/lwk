@@ -12,6 +12,7 @@ use lwk_wollet::*;
 fn claim_pegin() {
     let env = TestEnvBuilder::from_env()
         .with_bitcoind()
+        .with_waterfalls()
         .with_fedpeg_script(FED_PEG_SCRIPT)
         .build();
     let network = env.elementsd_network();
@@ -22,7 +23,11 @@ fn claim_pegin() {
     )
     .parse()
     .unwrap();
-    let wollet = WolletBuilder::new(network, descriptor).build().unwrap();
+    let mut wollet = WolletBuilder::new(network, descriptor).build().unwrap();
+    let mut client =
+        clients::blocking::WaterfallsClient::new(&env.waterfalls_url(), network).unwrap();
+    let update = client.full_scan(&wollet).unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
 
     let tip = env.elementsd_height() as u32;
     let epoch_length = network.dynamic_epoch_length();
@@ -49,7 +54,8 @@ fn claim_pegin() {
         &proof,
     )
     .unwrap();
-    let destination = env.elementsd_getnewaddress();
+    let pegin_amount = funding.deposit().amount().to_sat();
+    let destination = wollet.address(None).unwrap().address().clone();
     let mut pset = wollet
         .tx_builder()
         .add_pegin_input(PeginInput::from(funding))
@@ -62,6 +68,7 @@ fn claim_pegin() {
     let transaction = wollet.finalize(&mut pset).unwrap();
     assert!(transaction.input[0].is_pegin());
     assert_eq!(transaction.input[0].witness.pegin_witness.len(), 6);
+    let expected_balance = pegin_amount - transaction.fee_in(*network.policy_asset());
     let transaction_hex = elements::encode::serialize(&transaction).to_hex();
     let mempool_result =
         env.elementsd_call("testmempoolaccept", &[serde_json::json!([transaction_hex])]);
@@ -69,9 +76,19 @@ fn claim_pegin() {
         mempool_result[0]["allowed"].as_bool().unwrap(),
         "{mempool_result}"
     );
+    let liquid_txid = env.elementsd_sendrawtransaction(&transaction_hex);
+    assert_eq!(liquid_txid, transaction.txid().to_string());
+    env.elementsd_generate(1);
+
+    let update = crate::wait_blockchain_tx_update(&mut client, &wollet);
+    wollet.apply_update(update).unwrap();
     assert_eq!(
-        env.elementsd_sendrawtransaction(&transaction_hex),
-        transaction.txid().to_string()
+        *wollet
+            .balance()
+            .unwrap()
+            .get(network.policy_asset())
+            .unwrap(),
+        expected_balance
     );
 }
 

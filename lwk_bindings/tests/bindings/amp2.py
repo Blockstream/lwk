@@ -17,6 +17,7 @@ descriptor_blinding_key = "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b05
 
 amp2 = Amp2(server_key, url)
 desc = amp2.descriptor_from_str(xpub, descriptor_blinding_key)
+assert expected_desc == str(desc)
 
 dwid = amp2.register_wallet(desc)
 assert dwid == desc.descriptor().dwid(network)

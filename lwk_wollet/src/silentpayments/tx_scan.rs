@@ -90,7 +90,9 @@ mod tests {
     use super::*;
     use crate::silentpayments::test_fixture::SilentPaymentTestData as Data;
     use crate::silentpayments::test_fixture::SpPaymentBuilder;
-    use crate::silentpayments::{SilentPaymentScan, CHANGE_LABEL};
+    use crate::silentpayments::{
+        SilentPaymentScan, SilentPaymentSender, SpTxOutBuilder, CHANGE_LABEL,
+    };
 
     fn keys() -> SilentPaymentScanMaterial {
         Data::material(0x11, 0x22)
@@ -151,6 +153,59 @@ mod tests {
                 .unwrap(),
             found[0].output.spend_pubkey
         );
+    }
+
+    /// A match at `k` advances `k` even when the output does not unblind, otherwise a sender
+    /// could hide later outputs by exhausting the gap limit with unblindable ones.
+    #[test]
+    fn unblindable_match_does_not_stop_the_scan() {
+        let keys = keys();
+        let inputs = [(Data::outpoint(0x44, 0), Data::secret_key(0xC1))];
+        let sender = SilentPaymentSender::from_inputs(&inputs).unwrap();
+        let gap_limit = SilentPaymentScanner::DEFAULT_GAP_LIMIT;
+
+        let mut outputs = Vec::new();
+        for k in 0..gap_limit {
+            let mut output = sender.derive_output(&keys.address(), k);
+            output.blinding_pubkey = Data::material(0xDE, 0xAD).spend_pubkey();
+            let (txout, _) =
+                SpTxOutBuilder::build(&output, Data::asset(), 1_000, &mut rand::thread_rng())
+                    .unwrap();
+            outputs.push(txout);
+        }
+
+        let payable = sender.derive_output(&keys.address(), gap_limit);
+        let (txout, _) =
+            SpTxOutBuilder::build(&payable, Data::asset(), 9_000, &mut rand::thread_rng()).unwrap();
+        outputs.push(txout);
+
+        let tx = Transaction {
+            version: 2,
+            lock_time: crate::elements::LockTime::ZERO,
+            input: inputs
+                .iter()
+                .map(|(o, k)| lwk_test_util::ElementsTestData::p2wpkh_input(*o, k))
+                .collect(),
+            output: outputs,
+        };
+        let prevouts: Vec<_> = inputs
+            .iter()
+            .map(|(o, k)| (*o, lwk_test_util::ElementsTestData::p2wpkh(k)))
+            .collect();
+        let lookup = |o: &OutPoint| prevouts.iter().find(|(p, _)| p == o).map(|(_, s)| s);
+
+        let found = SilentPaymentTxScanner::new(keys).scan_tx(&tx, lookup);
+
+        assert_eq!(
+            found.len(),
+            1,
+            "the unblindable outputs must be dropped, the payable one kept"
+        );
+        assert_eq!(
+            found[0].k, gap_limit,
+            "a match must advance k even when it does not unblind"
+        );
+        assert_eq!(found[0].unblinded.value, 9_000);
     }
 
     #[test]

@@ -9,7 +9,7 @@ async function runIssueAssetTest() {
     const client = new lwk.WaterfallsClient(network, WATERFALLS_URL);
 
     // Create wallet
-    const mnemonic = new lwk.Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
+    const mnemonic = lwk.Mnemonic.fromRandom(12);
 
     const signer = new lwk.Signer(mnemonic, network);
     const desc = signer.wpkhSlip77Descriptor();

@@ -34,6 +34,7 @@ fn claim_pegin() {
 
     env.bitcoind_generate(101);
     let txid = env.bitcoind_sendtoaddress(pegin_address.address(), 100_000_000);
+    // TODO: Fetch the Bitcoin transaction through a parent-chain Waterfalls client.
     let transaction = env.bitcoind_getrawtransaction(txid);
 
     env.bitcoind_generate(101);

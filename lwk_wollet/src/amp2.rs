@@ -10,10 +10,12 @@
 //! AMP2 is under development, expect breaking changes.
 //! </div>
 
-use crate::WolletDescriptor;
-use elements::bitcoin::bip32::{KeySource, Xpub};
+use crate::{WolletDescriptor, EC};
+use elements::bitcoin::bip32::{ChildNumber, DerivationPath, KeySource, Xpub};
+use elements::hashes::{sha256, Hash};
+use elements::hex::ToHex;
 use elements::pset::PartiallySignedTransaction;
-use lwk_common::keyorigin_xpub_from_str;
+use lwk_common::{keyorigin_xpub_from_str, Signer};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use url::Url;
@@ -29,11 +31,18 @@ pub const KEYORIGIN_XPUB_TESTNET: &str = "[3d970d04/87h/1h/0h]tpubDC347GyKEGtyd4
 /// The URL of the AMP2 server for the testnet network.
 pub const URL_TESTNET: &str = "https://amp2.testnet.blockstream.com/";
 
+// TODO: once ELIP-AMP2 is assigned a number, replace elipamp2 references with that number
+/// The `purpose` field used to derive [`Amp2::elipamp2()`] keys: `1095585842`
+/// (hex `0x414d5032`, bytes `b"AMP2"`).
+const ELIP_AMP2_PURPOSE: u32 = 0x414d_5032;
+
 /// Context for actions interacting with AMP2
 #[derive(Debug)]
 pub struct Amp2 {
     server_key: String,
+    server_xpub: Xpub,
     url: String,
+    is_mainnet: bool,
 }
 
 /// An AMP2 descriptor
@@ -114,18 +123,140 @@ impl Amp2 {
     pub fn new(server_key: String, url: String) -> Result<Self, crate::Error> {
         Url::from_str(&url).map_err(crate::UrlError::Url)?;
 
-        let (keysource, _) = keyorigin_xpub_from_str(&server_key)?;
+        let (keysource, server_xpub) = keyorigin_xpub_from_str(&server_key)?;
         keysource.ok_or(crate::Error::MissingKeyorigin)?;
+        // TODO: per ELIP-AMP2 the server key should be the master xpub, allow it to have missing keyorigin
+        // TODO: consider replacing server_key with server_keyorigin
 
-        Ok(Self { server_key, url })
+        let is_mainnet = server_xpub.network.is_mainnet();
+        Ok(Self {
+            server_key,
+            server_xpub,
+            url,
+            is_mainnet,
+        })
     }
 
     /// Create a new AMP2 client with the default url and server key for the testnet network.
     pub fn new_testnet() -> Self {
+        let server_xpub: Xpub = XPUB_TESTNET.parse().expect("valid xpub constant");
         Self {
             server_key: KEYORIGIN_XPUB_TESTNET.into(),
+            server_xpub,
             url: URL_TESTNET.into(),
+            is_mainnet: false,
         }
+    }
+
+    /// Create an AMP2 descriptor ELIP-AMP2 compliant from an LWK Signer.
+    pub fn elipamp2_from_signer<S: Signer>(
+        &self,
+        signer: &S,
+        account: u32,
+    ) -> Result<Amp2Descriptor, crate::Error> {
+        let user_path = self.elipamp2_user_path(account)?;
+        let view_path = self.elipamp2_view_path(account)?;
+
+        // TODO: map signer errors more nicely
+        let fingerprint = signer
+            .fingerprint()
+            .map_err(|e| crate::Error::Generic(format!("{e:?}")))?;
+        let user_xpub = signer
+            .derive_xpub(&user_path)
+            .map_err(|e| crate::Error::Generic(format!("{e:?}")))?;
+        let view_xpub = signer
+            .derive_xpub(&view_path)
+            .map_err(|e| crate::Error::Generic(format!("{e:?}")))?;
+
+        self.elipamp2(
+            (fingerprint, user_path),
+            user_xpub,
+            (fingerprint, view_path),
+            view_xpub,
+        )
+    }
+
+    /// ELIP-AMP2 `USER_PATH = m/purpose'/coin_type'/account'`
+    pub fn elipamp2_user_path(&self, account: u32) -> Result<DerivationPath, crate::Error> {
+        let coin_type = if self.is_mainnet { 1776 } else { 1 };
+        Ok(DerivationPath::from(vec![
+            ChildNumber::from_hardened_idx(ELIP_AMP2_PURPOSE)?,
+            ChildNumber::from_hardened_idx(coin_type)?,
+            ChildNumber::from_hardened_idx(account)?,
+        ]))
+    }
+
+    /// ELIP-AMP2 `SERVER_PATH`
+    ///
+    /// `user_xpub` must be the xpub derived at [`Amp2::elipamp2_user_path()`].
+    fn elipamp2_server_path(&self, user_xpub: &Xpub) -> Result<DerivationPath, crate::Error> {
+        let user_pubkey_hash =
+            sha256::Hash::hash(&user_xpub.public_key.serialize()).to_byte_array();
+        let server_path: Vec<ChildNumber> = user_pubkey_hash[..12]
+            .chunks(4)
+            .map(|chunk| {
+                let mut bytes = [0u8; 4];
+                bytes.copy_from_slice(chunk);
+                let masked = u32::from_be_bytes(bytes) & 0x7FFF_FFFF;
+                // masked is below 2^31, so this cannot fail
+                ChildNumber::from_normal_idx(masked)
+            })
+            .collect::<Result<_, _>>()?;
+        Ok(DerivationPath::from(server_path))
+    }
+
+    /// ELIP-AMP2 `VIEW_PATH = m/purpose'/coin_type'/account'/server_fingerprint_masked'`
+    pub fn elipamp2_view_path(&self, account: u32) -> Result<DerivationPath, crate::Error> {
+        let user_path = self.elipamp2_user_path(account)?;
+        let server_fingerprint_masked =
+            u32::from_be_bytes(self.server_xpub.fingerprint().to_bytes()) & 0x7FFF_FFFF;
+        Ok(user_path.child(ChildNumber::from_hardened_idx(server_fingerprint_masked)?))
+    }
+
+    /// Create an AMP2 descriptor ELIP-AMP2 compliant from xpub strings.
+    ///
+    /// This is typically used when the signer is managed outside of LWK.
+    /// Derive the user xpub at [`Amp2::elipamp2_user_path()`] and
+    /// the view xpub at [`Amp2::elipamp2_view_path()`], and pass the
+    /// obtained keyorigin_xpub strings here.
+    pub fn elipamp2_from_str(
+        &self,
+        user_keyorigin_xpub: &str,
+        view_keyorigin_xpub: &str,
+    ) -> Result<Amp2Descriptor, crate::Error> {
+        let (user_keysource, user_xpub) = keyorigin_xpub_from_str(user_keyorigin_xpub)?;
+        let user_keysource = user_keysource.ok_or(crate::Error::MissingKeyorigin)?;
+        let (view_keysource, view_xpub) = keyorigin_xpub_from_str(view_keyorigin_xpub)?;
+        let view_keysource = view_keysource.ok_or(crate::Error::MissingKeyorigin)?;
+        self.elipamp2(user_keysource, user_xpub, view_keysource, view_xpub)
+    }
+
+    fn elipamp2(
+        &self,
+        user_keysource: KeySource,
+        user_xpub: Xpub,
+        _view_keysource: KeySource,
+        view_xpub: Xpub,
+    ) -> Result<Amp2Descriptor, crate::Error> {
+        // TODO: consider validating view_keysource
+
+        let server_path = self.elipamp2_server_path(&user_xpub)?;
+        let server_fingerprint = self.server_xpub.fingerprint();
+        let server_derived_xpub = self.server_xpub.derive_pub(&EC, &server_path)?;
+
+        // Descriptor blinding key: hash the pubkey of the user key hardened-derived at
+        // VIEW_PATH, so it's both deterministic and only computable by the user.
+        let key_hash = sha256::Hash::hash(&view_xpub.public_key.serialize());
+        let key_hex = key_hash.to_byte_array().to_hex();
+
+        let user_xpub_str = format!("[{}/{}]{}", user_keysource.0, user_keysource.1, user_xpub);
+        let server_xpub_str = format!("[{server_fingerprint}/{server_path}]{server_derived_xpub}");
+
+        let s = format!(
+            "ct({key_hex},elwsh(multi(2,{server_xpub_str}/<0;1>/*,{user_xpub_str}/<0;1>/*)))"
+        );
+        let descriptor: WolletDescriptor = s.parse()?;
+        Ok(Amp2Descriptor::new(descriptor))
     }
 
     /// Get an AMP2 wallet descriptor from the keyorigin xpub string obtained from a signer
@@ -260,6 +391,7 @@ fn error_for_status_blocking(url: &str, response: reqwest::blocking::Response) -
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::Network;
     use elements::bitcoin::bip32::{DerivationPath, Fingerprint};
 
     fn user_key() -> (KeySource, Xpub) {
@@ -298,6 +430,135 @@ mod test {
             .unwrap();
         assert_eq!(desc.descriptor().to_string(), expected);
         assert_eq!(desc1.descriptor().to_string(), expected);
+    }
+
+    /// Derive an xpub at `path` and its keyorigin, standing in for what a hardware signer
+    /// would return for the same request.
+    fn derive(signer: &lwk_signer::SwSigner, path: &DerivationPath) -> (KeySource, Xpub) {
+        use lwk_common::Signer;
+        let xpub = signer.derive_xpub(path).unwrap();
+        ((signer.fingerprint(), path.clone()), xpub)
+    }
+
+    #[test]
+    fn amp2_desc_elip() {
+        use lwk_signer::SwSigner;
+
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        let signer = SwSigner::new(mnemonic, false).unwrap();
+
+        let amp2 = Amp2::new_testnet();
+        let account = 0;
+        let (user_keysource, user_xpub) =
+            derive(&signer, &amp2.elipamp2_user_path(account).unwrap());
+        let (view_keysource, view_xpub) =
+            derive(&signer, &amp2.elipamp2_view_path(account).unwrap());
+
+        let desc = amp2
+            .elipamp2(user_keysource, user_xpub, view_keysource, view_xpub)
+            .unwrap();
+
+        let expected = "ct(4d90c104f07e6f4c3f2c2ef1100b2a24b93093eb3bdf975a85fbe2be5ddf7abe,elwsh(multi(2,[7a3be1b3/2088330946/1132574986/2019598932]tpubDKX4imD1VZt8nMqqLWo2aBwJnJmw9kWhgob65LLKPd2UGcWZ2eCZXmVSM1uAzScUkFDVK3YdKZy49Qz7K1x2xEZ2AJhWaqnj25MbZSb4KYs/<0;1>/*,[73c5da0a/1095585842'/1'/0']tpubDDKAX9d8KBy2HJ5UTMg4xydwC7Jssy9qfnKrs5LTpM8PpBAiwqZ7k2GVA2P5kiWCPjnmHbDMxBng8FzDBHVqHpQkAwwc4VzXtGx1AY7zc9C/<0;1>/*)))#ywc7jzkz";
+        assert_eq!(desc.descriptor().to_string(), expected);
+
+        // elipamp2_from_signer must produce the exact same descriptor as the manual,
+        // hardware-signer-compatible flow above.
+        let desc_from_signer = amp2.elipamp2_from_signer(&signer, account).unwrap();
+        assert_eq!(desc_from_signer.descriptor().to_string(), expected);
+    }
+
+    #[test]
+    fn test_elip_amp2_vectors() {
+        // Generate ELIP-AMP2 test vectors with
+        // cargo test -p lwk_wollet --features amp2 elip_amp2_vectors -- --nocapture
+        use lwk_signer::SwSigner;
+
+        let user_mnemonic_1 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        let user_mnemonic_2 =
+            "legal winner thank year wave sausage worth useful legal winner thank yellow";
+        let server_mnemonic_1 =
+            "letter advice cage absurd amount doctor acoustic avoid letter advice cage above";
+        let server_mnemonic_2 = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong";
+
+        let mut i = 0;
+        for (description, network, mnemonic, server_mnemonic, account) in [
+            (
+                "Liquid",
+                Network::Liquid,
+                user_mnemonic_1,
+                server_mnemonic_1,
+                0u32,
+            ),
+            (
+                "Testnet",
+                Network::TestnetLiquid,
+                user_mnemonic_1,
+                server_mnemonic_1,
+                0,
+            ),
+            (
+                "Regtest",
+                Network::default_regtest(),
+                user_mnemonic_1,
+                server_mnemonic_1,
+                0,
+            ),
+            (
+                "Liquid, different account",
+                Network::Liquid,
+                user_mnemonic_1,
+                server_mnemonic_1,
+                1,
+            ),
+            (
+                "Liquid, different user",
+                Network::Liquid,
+                user_mnemonic_2,
+                server_mnemonic_1,
+                0,
+            ),
+            (
+                "Liquid, different server",
+                Network::Liquid,
+                user_mnemonic_1,
+                server_mnemonic_2,
+                0,
+            ),
+        ] {
+            i += 1;
+            let is_mainnet = network == Network::Liquid;
+            let signer = SwSigner::new(mnemonic, is_mainnet).unwrap();
+            let server_signer = SwSigner::new(server_mnemonic, is_mainnet).unwrap();
+            let server_xpub = server_signer.xpub();
+
+            let amp2 = Amp2 {
+                server_key: KEYORIGIN_XPUB_TESTNET.into(),
+                server_xpub,
+                url: URL_TESTNET.into(),
+                is_mainnet,
+            };
+            let (user_keysource, user_xpub) =
+                derive(&signer, &amp2.elipamp2_user_path(account).unwrap());
+            let (view_keysource, view_xpub) =
+                derive(&signer, &amp2.elipamp2_view_path(account).unwrap());
+            let desc = amp2
+                .elipamp2(user_keysource, user_xpub, view_keysource, view_xpub)
+                .unwrap();
+            let dwid = desc.descriptor().dwid(network).unwrap();
+            let network_str = match network {
+                Network::Liquid => "Liquid",
+                Network::TestnetLiquid => "Liquid Testnet",
+                Network::CustomElements(_) => "Liquid Regtest",
+            };
+            println!("* Test Vector {i}");
+            println!("** Description: {description}");
+            println!("** Network: {network_str}");
+            println!("** User Mnemonic: <code>{mnemonic}</code>");
+            println!("** AMP2 Server Xpub: <code>{server_xpub}</code>");
+            println!("** User Account: {account}");
+            println!("** CT Descriptor: <code>{}</code>", desc.descriptor());
+            println!("** DWID: <code>{dwid}</code>\n");
+        }
     }
 
     #[ignore]

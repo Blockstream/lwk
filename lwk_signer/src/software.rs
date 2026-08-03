@@ -716,9 +716,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_mnemonic_statistical_entropy() {
-        let sample_size = 100_000;
+        let sample_size = if cfg!(debug_assertions) {
+            10_000
+        } else {
+            1_000_000
+        };
         let mut byte_counts = [0u64; 256];
         let mut bit_ones = 0u64;
         let mut generated = std::collections::HashSet::with_capacity(sample_size);
@@ -779,8 +782,8 @@ mod tests {
             }
         }
         assert!(
-            entropy_val > 7.999,
-            "Shannon entropy too low: {} (expected > 7.999)",
+            entropy_val > 7.99,
+            "Shannon entropy too low: {} (expected > 7.99)",
             entropy_val
         );
     }

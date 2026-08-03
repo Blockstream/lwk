@@ -790,8 +790,8 @@ impl Wollet {
             }
             let height = self.cache.tx_height(&outpoint.txid).unwrap_or(&None);
 
-            // A silent payment output has no derivation path, so it cannot go through
-            // `index()`; it is described by its cache entry instead.
+            // A silent payment script is not derived from the descriptor, so it cannot go
+            // through `index()`; it is described by its cache entry instead.
             #[cfg(feature = "silentpayments")]
             if let Some(entry) = self.cache.silent_payment(script_pubkey) {
                 utxos.push(self.silent_payment_wallet_txout(entry, unblinded, *height)?);

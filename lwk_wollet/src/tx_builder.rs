@@ -664,7 +664,7 @@ impl TxBuilder {
     /// [`crate::silentpayments::SilentPaymentUtxo::external_utxo()`] describes how to
     /// *fund* with the output, and that part an [`ExternalUtxo`] carries fine. What it
     /// has nowhere to put is the spend tweak — the one thing a signer cannot rederive,
-    /// since a silent payment output has no derivation path. Passing such an output
+    /// since it comes from the paying transaction rather than a BIP-32 path. Passing such an output
     /// through `add_external_utxos` alone therefore yields a PSET whose input no signer
     /// can complete. This method keeps the tweak attached, and the builder writes it
     /// into the PSET as proprietary metadata for a silent-payment aware signer.
@@ -1756,8 +1756,8 @@ impl TxBuilder {
         // Add details to the pset from our descriptor, like bip32derivation and keyorigin
         wollet.add_details(&mut built_tx.pset)?;
 
-        // The same step for inputs the descriptor cannot describe. A silent payment
-        // output has no derivation path, so `add_details` above passes over it and a
+        // The same step for inputs the descriptor cannot describe. A silent payment key is
+        // `b_spend + t_k`, off any BIP-32 path, so `add_details` above passes over it and a
         // signer would meet an input it cannot recognize; this attaches the tweak that
         // stands in for the missing `bip32_derivation`.
         //

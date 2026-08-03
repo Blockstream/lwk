@@ -111,9 +111,12 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    #[ignore]
     fn test_mnemonic_statistical_entropy() {
-        let sample_size = 10_000;
+        let sample_size = if cfg!(debug_assertions) {
+            10_000
+        } else {
+            1_000_000
+        };
         let mut byte_counts = [0u64; 256];
         let mut bit_ones = 0u64;
         let mut generated = std::collections::HashSet::with_capacity(sample_size);

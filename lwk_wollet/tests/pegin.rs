@@ -5,7 +5,7 @@ use lwk_common::electrum_ssl::{LIQUID_SOCKET, LIQUID_TESTNET_SOCKET};
 use lwk_common::Signer;
 use lwk_signer::SwSigner;
 use lwk_test_util::*;
-use lwk_wollet::pegin::fetch_last_full_header;
+use lwk_wollet::pegin::{fetch_fed_peg, fetch_last_full_header};
 use lwk_wollet::*;
 
 #[test]
@@ -29,14 +29,7 @@ fn claim_pegin() {
     let update = client.full_scan(&wollet).unwrap().unwrap();
     wollet.apply_update(update).unwrap();
 
-    let tip = env.elementsd_height() as u32;
-    let epoch_length = network.dynamic_epoch_length();
-    let full_header_height = (tip / epoch_length) * epoch_length;
-    let block_hash = env.elementsd_call("getblockhash", &[full_header_height.into()]);
-    let header_hex = env.elementsd_call("getblockheader", &[block_hash, false.into()]);
-    let header_bytes = Vec::<u8>::from_hex(header_hex.as_str().unwrap()).unwrap();
-    let header: elements::BlockHeader = elements::encode::deserialize(&header_bytes).unwrap();
-    let fed_peg = FedPeg::from_block_header(network, &header).unwrap();
+    let fed_peg = fetch_fed_peg(&client, network, wollet.tip().height()).unwrap();
     let pegin_address = wollet.pegin_address(Some(0), &fed_peg).unwrap();
 
     env.bitcoind_generate(101);

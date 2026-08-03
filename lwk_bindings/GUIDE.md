@@ -89,6 +89,11 @@ Document any non-obvious detail of that format in the constructor doc comment (f
 
 Add a _python_ test to check serialization roundtrip.
 
+## BIP32 derivation paths
+Always accept or return a BIP32 derivation path as a string (e.g. `"m/87'/1'/0'"`), never as a vector of integers.
+
+Strings are human-readable and copy-pastable across destination languages, and they avoid needing a convention (e.g. a high bit) to encode hardened vs. normal derivation in a plain integer.
+
 ## Deprecating functions
 If there are functions that contradict the guidelines above and should be marked as deprecated, add the following comment:
 ```

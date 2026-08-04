@@ -2,7 +2,9 @@ use std::{collections::HashMap, str::FromStr, sync::OnceLock};
 
 use crate::jade::Singlesig;
 use crate::websocket::WebSocketSerial;
-use crate::{signer::FakeSigner, Bip, Error, Network, Pset, WolletDescriptor, Xpub};
+use crate::{
+    signer::FakeSigner, Bip, DerivationPath, Error, Network, Pset, WolletDescriptor, Xpub,
+};
 use lwk_common::{DescriptorBlindingKey, Signer};
 use lwk_jade::{asyncr, protocol::GetXpubParams};
 use lwk_jade::{
@@ -11,7 +13,7 @@ use lwk_jade::{
     register_multisig::{JadeDescriptor, RegisterMultisigParams, RegisteredMultisigDetails},
 };
 use lwk_wollet::elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
-use lwk_wollet::{bitcoin::bip32::DerivationPath, elements::pset::PartiallySignedTransaction};
+use lwk_wollet::{bitcoin::bip32, elements::pset::PartiallySignedTransaction};
 use wasm_bindgen::prelude::*;
 use web_sys::WebSocket;
 
@@ -77,7 +79,7 @@ impl JadeWebSocket {
 
     /// Return a single sig address with the given `variant` and `path` derivation
     ///
-    /// Deprecated: use `getReceiveAddressSingleStr()` instead.
+    /// Deprecated: use `getReceiveAddressSingleWithPath()` instead.
     #[wasm_bindgen(js_name = getReceiveAddressSingle)]
     pub async fn get_receive_address_single(
         &self,
@@ -99,26 +101,25 @@ impl JadeWebSocket {
         Ok(xpub.to_string())
     }
 
-    /// Return a single sig address with the given `variant` and `path` derivation,
-    /// e.g. `"84'/1'/0'/0/3"`
-    #[wasm_bindgen(js_name = getReceiveAddressSingleStr)]
-    pub async fn get_receive_address_single_str(
+    /// Return a single sig address with the given `variant` and `path` derivation
+    #[wasm_bindgen(js_name = getReceiveAddressSingleWithPath)]
+    pub async fn get_receive_address_single_with_path(
         &self,
         variant: Singlesig,
-        path: &str,
+        path: &DerivationPath,
     ) -> Result<String, Error> {
-        let path = derivation_path_to_vec(&DerivationPath::from_str(path)?);
+        let path = derivation_path_to_vec(&path.into());
         self.get_receive_address_single(variant, path).await
     }
 
     /// Return a multisig address of a registered `multisig_name` wallet
     ///
-    /// This method accept `path` and `path_n` in place of a single `Vec<Vec<u32>>` because the
-    /// latter is not supported by wasm_bindgen (and neither `(u32, Vec<u32>)`). `path` and `path_n`
-    /// are converted internally to a `Vec<Vec<u32>>` with the caveat all the paths are the same,
-    /// which is almost always the case.
+    /// This method accepts a single `path`, applied to every signer, in place of a
+    /// `Vec<Vec<u32>>` (one path per signer) because the latter is not supported by
+    /// wasm_bindgen. This assumes all signers share the same derivation path, which is
+    /// almost always the case.
     ///
-    /// Deprecated: use `getReceiveAddressMultiStr()` instead.
+    /// Deprecated: use `getReceiveAddressMultiWithPath()` instead.
     #[wasm_bindgen(js_name = getReceiveAddressMulti)]
     pub async fn get_receive_address_multi(
         &self,
@@ -146,15 +147,19 @@ impl JadeWebSocket {
         Ok(xpub.to_string())
     }
 
-    /// Return a multisig address of a registered `multisig_name` wallet, with `path`
-    /// derivation given as a string, e.g. `"0/3"`
-    #[wasm_bindgen(js_name = getReceiveAddressMultiStr)]
-    pub async fn get_receive_address_multi_str(
+    /// Return a multisig address of a registered `multisig_name` wallet
+    ///
+    /// This method accepts a single `path`, applied to every signer, in place of a
+    /// `Vec<Vec<u32>>` (one path per signer) because the latter is not supported by
+    /// wasm_bindgen. This assumes all signers share the same derivation path, which is
+    /// almost always the case.
+    #[wasm_bindgen(js_name = getReceiveAddressMultiWithPath)]
+    pub async fn get_receive_address_multi_with_path(
         &self,
         multisig_name: &str,
-        path: &str,
+        path: &DerivationPath,
     ) -> Result<String, Error> {
-        let path = derivation_path_to_vec(&DerivationPath::from_str(path)?);
+        let path = derivation_path_to_vec(&path.into());
         self.get_receive_address_multi(multisig_name, path).await
     }
 
@@ -263,7 +268,7 @@ impl JadeWebSocket {
         for purpose in [49, 84, 87] {
             for coin_type in [1, 1776] {
                 let derivation_path_str = format!("m/{purpose}h/{coin_type}h/0h");
-                let derivation_path = DerivationPath::from_str(&derivation_path_str)?;
+                let derivation_path = bip32::DerivationPath::from_str(&derivation_path_str)?;
                 let path = derivation_path_to_vec(&derivation_path);
                 let params = GetXpubParams { network, path };
                 let xpub = self.inner.get_cached_xpub(params).await?;
@@ -271,7 +276,7 @@ impl JadeWebSocket {
             }
         }
         let xpub = self.inner.get_master_xpub().await?;
-        paths.insert(DerivationPath::master(), xpub);
+        paths.insert(bip32::DerivationPath::master(), xpub);
         let slip77 = self.inner.slip77_master_blinding_key().await?;
 
         let signer = FakeSigner { paths, slip77 };

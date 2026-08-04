@@ -1,4 +1,4 @@
-use crate::{LwkError, Mnemonic, Network, Pset, WolletDescriptor};
+use crate::{DerivationPath, LwkError, Mnemonic, Network, Pset, WolletDescriptor};
 use std::sync::Arc;
 
 #[derive(uniffi::Enum)]
@@ -141,10 +141,9 @@ impl Signer {
     }
 
     /// Derive an xpub at `path` and return it as a keyorigin xpub string
-    pub fn keyorigin_xpub_from_path(&self, path: &str) -> Result<String, LwkError> {
-        let path: elements::bitcoin::bip32::DerivationPath = path.parse()?;
+    pub fn keyorigin_xpub_from_path(&self, path: &DerivationPath) -> Result<String, LwkError> {
         let fingerprint = self.inner.fingerprint();
-        let xpub = lwk_common::Signer::derive_xpub(&self.inner, &path)?;
+        let xpub = lwk_common::Signer::derive_xpub(&self.inner, &path.into())?;
         Ok(format!("[{fingerprint}/{path}]{xpub}"))
     }
 

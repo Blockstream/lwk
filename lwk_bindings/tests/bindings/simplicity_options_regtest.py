@@ -63,7 +63,7 @@ client = ElectrumClient.from_url(node.electrum_url())
 
 mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
 signer = Signer(mnemonic, network)
-derivation_path = "m/86'/1'/0'/0/0"
+derivation_path = DerivationPath("m/86'/1'/0'/0/0")
 xonly_pubkey = simplicity_derive_xonly_pubkey(signer, derivation_path)
 
 p2pk_args = SimplicityArguments()

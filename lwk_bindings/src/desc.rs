@@ -1,7 +1,6 @@
-use elements::bitcoin::bip32::{ChildNumber, DerivationPath};
 use std::{fmt, str::FromStr, sync::Arc};
 
-use crate::{types::SecretKey, Chain, LwkError, Network, Script};
+use crate::{types::SecretKey, Chain, DerivationPath, LwkError, Network, Script};
 
 /// The output descriptors, wrapper over [`lwk_wollet::WolletDescriptor`]
 #[derive(uniffi::Object)]
@@ -84,58 +83,16 @@ impl fmt::Display for WolletDescriptor {
     }
 }
 
-fn get_path_inner(
-    network: &Network,
-    account_type: &str,
-    account_num: u32,
-) -> Result<(Vec<u32>, String, String), LwkError> {
-    let coin_type = if network.is_mainnet() { 1776 } else { 1 };
-    let (purpose, prefix, suffix) = match account_type {
-        "wpkh" => (84, "elwpkh", ""),
-        "shwpkh" => (49, "elsh(wpkh", ")"),
-        "pkh" => (44, "elpkh", ""),
-        "tr" => (86, "eltr", ""),
-        _ => {
-            return Err(LwkError::Generic {
-                msg: "invalid account type, must be 'wpkh', 'shwpkh', 'pkh' or 'tr'".into(),
-            })
-        }
-    };
-    let h = 1 << 31;
-    if account_num >= h {
-        return Err(LwkError::Generic {
-            msg: "invalid account number".into(),
-        });
+fn account_desc_affixes(account_type: &str) -> Result<(&'static str, &'static str), LwkError> {
+    match account_type {
+        "wpkh" => Ok(("elwpkh", "")),
+        "shwpkh" => Ok(("elsh(wpkh", ")")),
+        "pkh" => Ok(("elpkh", "")),
+        "tr" => Ok(("eltr", "")),
+        _ => Err(LwkError::Generic {
+            msg: "invalid account type, must be 'wpkh', 'shwpkh', 'pkh' or 'tr'".into(),
+        }),
     }
-
-    let path = vec![purpose + h, coin_type + h, account_num + h];
-    Ok((path, prefix.into(), suffix.into()))
-}
-
-/// Get the derivation path for an account
-#[uniffi::export]
-pub fn get_path(
-    network: &Network,
-    account_type: &str,
-    account_num: u32,
-) -> Result<String, LwkError> {
-    let (path, _, _) = get_path_inner(network, account_type, account_num)?;
-    let path: DerivationPath = path.into_iter().map(ChildNumber::from).collect();
-    Ok(path.to_string())
-}
-
-/// Convert a BIP32 derivation path from string to vector.
-#[uniffi::export]
-pub fn derivation_path_from_str(path: &str) -> Result<Vec<u32>, LwkError> {
-    let path = DerivationPath::from_str(path)?;
-    Ok(path.into_iter().map(|c| u32::from(*c)).collect())
-}
-
-/// Convert a BIP32 derivation path from vector to string.
-#[uniffi::export]
-pub fn derivation_path_to_str(path: &[u32]) -> String {
-    let path: DerivationPath = path.iter().map(|n| ChildNumber::from(*n)).collect();
-    path.to_string()
 }
 
 #[uniffi::export]
@@ -155,8 +112,8 @@ impl WolletDescriptor {
         fingerprint: &str,
         xpub: &str,
     ) -> Result<Arc<Self>, LwkError> {
-        let (path, prefix, suffix) = get_path_inner(network, account_type, account_num)?;
-        let path: DerivationPath = path.into_iter().map(ChildNumber::from).collect();
+        let (prefix, suffix) = account_desc_affixes(account_type)?;
+        let path = DerivationPath::from_account(network, account_type, account_num)?;
         let desc = format!(
             "ct({master_blinding_key},{prefix}([{fingerprint}/{path}]{xpub}/<0;1>/*){suffix})"
         );
@@ -173,8 +130,7 @@ impl WolletDescriptor {
 mod tests {
     use lwk_common::Network;
 
-    use super::*;
-    use crate::{Chain, Mnemonic, Signer, WolletDescriptor};
+    use crate::{Chain, DerivationPath, Mnemonic, Signer, WolletDescriptor};
     use std::str::FromStr;
 
     #[test]
@@ -207,12 +163,12 @@ mod tests {
     #[test]
     fn separate_signer_flow() {
         let network = crate::Network::mainnet();
-        get_path(&network, "wpkh", 1).unwrap();
+        DerivationPath::from_account(&network, "wpkh", 1).unwrap();
         let network = crate::Network::testnet();
-        get_path(&network, "wpkh", 0).unwrap();
-        get_path(&network, "shwpkh", 0).unwrap();
-        get_path(&network, "pkh", 0).unwrap();
-        get_path(&network, "tr", 0).unwrap();
+        DerivationPath::from_account(&network, "wpkh", 0).unwrap();
+        DerivationPath::from_account(&network, "shwpkh", 0).unwrap();
+        DerivationPath::from_account(&network, "pkh", 0).unwrap();
+        DerivationPath::from_account(&network, "tr", 0).unwrap();
 
         let mbk = "slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023)";
         let fp = "73c5da0a";

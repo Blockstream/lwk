@@ -7,7 +7,7 @@ use lwk_simplicity::simplicityhl;
 
 use crate::blockdata::tx_out::TxOut;
 use crate::types::XOnlyPublicKey;
-use crate::{Address, ControlBlock, LwkError, Network, Transaction};
+use crate::{Address, ControlBlock, DerivationPath, LwkError, Network, Transaction};
 
 use super::arguments::{SimplicityArguments, SimplicityWitnessValues};
 use super::cmr::Cmr;
@@ -138,7 +138,7 @@ impl SimplicityProgram {
     pub fn create_p2pk_signature(
         &self,
         signer: &crate::Signer,
-        derivation_path: &str,
+        derivation_path: &DerivationPath,
         tx: &Transaction,
         utxos: &[Arc<TxOut>],
         input_index: u32,

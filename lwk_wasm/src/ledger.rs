@@ -1,3 +1,4 @@
+use crate::DerivationPath;
 use crate::Error;
 use crate::Network;
 use crate::Pset;
@@ -7,11 +8,10 @@ use lwk_ledger::read_multi_apdu;
 use lwk_ledger::write_apdu;
 use lwk_ledger::APDUAnswer;
 use lwk_ledger::{APDUCmdVec, StatusWord};
-use lwk_wollet::{bitcoin::bip32::DerivationPath, elements::pset::PartiallySignedTransaction};
+use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use serde::Serialize;
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::HidDevice;
@@ -98,8 +98,8 @@ impl LedgerWeb {
     }
 
     #[wasm_bindgen(js_name = deriveXpub)]
-    pub async fn derive_xpub(&self, path: &str) -> Result<String, Error> {
-        let derivation_path = DerivationPath::from_str(&path).unwrap();
+    pub async fn derive_xpub(&self, path: &DerivationPath) -> Result<String, Error> {
+        let derivation_path = path.into();
         let r = self
             .ledger
             .client

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{LwkError, Pset, Signer, WolletDescriptor};
+use crate::{DerivationPath, LwkError, Pset, Signer, WolletDescriptor};
 
 /// Wrapper over [`lwk_wollet::amp2::Amp2`]
 #[derive(uniffi::Object)]
@@ -101,13 +101,13 @@ impl Amp2 {
     }
 
     /// ELIP153 `USER_PATH = m/purpose'/coin_type'/account'`
-    pub fn elip153_user_path(&self, account: u32) -> Result<String, LwkError> {
-        Ok(self.inner.elip153_user_path(account)?.to_string())
+    pub fn elip153_user_path(&self, account: u32) -> Result<Arc<DerivationPath>, LwkError> {
+        Ok(Arc::new(self.inner.elip153_user_path(account)?.into()))
     }
 
     /// ELIP153 `VIEW_PATH = m/purpose'/coin_type'/account'/server_fingerprint_masked'`
-    pub fn elip153_view_path(&self, account: u32) -> Result<String, LwkError> {
-        Ok(self.inner.elip153_view_path(account)?.to_string())
+    pub fn elip153_view_path(&self, account: u32) -> Result<Arc<DerivationPath>, LwkError> {
+        Ok(Arc::new(self.inner.elip153_view_path(account)?.into()))
     }
 
     /// Create an AMP2 descriptor ELIP153 compliant from xpub strings.

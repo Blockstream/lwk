@@ -9,6 +9,7 @@ pub mod blockdata;
 mod chain;
 mod contract;
 mod currency_code;
+mod derivation_path;
 mod desc;
 mod electrum_client;
 mod error;
@@ -81,7 +82,8 @@ pub use crate::types::{
 pub use crate::wollet::{Wollet, WolletBuilder};
 pub use chain::Chain;
 pub use currency_code::CurrencyCode;
-pub use desc::{derivation_path_from_str, derivation_path_to_str, get_path, WolletDescriptor};
+pub use derivation_path::DerivationPath;
+pub use desc::WolletDescriptor;
 pub use electrum_client::{ElectrumClient, ElectrumClientBuilder};
 pub use error::LwkError;
 pub use esplora_client::{

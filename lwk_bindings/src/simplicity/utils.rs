@@ -1,13 +1,10 @@
 use crate::blockdata::tx_out::TxOut;
 use crate::types::XOnlyPublicKey;
-use crate::{ControlBlock, LwkError};
+use crate::{ControlBlock, DerivationPath, LwkError};
 
 use super::cmr::Cmr;
 
-use std::str::FromStr;
 use std::sync::Arc;
-
-use elements::bitcoin::bip32::DerivationPath;
 
 use lwk_simplicity::scripts;
 use lwk_wollet::{secp256k1::Keypair, EC};
@@ -16,7 +13,7 @@ use lwk_wollet::{secp256k1::Keypair, EC};
 #[uniffi::export]
 pub fn simplicity_derive_xonly_pubkey(
     signer: &crate::Signer,
-    derivation_path: &str,
+    derivation_path: &DerivationPath,
 ) -> Result<Arc<XOnlyPublicKey>, LwkError> {
     let keypair = derive_keypair(signer, derivation_path)?;
     Ok(XOnlyPublicKey::from_keypair(&keypair))
@@ -43,11 +40,9 @@ pub(crate) fn convert_utxos(utxos: &[Arc<TxOut>]) -> Vec<elements::TxOut> {
 
 pub(crate) fn derive_keypair(
     signer: &crate::Signer,
-    derivation_path: &str,
+    derivation_path: &DerivationPath,
 ) -> Result<Keypair, LwkError> {
-    let derived_xprv = signer
-        .inner
-        .derive_xprv(&DerivationPath::from_str(derivation_path)?)?;
+    let derived_xprv = signer.inner.derive_xprv(&derivation_path.into())?;
     Ok(Keypair::from_secret_key(&EC, &derived_xprv.private_key))
 }
 

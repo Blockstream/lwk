@@ -1,4 +1,4 @@
-use crate::{Error, Pset, Signer, WolletDescriptor};
+use crate::{DerivationPath, Error, Pset, Signer, WolletDescriptor};
 
 use wasm_bindgen::prelude::*;
 
@@ -104,14 +104,14 @@ impl Amp2 {
 
     /// ELIP153 `USER_PATH = m/purpose'/coin_type'/account'`
     #[wasm_bindgen(js_name = elip153UserPath)]
-    pub fn elip153_user_path(&self, account: u32) -> Result<String, Error> {
-        Ok(self.inner.elip153_user_path(account)?.to_string())
+    pub fn elip153_user_path(&self, account: u32) -> Result<DerivationPath, Error> {
+        Ok(self.inner.elip153_user_path(account)?.into())
     }
 
     /// ELIP153 `VIEW_PATH = m/purpose'/coin_type'/account'/server_fingerprint_masked'`
     #[wasm_bindgen(js_name = elip153ViewPath)]
-    pub fn elip153_view_path(&self, account: u32) -> Result<String, Error> {
-        Ok(self.inner.elip153_view_path(account)?.to_string())
+    pub fn elip153_view_path(&self, account: u32) -> Result<DerivationPath, Error> {
+        Ok(self.inner.elip153_view_path(account)?.into())
     }
 
     /// Create an AMP2 descriptor ELIP153 compliant from xpub strings.

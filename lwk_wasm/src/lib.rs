@@ -14,6 +14,7 @@ mod boltz;
 mod contract;
 #[cfg(feature = "simplicity")]
 mod control_block;
+mod derivation_path;
 mod descriptor;
 mod error;
 mod esplora;
@@ -48,7 +49,6 @@ mod tweak;
 mod tx_builder;
 mod tx_details;
 mod update;
-mod util;
 
 // TODO serial is not logically needed here, but it brings in web_sys dep
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
@@ -102,6 +102,7 @@ pub use boltz::{BoltzSession, BoltzSessionBuilder, Invoice};
 pub use contract::Contract;
 #[cfg(feature = "simplicity")]
 pub use control_block::ControlBlock;
+pub use derivation_path::DerivationPath;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use error::MagicRoutingHint;
@@ -135,7 +136,6 @@ pub use store::{JsStorage, JsStoreLink, JsTestStore};
 pub use tweak::Tweak;
 pub use tx_builder::{IssuanceRequest, ReissuanceRequest, TxBuilder};
 pub use update::Update;
-pub use util::{derivation_path_from_str, derivation_path_to_str};
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use websocket::WebSocketSerial;

@@ -122,10 +122,10 @@ impl Jade {
 
     /// Return a multisig address of a registered `multisig_name` wallet
     ///
-    /// This method accept `path` and `path_n` in place of a single `Vec<Vec<u32>>` because the
-    /// latter is not supported by wasm_bindgen (and neither `(u32, Vec<u32>)`). `path` and `path_n`
-    /// are converted internally to a `Vec<Vec<u32>>` with the caveat all the paths are the same,
-    /// which is almost always the case.
+    /// This method accepts a single `path`, applied to every signer, in place of a
+    /// `Vec<Vec<u32>>` (one path per signer) because the latter is not supported by
+    /// wasm_bindgen. This assumes all signers share the same derivation path, which is
+    /// almost always the case.
     ///
     /// Deprecated: use `getReceiveAddressMultiStr()` instead.
     #[wasm_bindgen(js_name = getReceiveAddressMulti)]
@@ -156,6 +156,11 @@ impl Jade {
     }
 
     /// Return a multisig address of a registered `multisig_name` wallet
+    ///
+    /// This method accepts a single `path`, applied to every signer, in place of a
+    /// `Vec<Vec<u32>>` (one path per signer) because the latter is not supported by
+    /// wasm_bindgen. This assumes all signers share the same derivation path, which is
+    /// almost always the case.
     #[wasm_bindgen(js_name = getReceiveAddressMultiStr)]
     pub async fn get_receive_address_multi_str(
         &self,

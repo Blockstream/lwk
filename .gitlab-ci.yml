@@ -425,6 +425,7 @@ wasm:
     RUSTFLAGS: "--cfg=web_sys_unstable_apis"
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    - cargo build -p amp2_mock && export AMP2_MOCK_EXEC=$PWD/target/debug/amp2_mock
     # TODO: remove this when jq would be a part of an image
     - apt-get -qq update
     - apt-get install -y jq

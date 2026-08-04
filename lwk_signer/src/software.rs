@@ -714,4 +714,77 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_mnemonic_statistical_entropy() {
+        let sample_size = if cfg!(debug_assertions) {
+            10_000
+        } else {
+            1_000_000
+        };
+        let mut byte_counts = [0u64; 256];
+        let mut bit_ones = 0u64;
+        let mut generated = std::collections::HashSet::with_capacity(sample_size);
+
+        for _ in 0..sample_size {
+            let mnemonic = Mnemonic::generate(12).unwrap();
+            let entropy = mnemonic.to_entropy(); // 16 bytes (128 bits)
+            let entropy_bytes: [u8; 16] = entropy.clone().try_into().unwrap();
+
+            assert!(
+                generated.insert(entropy_bytes),
+                "Collision detected! Entropy source is deterministic or has low cardinality."
+            );
+
+            for &byte in &entropy {
+                byte_counts[byte as usize] += 1;
+                bit_ones += byte.count_ones() as u64;
+            }
+        }
+
+        let total_bytes = sample_size * 16;
+        let total_bits = total_bytes * 8;
+
+        // Monobit test (frequency check of ones/zeros)
+        let expected_ones = total_bits as f64 / 2.0;
+        let std_dev = (total_bits as f64).sqrt() / 2.0;
+        let observed_ones = bit_ones as f64;
+        let z_score = (observed_ones - expected_ones).abs() / std_dev;
+        assert!(
+            z_score < 4.0,
+            "Monobit test failed: z-score was {}",
+            z_score
+        );
+
+        // Chi-squared test on byte frequencies
+        let expected_count = total_bytes as f64 / 256.0;
+        let mut chi_squared = 0.0;
+        for &count in &byte_counts {
+            let diff = count as f64 - expected_count;
+            chi_squared += (diff * diff) / expected_count;
+        }
+
+        // For 255 degrees of freedom:
+        // - Chi-squared critical value at 99.9% confidence is ~323
+        // - Chi-squared critical value at 0.1% confidence is ~197
+        assert!(
+            (190.0..330.0).contains(&chi_squared),
+            "Chi-squared test failed: value was {} (expected [190, 330])",
+            chi_squared
+        );
+
+        // Shannon entropy
+        let mut entropy_val = 0.0;
+        for &count in &byte_counts {
+            if count > 0 {
+                let p = count as f64 / total_bytes as f64;
+                entropy_val -= p * p.log2();
+            }
+        }
+        assert!(
+            entropy_val > 7.99,
+            "Shannon entropy too low: {} (expected > 7.99)",
+            entropy_val
+        );
+    }
 }

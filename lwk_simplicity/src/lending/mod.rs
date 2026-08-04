@@ -3,6 +3,7 @@ mod core;
 mod error;
 mod indexer;
 mod network;
+mod verification;
 
 pub use indexer::client::IndexerClient;
 pub use indexer::common::OfferStatus;

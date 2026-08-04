@@ -20,6 +20,27 @@ pub struct FullRequest {
     pub params: Request,
 }
 
+impl FullRequest {
+    /// Wrap a request with a freshly generated id, ready to be serialized.
+    pub fn new(params: Request) -> Self {
+        Self {
+            id: rand::thread_rng().next_u32().to_string(),
+            method: params.to_string(),
+            params,
+        }
+    }
+
+    pub fn serialize(&self) -> Result<Vec<u8>, crate::Error> {
+        let mut buf = Vec::new();
+        serde_cbor::to_writer(&mut buf, self)?;
+        log::debug!("\n--->\t{:#?}\n\t({} bytes)", self, buf.len());
+        // Uncomment only for local debugging; this exposes sensitive request data as hex.
+        // Never leave this log uncommented.
+        // log::debug!("\n--->\t{}", hex::encode(&buf));
+        Ok(buf)
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum Request {
@@ -83,6 +104,11 @@ impl std::fmt::Display for Request {
 }
 
 impl Request {
+    /// Discards the generated id, so the response cannot be correlated; use [`FullRequest::serialize`] instead.
+    pub fn serialize(self) -> Result<Vec<u8>, crate::Error> {
+        FullRequest::new(self).serialize()
+    }
+
     pub fn network(&self) -> Option<Network> {
         match self {
             Request::GetXpub(e) => Some(e.network),
@@ -92,26 +118,6 @@ impl Request {
             Request::RegisterMultisig(e) => Some(e.network),
             _ => None,
         }
-    }
-}
-
-impl Request {
-    pub fn serialize(self) -> Result<Vec<u8>, crate::Error> {
-        let mut rng = rand::thread_rng();
-        let id = rng.next_u32().to_string();
-        let method = self.to_string();
-        let req = FullRequest {
-            id,
-            method,
-            params: self,
-        };
-        let mut buf = Vec::new();
-        serde_cbor::to_writer(&mut buf, &req)?;
-        log::debug!("\n--->\t{:#?}\n\t({} bytes)", &req, buf.len());
-        // Uncomment only for local debugging; this exposes sensitive request data as hex.
-        // Never leave this log uncommented.
-        // log::debug!("\n--->\t{}", hex::encode(&buf));
-        Ok(buf)
     }
 }
 

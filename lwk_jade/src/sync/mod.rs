@@ -24,7 +24,6 @@ use elements::bitcoin::sign_message::MessageSignature;
 use elements::pset::PartiallySignedTransaction;
 use elements_miniscript::slip77::{self, MasterBlindingKey};
 use lwk_common::{Network, Signer};
-use rand::RngCore;
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
 
@@ -388,18 +387,11 @@ impl Jade {
     pub fn sign_psbt(&self, params: SignPsbtParams) -> Result<Vec<u8>> {
         self.check_network(params.network)?;
 
-        let mut rng = rand::thread_rng();
-        let msgid = rng.next_u32().to_string();
-
-        let request = FullRequest {
-            id: msgid.clone(),
-            method: "sign_psbt".to_string(),
-            params: Request::SignPsbt(params),
-        };
+        let request = FullRequest::new(Request::SignPsbt(params));
+        let msgid = request.id.clone();
 
         let mut conn = self.conn.lock()?;
-        let buf = serde_cbor::to_vec(&request)?;
-        log::debug!("sign_psbt request: {buf_len} bytes", buf_len = buf.len());
+        let buf = request.serialize()?;
         conn.write_all(&buf)?;
 
         let mut result = vec![];
@@ -428,18 +420,15 @@ impl Jade {
                 break;
             }
 
-            newid = rng.next_u32().to_string();
-            let ext_request = FullRequest {
-                id: newid.clone(),
-                method: "get_extended_data".to_string(),
-                params: Request::GetExtendedData(GetExtendedDataParams {
-                    origid: msgid.clone(),
-                    orig: "sign_psbt".to_string(),
-                    seqnum: seqnum + 1,
-                    seqlen,
-                }),
-            };
-            let buf = serde_cbor::to_vec(&ext_request)?;
+            let ext_request = FullRequest::new(Request::GetExtendedData(GetExtendedDataParams {
+                origid: msgid.clone(),
+                orig: "sign_psbt".to_string(),
+                seqnum: seqnum + 1,
+                seqlen,
+            }));
+            newid = ext_request.id.clone();
+
+            let buf = ext_request.serialize()?;
             conn.write_all(&buf)?;
         }
 
@@ -478,6 +467,7 @@ impl Jade {
         if let Some(network) = request.network() {
             self.check_network(network)?;
         }
+        let request = FullRequest::new(request);
         let buf = request.serialize()?;
 
         conn.write_all(&buf)?;

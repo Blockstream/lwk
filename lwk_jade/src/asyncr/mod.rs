@@ -21,7 +21,6 @@ use elements::bitcoin::sign_message::MessageSignature;
 use elements::pset::PartiallySignedTransaction;
 use elements_miniscript::slip77;
 use lwk_common::{Network, Stream};
-use rand::RngCore;
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
 use tokio::sync::Mutex;
@@ -404,15 +403,10 @@ impl<S: Stream<Error = Error>> Jade<S> {
         let stream = self.stream.lock().await;
         self.check_network(params.network)?;
 
-        let msgid = rand::thread_rng().next_u32().to_string();
+        let request = FullRequest::new(Request::SignPsbt(params));
+        let msgid = request.id.clone();
 
-        let request = FullRequest {
-            id: msgid.clone(),
-            method: "sign_psbt".to_string(),
-            params: Request::SignPsbt(params),
-        };
-
-        let buf = serde_cbor::to_vec(&request)?;
+        let buf = request.serialize()?;
         stream.write(&buf).await?;
 
         let mut result = vec![];
@@ -441,18 +435,15 @@ impl<S: Stream<Error = Error>> Jade<S> {
                 break;
             }
 
-            newid = rand::thread_rng().next_u32().to_string();
-            let ext_request = FullRequest {
-                id: newid.clone(),
-                method: "get_extended_data".to_string(),
-                params: Request::GetExtendedData(GetExtendedDataParams {
-                    origid: msgid.clone(),
-                    orig: "sign_psbt".to_string(),
-                    seqnum: seqnum + 1,
-                    seqlen,
-                }),
-            };
-            let buf = serde_cbor::to_vec(&ext_request)?;
+            let ext_request = FullRequest::new(Request::GetExtendedData(GetExtendedDataParams {
+                origid: msgid.clone(),
+                orig: "sign_psbt".to_string(),
+                seqnum: seqnum + 1,
+                seqlen,
+            }));
+            newid = ext_request.id.clone();
+
+            let buf = ext_request.serialize()?;
             stream.write(&buf).await?;
         }
 
@@ -512,6 +503,7 @@ impl<S: Stream<Error = Error>> Jade<S> {
         if let Some(network) = request.network() {
             self.check_network(network)?;
         }
+        let request = FullRequest::new(request);
         let buf = request.serialize()?;
 
         stream.write(&buf).await?;

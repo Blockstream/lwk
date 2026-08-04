@@ -48,6 +48,7 @@ mod tweak;
 mod tx_builder;
 mod tx_details;
 mod update;
+mod util;
 
 // TODO serial is not logically needed here, but it brings in web_sys dep
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
@@ -134,6 +135,7 @@ pub use store::{JsStorage, JsStoreLink, JsTestStore};
 pub use tweak::Tweak;
 pub use tx_builder::{IssuanceRequest, ReissuanceRequest, TxBuilder};
 pub use update::Update;
+pub use util::{derivation_path_from_str, derivation_path_to_str};
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use websocket::WebSocketSerial;

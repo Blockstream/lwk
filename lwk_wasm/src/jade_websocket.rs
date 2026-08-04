@@ -76,6 +76,8 @@ impl JadeWebSocket {
     }
 
     /// Return a single sig address with the given `variant` and `path` derivation
+    ///
+    /// Deprecated: use `getReceiveAddressSingleStr()` instead.
     #[wasm_bindgen(js_name = getReceiveAddressSingle)]
     pub async fn get_receive_address_single(
         &self,
@@ -97,12 +99,26 @@ impl JadeWebSocket {
         Ok(xpub.to_string())
     }
 
+    /// Return a single sig address with the given `variant` and `path` derivation,
+    /// e.g. `"84'/1'/0'/0/3"`
+    #[wasm_bindgen(js_name = getReceiveAddressSingleStr)]
+    pub async fn get_receive_address_single_str(
+        &self,
+        variant: Singlesig,
+        path: &str,
+    ) -> Result<String, Error> {
+        let path = derivation_path_to_vec(&DerivationPath::from_str(path)?);
+        self.get_receive_address_single(variant, path).await
+    }
+
     /// Return a multisig address of a registered `multisig_name` wallet
     ///
     /// This method accept `path` and `path_n` in place of a single `Vec<Vec<u32>>` because the
     /// latter is not supported by wasm_bindgen (and neither `(u32, Vec<u32>)`). `path` and `path_n`
     /// are converted internally to a `Vec<Vec<u32>>` with the caveat all the paths are the same,
     /// which is almost always the case.
+    ///
+    /// Deprecated: use `getReceiveAddressMultiStr()` instead.
     #[wasm_bindgen(js_name = getReceiveAddressMulti)]
     pub async fn get_receive_address_multi(
         &self,
@@ -128,6 +144,18 @@ impl JadeWebSocket {
             })
             .await?;
         Ok(xpub.to_string())
+    }
+
+    /// Return a multisig address of a registered `multisig_name` wallet, with `path`
+    /// derivation given as a string, e.g. `"0/3"`
+    #[wasm_bindgen(js_name = getReceiveAddressMultiStr)]
+    pub async fn get_receive_address_multi_str(
+        &self,
+        multisig_name: &str,
+        path: &str,
+    ) -> Result<String, Error> {
+        let path = derivation_path_to_vec(&DerivationPath::from_str(path)?);
+        self.get_receive_address_multi(multisig_name, path).await
     }
 
     /// Sign and consume the given PSET, returning the signed one

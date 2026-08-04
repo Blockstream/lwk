@@ -64,6 +64,8 @@ path = "tests/e2e.rs"
 lwk_test_util = { version = "0.19.0" }
 lwk_containers = { version = "0.19.0" }
 
+tokio = { version = "1.36.0", features = ["time"] }
+
 tempfile.workspace = true
 base64 = "0.21.4"
 serde_json.workspace = true

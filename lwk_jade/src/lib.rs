@@ -42,10 +42,12 @@ use elements::{
     Script,
 };
 pub use error::Error;
+use error::ErrorDetails;
 use get_receive_address::{SingleOrMulti, Variant};
 use lwk_common::{get_genesis_hash, Network};
 
 use register_multisig::RegisteredMultisigDetails;
+use serde::Deserialize;
 use sign_liquid_tx::{AssetInfo, Change, Commitment, Contract, Prevout, SignLiquidTxParams};
 
 pub(crate) static SECP: LazyLock<Secp256k1<VerifyOnly>> =
@@ -78,30 +80,92 @@ pub const JADE_DEVICE_IDS: [(u16, u16); 6] = [
 
 const CHANGE_CHAIN: ChildNumber = ChildNumber::Normal { index: 1 };
 
-fn try_parse_response<T>(reader: &[u8]) -> Option<Result<protocol::Response<T>>>
+/// Id Jade replies with when it cannot recover the id of the request it is rejecting.
+///
+/// Set by `jade_process_reject_message_ex`
+const UNMATCHED_REQUEST_ID: &str = "00";
+
+/// Outcome of trying to decode a message out of the bytes read so far.
+enum ParseStep<T> {
+    Incomplete,
+    Mine(Result<protocol::Response<T>>),
+    Skip { consumed: usize },
+}
+
+/// Read the `id` of a message, if it has a usable one.
+fn message_id(value: &serde_cbor::Value) -> Option<&str> {
+    let serde_cbor::Value::Map(map) = value else {
+        return None;
+    };
+    match map.get(&serde_cbor::Value::Text("id".to_string())) {
+        Some(serde_cbor::Value::Text(id)) => Some(id),
+        _ => None,
+    }
+}
+
+/// Read the `error` of a message, if it has one.
+fn message_error(value: &serde_cbor::Value) -> Option<&serde_cbor::Value> {
+    let serde_cbor::Value::Map(map) = value else {
+        return None;
+    };
+    map.get(&serde_cbor::Value::Text("error".to_string()))
+}
+
+/// Decode the first message in `reader`, given the id of the request waiting for an answer.
+fn try_parse_response<T>(reader: &[u8], expected_id: &str) -> ParseStep<T>
 where
     T: std::fmt::Debug + serde::de::DeserializeOwned,
 {
-    match serde_cbor::from_reader::<protocol::Response<T>, &[u8]>(reader) {
-        Ok(r) => {
-            log::debug!(
-                "\n<---\t{:?}\n\t({} bytes) {}",
-                &r,
-                reader.len(),
-                hex::encode(reader)
-            );
-            return Some(Ok(r));
-        }
-
+    let mut deserializer = serde_cbor::Deserializer::from_slice(reader);
+    let value = match serde_cbor::Value::deserialize(&mut deserializer) {
+        Ok(value) => value,
         Err(e) => {
-            let res = serde_cbor::from_reader::<serde_cbor::Value, &[u8]>(reader);
-            if let Ok(value) = res {
-                log::warn!("The value returned is a valid CBOR, but our structs doesn't map it correctly: {value:?}");
-                return Some(Err(Error::SerdeCbor(e)));
-            }
+            return if e.is_eof() {
+                ParseStep::Incomplete
+            } else {
+                ParseStep::Mine(Err(Error::SerdeCbor(e)))
+            };
+        }
+    };
+    let consumed = deserializer.byte_offset();
+
+    log::debug!(
+        "\n<---\t{:?}\n\t({} bytes) {}",
+        &value,
+        consumed,
+        hex::encode(&reader[..consumed])
+    );
+
+    let Some(id) = message_id(&value) else {
+        log::warn!("Skipping message without an id: {value:?}");
+        return ParseStep::Skip { consumed };
+    };
+
+    if id == UNMATCHED_REQUEST_ID {
+        let Some(details) = message_error(&value) else {
+            log::warn!("Skipping message with id {UNMATCHED_REQUEST_ID} and no error: {value:?}");
+            return ParseStep::Skip { consumed };
+        };
+        return ParseStep::Mine(Err(
+            match serde_cbor::value::from_value::<ErrorDetails>(details.clone()) {
+                Ok(details) => Error::JadeError(details),
+                Err(e) => Error::SerdeCbor(e),
+            },
+        ));
+    }
+
+    if id != expected_id {
+        log::warn!("Skipping stale response, expected id {expected_id}, got {id}");
+        return ParseStep::Skip { consumed };
+    }
+
+    match serde_cbor::value::from_value::<protocol::Response<T>>(value) {
+        Ok(response) => ParseStep::Mine(Ok(response)),
+        Err(e) => {
+            log::warn!("The value returned is a valid CBOR, but our structs doesn't map it correctly: {e:?}");
+            ParseStep::Mine(Err(Error::SerdeCbor(e)))
         }
     }
-    None
 }
 
 pub fn derivation_path_to_vec(path: &DerivationPath) -> Vec<u32> {
@@ -437,5 +501,85 @@ mod test {
         assert_eq!(explicit_value.len(), 9);
         assert_eq!(explicit_value[0], 1);
         assert_eq!(explicit_value, vec![1, 0, 0, 0, 0, 0, 103, 194, 128]);
+    }
+
+    fn response(id: &str, result: &str) -> crate::protocol::Response<String> {
+        crate::protocol::Response {
+            id: id.to_string(),
+            result: Some(result.to_string()),
+            error: None,
+            seqnum: None,
+            seqlen: None,
+        }
+    }
+
+    #[test]
+    fn try_parse_response_with_two_messages_in_the_buffer() {
+        let mut buf = serde_cbor::to_vec(&response("1", "first")).unwrap();
+        buf.extend_from_slice(&serde_cbor::to_vec(&response("2", "second")).unwrap());
+
+        match crate::try_parse_response::<String>(&buf, "1") {
+            crate::ParseStep::Mine(parsed) => {
+                let parsed = parsed.unwrap();
+                assert_eq!(parsed.id, "1");
+                assert_eq!(parsed.result.as_deref(), Some("first"));
+            }
+            _ => panic!("two concatenated messages must not look like an incomplete one"),
+        }
+    }
+
+    #[test]
+    fn try_parse_response_skips_a_message_without_id() {
+        let log = serde_cbor::to_vec(&serde_json::json!({"log": "boot"})).unwrap();
+
+        let crate::ParseStep::Skip { consumed } = crate::try_parse_response::<String>(&log, "1")
+        else {
+            panic!("a message without an id must be skipped")
+        };
+        assert_eq!(consumed, log.len());
+    }
+
+    fn reject(id: &str) -> Vec<u8> {
+        serde_cbor::to_vec(&serde_json::json!({
+            "id": id,
+            "error": {"code": -32600, "message": "Invalid RPC Request message", "data": "4096"}
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn try_parse_response_returns_the_unmatched_request_error() {
+        let crate::ParseStep::Mine(parsed) =
+            crate::try_parse_response::<String>(&reject(crate::UNMATCHED_REQUEST_ID), "1")
+        else {
+            panic!("an error about the request we just sent must not be skipped")
+        };
+        assert_eq!(
+            parsed.unwrap_err().to_string(),
+            "Jade Error: Error code: -32600 - message: Invalid RPC Request message"
+        );
+    }
+
+    #[test]
+    fn try_parse_response_skips_an_error_for_another_request() {
+        let other = reject("2");
+
+        let crate::ParseStep::Skip { consumed } = crate::try_parse_response::<String>(&other, "1")
+        else {
+            panic!("an error carrying another id must be skipped")
+        };
+        assert_eq!(consumed, other.len());
+    }
+
+    #[test]
+    fn try_parse_response_skips_an_unmatched_message_without_an_error() {
+        let odd =
+            serde_cbor::to_vec(&serde_json::json!({"id": "00", "result": "unexpected"})).unwrap();
+
+        let crate::ParseStep::Skip { consumed } = crate::try_parse_response::<String>(&odd, "1")
+        else {
+            panic!("id 00 without an error is not an answer for us")
+        };
+        assert_eq!(consumed, odd.len());
     }
 }

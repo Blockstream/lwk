@@ -16,7 +16,7 @@ use crate::register_multisig::{
 use crate::sign_liquid_tx::{SignLiquidTxParams, SignPsbtParams, TxInputParams};
 use crate::{
     anti_exfil, derivation_path_to_vec, json_to_cbor, try_parse_response, vec_to_derivation_path,
-    Error, Result,
+    Error, ParseStep, Result,
 };
 use connection::Connection;
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
@@ -54,7 +54,7 @@ pub struct Jade {
     multisigs_details: Mutex<Option<Vec<RegisteredMultisigDetails>>>,
 }
 
-fn read_loop<T>(conn: &mut Connection) -> Result<Response<T>>
+fn read_loop<T>(conn: &mut Connection, expected_id: &str) -> Result<Response<T>>
 where
     T: std::fmt::Debug + DeserializeOwned,
 {
@@ -70,9 +70,16 @@ where
             }
             Ok(len) => {
                 total += len;
-                let reader = &rx[..total];
-                if let Some(value) = try_parse_response::<T>(reader) {
-                    return value;
+
+                loop {
+                    match try_parse_response::<T>(&rx[..total], expected_id) {
+                        ParseStep::Incomplete => break,
+                        ParseStep::Mine(response) => return response,
+                        ParseStep::Skip { consumed } => {
+                            rx.copy_within(consumed..total, 0);
+                            total -= consumed;
+                        }
+                    }
                 }
             }
             Err(e) => {
@@ -398,14 +405,8 @@ impl Jade {
         let mut newid = msgid.clone();
 
         loop {
-            let resp = read_loop::<ByteBuf>(&mut conn)?;
-
-            if resp.id != newid {
-                return Err(Error::Generic(format!(
-                    "reply id mismatch: expected {newid}, got {}",
-                    resp.id
-                )));
-            }
+            // `read_loop` only returns the answer to `newid`, so no id check is needed here
+            let resp = read_loop::<ByteBuf>(&mut conn, &newid)?;
 
             if let Some(error) = resp.error {
                 return Err(Error::JadeError(error));
@@ -472,7 +473,7 @@ impl Jade {
 
         conn.write_all(&buf)?;
 
-        let resp = read_loop::<T>(conn)?;
+        let resp = read_loop::<T>(conn, &request.id)?;
         match (resp.result, resp.error) {
             (Some(result), _) => Ok(result),
             (_, Some(error)) => Err(Error::JadeError(error)),

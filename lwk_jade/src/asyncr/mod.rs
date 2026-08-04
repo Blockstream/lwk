@@ -14,7 +14,7 @@ use crate::register_multisig::{
 use crate::sign_liquid_tx::{SignLiquidTxParams, SignPsbtParams, TxInputParams};
 use crate::{
     anti_exfil, derivation_path_to_vec, json_to_cbor, try_parse_response, vec_to_derivation_path,
-    Error, Result,
+    Error, ParseStep, Result,
 };
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use elements::bitcoin::sign_message::MessageSignature;
@@ -80,7 +80,10 @@ impl Jade<JadeTcpStream> {
     }
 }
 
-async fn read_loop<S: Stream<Error = Error>, T>(stream: &S) -> Result<Response<T>>
+async fn read_loop<S: Stream<Error = Error>, T>(
+    stream: &S,
+    expected_id: &str,
+) -> Result<Response<T>>
 where
     T: std::fmt::Debug + DeserializeOwned,
 {
@@ -97,9 +100,16 @@ where
 
             Ok(len) => {
                 total += len;
-                let reader = &rx[..total];
-                if let Some(value) = try_parse_response::<T>(reader) {
-                    return value;
+
+                loop {
+                    match try_parse_response::<T>(&rx[..total], expected_id) {
+                        ParseStep::Incomplete => break,
+                        ParseStep::Mine(response) => return response,
+                        ParseStep::Skip { consumed } => {
+                            rx.copy_within(consumed..total, 0);
+                            total -= consumed;
+                        }
+                    }
                 }
             }
             Err(Error::IoError(e)) if e.kind() == ErrorKind::Interrupted => (),
@@ -413,14 +423,8 @@ impl<S: Stream<Error = Error>> Jade<S> {
         let mut newid = msgid.clone();
 
         loop {
-            let resp: Response<ByteBuf> = read_loop(&*stream).await?;
-
-            if resp.id != newid {
-                return Err(Error::Generic(format!(
-                    "reply id mismatch: expected {newid}, got {}",
-                    resp.id
-                )));
-            }
+            // `read_loop` only returns the answer to `newid`, so no id check is needed here
+            let resp: Response<ByteBuf> = read_loop(&*stream, &newid).await?;
 
             if let Some(error) = resp.error {
                 return Err(Error::JadeError(error));
@@ -508,11 +512,258 @@ impl<S: Stream<Error = Error>> Jade<S> {
 
         stream.write(&buf).await?;
 
-        let resp: Response<T> = read_loop(stream).await?;
+        let resp: Response<T> = read_loop(stream, &request.id).await?;
         match (resp.result, resp.error) {
             (Some(result), _) => Ok(result),
             (_, Some(error)) => Err(Error::JadeError(error)),
             _ => Err(Error::JadeNeitherErrorNorResult),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::io::ErrorKind;
+    use std::sync::{Arc, Mutex};
+    use std::time::Duration;
+
+    use lwk_common::{Network, Stream};
+    use serde::Deserialize;
+    use serde_bytes::ByteBuf;
+    use tokio::sync::{Mutex as AsyncMutex, Notify};
+
+    use crate::protocol::{GetMasterBlindingKeyParams, GetSignatureParams, Response};
+    use crate::{Error, Result};
+
+    use super::Jade;
+
+    #[derive(Deserialize)]
+    struct RequestId {
+        id: String,
+    }
+
+    #[derive(Debug, Default)]
+    struct MockState {
+        ids: Vec<String>,
+        served: usize,
+        fail_next_read: bool,
+    }
+
+    #[derive(Debug)]
+    struct MockJade {
+        replies: Vec<ByteBuf>,
+        state: Mutex<MockState>,
+    }
+
+    impl MockJade {
+        fn new(replies: Vec<ByteBuf>) -> Self {
+            Self {
+                replies,
+                state: Mutex::new(MockState::default()),
+            }
+        }
+
+        fn fail_next_read(&self) {
+            self.state.lock().unwrap().fail_next_read = true;
+        }
+    }
+
+    impl Stream for MockJade {
+        type Error = Error;
+
+        async fn read(&self, buf: &mut [u8]) -> Result<usize> {
+            let reply = {
+                let mut state = self.state.lock().unwrap();
+                if state.fail_next_read {
+                    state.fail_next_read = false;
+                    return Err(Error::IoError(std::io::Error::new(
+                        ErrorKind::TimedOut,
+                        "read timed out",
+                    )));
+                }
+
+                let response = Response {
+                    id: state.ids[state.served].clone(),
+                    result: Some(self.replies[state.served].clone()),
+                    error: None,
+                    seqnum: None,
+                    seqlen: None,
+                };
+                state.served += 1;
+                serde_cbor::to_vec(&response).unwrap()
+            };
+
+            buf[..reply.len()].copy_from_slice(&reply);
+            Ok(reply.len())
+        }
+
+        async fn write(&self, data: &[u8]) -> Result<()> {
+            let request: RequestId = serde_cbor::from_slice(data).unwrap();
+            self.state.lock().unwrap().ids.push(request.id);
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn stale_reply_is_not_returned_as_a_signature() {
+        let master_blinding_key = ByteBuf::from(vec![0u8; 32]);
+        let signature = ByteBuf::from(vec![1u8; 64]);
+
+        let mock = MockJade::new(vec![master_blinding_key, signature.clone()]);
+        mock.fail_next_read();
+
+        let jade = Jade::new(mock, Network::default_regtest());
+
+        let params = GetMasterBlindingKeyParams {
+            only_if_silent: false,
+        };
+        assert!(jade.get_master_blinding_key(params).await.is_err());
+
+        let params = GetSignatureParams {
+            ae_host_entropy: vec![1u8; 32],
+        };
+        let signature_read = jade.get_signature_for_tx(params).await.unwrap();
+
+        assert_eq!(
+            signature_read, signature,
+            "returned the master blinding key as a signature"
+        );
+    }
+
+    #[derive(Debug, Default)]
+    struct CrossedResponseState {
+        ids: Vec<String>,
+        read_calls: usize,
+        crossed: bool,
+    }
+
+    #[derive(Clone, Debug)]
+    struct CrossedResponseStream {
+        state: Arc<AsyncMutex<CrossedResponseState>>,
+        first_read_started: Arc<Notify>,
+        second_write: Arc<Notify>,
+    }
+
+    impl CrossedResponseStream {
+        fn new() -> Self {
+            Self {
+                state: Arc::new(AsyncMutex::new(CrossedResponseState::default())),
+                first_read_started: Arc::new(Notify::new()),
+                second_write: Arc::new(Notify::new()),
+            }
+        }
+
+        async fn first_read_started(&self) {
+            self.first_read_started.notified().await;
+        }
+
+        async fn wait_for_second_write(&self) {
+            {
+                let state = self.state.lock().await;
+                if state.ids.len() >= 2 {
+                    return;
+                }
+            }
+
+            let _ =
+                tokio::time::timeout(Duration::from_millis(50), self.second_write.notified()).await;
+        }
+
+        async fn id_for_read(&self) -> Option<String> {
+            let read_call = {
+                let mut state = self.state.lock().await;
+                let read_call = state.read_calls;
+                state.read_calls += 1;
+                read_call
+            };
+
+            match read_call {
+                0 => {
+                    self.first_read_started.notify_one();
+                    self.wait_for_second_write().await;
+
+                    let mut state = self.state.lock().await;
+                    if state.ids.len() >= 2 {
+                        state.crossed = true;
+                        Some(state.ids[1].clone())
+                    } else {
+                        Some(state.ids[0].clone())
+                    }
+                }
+                1 => {
+                    let state = self.state.lock().await;
+                    if state.crossed {
+                        Some(state.ids[0].clone())
+                    } else {
+                        Some(state.ids[1].clone())
+                    }
+                }
+                _ => None,
+            }
+        }
+    }
+
+    fn ping_response(id: String) -> Vec<u8> {
+        let response = Response {
+            id,
+            result: Some(0u8),
+            error: None,
+            seqnum: None,
+            seqlen: None,
+        };
+        serde_cbor::to_vec(&response).unwrap()
+    }
+
+    impl Stream for CrossedResponseStream {
+        type Error = Error;
+
+        async fn read(&self, buf: &mut [u8]) -> Result<usize> {
+            let Some(id) = self.id_for_read().await else {
+                return std::future::pending::<Result<usize>>().await;
+            };
+
+            let response = ping_response(id);
+            buf[..response.len()].copy_from_slice(&response);
+            Ok(response.len())
+        }
+
+        async fn write(&self, data: &[u8]) -> Result<()> {
+            let request: RequestId = serde_cbor::from_slice(data).unwrap();
+            let mut state = self.state.lock().await;
+            state.ids.push(request.id);
+            if state.ids.len() >= 2 {
+                self.second_write.notify_waiters();
+            }
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn concurrent_sends_are_serialized() {
+        let stream = CrossedResponseStream::new();
+        let jade = Arc::new(Jade::new(stream.clone(), Network::default_regtest()));
+
+        let first = tokio::spawn({
+            let jade = Arc::clone(&jade);
+            async move { jade.ping().await }
+        });
+
+        stream.first_read_started().await;
+
+        let second = tokio::spawn({
+            let jade = Arc::clone(&jade);
+            async move { jade.ping().await }
+        });
+
+        let (first, second) = tokio::time::timeout(Duration::from_millis(250), async {
+            let first = first.await.expect("first task must not panic");
+            let second = second.await.expect("second task must not panic");
+            (first, second)
+        })
+        .await
+        .expect("a caller reached the stream while another was waiting for its answer");
+
+        assert_eq!(first.expect("first ping must succeed"), 0);
+        assert_eq!(second.expect("second ping must succeed"), 0);
     }
 }

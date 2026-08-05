@@ -2,6 +2,7 @@
 //!
 //! A Peg-in is a way to convert bitcoin (BTC) on the mainchain to liquid bitcoin (L-BTC).
 
+use elements::hashes::Hash;
 use elements::{bitcoin, BlockHeader};
 use elements_miniscript::{BtcDescriptor, BtcMiniscript, BtcSegwitv0};
 
@@ -270,6 +271,235 @@ impl PeginAddress {
     }
 }
 
+/// A Bitcoin transaction output paying a [`PeginAddress`].
+///
+/// Construction finds the output paying the exact Bitcoin script pubkey
+/// derived for the pegin and rejects transactions with zero or multiple
+/// matching outputs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PeginDeposit {
+    pegin_address: PeginAddress,
+    transaction: bitcoin::Transaction,
+    outpoint: bitcoin::OutPoint,
+    output: bitcoin::TxOut,
+}
+
+impl PeginDeposit {
+    /// Create and validate a pegin deposit.
+    pub fn new(
+        pegin_address: PeginAddress,
+        transaction: bitcoin::Transaction,
+    ) -> Result<Self, Error> {
+        let expected_script = pegin_address.address().script_pubkey();
+        let mut matching_outputs = transaction
+            .output
+            .iter()
+            .enumerate()
+            .filter(|(_, output)| output.script_pubkey == expected_script);
+        let (vout, output) = matching_outputs.next().ok_or(Error::PeginOutputNotFound)?;
+        if matching_outputs.next().is_some() {
+            return Err(Error::PeginOutputAmbiguous);
+        }
+        let output = output.clone();
+        let vout = u32::try_from(vout).map_err(|_| Error::PeginOutputIndexOverflow { vout })?;
+
+        let outpoint = bitcoin::OutPoint::new(transaction.compute_txid(), vout);
+        Ok(Self {
+            pegin_address,
+            transaction,
+            outpoint,
+            output,
+        })
+    }
+
+    /// Return the pegin address paid by this deposit.
+    pub fn pegin_address(&self) -> &PeginAddress {
+        &self.pegin_address
+    }
+
+    /// Return the Bitcoin transaction containing this deposit.
+    pub fn transaction(&self) -> &bitcoin::Transaction {
+        &self.transaction
+    }
+
+    /// Return the Bitcoin outpoint identifying this deposit.
+    pub fn outpoint(&self) -> bitcoin::OutPoint {
+        self.outpoint
+    }
+
+    /// Return the Bitcoin transaction output containing the deposited amount.
+    pub fn output(&self) -> &bitcoin::TxOut {
+        &self.output
+    }
+
+    /// Return the deposited amount.
+    pub fn amount(&self) -> bitcoin::Amount {
+        self.output.value
+    }
+}
+
+/// A pegin deposit authenticated by a Bitcoin transaction inclusion proof.
+///
+/// Construction verifies the partial Merkle tree against its block header and
+/// requires the deposit transaction among the matched transactions. It does
+/// not establish that the header belongs to the best Bitcoin chain or that the
+/// deposit has enough confirmations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PeginFunding {
+    deposit: PeginDeposit,
+    txout_proof: bitcoin::MerkleBlock,
+    referenced_block: bitcoin::BlockHash,
+}
+
+impl PeginFunding {
+    /// Create and validate proven pegin funding.
+    pub fn new(deposit: PeginDeposit, txout_proof: bitcoin::MerkleBlock) -> Result<Self, Error> {
+        let mut matched_txids = Vec::new();
+        let mut matched_indexes = Vec::new();
+        txout_proof
+            .extract_matches(&mut matched_txids, &mut matched_indexes)
+            .map_err(|e| Error::InvalidPeginProof(e.to_string()))?;
+
+        let txid = deposit.outpoint().txid;
+        if !matched_txids.contains(&txid) {
+            return Err(Error::PeginTransactionNotInProof { txid });
+        }
+
+        let referenced_block = txout_proof.header.block_hash();
+        Ok(Self {
+            deposit,
+            txout_proof,
+            referenced_block,
+        })
+    }
+
+    /// Decode and validate pegin funding from consensus-encoded Bitcoin data.
+    pub fn from_raw(
+        pegin_address: PeginAddress,
+        transaction: &[u8],
+        txout_proof: &[u8],
+    ) -> Result<Self, Error> {
+        let transaction = bitcoin::consensus::deserialize(transaction)?;
+        let txout_proof = bitcoin::consensus::deserialize(txout_proof)?;
+        let deposit = PeginDeposit::new(pegin_address, transaction)?;
+        Self::new(deposit, txout_proof)
+    }
+
+    /// Return the authenticated pegin deposit.
+    pub fn deposit(&self) -> &PeginDeposit {
+        &self.deposit
+    }
+
+    /// Return the Bitcoin transaction inclusion proof.
+    pub fn txout_proof(&self) -> &bitcoin::MerkleBlock {
+        &self.txout_proof
+    }
+
+    /// Return the Bitcoin block header hash committed to by the proof.
+    pub fn referenced_block(&self) -> bitcoin::BlockHash {
+        self.referenced_block
+    }
+}
+
+/// Claim data prepared from authenticated pegin funding.
+///
+/// This type constructs the canonical pegin witness from the funding data and
+/// the network parameters retained by its [`PeginAddress`]. It does not
+/// establish that the referenced Bitcoin header is in the best chain or that
+/// the deposit has enough confirmations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PeginInput {
+    funding: PeginFunding,
+    pegged_asset: elements::AssetId,
+    parent_genesis_hash: bitcoin::BlockHash,
+    pegin_witness: Vec<Vec<u8>>,
+}
+
+impl From<PeginFunding> for PeginInput {
+    fn from(funding: PeginFunding) -> Self {
+        let network = funding.deposit().pegin_address().fed_peg().network();
+        let pegged_asset = *network.policy_asset();
+        let parent_genesis_hash = network.parent_genesis_hash();
+        let transaction = bitcoin::consensus::serialize(funding.deposit().transaction());
+        let txout_proof = bitcoin::consensus::serialize(funding.txout_proof());
+        let pegin_data = elements::PeginData {
+            outpoint: funding.deposit().outpoint(),
+            value: funding.deposit().amount().to_sat(),
+            asset: pegged_asset,
+            genesis_hash: parent_genesis_hash,
+            claim_script: funding.deposit().pegin_address().claim_script().as_bytes(),
+            tx: &transaction,
+            merkle_proof: &txout_proof,
+            referenced_block: funding.referenced_block(),
+        };
+        let pegin_witness = pegin_data.to_pegin_witness();
+
+        Self {
+            funding,
+            pegged_asset,
+            parent_genesis_hash,
+            pegin_witness,
+        }
+    }
+}
+
+impl PeginInput {
+    /// Return the authenticated funding used by this input.
+    pub fn funding(&self) -> &PeginFunding {
+        &self.funding
+    }
+
+    /// Return the asset created by claiming this pegin.
+    pub fn pegged_asset(&self) -> elements::AssetId {
+        self.pegged_asset
+    }
+
+    /// Return the parent-chain genesis hash committed to by this input.
+    pub fn parent_genesis_hash(&self) -> bitcoin::BlockHash {
+        self.parent_genesis_hash
+    }
+
+    /// Return the canonical six-element pegin witness.
+    pub fn pegin_witness(&self) -> &[Vec<u8>] {
+        &self.pegin_witness
+    }
+
+    /// Construct a standalone PSET input containing this pegin claim.
+    pub fn to_pset_input(&self) -> Result<elements::pset::Input, Error> {
+        // See Elements' COutPoint::{OUTPOINT_PEGIN_FLAG, OUTPOINT_ISSUANCE_FLAG}.
+        const PEGIN_FLAG: u32 = 1 << 30;
+        const ISSUANCE_FLAG: u32 = 1 << 31;
+
+        let bitcoin_outpoint = self.funding.deposit().outpoint();
+        if bitcoin_outpoint.vout & (PEGIN_FLAG | ISSUANCE_FLAG) != 0 {
+            return Err(Error::PeginVoutConflictsWithFlags {
+                vout: bitcoin_outpoint.vout,
+            });
+        }
+
+        let txid = elements::Txid::from_byte_array(bitcoin_outpoint.txid.to_byte_array());
+        let outpoint = elements::OutPoint::new(txid, bitcoin_outpoint.vout | PEGIN_FLAG);
+        let mut input = elements::pset::Input::from_prevout(outpoint);
+        input.pegin_tx = Some(self.funding.deposit().transaction().clone());
+        input.pegin_txout_proof = Some(bitcoin::consensus::serialize(self.funding.txout_proof()));
+        input.pegin_genesis_hash = Some(elements::BlockHash::from_byte_array(
+            self.parent_genesis_hash.to_byte_array(),
+        ));
+        input.pegin_claim_script = Some(
+            self.funding
+                .deposit()
+                .pegin_address()
+                .claim_script()
+                .clone(),
+        );
+        input.pegin_value = Some(self.funding.deposit().amount().to_sat());
+        input.pegin_witness = Some(self.pegin_witness.clone());
+        input.asset = Some(self.pegged_asset);
+        input.amount = Some(self.funding.deposit().amount().to_sat());
+        Ok(input)
+    }
+}
+
 fn classify_fedpeg_program(
     program: &bitcoin::Script,
     script: &bitcoin::Script,
@@ -338,8 +568,9 @@ pub fn fetch_fed_peg<B: crate::clients::blocking::BlockchainBackend>(
 #[cfg(test)]
 mod test {
     use elements::bitcoin;
+    use elements::bitcoin::hashes::Hash;
 
-    use crate::Network;
+    use crate::{Error, Network};
 
     use super::{
         classify_fedpeg_program, fed_peg_script, height_with_fed_peg_script, FedPeg,
@@ -380,6 +611,267 @@ mod test {
         assert!(fed_peg.is_guaranteed_valid_at(2_963_520));
         assert!(fed_peg.is_guaranteed_valid_at(3_003_839));
         assert!(!fed_peg.is_guaranteed_valid_at(3_003_840));
+    }
+
+    fn test_pegin_address() -> super::PeginAddress {
+        let header = lwk_test_util::liquid_block_header_2_963_520();
+        let fed_peg = FedPeg::from_block_header(Network::TestnetLiquid, &header).unwrap();
+        let descriptor: crate::WolletDescriptor = lwk_test_util::PEGIN_TEST_DESC.parse().unwrap();
+        descriptor.pegin_address(0, &fed_peg).unwrap()
+    }
+
+    fn test_deposit_transaction(pegin_address: &super::PeginAddress) -> bitcoin::Transaction {
+        bitcoin::Transaction {
+            version: bitcoin::transaction::Version::TWO,
+            lock_time: bitcoin::absolute::LockTime::ZERO,
+            input: vec![],
+            output: vec![
+                bitcoin::TxOut {
+                    value: bitcoin::Amount::from_sat(1),
+                    script_pubkey: bitcoin::ScriptBuf::new(),
+                },
+                bitcoin::TxOut {
+                    value: bitcoin::Amount::from_sat(100_000),
+                    script_pubkey: pegin_address.address().script_pubkey(),
+                },
+            ],
+        }
+    }
+
+    fn test_txout_proof(txid: bitcoin::Txid) -> bitcoin::MerkleBlock {
+        let header = bitcoin::block::Header {
+            version: bitcoin::block::Version::ONE,
+            prev_blockhash: bitcoin::BlockHash::all_zeros(),
+            merkle_root: bitcoin::TxMerkleNode::from_raw_hash(txid.to_raw_hash()),
+            time: 0,
+            bits: bitcoin::CompactTarget::from_consensus(0),
+            nonce: 0,
+        };
+        bitcoin::MerkleBlock::from_header_txids_with_predicate(&header, &[txid], |_| true)
+    }
+
+    #[test]
+    fn pegin_deposit_validates_output() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address.clone(), transaction.clone()).unwrap();
+
+        assert_eq!(deposit.pegin_address(), &pegin_address);
+        assert_eq!(deposit.transaction(), &transaction);
+        assert_eq!(deposit.outpoint(), bitcoin::OutPoint::new(txid, 1));
+        assert_eq!(deposit.output(), &transaction.output[1]);
+        assert_eq!(deposit.amount(), bitcoin::Amount::from_sat(100_000));
+    }
+
+    #[test]
+    fn pegin_deposit_rejects_missing_output() {
+        let pegin_address = test_pegin_address();
+        let mut transaction = test_deposit_transaction(&pegin_address);
+        transaction.output.pop();
+
+        assert!(matches!(
+            super::PeginDeposit::new(pegin_address, transaction),
+            Err(Error::PeginOutputNotFound)
+        ));
+    }
+
+    #[test]
+    fn pegin_deposit_rejects_ambiguous_output() {
+        let pegin_address = test_pegin_address();
+        let mut transaction = test_deposit_transaction(&pegin_address);
+        transaction.output.push(transaction.output[1].clone());
+
+        assert!(matches!(
+            super::PeginDeposit::new(pegin_address, transaction),
+            Err(Error::PeginOutputAmbiguous)
+        ));
+    }
+
+    #[test]
+    fn pegin_funding_validates_txout_proof() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address, transaction).unwrap();
+        let proof = test_txout_proof(txid);
+        let referenced_block = proof.header.block_hash();
+        let funding = super::PeginFunding::new(deposit.clone(), proof.clone()).unwrap();
+
+        assert_eq!(funding.deposit(), &deposit);
+        assert_eq!(funding.txout_proof(), &proof);
+        assert_eq!(funding.referenced_block(), referenced_block);
+    }
+
+    #[test]
+    fn pegin_funding_rejects_invalid_txout_proof() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address, transaction).unwrap();
+        let mut proof = test_txout_proof(txid);
+        proof.header.merkle_root = bitcoin::TxMerkleNode::all_zeros();
+
+        assert!(matches!(
+            super::PeginFunding::new(deposit, proof),
+            Err(Error::InvalidPeginProof(_))
+        ));
+    }
+
+    #[test]
+    fn pegin_funding_rejects_unmatched_transaction() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address, transaction).unwrap();
+        let mut other_transaction = test_deposit_transaction(deposit.pegin_address());
+        other_transaction.output[0].value = bitcoin::Amount::from_sat(2);
+        let other_txid = other_transaction.compute_txid();
+        let proof = test_txout_proof(other_txid);
+
+        assert!(matches!(
+            super::PeginFunding::new(deposit, proof),
+            Err(Error::PeginTransactionNotInProof {
+                txid: unmatched_txid
+            }) if unmatched_txid == txid
+        ));
+    }
+
+    #[test]
+    fn pegin_funding_decodes_consensus_data() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let proof = test_txout_proof(txid);
+        let transaction_bytes = bitcoin::consensus::serialize(&transaction);
+        let proof_bytes = bitcoin::consensus::serialize(&proof);
+
+        let funding =
+            super::PeginFunding::from_raw(pegin_address, &transaction_bytes, &proof_bytes).unwrap();
+
+        assert_eq!(funding.deposit().transaction(), &transaction);
+        assert_eq!(funding.deposit().outpoint().txid, txid);
+        assert_eq!(
+            bitcoin::consensus::serialize(funding.txout_proof()),
+            proof_bytes
+        );
+        assert_eq!(funding.referenced_block(), proof.header.block_hash());
+    }
+
+    #[test]
+    fn pegin_funding_rejects_invalid_consensus_data() {
+        let pegin_address = test_pegin_address();
+
+        assert!(matches!(
+            super::PeginFunding::from_raw(pegin_address, &[0xff], &[0xff]),
+            Err(Error::BitcoinEncode(_))
+        ));
+    }
+
+    #[test]
+    fn pegin_input_constructs_claim_witness() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address, transaction.clone()).unwrap();
+        let proof = test_txout_proof(txid);
+        let funding = super::PeginFunding::new(deposit, proof.clone()).unwrap();
+        let input = super::PeginInput::from(funding.clone());
+        let pegin_data = elements::PeginData::from_pegin_witness(
+            input.pegin_witness(),
+            funding.deposit().outpoint(),
+        )
+        .unwrap();
+
+        assert_eq!(input.funding(), &funding);
+        assert_eq!(input.pegged_asset(), *Network::TestnetLiquid.policy_asset());
+        assert_eq!(
+            input.parent_genesis_hash(),
+            Network::TestnetLiquid.parent_genesis_hash()
+        );
+        assert_eq!(pegin_data.outpoint, funding.deposit().outpoint());
+        assert_eq!(pegin_data.value, funding.deposit().amount().to_sat());
+        assert_eq!(pegin_data.asset, input.pegged_asset());
+        assert_eq!(pegin_data.genesis_hash, input.parent_genesis_hash());
+        assert_eq!(
+            pegin_data.claim_script,
+            funding.deposit().pegin_address().claim_script().as_bytes()
+        );
+        assert_eq!(pegin_data.parse_tx().unwrap(), transaction);
+        assert_eq!(
+            bitcoin::consensus::serialize(&pegin_data.parse_merkle_proof().unwrap()),
+            bitcoin::consensus::serialize(&proof)
+        );
+        assert_eq!(pegin_data.referenced_block, funding.referenced_block());
+    }
+
+    #[test]
+    fn pegin_input_constructs_pset_input() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address, transaction.clone()).unwrap();
+        let proof = test_txout_proof(txid);
+        let funding = super::PeginFunding::new(deposit, proof.clone()).unwrap();
+        let input = super::PeginInput::from(funding.clone());
+        let pset_input = input.to_pset_input().unwrap();
+
+        assert!(pset_input.is_pegin());
+        assert_eq!(
+            pset_input.previous_txid.to_byte_array(),
+            funding.deposit().outpoint().txid.to_byte_array()
+        );
+        assert_eq!(
+            pset_input.previous_output_index,
+            funding.deposit().outpoint().vout | (1 << 30)
+        );
+        assert_eq!(pset_input.pegin_tx.as_ref(), Some(&transaction));
+        assert_eq!(
+            pset_input.pegin_txout_proof,
+            Some(bitcoin::consensus::serialize(&proof))
+        );
+        assert_eq!(
+            pset_input.pegin_genesis_hash,
+            Some(elements::BlockHash::from_byte_array(
+                input.parent_genesis_hash().to_byte_array()
+            ))
+        );
+        assert_eq!(
+            pset_input.pegin_claim_script.as_ref(),
+            Some(funding.deposit().pegin_address().claim_script())
+        );
+        assert_eq!(
+            pset_input.pegin_value,
+            Some(funding.deposit().amount().to_sat())
+        );
+        assert_eq!(
+            pset_input.pegin_witness.as_deref(),
+            Some(input.pegin_witness())
+        );
+        assert_eq!(pset_input.asset, Some(input.pegged_asset()));
+        assert_eq!(pset_input.amount, Some(funding.deposit().amount().to_sat()));
+
+        let mut pset = elements::pset::PartiallySignedTransaction::new_v2();
+        pset.add_input(pset_input.clone());
+        let roundtrip: elements::pset::PartiallySignedTransaction =
+            pset.to_string().parse().unwrap();
+        assert_eq!(&roundtrip.inputs()[0], &pset_input);
+    }
+
+    #[test]
+    fn pegin_input_rejects_vout_flag_collision() {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address, transaction).unwrap();
+        let funding = super::PeginFunding::new(deposit, test_txout_proof(txid)).unwrap();
+        let mut input = super::PeginInput::from(funding);
+        input.funding.deposit.outpoint.vout = 1 << 30;
+
+        assert!(matches!(
+            input.to_pset_input(),
+            Err(Error::PeginVoutConflictsWithFlags { vout }) if vout == 1 << 30
+        ));
     }
 
     #[test]

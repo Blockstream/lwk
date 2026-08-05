@@ -50,6 +50,9 @@ pub enum Error {
     #[error(transparent)]
     ElementsEncode(#[from] crate::elements::encode::Error),
 
+    #[error(transparent)]
+    BitcoinEncode(#[from] crate::bitcoin::consensus::encode::Error),
+
     #[error("Hex Error: {0}")]
     ElementsHex(crate::elements::hex::Error),
 
@@ -201,6 +204,24 @@ pub enum Error {
         wallet: &'static str,
         fed_peg: &'static str,
     },
+
+    #[error("Pegin transaction does not pay the expected address")]
+    PeginOutputNotFound,
+
+    #[error("Pegin transaction pays the expected address more than once")]
+    PeginOutputAmbiguous,
+
+    #[error("Pegin transaction output index {vout} does not fit in an outpoint")]
+    PeginOutputIndexOverflow { vout: usize },
+
+    #[error("Pegin transaction output index {vout} conflicts with Elements input flags")]
+    PeginVoutConflictsWithFlags { vout: u32 },
+
+    #[error("Invalid pegin txout proof: {0}")]
+    InvalidPeginProof(String),
+
+    #[error("Pegin transaction {txid} is not included in the txout proof")]
+    PeginTransactionNotInProof { txid: crate::bitcoin::Txid },
 
     #[error("Missing PSET")]
     MissingPset,

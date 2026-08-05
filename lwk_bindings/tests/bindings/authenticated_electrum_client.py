@@ -25,7 +25,7 @@ client_secret = os.environ.get("CLIENT_SECRET", "your_client_secret")
 
 def offline_checks():
     """Assert the builder wiring, no network."""
-    url = "ssl://enterprise.blockstream.info:50002"
+    url = "ssl://elements-mainnet.enterprise.blockstream.info:50002"
     login_url = "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token"
 
     # The OAuth2 provider is recorded on the builder (the connection, and thus the
@@ -60,7 +60,8 @@ def live_check():
 
     print("authenticating ...")
     # ANCHOR: authenticated_electrum_client
-    url = "ssl://enterprise.blockstream.info:50002"
+    # Mainnet Liquid enterprise Electrum RPC endpoint.
+    url = "ssl://elements-mainnet.enterprise.blockstream.info:50002"
     login_url = "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token"
 
     builder = ElectrumClientBuilder(

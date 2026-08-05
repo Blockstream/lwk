@@ -4633,7 +4633,8 @@ fn blocking_clients() -> Result<(), Box<dyn std::error::Error>> {
     use lwk_wollet::clients::TokenProvider;
     use lwk_wollet::ElectrumClientBuilder;
 
-    let url = "ssl://enterprise.blockstream.info:50002";
+    // Mainnet Liquid enterprise Electrum RPC endpoint.
+    let url = "ssl://elements-mainnet.enterprise.blockstream.info:50002";
     let client_id = "your_client_id";
     let client_secret = "your_client_secret";
     let client_id = std::env::var("CLIENT_ID").unwrap(); // ANCHOR: ignore

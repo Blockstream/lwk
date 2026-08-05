@@ -91,20 +91,6 @@ The token is only sent over an encrypted `ssl://` connection. On a plaintext `tc
 {{#include ../../lwk_bindings/tests/bindings/authenticated_electrum_client.py:authenticated_electrum_client}}
 ```
 </section>
-
-<div slot="title">Javascript</div>
-<section>
-
-```typescript
-```
-</section>
-
-<div slot="title">Go</div>
-<section>
-
-```go
-```
-</section>
 </custom-tabs>
 
 ## Esplora

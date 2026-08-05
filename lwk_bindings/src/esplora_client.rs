@@ -325,6 +325,15 @@ impl EsploraClient {
         let tip = self.inner.lock()?.tip()?;
         Ok(Arc::new(tip.into()))
     }
+
+    /// Whether the descriptor has any tx using the first `gap_limit` addresses (default 20)
+    pub fn has_txs(
+        &self,
+        descriptor: &WolletDescriptor,
+        gap_limit: Option<u32>,
+    ) -> Result<bool, LwkError> {
+        Ok(self.inner.lock()?.has_txs(descriptor.as_ref(), gap_limit)?)
+    }
 }
 
 #[uniffi::export]
@@ -379,6 +388,15 @@ impl WaterfallsClient {
     pub fn tip(&self) -> Result<Arc<BlockHeader>, LwkError> {
         let tip = self.inner.lock()?.tip()?;
         Ok(Arc::new(tip.into()))
+    }
+
+    /// Whether the descriptor has any tx using the first `gap_limit` addresses (default 20)
+    pub fn has_txs(
+        &self,
+        descriptor: &WolletDescriptor,
+        gap_limit: Option<u32>,
+    ) -> Result<bool, LwkError> {
+        Ok(self.inner.lock()?.has_txs(descriptor.as_ref(), gap_limit)?)
     }
 
     /// Subscribe to Waterfalls descriptor updates.

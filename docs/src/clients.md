@@ -7,6 +7,7 @@ LWK supports different ways to retrieve wallet data from the Liquid blockchain:
 - **Waterfalls** - Optimized HTTP-based protocol with reduced roundtrips
 
 Some clients also come in different flavors: blocking or async.
+
 For production, all three clients can connect to Blockstream Enterprise authenticated, paid instances, see [Authenticated connections](#authenticated-connections).
 
 ## Quick Comparison
@@ -163,6 +164,47 @@ This client is ideal for web applications and scenarios where HTTP-based communi
 </section>
 </custom-tabs>
 
+## Fallback Client
+
+For improved resilience, implement a fallback strategy to handle transient errors.
+This pattern is useful when dealing with unreliable network conditions or temporary server issues.
+
+When a primary request fails, manually evaluate the error to determine if a retry is appropriate with a different client.
+
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:fallback_client}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+{{#include ../../lwk_bindings/tests/bindings/fallback_client.py:fallback_client}}
+```
+</section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/fallback_client.js:fallback_client}}
+```
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/fallback_client.go:fallback_client}}
+```
+</section>
+</custom-tabs>
+
 ## Authenticated connections
 
 Blockstream runs paid, authenticated instances of these APIs for production use, [Blockstream Enterprise](https://blockstream.info/explorer-api): dedicated infrastructure with guaranteed rate limits, higher quotas, and greater privacy than the shared public servers. If you are shipping a product on Liquid, these are the endpoints to build against.
@@ -192,6 +234,8 @@ Notes:
 - The token is only sent over an encrypted connection. On a plaintext `tcp://` Electrum url it is refused unless explicitly allowed (for a localhost or already-tunneled proxy: `allow_plaintext_with_token` in the builder, or `--auth-allow-plaintext-with-token` in `lwk_cli`).
 - Esplora and Waterfalls address the enterprise load balancer by path (`/liquid/api`, `/liquid/api/waterfalls`); Electrum uses a network-prefixed host.
 - In the browser (wasm), authenticated Esplora/Waterfalls is not yet available, and Electrum has no browser path.
+
+The snippets below show the client wiring; take the endpoint urls from the table above.
 
 ### Esplora
 
@@ -249,47 +293,6 @@ Notes:
 
 ```python
 {{#include ../../lwk_bindings/tests/bindings/authenticated_electrum_client.py:authenticated_electrum_client}}
-```
-</section>
-</custom-tabs>
-
-## Fallback Client
-
-For improved resilience, implement a fallback strategy to handle transient errors.
-This pattern is useful when dealing with unreliable network conditions or temporary server issues.
-
-When a primary request fails, manually evaluate the error to determine if a retry is appropriate with a different client.
-
-<custom-tabs category="lang">
-<div slot="title">Rust</div>
-<section>
-
-```rust,ignore
-{{#include ../../lwk_wollet/tests/e2e.rs:fallback_client}}
-```
-</section>
-
-<div slot="title">Python</div>
-<section>
-
-```python
-{{#include ../../lwk_bindings/tests/bindings/fallback_client.py:fallback_client}}
-```
-</section>
-
-<div slot="title">Javascript</div>
-<section>
-
-```typescript
-{{#include ../../lwk_wasm/tests/node/fallback_client.js:fallback_client}}
-```
-</section>
-
-<div slot="title">Go</div>
-<section>
-
-```go
-{{#include ../../lwk_bindings/go/fallback_client.go:fallback_client}}
 ```
 </section>
 </custom-tabs>

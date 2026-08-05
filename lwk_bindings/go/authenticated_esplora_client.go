@@ -9,10 +9,10 @@ import (
 )
 
 func offlineChecks(clientId, clientSecret string, network *lwk.Network) {
-	// ANCHOR: authenticated_esplora_client
 	baseUrl := "https://enterprise.blockstream.info/liquid/api"
 	loginUrl := "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token"
 
+	// ANCHOR: authenticated_esplora_client
 	var tpBlockstream lwk.TokenProvider = lwk.TokenProviderBlockstream{
 		Url:          loginUrl,
 		ClientId:     clientId,

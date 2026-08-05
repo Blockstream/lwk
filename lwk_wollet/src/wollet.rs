@@ -53,6 +53,19 @@ pub struct Wollet {
     /// cached value
     max_weight_to_satisfy: usize,
     utxo_only: bool,
+
+    /// Silent-payment scan-only material.
+    #[cfg(feature = "silentpayments")]
+    pub(crate) silent_payment_material: Option<crate::silentpayments::SilentPaymentScanMaterial>,
+
+    /// Where discovery starts when it has never run. See
+    /// [`WolletBuilder::with_silent_payment_birthday()`].
+    ///
+    /// Not persisted: it describes how to *begin* scanning, and once a scan has run the
+    /// recorded progress supersedes it. Persisting it would create two sources of truth
+    /// for the resume point.
+    #[cfg(feature = "silentpayments")]
+    pub(crate) silent_payment_birthday: Option<Height>,
 }
 
 /// A builder for constructing [`Wollet`] instances
@@ -68,6 +81,10 @@ pub struct WolletBuilder {
     txs_store: Arc<dyn DynStore>,
     encrypt_txs_store: Option<bool>,
     utxo_only: bool,
+    #[cfg(feature = "silentpayments")]
+    silent_payment_material: Option<crate::silentpayments::SilentPaymentScanMaterial>,
+    #[cfg(feature = "silentpayments")]
+    silent_payment_birthday: Option<Height>,
 }
 
 impl WolletBuilder {
@@ -83,7 +100,28 @@ impl WolletBuilder {
             encrypt_txs_store: None,
             merge_threshold: None,
             utxo_only: false,
+            #[cfg(feature = "silentpayments")]
+            silent_payment_material: None,
+            #[cfg(feature = "silentpayments")]
+            silent_payment_birthday: None,
         }
+    }
+
+    /// Sets scan-only material for receiving silent payments.
+    #[cfg(feature = "silentpayments")]
+    pub fn with_silent_payment_material(
+        mut self,
+        material: crate::silentpayments::SilentPaymentScanMaterial,
+    ) -> Self {
+        self.silent_payment_material = Some(material);
+        self
+    }
+
+    /// Sets the first block used for silent-payment discovery.
+    #[cfg(feature = "silentpayments")]
+    pub fn with_silent_payment_birthday(mut self, height: Height) -> Self {
+        self.silent_payment_birthday = Some(height);
+        self
     }
 
     /// Set all key-value stores for peristence
@@ -245,6 +283,10 @@ impl WolletBuilder {
             updates_persister,
             max_weight_to_satisfy,
             utxo_only: self.utxo_only,
+            #[cfg(feature = "silentpayments")]
+            silent_payment_material: self.silent_payment_material,
+            #[cfg(feature = "silentpayments")]
+            silent_payment_birthday: self.silent_payment_birthday,
         };
 
         wollet.restore_updates()?;
@@ -282,6 +324,52 @@ pub trait WolletState {
     fn descriptor(&self) -> WolletDescriptor;
     fn wollet_status(&self) -> u64;
     fn utxo_only(&self) -> bool;
+
+    /// The silent payment scan-only material, if this wallet has any.
+    ///
+    /// A scan needs this to discover silent payments, and it cannot be recovered
+    /// from the descriptor — detection requires `b_scan`, which a CT descriptor cannot
+    /// express. `None` means the wallet can send silent payments but not receive them,
+    /// and a scan skips discovery entirely.
+    #[cfg(feature = "silentpayments")]
+    fn silent_payment_material(&self) -> Option<&crate::silentpayments::SilentPaymentScanMaterial> {
+        None
+    }
+
+    /// The height through which silent payments have already been discovered.
+    ///
+    /// Discovery cannot resume from the descriptor-scan tip: the two advance
+    /// independently, and a silent payment scan that restarted from the wallet tip after
+    /// every restart would re-download every block in between.
+    #[cfg(feature = "silentpayments")]
+    fn silent_payments_scanned_to(&self) -> Option<Height> {
+        None
+    }
+
+    /// The height at which discovery should begin when it has never run.
+    ///
+    /// See [`WolletBuilder::with_silent_payment_birthday()`]. `None` means genesis,
+    /// which is correct but only affordable on a short chain.
+    #[cfg(feature = "silentpayments")]
+    fn silent_payment_birthday(&self) -> Option<Height> {
+        None
+    }
+
+    /// The first height a scan must examine: one past whatever discovery already
+    /// covered, or the birthday if it has never run.
+    ///
+    /// Provided by the trait so every backend resolves this the same way. Getting it
+    /// wrong in either direction is costly — too low re-downloads the chain, too high
+    /// silently skips payments — so it is defined once rather than at each call site.
+    #[cfg(feature = "silentpayments")]
+    fn silent_payments_scan_from(&self) -> Height {
+        match self.silent_payments_scanned_to() {
+            // Recorded progress always wins: it is a fact about what was scanned,
+            // whereas the birthday is only a hint about where to start.
+            Some(scanned_to) => scanned_to.saturating_add(1),
+            None => self.silent_payment_birthday().unwrap_or(0),
+        }
+    }
 }
 
 impl WolletState for WolletConciseState {
@@ -430,6 +518,21 @@ impl WolletState for Wollet {
     fn utxo_only(&self) -> bool {
         self.utxo_only
     }
+
+    #[cfg(feature = "silentpayments")]
+    fn silent_payment_material(&self) -> Option<&crate::silentpayments::SilentPaymentScanMaterial> {
+        self.silent_payment_material.as_ref()
+    }
+
+    #[cfg(feature = "silentpayments")]
+    fn silent_payments_scanned_to(&self) -> Option<Height> {
+        self.cache.silent_payments_scanned_to
+    }
+
+    #[cfg(feature = "silentpayments")]
+    fn silent_payment_birthday(&self) -> Option<Height> {
+        self.silent_payment_birthday
+    }
 }
 
 impl std::hash::Hash for Wollet {
@@ -437,6 +540,49 @@ impl std::hash::Hash for Wollet {
         self.network.hash(state);
         self.cache.hash(state);
         self.descriptor.hash(state);
+        #[cfg(feature = "silentpayments")]
+        self.hash_silent_payment_identity(state);
+    }
+}
+
+/// The silent-payment half of a wallet's persistence identity.
+///
+/// Only compiled with the feature: without it a wallet has no scan material, so
+/// there is nothing to contribute and no call site to gate.
+#[cfg(feature = "silentpayments")]
+impl Wollet {
+    /// Domain tag for the silent-payment section of [`Wollet::status()`].
+    ///
+    /// Version for the silent-payment identity hash.
+    const STATUS_DOMAIN: &'static [u8] = b"lwk/silentpayments/status/v1";
+
+    /// Mix this wallet's silent-payment identity into its `status()` hash.
+    ///
+    /// Hashes the presence and identity of scan material.
+    ///
+    /// The layout is `domain tag ‖ present flag ‖ coin_type ‖ account ‖ B_scan ‖ B_spend`.
+    ///
+    /// The section is omitted when no material exists, preserving the legacy hash.
+    /// Account coordinates and both public points identify the material; the secret
+    /// scan key is never hashed.
+    fn hash_silent_payment_identity<H: std::hash::Hasher>(&self, state: &mut H) {
+        use std::hash::Hash;
+
+        match self.silent_payment_material.as_ref() {
+            None => {}
+            Some(material) => {
+                Self::STATUS_DOMAIN.hash(state);
+                true.hash(state);
+                let account = material.account();
+                account.coin_type().hash(state);
+                account.account().hash(state);
+                material
+                    .scan_pubkey(&crate::util::EC)
+                    .serialize()
+                    .hash(state);
+                material.spend_pubkey().serialize().hash(state);
+            }
+        }
     }
 }
 
@@ -643,6 +789,15 @@ impl Wollet {
                 continue;
             }
             let height = self.cache.tx_height(&outpoint.txid).unwrap_or(&None);
+
+            // A silent payment script is not derived from the descriptor, so it cannot go
+            // through `index()`; it is described by its cache entry instead.
+            #[cfg(feature = "silentpayments")]
+            if let Some(entry) = self.cache.silent_payment(script_pubkey) {
+                utxos.push(self.silent_payment_wallet_txout(entry, unblinded, *height)?);
+                continue;
+            }
+
             let index = self
                 .index(script_pubkey)
                 .ok()
@@ -696,6 +851,21 @@ impl Wollet {
                 })
                 .filter_map(|(outpoint, output, is_spent)| {
                     let unblinded = *self.cache.get_unblinded(&outpoint)?;
+
+                    // Silent payment outputs are described by their cache entry, not by a
+                    // derivation path. They must appear here too, not just in `utxos()`:
+                    // `txos_inner` is what transaction history and per-transaction
+                    // balances are computed from, so skipping them would show a receiving
+                    // transaction with no incoming amount.
+                    #[cfg(feature = "silentpayments")]
+                    if let Some(entry) = self.cache.silent_payment(&output.script_pubkey) {
+                        let mut txo = self
+                            .silent_payment_wallet_txout(entry, unblinded, *height)
+                            .ok()?;
+                        txo.is_spent = is_spent;
+                        return Some(txo);
+                    }
+
                     let index = self.index(&output.script_pubkey).ok()?;
                     let blinding_pubkey = (!is_explicit(&unblinded))
                         .then(|| {
@@ -725,6 +895,45 @@ impl Wollet {
         }
 
         Ok(txos)
+    }
+
+    /// Render a found silent payment output as an ordinary [`WalletTxOut`].
+    ///
+    /// Two fields cannot mean what they usually do, because this output has no
+    /// derivation path:
+    ///
+    /// - `wildcard_index` carries the silent payment output counter `k`. It is not a
+    ///   BIP-32 child index, and deriving the wallet descriptor at `k` yields an
+    ///   unrelated script.
+    /// - `ext_int` is a classification from the BIP-352 label rather than a chain in the
+    ///   descriptor: change-labeled outputs report [`Chain::Internal`].
+    ///
+    /// The address is confidential, built from the output's own blinding pubkey — the
+    /// blinding key comes from the shared secret, so the wallet's SLIP-77 key has
+    /// nothing to do with it.
+    #[cfg(feature = "silentpayments")]
+    fn silent_payment_wallet_txout(
+        &self,
+        entry: &crate::silentpayments::SilentPaymentCacheEntry,
+        unblinded: TxOutSecrets,
+        height: Option<Height>,
+    ) -> Result<WalletTxOut, Error> {
+        let address = Address::from_script(
+            &entry.script_pubkey,
+            Some(entry.blinding_pubkey),
+            self.network().address_params(),
+        )
+        .ok_or_else(|| Error::Generic("invalid silent payment scriptpubkey".into()))?;
+        Ok(WalletTxOut {
+            outpoint: entry.outpoint,
+            script_pubkey: entry.script_pubkey.clone(),
+            height,
+            unblinded,
+            wildcard_index: entry.k,
+            ext_int: entry.chain(),
+            is_spent: false,
+            address,
+        })
     }
 
     /// Get the wallet UTXOs
@@ -1246,6 +1455,132 @@ impl Wollet {
     }
 }
 
+/// Silent-payment wallet operations using scan-only material.
+#[cfg(feature = "silentpayments")]
+impl Wollet {
+    /// Returns the wallet's scan-only silent-payment material, if configured.
+    pub fn silent_payment_material(
+        &self,
+    ) -> Option<&crate::silentpayments::SilentPaymentScanMaterial> {
+        self.silent_payment_material.as_ref()
+    }
+
+    /// Returns the height through which silent-payment discovery has scanned.
+    pub fn silent_payments_scanned_to(&self) -> Option<Height> {
+        self.cache.silent_payments_scanned_to
+    }
+
+    /// Returns the wallet's reusable silent-payment address.
+    pub fn silent_payment_address(&self) -> Result<String, Error> {
+        use crate::silentpayments::SilentPaymentScan as _;
+        Ok(self
+            .require_silent_payment_material()?
+            .address()
+            .encode(self.network))
+    }
+
+    /// A labeled silent-payment address (BIP-352 labels), e.g.
+    /// [`crate::silentpayments::CHANGE_LABEL`] for change.
+    pub fn labeled_silent_payment_address(&self, label: u32) -> Result<String, Error> {
+        use crate::silentpayments::SilentPaymentScan as _;
+        Ok(self
+            .require_silent_payment_material()?
+            .labeled_address(label)
+            .encode(self.network))
+    }
+
+    /// The scan material, or an error explaining that the wallet has none.
+    pub(crate) fn require_silent_payment_material(
+        &self,
+    ) -> Result<&crate::silentpayments::SilentPaymentScanMaterial, Error> {
+        self.silent_payment_material
+            .as_ref()
+            .ok_or(Error::MissingSilentPaymentKeys)
+    }
+
+    /// Find the silent payments to this wallet among `txs`, returning them unblinded and
+    /// ready to spend.
+    ///
+    /// This is the low-level entry point, for callers holding transactions from a source
+    /// of their own. A normal sync reaches it via
+    /// [`crate::clients::blocking::BlockchainBackend::full_scan()`], after which the
+    /// results are in [`Wollet::utxos()`] and [`Wollet::balance()`] and need no special
+    /// handling to spend; use this directly only to scan transactions the wallet's
+    /// backend cannot supply.
+    ///
+    /// Transactions must be passed in because a silent-payment scriptPubKey is derived
+    /// from a shared secret and so matches none of the wallet's descriptor-derived
+    /// scripts: no script-history query can surface it, and the transactions have to come
+    /// from a source that does not filter by descriptor (a full node, a tweak/index
+    /// server, or a block feed).
+    ///
+    /// `prevout_script` resolves the scriptPubKey each input spends, which is what the
+    /// input pubkeys are recovered from; returning `None` makes that input contribute
+    /// no key. When a tweak server already publishes `T = input_hash·A`, prefer
+    /// [`crate::silentpayments::SilentPaymentTxScanner::scan_tx_with_tweak()`] and skip
+    /// the prevout lookups entirely.
+    ///
+    /// `labels` are the BIP-352 labels to watch in addition to the plain address.
+    ///
+    /// Results are returned, **not** applied to the wallet: this method takes `&self`.
+    /// Feed them to [`Wollet::apply_silent_payments()`] to have them show up in the
+    /// balance, or spend them standalone via
+    /// [`crate::TxBuilder::add_silent_payment_utxos()`] — which carries the spend tweak
+    /// through to the PSET, as `external_utxo()` alone cannot.
+    pub fn scan_silent_payments<'a, F>(
+        &self,
+        txs: &[Transaction],
+        labels: impl IntoIterator<Item = u32>,
+        mut prevout_script: F,
+    ) -> Result<Vec<crate::silentpayments::SilentPaymentUtxo>, Error>
+    where
+        F: FnMut(&OutPoint) -> Option<&'a Script>,
+    {
+        let material = *self.require_silent_payment_material()?;
+        let scanner =
+            crate::silentpayments::SilentPaymentTxScanner::new(material).with_labels(labels);
+        Ok(txs
+            .iter()
+            .flat_map(|tx| scanner.scan_tx(tx, &mut prevout_script))
+            .collect())
+    }
+
+    /// Record found silent payments as wallet outputs.
+    ///
+    /// After this they are ordinary wallet outputs: they appear in [`Wollet::utxos()`],
+    /// [`Wollet::balance()`] and [`Wollet::txos()`], coin selection will spend them, and
+    /// the fee estimate uses their Taproot satisfaction weight rather than the
+    /// descriptor's.
+    ///
+    /// The transaction containing each output must already be in the wallet (a scan
+    /// applies the transactions it fetched before applying what it found), otherwise the
+    /// output has no confirmation height and no spend/unspend bookkeeping to hang off;
+    /// such entries are reported as [`Error::MissingTransaction`] rather than stored in a
+    /// state where the balance would count an output the wallet cannot locate.
+    ///
+    /// Only the spend **tweak** is stored, never the spend key — see
+    /// [`crate::silentpayments::SilentPaymentCacheEntry`]. Signing re-derives the key
+    /// from the wallet's scan keys.
+    pub fn apply_silent_payments(
+        &mut self,
+        found: &[crate::silentpayments::SilentPaymentUtxo],
+    ) -> Result<(), Error> {
+        // Check every output first: applying half of them would leave the balance
+        // counting outputs whose transaction the wallet cannot locate.
+        for utxo in found {
+            if self.cache.tx(&utxo.outpoint.txid).is_none() {
+                return Err(Error::MissingTransaction);
+            }
+        }
+
+        for utxo in found {
+            self.cache
+                .insert_silent_payment(utxo.cache_entry(), utxo.unblinded);
+        }
+        Ok(())
+    }
+}
+
 fn is_explicit(txoutsecrets: &TxOutSecrets) -> bool {
     txoutsecrets.asset_bf == AssetBlindingFactor::zero()
         && txoutsecrets.value_bf == ValueBlindingFactor::zero()
@@ -1492,8 +1827,420 @@ mod tests {
             .unwrap()
     }
 
+    /// Scan material for testnet `account`, derived from a fixed master key.
+    ///
+    /// This duplicates what `lwk_signer::SwSigner` does, deliberately: `lwk_wollet`
+    /// must not depend on `lwk_signer` (the whole point of the boundary), so a test
+    /// that needs realistic material has to derive it here. Note what it produces is
+    /// still only `b_scan` + `B_spend` — `b_spend` is derived, reduced to a point,
+    /// and dropped, exactly as the signer does.
+    #[cfg(feature = "silentpayments")]
+    fn test_scan_material(account: u32) -> crate::silentpayments::SilentPaymentScanMaterial {
+        use crate::silentpayments::{SilentPaymentAccount, SilentPaymentScanMaterial};
+
+        let master = Xpriv::new_master(BitcoinNetwork::Testnet, &[0x42; 32]).unwrap();
+        let acct = SilentPaymentAccount::liquid_testnet(account);
+        let derive = |path| master.derive_priv(&EC, &path).unwrap().private_key;
+
+        SilentPaymentScanMaterial::new(
+            acct,
+            derive(acct.scan_path()),
+            derive(acct.spend_path()).public_key(&EC),
+        )
+    }
+
     fn fast_tempdir() -> tempfile::TempDir {
         tempfile::tempdir_in("/dev/shm").unwrap_or_else(|_| tempfile::tempdir().unwrap())
+    }
+
+    #[cfg(feature = "silentpayments")]
+    #[test]
+    fn silent_payment_material_changes_wallet_identity() {
+        use crate::silentpayments::CHANGE_LABEL;
+
+        let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
+        let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
+        let desc = format!("ct({view_key},elwpkh({xpub}/*))");
+
+        // The receiver's scan material, obtained the way a real wallet obtains it:
+        // from a signer, which derives both BIP-352 branches and exports only the
+        // scan-only half.
+        let network = Network::TestnetLiquid;
+        let keys = test_scan_material(0);
+
+        // A wallet without scan material refuses to hand out an address it could never
+        // scan for, rather than returning one that would silently swallow funds.
+        let keyless = new_wollet(&desc);
+        assert!(matches!(
+            keyless.silent_payment_address(),
+            Err(Error::MissingSilentPaymentKeys)
+        ));
+
+        let wollet = WolletBuilder::new(network, desc.parse().unwrap())
+            .with_silent_payment_material(keys)
+            .build()
+            .unwrap();
+
+        // Scan material participates in the wallet identity, so a cache built without it
+        // is not mistaken for one built with it.
+        assert_ne!(
+            wollet.status(),
+            keyless.status(),
+            "scan material must change `status()`, else toggling it reuses a stale cache"
+        );
+
+        // ...and so does *which* material it is. Two accounts of the same signer
+        // discover different outputs, so their caches are not interchangeable either.
+        let other_account = WolletBuilder::new(network, desc.parse().unwrap())
+            .with_silent_payment_material(test_scan_material(1))
+            .build()
+            .unwrap();
+        assert_ne!(
+            wollet.status(),
+            other_account.status(),
+            "a different silent payment account must change `status()`"
+        );
+
+        // The account coordinates are hashed in their own right, not merely implied
+        // by the keys. Today distinct accounts always derive distinct points, so the
+        // assertion above would hold even if the coordinates were ignored; this one
+        // isolates them by holding the keys fixed and changing only the account.
+        //
+        // That combination cannot arise from a signer, which is the point: it is what
+        // a future derivation change could produce, and identity should already be
+        // correct when it does rather than needing to be fixed afterwards.
+        let same_keys_other_account = WolletBuilder::new(network, desc.parse().unwrap())
+            .with_silent_payment_material(crate::silentpayments::SilentPaymentScanMaterial::new(
+                lwk_common::silentpayments::SilentPaymentAccount::liquid_testnet(9),
+                keys.scan_seckey(),
+                keys.spend_pubkey(),
+            ))
+            .build()
+            .unwrap();
+        assert_ne!(
+            wollet.status(),
+            same_keys_other_account.status(),
+            "account coordinates must contribute to `status()` on their own"
+        );
+
+        // The published address is reusable and network-tagged.
+        let address = wollet.silent_payment_address().unwrap();
+        assert!(address.starts_with("tlqsp1"), "unexpected hrp: {address}");
+        assert_eq!(
+            address,
+            wollet.silent_payment_address().unwrap(),
+            "an SP address is reusable, not index-consuming"
+        );
+        // Labeled addresses differ from the plain one but share the scan key.
+        let change_address = wollet.labeled_silent_payment_address(CHANGE_LABEL).unwrap();
+        assert_ne!(change_address, address);
+    }
+
+    #[cfg(feature = "silentpayments")]
+    #[test]
+    fn applying_a_silent_payment_requires_its_transaction() {
+        use crate::silentpayments::test_fixture::SilentPaymentTestData as Data;
+        use crate::silentpayments::test_fixture::SpPaymentBuilder;
+
+        let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
+        let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
+        let desc = format!("ct({view_key},elwpkh({xpub}/*))");
+        let network = Network::TestnetLiquid;
+        let keys = test_scan_material(0);
+
+        let mut wollet = WolletBuilder::new(network, desc.parse().unwrap())
+            .with_silent_payment_material(keys)
+            .build()
+            .unwrap();
+
+        // A stranger pays the wallet's SP address.
+        let asset = *network.policy_asset();
+        let value = 123_456u64;
+        let payment = SpPaymentBuilder::new()
+            .with_inputs(&[(Data::outpoint(0x31, 0), Data::secret_key(0xB1))])
+            .with_value(value)
+            .with_asset(asset)
+            .without_extra_output()
+            .build_for(&keys);
+        let tx = payment.tx.clone();
+
+        let found = wollet
+            .scan_silent_payments(std::slice::from_ref(&tx), [], payment.prevout_lookup())
+            .unwrap();
+        assert_eq!(found.len(), 1);
+
+        // Applying before the transaction is known must fail rather than record an
+        // output whose transaction the wallet cannot locate.
+        assert!(matches!(
+            wollet.apply_silent_payments(&found),
+            Err(Error::MissingTransaction)
+        ));
+        assert!(wollet.balance().unwrap().values().all(|v| *v == 0));
+    }
+
+    /// A silent payment spent *standalone* — never applied to the wallet — must reach a
+    /// signer just as well annotated as one the wallet is tracking.
+    ///
+    /// This is the path `scan_silent_payments()` documents for callers holding their own
+    /// transactions. Funding it was always possible through `external_utxo()`, but an
+    /// `ExternalUtxo` has nowhere to carry the spend tweak, so the resulting input had
+    /// no `bip32_derivation` (it cannot) *and* no metadata (it should have) — an input
+    /// no signer could complete, from an API that looked like it worked.
+    #[cfg(feature = "silentpayments")]
+    #[test]
+    fn a_standalone_silent_payment_reaches_the_signer_annotated() {
+        use crate::silentpayments::test_fixture::SilentPaymentTestData as Data;
+        use crate::silentpayments::test_fixture::SpPaymentBuilder;
+        use lwk_common::silentpayments::SilentPaymentInputMeta;
+
+        let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
+        let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
+        let desc = format!("ct({view_key},elwpkh({xpub}/*))");
+        let network = Network::TestnetLiquid;
+        let keys = test_scan_material(0);
+        let asset = *network.policy_asset();
+
+        let mut wollet = WolletBuilder::new(network, desc.parse().unwrap())
+            .with_silent_payment_material(keys)
+            .build()
+            .unwrap();
+
+        // A stranger pays the wallet's SP address, and separately the wallet holds
+        // ordinary money so the transaction has a descriptor-derived input to contrast
+        // against.
+        let sp_value = 200_000u64;
+        let payment = SpPaymentBuilder::new()
+            .with_inputs(&[(Data::outpoint(0x41, 0), Data::secret_key(0xB4))])
+            .with_value(sp_value)
+            .with_asset(asset)
+            .without_extra_output()
+            .build_for(&keys);
+        let tx = payment.tx.clone();
+
+        let found = wollet
+            .scan_silent_payments(std::slice::from_ref(&tx), [], payment.prevout_lookup())
+            .unwrap();
+        assert_eq!(found.len(), 1);
+
+        // The transaction is known to the wallet (it has to be, to spend from it) but
+        // the payment is deliberately NOT applied: this is the standalone path, so the
+        // cache must not be what makes the annotation work.
+        wollet
+            .cache
+            .update(
+                &[(tx.txid(), Some(100u32))],
+                &[],
+                &[(tx.txid(), tx.clone())],
+                false,
+                vec![],
+                false,
+            )
+            .unwrap();
+        assert!(
+            wollet.utxos().unwrap().is_empty(),
+            "the payment must not be wallet money in this test"
+        );
+
+        // Spend it standalone. Every satoshi has to come from the silent payment,
+        // since the wallet has nothing else.
+        let recipient_addr = wollet.address(Some(0)).unwrap().address().clone();
+        let pset = wollet
+            .tx_builder()
+            .add_silent_payment_utxos(found.clone())
+            .unwrap()
+            .add_recipient(&recipient_addr, 1_000, asset)
+            .unwrap()
+            .finish()
+            .unwrap();
+
+        let sp_index = pset
+            .inputs()
+            .iter()
+            .position(|i| {
+                i.previous_txid == found[0].outpoint.txid
+                    && i.previous_output_index == found[0].outpoint.vout
+            })
+            .expect("the standalone silent payment must fund the transaction");
+
+        let sp_input = &pset.inputs()[sp_index];
+        assert!(
+            sp_input.bip32_derivation.is_empty(),
+            "an SP input has no derivation path; the metadata is what stands in for it"
+        );
+
+        let meta = SilentPaymentInputMeta::read(sp_input)
+            .expect("a standalone silent payment input must carry signing metadata");
+        assert_eq!(meta.account(), keys.account());
+        assert_eq!(meta.expected_spend_pubkey(), keys.spend_pubkey());
+        assert_eq!(&meta.spend_tweak(), found[0].spend_tweak.as_scalar());
+
+        // The metadata must survive serialization: a PSET exists to be handed to
+        // another process, and metadata that only round-trips in memory is useless.
+        let reparsed: PartiallySignedTransaction = pset.to_string().parse().unwrap();
+        assert_eq!(
+            SilentPaymentInputMeta::read(&reparsed.inputs()[sp_index]).unwrap(),
+            meta
+        );
+    }
+
+    /// A silent payment UTXO handed to a wallet that holds no scan material must be
+    /// refused, not quietly funded into an unsignable PSET.
+    ///
+    /// Such a wallet could not have found the output, so it cannot vouch for the tweak
+    /// or name the account a signer should use. Skipping the annotation would produce
+    /// exactly the failure this whole change exists to remove.
+    #[cfg(feature = "silentpayments")]
+    #[test]
+    fn spending_a_silent_payment_without_scan_material_is_refused() {
+        use crate::silentpayments::{SilentPaymentOutput, SilentPaymentUtxo, SpendTweak};
+
+        let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
+        let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
+        let desc = format!("ct({view_key},elwpkh({xpub}/*))");
+        let network = Network::TestnetLiquid;
+
+        // Built WITHOUT `with_silent_payment_material`.
+        let wollet = WolletBuilder::new(network, desc.parse().unwrap())
+            .build()
+            .unwrap();
+
+        let stranger = crate::secp256k1::SecretKey::from_slice(&[0xE1; 32]).unwrap();
+        let pk = stranger.public_key(&EC);
+        let utxo = SilentPaymentUtxo {
+            outpoint: OutPoint::new(
+                <Txid as crate::hashes::Hash>::from_byte_array([0xF2; 32]),
+                0,
+            ),
+            txout: crate::elements::TxOut {
+                asset: crate::elements::confidential::Asset::Explicit(*network.policy_asset()),
+                value: crate::elements::confidential::Value::Explicit(50_000),
+                nonce: Default::default(),
+                script_pubkey: Script::new_v1_p2tr_tweaked(
+                    crate::elements::schnorr::TweakedPublicKey::new(pk.x_only_public_key().0),
+                ),
+                witness: Default::default(),
+            },
+            unblinded: TxOutSecrets::new(
+                *network.policy_asset(),
+                AssetBlindingFactor::zero(),
+                50_000,
+                ValueBlindingFactor::zero(),
+            ),
+            k: 0,
+            label: None,
+            output: SilentPaymentOutput {
+                spend_pubkey: pk,
+                blinding_pubkey: pk,
+                blinding_seckey: stranger,
+            },
+            spend_tweak: SpendTweak::from_be_bytes([0x3C; 32]).unwrap(),
+        };
+
+        let recipient_addr = wollet.address(Some(0)).unwrap().address().clone();
+        let err = wollet
+            .tx_builder()
+            .add_silent_payment_utxos(vec![utxo])
+            .unwrap()
+            .add_recipient(&recipient_addr, 1_000, *network.policy_asset())
+            .unwrap()
+            .finish()
+            .expect_err("a wallet with no scan material cannot vouch for a silent payment");
+        assert!(
+            matches!(err, Error::MissingSilentPaymentKeys),
+            "unexpected error: {err}"
+        );
+    }
+
+    /// A cache entry whose tweak does not describe its own script must be refused at
+    /// build time, not annotated and shipped to a signer.
+    ///
+    /// The signer would catch it — that check is the real gate. But a PSET that is
+    /// guaranteed to fail signing is not a useful thing to hand back to a caller, and
+    /// the failure would surface far from its cause, looking like a signer bug rather
+    /// than a corrupt or foreign cache entry.
+    #[cfg(feature = "silentpayments")]
+    #[test]
+    fn a_corrupt_cache_entry_is_refused_before_it_reaches_a_signer() {
+        use crate::silentpayments::{SilentPaymentCacheEntry, SpendTweak};
+
+        let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
+        let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
+        let desc = format!("ct({view_key},elwpkh({xpub}/*))");
+        let keys = test_scan_material(0);
+
+        let mut wollet = WolletBuilder::new(Network::TestnetLiquid, desc.parse().unwrap())
+            .with_silent_payment_material(keys)
+            .build()
+            .unwrap();
+
+        // A well-formed Taproot script paired with a tweak that has nothing to do with
+        // it — the shape a corrupted or cross-wallet cache entry would have.
+        let stranger = crate::secp256k1::SecretKey::from_slice(&[0xC7; 32])
+            .unwrap()
+            .public_key(&EC);
+        let entry = SilentPaymentCacheEntry {
+            outpoint: OutPoint::new(
+                <Txid as crate::hashes::Hash>::from_byte_array([0xD1; 32]),
+                0,
+            ),
+            script_pubkey: Script::new_v1_p2tr_tweaked(
+                crate::elements::schnorr::TweakedPublicKey::new(stranger.x_only_public_key().0),
+            ),
+            k: 0,
+            label: None,
+            spend_tweak: SpendTweak::from_be_bytes([0x5A; 32]).unwrap(),
+            blinding_pubkey: stranger,
+        };
+
+        assert!(
+            !entry.verify(&keys.spend_pubkey()),
+            "fixture must be a genuinely inconsistent entry"
+        );
+
+        // It has to be *in the cache*: the annotation path keys off the cache to decide
+        // whether an input is a silent payment at all.
+        let script = entry.script_pubkey.clone();
+        let outpoint = entry.outpoint;
+        wollet.cache.insert_silent_payment(
+            entry,
+            TxOutSecrets::new(
+                *Network::TestnetLiquid.policy_asset(),
+                AssetBlindingFactor::zero(),
+                1_000,
+                ValueBlindingFactor::zero(),
+            ),
+        );
+
+        // The witness utxo is what verification reads the script from — the annotator
+        // checks the tweak against the output the PSET actually spends, not against
+        // whatever the cache claims the script is.
+        let mut pset = PartiallySignedTransaction::new_v2();
+        let mut input = crate::elements::pset::Input::from_prevout(outpoint);
+        input.witness_utxo = Some(crate::elements::TxOut {
+            asset: crate::elements::confidential::Asset::Explicit(
+                *Network::TestnetLiquid.policy_asset(),
+            ),
+            value: crate::elements::confidential::Value::Explicit(1_000),
+            nonce: Default::default(),
+            script_pubkey: script,
+            witness: Default::default(),
+        });
+        pset.add_input(input);
+
+        let err = crate::silentpayments::SilentPaymentPsetAnnotator::for_builder(&wollet, &[])
+            .expect("the wallet has scan material")
+            .expect("a wallet with material always gets an annotator")
+            .annotate(&mut pset)
+            .expect_err("an inconsistent cache entry must not be annotated");
+        assert!(
+            format!("{err}").contains("does not verify"),
+            "unexpected error: {err}"
+        );
+
+        // And nothing was written: a refused input must not carry half-formed metadata.
+        assert!(
+            lwk_common::silentpayments::SilentPaymentInputMeta::read(&pset.inputs()[0]).is_err()
+        );
     }
 
     #[test]
@@ -1551,6 +2298,8 @@ mod tests {
             tip,
             unspent: Vec::new(),
             last_unused: Default::default(),
+            #[cfg(feature = "silentpayments")]
+            silent_payments: None,
         };
 
         wollet.apply_update(update.clone()).unwrap();

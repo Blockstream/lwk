@@ -3,6 +3,11 @@
 #[cfg(feature = "esplora")]
 mod esplora;
 
+// Parsing of Esplora's JSON block listing, used to get a block's prevout scripts in a
+// handful of requests instead of one per input.
+#[cfg(all(feature = "esplora", feature = "silentpayments"))]
+mod block_prevouts;
+
 #[cfg(feature = "esplora")]
 pub use crate::clients::{EsploraClientBuilder, WaterfallsClientBuilder};
 

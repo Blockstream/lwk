@@ -39,6 +39,15 @@ impl EsploraClient {
             client: asyncr::EsploraClient::new(network, url),
         })
     }
+
+    /// The number of network requests this client has made.
+    ///
+    /// Useful for asserting that an operation's cost scales the way it is meant to —
+    /// against a rate-limited public endpoint, request count is a correctness concern
+    /// and not just a performance one.
+    pub fn requests(&self) -> usize {
+        self.client.requests()
+    }
 }
 
 /// "Waterfalls" methods
@@ -135,6 +144,14 @@ impl BlockchainBackend for EsploraClient {
 
     fn capabilities(&self) -> HashSet<Capability> {
         self.client.capabilities()
+    }
+
+    #[cfg(feature = "silentpayments")]
+    fn silent_payment_tweaks(
+        &self,
+        height: Height,
+    ) -> Result<Vec<(Txid, crate::silentpayments::PartialTweak)>, Error> {
+        self.rt.block_on(self.client.silent_payment_tweaks(height))
     }
 
     fn get_history_waterfalls<S: WolletState>(

@@ -289,6 +289,20 @@ pub struct Data {
 pub enum Capability {
     /// Can interfact with a Waterfalls data source
     Waterfalls,
+
+    /// Can supply per-block silent payment tweaks (`T = input_hash·A`).
+    ///
+    /// Silent payment outputs match no descriptor-derived script, so script-history
+    /// queries can never surface them however deep they scan. Discovery instead needs
+    /// the tweak of every eligible transaction, from which a wallet derives the
+    /// candidate outputs its scan key would own.
+    ///
+    /// A backend earns this either by serving tweaks from an index (the BIP-352
+    /// index-server model) or by computing them locally from downloaded blocks; both
+    /// answer [`blocking::BlockchainBackend::silent_payment_tweaks()`] identically, so
+    /// the wallet-side scan does not care which.
+    #[cfg(feature = "silentpayments")]
+    SilentPayments,
 }
 
 #[derive(Debug, Clone, Deserialize)]

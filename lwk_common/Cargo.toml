@@ -24,6 +24,12 @@ serde_json.workspace = true
 default = ["amp0"]
 amp0 = []
 sqlite = ["rusqlite"]
+# Silent Payments (BIP-352) boundary types shared between `lwk_wollet` (the
+# wallet/scan side) and `lwk_signer` (the signing side). Living here rather than in
+# either crate is what lets a wallet depend on the shared types without depending on
+# a signer, and vice versa — see `SilentPaymentScanMaterial`'s docs for why that
+# split matters.
+silentpayments = []
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rusqlite = { version = "0.32", optional = true, features = ["bundled"] }

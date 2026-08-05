@@ -63,6 +63,8 @@ def live_check():
     # Mainnet Liquid enterprise Electrum RPC endpoint.
     url = "ssl://elements-mainnet.enterprise.blockstream.info:50002"
     login_url = "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token"
+    url = os.environ.get("ELECTRUM_URL", "ssl://elements-testnet.enterprise.blockstream.info:50002")  # ANCHOR: ignore
+    login_url = os.environ.get("ELECTRUM_LOGIN_URL", "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token")  # ANCHOR: ignore
 
     builder = ElectrumClientBuilder(
         url=url,

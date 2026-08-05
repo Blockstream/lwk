@@ -9,6 +9,7 @@ use lwk_wollet::*;
 #[cfg(feature = "esplora")]
 #[tokio::test]
 #[ignore = "requires docker and the blockstream/apisix image"]
+#[allow(unused_variables)] // the doc-example anchor below shadows shown placeholders
 async fn test_esplora_authenticated() {
     let env = TestEnvBuilder::from_env()
         .with_esplora()
@@ -23,16 +24,31 @@ async fn test_esplora_authenticated() {
         .unwrap();
     assert!(client.tip().await.is_err());
 
-    // with the token provider the token is fetched from keycloak and the call is served
-    let token_provider = clients::TokenProvider::Blockstream {
-        url: env.oidc_token_url(),
-        client_id: lwk_test_util::AUTH_CLIENT_ID.to_string(),
-        client_secret: lwk_test_util::AUTH_CLIENT_SECRET.to_string(),
-    };
-    let mut client = clients::asyncr::EsploraClientBuilder::new(&gateway_url, network)
-        .token_provider(token_provider)
+    // with the token provider the token is fetched from keycloak and the call is served.
+    // The block below is the `authenticated_esplora_client` doc example; its `ANCHOR: ignore`
+    // lines swap the public enterprise urls/credentials for this test's local gateway.
+    // ANCHOR: authenticated_esplora_client
+    let base_url = "https://enterprise.blockstream.info/liquid/api";
+    let login_url =
+        "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
+    let client_id = "your_client_id";
+    let client_secret = "your_client_secret";
+    let network = Network::Liquid;
+    let base_url = gateway_url.as_str(); // ANCHOR: ignore
+    let login_url = env.oidc_token_url(); // ANCHOR: ignore
+    let client_id = AUTH_CLIENT_ID; // ANCHOR: ignore
+    let client_secret = AUTH_CLIENT_SECRET; // ANCHOR: ignore
+    let network = Network::default_regtest(); // ANCHOR: ignore
+
+    let mut client = clients::asyncr::EsploraClientBuilder::new(base_url, network)
+        .token_provider(clients::TokenProvider::Blockstream {
+            url: login_url.to_string(),
+            client_id: client_id.to_string(),
+            client_secret: client_secret.to_string(),
+        })
         .build()
         .unwrap();
+    // ANCHOR_END: authenticated_esplora_client
     let tip = client.tip().await.unwrap();
     assert_eq!(tip.height, 101);
 }
@@ -44,6 +60,7 @@ async fn test_esplora_authenticated() {
 #[cfg(feature = "esplora")]
 #[test]
 #[ignore = "requires docker and the blockstream/apisix image"]
+#[allow(unused_variables)] // the doc-example anchor below shadows shown placeholders
 fn test_waterfalls_authenticated() {
     let env = TestEnvBuilder::from_env()
         .with_waterfalls()
@@ -56,10 +73,32 @@ fn test_waterfalls_authenticated() {
         client_id: lwk_test_util::AUTH_CLIENT_ID.to_string(),
         client_secret: lwk_test_util::AUTH_CLIENT_SECRET.to_string(),
     };
-    let client = clients::WaterfallsClientBuilder::new(&env.waterfalls_url(), network)
-        .token_provider(token_provider())
+
+    // The block below is the `authenticated_waterfalls_client` doc example; its `ANCHOR: ignore`
+    // lines swap the public enterprise urls/credentials for this test's local gateway.
+    // ANCHOR: authenticated_waterfalls_client
+    let base_url = "https://enterprise.blockstream.info/liquid/api/waterfalls";
+    let login_url =
+        "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
+    let client_id = "your_client_id";
+    let client_secret = "your_client_secret";
+    let network = Network::Liquid;
+    let waterfalls_url = env.waterfalls_url(); // ANCHOR: ignore
+    let base_url = waterfalls_url.as_str(); // ANCHOR: ignore
+    let login_url = env.oidc_token_url(); // ANCHOR: ignore
+    let client_id = AUTH_CLIENT_ID; // ANCHOR: ignore
+    let client_secret = AUTH_CLIENT_SECRET; // ANCHOR: ignore
+    let network = Network::default_regtest(); // ANCHOR: ignore
+
+    let client = clients::WaterfallsClientBuilder::new(base_url, network)
+        .token_provider(clients::TokenProvider::Blockstream {
+            url: login_url.to_string(),
+            client_id: client_id.to_string(),
+            client_secret: client_secret.to_string(),
+        })
         .build_blocking()
         .unwrap();
+    // ANCHOR_END: authenticated_waterfalls_client
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -98,6 +137,7 @@ fn test_waterfalls_authenticated() {
 #[cfg(feature = "electrum_oidc")]
 #[test]
 #[ignore = "requires docker, the blockstream/apisix image and the rpcproxy image"]
+#[allow(unused_variables)] // the doc-example anchor below shadows shown placeholders
 fn test_electrum_authenticated() {
     let env = TestEnvBuilder::from_env()
         .with_electrum()
@@ -167,15 +207,31 @@ fn test_electrum_authenticated() {
     );
 
     // The token is minted when the client is built and the connection is served.
-    let mut client = ElectrumClientBuilder::new(&gateway_url)
+    // The block below is the `authenticated_electrum_client` doc example; its `ANCHOR: ignore`
+    // lines swap the public enterprise url/credentials for this test's local gateway (and
+    // `allow_plaintext_with_token`, needed only because that gateway is a localhost tcp:// proxy).
+    // ANCHOR: authenticated_electrum_client
+    let url = "ssl://elements-mainnet.enterprise.blockstream.info:50002";
+    let login_url =
+        "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
+    let client_id = "your_client_id";
+    let client_secret = "your_client_secret";
+    let url = gateway_url.as_str(); // ANCHOR: ignore
+    let login_url = env.oidc_token_url(); // ANCHOR: ignore
+    let client_id = AUTH_SHORT_CLIENT_ID; // ANCHOR: ignore
+    let client_secret = AUTH_SHORT_CLIENT_SECRET; // ANCHOR: ignore
+
+    // The token provider needs the `electrum_oidc` cargo feature.
+    let mut client = ElectrumClientBuilder::new(url)
         .token_provider(clients::TokenProvider::Blockstream {
-            url: env.oidc_token_url(),
-            client_id: AUTH_SHORT_CLIENT_ID.to_string(),
-            client_secret: AUTH_SHORT_CLIENT_SECRET.to_string(),
+            url: login_url.to_string(),
+            client_id: client_id.to_string(),
+            client_secret: client_secret.to_string(),
         })
-        .allow_plaintext_with_token(true)
+        .allow_plaintext_with_token(true) // ANCHOR: ignore
         .build()
         .unwrap();
+    // ANCHOR_END: authenticated_electrum_client
     assert_eq!(client.tip().unwrap().height, 101);
 
     // Mine a block so a served tip() is distinguishable from the last known header

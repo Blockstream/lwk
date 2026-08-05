@@ -9,10 +9,10 @@ import (
 )
 
 func offlineChecks(clientId, clientSecret string, network *lwk.Network) {
-	// ANCHOR: authenticated_esplora_client
 	baseUrl := "https://enterprise.blockstream.info/liquid/api"
 	loginUrl := "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token"
 
+	// ANCHOR: authenticated_esplora_client
 	var tpBlockstream lwk.TokenProvider = lwk.TokenProviderBlockstream{
 		Url:          loginUrl,
 		ClientId:     clientId,
@@ -99,12 +99,12 @@ func liveCheck(clientId, clientSecret string, network *lwk.Network) error {
 
 	baseUrl := os.Getenv("ESPLORA_BASE_URL")
 	if baseUrl == "" {
-		baseUrl = "https://enterprise.uat.blockstream.info/liquid/api"
+		baseUrl = "https://enterprise.blockstream.info/liquidtestnet/api"
 	}
 
 	loginUrl := os.Getenv("ESPLORA_LOGIN_URL")
 	if loginUrl == "" {
-		loginUrl = "https://login.uat.blockstream.com/realms/blockstream-public/protocol/openid-connect/token"
+		loginUrl = "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token"
 	}
 
 	timeout := uint8(30)
@@ -117,7 +117,7 @@ func liveCheck(clientId, clientSecret string, network *lwk.Network) error {
 
 	builder := lwk.EsploraClientBuilder{
 		BaseUrl:       baseUrl,
-		Network:       network,
+		Network:       lwk.NetworkTestnet(),
 		TokenProvider: &liveTp,
 		Timeout:       &timeout,
 	}

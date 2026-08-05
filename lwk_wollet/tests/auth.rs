@@ -23,16 +23,25 @@ async fn test_esplora_authenticated() {
         .unwrap();
     assert!(client.tip().await.is_err());
 
-    // with the token provider the token is fetched from keycloak and the call is served
-    let token_provider = clients::TokenProvider::Blockstream {
-        url: env.oidc_token_url(),
-        client_id: lwk_test_util::AUTH_CLIENT_ID.to_string(),
-        client_secret: lwk_test_util::AUTH_CLIENT_SECRET.to_string(),
-    };
-    let mut client = clients::asyncr::EsploraClientBuilder::new(&gateway_url, network)
-        .token_provider(token_provider)
+    // with the token provider the token is fetched from keycloak and the call is served.
+    // The doc snippet (`authenticated_esplora_client`) covers only the client build; the
+    // endpoint urls live in the docs table, so this test's local gateway values are set here,
+    // outside the anchor.
+    let base_url = gateway_url.as_str();
+    let login_url = env.oidc_token_url();
+    let client_id = AUTH_CLIENT_ID;
+    let client_secret = AUTH_CLIENT_SECRET;
+
+    // ANCHOR: authenticated_esplora_client
+    let mut client = clients::asyncr::EsploraClientBuilder::new(base_url, network)
+        .token_provider(clients::TokenProvider::Blockstream {
+            url: login_url.to_string(),
+            client_id: client_id.to_string(),
+            client_secret: client_secret.to_string(),
+        })
         .build()
         .unwrap();
+    // ANCHOR_END: authenticated_esplora_client
     let tip = client.tip().await.unwrap();
     assert_eq!(tip.height, 101);
 }
@@ -56,10 +65,26 @@ fn test_waterfalls_authenticated() {
         client_id: lwk_test_util::AUTH_CLIENT_ID.to_string(),
         client_secret: lwk_test_util::AUTH_CLIENT_SECRET.to_string(),
     };
-    let client = clients::WaterfallsClientBuilder::new(&env.waterfalls_url(), network)
-        .token_provider(token_provider())
+
+    // The doc snippet (`authenticated_waterfalls_client`) covers only the client build; the
+    // endpoint urls live in the docs table, so this test's local gateway values are set here,
+    // outside the anchor.
+    let waterfalls_url = env.waterfalls_url();
+    let base_url = waterfalls_url.as_str();
+    let login_url = env.oidc_token_url();
+    let client_id = AUTH_CLIENT_ID;
+    let client_secret = AUTH_CLIENT_SECRET;
+
+    // ANCHOR: authenticated_waterfalls_client
+    let client = clients::WaterfallsClientBuilder::new(base_url, network)
+        .token_provider(clients::TokenProvider::Blockstream {
+            url: login_url.to_string(),
+            client_id: client_id.to_string(),
+            client_secret: client_secret.to_string(),
+        })
         .build_blocking()
         .unwrap();
+    // ANCHOR_END: authenticated_waterfalls_client
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -167,15 +192,27 @@ fn test_electrum_authenticated() {
     );
 
     // The token is minted when the client is built and the connection is served.
-    let mut client = ElectrumClientBuilder::new(&gateway_url)
+    // The doc snippet (`authenticated_electrum_client`) covers only the client build; the
+    // endpoint url lives in the docs table, so this test's local gateway values are set here,
+    // outside the anchor. `allow_plaintext_with_token` is ignored in the doc too (it is needed
+    // only for the localhost tcp:// gateway; the documented ssl:// endpoint does not need it).
+    let url = gateway_url.as_str();
+    let login_url = env.oidc_token_url();
+    let client_id = AUTH_SHORT_CLIENT_ID;
+    let client_secret = AUTH_SHORT_CLIENT_SECRET;
+
+    // ANCHOR: authenticated_electrum_client
+    // The token provider needs the `electrum_oidc` cargo feature.
+    let mut client = ElectrumClientBuilder::new(url)
         .token_provider(clients::TokenProvider::Blockstream {
-            url: env.oidc_token_url(),
-            client_id: AUTH_SHORT_CLIENT_ID.to_string(),
-            client_secret: AUTH_SHORT_CLIENT_SECRET.to_string(),
+            url: login_url.to_string(),
+            client_id: client_id.to_string(),
+            client_secret: client_secret.to_string(),
         })
-        .allow_plaintext_with_token(true)
+        .allow_plaintext_with_token(true) // ANCHOR: ignore
         .build()
         .unwrap();
+    // ANCHOR_END: authenticated_electrum_client
     assert_eq!(client.tip().unwrap().height, 101);
 
     // Mine a block so a served tip() is distinguishable from the last known header

@@ -10,6 +10,12 @@ use reqwest::Response;
 /// clearly rather than as a downstream JSON parsing error.
 pub(crate) async fn error_for_status(url: &str, response: Response) -> Error {
     let status = response.status().as_u16();
+    // Map the authenticated-backend "out of credits" denial to the common variant so callers do
+    // not have to match a transport-specific HTTP status. 401 and 429 are retried by the esplora
+    // client and surface via retry-exhaustion (mapped there), so only 402 reaches here.
+    if status == 402 {
+        return Error::InsufficientCredits;
+    }
     let body = response.text().await.unwrap_or_default();
     let snippet: String = body.trim().chars().take(500).collect();
     Error::EsploraHttpError {

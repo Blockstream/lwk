@@ -84,7 +84,7 @@ fn rpc_proxy_image() -> String {
             .to_string()
     });
     let version = std::env::var("RPC_PROXY_IMAGE_VERSION")
-        .unwrap_or_else(|_| "4540cbae-20260714161505".to_string());
+        .unwrap_or_else(|_| "4371ab45-20260812132509".to_string());
     format!("{name}:{version}")
 }
 

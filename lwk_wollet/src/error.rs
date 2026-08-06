@@ -14,6 +14,21 @@ pub enum Error {
         body: Option<String>,
     },
 
+    /// An authenticated backend denied the request because it lacks a valid token
+    /// (esplora/waterfalls HTTP 401, electrum proxy JSON-RPC -32004).
+    #[error("authentication required")]
+    AuthenticationRequired,
+
+    /// An authenticated backend denied the request because the account is out of credits
+    /// (esplora/waterfalls HTTP 402, electrum proxy JSON-RPC -32000).
+    #[error("insufficient credits")]
+    InsufficientCredits,
+
+    /// An authenticated backend denied the request because it is rate limited
+    /// (esplora/waterfalls HTTP 429, electrum proxy JSON-RPC -32002/-32003).
+    #[error("rate limited")]
+    RateLimited,
+
     #[error("Aes {0}")]
     Aes(String),
 
@@ -37,7 +52,7 @@ pub enum Error {
 
     #[cfg(feature = "electrum")]
     #[error(transparent)]
-    ClientError(#[from] electrum_client::Error),
+    ClientError(electrum_client::Error),
 
     #[cfg(feature = "elements_rpc")]
     #[error(transparent)]
@@ -407,6 +422,57 @@ impl From<lwk_common::EncryptError> for Error {
 impl From<elements::hex::Error> for Error {
     fn from(err: elements::hex::Error) -> Self {
         Self::ElementsHex(err)
+    }
+}
+
+/// The `error.data.source` value the Blockstream Electrum RPC proxy stamps on the denials it
+/// owns, so its JSON-RPC codes can be told apart from another server's use of the same numbers.
+#[cfg(feature = "electrum")]
+const ELECTRUM_PROXY_SOURCE: &str = "electrs-electrum-proxy";
+
+/// Maps the Blockstream Electrum RPC proxy's JSON-RPC denial codes to the common [`Error`] denial
+/// variants, so callers handle them the same way as the esplora/waterfalls HTTP denials. Returns
+/// `None` for any other electrum error.
+///
+/// The codes live in the JSON-RPC implementation-defined range (-32000..-32099), which is not
+/// globally unique: any other Electrum/JSON-RPC server assigns them different meanings (our own
+/// `lwk_tiny_jrpc`, for instance, uses -32000/-32002/-32004 for unrelated errors). So the mapping
+/// keys on the proxy-owned `error.data.source` marker rather than the code alone; without that
+/// marker the error is left untouched. A denial can arrive nested inside
+/// [`electrum_client::Error::AllAttemptsErrored`] (a reconnect re-runs the token-carrying
+/// handshake and is denied), so this recurses into it.
+#[cfg(feature = "electrum")]
+pub(crate) fn electrum_denial_variant(error: &electrum_client::Error) -> Option<Error> {
+    match error {
+        electrum_client::Error::Protocol(value) => {
+            let from_proxy = value
+                .get("data")
+                .and_then(|d| d.get("source"))
+                .and_then(|s| s.as_str())
+                == Some(ELECTRUM_PROXY_SOURCE);
+            if !from_proxy {
+                return None;
+            }
+            match value.get("code").and_then(|c| c.as_i64()) {
+                Some(-32004) => Some(Error::AuthenticationRequired),
+                Some(-32000) => Some(Error::InsufficientCredits),
+                Some(-32002) | Some(-32003) => Some(Error::RateLimited),
+                _ => None,
+            }
+        }
+        electrum_client::Error::AllAttemptsErrored(errors) => {
+            errors.iter().find_map(electrum_denial_variant)
+        }
+        _ => None,
+    }
+}
+
+// The proxy-owned `data.source` marker makes the denial codes safe to map globally (a non-proxy
+// server lacks the marker), so the blanket conversion maps them; everything else stays ClientError.
+#[cfg(feature = "electrum")]
+impl From<electrum_client::Error> for Error {
+    fn from(err: electrum_client::Error) -> Self {
+        electrum_denial_variant(&err).unwrap_or(Error::ClientError(err))
     }
 }
 

@@ -194,9 +194,10 @@ test_auth:
     # the authenticated-Electrum expiry e2e (TokenProvider::Blockstream) is gated on the
     # electrum_oidc feature, now enabled by default
     - cargo test -p lwk_wollet --test e2e authenticated -- --ignored
-    # authenticated Electrum end to end through the CLI: funds a wallet through the proxy
-    # (lwk_app enables electrum_oidc, so the CLI's Blockstream provider works)
-    - cargo test -p lwk_cli test_auth_electrum_authenticated -- --ignored
+    # authenticated Electrum/Esplora/Waterfalls end to end through the CLI: each funds a wallet
+    # through the proxy (lwk_app enables electrum_oidc, so the CLI's Blockstream provider works).
+    # `--ignored` runs only the three `#[ignore]`d authenticated tests, not test_auth_err/success.
+    - cargo test -p lwk_cli test_auth -- --ignored
 
 test_ledger:
   stage: test

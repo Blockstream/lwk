@@ -11,10 +11,7 @@ use elements::{
 };
 
 use crate::{
-    anti_exfil::{self, VerifyError},
-    derivation_path_to_vec, script_code_wpkh,
-    sign_liquid_tx::TxInputParams,
-    Error,
+    anti_exfil, derivation_path_to_vec, script_code_wpkh, sign_liquid_tx::TxInputParams, Error,
 };
 
 pub(crate) enum SignInfo {
@@ -285,15 +282,11 @@ pub(crate) fn validate_signature(
             signature,
             *sighash,
         )
-        .map_err(|e| match e {
-            VerifyError::InvalidSignerCommitment => Error::AntiExfilInvalidSignerCommitment(i),
-            VerifyError::InvalidSignature => Error::AntiExfilInvalidSignature(i),
-            VerifyError::VerificationFailed => Error::AntiExfilVerificationFailed(i),
-        }),
+        .map_err(|_| Error::SignatureValidationFailed(i)),
         Some(SignInfo::Taproot) => SchnorrSignature::from_slice(signature)
             .map(|_| ())
-            .map_err(|_| Error::AntiExfilInvalidSignature(i)),
+            .map_err(|_| Error::SignatureValidationFailed(i)),
         None if signature.is_empty() => Ok(()),
-        None => Err(Error::AntiExfilInvalidSignature(i)),
+        None => Err(Error::SignatureValidationFailed(i)),
     }
 }

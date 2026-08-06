@@ -210,7 +210,7 @@ pub(crate) fn prepare_input(
                     )
                     .to_byte_array(),
             );
-            let host_entropy = anti_exfil::new_host_entropy();
+            let host_entropy = anti_exfil::new_host_entropy()?;
             let host_commitment = anti_exfil::host_commitment(&host_entropy);
 
             (

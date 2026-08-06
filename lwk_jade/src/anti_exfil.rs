@@ -32,10 +32,10 @@ pub(crate) enum VerifyError {
     VerificationFailed,
 }
 
-pub(crate) fn new_host_entropy() -> [u8; 32] {
+pub(crate) fn new_host_entropy() -> Result<[u8; 32], rand::Error> {
     let mut entropy = [0u8; 32];
-    rand::rngs::OsRng.fill_bytes(&mut entropy);
-    entropy
+    rand::rngs::OsRng.try_fill_bytes(&mut entropy)?;
+    Ok(entropy)
 }
 
 pub(crate) fn host_commitment(entropy: &[u8; 32]) -> [u8; 32] {

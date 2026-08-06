@@ -62,6 +62,9 @@ pub enum Error {
     #[error(transparent)]
     Sighash(#[from] elements_miniscript::psbt::SighashError),
 
+    #[error("Failed to generate secure host entropy: {0}")]
+    HostEntropy(#[from] rand::Error),
+
     #[error(
         "Signature validation failed for input {0}. If this error is unexpected and has happened repeatedly, it is possible the hardware wallet is faulty or has been compromised. It could be leaking your keys, which could lead to loss of funds. Please consider replacing the hardware wallet."
     )]

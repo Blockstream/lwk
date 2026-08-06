@@ -1,8 +1,8 @@
-use std::{fmt::Display, sync::Arc};
+use std::{fmt::Display, str::FromStr, sync::Arc};
 
 use lwk_common::electrum_ssl::{LIQUID_SOCKET, LIQUID_TESTNET_SOCKET};
 
-use elements::hex::ToHex;
+use elements::{hex::ToHex, BlockHash};
 
 use crate::{types::AssetId, ElectrumClient, EsploraClient, LwkError, TxBuilder};
 
@@ -68,6 +68,24 @@ impl Network {
         )
     }
 
+    /// Return a custom Elements network with the given policy asset and genesis block hash.
+    ///
+    /// The genesis block hash uses the conventional display-order hexadecimal encoding returned
+    /// by Elements RPCs such as `getblockhash 0`.
+    #[uniffi::constructor]
+    pub fn custom(policy_asset: AssetId, genesis_hash: &str) -> Result<Arc<Network>, LwkError> {
+        let genesis_hash = BlockHash::from_str(genesis_hash).map_err(|e| LwkError::Generic {
+            msg: format!("invalid genesis block hash: {e}"),
+        })?;
+        let params = lwk_common::ElementsParamsBuilder::new()
+            .with_policy_asset(policy_asset.into())
+            .with_genesis_hash(genesis_hash)
+            .build()
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+
+        Ok(Arc::new(lwk_common::Network::CustomElements(params).into()))
+    }
+
     /// Return the default regtest network with the default policy asset
     #[uniffi::constructor]
     pub fn regtest_default() -> Arc<Network> {
@@ -114,5 +132,44 @@ impl Network {
     /// Return a new `TxBuilder` for this network
     pub fn tx_builder(&self) -> Arc<TxBuilder> {
         Arc::new(TxBuilder::new(self))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ELEMENTS_REGTEST_GENESIS: &str =
+        "cd179c84c35f51825f20a3b91a18d45f0c53b5ceb744a5b6ef8f0babe809396f";
+    const ELEMENTS_REGTEST_POLICY_ASSET: &str =
+        "b2e15d0d7a0c94e4e2ce0fe6e8691b9e451377f6e46e8045a86f7c4b5d4f0f23";
+
+    fn elements_regtest_policy_asset() -> AssetId {
+        elements::AssetId::from_str(ELEMENTS_REGTEST_POLICY_ASSET)
+            .expect("valid asset id")
+            .into()
+    }
+
+    #[test]
+    fn custom_network_preserves_explicit_identity() {
+        let network = Network::custom(elements_regtest_policy_asset(), ELEMENTS_REGTEST_GENESIS)
+            .expect("valid custom network");
+
+        assert_eq!(
+            network.policy_asset().to_string(),
+            ELEMENTS_REGTEST_POLICY_ASSET
+        );
+        assert_eq!(network.genesis_block_hash(), ELEMENTS_REGTEST_GENESIS);
+        assert!(!network.is_mainnet());
+    }
+
+    #[test]
+    fn custom_network_rejects_invalid_genesis() {
+        assert!(Network::custom(elements_regtest_policy_asset(), "00").is_err());
+        assert!(Network::custom(
+            elements_regtest_policy_asset(),
+            "zz179c84c35f51825f20a3b91a18d45f0c53b5ceb744a5b6ef8f0babe809396f",
+        )
+        .is_err());
     }
 }

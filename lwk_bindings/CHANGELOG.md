@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Added `Network::custom()` to bind an explicit Elements policy asset and genesis block hash.
 * Added `DerivationPath`
 * Removed `get_path()`, replaced with `DerivationPath::from_account()`
 * Changed "simplicity" functions `derive_keypair()`, `simplicity_derive_xonly_pubkey()`, `create_p2pk_signature()` to accept `DerivatioPath` instead of `str`

@@ -68,12 +68,20 @@ impl Network {
         )
     }
 
-    /// Return a custom Elements network with the given policy asset and genesis block hash.
+    /// Return an Elements regtest network with the given policy asset and genesis block hash.
     ///
     /// The genesis block hash uses the conventional display-order hexadecimal encoding returned
     /// by Elements RPCs such as `getblockhash 0`.
+    ///
+    /// This retains LWK's standard Elements regtest parameters: Bitcoin regtest as the parent
+    /// chain, the `ert`/`el` address HRPs and `235`/`75`/`4` Base58 prefixes, dynamic epoch
+    /// length 10, total valid epochs 2, and localhost client defaults. It must not be used for an
+    /// arbitrary custom Elements chain that changes any of those parameters.
     #[uniffi::constructor]
-    pub fn custom(policy_asset: AssetId, genesis_hash: &str) -> Result<Arc<Network>, LwkError> {
+    pub fn regtest_with_genesis(
+        policy_asset: AssetId,
+        genesis_hash: &str,
+    ) -> Result<Arc<Network>, LwkError> {
         let genesis_hash = BlockHash::from_str(genesis_hash).map_err(|e| LwkError::Generic {
             msg: format!("invalid genesis block hash: {e}"),
         })?;
@@ -137,6 +145,11 @@ impl Network {
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        collections::hash_map::DefaultHasher,
+        hash::{Hash, Hasher},
+    };
+
     use super::*;
 
     const ELEMENTS_REGTEST_GENESIS: &str =
@@ -151,9 +164,12 @@ mod tests {
     }
 
     #[test]
-    fn custom_network_preserves_explicit_identity() {
-        let network = Network::custom(elements_regtest_policy_asset(), ELEMENTS_REGTEST_GENESIS)
-            .expect("valid custom network");
+    fn regtest_with_genesis_preserves_explicit_identity() {
+        let network = Network::regtest_with_genesis(
+            elements_regtest_policy_asset(),
+            ELEMENTS_REGTEST_GENESIS,
+        )
+        .expect("valid regtest network");
 
         assert_eq!(
             network.policy_asset().to_string(),
@@ -164,12 +180,79 @@ mod tests {
     }
 
     #[test]
-    fn custom_network_rejects_invalid_genesis() {
-        assert!(Network::custom(elements_regtest_policy_asset(), "00").is_err());
-        assert!(Network::custom(
+    fn regtest_with_genesis_canonicalizes_and_rejects_invalid_genesis() {
+        let uppercase = Network::regtest_with_genesis(
             elements_regtest_policy_asset(),
-            "zz179c84c35f51825f20a3b91a18d45f0c53b5ceb744a5b6ef8f0babe809396f",
+            &ELEMENTS_REGTEST_GENESIS.to_ascii_uppercase(),
         )
-        .is_err());
+        .expect("uppercase display hash is valid");
+        assert_eq!(uppercase.genesis_block_hash(), ELEMENTS_REGTEST_GENESIS);
+
+        for invalid in [
+            "",
+            "0",
+            "00",
+            "cd179c84c35f51825f20a3b91a18d45f0c53b5ceb744a5b6ef8f0babe809396",
+            "cd179c84c35f51825f20a3b91a18d45f0c53b5ceb744a5b6ef8f0babe809396f0",
+            "zd179c84c35f51825f20a3b91a18d45f0c53b5ceb744a5b6ef8f0babe809396f",
+            "cd179c84c35f51825f20a3b91a18d45f0c53b5ceb744a5b6ef8f0babe809396z",
+            " cd179c84c35f51825f20a3b91a18d45f0c53b5ceb744a5b6ef8f0babe809396f",
+            "cd179c84c35f51825f20a3b91a18d45f0c53b5ceb744a5b6ef8f0babe809396f ",
+        ] {
+            assert!(
+                Network::regtest_with_genesis(elements_regtest_policy_asset(), invalid).is_err(),
+                "accepted invalid genesis: {invalid:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn regtest_with_genesis_retains_standard_regtest_parameters() {
+        let network = Network::regtest_with_genesis(
+            elements_regtest_policy_asset(),
+            ELEMENTS_REGTEST_GENESIS,
+        )
+        .expect("valid regtest network");
+
+        assert_eq!(
+            network.inner.parent_genesis_hash(),
+            elements::bitcoin::constants::genesis_block(elements::bitcoin::Network::Regtest)
+                .header
+                .block_hash()
+        );
+        assert_eq!(
+            network.inner.address_params(),
+            &elements::AddressParams::ELEMENTS
+        );
+        assert_eq!(network.inner.dynamic_epoch_length(), 10);
+        assert_eq!(network.inner.total_valid_epochs(), 2);
+
+        let address = elements::Address::p2wsh(
+            &elements::Script::new(),
+            None,
+            network.inner.address_params(),
+        );
+        assert!(address.to_string().starts_with("ert1"));
+    }
+
+    #[test]
+    fn regtest_with_genesis_preserves_legacy_custom_network_hashing() {
+        let first = Network::regtest_with_genesis(
+            elements_regtest_policy_asset(),
+            ELEMENTS_REGTEST_GENESIS,
+        )
+        .expect("valid regtest network");
+        let second = Network::regtest_with_genesis(
+            elements_regtest_policy_asset(),
+            "00902a6b70c2ca83b5d9c815d96a0e2f4202179316970d14ea1847dae5b1ca21",
+        )
+        .expect("valid alternate regtest genesis");
+
+        assert_ne!(first, second);
+        let mut first_hasher = DefaultHasher::new();
+        first.hash(&mut first_hasher);
+        let mut second_hasher = DefaultHasher::new();
+        second.hash(&mut second_hasher);
+        assert_eq!(first_hasher.finish(), second_hasher.finish());
     }
 }

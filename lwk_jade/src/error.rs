@@ -59,6 +59,12 @@ pub enum Error {
     #[error(transparent)]
     Pset(#[from] elements::pset::Error),
 
+    #[error(transparent)]
+    Sighash(#[from] elements_miniscript::psbt::SighashError),
+
+    #[error("Invalid anti-exfil signature for input {0}")]
+    AntiExfilInvalidSignature(usize),
+
     #[error("Missing asset id in output {0}")]
     MissingAssetIdInOutput(usize),
 

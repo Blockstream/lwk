@@ -3,15 +3,24 @@ use elements::{
         bip32::{DerivationPath, Fingerprint},
         PublicKey,
     },
+    hashes::Hash,
     pset::{Input, PartiallySignedTransaction},
-    secp256k1_zkp::schnorr::Signature as SchnorrSignature,
-    SchnorrSig, SchnorrSighashType,
+    secp256k1_zkp::{
+        ecdsa::Signature as EcdsaSignature, schnorr::Signature as SchnorrSignature, Message,
+        Secp256k1,
+    },
+    sighash::SighashCache,
+    SchnorrSig, SchnorrSighashType, Transaction,
 };
 
 use crate::{derivation_path_to_vec, script_code_wpkh, sign_liquid_tx::TxInputParams, Error};
 
 pub(crate) enum SignInfo {
-    Ecdsa(PublicKey),
+    Ecdsa {
+        public_key: PublicKey,
+        message: Message,
+        sighash: u8,
+    },
     Taproot,
 }
 
@@ -85,7 +94,7 @@ pub(crate) fn apply_sig(
                     });
                     *sigs_added_or_overwritten += 1;
                 }
-                SignInfo::Ecdsa(public_key) => {
+                SignInfo::Ecdsa { public_key, .. } => {
                     input.partial_sigs.insert(public_key, sig);
                     *sigs_added_or_overwritten += 1;
                 }
@@ -97,11 +106,15 @@ pub(crate) fn apply_sig(
 }
 
 pub(crate) fn prepare_input(
-    input: &Input,
+    pset: &PartiallySignedTransaction,
     my_fingerprint: Fingerprint,
     i: usize,
     signing_taproot: bool,
+    sighash_cache: &mut SighashCache<Box<Transaction>>,
 ) -> Result<(Option<SignInfo>, TxInputParams), Error> {
+    let input = pset.inputs().get(i).ok_or_else(|| {
+        Error::Generic("expected input index to be within pset.inputs()".to_string())
+    })?;
     let is_taproot = input
         .witness_utxo
         .as_ref()
@@ -184,8 +197,25 @@ pub(crate) fn prepare_input(
                 ));
             };
 
+            let sighash = input
+                .ecdsa_hash_ty()
+                .ok_or(elements_miniscript::psbt::SighashError::InvalidSighashType)?;
+            let message = Message::from_digest(
+                sighash_cache
+                    .segwitv0_sighash(
+                        i,
+                        &script_code,
+                        txout.expect("is_signable => txout present").value,
+                        sighash,
+                    )
+                    .to_byte_array(),
+            );
             (
-                Some(SignInfo::Ecdsa(pk)),
+                Some(SignInfo::Ecdsa {
+                    public_key: pk,
+                    message,
+                    sighash: sighash as u8,
+                }),
                 TxInputParams {
                     is_witness: Some(true),
                     script_code: script_code.as_bytes().to_vec(),
@@ -195,7 +225,7 @@ pub(crate) fn prepare_input(
                     // (test case) https://github.com/Blockstream/Jade/blob/3edd8f4b03ae65d6ee38fb8620b46aad88ab341e/test_data/liquid_txn_nonconfidential_input.json#L54
                     value_commitment,
                     path: Some(derivation_path_to_vec(derivation_path)),
-                    sighash: Some(1),
+                    sighash: Some(sighash.as_u32()),
                     ae_host_commitment: vec![1u8; 32], // TODO verify anti-exfil
                     scriptpubkey,
                     asset_generator,
@@ -225,4 +255,36 @@ pub(crate) fn prepare_input(
     };
 
     Ok((sign_info, params))
+}
+
+pub(crate) fn validate_signature(
+    sign_info: &Option<SignInfo>,
+    _signer_commitment: &[u8],
+    signature: &[u8],
+    i: usize,
+) -> Result<(), Error> {
+    match sign_info {
+        Some(SignInfo::Ecdsa {
+            public_key,
+            message,
+            sighash,
+        }) => {
+            let (&returned_sighash, der_signature) = signature
+                .split_last()
+                .ok_or(Error::AntiExfilInvalidSignature(i))?;
+            if returned_sighash != *sighash {
+                return Err(Error::AntiExfilInvalidSignature(i));
+            }
+            let signature = EcdsaSignature::from_der(der_signature)
+                .map_err(|_| Error::AntiExfilInvalidSignature(i))?;
+            Secp256k1::verification_only()
+                .verify_ecdsa(message, &signature, &public_key.inner)
+                .map_err(|_| Error::AntiExfilInvalidSignature(i))
+        }
+        Some(SignInfo::Taproot) => SchnorrSignature::from_slice(signature)
+            .map(|_| ())
+            .map_err(|_| Error::AntiExfilInvalidSignature(i)),
+        None if signature.is_empty() => Ok(()),
+        None => Err(Error::AntiExfilInvalidSignature(i)),
+    }
 }

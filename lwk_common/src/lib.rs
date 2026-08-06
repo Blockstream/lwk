@@ -50,7 +50,7 @@ pub use crate::qr::*;
 pub use crate::segwit::is_provably_segwit;
 #[cfg(feature = "amp0")]
 pub use crate::signer::amp0::{Amp0Signer, Amp0SignerData};
-pub use crate::signer::Signer;
+pub use crate::signer::{ss_path, SSAccountType, Signer};
 #[cfg(all(feature = "sqlite", not(target_arch = "wasm32")))]
 pub use crate::sqlite::{SqliteStore, SqliteStoreError};
 pub use crate::store::{

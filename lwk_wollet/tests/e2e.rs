@@ -4,6 +4,7 @@ mod amp2;
 mod auth;
 mod blinders;
 mod blockchain_backend;
+mod coin_selection;
 mod elements_wallet;
 mod fees;
 mod issuance;

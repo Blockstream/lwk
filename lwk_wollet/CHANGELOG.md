@@ -6,6 +6,7 @@
 * Add the `electrum_oidc` feature: `TokenProvider::Blockstream` support for `ElectrumClient` (automatic OAuth2 token fetch, plus invalidate and retry once when the server denies a call with an authentication error). Not available on wasm.
 * `Wollet::assets_owned()` returns all assets ever owned instead of only unspent ones.
 * `Contract` no longer contains public fields. To build a `Contract` for issuance, use `Contract::builder`.
+* Esplora client: address history requests within a scan batch run concurrently, honoring `EsploraClientBuilder::concurrency` (default 1, so behavior is unchanged unless opted in).
 
 ## 0.18.0
 

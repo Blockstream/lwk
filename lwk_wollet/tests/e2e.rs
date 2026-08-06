@@ -1077,7 +1077,11 @@ async fn test_esplora_address_history_paging() {
         first_page.len()
     );
 
-    let mut client = clients::asyncr::EsploraClient::new(network, &url);
+    // concurrency(4) also exercises the ordered concurrent address walk.
+    let mut client = clients::asyncr::EsploraClientBuilder::new(&url, network)
+        .concurrency(4)
+        .build()
+        .unwrap();
     for _ in 0..50 {
         if let Some(update) = client.full_scan(&wollet).await.unwrap() {
             wollet.apply_update(update).unwrap();

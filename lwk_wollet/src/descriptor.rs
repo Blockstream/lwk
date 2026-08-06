@@ -2,16 +2,20 @@ use std::{fmt::Display, str::FromStr};
 
 use aes_gcm_siv::Aes256GcmSiv;
 use elements::bitcoin::secp256k1::SecretKey;
-use elements::bitcoin::{bip32::ChildNumber, WitnessVersion};
+use elements::bitcoin::{
+    bip32::{ChildNumber, Fingerprint, Xpub},
+    WitnessVersion,
+};
 use elements::hashes::{sha256t_hash_newtype, Hash};
 use elements::{bitcoin, Address, AddressParams, Script};
 use elements_miniscript::DefiniteDescriptorKey;
 use elements_miniscript::{
     confidential::Key,
     descriptor::{DescriptorSecretKey, Wildcard},
+    slip77::MasterBlindingKey,
     ConfidentialDescriptor, Descriptor, DescriptorPublicKey, ForEachKey,
 };
-use lwk_common::cipher_from_key_bytes;
+use lwk_common::{cipher_from_key_bytes, ss_path, Network, SSAccountType, Signer};
 use serde::{Deserialize, Serialize};
 
 use crate::{Error, FedPeg, PeginAddress, PeginAddressType, EC};
@@ -350,6 +354,50 @@ impl TryFrom<&WolletDescriptor> for Chain {
 }
 
 impl WolletDescriptor {
+    /// Build the "standard" single sig descriptor for the given account, see
+    /// [`lwk_common::Signer::ss_desc`].
+    ///
+    /// **Experimental**: this API might change without notice.
+    pub fn ss_desc(
+        network: &Network,
+        account_type: SSAccountType,
+        account_num: u32,
+        signer: &impl Signer,
+    ) -> Result<Self, Error> {
+        let desc = signer
+            .ss_desc(network, account_type, account_num)
+            .map_err(|e| Error::Generic(e.to_string()))?;
+        desc.parse()
+    }
+
+    /// Same as `WolletDescriptor::ss_desc()` but with data obtain from a signer managed externally
+    ///
+    /// Caller must ensure that:
+    /// * `master_blinding_key` is derived from the signer
+    /// * `fingerprint` is the signer master fingerprint
+    /// * `xpub` is the signer xpub derived at `ss_path(network, account_type, account_num)`
+    ///
+    /// Passing incorrect signer data can lead to creating an incorrect
+    /// descriptor, which could lead to loss of funds.
+    ///
+    /// **Experimental**: this API might change without notice.
+    pub fn ss_desc_from_external_signer(
+        network: &Network,
+        account_type: SSAccountType,
+        account_num: u32,
+        master_blinding_key: MasterBlindingKey,
+        fingerprint: Fingerprint,
+        xpub: Xpub,
+    ) -> Result<Self, Error> {
+        let (prefix, suffix) = account_type.desc_affixes();
+        let path = ss_path(network, account_type, account_num)
+            .map_err(|e| Error::Generic(e.to_string()))?;
+        let desc = format!(
+            "ct(slip77({master_blinding_key}),{prefix}([{fingerprint}/{path}]{xpub}/<0;1>/*){suffix})"
+        );
+        desc.parse()
+    }
+
     /// Return a reference to the underlying descriptor.
     pub fn descriptor(&self) -> Result<&Descriptor<DescriptorPublicKey>, Error> {
         match &self.inner {

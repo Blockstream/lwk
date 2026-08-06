@@ -50,7 +50,8 @@ impl Jade {
             // https://github.com/Blockstream/Jade/blob/18fdfd074b143b00a1217736b9358de748fa7730/main/process/process_utils.c#L385
             let ae_host_entropy = match &sign_info {
                 Some(SignInfo::Taproot) => vec![],
-                _ => vec![1u8; 32], // TODO verify anti-exfil
+                Some(SignInfo::Ecdsa { host_entropy, .. }) => host_entropy.to_vec(),
+                None => vec![],
             };
             let params = GetSignatureParams { ae_host_entropy };
             let sig: Vec<u8> = self.get_signature_for_tx(params)?.to_vec();

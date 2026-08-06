@@ -62,8 +62,14 @@ pub enum Error {
     #[error(transparent)]
     Sighash(#[from] elements_miniscript::psbt::SighashError),
 
+    #[error("Invalid anti-exfil signer commitment for input {0}")]
+    AntiExfilInvalidSignerCommitment(usize),
+
     #[error("Invalid anti-exfil signature for input {0}")]
     AntiExfilInvalidSignature(usize),
+
+    #[error("Anti-exfil verification failed for input {0}")]
+    AntiExfilVerificationFailed(usize),
 
     #[error("Missing asset id in output {0}")]
     MissingAssetIdInOutput(usize),

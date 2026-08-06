@@ -3,6 +3,7 @@
 ## Unreleased
 
 * `asyncr::Jade::stream` returns `&Mutex<S>` instead of `&S`.
+* PSET signatures produced through Jade's anti-exfil flow are now verified before being added.
 
 ## 0.18.0
 

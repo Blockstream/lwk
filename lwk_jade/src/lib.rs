@@ -5,6 +5,7 @@
 #[cfg(feature = "asyncr")]
 pub mod asyncr;
 
+mod anti_exfil;
 pub mod consts;
 pub mod error;
 pub mod get_receive_address;

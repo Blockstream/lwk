@@ -5,19 +5,22 @@ use elements::{
     },
     hashes::Hash,
     pset::{Input, PartiallySignedTransaction},
-    secp256k1_zkp::{
-        ecdsa::Signature as EcdsaSignature, schnorr::Signature as SchnorrSignature, Message,
-        Secp256k1,
-    },
+    secp256k1_zkp::{schnorr::Signature as SchnorrSignature, Message, Secp256k1},
     sighash::SighashCache,
     SchnorrSig, SchnorrSighashType, Transaction,
 };
 
-use crate::{derivation_path_to_vec, script_code_wpkh, sign_liquid_tx::TxInputParams, Error};
+use crate::{
+    anti_exfil::{self, VerifyError},
+    derivation_path_to_vec, script_code_wpkh,
+    sign_liquid_tx::TxInputParams,
+    Error,
+};
 
 pub(crate) enum SignInfo {
     Ecdsa {
         public_key: PublicKey,
+        host_entropy: [u8; 32],
         message: Message,
         sighash: u8,
     },
@@ -210,9 +213,13 @@ pub(crate) fn prepare_input(
                     )
                     .to_byte_array(),
             );
+            let host_entropy = anti_exfil::new_host_entropy();
+            let host_commitment = anti_exfil::host_commitment(&host_entropy);
+
             (
                 Some(SignInfo::Ecdsa {
                     public_key: pk,
+                    host_entropy,
                     message,
                     sighash: sighash as u8,
                 }),
@@ -226,7 +233,7 @@ pub(crate) fn prepare_input(
                     value_commitment,
                     path: Some(derivation_path_to_vec(derivation_path)),
                     sighash: Some(sighash.as_u32()),
-                    ae_host_commitment: vec![1u8; 32], // TODO verify anti-exfil
+                    ae_host_commitment: host_commitment.to_vec(),
                     scriptpubkey,
                     asset_generator,
                 },
@@ -259,28 +266,30 @@ pub(crate) fn prepare_input(
 
 pub(crate) fn validate_signature(
     sign_info: &Option<SignInfo>,
-    _signer_commitment: &[u8],
+    signer_commitment: &[u8],
     signature: &[u8],
     i: usize,
 ) -> Result<(), Error> {
     match sign_info {
         Some(SignInfo::Ecdsa {
             public_key,
+            host_entropy,
             message,
             sighash,
-        }) => {
-            let (&returned_sighash, der_signature) = signature
-                .split_last()
-                .ok_or(Error::AntiExfilInvalidSignature(i))?;
-            if returned_sighash != *sighash {
-                return Err(Error::AntiExfilInvalidSignature(i));
-            }
-            let signature = EcdsaSignature::from_der(der_signature)
-                .map_err(|_| Error::AntiExfilInvalidSignature(i))?;
-            Secp256k1::verification_only()
-                .verify_ecdsa(message, &signature, &public_key.inner)
-                .map_err(|_| Error::AntiExfilInvalidSignature(i))
-        }
+        }) => anti_exfil::verify(
+            &Secp256k1::verification_only(),
+            &public_key.inner,
+            message,
+            host_entropy,
+            signer_commitment,
+            signature,
+            *sighash,
+        )
+        .map_err(|e| match e {
+            VerifyError::InvalidSignerCommitment => Error::AntiExfilInvalidSignerCommitment(i),
+            VerifyError::InvalidSignature => Error::AntiExfilInvalidSignature(i),
+            VerifyError::VerificationFailed => Error::AntiExfilVerificationFailed(i),
+        }),
         Some(SignInfo::Taproot) => SchnorrSignature::from_slice(signature)
             .map(|_| ())
             .map_err(|_| Error::AntiExfilInvalidSignature(i)),

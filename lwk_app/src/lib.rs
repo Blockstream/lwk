@@ -1110,7 +1110,10 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 let s = state.lock()?;
                 s.config.blockchain_client()?
             };
-            let tx = client.get_transactions(&[txid])?.pop().expect("tx");
+            let tx = client
+                .get_transactions(&[txid])?
+                .pop()
+                .ok_or_else(|| Error::TxNotFound(txid.to_string()))?;
             let proposal = proposal.validate(tx)?;
 
             let mut s = state.lock()?;
@@ -1295,7 +1298,10 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 registry.fetch_with_tx(asset_id, &s.config.blockchain_client()?)?;
             s.insert_asset(asset_id, issuance_tx, contract)?;
             // convert the request to an AssetInsert to skip network calls
-            let asset_insert_request = s.get_asset(&asset_id)?.request().expect("asset");
+            let asset_insert_request = s
+                .get_asset(&asset_id)?
+                .request()
+                .ok_or_else(|| Error::AssetNotExist(asset_id.to_string()))?;
             s.persist(&asset_insert_request)?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }

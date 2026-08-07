@@ -80,6 +80,9 @@ pub enum Error {
     #[error("Tx '{0}' was not found in wallet '{1}'")]
     WalletTxNotFound(String, String),
 
+    #[error("Tx '{0}' was not found")]
+    TxNotFound(String),
+
     #[error("Signer '{0}' does not exist")]
     SignerNotExist(String),
 

@@ -1,4 +1,5 @@
 use std::net::SocketAddr;
+use std::path::PathBuf;
 
 use lwk_jade::TIMEOUT;
 use lwk_wollet::UnvalidatedRecipient;
@@ -19,8 +20,12 @@ pub struct Client {
 
 impl Client {
     pub fn new(addr: SocketAddr) -> Result<Self, Error> {
+        Self::new_with_cookie(addr, None)
+    }
+
+    pub fn new_with_cookie(addr: SocketAddr, cookie_path: Option<PathBuf>) -> Result<Self, Error> {
         let url = format!("http://{addr}");
-        let transport = ReqwestHttpTransport::new(url, TIMEOUT);
+        let transport = ReqwestHttpTransport::new(url, TIMEOUT, cookie_path);
         let client = jsonrpc::Client::with_transport(transport);
         Ok(Self { client })
     }

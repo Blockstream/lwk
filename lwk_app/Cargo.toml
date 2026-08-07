@@ -16,6 +16,7 @@ lwk_rpc_model = { version = "0.18.0" }
 lwk_tiny_jrpc = { version = "0.18.0" }
 
 jsonrpc = { version = "0.18.0" }
+base64 = "0.22"
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 secp256k1 = "0.29.1"

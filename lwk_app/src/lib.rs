@@ -62,6 +62,7 @@ mod blockchain_client;
 mod client;
 mod config;
 pub mod consts;
+mod cookie;
 mod error;
 pub mod method;
 mod reqwest_transport;
@@ -118,10 +119,17 @@ impl App {
         let server = tiny_http::Server::http(self.config.addr)
             .map_err(|_| Error::ServerStart(self.config.addr.to_string()))?;
 
+        // Fresh cookie per run, so a client needs same-user filesystem access to authenticate.
+        // TODO: support an explicit --rpcauth / config-file username+password (for remote access,
+        // multiple users, or containers without a shared filesystem) that skips cookie generation
+        // entirely when configured.
+        let expected_auth_header = cookie::generate(&self.config.cookie_path()?)?;
+
         // TODO, for some reasons, using the default number of threads (4) cause a request to be
         // replied after 15 seconds, using 1 instead seems to not have that issue.
         let config = lwk_tiny_jrpc::Config::builder()
             .with_num_threads(NonZeroU8::new(1).expect("static"))
+            .with_expected_auth_header(Some(expected_auth_header))
             .build();
 
         let rpc = lwk_tiny_jrpc::JsonRpcServer::new(server, config, state.clone(), method_handler);
@@ -227,6 +235,7 @@ impl App {
     }
 
     pub fn stop(&self) -> Result<(), Error> {
+        // TODO: delete the cookie file on clean shutdown, so its absence signals "not running".
         self.is_scanning.store(false, Ordering::Relaxed);
         match self.rpc.as_ref() {
             Some(rpc) => {
@@ -260,7 +269,7 @@ impl App {
     }
 
     fn client(&self) -> Result<Client, Error> {
-        Client::new(self.config.addr)
+        Client::new_with_cookie(self.config.addr, Some(self.config.cookie_path()?))
     }
 }
 
@@ -1527,26 +1536,32 @@ mod tests {
     use std::net::TcpListener;
     use std::str::FromStr;
 
-    fn app_random_port() -> App {
+    fn app_random_port() -> (App, Config) {
         let addr = TcpListener::bind("127.0.0.1:0")
             .unwrap()
             .local_addr()
             .unwrap();
-        let tempdir = tempfile::tempdir().unwrap();
-        let mut config = Config::default_testnet(tempdir.path().to_path_buf());
+        // keep() so the datadir (and the cookie file the server writes in it) outlives this
+        // function; a plain TempDir would delete it as soon as it drops here.
+        let tempdir = tempfile::tempdir().unwrap().keep();
+        let mut config = Config::default_testnet(tempdir);
         config.addr = addr;
-        let mut app = App::new(config).unwrap();
+        let mut app = App::new(config.clone()).unwrap();
         app.run().unwrap();
-        app
+        (app, config)
     }
 
     #[test]
     fn version() {
-        let mut app = app_random_port();
+        let (mut app, config) = app_random_port();
         let addr = app.addr();
         let url = addr.to_string();
 
-        let client = jsonrpc::Client::simple_http(&url, None, None).unwrap();
+        let cookie = std::fs::read_to_string(config.cookie_path().unwrap()).unwrap();
+        let (user, pass) = cookie.trim().split_once(':').unwrap();
+        let client =
+            jsonrpc::Client::simple_http(&url, Some(user.to_string()), Some(pass.to_string()))
+                .unwrap();
         let request = client.build_request("version", None);
         let response = client.send_request(request).unwrap();
 

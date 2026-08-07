@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+* Breaking: `server start` now writes a random RPC auth cookie to `<datadir>/<network>/.cookie`
+  and the server rejects requests without a matching `Authorization` header.
+  `lwk_cli` reads the cookie automatically; a raw `curl` (or other direct HTTP client) call now
+  needs `-u "$(cat <datadir>/<network>/.cookie)"`. `--datadir` moved from `server start` to a
+  top-level option, since every command now needs it to find the cookie file, not just `server start`.
+
 ## 0.18.0
 
 * Change output of `lwk_cli wallet pset-details`: `fee : u64` replaced with `fees: {asset_id : u64}` ([ELIP-204](https://github.com/ElementsProject/ELIPs/blob/main/elip-0204.mediawiki))

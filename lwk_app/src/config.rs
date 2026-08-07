@@ -133,6 +133,13 @@ impl Config {
         Ok(path)
     }
 
+    /// Returns the path of the RPC auth cookie file under datadir
+    pub fn cookie_path(&self) -> Result<PathBuf, Error> {
+        let mut path = self.datadir()?;
+        path.push(".cookie");
+        Ok(path)
+    }
+
     /// True if Liquid mainnet
     pub fn is_mainnet(&self) -> bool {
         matches!(self.network, Network::Liquid)

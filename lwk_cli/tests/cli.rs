@@ -65,8 +65,8 @@ fn setup_cli(env: TestEnv) -> (JoinHandle<()>, TempDir, String, String, TestEnv)
     let server_url = format!("--server-url {}", &env.electrum_url());
     let addr = get_available_addr().unwrap();
 
-    let cli = format!("cli --addr {addr} -n regtest");
-    let params = format!("--datadir {datadir} {server_url} {registry_url}");
+    let cli = format!("cli --addr {addr} -n regtest --datadir {datadir}");
+    let params = format!("{server_url} {registry_url}");
 
     let t = {
         let cli = cli.clone();
@@ -255,8 +255,8 @@ fn test_state_regression() {
     let addr = get_available_addr().unwrap();
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
-    let cli = format!("cli --addr {addr} -n regtest");
-    let params = format!("--datadir {datadir} {server_url}");
+    let cli = format!("cli --addr {addr} -n regtest --datadir {datadir}");
+    let params = server_url;
 
     // copy static state into data dir
     let state = include_str!("./test_data/state.json");
@@ -1322,12 +1322,41 @@ fn test_multisig() {
 }
 
 #[test]
-fn test_inconsistent_network() {
+fn test_local_auth() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (_t, _tmp, cli, _params, _env) = setup_cli(env);
-    let cli_addr = cli.split(" -n").next().unwrap();
+    let (t, tmp, cli, _params, _env) = setup_cli(env);
+
+    let cookie_path = tmp.path().join("liquid-regtest").join(".cookie");
+    let real_cookie = std::fs::read_to_string(&cookie_path).unwrap();
+
+    // a cookie the server never generated must be rejected
+    std::fs::write(&cookie_path, "__cookie__:not-the-real-secret").unwrap();
+    let err = sh_err(&format!("{cli} signer list"));
+    assert!(err.contains("Missing or invalid Authorization header"));
+
+    // no cookie file at all must be rejected too
+    std::fs::remove_file(&cookie_path).unwrap();
+    let err = sh_err(&format!("{cli} signer list"));
+    assert!(err.contains("Missing or invalid Authorization header"));
+
+    // restore the real cookie so the server can be stopped cleanly
+    std::fs::write(&cookie_path, real_cookie).unwrap();
+    sh(&format!("{cli} signer list"));
+
+    // copy regtest cookie to testnet dir
+    let testnet_dir = tmp.path().join("liquid-testnet");
+    std::fs::create_dir_all(&testnet_dir).unwrap();
+    std::fs::copy(
+        tmp.path().join("liquid-regtest").join(".cookie"),
+        testnet_dir.join(".cookie"),
+    )
+    .unwrap();
+    let cli_addr = cli.replace(" -n regtest", "");
     let err = sh_err(&format!("{cli_addr} -n testnet wallet list"));
     assert!(err.contains("Inconsistent network"));
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
 }
 
 #[test]
@@ -1622,10 +1651,10 @@ fn test_amp2() {
 
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
-    let params = format!("--datadir {datadir} {server_url}");
+    let params = server_url;
 
     // regtest: AMP2 requires --amp2-url for all methods
-    let cli = format!("cli --addr {addr} -n regtest");
+    let cli = format!("cli --addr {addr} -n regtest --datadir {datadir}");
     let t = {
         let cli = cli.clone();
         let params = params.clone();
@@ -1673,7 +1702,7 @@ fn test_amp2() {
     t.join().unwrap();
 
     // mainnet: AMP2 is not available
-    let cli = format!("cli --addr {addr} -n mainnet");
+    let cli = format!("cli --addr {addr} -n mainnet --datadir {datadir}");
     let t = {
         let cli = cli.clone();
         let params = params.clone();
@@ -1908,6 +1937,7 @@ fn test_sent_outputs() {
     //     │   └── <WALLET "w" HASH>
     //     │       ├── 000000000000  // legacy updates
     //     │       └── 000000000001
+    //     ├── .cookie               // RPC auth secret, regenerated on every server start
     //     ├── state.json            // jsonrpc commands to replay on restart (untouched)
     //     └── lwk.sqlite            // sqlite store, for all wallets ("w" and "shw")
 
@@ -1939,8 +1969,8 @@ fn test_auth_err() {
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
     let server_url = format!("--server-url {}", &env.electrum_url());
-    let cli = format!("cli --addr {addr} -n regtest");
-    let params = format!("--datadir {datadir} {server_url}");
+    let cli = format!("cli --addr {addr} -n regtest --datadir {datadir}");
+    let params = server_url;
 
     // Blockstream auth requires all three fields set together (regardless of server type).
     let err = sh_err(&format!(
@@ -1958,9 +1988,9 @@ fn test_auth_success() {
     let addr = get_available_addr().unwrap();
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
-    let cli = format!("cli --addr {addr} -n regtest");
+    let cli = format!("cli --addr {addr} -n regtest --datadir {datadir}");
     let params = format!(
-        "--datadir {datadir} --server-url {} --server-type esplora --auth-static-token token",
+        "--server-url {} --server-type esplora --auth-static-token token",
         env.esplora_url()
     );
 
@@ -1976,7 +2006,7 @@ fn test_auth_success() {
     t.join().unwrap();
 
     let params = format!(
-        "--datadir {datadir} --server-url {} --server-type esplora --auth-token-url https://login --auth-client-id client_id --auth-client-secret secret",
+        "--server-url {} --server-type esplora --auth-token-url https://login --auth-client-id client_id --auth-client-secret secret",
         env.esplora_url()
     );
 
@@ -1995,7 +2025,7 @@ fn test_auth_success() {
     // Electrum needs the `electrum_oidc` feature, enabled for lwk_app). A token over a
     // plaintext `tcp://` url additionally needs `--auth-allow-plaintext-with-token`.
     let params = format!(
-        "--datadir {datadir} --server-url {} --server-type electrum --auth-token-url https://login --auth-client-id client_id --auth-client-secret secret --auth-allow-plaintext-with-token",
+        "--server-url {} --server-type electrum --auth-token-url https://login --auth-client-id client_id --auth-client-secret secret --auth-allow-plaintext-with-token",
         env.electrum_url()
     );
 
@@ -2025,10 +2055,10 @@ fn test_auth_electrum_authenticated() {
     let addr = get_available_addr().unwrap();
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
-    let cli = format!("cli --addr {addr} -n regtest");
+    let cli = format!("cli --addr {addr} -n regtest --datadir {datadir}");
     // The gateway is a localhost `tcp://` proxy, so the token needs `--auth-allow-plaintext-with-token`.
     let params = format!(
-        "--datadir {datadir} --scanning-interval 1 --server-url {} --server-type electrum \
+        "--scanning-interval 1 --server-url {} --server-type electrum \
          --auth-token-url {} --auth-client-id {} --auth-client-secret {} \
          --auth-allow-plaintext-with-token",
         env.electrum_url(),

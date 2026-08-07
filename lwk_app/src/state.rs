@@ -640,6 +640,9 @@ impl State {
                 }
                 AppSignerInner::AvailableSigner(a) => match a {
                     AnySigner::Software(a) => {
+                        if !s.persist {
+                            continue;
+                        }
                         let params = request::SignerLoadSoftware {
                             name: n.to_string(),
                             mnemonic: a

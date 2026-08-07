@@ -291,7 +291,7 @@ fn test_state_regression() {
 #[test]
 fn test_start_stop_persist() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, params, _env) = setup_cli(env);
+    let (t, tmp, cli, params, _env) = setup_cli(env);
 
     let r = sh(&format!("{cli} signer list"));
     assert_eq!(get_len(&r, "signers"), 0);
@@ -356,6 +356,12 @@ fn test_start_stop_persist() {
     let r = sh(&format!("{cli} signer list"));
     assert_eq!(get_len(&r, "signers"), 4);
 
+    sh(&format!("{cli} wallet unload --wallet custody"));
+    sh(&format!("{cli} wallet load --wallet custody -d {desc}"));
+    let state_path = tmp.path().join("liquid-regtest").join("state.json");
+    let state = std::fs::read_to_string(&state_path).unwrap();
+    assert!(!state.contains(m));
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 
@@ -370,6 +376,9 @@ fn test_start_stop_persist() {
 
     let result = sh(&format!("{cli} signer list"));
     assert_eq!(expected_signers, result, "persist not working");
+
+    let state = std::fs::read_to_string(&state_path).unwrap();
+    assert!(!state.contains(m));
 
     let result = sh(&format!("{cli} wallet list"));
     assert_eq!(expected_wallets, result, "persist not working");

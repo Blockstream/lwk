@@ -10,6 +10,8 @@ pub struct Config {
     pub num_threads: NonZeroU8,
     /// The path to serve HTTP GET requests from.
     pub serve_dir: Option<PathBuf>,
+    /// If set, POST requests must carry an `Authorization` header equal to this value.
+    pub expected_auth_header: Option<String>,
 }
 
 impl Config {
@@ -24,6 +26,7 @@ impl Default for Config {
             headers: Vec::new(),
             num_threads: NonZeroU8::new(4).expect("non-zero"),
             serve_dir: None,
+            expected_auth_header: None,
         }
     }
 }
@@ -32,6 +35,7 @@ pub struct ConfigBuilder {
     headers: Vec<Header>,
     num_threads: NonZeroU8,
     serve_dir: Option<PathBuf>,
+    expected_auth_header: Option<String>,
 }
 
 impl ConfigBuilder {
@@ -54,11 +58,17 @@ impl ConfigBuilder {
         self
     }
 
+    pub fn with_expected_auth_header(mut self, expected_auth_header: Option<String>) -> Self {
+        self.expected_auth_header = expected_auth_header;
+        self
+    }
+
     pub fn build(self) -> Config {
         Config {
             headers: self.headers,
             num_threads: self.num_threads,
             serve_dir: self.serve_dir,
+            expected_auth_header: self.expected_auth_header,
         }
     }
 }
@@ -69,6 +79,7 @@ impl Default for ConfigBuilder {
             headers: Vec::new(),
             num_threads: NonZeroU8::new(4).expect("non-zero"),
             serve_dir: None,
+            expected_auth_header: None,
         }
     }
 }

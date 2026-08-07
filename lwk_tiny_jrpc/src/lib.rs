@@ -170,7 +170,8 @@ impl JsonRpcServer {
                         }
                         tiny_http::Method::Post => {
                             // validate/parse the jsonrpc POST request
-                            let response = match validate_jsonrpc_request(&mut http_request) {
+                            let result = validate_jsonrpc_request(&mut http_request, &config);
+                            let response = match result {
                                 Ok(request) => {
                                     // handle the request
                                     let id = request.id.clone();
@@ -254,13 +255,33 @@ where
     }
 }
 
-fn validate_jsonrpc_request(http_request: &mut tiny_http::Request) -> Result<Request, InnerError> {
-    log::debug!(
-        "received request - method: {:?}, url: {:?}, headers: {:?}",
-        http_request.method(),
-        http_request.url(),
-        http_request.headers()
-    );
+fn validate_jsonrpc_request(
+    http_request: &mut tiny_http::Request,
+    config: &Config,
+) -> Result<Request, InnerError> {
+    // check authorization, if configured
+    if let Some(expected) = &config.expected_auth_header {
+        let provided = http_request
+            .headers()
+            .iter()
+            .find(|h| {
+                h.field
+                    .as_str()
+                    .as_str()
+                    .eq_ignore_ascii_case("authorization")
+            })
+            .map(|h| h.value.as_str());
+        let authorized = match provided {
+            Some(provided) => {
+                use subtle::ConstantTimeEq;
+                bool::from(provided.as_bytes().ct_eq(expected.as_bytes()))
+            }
+            None => false,
+        };
+        if !authorized {
+            return Err(InnerError::Unauthorized);
+        }
+    }
 
     // check content-type header exists
     let content_header = http_request

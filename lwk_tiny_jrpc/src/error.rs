@@ -44,6 +44,9 @@ pub enum InnerError {
 
     #[error("'jsonrpc' version should be '2.0'")]
     InvalidVersion,
+
+    #[error("Missing or invalid Authorization header")]
+    Unauthorized,
 }
 
 impl From<String> for Error {
@@ -83,6 +86,7 @@ impl AsRpcError for InnerError {
             InnerError::WrongContentType => (WRONG_CONTENT_TYPE, None),
             InnerError::ReservedMethodPrefix => (METHOD_RESERVED, None),
             InnerError::InvalidVersion => (INVALID_VERSION, None),
+            InnerError::Unauthorized => (UNAUTHORIZED, None),
         };
 
         RpcError {
@@ -141,7 +145,7 @@ const WRONG_CONTENT_TYPE: i64 = -32_002;
 const METHOD_RESERVED: i64 = -32_003;
 const INVALID_VERSION: i64 = -32_004;
 
-// GENERIC = -32_098, // TODO remove
+const UNAUTHORIZED: i64 = -32_098;
 const STOP_ERROR: i64 = -32_099;
 
 #[derive(Debug)]

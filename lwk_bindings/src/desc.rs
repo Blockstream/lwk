@@ -1,6 +1,9 @@
 use std::{fmt, str::FromStr, sync::Arc};
 
-use crate::{types::SecretKey, Chain, DerivationPath, LwkError, Network, Script};
+use elements::bitcoin::bip32::{Fingerprint, Xpub};
+use elements_miniscript::slip77::MasterBlindingKey;
+
+use crate::{types::SecretKey, Chain, LwkError, Network, Script};
 
 /// The output descriptors, wrapper over [`lwk_wollet::WolletDescriptor`]
 #[derive(uniffi::Object)]
@@ -83,28 +86,23 @@ impl fmt::Display for WolletDescriptor {
     }
 }
 
-fn account_desc_affixes(account_type: &str) -> Result<(&'static str, &'static str), LwkError> {
-    match account_type {
-        "wpkh" => Ok(("elwpkh", "")),
-        "shwpkh" => Ok(("elsh(wpkh", ")")),
-        "pkh" => Ok(("elpkh", "")),
-        "tr" => Ok(("eltr", "")),
-        _ => Err(LwkError::Generic {
-            msg: "invalid account type, must be 'wpkh', 'shwpkh', 'pkh' or 'tr'".into(),
-        }),
-    }
-}
-
 #[uniffi::export]
 impl WolletDescriptor {
-    /// Descriptor from xpub
+    /// Same as [`Signer::ss_desc`](crate::Signer::ss_desc) but with data obtained from a
+    /// signer managed externally (e.g. a Jade).
     ///
-    /// This should be used when the xpub is obtained from a signer
-    /// (e.g. Jade) managed outside LWK.
+    /// Caller must ensure that:
+    /// * `master_blinding_key` is derived from the signer, and not wrapped in "slip77(...)"
+    /// * `fingerprint` is the signer master fingerprint
+    /// * `xpub` is the signer xpub derived at path
+    ///    `DerivationPath::ss_path(network, account_type, account_num)`
     ///
-    /// If master blinding key is SLIP77, it must be wrapped in "slip77(...)"
+    /// Passing incorrect signer data can lead to creating an incorrect
+    /// descriptor, which could lead to loss of funds.
+    ///
+    /// **Experimental**: this API might change without notice.
     #[uniffi::constructor]
-    pub fn from_xpub(
+    pub fn ss_desc_from_external_signer(
         network: &Network,
         account_type: &str,
         account_num: u32,
@@ -112,17 +110,29 @@ impl WolletDescriptor {
         fingerprint: &str,
         xpub: &str,
     ) -> Result<Arc<Self>, LwkError> {
-        let (prefix, suffix) = account_desc_affixes(account_type)?;
-        let path = DerivationPath::from_account(network, account_type, account_num)?;
-        let desc = format!(
-            "ct({master_blinding_key},{prefix}([{fingerprint}/{path}]{xpub}/<0;1>/*){suffix})"
-        );
-        let wd = Self::new(&desc)?;
+        let account_type: lwk_common::SSAccountType = account_type
+            .parse()
+            .map_err(|e: &str| LwkError::Generic { msg: e.to_string() })?;
+        let master_blinding_key = MasterBlindingKey::from_str(master_blinding_key)
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+        let fingerprint = Fingerprint::from_hex(fingerprint)
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+        let xpub = Xpub::from_str(xpub).map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+
+        let inner = lwk_wollet::WolletDescriptor::ss_desc_from_external_signer(
+            &network.into(),
+            account_type,
+            account_num,
+            master_blinding_key,
+            fingerprint,
+            xpub,
+        )?;
+        let wd = Self { inner };
         if wd.is_mainnet() != network.is_mainnet() {
             let msg = "inconsistent network and xpub".into();
             return Err(LwkError::Generic { msg });
         }
-        Ok(wd)
+        Ok(Arc::new(wd))
     }
 }
 
@@ -163,26 +173,32 @@ mod tests {
     #[test]
     fn separate_signer_flow() {
         let network = crate::Network::mainnet();
-        DerivationPath::from_account(&network, "wpkh", 1).unwrap();
+        DerivationPath::ss_path(&network, "wpkh", 1).unwrap();
         let network = crate::Network::testnet();
-        DerivationPath::from_account(&network, "wpkh", 0).unwrap();
-        DerivationPath::from_account(&network, "shwpkh", 0).unwrap();
-        DerivationPath::from_account(&network, "pkh", 0).unwrap();
-        DerivationPath::from_account(&network, "tr", 0).unwrap();
+        DerivationPath::ss_path(&network, "wpkh", 0).unwrap();
+        DerivationPath::ss_path(&network, "shwpkh", 0).unwrap();
+        DerivationPath::ss_path(&network, "tr", 0).unwrap();
+        assert!(DerivationPath::ss_path(&network, "pkh", 0).is_err());
 
-        let mbk = "slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023)";
+        let mbk = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
         let fp = "73c5da0a";
         let xpub = "tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M";
-        let d = WolletDescriptor::from_xpub(&network, "wpkh", 0, mbk, fp, xpub).unwrap();
+        let d = WolletDescriptor::ss_desc_from_external_signer(&network, "wpkh", 0, mbk, fp, xpub)
+            .unwrap();
         let exp = "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84'/1'/0']tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#2e4n992d";
         assert_eq!(d.to_string(), exp);
 
-        assert!(WolletDescriptor::from_xpub(&network, "not-wpkh", 0, mbk, fp, xpub).is_err());
-        assert!(WolletDescriptor::from_xpub(&network, "wpkh", 1 << 31, mbk, fp, xpub).is_err());
-        assert!(WolletDescriptor::from_xpub(&network, "wpkh", 0, "not-mbk", fp, xpub).is_err());
-        assert!(WolletDescriptor::from_xpub(&network, "wpkh", 0, mbk, "not-fp", xpub).is_err());
-        assert!(WolletDescriptor::from_xpub(&network, "wpkh", 0, mbk, fp, "not-xpub").is_err());
+        let ss =
+            |n: &crate::Network, type_: &str, num: u32, mbk: &str, fp: &str, xpub: &str| -> bool {
+                WolletDescriptor::ss_desc_from_external_signer(n, type_, num, mbk, fp, xpub)
+                    .is_err()
+            };
+        assert!(ss(&network, "not-wpkh", 0, mbk, fp, xpub));
+        assert!(ss(&network, "wpkh", 1 << 31, mbk, fp, xpub));
+        assert!(ss(&network, "wpkh", 0, "not-mbk", fp, xpub));
+        assert!(ss(&network, "wpkh", 0, mbk, "not-fp", xpub));
+        assert!(ss(&network, "wpkh", 0, mbk, fp, "not-xpub"));
         let network = crate::Network::mainnet();
-        assert!(WolletDescriptor::from_xpub(&network, "wpkh", 0, mbk, fp, xpub).is_err());
+        assert!(ss(&network, "wpkh", 0, mbk, fp, xpub));
     }
 }

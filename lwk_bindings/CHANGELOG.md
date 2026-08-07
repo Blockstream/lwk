@@ -5,10 +5,12 @@
 ## 0.19.0
 
 * Added `DerivationPath`
-* Removed `get_path()`, replaced with `DerivationPath::from_account()`
+* Removed `get_path()`, replaced with `DerivationPath::ss_path()`
 * Changed "simplicity" functions `derive_keypair()`, `simplicity_derive_xonly_pubkey()`, `create_p2pk_signature()` to accept `DerivatioPath` instead of `str`
 * Added `has_txs()` to `ElectrumClient`, `EsploraClient` and `WaterfallsClient`, to cheaply check if a descriptor has transaction history without a full scan
 * Fixed Boltz chain-swap restoration to use the binding session network instead of Regtest
+* Added `Signer::ss_desc()`
+* Renamed `WolletDescriptor::from_xpub()` to `WolletDescriptor::ss_desc_from_external_signer()`; `account_type` is now restricted to "wpkh"/"shwpkh" (was also "pkh"/"tr"), and `master_blinding_key` must now be the raw SLIP77 key hex, not wrapped in "slip77(...)"
 
 ## 0.18.3
 

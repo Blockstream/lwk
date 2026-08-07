@@ -125,6 +125,40 @@ impl Signer {
         WolletDescriptor::new(&desc_str)
     }
 
+    /// Derive a "standard" single sig descriptor
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// `account_type` must "wpkh", "shwpkh" or "tr".
+    ///
+    /// These are the "standard" single sig descriptors derived and
+    /// used by common Liquid wallets. Their derivation is not
+    /// specified in any ELIP.
+    ///
+    /// The unblinded descriptor follows BIP44/BIP49/BIP84/BIP86.
+    ///
+    /// They use a SLIP77 descriptor blinding key, however all
+    /// accounts use the same descriptor blinding key. This has the
+    /// undesirable consequence that if you share the CT descriptor
+    /// for one account, you reveal the descriptor blinding key used
+    /// by all other accounts.
+    pub fn ss_desc(
+        &self,
+        network: &Network,
+        account_type: &str,
+        account_num: u32,
+    ) -> Result<Arc<WolletDescriptor>, LwkError> {
+        let account_type: lwk_common::SSAccountType = account_type
+            .parse()
+            .map_err(|e: &str| LwkError::Generic { msg: e.to_string() })?;
+        let desc_str =
+            lwk_common::Signer::ss_desc(&self.inner, &network.into(), account_type, account_num)
+                .map_err(|e| LwkError::Generic {
+                    msg: format!("{e:?}"),
+                })?;
+        WolletDescriptor::new(&desc_str)
+    }
+
     /// Return keyorigin and xpub, like "[73c5da0a/84h/1h/0h]tpub..."
     pub fn keyorigin_xpub(&self, bip: &Bip) -> Result<String, LwkError> {
         let is_mainnet = lwk_common::Signer::is_mainnet(&self.inner)?;

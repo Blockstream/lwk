@@ -16,14 +16,15 @@ w.wait_for_tx(txid, client)
 # Perform "BIP44 account discovery"
 
 # Get values shared by all (singlesig) descriptors
-master_blinding_key = signer.slip77_master_blinding_key()
+# ss_desc_from_external_signer() wants the raw SLIP77 key, not wrapped in "slip77(...)"
+master_blinding_key = signer.slip77_master_blinding_key()[len("slip77("):-1]
 fingerprint = signer.fingerprint()
 
 def derive_descriptor(account_type, account_num):
-    account_path = DerivationPath.from_account(network, account_type, account_num)
+    account_path = DerivationPath.ss_path(network, account_type, account_num)
     # Get the xpub from the signer (which might be handled externally)
     account_xpub = signer.keyorigin_xpub_from_path(account_path).split("]")[1]  # strip keyorigin
-    return WolletDescriptor.from_xpub(network, account_type, account_num, master_blinding_key, fingerprint, account_xpub)
+    return WolletDescriptor.ss_desc_from_external_signer(network, account_type, account_num, master_blinding_key, fingerprint, account_xpub)
 
 # Account discovery
 GAP_LIMIT = 20

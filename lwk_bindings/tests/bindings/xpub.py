@@ -4,10 +4,11 @@ mnemonic = Mnemonic.from_random(12)
 network = Network.regtest_default()
 signer = Signer(mnemonic, network)
 
-master_blinding_key = signer.slip77_master_blinding_key()
+# ss_desc_from_external_signer() wants the raw SLIP77 key, not wrapped in "slip77(...)"
+master_blinding_key = signer.slip77_master_blinding_key()[len("slip77("):-1]
 fingerprint = signer.fingerprint()
 
-path = DerivationPath.from_account(network, "wpkh", 0)
+path = DerivationPath.ss_path(network, "wpkh", 0)
 assert str(path) == "84'/1'/0'"
 assert str(DerivationPath.from_vec(path.to_vec())) == str(path)
 
@@ -15,7 +16,7 @@ assert str(DerivationPath.from_vec(path.to_vec())) == str(path)
 xpub = signer.keyorigin_xpub(Bip.new_bip84()).split("]")[1]  # strip keyorigin
 
 # construct the descriptor from the obtained xpub
-desc = WolletDescriptor.from_xpub(
+desc = WolletDescriptor.ss_desc_from_external_signer(
     network,
     "wpkh",
     0,  # bip32 account number

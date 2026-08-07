@@ -7,8 +7,9 @@ use elements::{
     pset::{Input, PartiallySignedTransaction},
     secp256k1_zkp::{schnorr::Signature as SchnorrSignature, Message, Secp256k1},
     sighash::SighashCache,
-    SchnorrSig, SchnorrSighashType, Transaction,
+    EcdsaSighashType, SchnorrSig, SchnorrSighashType, Transaction,
 };
+use elements_miniscript::psbt::SighashError;
 
 use crate::{
     anti_exfil, derivation_path_to_vec, script_code_wpkh, sign_liquid_tx::TxInputParams, Error,
@@ -69,6 +70,14 @@ impl<'a> Derivation<'a> {
             )))
         }
     }
+}
+
+fn ecdsa_sighash(input: &Input) -> Result<EcdsaSighashType, SighashError> {
+    // Per BIP 174, rust-elements defaults a missing sighash type to SIGHASH_ALL;
+    // None therefore means an explicitly non-standard ECDSA sighash.
+    input
+        .ecdsa_hash_ty()
+        .ok_or(SighashError::InvalidSighashType)
 }
 
 pub(crate) fn apply_sig(
@@ -197,9 +206,7 @@ pub(crate) fn prepare_input(
                 ));
             };
 
-            let sighash = input
-                .ecdsa_hash_ty()
-                .ok_or(elements_miniscript::psbt::SighashError::InvalidSighashType)?;
+            let sighash = ecdsa_sighash(input)?;
             let message = Message::from_digest(
                 sighash_cache
                     .segwitv0_sighash(
@@ -288,5 +295,33 @@ pub(crate) fn validate_signature(
             .map_err(|_| Error::SignatureValidationFailed(i)),
         None if signature.is_empty() => Ok(()),
         None => Err(Error::SignatureValidationFailed(i)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use elements::{pset::PsbtSighashType, EcdsaSighashType};
+    use elements_miniscript::psbt::SighashError;
+
+    use super::{ecdsa_sighash, Input};
+
+    #[test]
+    fn ecdsa_sighash_defaults_and_validates() {
+        let mut input = Input::default();
+        assert_eq!(ecdsa_sighash(&input).unwrap(), EcdsaSighashType::All);
+
+        input.sighash_type = Some(PsbtSighashType::from_u32(
+            EcdsaSighashType::SinglePlusAnyoneCanPay.as_u32(),
+        ));
+        assert_eq!(
+            ecdsa_sighash(&input).unwrap(),
+            EcdsaSighashType::SinglePlusAnyoneCanPay
+        );
+
+        input.sighash_type = Some(PsbtSighashType::from_u32(0));
+        assert!(matches!(
+            ecdsa_sighash(&input),
+            Err(SighashError::InvalidSighashType)
+        ));
     }
 }

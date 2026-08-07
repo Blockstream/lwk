@@ -406,6 +406,13 @@ pub enum Error {
 
     #[error("Invalid network")]
     InvalidNetwork,
+
+    #[error("PSET validation failed: {0}")]
+    PsetValidationError(#[from] lwk_common::PsetValidationError),
+
+    #[cfg(feature = "amp2")]
+    #[error("AMP2 cosign didn't add any signatures")]
+    Amp2NoSigsAdded,
 }
 
 // cannot derive automatically with this error because of trait bound

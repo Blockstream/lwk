@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Added `Network::regtest_with_genesis()` to bind an explicit Elements regtest policy asset and genesis block hash while retaining the standard regtest parent, address, epoch, pegin, and local-client parameters.
 * Added `DerivationPath`
 * Removed `get_path()`, replaced with `DerivationPath::from_account()`
 * Changed "simplicity" functions `derive_keypair()`, `simplicity_derive_xonly_pubkey()`, `create_p2pk_signature()` to accept `DerivatioPath` instead of `str`

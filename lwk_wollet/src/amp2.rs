@@ -340,7 +340,13 @@ impl Amp2 {
             return Err(error_for_status(&url, response).await);
         }
         let j: CosignResponseInner = response.json().await?;
-        j.try_into()
+        let response: CosignResponse = j.try_into()?;
+        let sigs_added =
+            lwk_common::verify_added_sigs(pset, &response.pset, self.server_fingerprint, &EC)?;
+        if sigs_added == 0 {
+            return Err(crate::Error::Amp2NoSigsAdded);
+        }
+        Ok(response)
     }
 
     /// Ask the AMP2 server to cosign a PSET
@@ -361,7 +367,13 @@ impl Amp2 {
             return Err(error_for_status_blocking(&url, response));
         }
         let j: CosignResponseInner = response.json()?;
-        j.try_into()
+        let response: CosignResponse = j.try_into()?;
+        let sigs_added =
+            lwk_common::verify_added_sigs(pset, &response.pset, self.server_fingerprint, &EC)?;
+        if sigs_added == 0 {
+            return Err(crate::Error::Amp2NoSigsAdded);
+        }
+        Ok(response)
     }
 }
 

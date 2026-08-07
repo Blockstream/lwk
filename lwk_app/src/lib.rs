@@ -272,11 +272,6 @@ fn method_handler(
 }
 
 fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Response, Error> {
-    log::debug!(
-        "method: {} params: {:?} ",
-        request.method.as_str(),
-        request.params
-    );
     let method: Method = match request.method.as_str().parse() {
         Ok(method) => method,
         Err(e) => return Ok(Response::unimplemented(request.id, e.to_string())),

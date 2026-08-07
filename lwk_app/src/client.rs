@@ -37,9 +37,10 @@ impl Client {
         let params = req.map(|req| to_raw_value(&req)).transpose()?;
         let method = method.to_string();
         let request = self.client.build_request(&method, params.as_deref());
-        log::trace!("---> {}", serde_json::to_string(&request)?);
+        log::debug!("method: {method}");
+        // log::trace!("---> {}", serde_json::to_string(&request)?); // for local debugging
         let response = self.client.send_request(request)?;
-        log::trace!("<--- {}", serde_json::to_string(&response)?);
+        // log::trace!("<--- {}", serde_json::to_string(&response)?); // for local debugging
         match response.result.as_ref() {
             Some(result) => Ok(serde_json::from_str(result.get())?),
             None => match response.error {

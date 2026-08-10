@@ -49,7 +49,13 @@ pub struct LiquidBip21 {
     pub address: elements::Address,
     pub asset: AssetId,
 
-    /// The amount in satoshis or units of the asset (optional)
+    /// The amount in the asset's indivisible base units (optional).
+    ///
+    /// Liquid BIP21 intentionally encodes every asset amount using BIP21's
+    /// fixed decimal-BTC convention, independently of the issuer-defined
+    /// display precision. Callers must apply the asset's registry precision
+    /// separately when converting these base units to a display amount.
+    /// See <https://github.com/ElementsProject/elements/issues/805>.
     pub satoshi: Option<u64>,
 }
 
@@ -384,7 +390,12 @@ fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<Payment, Error> {
         .ok_or_else(|| "Invalid payment request: assetID needs to be specified".to_string())?;
     let asset = AssetId::from_str(&asset_str).map_err(|e| e.to_string())?;
 
-    // BIP21 amounts are in BTC (decimal), convert to satoshis (optional)
+    // This fixed 10^8 conversion is intentional. The Liquid BIP21 convention
+    // inherits BIP21's decimal-BTC wire format for every asset, irrespective of
+    // the asset issuer's display precision. The result is the integer number of
+    // indivisible asset units; registry precision is applied later by the UI or
+    // other consumer. Do not scale this value using asset metadata here.
+    // See https://github.com/ElementsProject/elements/issues/805.
     let amount = url
         .query_pairs()
         .find(|(key, _)| key == "amount")

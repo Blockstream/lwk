@@ -22,6 +22,7 @@ LWK is a Rust workspace containing libraries for Liquid wallets. It consists of 
 - `lwk_common` - Shared utilities
 - `lwk_cli` - Command line interface
 - `lwk_wasm` - WebAssembly bindings
+- `lwk_simplicity` - Tools for working with the Simplicity language. Highly experimental and NOT production-ready.
 - and others
 
 ## Build Commands

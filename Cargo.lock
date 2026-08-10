@@ -2739,6 +2739,7 @@ dependencies = [
  "enum-iterator",
  "home",
  "jsonrpc",
+ "libc",
  "log",
  "lwk_common",
  "lwk_jade",

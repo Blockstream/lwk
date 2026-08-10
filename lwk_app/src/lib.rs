@@ -102,6 +102,15 @@ impl App {
         if self.rpc.is_some() {
             return Err(error::Error::AlreadyStarted);
         }
+
+        // Restrict permissions on every file and directory this process creates from here on
+        // matching Bitcoin Core's `SetupEnvironment()`
+        #[cfg(unix)]
+        // SAFETY: umask(2) has no unsafe precondition beyond the FFI call itself; it cannot fail.
+        unsafe {
+            libc::umask(0o077);
+        }
+
         let mut state = State {
             config: self.config.clone(),
             wollets: Default::default(),

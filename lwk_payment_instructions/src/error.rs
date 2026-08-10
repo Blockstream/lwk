@@ -38,6 +38,19 @@ pub enum Error {
     #[error("Amount overflow")]
     AmountOverflow,
 
+    /// The LNURL callback returned an invoice for a different amount.
+    #[error("LNURL invoice amount mismatch: expected {expected_msat} msat, got {actual_msat:?}")]
+    LnUrlInvoiceAmountMismatch {
+        /// Amount requested from the LNURL callback.
+        expected_msat: u64,
+        /// Amount encoded in the returned invoice, if any.
+        actual_msat: Option<u64>,
+    },
+
+    /// The LNURL callback returned an invoice not bound to the advertised metadata.
+    #[error("LNURL invoice metadata hash mismatch")]
+    LnUrlInvoiceMetadataMismatch,
+
     /// Generic error.
     #[error("{0}")]
     Generic(String),

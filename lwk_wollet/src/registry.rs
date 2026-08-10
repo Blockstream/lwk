@@ -209,6 +209,7 @@ impl Registry {
         let url = format!("{}/{}", self.base_url.trim_end_matches("/"), asset_id);
         let response = self.client.get(url).send().await?;
         let data = response.json::<RegistryData>().await?;
+        data.contract.validate()?;
         Ok(data)
     }
 

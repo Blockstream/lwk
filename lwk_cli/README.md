@@ -64,6 +64,17 @@ process in the foreground and then hit `ctrl-c`
 
 Every command requires the server running.
 
+On startup the server writes a fresh RPC auth cookie to `<datadir>/<network>/.cookie`,
+e.g. `$HOME/.lwk/liquid-testnet/.cookie` by default. `lwk_cli` reads it automatically, but a raw `curl`
+call needs `-u` with the cookie file's contents (already formatted as `user:pass`):
+
+```sh
+$ curl -u "$(cat ~/.lwk/liquid-testnet/.cookie)" ...
+```
+
+If you started the server with a non-default `--datadir`, pass the same `--datadir` to every other
+`lwk_cli` command too, so it can find the same cookie file.
+
 Generate a software signer ("stateless" request)
 
 ```sh
@@ -73,7 +84,7 @@ $ lwk_cli signer generate
 is equivalent to:
 
 ```sh
-$ curl --header "Content-Type: application/json" --request POST --data '{"method":"signer_generate","params":[],"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s
+$ curl --header "Content-Type: application/json" -u "$(cat ~/.lwk/liquid-testnet/.cookie)" --request POST --data '{"method":"signer_generate","params":[],"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s
 ```
 
 To see RPC data exchanged via the cli commands enable app log tracing eg:
@@ -104,9 +115,9 @@ $ lwk_cli wallet balance --wallet custody
 is equivalent to:
 
 ```sh
-$ curl --header "Content-Type: application/json" --request POST --data '{"method":"wallet_load","params":{"descriptor":"ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63", "name": "custody"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s
+$ curl --header "Content-Type: application/json" -u "$(cat ~/.lwk/liquid-testnet/.cookie)" --request POST --data '{"method":"wallet_load","params":{"descriptor":"ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63", "name": "custody"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s
 
-$ curl --header "Content-Type: application/json" --request POST --data '{"method":"balance","params":{"name":"custody"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s | jq .result
+$ curl --header "Content-Type: application/json" -u "$(cat ~/.lwk/liquid-testnet/.cookie)" --request POST --data '{"method":"balance","params":{"name":"custody"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s | jq .result
 ```
 
 Request an address:
@@ -119,7 +130,7 @@ $ lwk_cli wallet address --wallet custody --index 4
 An error test case:
 
 ```sh
-$ curl --header "Content-Type: application/json" --request POST --data '{"method":"wallet_load","params":{"desc":"fake"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s | jq
+$ curl --header "Content-Type: application/json" -u "$(cat ~/.lwk/liquid-testnet/.cookie)" --request POST --data '{"method":"wallet_load","params":{"desc":"fake"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s | jq
 {
   "jsonrpc": "2.0",
   "id": 1,

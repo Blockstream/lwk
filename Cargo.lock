@@ -2735,6 +2735,7 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 name = "lwk_app"
 version = "0.18.0"
 dependencies = [
+ "base64 0.22.1",
  "enum-iterator",
  "home",
  "jsonrpc",
@@ -2987,6 +2988,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
+ "subtle",
  "tempfile",
  "thiserror 2.0.18",
  "tiny_http",

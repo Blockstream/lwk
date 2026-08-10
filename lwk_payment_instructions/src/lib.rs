@@ -503,6 +503,35 @@ mod tests {
             .unwrap()
     }
 
+    async fn fetch_stubbed_lnurl_invoice(
+        invoice: &Bolt11Invoice,
+        metadata: &str,
+        amount_sats: u64,
+    ) -> Result<Payment, Error> {
+        let mut server = mockito::Server::new_async().await;
+        let callback_path = "/callback";
+        let _mock = server
+            .mock("GET", callback_path)
+            .match_query(mockito::Matcher::UrlEncoded(
+                "amount".into(),
+                (amount_sats * 1000).to_string(),
+            ))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(format!(r#"{{"pr":"{invoice}"}}"#))
+            .create_async()
+            .await;
+        let info = LnUrlPayResponse {
+            callback: format!("{}{callback_path}", server.url()),
+            max_sendable: 1_000_000,
+            min_sendable: 1_000,
+            metadata: metadata.to_string(),
+            tag: "payRequest".to_string(),
+        };
+
+        Payment::fetch_lnurl_invoice(&info, amount_sats).await
+    }
+
     struct TestHrnResolver {
         result: &'static str,
     }
@@ -1080,6 +1109,36 @@ mod tests {
             validate_lnurl_invoice(&wrong_metadata, &info, 10_000),
             Err(Error::LnUrlInvoiceMetadataMismatch)
         );
+    }
+
+    #[tokio::test]
+    async fn test_fetch_lnurl_invoice_rejects_wrong_amount() {
+        let metadata = "[[\"text/plain\",\"test metadata\"]]";
+        let invoice = lnurl_test_invoice(50_000, metadata);
+
+        let err = fetch_stubbed_lnurl_invoice(&invoice, metadata, 5)
+            .await
+            .unwrap_err();
+
+        assert_eq!(
+            err,
+            Error::LnUrlInvoiceAmountMismatch {
+                expected_msat: 5_000,
+                actual_msat: Some(50_000),
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn test_fetch_lnurl_invoice_rejects_wrong_metadata() {
+        let metadata = "[[\"text/plain\",\"test metadata\"]]";
+        let invoice = lnurl_test_invoice(5_000, "different metadata");
+
+        let err = fetch_stubbed_lnurl_invoice(&invoice, metadata, 5)
+            .await
+            .unwrap_err();
+
+        assert_eq!(err, Error::LnUrlInvoiceMetadataMismatch);
     }
 
     #[tokio::test]

@@ -1495,21 +1495,21 @@ impl TxBuilder {
         };
         use elements26::pset::PartiallySignedTransaction as Pset26;
         use std::str::FromStr;
-        let mut pset26 = Pset26::from_str(&pset.to_string()).expect("from elements25");
+        let mut pset26 = Pset26::from_str(&pset.to_string()).map_err(e26conv_err)?;
         let inp_txout_sec: HashMap<usize, elements26::TxOutSecrets> = inp_txout_sec
             .iter()
             .map(|(i, s)| {
                 let asset = elements26::AssetId::from_slice(s.asset.into_inner().as_ref())
-                    .expect("from elements25");
+                    .map_err(e26conv_err)?;
                 let abf =
-                    Abf26::from_slice(s.asset_bf.into_inner().as_ref()).expect("from elements25");
+                    Abf26::from_slice(s.asset_bf.into_inner().as_ref()).map_err(e26conv_err)?;
                 let vbf =
-                    Vbf26::from_slice(s.value_bf.into_inner().as_ref()).expect("from elements25");
+                    Vbf26::from_slice(s.value_bf.into_inner().as_ref()).map_err(e26conv_err)?;
                 let value = s.value;
                 let s = elements26::TxOutSecrets::new(asset, abf, value, vbf);
-                (*i, s)
+                Ok((*i, s))
             })
-            .collect();
+            .collect::<Result<_, Error>>()?;
         let blind_secrets = pset26
             .blind_last(&mut rng, &EC, &inp_txout_sec)
             .map_err(|e| Error::Generic(format!("elements26 blind error: {e}")))?;
@@ -1523,7 +1523,7 @@ impl TxBuilder {
             }
         }
         let pset25 = elements::pset::PartiallySignedTransaction::from_str(&pset26.to_string())
-            .expect("from elements25");
+            .map_err(e26conv_err)?;
         let mut built_tx = BuiltTx {
             pset: pset25,
             blind_secrets,
@@ -1534,6 +1534,11 @@ impl TxBuilder {
 
         Ok(built_tx)
     }
+}
+
+/// Error while converting data between the elements 0.25 and 0.26 types
+fn e26conv_err<E: std::fmt::Display>(e: E) -> Error {
+    Error::Generic(format!("unexpected elements 25-26 conversion err: {e}"))
 }
 
 /// Transaction with metadata
@@ -1614,9 +1619,9 @@ impl BuiltTx {
             } = ct_location
             {
                 let abf = AssetBlindingFactor::from_slice(abf.into_inner().as_ref())
-                    .expect("from elements26");
+                    .map_err(e26conv_err)?;
                 let vbf = ValueBlindingFactor::from_slice(vbf.into_inner().as_ref())
-                    .expect("from elements26");
+                    .map_err(e26conv_err)?;
                 let outpoint = OutPoint::new(txid, *vout as u32);
                 let output = self
                     .pset

@@ -13,10 +13,13 @@ pub(crate) fn generate(path: &Path) -> Result<String, Error> {
     let secret: [u8; 32] = rand::random();
     let user_pass = format!("{COOKIE_USER}:{}", secret.to_hex());
 
-    // TODO: restrict file permissions.
-    // File permissions are a wider topic across lwk_cli/lwk_app (datadir, sqlite store,
-    // state.json, etc), handle them properly with a shared util in a follow-up.
-    std::fs::write(path, user_pass.as_bytes())?;
+    // Matching Bitcoin Core's GenerateAuthCookie.
+    // UNIX permissions come from the process umask, set once in App::run()
+    let mut tmp_name = path.file_name().unwrap_or_default().to_os_string();
+    tmp_name.push(".tmp");
+    let tmp_path = path.with_file_name(tmp_name);
+    std::fs::write(&tmp_path, user_pass.as_bytes())?;
+    std::fs::rename(&tmp_path, path)?;
 
     Ok(header_value(&user_pass))
 }

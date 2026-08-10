@@ -1942,7 +1942,8 @@ fn test_sent_outputs() {
     //     └── lwk.sqlite            // sqlite store, for all wallets ("w" and "shw")
 
     // legacy (no, --with-experimental-blinders)
-    let enc_cache = tmp.path().join("liquid-regtest").join("enc_cache");
+    let network_dir = tmp.path().join("liquid-regtest");
+    let enc_cache = network_dir.join("enc_cache");
     let subdirs: Vec<_> = std::fs::read_dir(&enc_cache)
         .unwrap()
         .filter_map(|e| e.ok())
@@ -1952,11 +1953,22 @@ fn test_sent_outputs() {
     assert_eq!(subdirs.len(), 1);
 
     // Both wallet "w" and "shw" use the sqlite file
-    assert!(tmp
-        .path()
-        .join("liquid-regtest")
-        .join("lwk.sqlite")
-        .exists());
+    assert!(network_dir.join("lwk.sqlite").exists());
+
+    // Every file/dir the server creates should end up owner-only
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let mode = |p: &std::path::Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+
+        let network_dir = tmp.path().join("liquid-regtest");
+        assert_eq!(mode(&network_dir), 0o700);
+        assert_eq!(mode(&network_dir.join(".cookie")), 0o600);
+        assert_eq!(mode(&network_dir.join("state.json")), 0o600);
+        assert_eq!(mode(&network_dir.join("lwk.sqlite")), 0o600);
+        assert_eq!(mode(&enc_cache), 0o700);
+    }
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

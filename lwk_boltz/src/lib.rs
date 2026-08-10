@@ -880,7 +880,11 @@ pub async fn next_status(
             }
         } else {
             // since we can receive updates for all swaps, we need to check the deadline
-            let remaining = deadline - async_now().await;
+            let remaining = deadline.saturating_sub(async_now().await);
+            if remaining == 0 {
+                log::warn!("Timeout while waiting state for swap id {swap_id}");
+                return Err(Error::Timeout(swap_id.to_string()));
+            }
             tokio::select! {
                 update = rx.recv() => match update {
                     Ok(update) => update,
@@ -1164,6 +1168,21 @@ mod tests {
             .unwrap();
 
         assert_eq!(update.status, "swap.expired");
+    }
+
+    #[tokio::test]
+    async fn test_next_status_blocking_expired_deadline_returns_timeout() {
+        let (tx, mut rx) = tokio::sync::broadcast::channel(1);
+        tx.send(SwapStatus {
+            id: "other".to_string(),
+            status: "invoice.set".to_string(),
+            ..Default::default()
+        })
+        .unwrap();
+
+        let result = crate::next_status(&mut rx, Duration::ZERO, "swap-id", false).await;
+
+        assert!(matches!(result, Err(crate::Error::Timeout(swap_id)) if swap_id == "swap-id"));
     }
 
     #[test]

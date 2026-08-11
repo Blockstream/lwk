@@ -115,15 +115,12 @@ pub(crate) fn apply_sig(
 }
 
 pub(crate) fn prepare_input(
-    pset: &PartiallySignedTransaction,
+    input: &Input,
     my_fingerprint: Fingerprint,
     i: usize,
     signing_taproot: bool,
     sighash_cache: &mut SighashCache<Box<Transaction>>,
 ) -> Result<(Option<SignInfo>, TxInputParams), Error> {
-    let input = pset.inputs().get(i).ok_or_else(|| {
-        Error::Generic("expected input index to be within pset.inputs()".to_string())
-    })?;
     let is_taproot = input
         .witness_utxo
         .as_ref()

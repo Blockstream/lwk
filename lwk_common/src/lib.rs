@@ -475,10 +475,53 @@ mod test {
     use elements::{pset::PartiallySignedTransaction, AssetId};
     use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 
-    use crate::pset_balance;
+    use crate::{input_sighash, pset_balance};
 
     fn normalize_newlines(s: &str) -> String {
         s.replace("\r\n", "\n")
+    }
+
+    #[test]
+    fn test_input_sighash() {
+        let pset_str = include_str!("../test_data/pset_details/pset.base64");
+        let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
+        let mut input = pset.inputs()[0].clone();
+
+        // p2wsh input declaring nothing defaults to `ALL`
+        assert!(input.sighash_type.is_none());
+        assert_eq!(input_sighash(&input), Some(1));
+
+        // the declared value is reported as is, even when non standard
+        input.sighash_type = Some(elements::pset::PsbtSighashType::from_u32(131));
+        assert_eq!(input_sighash(&input), Some(131));
+        input.sighash_type = Some(elements::pset::PsbtSighashType::from_u32(153));
+        assert_eq!(input_sighash(&input), Some(153));
+
+        // a taproot input declaring nothing defaults to `DEFAULT`
+        input.sighash_type = None;
+        let mut p2tr = vec![0x51, 0x20];
+        p2tr.extend([0u8; 32]);
+        let p2tr = elements::Script::from(p2tr);
+        assert!(p2tr.is_v1_p2tr());
+        input.witness_utxo.as_mut().unwrap().script_pubkey = p2tr.clone();
+        assert_eq!(input_sighash(&input), Some(0));
+
+        // the spent output is taken from `non_witness_utxo` when there is no `witness_utxo`
+        let mut tx = elements::Transaction {
+            version: 2,
+            lock_time: elements::LockTime::ZERO,
+            input: vec![],
+            output: vec![elements::TxOut::default(), elements::TxOut::default()],
+        };
+        tx.output[1].script_pubkey = p2tr;
+        input.witness_utxo = None;
+        input.non_witness_utxo = Some(tx);
+        input.previous_output_index = 1;
+        assert_eq!(input_sighash(&input), Some(0));
+
+        // without any spent output the input cannot be signed, return None
+        input.non_witness_utxo = None;
+        assert_eq!(input_sighash(&input), None);
     }
 
     fn setup_pset_details() -> (AssetId, ConfidentialDescriptor<DescriptorPublicKey>) {

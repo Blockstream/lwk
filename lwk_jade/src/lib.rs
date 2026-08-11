@@ -5,6 +5,7 @@
 #[cfg(feature = "asyncr")]
 pub mod asyncr;
 
+mod anti_exfil;
 pub mod consts;
 pub mod error;
 pub mod get_receive_address;
@@ -280,6 +281,8 @@ fn create_jade_sign_req(
         network,
         txn,
         num_inputs: tx.input.len() as u32,
+        // LWK always uses Jade's anti-exfil signing flow. Jade defaults this field to false;
+        // anti-exfil has been supported since firmware 0.1.24.
         use_ae_signatures: true,
         change: changes,
         asset_info: assets_info,

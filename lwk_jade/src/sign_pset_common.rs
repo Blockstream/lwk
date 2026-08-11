@@ -3,15 +3,25 @@ use elements::{
         bip32::{DerivationPath, Fingerprint},
         PublicKey,
     },
+    hashes::Hash,
     pset::{Input, PartiallySignedTransaction},
-    secp256k1_zkp::schnorr::Signature as SchnorrSignature,
-    SchnorrSig, SchnorrSighashType,
+    secp256k1_zkp::{schnorr::Signature as SchnorrSignature, Message, Secp256k1},
+    sighash::SighashCache,
+    EcdsaSighashType, SchnorrSig, SchnorrSighashType, Transaction,
+};
+use elements_miniscript::psbt::SighashError;
+
+use crate::{
+    anti_exfil, derivation_path_to_vec, script_code_wpkh, sign_liquid_tx::TxInputParams, Error,
 };
 
-use crate::{derivation_path_to_vec, script_code_wpkh, sign_liquid_tx::TxInputParams, Error};
-
 pub(crate) enum SignInfo {
-    Ecdsa(PublicKey),
+    Ecdsa {
+        public_key: PublicKey,
+        host_entropy: [u8; 32],
+        message: Message,
+        sighash: u8,
+    },
     Taproot,
 }
 
@@ -62,6 +72,14 @@ impl<'a> Derivation<'a> {
     }
 }
 
+fn ecdsa_sighash(input: &Input) -> Result<EcdsaSighashType, SighashError> {
+    // Per BIP 174, rust-elements defaults a missing sighash type to SIGHASH_ALL;
+    // None therefore means an explicitly non-standard ECDSA sighash.
+    input
+        .ecdsa_hash_ty()
+        .ok_or(SighashError::InvalidSighashType)
+}
+
 pub(crate) fn apply_sig(
     pset: &mut PartiallySignedTransaction,
     sign_info: Option<SignInfo>,
@@ -85,7 +103,7 @@ pub(crate) fn apply_sig(
                     });
                     *sigs_added_or_overwritten += 1;
                 }
-                SignInfo::Ecdsa(public_key) => {
+                SignInfo::Ecdsa { public_key, .. } => {
                     input.partial_sigs.insert(public_key, sig);
                     *sigs_added_or_overwritten += 1;
                 }
@@ -97,11 +115,15 @@ pub(crate) fn apply_sig(
 }
 
 pub(crate) fn prepare_input(
-    input: &Input,
+    pset: &PartiallySignedTransaction,
     my_fingerprint: Fingerprint,
     i: usize,
     signing_taproot: bool,
+    sighash_cache: &mut SighashCache<Box<Transaction>>,
 ) -> Result<(Option<SignInfo>, TxInputParams), Error> {
+    let input = pset.inputs().get(i).ok_or_else(|| {
+        Error::Generic("expected input index to be within pset.inputs()".to_string())
+    })?;
     let is_taproot = input
         .witness_utxo
         .as_ref()
@@ -184,8 +206,27 @@ pub(crate) fn prepare_input(
                 ));
             };
 
+            let sighash = ecdsa_sighash(input)?;
+            let message = Message::from_digest(
+                sighash_cache
+                    .segwitv0_sighash(
+                        i,
+                        &script_code,
+                        txout.expect("is_signable => txout present").value,
+                        sighash,
+                    )
+                    .to_byte_array(),
+            );
+            let host_entropy = anti_exfil::new_host_entropy()?;
+            let host_commitment = anti_exfil::host_commitment(&host_entropy);
+
             (
-                Some(SignInfo::Ecdsa(pk)),
+                Some(SignInfo::Ecdsa {
+                    public_key: pk,
+                    host_entropy,
+                    message,
+                    sighash: sighash as u8,
+                }),
                 TxInputParams {
                     is_witness: Some(true),
                     script_code: script_code.as_bytes().to_vec(),
@@ -195,8 +236,8 @@ pub(crate) fn prepare_input(
                     // (test case) https://github.com/Blockstream/Jade/blob/3edd8f4b03ae65d6ee38fb8620b46aad88ab341e/test_data/liquid_txn_nonconfidential_input.json#L54
                     value_commitment,
                     path: Some(derivation_path_to_vec(derivation_path)),
-                    sighash: Some(1),
-                    ae_host_commitment: vec![1u8; 32], // TODO verify anti-exfil
+                    sighash: Some(sighash.as_u32()),
+                    ae_host_commitment: host_commitment.to_vec(),
                     scriptpubkey,
                     asset_generator,
                 },
@@ -225,4 +266,62 @@ pub(crate) fn prepare_input(
     };
 
     Ok((sign_info, params))
+}
+
+pub(crate) fn validate_signature(
+    sign_info: &Option<SignInfo>,
+    signer_commitment: &[u8],
+    signature: &[u8],
+    i: usize,
+) -> Result<(), Error> {
+    match sign_info {
+        Some(SignInfo::Ecdsa {
+            public_key,
+            host_entropy,
+            message,
+            sighash,
+        }) => anti_exfil::verify(
+            &Secp256k1::verification_only(),
+            &public_key.inner,
+            message,
+            host_entropy,
+            signer_commitment,
+            signature,
+            *sighash,
+        )
+        .map_err(|_| Error::SignatureValidationFailed(i)),
+        Some(SignInfo::Taproot) => SchnorrSignature::from_slice(signature)
+            .map(|_| ())
+            .map_err(|_| Error::SignatureValidationFailed(i)),
+        None if signature.is_empty() => Ok(()),
+        None => Err(Error::SignatureValidationFailed(i)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use elements::{pset::PsbtSighashType, EcdsaSighashType};
+    use elements_miniscript::psbt::SighashError;
+
+    use super::{ecdsa_sighash, Input};
+
+    #[test]
+    fn ecdsa_sighash_defaults_and_validates() {
+        let mut input = Input::default();
+        assert_eq!(ecdsa_sighash(&input).unwrap(), EcdsaSighashType::All);
+
+        input.sighash_type = Some(PsbtSighashType::from_u32(
+            EcdsaSighashType::SinglePlusAnyoneCanPay.as_u32(),
+        ));
+        assert_eq!(
+            ecdsa_sighash(&input).unwrap(),
+            EcdsaSighashType::SinglePlusAnyoneCanPay
+        );
+
+        input.sighash_type = Some(PsbtSighashType::from_u32(0));
+        assert!(matches!(
+            ecdsa_sighash(&input),
+            Err(SighashError::InvalidSighashType)
+        ));
+    }
 }

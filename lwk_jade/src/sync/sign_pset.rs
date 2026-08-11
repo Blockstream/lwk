@@ -1,9 +1,9 @@
-use elements::pset::PartiallySignedTransaction;
+use elements::{pset::PartiallySignedTransaction, sighash::SighashCache};
 
 use crate::{
     create_jade_sign_req,
     protocol::GetSignatureParams,
-    sign_pset_common::{apply_sig, prepare_input, SignInfo},
+    sign_pset_common::{apply_sig, prepare_input, validate_signature, SignInfo},
     Error,
 };
 
@@ -34,24 +34,32 @@ impl Jade {
 
         let mut signable_inputs: Vec<(Option<SignInfo>, Vec<u8>)> =
             Vec::with_capacity(pset.inputs().len());
+        let mut sighash_cache = SighashCache::new(Box::new(pset.extract_tx()?));
 
-        for (i, input) in pset.inputs().iter().enumerate() {
-            let (sign_info, params) = prepare_input(input, my_fingerprint, i, has_taproot)?;
+        for i in 0..pset.inputs().len() {
+            let (sign_info, params) =
+                prepare_input(pset, my_fingerprint, i, has_taproot, &mut sighash_cache)?;
             let signer_commitment = self.tx_input(params)?.to_vec();
             signable_inputs.push((sign_info, signer_commitment));
         }
 
-        for (i, (sign_info, _signer_commitment)) in signable_inputs.into_iter().enumerate() {
+        let mut signatures = Vec::with_capacity(signable_inputs.len());
+        for (i, (sign_info, signer_commitment)) in signable_inputs.into_iter().enumerate() {
             // Jade rejects a non-empty `ae_host_commitment` for taproot inputs outright, so
             // prepare_input always sends an empty commitment for them:
             // https://github.com/Blockstream/Jade/blob/18fdfd074b143b00a1217736b9358de748fa7730/main/process/process_utils.c#L385
             let ae_host_entropy = match &sign_info {
                 Some(SignInfo::Taproot) => vec![],
-                _ => vec![1u8; 32], // TODO verify anti-exfil
+                Some(SignInfo::Ecdsa { host_entropy, .. }) => host_entropy.to_vec(),
+                None => vec![],
             };
             let params = GetSignatureParams { ae_host_entropy };
             let sig: Vec<u8> = self.get_signature_for_tx(params)?.to_vec();
+            validate_signature(&sign_info, &signer_commitment, &sig, i)?;
+            signatures.push((sign_info, sig));
+        }
 
+        for (i, (sign_info, sig)) in signatures.into_iter().enumerate() {
             apply_sig(pset, sign_info, sig, i, &mut sigs_added_or_overwritten)?;
         }
 

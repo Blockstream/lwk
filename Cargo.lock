@@ -2864,6 +2864,7 @@ dependencies = [
  "base64 0.21.7",
  "elements 0.25.3",
  "elements-miniscript",
+ "getrandom 0.2.16",
  "hex",
  "log",
  "lwk_common",

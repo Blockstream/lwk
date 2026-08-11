@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use lwk_common::EncryptedStore;
+use lwk_common::{BoxError, EncryptedStore};
 use lwk_wollet::bitcoin::bip32::Xpub;
 use lwk_wollet::hashes::{sha256t_hash_newtype, Hash};
 
@@ -30,6 +30,52 @@ pub fn key_bytes_from_xpub(xpub: &Xpub) -> [u8; 32] {
 pub fn encrypted_store_from_xpub(store: Arc<dyn DynStore>, xpub: &Xpub) -> Arc<dyn DynStore> {
     let key_bytes = key_bytes_from_xpub(xpub);
     Arc::new(EncryptedStore::new_with_key_encryption(store, key_bytes))
+}
+
+#[derive(Debug)]
+struct NamespacedStore {
+    inner: Arc<dyn DynStore>,
+    namespace: String,
+}
+
+impl NamespacedStore {
+    fn key(&self, key: &str) -> String {
+        format!("{}:{key}", self.namespace)
+    }
+}
+
+impl DynStore for NamespacedStore {
+    fn get(&self, key: &str) -> Result<Option<Vec<u8>>, BoxError> {
+        self.inner.get(&self.key(key))
+    }
+
+    fn put(&self, key: &str, value: &[u8]) -> Result<(), BoxError> {
+        self.inner.put(&self.key(key), value)
+    }
+
+    fn remove(&self, key: &str) -> Result<(), BoxError> {
+        self.inner.remove(&self.key(key))
+    }
+
+    fn is_persisted(&self) -> bool {
+        self.inner.is_persisted()
+    }
+}
+
+/// Wrap a store with encryption and, when present, an API URL namespace.
+pub(crate) fn session_store_from_xpub(
+    store: Arc<dyn DynStore>,
+    xpub: &Xpub,
+    api_url: Option<String>,
+) -> Arc<dyn DynStore> {
+    let store = encrypted_store_from_xpub(store, xpub);
+    match api_url {
+        Some(namespace) => Arc::new(NamespacedStore {
+            inner: store,
+            namespace,
+        }),
+        None => store,
+    }
 }
 
 /// Store keys for Boltz swap persistence.
@@ -234,6 +280,47 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(swap_data.to_vec(), loaded_data);
+    }
+
+    #[test]
+    fn test_api_urls_use_different_store_keys() {
+        let xpub = test_xpub();
+        let inner = Arc::new(MemoryStore::new());
+        let store1 = session_store_from_xpub(
+            inner.clone() as Arc<dyn DynStore>,
+            &xpub,
+            Some("https://provider-1.example/v2".to_string()),
+        );
+        let store2 = session_store_from_xpub(
+            inner.clone() as Arc<dyn DynStore>,
+            &xpub,
+            Some("https://provider-2.example/v2".to_string()),
+        );
+
+        store_keys::set_pending_swaps(store1.as_ref(), &["swap1".to_string()]).unwrap();
+
+        assert_eq!(
+            store_keys::get_pending_swaps(store1.as_ref()).unwrap(),
+            vec!["swap1"]
+        );
+        assert!(store_keys::get_pending_swaps(store2.as_ref())
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn test_default_api_url_keeps_existing_store_keys() {
+        let xpub = test_xpub();
+        let inner = Arc::new(MemoryStore::new());
+        let existing_store = encrypted_store_from_xpub(inner.clone() as Arc<dyn DynStore>, &xpub);
+        let session_store = session_store_from_xpub(inner, &xpub, None);
+
+        store_keys::set_pending_swaps(existing_store.as_ref(), &["swap1".to_string()]).unwrap();
+
+        assert_eq!(
+            store_keys::get_pending_swaps(session_store.as_ref()).unwrap(),
+            vec!["swap1"]
+        );
     }
 
     #[test]

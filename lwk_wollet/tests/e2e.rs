@@ -1375,11 +1375,14 @@ fn drain() {
     }
 
     // Drain explicit
-    wallet.fund_explicit(&env, 10_000, None, None);
-    let mut addr_explicit = env.elementsd_getnewaddress();
+    wallet.fund_btc(&env);
+    let addr = env.elementsd_getnewaddress();
+    let mut addr_explicit = addr.clone();
     addr_explicit.blinding_pubkey = None;
     let mut pset = wallet
         .tx_builder()
+        .add_lbtc_recipient(&addr, 1_000)
+        .unwrap()
         .drain_lbtc_wallet()
         .drain_lbtc_to_explicit(&addr_explicit)
         .unwrap()

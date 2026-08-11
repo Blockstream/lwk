@@ -139,6 +139,13 @@ mod tests {
         let mut one = [0u8; 32];
         one[31] = 1;
         assert_eq!(above, one);
+
+        let mut max = [u8::MAX; 32];
+        reduce_mod_curve_order(&mut max);
+        assert_eq!(
+            hex::encode(max),
+            "000000000000000000000000000000014551231950b75fc4402da1732fc9bebe"
+        );
     }
 
     #[test]

@@ -1,10 +1,10 @@
-//! Host-side implementation of the ECDSA anti-exfil protocol.
+//! Temporary host-side implementation of the ECDSA anti-exfil protocol.
 //!
 //! The construction matches libsecp256k1-zkp's `ecdsa_s2c` module:
 //! <https://github.com/BlockstreamResearch/secp256k1-zkp/blob/master/include/secp256k1_ecdsa_s2c.h>
-
-// TODO: Replace this implementation with rust-secp256k1-zkp's ECDSA anti-exfil bindings once
-// available: https://github.com/BlockstreamResearch/rust-secp256k1-zkp/issues/100
+//!
+//! Replace this module with rust-secp256k1-zkp's ECDSA anti-exfil bindings once available:
+//! <https://github.com/BlockstreamResearch/rust-secp256k1-zkp/issues/100>
 
 use elements::{
     hashes::Hash,

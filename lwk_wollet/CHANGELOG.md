@@ -7,6 +7,7 @@
 * `Wollet::assets_owned()` returns all assets ever owned instead of only unspent ones.
 * `Contract` no longer contains public fields. To build a `Contract` for issuance, use `Contract::builder`.
 * Changed `TxBuilder::drain_lbtc_to()` to return a `Result` and validate the address network, rejecting non confidential addresses.
+* Add `TxBuilder::drain_lbtc_to_explicit()`, like `drain_lbtc_to()` but for a non-confidential (explicit) address.
 
 ## 0.18.0
 

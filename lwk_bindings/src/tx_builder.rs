@@ -84,6 +84,14 @@ impl TxBuilder {
         Ok(())
     }
 
+    /// Sets the (explicit, non-confidential) address to drain excess L-BTC to
+    pub fn drain_lbtc_to_explicit(&self, address: &Address) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.drain_lbtc_to_explicit(address.into())?);
+        Ok(())
+    }
+
     /// Add a recipient receiving L-BTC
     pub fn add_lbtc_recipient(&self, address: &Address, satoshi: u64) -> Result<(), LwkError> {
         let unvalidated_recipient = UnvalidatedRecipient::lbtc(address.to_string(), satoshi);

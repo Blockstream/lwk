@@ -1373,6 +1373,23 @@ fn drain() {
         assert!(tx.height.is_some());
         assert!(tx.timestamp.is_some());
     }
+
+    // Drain explicit
+    wallet.fund_explicit(&env, 10_000, None, None);
+    let mut addr_explicit = env.elementsd_getnewaddress();
+    addr_explicit.blinding_pubkey = None;
+    let mut pset = wallet
+        .tx_builder()
+        .drain_lbtc_wallet()
+        .drain_lbtc_to_explicit(addr_explicit)
+        .unwrap()
+        .finish()
+        .unwrap();
+    for signer in signers {
+        wallet.sign(signer, &mut pset);
+    }
+    wallet.send(&mut pset);
+    assert_eq!(wallet.wollet.explicit_utxos().unwrap().len(), 0);
 }
 
 fn wait_tx_update<C: BlockchainBackend>(wallet: &mut TestWollet<C>) {

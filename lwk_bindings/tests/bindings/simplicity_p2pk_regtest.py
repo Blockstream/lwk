@@ -60,7 +60,7 @@ send_amount = 50000
 builder = network.tx_builder()
 builder.add_external_utxos([external_utxo])
 builder.add_lbtc_recipient(recipient_address, send_amount)
-builder.drain_lbtc_to(simplicity_address)  # Change back to Simplicity address
+builder.drain_lbtc_to_explicit(simplicity_address)  # Change back to Simplicity address
 pset = builder.finish(wollet)
 
 # 9. Extract unsigned transaction and create signature

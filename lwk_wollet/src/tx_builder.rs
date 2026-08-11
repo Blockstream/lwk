@@ -8,7 +8,9 @@ use crate::{
     issuance::{IssuanceOutput, IssuanceRequest, Issuances, ReissuanceRequest, Reissuances},
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
-    pset_create::{validate_address, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS},
+    pset_create::{
+        validate_address, validate_address_explicit, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS,
+    },
     Contract, DownloadTxResult, Error, LiquidexProposal, Network, UnvalidatedRecipient, Update,
     WalletTxOut, Wollet, EC,
 };
@@ -542,6 +544,13 @@ impl TxBuilder {
     /// Sets the address to drain excess L-BTC to
     pub fn drain_lbtc_to(mut self, address: Address) -> Result<Self, Error> {
         validate_address(&address.to_string(), self.network())?;
+        self.drain_to = Some(address);
+        Ok(self)
+    }
+
+    /// Sets the (explicit, non-confidential) address to drain excess L-BTC to
+    pub fn drain_lbtc_to_explicit(mut self, address: Address) -> Result<Self, Error> {
+        validate_address_explicit(&address.to_string(), self.network())?;
         self.drain_to = Some(address);
         Ok(self)
     }
@@ -1887,6 +1896,14 @@ impl<'a> WolletTxBuilder<'a> {
         Ok(Self {
             wollet: self.wollet,
             inner: self.inner.drain_lbtc_to(address)?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::drain_lbtc_to_explicit()`]
+    pub fn drain_lbtc_to_explicit(self, address: Address) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.drain_lbtc_to_explicit(address)?,
         })
     }
 

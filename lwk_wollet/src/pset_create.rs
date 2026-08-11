@@ -212,6 +212,15 @@ pub(crate) fn validate_address(address: &str, network: Network) -> Result<Addres
     Ok(address)
 }
 
+pub(crate) fn validate_address_explicit(address: &str, network: Network) -> Result<Address, Error> {
+    let params = network.address_params();
+    let address = Address::parse_with_params(address, params)?;
+    if address.blinding_pubkey.is_some() {
+        return Err(Error::NotExplicitAddress);
+    };
+    Ok(address)
+}
+
 #[cfg(test)]
 mod test {
     use crate::{pset_create::validate_address, Network, Update, WolletBuilder, WolletDescriptor};
@@ -221,11 +230,22 @@ mod test {
     fn test_validate() {
         let testnet_address = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
         let network = Network::TestnetLiquid;
+        let mut explicit_address =
+            Address::parse_with_params(testnet_address, network.address_params()).unwrap();
+        explicit_address.blinding_pubkey = None;
+        let explicit_address = explicit_address.to_string();
+
         let addr = validate_address(testnet_address, network).unwrap();
         assert_eq!(addr.to_string(), testnet_address);
+        let explicit_addr = validate_address_explicit(&explicit_address, network).unwrap();
+        assert_eq!(explicit_addr.to_string(), explicit_address);
+
+        assert!(validate_address(&explicit_address, network).is_err());
+        assert!(validate_address_explicit(testnet_address, network).is_err());
 
         let network = Network::Liquid;
-        assert!(validate_address(testnet_address, network).is_err())
+        assert!(validate_address(testnet_address, network).is_err());
+        assert!(validate_address_explicit(&explicit_address, network).is_err());
     }
 
     #[test]

@@ -204,6 +204,7 @@ fn convert_pubkey(pk: crate::elements::secp256k1_zkp::PublicKey) -> BitcoinPubli
 }
 
 pub(crate) fn validate_address(address: &str, network: Network) -> Result<Address, Error> {
+    // We parse the address from str even if more inefficient to get the nicer AddressError from rust-elements
     let params = network.address_params();
     let address = Address::parse_with_params(address, params)?;
     if address.blinding_pubkey.is_none() {

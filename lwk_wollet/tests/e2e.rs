@@ -29,7 +29,7 @@ use elements::bitcoin::bip32::Xpub;
 use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
 use elements::encode::{deserialize, serialize};
 use elements::hex::{FromHex, ToHex};
-use elements::{OutPoint, Transaction};
+use elements::{Address, OutPoint, Transaction};
 use lwk_common::electrum_ssl::LIQUID_TESTNET_SOCKET;
 use lwk_common::Signer;
 use lwk_containers::testcontainers::clients::Cli;
@@ -1390,6 +1390,85 @@ fn drain() {
     }
     wallet.send(&mut pset);
     assert_eq!(wallet.wollet.explicit_utxos().unwrap().len(), 0);
+}
+
+#[test]
+fn tx_builder_rejects_wrong_network_address() {
+    let wd = WolletDescriptor::from_str(TEST_DESCRIPTOR).unwrap();
+    let network = Network::default_regtest();
+    let wollet = WolletBuilder::new(network, wd).build().unwrap();
+    let lbtc = network.policy_asset().clone();
+
+    let testnet_address = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
+    let confidential = Address::from_str(testnet_address).unwrap();
+    let mut explicit = confidential.clone();
+    explicit.blinding_pubkey = None;
+
+    let err = wollet
+        .tx_builder()
+        .add_recipient(&confidential, 1_000, lbtc)
+        .unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
+
+    let err = wollet
+        .tx_builder()
+        .add_lbtc_recipient(&confidential, 1_000)
+        .unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
+
+    let err = wollet
+        .tx_builder()
+        .add_explicit_recipient(&explicit, 1_000, lbtc)
+        .unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
+
+    let err = wollet
+        .tx_builder()
+        .drain_lbtc_to(confidential.clone())
+        .unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
+
+    let err = wollet
+        .tx_builder()
+        .drain_lbtc_to_explicit(explicit.clone())
+        .unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
+
+    let err = wollet
+        .tx_builder()
+        .liquidex_make(OutPoint::null(), &confidential, 1_000, lbtc)
+        .unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
+
+    let err = wollet
+        .tx_builder()
+        .issue_asset(1_000, Some(confidential.clone()), 0, None, None)
+        .unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
+
+    let err = wollet
+        .tx_builder()
+        .issue_asset(0, None, 1_000, Some(confidential.clone()), None)
+        .unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
+
+    let err = wollet
+        .tx_builder()
+        .reissue_asset(lbtc, 1_000, Some(confidential.clone()), None)
+        .unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
+
+    let request = IssuanceRequest::new(1_000, 0).add_asset_output(1_000, Some(confidential.clone()));
+    let err = wollet.tx_builder().add_issuance(request).unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
+
+    let request = IssuanceRequest::new(0, 1_000).add_token_output(1_000, Some(confidential.clone()));
+    let err = wollet.tx_builder().add_issuance(request).unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
+
+    let request = ReissuanceRequest::new(lbtc, 1_000).add_asset_output(1_000, Some(confidential));
+    let err = wollet.tx_builder().add_reissuance(request).unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
 }
 
 fn wait_tx_update<C: BlockchainBackend>(wallet: &mut TestWollet<C>) {

@@ -36,9 +36,9 @@ impl Jade {
             Vec::with_capacity(pset.inputs().len());
         let mut sighash_cache = SighashCache::new(Box::new(pset.extract_tx()?));
 
-        for i in 0..pset.inputs().len() {
+        for (i, input) in pset.inputs().iter().enumerate() {
             let (sign_info, params) =
-                prepare_input(pset, my_fingerprint, i, has_taproot, &mut sighash_cache)?;
+                prepare_input(input, my_fingerprint, i, has_taproot, &mut sighash_cache)?;
             let signer_commitment = self.tx_input(params)?.to_vec();
             signable_inputs.push((sign_info, signer_commitment));
         }

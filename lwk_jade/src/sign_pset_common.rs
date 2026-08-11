@@ -115,15 +115,12 @@ pub(crate) fn apply_sig(
 }
 
 pub(crate) fn prepare_input(
-    pset: &PartiallySignedTransaction,
+    input: &Input,
     my_fingerprint: Fingerprint,
     i: usize,
     signing_taproot: bool,
     sighash_cache: &mut SighashCache<Box<Transaction>>,
 ) -> Result<(Option<SignInfo>, TxInputParams), Error> {
-    let input = pset.inputs().get(i).ok_or_else(|| {
-        Error::Generic("expected input index to be within pset.inputs()".to_string())
-    })?;
     let is_taproot = input
         .witness_utxo
         .as_ref()
@@ -290,9 +287,13 @@ pub(crate) fn validate_signature(
             *sighash,
         )
         .map_err(|_| Error::SignatureValidationFailed(i)),
-        Some(SignInfo::Taproot) => SchnorrSignature::from_slice(signature)
-            .map(|_| ())
-            .map_err(|_| Error::SignatureValidationFailed(i)),
+        Some(SignInfo::Taproot) => {
+            // TODO: Verify the Schnorr signature against the Taproot key and sighash,
+            // even though Jade's anti-exfil protocol only covers ECDSA inputs.
+            SchnorrSignature::from_slice(signature)
+                .map(|_| ())
+                .map_err(|_| Error::SignatureValidationFailed(i))
+        }
         None if signature.is_empty() => Ok(()),
         None => Err(Error::SignatureValidationFailed(i)),
     }

@@ -1,10 +1,10 @@
-//! Host-side implementation of the ECDSA anti-exfil protocol.
+//! Temporary host-side implementation of the ECDSA anti-exfil protocol.
 //!
 //! The construction matches libsecp256k1-zkp's `ecdsa_s2c` module:
 //! <https://github.com/BlockstreamResearch/secp256k1-zkp/blob/master/include/secp256k1_ecdsa_s2c.h>
-
-// TODO: Replace this implementation with rust-secp256k1-zkp's ECDSA anti-exfil bindings once
-// available: https://github.com/BlockstreamResearch/rust-secp256k1-zkp/issues/100
+//!
+//! Replace this module with rust-secp256k1-zkp's ECDSA anti-exfil bindings once available:
+//! <https://github.com/BlockstreamResearch/rust-secp256k1-zkp/issues/100>
 
 use elements::{
     hashes::Hash,
@@ -111,6 +111,9 @@ mod tests {
 
     #[test]
     fn host_commitment_matches_libwally() {
+        // Generated with libwally-core's Python binding:
+        // wally.ae_host_commit_from_bytes(entropy, wally.EC_FLAG_ECDSA)
+        // https://github.com/ElementsProject/libwally-core/blob/3bf543cd06a67fdd877688a6304808f270351aee/src/pyexample/anti-exfil.py#L9-L10
         let entropy =
             hex::decode("3f5540b9336af9bdd50a5b7f69fc2045a12e3b3e0740f7461902d882bf8a8820")
                 .unwrap();
@@ -139,6 +142,46 @@ mod tests {
         let mut one = [0u8; 32];
         one[31] = 1;
         assert_eq!(above, one);
+
+        let mut max = [u8::MAX; 32];
+        reduce_mod_curve_order(&mut max);
+        assert_eq!(
+            hex::encode(max),
+            "000000000000000000000000000000014551231950b75fc4402da1732fc9bebe"
+        );
+    }
+
+    #[test]
+    fn valid_signature_is_accepted() {
+        // Generated with secp256k1-zkp 0.10.1's anti-exfil APIs using a 0x55 secret
+        // key, 0x88 message, and 0x42 host entropy.
+        let public_key = PublicKey::from_slice(
+            &hex::decode("029ac20335eb38768d2052be1dbbc3c8f6178407458e51e6b4ad22f1d91758895b")
+                .unwrap(),
+        )
+        .unwrap();
+        let message = Message::from_digest([0x88; 32]);
+        let host_entropy = [0x42; 32];
+        let signer_commitment =
+            hex::decode("03de63785e2b5f823b076935bd7877fd8f03f678b7ec42e14779c5e34a9a109a12")
+                .unwrap();
+        let signature = hex::decode(
+            "304402207ab9c455903c04a4ed018a2168020ba1d6013629dcdb626120511641ee0db33c02205339e6a49be83aeb4b27da51d712f1a74899e5435606a33b301e501d6bc064e601",
+        )
+        .unwrap();
+
+        assert_eq!(
+            verify(
+                &Secp256k1::verification_only(),
+                &public_key,
+                &message,
+                &host_entropy,
+                &signer_commitment,
+                &signature,
+                1,
+            ),
+            Ok(())
+        );
     }
 
     #[test]

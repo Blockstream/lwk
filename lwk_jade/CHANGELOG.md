@@ -4,6 +4,7 @@
 
 * `asyncr::Jade::stream` returns `&Mutex<S>` instead of `&S`.
 * PSET signatures produced through Jade's anti-exfil flow are now verified before being added.
+* PSET signing now honors requested ECDSA sighash types instead of always using `SIGHASH_ALL`.
 
 ## 0.18.0
 

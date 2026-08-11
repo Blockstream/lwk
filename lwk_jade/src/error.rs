@@ -65,6 +65,8 @@ pub enum Error {
     #[error("Failed to generate secure host entropy: {0}")]
     HostEntropy(#[from] rand::Error),
 
+    // Warning adapted from GDK's anti-exfil verification error:
+    // https://gl.blockstream.io/blockstream/green/gdk/-/blob/13edfdd10e98c3f446b11a36fcdd9ae93807f17b/src/ga_strings.cpp#L893-897
     #[error(
         "Signature validation failed for input {0}. If this error is unexpected and has happened repeatedly, it is possible the hardware wallet is faulty or has been compromised. It could be leaking your keys, which could lead to loss of funds. Please consider replacing the hardware wallet."
     )]

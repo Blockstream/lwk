@@ -1420,19 +1420,19 @@ fn tx_builder_rejects_wrong_network_address() {
         .tx_builder()
         .add_explicit_recipient(&explicit, 1_000, lbtc)
         .unwrap_err();
-    assert!(matches!(err, Error::AddressError(_)));
+    assert!(matches!(err, Error::InvalidNetwork));
 
     let err = wollet
         .tx_builder()
         .drain_lbtc_to(&confidential)
         .unwrap_err();
-    assert!(matches!(err, Error::AddressError(_)));
+    assert!(matches!(err, Error::InvalidNetwork));
 
     let err = wollet
         .tx_builder()
         .drain_lbtc_to_explicit(&explicit)
         .unwrap_err();
-    assert!(matches!(err, Error::AddressError(_)));
+    assert!(matches!(err, Error::InvalidNetwork));
 
     let err = wollet
         .tx_builder()
@@ -1444,33 +1444,33 @@ fn tx_builder_rejects_wrong_network_address() {
         .tx_builder()
         .issue_asset(1_000, Some(confidential.clone()), 0, None, None)
         .unwrap_err();
-    assert!(matches!(err, Error::AddressError(_)));
+    assert!(matches!(err, Error::InvalidNetwork));
 
     let err = wollet
         .tx_builder()
         .issue_asset(0, None, 1_000, Some(confidential.clone()), None)
         .unwrap_err();
-    assert!(matches!(err, Error::AddressError(_)));
+    assert!(matches!(err, Error::InvalidNetwork));
 
     let err = wollet
         .tx_builder()
         .reissue_asset(lbtc, 1_000, Some(confidential.clone()), None)
         .unwrap_err();
-    assert!(matches!(err, Error::AddressError(_)));
+    assert!(matches!(err, Error::InvalidNetwork));
 
     let request =
         IssuanceRequest::new(1_000, 0).add_asset_output(1_000, Some(confidential.clone()));
     let err = wollet.tx_builder().add_issuance(request).unwrap_err();
-    assert!(matches!(err, Error::AddressError(_)));
+    assert!(matches!(err, Error::InvalidNetwork));
 
     let request =
         IssuanceRequest::new(0, 1_000).add_token_output(1_000, Some(confidential.clone()));
     let err = wollet.tx_builder().add_issuance(request).unwrap_err();
-    assert!(matches!(err, Error::AddressError(_)));
+    assert!(matches!(err, Error::InvalidNetwork));
 
     let request = ReissuanceRequest::new(lbtc, 1_000).add_asset_output(1_000, Some(confidential));
     let err = wollet.tx_builder().add_reissuance(request).unwrap_err();
-    assert!(matches!(err, Error::AddressError(_)));
+    assert!(matches!(err, Error::InvalidNetwork));
 }
 
 fn wait_tx_update<C: BlockchainBackend>(wallet: &mut TestWollet<C>) {

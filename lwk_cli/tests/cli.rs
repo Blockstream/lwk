@@ -1598,7 +1598,7 @@ fn test_send_all() {
     let err = sh_err(&format!(
         "{cli} wallet drain -w w1 --address {testnet_addr}"
     ));
-    assert!(err.contains("base58 error: decode"));
+    assert!(err.contains("Invalid network"));
 
     let node_address = env.elementsd_getnewaddress();
     let r = sh(&format!(

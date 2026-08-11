@@ -105,24 +105,9 @@ fn reduce_mod_curve_order(value: &mut [u8; 32]) {
 
 #[cfg(test)]
 mod tests {
-    use elements::secp256k1_zkp::{Message, PublicKey, Secp256k1, SecretKey};
+    use elements::secp256k1_zkp::{Message, PublicKey, Secp256k1};
 
     use super::{host_commitment, reduce_mod_curve_order, verify, VerifyError, CURVE_ORDER};
-
-    #[test]
-    fn host_commitment_matches_libwally() {
-        // Generated with libwally-core's Python binding:
-        // wally.ae_host_commit_from_bytes(entropy, wally.EC_FLAG_ECDSA)
-        // https://github.com/ElementsProject/libwally-core/blob/3bf543cd06a67fdd877688a6304808f270351aee/src/pyexample/anti-exfil.py#L9-L10
-        let entropy =
-            hex::decode("3f5540b9336af9bdd50a5b7f69fc2045a12e3b3e0740f7461902d882bf8a8820")
-                .unwrap();
-        let entropy: [u8; 32] = entropy.try_into().unwrap();
-        assert_eq!(
-            hex::encode(host_commitment(&entropy)),
-            "7b61fad27ce2d95abca09f76bd7226e50212a8542f3ca274ee546cec4bc5c3bb"
-        );
-    }
 
     #[test]
     fn curve_order_reduction() {
@@ -152,23 +137,44 @@ mod tests {
     }
 
     #[test]
-    fn valid_signature_is_accepted() {
-        // Generated with secp256k1-zkp 0.10.1's anti-exfil APIs using a 0x55 secret
-        // key, 0x88 message, and 0x42 host entropy.
+    fn libwally_compatibility() {
+        // Generated with libwally-core's Python binding:
+        //
+        // import wallycore as wally
+        //
+        // entropy = wally.hex_to_bytes("11" * 32)
+        // priv_key = wally.hex_to_bytes("22" * 32)
+        // msg = wally.hex_to_bytes("33" * 32)
+        // flags = wally.EC_FLAG_ECDSA
+        //
+        // pub_key = wally.ec_public_key_from_private_key(priv_key)
+        // host_commitment = wally.ae_host_commit_from_bytes(entropy, flags)
+        // signer_commitment = wally.ae_signer_commit_from_bytes(
+        //     priv_key, msg, host_commitment, flags
+        // )
+        // sig = wally.ae_sig_from_bytes(priv_key, msg, entropy, flags)
+        // wally.ae_verify(pub_key, msg, entropy, signer_commitment, flags, sig)
+        // der_sig = wally.ec_sig_to_der(sig)
+        let host_entropy = [0x11; 32];
         let public_key = PublicKey::from_slice(
-            &hex::decode("029ac20335eb38768d2052be1dbbc3c8f6178407458e51e6b4ad22f1d91758895b")
+            &hex::decode("02466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f27")
                 .unwrap(),
         )
         .unwrap();
-        let message = Message::from_digest([0x88; 32]);
-        let host_entropy = [0x42; 32];
+        let message = Message::from_digest([0x33; 32]);
         let signer_commitment =
-            hex::decode("03de63785e2b5f823b076935bd7877fd8f03f678b7ec42e14779c5e34a9a109a12")
+            hex::decode("038e312c526bd1c2fa2cfe3b782f4cb1c6e6b9dc436236438aa2c543f6aee1a967")
                 .unwrap();
-        let signature = hex::decode(
-            "304402207ab9c455903c04a4ed018a2168020ba1d6013629dcdb626120511641ee0db33c02205339e6a49be83aeb4b27da51d712f1a74899e5435606a33b301e501d6bc064e601",
+        let mut signature = hex::decode(
+            "3045022100dfa7fbbfec43a7ded916639981615c11f5e0cf2755099eebb85c733252206e4f022033100dff275df0a9fc6020fa4d63491c8919a47f1b4903b2519dec88f77ae23d",
         )
         .unwrap();
+        signature.push(1);
+
+        assert_eq!(
+            hex::encode(host_commitment(&host_entropy)),
+            "e231c06f3039640f06dbbe754e1914e3dfdc73d4caefaa3f7b6b692e026a328a"
+        );
 
         assert_eq!(
             verify(
@@ -182,29 +188,34 @@ mod tests {
             ),
             Ok(())
         );
-    }
 
-    #[test]
-    fn malformed_responses_are_rejected() {
-        let secp = Secp256k1::new();
-        let secret_key = SecretKey::from_slice(&[1u8; 32]).unwrap();
-        let public_key = PublicKey::from_secret_key(&secp, &secret_key);
-        let message = Message::from_digest([2u8; 32]);
-        let entropy = [3u8; 32];
-
-        assert_eq!(
-            verify(&secp, &public_key, &message, &entropy, &[0u8; 32], &[], 1,),
-            Err(VerifyError::InvalidSignerCommitment)
-        );
+        let mut invalid_signer_commitment = signer_commitment.clone();
+        invalid_signer_commitment[0] = 0x04;
 
         assert_eq!(
             verify(
-                &secp,
+                &Secp256k1::verification_only(),
                 &public_key,
                 &message,
-                &entropy,
-                &public_key.serialize(),
-                &[],
+                &host_entropy,
+                &invalid_signer_commitment,
+                &signature,
+                1,
+            ),
+            Err(VerifyError::InvalidSignerCommitment)
+        );
+
+        let mut invalid_signature = signature.clone();
+        invalid_signature[0] = 0x31;
+
+        assert_eq!(
+            verify(
+                &Secp256k1::verification_only(),
+                &public_key,
+                &message,
+                &host_entropy,
+                &signer_commitment,
+                &invalid_signature,
                 1,
             ),
             Err(VerifyError::InvalidSignature)

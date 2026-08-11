@@ -48,7 +48,7 @@ fn validate_outputs(
             return Err(Error::InvalidAmount);
         }
         if let Some(address) = output.address.as_ref() {
-            validate_address(&address, network)?;
+            validate_address(address, network)?;
         }
         sum = sum
             .checked_add(output.satoshi)
@@ -331,7 +331,7 @@ impl TxBuilder {
         satoshi: u64,
         asset: AssetId,
     ) -> Result<Self, Error> {
-        validate_address_explicit(&address, self.network())?;
+        validate_address_explicit(address, self.network())?;
         self.recipients.push(Recipient {
             satoshi,
             script_pubkey: address.script_pubkey(),
@@ -548,7 +548,7 @@ impl TxBuilder {
 
     /// Sets the (explicit, non-confidential) address to drain excess L-BTC to
     pub fn drain_lbtc_to_explicit(mut self, address: &Address) -> Result<Self, Error> {
-        validate_address_explicit(&address, self.network())?;
+        validate_address_explicit(address, self.network())?;
         self.drain_to = Some(address.clone());
         Ok(self)
     }

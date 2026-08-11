@@ -1400,7 +1400,7 @@ fn tx_builder_rejects_wrong_network_address() {
     let wd = WolletDescriptor::from_str(TEST_DESCRIPTOR).unwrap();
     let network = Network::default_regtest();
     let wollet = WolletBuilder::new(network, wd).build().unwrap();
-    let lbtc = network.policy_asset().clone();
+    let lbtc = *network.policy_asset();
 
     let testnet_address = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
     let confidential = Address::from_str(testnet_address).unwrap();

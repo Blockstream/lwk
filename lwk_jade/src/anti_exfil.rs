@@ -138,6 +138,8 @@ mod tests {
 
     #[test]
     fn libwally_compatibility() {
+        let d = |s: &str| hex::decode(s).unwrap();
+
         // Generated with libwally-core's Python binding:
         //
         // import wallycore as wally
@@ -156,19 +158,16 @@ mod tests {
         // wally.ae_verify(pub_key, msg, entropy, signer_commitment, flags, sig)
         // der_sig = wally.ec_sig_to_der(sig)
         let host_entropy = [0x11; 32];
-        let public_key = PublicKey::from_slice(
-            &hex::decode("02466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f27")
-                .unwrap(),
-        )
+        let public_key = PublicKey::from_slice(&d(
+            "02466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f27",
+        ))
         .unwrap();
         let message = Message::from_digest([0x33; 32]);
         let signer_commitment =
-            hex::decode("038e312c526bd1c2fa2cfe3b782f4cb1c6e6b9dc436236438aa2c543f6aee1a967")
-                .unwrap();
-        let mut signature = hex::decode(
+            d("038e312c526bd1c2fa2cfe3b782f4cb1c6e6b9dc436236438aa2c543f6aee1a967");
+        let mut signature = d(
             "3045022100dfa7fbbfec43a7ded916639981615c11f5e0cf2755099eebb85c733252206e4f022033100dff275df0a9fc6020fa4d63491c8919a47f1b4903b2519dec88f77ae23d",
-        )
-        .unwrap();
+        );
         signature.push(1);
 
         assert_eq!(

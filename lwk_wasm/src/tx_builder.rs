@@ -63,13 +63,13 @@ impl TxBuilder {
 
     /// Sets the address to drain excess L-BTC to
     #[wasm_bindgen(js_name = drainLbtcTo)]
-    pub fn drain_lbtc_to(self, address: Address) -> Result<TxBuilder, Error> {
+    pub fn drain_lbtc_to(self, address: &Address) -> Result<TxBuilder, Error> {
         Ok(self.inner.drain_lbtc_to(&address.into())?.into())
     }
 
     /// Sets the (explicit, non-confidential) address to drain excess L-BTC to
     #[wasm_bindgen(js_name = drainLbtcToExplicit)]
-    pub fn drain_lbtc_to_explicit(self, address: Address) -> Result<TxBuilder, Error> {
+    pub fn drain_lbtc_to_explicit(self, address: &Address) -> Result<TxBuilder, Error> {
         Ok(self.inner.drain_lbtc_to_explicit(&address.into())?.into())
     }
 

@@ -67,6 +67,7 @@ impl lwk_common::Store for PanicStore {
 
 mod amp2;
 mod auth;
+mod elements_test_data;
 mod registry;
 mod test_env;
 mod waterfalls;
@@ -74,6 +75,7 @@ pub use auth::{
     AuthStack, AUTH_CLIENT_ID, AUTH_CLIENT_SECRET, AUTH_REALM, AUTH_SHORT_CLIENT_ID,
     AUTH_SHORT_CLIENT_SECRET, AUTH_USER_UUID,
 };
+pub use elements_test_data::ElementsTestData;
 pub use test_env::{TestEnv, TestEnvBuilder};
 
 const DEFAULT_FEE_RATE: f32 = 100.0;

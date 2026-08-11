@@ -25,6 +25,9 @@ mod pset;
 mod qr;
 mod segwit;
 mod signer;
+#[cfg(feature = "silentpayments")]
+#[cfg_attr(docsrs, doc(cfg(feature = "silentpayments")))]
+pub mod silentpayments;
 #[cfg(all(feature = "sqlite", not(target_arch = "wasm32")))]
 pub mod sqlite;
 mod store;

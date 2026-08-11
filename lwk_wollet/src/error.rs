@@ -122,6 +122,36 @@ pub enum Error {
         body: Option<String>,
     },
 
+    #[cfg(feature = "silentpayments")]
+    #[error(transparent)]
+    SilentPaymentAddress(#[from] crate::silentpayments::SilentPaymentAddressError),
+
+    #[cfg(feature = "silentpayments")]
+    #[error(transparent)]
+    SilentPaymentInput(#[from] crate::silentpayments::SilentPaymentInputError),
+
+    /// A silent payment recipient was added, but the PSET was finalized without
+    /// supplying the input private keys needed to derive the output.
+    #[cfg(feature = "silentpayments")]
+    #[error("transaction has {0} silent payment recipient(s): finish with `TxBuilder::finish_silent_payment()` (a watch-only wallet cannot derive silent payment outputs, they require the input private keys)")]
+    SilentPaymentRequiresKeys(usize),
+
+    /// A silent payment receive operation was attempted on a wallet built without
+    /// scan material. Detection needs `b_scan`, which a CT descriptor cannot express.
+    #[cfg(feature = "silentpayments")]
+    #[error("wallet has no silent payment scan material: build it with `WolletBuilder::with_silent_payment_material()`")]
+    MissingSilentPaymentKeys,
+
+    /// A silent payment scan was requested from a backend that cannot discover them.
+    ///
+    /// Silent payment outputs match no descriptor-derived script, so a backend whose
+    /// only query is script history cannot find them however many addresses it scans.
+    /// This is reported rather than silently skipped: a scan that quietly finds nothing
+    /// is indistinguishable from having received no payments.
+    #[cfg(feature = "silentpayments")]
+    #[error("this backend cannot discover silent payments (it can only query descriptor-derived script history, which never matches a silent payment output); use a backend with `Capability::SilentPayments`, such as `EsploraClient`")]
+    SilentPaymentsUnsupportedByBackend,
+
     #[error("Address must be explicit")]
     NotExplicitAddress,
 

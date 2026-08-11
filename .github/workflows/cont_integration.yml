@@ -24,6 +24,8 @@ jobs:
       - run: cargo build
       - run: cargo build --features serial
       - run: cargo test --lib  # integration tests requires binaries for the test env...
+      # `silentpayments` is opt-in, so the default build above never compiles it.
+      - run: cargo test --lib -p lwk_common -p lwk_signer -p lwk_wollet --features lwk_common/silentpayments,lwk_signer/silentpayments,lwk_wollet/silentpayments
 
   nix:
     runs-on: ubuntu-22.04

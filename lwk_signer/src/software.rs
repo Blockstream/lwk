@@ -53,6 +53,36 @@ pub enum SignError {
 
     #[error("BIP85 derivation failed: {0}")]
     Bip85Derivation(String),
+
+    /// Errors specific to silent-payment signing.
+    #[cfg(feature = "silentpayments")]
+    #[error("Invalid tweak: tweaked key is out of range (e.g. sums to zero)")]
+    InvalidTweak,
+
+    #[cfg(feature = "silentpayments")]
+    #[error("Taproot key-spend sighash requires every input's witness_utxo")]
+    MissingWitnessUtxo,
+
+    #[cfg(feature = "silentpayments")]
+    #[error(transparent)]
+    TaprootSighash(#[from] elements_miniscript::elements::sighash::Error),
+
+    #[cfg(feature = "silentpayments")]
+    #[error(transparent)]
+    Secp256k1(#[from] elements_miniscript::bitcoin::secp256k1::Error),
+
+    /// Invalid untrusted silent-payment PSET metadata.
+    #[cfg(feature = "silentpayments")]
+    #[error(transparent)]
+    SilentPaymentMeta(#[from] lwk_common::silentpayments::SilentPaymentPsetMetaError),
+
+    #[cfg(feature = "silentpayments")]
+    #[error("Silent payment input names an account whose B_spend this signer does not derive")]
+    SilentPaymentSpendPubkeyMismatch,
+
+    #[cfg(feature = "silentpayments")]
+    #[error("Silent payment tweak does not produce the Taproot output being spent")]
+    SilentPaymentOutputMismatch,
 }
 
 /// Possible errors when creating a new software signer [`SwSigner`]
@@ -417,6 +447,11 @@ impl Signer for SwSigner {
             }
         }
 
+        #[cfg(feature = "silentpayments")]
+        {
+            signature_added += self.sign_silent_payment_inputs(pset)?;
+        }
+
         Ok(signature_added)
     }
 
@@ -467,7 +502,8 @@ pub fn sign_with_seckey(
     let tx = pset.extract_tx()?;
     let mut sighash_cache = SighashCache::new(&tx);
     let mut signature_added = 0;
-    let genesis_hash = elements_miniscript::elements::BlockHash::all_zeros();
+    // Read the genesis hash from the PSET for ELIP-101 compatibility.
+    let genesis_hash = get_genesis_hash(pset);
     let mut messages = vec![];
     for i in 0..pset.inputs().len() {
         let msg = pset
@@ -583,6 +619,83 @@ mod tests {
 
         // result checked also with bitcoin-cli
         // bitcoin-cli verifymessage "1BZ9j3F7m4H1RPyeDp5iFwpR31SB6zrs19" "Hwlg40qLYZXEj9AoA3oZpfJMJPxaXzBL0+siHAJRhTIvSFiwSdtCsqxqB7TxgWfhqIr/YnGE4nagWzPchFJElTo=" 'Hello, world!'
+    }
+
+    /// ECDSA signing reads the genesis hash from the PSET.
+    #[test]
+    fn sign_with_seckey_uses_the_psets_genesis_hash() {
+        use elements_miniscript::elements::pset::{Input, Output, PsbtSighashType};
+        use elements_miniscript::elements::{
+            confidential::{Asset, Value},
+            AssetId, OutPoint, Script, TxOut, Txid,
+        };
+
+        let secp = Secp256k1::new();
+        let seckey = bitcoin::secp256k1::SecretKey::from_slice(&[0x42; 32]).unwrap();
+        let pk = bitcoin::key::PublicKey::new(seckey.public_key(&secp));
+
+        let build = |network: lwk_common::Network| {
+            let wpkh = elements_miniscript::elements::WPubkeyHash::from_slice(
+                pk.wpubkey_hash().unwrap().as_byte_array(),
+            )
+            .unwrap();
+            let txout = TxOut {
+                asset: Asset::Explicit(AssetId::from_slice(&[0x42; 32]).unwrap()),
+                value: Value::Explicit(100_000),
+                nonce: Default::default(),
+                script_pubkey: Script::new_v0_wpkh(&wpkh),
+                witness: Default::default(),
+            };
+
+            let mut input =
+                Input::from_prevout(OutPoint::new(Txid::from_slice(&[0x99; 32]).unwrap(), 0));
+            input.witness_utxo = Some(txout.clone());
+            input.sighash_type = Some(PsbtSighashType::from_u32(EcdsaSighashType::All as u32));
+            input
+                .bip32_derivation
+                .insert(pk, (Fingerprint::default(), DerivationPath::master()));
+
+            let mut pset = PartiallySignedTransaction::new_v2();
+            lwk_common::set_genesis_hash(&mut pset, &network);
+            pset.add_input(input);
+            pset.add_output(Output::from_txout(TxOut {
+                script_pubkey: Script::new(),
+                ..txout
+            }));
+            pset
+        };
+
+        let mut pset = build(lwk_common::Network::TestnetLiquid);
+        assert_eq!(sign_with_seckey(seckey, &mut pset).unwrap(), 1);
+
+        let genesis_hash = get_genesis_hash(&pset);
+        assert_ne!(
+            genesis_hash,
+            elements_miniscript::elements::BlockHash::all_zeros(),
+            "fixture must carry a real genesis hash, or this proves nothing"
+        );
+        let tx = pset.extract_tx().unwrap();
+        let mut cache = SighashCache::new(&tx);
+        let msg = pset
+            .sighash_msg(0, &mut cache, None, genesis_hash)
+            .unwrap()
+            .to_secp_msg();
+
+        let stored = pset.inputs()[0].partial_sigs.get(&pk).unwrap().clone();
+        let (_, der) = stored.split_last().unwrap();
+        let sig = bitcoin::secp256k1::ecdsa::Signature::from_der(der).unwrap();
+        secp.verify_ecdsa(&msg, &sig, &seckey.public_key(&secp))
+            .expect("signature must verify under the PSET's own genesis hash");
+
+        // BIP-143 does not commit to the genesis hash.
+        let mut mainnet = build(lwk_common::Network::Liquid);
+        assert_eq!(sign_with_seckey(seckey, &mut mainnet).unwrap(), 1);
+        assert_eq!(
+            pset.inputs()[0].partial_sigs.get(&pk).unwrap(),
+            mainnet.inputs()[0].partial_sigs.get(&pk).unwrap(),
+            "BIP-143 v0 sighashes do not commit to the genesis hash; if these now differ, \
+             a taproot signing path was added and needs its own genesis-hash coverage"
+        );
     }
 
     #[test]

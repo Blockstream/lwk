@@ -213,6 +213,181 @@ impl EsploraClient {
         }
     }
 
+    /// Fetch the full block at `height`.
+    #[cfg(feature = "silentpayments")]
+    async fn get_block_at(&self, height: Height) -> Result<elements::Block, Error> {
+        let block_height = format!("{}/block-height/{}", self.base_url, height);
+        let response = self.get_with_retry(&block_height).await?;
+        let block_hash = BlockHash::from_str(&response.text().await?)?;
+
+        let block_url = format!("{}/block/{}/raw", self.base_url, block_hash);
+        let response = self.get_with_retry(&block_url).await?;
+        Ok(elements::Block::consensus_decode(
+            &response.bytes().await?[..],
+        )?)
+    }
+
+    /// Computes block tweaks from Esplora block and transaction-listing data.
+    #[cfg(feature = "silentpayments")]
+    pub async fn silent_payment_tweaks(
+        &self,
+        height: Height,
+    ) -> Result<Vec<(Txid, crate::silentpayments::PartialTweak)>, Error> {
+        use crate::silentpayments::BlockTweaks;
+
+        let block = self.get_block_at(height).await?;
+        let tweaks = BlockTweaks::new(&block);
+
+        if tweaks.required_prevouts().is_empty() {
+            return Ok(tweaks.compute(&HashMap::new()));
+        }
+
+        let prevouts = self.block_prevout_scripts(&block).await?;
+        Ok(tweaks.compute(&prevouts))
+    }
+
+    /// Reads spent scripts from Esplora's paged transaction listing.
+    #[cfg(feature = "silentpayments")]
+    async fn block_prevout_scripts(
+        &self,
+        block: &elements::Block,
+    ) -> Result<HashMap<elements::OutPoint, Script>, Error> {
+        use super::block_prevouts::{BlockTxsPage, BLOCK_TXS_PAGE_SIZE};
+
+        let block_hash = block.block_hash();
+        let mut prevouts = HashMap::new();
+
+        let mut start = 0usize;
+        while start < block.txdata.len() {
+            let url = format!("{}/block/{}/txs/{}", self.base_url, block_hash, start);
+            let response = self.get_with_retry(&url).await?;
+            let page: BlockTxsPage = serde_json::from_str(&response.text().await?)
+                .map_err(|e| Error::Generic(format!("cannot parse block txs page: {e}")))?;
+
+            let seen = page.len();
+            page.collect_into(&mut prevouts);
+
+            // An empty page means the listing is exhausted; without this a server that
+            // disagrees with our page size would loop forever. Advance by what was
+            // actually returned rather than by the nominal page size, so a short page
+            // cannot cause transactions to be skipped.
+            if seen == 0 {
+                break;
+            }
+            start += seen;
+            if seen < BLOCK_TXS_PAGE_SIZE {
+                break;
+            }
+        }
+
+        Ok(prevouts)
+    }
+
+    /// Async twin of `BlockchainBackend::scan_silent_payments_for()`, run as part of
+    /// [`Self::full_scan_to_index()`].
+    ///
+    /// Returns `None` when discovery did not run — the wallet has no scan keys, or the
+    /// range is already covered — which must stay distinct from running and finding
+    /// nothing, since only the latter advances the scanned-to height.
+    #[cfg(feature = "silentpayments")]
+    async fn scan_silent_payments_for(
+        &self,
+        wollet: &Wollet,
+        tip: &elements::BlockHeader,
+        new_txs: &mut crate::update::DownloadTxResult,
+    ) -> Result<Option<crate::update::SilentPaymentsUpdate>, Error> {
+        use crate::silentpayments::{SilentPaymentSync, SilentPaymentTxScanner, CHANGE_LABEL};
+
+        let Some(material) = wollet.silent_payment_material().copied() else {
+            return Ok(None);
+        };
+
+        // Resume from where discovery reached, never from the wallet tip: the two
+        // advance for different reasons and starting from the tip would skip the blocks
+        // in between. On a wallet that has never scanned this is the configured
+        // birthday.
+        let from = {
+            use crate::wollet::WolletState;
+            wollet.silent_payments_scan_from()
+        };
+        if from > tip.height {
+            return Ok(None);
+        }
+
+        let sync = SilentPaymentSync::new(material).with_labels([CHANGE_LABEL]);
+
+        let mut tweaks = Vec::new();
+        for height in from..=tip.height {
+            tweaks.extend(self.silent_payment_tweaks(height).await?);
+        }
+        if tweaks.is_empty() {
+            return Ok(Some(crate::update::SilentPaymentsUpdate {
+                found: Vec::new(),
+                scanned_to: tip.height,
+            }));
+        }
+
+        // Narrow to the transactions that might pay us before downloading any of them.
+        let candidates = sync.candidate_scripts(&tweaks);
+        let scripts: Vec<Script> = candidates.keys().cloned().collect();
+        let script_refs: Vec<&Script> = scripts.iter().collect();
+        let histories = self.get_scripts_history(&script_refs).await?;
+        let seen: Vec<Script> = histories
+            .iter()
+            .zip(scripts.iter())
+            .filter(|(history, _)| !history.is_empty())
+            .map(|(_, script)| script.clone())
+            .collect();
+
+        let hits = sync.tweaks_to_scan(&tweaks, &seen);
+        if hits.is_empty() {
+            return Ok(Some(crate::update::SilentPaymentsUpdate {
+                found: Vec::new(),
+                scanned_to: tip.height,
+            }));
+        }
+
+        let txids: Vec<Txid> = hits.iter().map(|(txid, _)| *txid).collect();
+        let txs = self.get_transactions(&txids).await?;
+        // Pair by txid rather than by position: `get_transactions` promises no ordering,
+        // and scanning a transaction with another's tweak would find nothing at all.
+        let by_txid: HashMap<Txid, crate::silentpayments::PartialTweak> =
+            hits.into_iter().collect();
+
+        // Scan with the tweak discovery already computed — re-deriving it would need the
+        // prevout scripts, which this client does not have.
+        let scanner = SilentPaymentTxScanner::new(material).with_labels([CHANGE_LABEL]);
+        let mut found = Vec::new();
+        let mut matched = Vec::new();
+        for tx in txs {
+            let Some(tweak) = by_txid.get(&tx.txid()) else {
+                continue;
+            };
+            for utxo in scanner.scan_tx_with_tweak(&tx, tweak) {
+                found.push((utxo.cache_entry(), utxo.unblinded));
+            }
+            matched.push(tx);
+        }
+
+        // These transactions are not in the descriptor-derived history, so nothing else
+        // in this scan would add them, and without them the outputs have no confirmation
+        // height to hang off.
+        if !found.is_empty() {
+            let known: HashSet<Txid> = new_txs.txs.iter().map(|(txid, _)| *txid).collect();
+            for tx in matched {
+                let txid = tx.txid();
+                if !known.contains(&txid) {
+                    new_txs.txs.push((txid, tx));
+                }
+            }
+        }
+
+        Ok(Some(crate::update::SilentPaymentsUpdate {
+            found,
+            scanned_to: tip.height,
+        }))
+    }
+
     async fn get_scripts_history_esplora(
         &self,
         addresses: &[Address],
@@ -428,8 +603,17 @@ impl EsploraClient {
         };
 
         let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
-        let new_txs = self
+        #[cfg_attr(not(feature = "silentpayments"), allow(unused_mut))]
+        let mut new_txs = self
             .download_txs(&history_txs_id, &scripts, cache, &descriptor)
+            .await?;
+
+        // Discovered here for the same reason as in the blocking client: a silent
+        // payment is spendable wallet money, so a scan that skipped it would under-report
+        // the balance.
+        #[cfg(feature = "silentpayments")]
+        let silent_payments = self
+            .scan_silent_payments_for(wollet, &tip, &mut new_txs)
             .await?;
 
         let history_txs_heights_plus_tip: HashSet<Height> = txid_height
@@ -485,6 +669,9 @@ impl EsploraClient {
                 .collect();
 
             let update = Update {
+                #[cfg(feature = "silentpayments")]
+                version: if silent_payments.is_some() { 6 } else { 4 },
+                #[cfg(not(feature = "silentpayments"))]
                 version: 4,
                 wollet_status,
                 new_txs,
@@ -495,6 +682,8 @@ impl EsploraClient {
                 tip,
                 unspent,
                 last_unused,
+                #[cfg(feature = "silentpayments")]
+                silent_payments,
             };
             Ok(Some(update))
         } else {
@@ -936,11 +1125,16 @@ impl EsploraClient {
 
     #[allow(unused)]
     pub(crate) fn capabilities(&self) -> HashSet<Capability> {
+        let mut caps = HashSet::new();
         if self.waterfalls {
-            vec![Capability::Waterfalls].into_iter().collect()
-        } else {
-            HashSet::new()
+            caps.insert(Capability::Waterfalls);
         }
+        // Esplora exposes whole blocks and arbitrary transactions, which is everything
+        // needed to compute tweaks client-side. Unlike Electrum — whose protocol has no
+        // block-enumeration method — this needs no server extension.
+        #[cfg(feature = "silentpayments")]
+        caps.insert(Capability::SilentPayments);
+        caps
     }
 
     /// Return the number of network requests made by this client.

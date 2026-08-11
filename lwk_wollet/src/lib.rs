@@ -112,6 +112,9 @@ mod tx_details;
 mod pset_create;
 #[cfg(feature = "registry")]
 pub mod registry;
+#[cfg(feature = "silentpayments")]
+#[cfg_attr(docsrs, doc(cfg(feature = "silentpayments")))]
+pub mod silentpayments;
 mod tx_builder;
 mod update;
 mod util;
@@ -146,6 +149,10 @@ pub use crate::wollet::DirectoryIdHash;
 pub use crate::issuance::{IssuanceRequest, ReissuanceRequest};
 pub use crate::tx_builder::{BuiltTx, TxBuilder, WolletTxBuilder};
 pub use crate::update::{DownloadTxResult, Update};
+// The `Update::silent_payments` field is public, so its type must be nameable from
+// outside the crate — otherwise the field can be neither constructed nor matched.
+#[cfg(feature = "silentpayments")]
+pub use crate::update::SilentPaymentsUpdate;
 pub use crate::util::EC;
 pub use crate::wollet::{Tip, Wollet, WolletBuilder};
 pub use lwk_common::{

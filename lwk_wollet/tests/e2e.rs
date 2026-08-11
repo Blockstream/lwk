@@ -1381,7 +1381,7 @@ fn drain() {
     let mut pset = wallet
         .tx_builder()
         .drain_lbtc_wallet()
-        .drain_lbtc_to_explicit(addr_explicit)
+        .drain_lbtc_to_explicit(&addr_explicit)
         .unwrap()
         .finish()
         .unwrap();
@@ -1424,13 +1424,13 @@ fn tx_builder_rejects_wrong_network_address() {
 
     let err = wollet
         .tx_builder()
-        .drain_lbtc_to(confidential.clone())
+        .drain_lbtc_to(&confidential)
         .unwrap_err();
     assert!(matches!(err, Error::AddressError(_)));
 
     let err = wollet
         .tx_builder()
-        .drain_lbtc_to_explicit(explicit.clone())
+        .drain_lbtc_to_explicit(&explicit)
         .unwrap_err();
     assert!(matches!(err, Error::AddressError(_)));
 
@@ -1458,11 +1458,13 @@ fn tx_builder_rejects_wrong_network_address() {
         .unwrap_err();
     assert!(matches!(err, Error::AddressError(_)));
 
-    let request = IssuanceRequest::new(1_000, 0).add_asset_output(1_000, Some(confidential.clone()));
+    let request =
+        IssuanceRequest::new(1_000, 0).add_asset_output(1_000, Some(confidential.clone()));
     let err = wollet.tx_builder().add_issuance(request).unwrap_err();
     assert!(matches!(err, Error::AddressError(_)));
 
-    let request = IssuanceRequest::new(0, 1_000).add_token_output(1_000, Some(confidential.clone()));
+    let request =
+        IssuanceRequest::new(0, 1_000).add_token_output(1_000, Some(confidential.clone()));
     let err = wollet.tx_builder().add_issuance(request).unwrap_err();
     assert!(matches!(err, Error::AddressError(_)));
 
@@ -1830,7 +1832,7 @@ fn test_docs_external_utxo() -> Result<(), Box<dyn std::error::Error>> {
         .add_recipient(&node_address, 1, asset)?
         // Send LBTC back to external wollet
         .drain_lbtc_wallet()
-        .drain_lbtc_to(external_wollet_address)?
+        .drain_lbtc_to(&external_wollet_address)?
         .finish()?;
     // ANCHOR_END: external_utxo_add
     // ANCHOR: external_utxo_sign
@@ -1973,7 +1975,7 @@ fn test_unblinded_utxo() {
         .add_external_utxos(vec![external_utxo])
         .unwrap()
         .drain_lbtc_wallet()
-        .drain_lbtc_to(node_address)
+        .drain_lbtc_to(&node_address)
         .unwrap()
         .finish()
         .unwrap();
@@ -2004,7 +2006,7 @@ fn test_unblinded_utxo() {
         .add_external_utxos(vec![external_utxo])
         .unwrap()
         .drain_lbtc_wallet()
-        .drain_lbtc_to(node_address)
+        .drain_lbtc_to(&node_address)
         .unwrap()
         .finish()
         .unwrap();
@@ -2178,7 +2180,7 @@ fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
     let mut pset = wollet
         .tx_builder()
         .drain_lbtc_wallet()
-        .drain_lbtc_to(address.clone())?
+        .drain_lbtc_to(&address)?
         .finish()?;
     // ANCHOR_END: drain_lbtc_wallet
 
@@ -4177,7 +4179,7 @@ fn test_non_std_legacy_multisig() {
         .add_recipient(&recv_addr, satoshi, asset)
         .unwrap()
         .drain_lbtc_wallet()
-        .drain_lbtc_to(recv_addr)
+        .drain_lbtc_to(&recv_addr)
         .unwrap()
         .finish()
         .unwrap();
@@ -4598,7 +4600,7 @@ fn test_fee_service() {
         .unwrap()
         // Send all (change) LBTC to the Fee Service
         .drain_lbtc_wallet()
-        .drain_lbtc_to(addr_fs)
+        .drain_lbtc_to(&addr_fs)
         .unwrap()
         .finish()
         .unwrap();

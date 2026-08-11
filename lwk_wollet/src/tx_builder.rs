@@ -540,16 +540,16 @@ impl TxBuilder {
     }
 
     /// Sets the address to drain excess L-BTC to
-    pub fn drain_lbtc_to(mut self, address: Address) -> Result<Self, Error> {
+    pub fn drain_lbtc_to(mut self, address: &Address) -> Result<Self, Error> {
         validate_address(&address.to_string(), self.network())?;
-        self.drain_to = Some(address);
+        self.drain_to = Some(address.clone());
         Ok(self)
     }
 
     /// Sets the (explicit, non-confidential) address to drain excess L-BTC to
-    pub fn drain_lbtc_to_explicit(mut self, address: Address) -> Result<Self, Error> {
+    pub fn drain_lbtc_to_explicit(mut self, address: &Address) -> Result<Self, Error> {
         validate_address_explicit(&address.to_string(), self.network())?;
-        self.drain_to = Some(address);
+        self.drain_to = Some(address.clone());
         Ok(self)
     }
 
@@ -1890,7 +1890,7 @@ impl<'a> WolletTxBuilder<'a> {
     }
 
     /// Wrapper of [`TxBuilder::drain_lbtc_to()`]
-    pub fn drain_lbtc_to(self, address: Address) -> Result<Self, Error> {
+    pub fn drain_lbtc_to(self, address: &Address) -> Result<Self, Error> {
         Ok(Self {
             wollet: self.wollet,
             inner: self.inner.drain_lbtc_to(address)?,
@@ -1898,7 +1898,7 @@ impl<'a> WolletTxBuilder<'a> {
     }
 
     /// Wrapper of [`TxBuilder::drain_lbtc_to_explicit()`]
-    pub fn drain_lbtc_to_explicit(self, address: Address) -> Result<Self, Error> {
+    pub fn drain_lbtc_to_explicit(self, address: &Address) -> Result<Self, Error> {
         Ok(Self {
             wollet: self.wollet,
             inner: self.inner.drain_lbtc_to_explicit(address)?,

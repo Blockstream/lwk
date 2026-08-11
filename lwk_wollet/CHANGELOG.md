@@ -6,7 +6,7 @@
 * Add the `electrum_oidc` feature: `TokenProvider::Blockstream` support for `ElectrumClient` (automatic OAuth2 token fetch, plus invalidate and retry once when the server denies a call with an authentication error). Not available on wasm.
 * `Wollet::assets_owned()` returns all assets ever owned instead of only unspent ones.
 * `Contract` no longer contains public fields. To build a `Contract` for issuance, use `Contract::builder`.
-* Changed `TxBuilder::drain_lbtc_to()` to return a `Result` and validate the address network, rejecting non confidential addresses.
+* Changed `TxBuilder::drain_lbtc_to()` to take `&Address`, return a `Result`, and validate the address network, rejecting non confidential addresses.
 * Add `TxBuilder::drain_lbtc_to_explicit()`, like `drain_lbtc_to()` but for a non-confidential (explicit) address.
 * `TxBuilder::add_explicit_recipient()` now validates the address network.
 

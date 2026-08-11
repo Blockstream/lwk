@@ -434,7 +434,7 @@ fn large_pset_sign_psbt() {
     let mut pset = wallet
         .tx_builder()
         .drain_lbtc_wallet()
-        .drain_lbtc_to(node_address)
+        .drain_lbtc_to(&node_address)
         .unwrap()
         .finish()
         .unwrap();

@@ -435,6 +435,7 @@ fn large_pset_sign_psbt() {
         .tx_builder()
         .drain_lbtc_wallet()
         .drain_lbtc_to(node_address)
+        .unwrap()
         .finish()
         .unwrap();
 

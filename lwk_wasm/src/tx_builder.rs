@@ -62,9 +62,11 @@ impl TxBuilder {
     }
 
     /// Sets the address to drain excess L-BTC to
+    ///
+    /// Errors if address's network is incompatible
     #[wasm_bindgen(js_name = drainLbtcTo)]
-    pub fn drain_lbtc_to(self, address: Address) -> TxBuilder {
-        self.inner.drain_lbtc_to(address.into()).into()
+    pub fn drain_lbtc_to(self, address: Address) -> Result<TxBuilder, Error> {
+        Ok(self.inner.drain_lbtc_to(address.into())?.into())
     }
 
     /// Add a recipient receiving L-BTC

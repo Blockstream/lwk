@@ -43,6 +43,7 @@ fn test_assets_owned() {
         .add_recipient(&external_address, 10_000, asset_id)
         .unwrap()
         .drain_lbtc_to(external_address)
+        .unwrap()
         .add_external_utxos(explicit_utxos)
         .unwrap()
         .finish()

@@ -616,7 +616,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let built_tx = wollet
                 .tx_builder()
                 .drain_lbtc_wallet()
-                .drain_lbtc_to(address)
+                .drain_lbtc_to(address)?
                 .fee_rate(r.fee_rate)
                 .build()?;
             if with_experimental_blinders {

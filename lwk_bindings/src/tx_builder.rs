@@ -80,7 +80,7 @@ impl TxBuilder {
     pub fn drain_lbtc_to(&self, address: &Address) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
-        *lock = Some(inner.drain_lbtc_to(address.into()));
+        *lock = Some(inner.drain_lbtc_to(address.into())?);
         Ok(())
     }
 

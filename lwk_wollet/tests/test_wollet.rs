@@ -336,6 +336,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
             .tx_builder()
             .drain_lbtc_wallet()
             .drain_lbtc_to(address)
+            .unwrap()
             .fee_rate(fee_rate)
             .finish()
             .unwrap();

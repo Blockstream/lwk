@@ -111,6 +111,9 @@ mod tests {
 
     #[test]
     fn host_commitment_matches_libwally() {
+        // Generated with libwally-core's Python binding:
+        // wally.ae_host_commit_from_bytes(entropy, wally.EC_FLAG_ECDSA)
+        // https://github.com/ElementsProject/libwally-core/blob/3bf543cd06a67fdd877688a6304808f270351aee/src/pyexample/anti-exfil.py#L9-L10
         let entropy =
             hex::decode("3f5540b9336af9bdd50a5b7f69fc2045a12e3b3e0740f7461902d882bf8a8820")
                 .unwrap();

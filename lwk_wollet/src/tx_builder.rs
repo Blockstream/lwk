@@ -331,9 +331,7 @@ impl TxBuilder {
         satoshi: u64,
         asset: AssetId,
     ) -> Result<Self, Error> {
-        if address.blinding_pubkey.is_some() {
-            return Err(Error::NotExplicitAddress);
-        }
+        validate_address_explicit(&address.to_string(), self.network())?;
         self.recipients.push(Recipient {
             satoshi,
             script_pubkey: address.script_pubkey(),

@@ -287,9 +287,13 @@ pub(crate) fn validate_signature(
             *sighash,
         )
         .map_err(|_| Error::SignatureValidationFailed(i)),
-        Some(SignInfo::Taproot) => SchnorrSignature::from_slice(signature)
-            .map(|_| ())
-            .map_err(|_| Error::SignatureValidationFailed(i)),
+        Some(SignInfo::Taproot) => {
+            // TODO: Verify the Schnorr signature against the Taproot key and sighash,
+            // even though Jade's anti-exfil protocol only covers ECDSA inputs.
+            SchnorrSignature::from_slice(signature)
+                .map(|_| ())
+                .map_err(|_| Error::SignatureValidationFailed(i))
+        }
         None if signature.is_empty() => Ok(()),
         None => Err(Error::SignatureValidationFailed(i)),
     }

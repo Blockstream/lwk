@@ -415,6 +415,25 @@ pub fn pset_signatures(pset: &PartiallySignedTransaction) -> Vec<PsetSignatures>
         .collect()
 }
 
+/// Return the sighash declared by an input, the default implied by the spent output script, or `None` if the spent output is unknown.
+pub fn input_sighash(input: &elements::pset::Input) -> Option<u32> {
+    if let Some(sighash) = input.sighash_type {
+        return Some(sighash.to_u32());
+    }
+
+    let script_pubkey = if let Some(prevout) = input.witness_utxo.as_ref() {
+        Some(&prevout.script_pubkey)
+    } else if let Some(tx) = input.non_witness_utxo.as_ref() {
+        tx.output
+            .get(input.previous_output_index as usize)
+            .map(|o| &o.script_pubkey)
+    } else {
+        None
+    };
+
+    script_pubkey.map(|s| if s.is_v1_p2tr() { 0 } else { 1 })
+}
+
 /// Return the issuances of a PSET, for each input return an Issuance but the struct must be checked with [`Issuance::is_issuance`] if it's a real issuance or reissuance.
 pub fn pset_issuances(pset: &PartiallySignedTransaction) -> Vec<Issuance> {
     pset.inputs().iter().map(Issuance::new).collect()

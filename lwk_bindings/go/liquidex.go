@@ -129,7 +129,8 @@ func main() {
 	}
 
 	inputs := pset.Inputs()
-	if inputs[0].Sighash() != 131 { // ANCHOR: ignore
+	sighash := inputs[0].Sighash()         // ANCHOR: ignore
+	if sighash == nil || *sighash != 131 { // ANCHOR: ignore
 		panic("expected sighash 131") // ANCHOR: ignore
 	} // ANCHOR: ignore
 
@@ -198,7 +199,8 @@ func main() {
 	}
 
 	inputs2 := pset2.Inputs()
-	if inputs2[1].Sighash() != 1 { // ANCHOR: ignore
+	sighash2 := inputs2[1].Sighash()       // ANCHOR: ignore
+	if sighash2 == nil || *sighash2 != 1 { // ANCHOR: ignore
 		panic("expected sighash 1") // ANCHOR: ignore
 	} // ANCHOR: ignore
 

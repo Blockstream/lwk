@@ -13,14 +13,9 @@ use crate::{pset_balance, pset_issuances, pset_signatures, Error, Network, Signe
 /// The details regarding balance and amounts in a PSET
 #[derive(Debug, Clone)]
 pub struct PsetBalance {
-    /// The fees of the transaction in the PSET
-    pub fees: HashMap<AssetId, u64>,
-
-    /// The net balance of the assets in the PSET from the point of view of the wallet
-    pub balances: SignedBalance,
-
-    /// Outputs going out of the wallet
-    pub recipients: Vec<Recipient>,
+    fees: HashMap<AssetId, u64>,
+    balances: SignedBalance,
+    recipients: Vec<Recipient>,
 }
 
 impl PsetBalance {
@@ -61,21 +56,10 @@ impl PsetBalance {
 /// The recipient (an output not belonging to the wallet) in a PSET
 #[derive(Debug, Clone)]
 pub struct Recipient {
-    /// The confidential address of the recipients.
-    ///
-    /// Can be None in the following cases:
-    ///  - if no blinding key is available in the PSET, FIXME?
-    ///  - if the script is not a known template
-    pub address: Option<elements::Address>,
-
-    /// The asset sent to this recipient if it's available to extract from the PSET
-    pub asset: Option<AssetId>,
-
-    /// The value sent to this recipient if it's available to extract from the PSET
-    pub value: Option<u64>,
-
-    /// The index of the output in the transaction
-    pub vout: u32,
+    address: Option<elements::Address>,
+    asset: Option<AssetId>,
+    value: Option<u64>,
+    vout: u32,
 }
 
 impl Recipient {
@@ -122,11 +106,8 @@ impl Recipient {
 /// The details of the signatures in a PSET
 #[derive(Debug, Clone)]
 pub struct PsetSignatures {
-    /// The signatures that are available
-    pub has_signature: Vec<(PublicKey, KeySource)>,
-
-    /// The signatures that are missing
-    pub missing_signature: Vec<(PublicKey, KeySource)>,
+    has_signature: Vec<(PublicKey, KeySource)>,
+    missing_signature: Vec<(PublicKey, KeySource)>,
 }
 
 impl PsetSignatures {
@@ -235,14 +216,9 @@ impl Issuance {
 /// - for issuances and reissuances transactions contains the issuance or reissuance details
 #[derive(Debug, Clone)]
 pub struct PsetDetails {
-    /// The net balance of the PSET from the point of view of the wallet
-    pub balance: PsetBalance,
-
-    /// For each input, existing or missing signatures
-    pub sig_details: Vec<PsetSignatures>,
-
-    /// For each input, the corresponding issuance
-    pub issuances: Vec<Issuance>,
+    balance: PsetBalance,
+    sig_details: Vec<PsetSignatures>,
+    issuances: Vec<Issuance>,
 }
 
 impl PsetDetails {

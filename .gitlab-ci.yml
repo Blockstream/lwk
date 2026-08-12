@@ -257,9 +257,20 @@ unit_tests:
   script:
     - cargo nextest run --lib --profile unit # ensure unit tests don't take more than a sec each
 
+unit_tests_coverage:
+  stage: test
+  needs: []
+  extends:
+    - .base
+    - .coverage_mixin
+  script:
+    - cargo nextest run --lib
+
 coverage_report:
   stage: coverage
   needs:
+    - job: unit_tests_coverage
+      artifacts: true
     - job: test_wollet
       artifacts: true
     - job: test_jade

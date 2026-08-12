@@ -82,7 +82,7 @@ impl Default for ConfigBuilder {
 #[cfg(test)]
 mod tests {
     use super::{Config, ConfigBuilder};
-    use std::{num::NonZeroU8};
+    use std::num::NonZeroU8;
     use tiny_http::Header;
 
     #[test]

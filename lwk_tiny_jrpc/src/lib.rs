@@ -28,6 +28,12 @@ pub mod error;
 // re-export
 pub use tiny_http;
 
+/// Maximum accepted size, in bytes, of a JSON-RPC request body.
+///
+/// Bounds worst-case memory use per request; requests over this size are rejected with a 413
+/// before (or, if the `Content-Length` header is absent or understated, while) the body is read.
+const MAX_REQUEST_BODY_BYTES: usize = 16 * 1024 * 1024;
+
 pub struct JsonRpcServer {
     server: Arc<Server>,
     handles: Vec<JoinHandle<Result<(), Error>>>,
@@ -171,6 +177,15 @@ impl JsonRpcServer {
                         tiny_http::Method::Post => {
                             // validate/parse the jsonrpc POST request
                             let result = validate_jsonrpc_request(&mut http_request, &config);
+                            if let Err(InnerError::PayloadTooLarge) = result {
+                                let message = format!(
+                                    "413: Payload too large (max {MAX_REQUEST_BODY_BYTES} bytes)"
+                                );
+                                let response =
+                                    HttpResponse::from_string(&message).with_status_code(413);
+                                send_http_response(http_request, response, &message);
+                                continue;
+                            }
                             let response = match result {
                                 Ok(request) => {
                                     // handle the request
@@ -306,9 +321,24 @@ fn validate_jsonrpc_request(
         return Err(InnerError::WrongContentType);
     }
 
+    // reject requests whose advertised size already exceeds the limit
+    if let Some(len) = http_request.body_length() {
+        if len > MAX_REQUEST_BODY_BYTES {
+            return Err(InnerError::PayloadTooLarge);
+        }
+    }
+
     // parse json into request
     let mut s = String::new(); // todo: performance
-    http_request.as_reader().read_to_string(&mut s)?;
+
+    // bound the actual bytes read too, in case Content-Length is missing or understated
+    let mut limited_reader = http_request
+        .as_reader()
+        .take(MAX_REQUEST_BODY_BYTES as u64 + 1);
+    limited_reader.read_to_string(&mut s)?;
+    if s.len() > MAX_REQUEST_BODY_BYTES {
+        return Err(InnerError::PayloadTooLarge);
+    }
 
     let request: Request = serde_json::from_str(&s)?;
 

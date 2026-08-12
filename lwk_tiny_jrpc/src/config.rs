@@ -53,11 +53,6 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn with_serve_dir(mut self, dir: Option<PathBuf>) -> Self {
-        self.serve_dir = dir;
-        self
-    }
-
     pub fn with_expected_auth_header(mut self, expected_auth_header: Option<String>) -> Self {
         self.expected_auth_header = expected_auth_header;
         self
@@ -87,7 +82,7 @@ impl Default for ConfigBuilder {
 #[cfg(test)]
 mod tests {
     use super::{Config, ConfigBuilder};
-    use std::{num::NonZeroU8, path::PathBuf};
+    use std::{num::NonZeroU8};
     use tiny_http::Header;
 
     #[test]
@@ -104,18 +99,16 @@ mod tests {
     }
 
     #[test]
-    fn config_builder_applies_headers_and_serve_dir() {
+    fn config_builder_applies_headers() {
         let headers = vec![
             Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..]).unwrap(),
             Header::from_bytes(&b"X-Test-Header"[..], &b"lwk"[..]).unwrap(),
         ];
-        let serve_dir = Some(PathBuf::from("public"));
         let num_threads = NonZeroU8::new(2).expect("non-zero");
 
         let config = ConfigBuilder::new()
             .with_headers(headers)
             .with_num_threads(num_threads)
-            .with_serve_dir(serve_dir.clone())
             .build();
 
         assert_eq!(config.headers.len(), 2);
@@ -125,6 +118,6 @@ mod tests {
         );
         assert_eq!(config.headers[1].to_string(), "X-Test-Header: lwk");
         assert_eq!(config.num_threads, num_threads);
-        assert_eq!(config.serve_dir, serve_dir);
+        assert_eq!(config.serve_dir, None);
     }
 }

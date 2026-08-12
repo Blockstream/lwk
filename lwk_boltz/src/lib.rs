@@ -235,6 +235,7 @@ impl BoltzSession {
         #[cfg(not(feature = "blocking"))]
         let chain_client = Arc::new(ChainClient::new().with_liquid(client));
 
+        let store_api_url = store_api_url(network, api_url.as_deref());
         let api_url = api_url.unwrap_or_else(|| boltz_default_url(network).to_string());
         let api = Arc::new(BoltzApiClientV2::new(api_url.clone(), timeout));
         let config = BoltzWsConfig::default();
@@ -256,8 +257,8 @@ impl BoltzSession {
             None => 0,
         };
 
-        // Wrap the user provided store in EncryptedStore to encrypt values and keys
-        let store = store.map(|s| store::encrypted_store_from_xpub(s, &xpub));
+        // Encrypt store values and keys, namespacing custom providers by their API URL.
+        let store = store.map(|s| store::session_store_from_xpub(s, &xpub, store_api_url));
 
         Ok(Self {
             next_index_to_use: AtomicU32::new(next_index_to_use),
@@ -691,10 +692,8 @@ impl BoltzSessionBuilder {
     /// It is the caller responsibility to ensure the provider behind this URL matches the
     /// [`Network`] used to build the session.
     ///
-    /// If a custom provider URL is used together with [`BoltzSessionBuilder::store`], the caller
-    /// must use a different store per provider. Persisted swap data is not namespaced by provider,
-    /// so reusing the same store across different `api_url` values can mix swaps from different
-    /// providers.
+    /// When used together with [`BoltzSessionBuilder::store`], a custom provider URL namespaces
+    /// persisted swap data so that a store can be safely shared by different providers.
     pub fn api_url(mut self, api_url: String) -> Self {
         self.api_url = Some(api_url);
         self
@@ -725,10 +724,9 @@ impl BoltzSessionBuilder {
     /// When set, swap data will be automatically persisted to the store after creation
     /// and on each state change. This enables automatic restoration of pending swaps.
     ///
-    /// The store uses keys prefixed with `boltz:` to avoid collisions with other users.
-    /// The store is not namespaced by provider, so if different `api_url` values are used the
-    /// caller must use a different store per provider to avoid mixing swaps from different
-    /// providers.
+    /// The store uses keys prefixed with `boltz:` to avoid collisions with other users. Custom
+    /// provider URLs namespace these keys, while the default provider keeps the existing key
+    /// format for backwards compatibility.
     ///
     /// See [`store_keys`] for the key format.
     pub fn store(mut self, store: Arc<dyn DynStore>) -> Self {
@@ -838,6 +836,13 @@ pub fn boltz_default_url(network: Network) -> &'static str {
         Network::TestnetLiquid => BOLTZ_TESTNET_URL_V2,
         Network::CustomElements(_) => BOLTZ_REGTEST,
     }
+}
+
+fn store_api_url(network: Network, api_url: Option<&str>) -> Option<String> {
+    api_url
+        .map(|url| url.trim_end_matches('/'))
+        .filter(|url| *url != boltz_default_url(network).trim_end_matches('/'))
+        .map(str::to_string)
 }
 
 fn boltz_ws_url(api_url: &str) -> Result<String, Error> {
@@ -1211,6 +1216,21 @@ mod tests {
             "ws://localhost:9001/v2/ws"
         );
         assert!(crate::boltz_ws_url("api.middle-way.space/v2").is_err());
+    }
+
+    #[test]
+    fn test_store_api_url_omits_default_and_normalizes_custom_url() {
+        let network = lwk_common::Network::Liquid;
+
+        assert_eq!(crate::store_api_url(network, None), None);
+        assert_eq!(
+            crate::store_api_url(network, Some(crate::boltz_default_url(network))),
+            None
+        );
+        assert_eq!(
+            crate::store_api_url(network, Some("https://provider.example/v2/")),
+            Some("https://provider.example/v2".to_string())
+        );
     }
 
     #[test]

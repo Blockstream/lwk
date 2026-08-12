@@ -201,11 +201,21 @@ pub struct HandshakeComplete {
     pub ske: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct DebugSetMnemonicParams {
     pub mnemonic: String,
     pub passphrase: Option<String>,
     pub temporary_wallet: bool,
+}
+
+impl Debug for DebugSetMnemonicParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DebugSetMnemonicParams")
+            .field("mnemonic", &"<redacted>")
+            .field("passphrase", &"<redacted>")
+            .field("temporary_wallet", &self.temporary_wallet)
+            .finish()
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -355,7 +365,22 @@ pub struct GetMasterBlindingKeyParams {
 
 #[cfg(test)]
 mod test {
-    use crate::protocol::select_url;
+    use crate::protocol::{select_url, DebugSetMnemonicParams};
+
+    #[test]
+    fn debug_set_mnemonic_redacts_secrets() {
+        let params = DebugSetMnemonicParams {
+            mnemonic: "abandon abandon abandon".to_owned(),
+            passphrase: Some("secret passphrase".to_owned()),
+            temporary_wallet: true,
+        };
+
+        let debug = format!("{params:?}");
+        assert_eq!(
+            debug,
+            "DebugSetMnemonicParams { mnemonic: \"<redacted>\", passphrase: \"<redacted>\", temporary_wallet: true }"
+        );
+    }
 
     #[test]
     fn serialize_empty() {

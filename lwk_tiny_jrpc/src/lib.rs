@@ -112,10 +112,13 @@ impl JsonRpcServer {
                                 continue;
                             };
                             // remove starting slash
-                            let file_name = http_request
-                                .url()
-                                .strip_prefix('/')
-                                .expect("url starts with slash");
+                            let Some(file_name) = http_request.url().strip_prefix('/') else {
+                                let message = "400: Bad request - URL must start with '/'";
+                                let response =
+                                    HttpResponse::from_string(message).with_status_code(400);
+                                send_http_response(http_request, response, message);
+                                continue;
+                            };
                             path.push(file_name);
                             // add index.html to directories
                             if path.is_dir() {

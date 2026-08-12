@@ -203,13 +203,31 @@ fn convert_pubkey(pk: crate::elements::secp256k1_zkp::PublicKey) -> BitcoinPubli
     BitcoinPublicKey::new(pk)
 }
 
-pub(crate) fn validate_address(address: &str, network: Network) -> Result<Address, Error> {
+pub(crate) fn validate_address_str(address: &str, network: Network) -> Result<Address, Error> {
     let params = network.address_params();
     let address = Address::parse_with_params(address, params)?;
+    validate_address(&address, network)?;
+    Ok(address)
+}
+
+pub(crate) fn validate_address(address: &Address, network: Network) -> Result<(), Error> {
+    if address.params != network.address_params() {
+        return Err(Error::InvalidNetwork);
+    }
     if address.blinding_pubkey.is_none() {
         return Err(Error::NotConfidentialAddress);
     };
-    Ok(address)
+    Ok(())
+}
+
+pub(crate) fn validate_address_explicit(address: &Address, network: Network) -> Result<(), Error> {
+    if address.params != network.address_params() {
+        return Err(Error::InvalidNetwork);
+    }
+    if address.blinding_pubkey.is_some() {
+        return Err(Error::NotExplicitAddress);
+    };
+    Ok(())
 }
 
 #[cfg(test)]
@@ -219,13 +237,27 @@ mod test {
     use super::*;
     #[test]
     fn test_validate() {
-        let testnet_address = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
+        let addr_str = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
         let network = Network::TestnetLiquid;
-        let addr = validate_address(testnet_address, network).unwrap();
-        assert_eq!(addr.to_string(), testnet_address);
+        let addr = Address::parse_with_params(addr_str, network.address_params()).unwrap();
+        let mut explicit_addr = addr.clone();
+        explicit_addr.blinding_pubkey = None;
+
+        assert_eq!(
+            validate_address_str(addr_str, network).unwrap().to_string(),
+            addr_str
+        );
+        validate_address(&addr, network).unwrap();
+        validate_address_explicit(&explicit_addr, network).unwrap();
+
+        assert!(validate_address_str(&explicit_addr.to_string(), network).is_err());
+        assert!(validate_address(&explicit_addr, network).is_err());
+        assert!(validate_address_explicit(&addr, network).is_err());
 
         let network = Network::Liquid;
-        assert!(validate_address(testnet_address, network).is_err())
+        assert!(validate_address_str(addr_str, network).is_err());
+        assert!(validate_address(&addr, network).is_err());
+        assert!(validate_address_explicit(&explicit_addr, network).is_err());
     }
 
     #[test]

@@ -8,7 +8,9 @@ use crate::{
     issuance::{IssuanceOutput, IssuanceRequest, Issuances, ReissuanceRequest, Reissuances},
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
-    pset_create::{validate_address, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS},
+    pset_create::{
+        validate_address, validate_address_explicit, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS,
+    },
     Contract, DownloadTxResult, Error, LiquidexProposal, Network, UnvalidatedRecipient, Update,
     WalletTxOut, Wollet, EC,
 };
@@ -46,7 +48,7 @@ fn validate_outputs(
             return Err(Error::InvalidAmount);
         }
         if let Some(address) = output.address.as_ref() {
-            validate_address(&address.to_string(), network)?;
+            validate_address(address, network)?;
         }
         sum = sum
             .checked_add(output.satoshi)
@@ -329,9 +331,7 @@ impl TxBuilder {
         satoshi: u64,
         asset: AssetId,
     ) -> Result<Self, Error> {
-        if address.blinding_pubkey.is_some() {
-            return Err(Error::NotExplicitAddress);
-        }
+        validate_address_explicit(address, self.network())?;
         self.recipients.push(Recipient {
             satoshi,
             script_pubkey: address.script_pubkey(),
@@ -540,9 +540,17 @@ impl TxBuilder {
     }
 
     /// Sets the address to drain excess L-BTC to
-    pub fn drain_lbtc_to(mut self, address: Address) -> Self {
-        self.drain_to = Some(address);
-        self
+    pub fn drain_lbtc_to(mut self, address: &Address) -> Result<Self, Error> {
+        validate_address(address, self.network())?;
+        self.drain_to = Some(address.clone());
+        Ok(self)
+    }
+
+    /// Sets the (explicit, non-confidential) address to drain excess L-BTC to
+    pub fn drain_lbtc_to_explicit(mut self, address: &Address) -> Result<Self, Error> {
+        validate_address_explicit(address, self.network())?;
+        self.drain_to = Some(address.clone());
+        Ok(self)
     }
 
     /// Adds external UTXOs
@@ -1882,11 +1890,19 @@ impl<'a> WolletTxBuilder<'a> {
     }
 
     /// Wrapper of [`TxBuilder::drain_lbtc_to()`]
-    pub fn drain_lbtc_to(self, address: Address) -> Self {
-        Self {
+    pub fn drain_lbtc_to(self, address: &Address) -> Result<Self, Error> {
+        Ok(Self {
             wollet: self.wollet,
-            inner: self.inner.drain_lbtc_to(address),
-        }
+            inner: self.inner.drain_lbtc_to(address)?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::drain_lbtc_to_explicit()`]
+    pub fn drain_lbtc_to_explicit(self, address: &Address) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.drain_lbtc_to_explicit(address)?,
+        })
     }
 
     /// Wrapper of [`TxBuilder::add_external_utxos()`]

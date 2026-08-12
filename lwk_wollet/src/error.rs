@@ -381,6 +381,9 @@ pub enum Error {
 
     #[error("Async sleep failed: {0}")]
     AsyncSleepFailed(String),
+
+    #[error("Invalid network")]
+    InvalidNetwork,
 }
 
 // cannot derive automatically with this error because of trait bound

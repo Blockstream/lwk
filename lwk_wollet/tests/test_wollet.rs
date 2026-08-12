@@ -335,7 +335,8 @@ impl<C: BlockchainBackend> TestWollet<C> {
         let mut pset = self
             .tx_builder()
             .drain_lbtc_wallet()
-            .drain_lbtc_to(address)
+            .drain_lbtc_to(&address)
+            .unwrap()
             .fee_rate(fee_rate)
             .finish()
             .unwrap();

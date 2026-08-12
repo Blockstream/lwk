@@ -1594,6 +1594,12 @@ fn test_send_all() {
 
     let _ = fund(&env, &cli, "w1", 1_000_000);
 
+    let testnet_addr = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
+    let err = sh_err(&format!(
+        "{cli} wallet drain -w w1 --address {testnet_addr}"
+    ));
+    assert!(err.contains("Invalid network"));
+
     let node_address = env.elementsd_getnewaddress();
     let r = sh(&format!(
         "{cli} wallet drain -w w1 --address {node_address}"

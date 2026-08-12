@@ -107,12 +107,10 @@ impl Request {
         };
         let mut buf = Vec::new();
         serde_cbor::to_writer(&mut buf, &req)?;
-        log::debug!(
-            "\n--->\t{:#?}\n\t({} bytes) {}",
-            &req,
-            buf.len(),
-            &hex::encode(&buf),
-        );
+        log::debug!("\n--->\t{:#?}\n\t({} bytes)", &req, buf.len());
+        // Uncomment only for local debugging; this exposes sensitive request data as hex.
+        // Never leave this log uncommented.
+        // log::debug!("\n--->\t{}", hex::encode(&buf));
         Ok(buf)
     }
 }

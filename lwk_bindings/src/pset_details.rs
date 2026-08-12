@@ -23,15 +23,15 @@ impl PsetDetails {
     /// Return the balance of the PSET from the point of view of the wallet
     /// that generated this via `psetDetails()`
     pub fn balance(&self) -> Arc<PsetBalance> {
-        Arc::new(self.inner.balance.clone().into())
+        Arc::new(self.inner.balance().clone().into())
     }
 
     /// For each input its existing or missing signatures
     pub fn signatures(&self) -> Vec<Arc<PsetSignatures>> {
         self.inner
-            .sig_details
-            .clone()
-            .into_iter()
+            .sig_details()
+            .iter()
+            .cloned()
             .map(|s| Arc::new(s.into()))
             .collect()
     }
@@ -42,9 +42,9 @@ impl PsetDetails {
         // with a reference to the relative input. We should problaby move that logic upper so we can reuse?
         // in the meantime, this less ergonomic method should suffice.
         self.inner
-            .issuances
-            .clone()
-            .into_iter()
+            .issuances()
+            .iter()
+            .cloned()
             .map(|e| Arc::new(e.into()))
             .collect()
     }
@@ -89,12 +89,12 @@ impl PsetBalance {
     ///
     /// Deprecated: use `fees_in(asset_id)` or `fees()` instead.
     pub fn fee(&self) -> u64 {
-        *self.inner.fees.values().next().unwrap_or(&0)
+        *self.inner.fees().values().next().unwrap_or(&0)
     }
 
     pub fn fees(&self) -> HashMap<AssetId, u64> {
         self.inner
-            .fees
+            .fees()
             .iter()
             .map(|(k, v)| ((*k).into(), *v))
             .collect()
@@ -106,7 +106,7 @@ impl PsetBalance {
 
     pub fn balances(&self) -> HashMap<AssetId, i64> {
         self.inner
-            .balances
+            .balances()
             .iter()
             .map(|(k, v)| ((*k).into(), *v))
             .collect()
@@ -114,9 +114,9 @@ impl PsetBalance {
 
     pub fn recipients(&self) -> Vec<Arc<Recipient>> {
         self.inner
-            .recipients
-            .clone()
-            .into_iter()
+            .recipients()
+            .iter()
+            .cloned()
             .map(|e| Arc::new(e.into()))
             .collect()
     }
@@ -140,7 +140,7 @@ type KeySource = String;
 impl PsetSignatures {
     pub fn has_signature(&self) -> HashMap<PublicKey, KeySource> {
         self.inner
-            .has_signature
+            .has_signature()
             .iter()
             .map(|(k, v)| (k.to_string(), key_source_to_string(v)))
             .collect()
@@ -148,7 +148,7 @@ impl PsetSignatures {
 
     pub fn missing_signature(&self) -> HashMap<PublicKey, KeySource> {
         self.inner
-            .missing_signature
+            .missing_signature()
             .iter()
             .map(|(k, v)| (k.to_string(), key_source_to_string(v)))
             .collect()
@@ -244,21 +244,18 @@ impl From<lwk_common::Recipient> for Recipient {
 #[uniffi::export]
 impl Recipient {
     pub fn asset(&self) -> Option<AssetId> {
-        self.inner.asset.map(Into::into)
+        self.inner.asset().map(Into::into)
     }
 
     pub fn value(&self) -> Option<u64> {
-        self.inner.value
+        self.inner.value()
     }
 
     pub fn address(&self) -> Option<Arc<Address>> {
-        self.inner
-            .address
-            .as_ref()
-            .map(|e| Arc::new(e.clone().into()))
+        self.inner.address().map(|e| Arc::new(e.clone().into()))
     }
     pub fn vout(&self) -> u32 {
-        self.inner.vout
+        self.inner.vout()
     }
 }
 

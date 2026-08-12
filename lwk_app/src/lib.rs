@@ -888,8 +888,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })
                 .collect();
             let mut balance: HashMap<String, i64> = details
-                .balance
-                .balances
+                .balance()
+                .balances()
                 .as_ref()
                 .iter()
                 .map(|(k, v)| (k.to_string(), *v))
@@ -898,7 +898,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 balance = s.replace_id_with_ticker(balance);
             }
             let issuances = details
-                .issuances
+                .issuances()
                 .iter()
                 .enumerate()
                 .filter(|(_, e)| e.is_issuance())
@@ -914,7 +914,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })
                 .collect();
             let reissuances = details
-                .issuances
+                .issuances()
                 .iter()
                 .enumerate()
                 .filter(|(_, e)| e.is_reissuance())
@@ -928,8 +928,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .collect();
 
             let fees = details
-                .balance
-                .fees
+                .balance()
+                .fees()
                 .iter()
                 .map(|(&k, &v)| (k.to_string(), v))
                 .collect();

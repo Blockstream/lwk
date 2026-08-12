@@ -204,9 +204,12 @@ fn test_simplicity_mixed_p2pk() {
         .unwrap();
 
     let details = w_w.get_details(&pset).unwrap();
-    let fee = details.balance.fees_in(lbtc);
-    assert_eq!(details.balance.balances.len(), 1);
-    assert_eq!(*details.balance.balances.get(lbtc).unwrap(), -(fee as i64));
+    let fee = details.balance().fees_in(lbtc);
+    assert_eq!(details.balance().balances().len(), 1);
+    assert_eq!(
+        *details.balance().balances().get(lbtc).unwrap(),
+        -(fee as i64)
+    );
 
     // Sign the wpkh input and finalize the PSET
     signer_w.sign(&mut pset).unwrap();

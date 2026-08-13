@@ -9,6 +9,13 @@
 * Changed `TxBuilder::drain_lbtc_to()` to take `&Address`, return a `Result`, and validate the address network, rejecting non confidential addresses.
 * Add `TxBuilder::drain_lbtc_to_explicit()`, like `drain_lbtc_to()` but for a non-confidential (explicit) address.
 * `TxBuilder::add_explicit_recipient()` now validates the address network.
+* `lwk_common::PsetDetails`, `lwk_common::PsetBalance`, `lwk_common::Recipient` and `lwk_common::PsetSignatures` no longer contain public fields, the fields are now read with accessors of the same name:
+  * `PsetDetails`: `balance()`, `sig_details()`, `issuances()`
+  * `PsetBalance`: `fees()`, `balances()`, `recipients()`
+  * `Recipient`: `address()`, `asset()`, `value()`, `vout()`
+  * `PsetSignatures`: `has_signature()`, `missing_signature()`
+* To build these types, use `PsetDetails::new(pset, descriptor, network)`, `PsetBalance::new()`, `Recipient::new()` and `PsetSignatures::new()`.
+* Add `PsetDetails::fees()`, `PsetDetails::fees_in()`, `PsetDetails::balances()` and `PsetDetails::recipients()`, forwarding to the inner `PsetBalance`.
 
 ## 0.18.0
 

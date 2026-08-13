@@ -15,7 +15,8 @@ use crate::register_multisig::{
 };
 use crate::sign_liquid_tx::{SignLiquidTxParams, SignPsbtParams, TxInputParams};
 use crate::{
-    derivation_path_to_vec, json_to_cbor, try_parse_response, vec_to_derivation_path, Error, Result,
+    anti_exfil, derivation_path_to_vec, json_to_cbor, sign_message, try_parse_response,
+    vec_to_derivation_path, Error, Result,
 };
 use connection::Connection;
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
@@ -525,10 +526,27 @@ impl Signer for &Jade {
 
     fn sign_message(
         &self,
-        _message: &str,
-        _path: &DerivationPath,
+        message: &str,
+        path: &DerivationPath,
     ) -> std::result::Result<MessageSignature, Self::Error> {
-        todo!(); // TODO: use sign_message_inner
+        self.unlock()?;
+
+        let xpub = self.get_cached_xpub(GetXpubParams {
+            network: self.network,
+            path: derivation_path_to_vec(path),
+        })?;
+        let host_entropy = anti_exfil::new_host_entropy()?;
+        self.sign_message_inner(SignMessageParams {
+            message: message.to_owned(),
+            path: derivation_path_to_vec(path),
+            ae_host_commitment: anti_exfil::host_commitment(&host_entropy).to_vec(),
+        })?;
+        let encoded_signature = self.get_signature_for_msg(GetSignatureParams {
+            ae_host_entropy: host_entropy.to_vec(),
+        })?;
+        sign_message::parse(&xpub.public_key, message, &encoded_signature)
+            .map(|signature| signature.signature)
+            .ok_or(Error::MessageSignatureValidationFailed)
     }
 }
 

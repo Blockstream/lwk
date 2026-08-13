@@ -72,6 +72,11 @@ pub enum Error {
     )]
     SignatureValidationFailed(usize),
 
+    #[error(
+        "Message signature validation failed. If this error is unexpected and has happened repeatedly, it is possible the hardware wallet is faulty or has been compromised. It could be leaking your keys, which could lead to loss of funds. Please consider replacing the hardware wallet."
+    )]
+    MessageSignatureValidationFailed,
+
     #[error("Missing asset id in output {0}")]
     MissingAssetIdInOutput(usize),
 

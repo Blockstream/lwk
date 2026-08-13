@@ -383,7 +383,7 @@ impl<S: Stream<Error = Error>> Jade<S> {
                 &*stream,
             )
             .await?;
-        let encoded_signature: String = self
+        let base64_signature: String = self
             .send_with_stream(
                 Request::GetSignature(GetSignatureParams {
                     ae_host_entropy: host_entropy.to_vec(),
@@ -397,7 +397,7 @@ impl<S: Stream<Error = Error>> Jade<S> {
             message,
             &host_entropy,
             &signer_commitment,
-            &encoded_signature,
+            &base64_signature,
         )
         .map_err(|_| Error::MessageSignatureValidationFailed)
     }

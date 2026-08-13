@@ -551,7 +551,7 @@ impl Signer for &Jade {
             }),
             &mut conn,
         )?;
-        let encoded_signature: String = self.send_with_conn(
+        let base64_signature: String = self.send_with_conn(
             Request::GetSignature(GetSignatureParams {
                 ae_host_entropy: host_entropy.to_vec(),
             }),
@@ -562,7 +562,7 @@ impl Signer for &Jade {
             message,
             &host_entropy,
             &signer_commitment,
-            &encoded_signature,
+            &base64_signature,
         )
         .map_err(|_| Error::MessageSignatureValidationFailed)
     }

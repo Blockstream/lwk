@@ -24,9 +24,9 @@ pub(crate) struct ParsedMessageSignature {
 pub(crate) fn parse(
     public_key: &PublicKey,
     message: &Message,
-    encoded_signature: &str,
+    base64_signature: &str,
 ) -> Option<ParsedMessageSignature> {
-    let signature_bytes = BASE64_STANDARD.decode(encoded_signature).ok()?;
+    let signature_bytes = BASE64_STANDARD.decode(base64_signature).ok()?;
     let compact: [u8; 64] = match signature_bytes.len() {
         64 => signature_bytes.as_slice(),
         65 => &signature_bytes[1..],

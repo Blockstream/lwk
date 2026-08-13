@@ -73,11 +73,11 @@ pub(crate) fn verify_message(
     message: &str,
     host_entropy: &[u8; 32],
     signer_commitment: &[u8],
-    encoded_signature: &str,
+    base64_signature: &str,
 ) -> Result<MessageSignature, VerifyError> {
     let digest = signed_msg_hash(message);
     let message = Message::from_digest(digest.to_byte_array());
-    let signature = sign_message::parse(public_key, &message, encoded_signature)
+    let signature = sign_message::parse(public_key, &message, base64_signature)
         .ok_or(VerifyError::InvalidSignature)?;
     let opening = PublicKey::from_slice(signer_commitment)
         .map_err(|_| VerifyError::InvalidSignerCommitment)?;

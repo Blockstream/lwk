@@ -7,10 +7,13 @@
 //! <https://github.com/BlockstreamResearch/rust-secp256k1-zkp/issues/100>
 
 use elements::{
+    bitcoin::sign_message::{signed_msg_hash, MessageSignature},
     hashes::Hash,
     secp256k1_zkp::{ecdsa::Signature, Message, PublicKey, Scalar, Secp256k1, Verification},
 };
 use rand::RngCore;
+
+use crate::sign_message;
 
 elements::hashes::sha256t_hash_newtype! {
     struct S2cDataTag = hash_str("s2c/ecdsa/data");
@@ -63,7 +66,71 @@ pub(crate) fn verify<C: Verification>(
 
     let signature =
         Signature::from_der(der_signature).map_err(|_| VerifyError::InvalidSignature)?;
-    secp.verify_ecdsa(message, &signature, public_key)
+    verify_signature(
+        secp,
+        public_key,
+        message,
+        host_entropy,
+        &opening,
+        &signature,
+    )
+}
+
+pub(crate) fn verify_compact<C: Verification>(
+    secp: &Secp256k1<C>,
+    public_key: &PublicKey,
+    message: &Message,
+    host_entropy: &[u8; 32],
+    signer_commitment: &[u8],
+    signature: &[u8],
+) -> Result<(), VerifyError> {
+    let opening = PublicKey::from_slice(signer_commitment)
+        .map_err(|_| VerifyError::InvalidSignerCommitment)?;
+    let signature =
+        Signature::from_compact(signature).map_err(|_| VerifyError::InvalidSignature)?;
+    verify_signature(
+        secp,
+        public_key,
+        message,
+        host_entropy,
+        &opening,
+        &signature,
+    )
+}
+
+pub(crate) fn verify_message(
+    public_key: &PublicKey,
+    message: &str,
+    host_entropy: &[u8; 32],
+    signer_commitment: &[u8],
+    encoded_signature: &str,
+) -> Result<MessageSignature, VerifyError> {
+    let signature = sign_message::parse(public_key, message, encoded_signature)
+        .ok_or(VerifyError::InvalidSignature)?;
+    let digest = signed_msg_hash(message);
+    let message = Message::from_digest(digest.to_byte_array());
+    let secp = Secp256k1::verification_only();
+
+    verify_compact(
+        &secp,
+        public_key,
+        &message,
+        host_entropy,
+        signer_commitment,
+        &signature.compact,
+    )?;
+    Ok(signature.signature)
+}
+
+fn verify_signature<C: Verification>(
+    secp: &Secp256k1<C>,
+    public_key: &PublicKey,
+    message: &Message,
+    host_entropy: &[u8; 32],
+    opening: &PublicKey,
+    signature: &Signature,
+) -> Result<(), VerifyError> {
+    secp.verify_ecdsa(message, signature, public_key)
         .map_err(|_| VerifyError::VerificationFailed)?;
 
     let mut commitment_data = [0u8; 65];
@@ -105,9 +172,11 @@ fn reduce_mod_curve_order(value: &mut [u8; 32]) {
 
 #[cfg(test)]
 mod tests {
-    use elements::secp256k1_zkp::{Message, PublicKey, Secp256k1};
+    use elements::secp256k1_zkp::{ecdsa::Signature, Message, PublicKey, Secp256k1};
 
-    use super::{host_commitment, reduce_mod_curve_order, verify, VerifyError, CURVE_ORDER};
+    use super::{
+        host_commitment, reduce_mod_curve_order, verify, verify_compact, VerifyError, CURVE_ORDER,
+    };
 
     #[test]
     fn curve_order_reduction() {
@@ -184,6 +253,21 @@ mod tests {
                 &signer_commitment,
                 &signature,
                 1,
+            ),
+            Ok(())
+        );
+
+        let compact_signature = Signature::from_der(&signature[..signature.len() - 1])
+            .unwrap()
+            .serialize_compact();
+        assert_eq!(
+            verify_compact(
+                &Secp256k1::verification_only(),
+                &public_key,
+                &message,
+                &host_entropy,
+                &signer_commitment,
+                &compact_signature,
             ),
             Ok(())
         );

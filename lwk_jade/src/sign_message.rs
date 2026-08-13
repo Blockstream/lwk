@@ -10,7 +10,6 @@ use elements::{
 
 pub(crate) struct ParsedMessageSignature {
     pub(crate) signature: MessageSignature,
-    #[allow(dead_code)] // Used by anti-exfil verification in the following commit.
     pub(crate) compact: [u8; 64],
 }
 

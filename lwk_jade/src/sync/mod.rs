@@ -15,8 +15,8 @@ use crate::register_multisig::{
 };
 use crate::sign_liquid_tx::{SignLiquidTxParams, SignPsbtParams, TxInputParams};
 use crate::{
-    anti_exfil, derivation_path_to_vec, json_to_cbor, sign_message, try_parse_response,
-    vec_to_derivation_path, Error, Result,
+    anti_exfil, derivation_path_to_vec, json_to_cbor, try_parse_response, vec_to_derivation_path,
+    Error, Result,
 };
 use connection::Connection;
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
@@ -471,16 +471,22 @@ impl Jade {
     where
         T: std::fmt::Debug + DeserializeOwned,
     {
+        let mut conn = self.conn.lock()?;
+        self.send_with_conn(request, &mut conn)
+    }
+
+    fn send_with_conn<T>(&self, request: Request, conn: &mut Connection) -> Result<T>
+    where
+        T: std::fmt::Debug + DeserializeOwned,
+    {
         if let Some(network) = request.network() {
             self.check_network(network)?;
         }
         let buf = request.serialize()?;
 
-        let mut conn = self.conn.lock()?;
-
         conn.write_all(&buf)?;
 
-        let resp = read_loop::<T>(&mut conn)?;
+        let resp = read_loop::<T>(conn)?;
         match (resp.result, resp.error) {
             (Some(result), _) => Ok(result),
             (_, Some(error)) => Err(Error::JadeError(error)),
@@ -536,17 +542,29 @@ impl Signer for &Jade {
             path: derivation_path_to_vec(path),
         })?;
         let host_entropy = anti_exfil::new_host_entropy()?;
-        self.sign_message_inner(SignMessageParams {
-            message: message.to_owned(),
-            path: derivation_path_to_vec(path),
-            ae_host_commitment: anti_exfil::host_commitment(&host_entropy).to_vec(),
-        })?;
-        let encoded_signature = self.get_signature_for_msg(GetSignatureParams {
-            ae_host_entropy: host_entropy.to_vec(),
-        })?;
-        sign_message::parse(&xpub.public_key, message, &encoded_signature)
-            .map(|signature| signature.signature)
-            .ok_or(Error::MessageSignatureValidationFailed)
+        let mut conn = self.conn.lock()?;
+        let signer_commitment: ByteBuf = self.send_with_conn(
+            Request::SignMessage(SignMessageParams {
+                message: message.to_owned(),
+                path: derivation_path_to_vec(path),
+                ae_host_commitment: anti_exfil::host_commitment(&host_entropy).to_vec(),
+            }),
+            &mut conn,
+        )?;
+        let encoded_signature: String = self.send_with_conn(
+            Request::GetSignature(GetSignatureParams {
+                ae_host_entropy: host_entropy.to_vec(),
+            }),
+            &mut conn,
+        )?;
+        anti_exfil::verify_message(
+            &xpub.public_key,
+            message,
+            &host_entropy,
+            &signer_commitment,
+            &encoded_signature,
+        )
+        .map_err(|_| Error::MessageSignatureValidationFailed)
     }
 }
 

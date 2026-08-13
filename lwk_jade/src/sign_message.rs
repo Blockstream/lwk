@@ -34,22 +34,26 @@ pub(crate) fn parse(
     }
     .try_into()
     .ok()?;
-    let signature = if signature_bytes.len() == 65 {
-        MessageSignature::from_slice(&signature_bytes).ok()?
+    let (signature, recovered) = if signature_bytes.len() == 65 {
+        let signature = MessageSignature::from_slice(&signature_bytes).ok()?;
+        let recovered = SECP.recover_ecdsa(message, &signature.signature).ok()?;
+        (signature, recovered)
     } else {
-        let signature = (0..=3)
+        let (signature, recovered) = (0..=3)
             .filter_map(|id| RecoveryId::from_i32(id).ok())
             .filter_map(|id| RecoverableSignature::from_compact(&compact, id).ok())
-            .find(|signature| {
-                SECP.recover_ecdsa(message, signature)
-                    .is_ok_and(|recovered| recovered == *public_key)
+            .find_map(|signature| {
+                let recovered = SECP.recover_ecdsa(message, &signature).ok()?;
+                (recovered == *public_key).then_some((signature, recovered))
             })?;
-        MessageSignature {
-            signature,
-            compressed: true,
-        }
+        (
+            MessageSignature {
+                signature,
+                compressed: true,
+            },
+            recovered,
+        )
     };
-    let recovered = SECP.recover_ecdsa(message, &signature.signature).ok()?;
     if recovered != *public_key {
         return None;
     }

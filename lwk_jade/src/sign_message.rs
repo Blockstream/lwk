@@ -2,11 +2,12 @@ use elements::{
     bitcoin::{
         base64::prelude::{Engine as _, BASE64_STANDARD},
         secp256k1::ecdsa::{RecoverableSignature, RecoveryId},
-        sign_message::{signed_msg_hash, MessageSignature},
+        sign_message::MessageSignature,
     },
-    hashes::Hash,
-    secp256k1_zkp::{Message, PublicKey, Secp256k1},
+    secp256k1_zkp::{Message, PublicKey},
 };
+
+use crate::SECP;
 
 pub(crate) struct ParsedMessageSignature {
     pub(crate) signature: MessageSignature,
@@ -22,7 +23,7 @@ pub(crate) struct ParsedMessageSignature {
 /// See <https://github.com/Blockstream/Jade/blob/1f2e4403b351bec2547c780ada1c958a51f74537/main/wallet.c#L1478-L1514>.
 pub(crate) fn parse(
     public_key: &PublicKey,
-    message: &str,
+    message: &Message,
     encoded_signature: &str,
 ) -> Option<ParsedMessageSignature> {
     let signature_bytes = BASE64_STANDARD.decode(encoded_signature).ok()?;
@@ -33,10 +34,6 @@ pub(crate) fn parse(
     }
     .try_into()
     .ok()?;
-    let digest = signed_msg_hash(message);
-    let message = Message::from_digest(digest.to_byte_array());
-    let secp = Secp256k1::verification_only();
-
     let signature = if signature_bytes.len() == 65 {
         MessageSignature::from_slice(&signature_bytes).ok()?
     } else {
@@ -44,7 +41,7 @@ pub(crate) fn parse(
             .filter_map(|id| RecoveryId::from_i32(id).ok())
             .filter_map(|id| RecoverableSignature::from_compact(&compact, id).ok())
             .find(|signature| {
-                secp.recover_ecdsa(&message, signature)
+                SECP.recover_ecdsa(message, signature)
                     .is_ok_and(|recovered| recovered == *public_key)
             })?;
         MessageSignature {
@@ -52,8 +49,8 @@ pub(crate) fn parse(
             compressed: true,
         }
     };
-    let recovered = signature.recover_pubkey(&secp, digest).ok()?;
-    if recovered.inner != *public_key {
+    let recovered = SECP.recover_ecdsa(message, &signature.signature).ok()?;
+    if recovered != *public_key {
         return None;
     }
 
@@ -80,23 +77,23 @@ mod tests {
         let public_key = PublicKey::from_secret_key(&secp, &secret_key);
         let message = "Hello world!";
         let digest = signed_msg_hash(message);
-        let signature =
-            secp.sign_ecdsa_recoverable(&Message::from_digest(digest.to_byte_array()), &secret_key);
+        let secp_message = Message::from_digest(digest.to_byte_array());
+        let signature = secp.sign_ecdsa_recoverable(&secp_message, &secret_key);
         let message_signature = MessageSignature {
             signature,
             compressed: true,
         };
 
-        let parsed = parse(&public_key, message, &message_signature.to_base64()).unwrap();
+        let parsed = parse(&public_key, &secp_message, &message_signature.to_base64()).unwrap();
         assert_eq!(parsed.signature, message_signature);
 
         let (_, compact) = signature.serialize_compact();
-        let parsed = parse(&public_key, message, &BASE64_STANDARD.encode(compact)).unwrap();
+        let parsed = parse(&public_key, &secp_message, &BASE64_STANDARD.encode(compact)).unwrap();
         assert_eq!(parsed.signature, message_signature);
         assert_eq!(parsed.compact, compact);
 
         let other_key = SecretKey::from_slice(&[0x23; 32]).unwrap();
         let other_key = PublicKey::from_secret_key(&secp, &other_key);
-        assert!(parse(&other_key, message, &BASE64_STANDARD.encode(compact)).is_none());
+        assert!(parse(&other_key, &secp_message, &BASE64_STANDARD.encode(compact)).is_none());
     }
 }

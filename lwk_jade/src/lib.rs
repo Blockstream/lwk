@@ -24,7 +24,7 @@ pub use jade_emulator::TestJadeEmulator;
 #[cfg(feature = "sync")]
 mod sync;
 
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::LazyLock};
 
 pub use consts::{BAUD_RATE, TIMEOUT};
 use elements::{
@@ -38,6 +38,7 @@ use elements::{
     },
     pset::{serialize::Serialize, PartiallySignedTransaction},
     script::Instruction,
+    secp256k1_zkp::{Secp256k1, VerifyOnly},
     BlockHash, Script,
 };
 pub use error::Error;
@@ -46,6 +47,10 @@ use lwk_common::{get_genesis_hash, Network};
 
 use register_multisig::RegisteredMultisigDetails;
 use sign_liquid_tx::{AssetInfo, Change, Commitment, Contract, Prevout, SignLiquidTxParams};
+
+pub(crate) static SECP: LazyLock<Secp256k1<VerifyOnly>> =
+    LazyLock::new(Secp256k1::verification_only);
+
 #[cfg(feature = "sync")]
 pub use sync::Jade;
 

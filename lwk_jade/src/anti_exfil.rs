@@ -13,7 +13,7 @@ use elements::{
 };
 use rand::RngCore;
 
-use crate::sign_message;
+use crate::{sign_message, SECP};
 
 elements::hashes::sha256t_hash_newtype! {
     struct S2cDataTag = hash_str("s2c/ecdsa/data");
@@ -105,14 +105,13 @@ pub(crate) fn verify_message(
     signer_commitment: &[u8],
     encoded_signature: &str,
 ) -> Result<MessageSignature, VerifyError> {
-    let signature = sign_message::parse(public_key, message, encoded_signature)
-        .ok_or(VerifyError::InvalidSignature)?;
     let digest = signed_msg_hash(message);
     let message = Message::from_digest(digest.to_byte_array());
-    let secp = Secp256k1::verification_only();
+    let signature = sign_message::parse(public_key, &message, encoded_signature)
+        .ok_or(VerifyError::InvalidSignature)?;
 
     verify_compact(
-        &secp,
+        &SECP,
         public_key,
         &message,
         host_entropy,

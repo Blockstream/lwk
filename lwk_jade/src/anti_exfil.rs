@@ -9,7 +9,7 @@
 use elements::{
     bitcoin::sign_message::{signed_msg_hash, MessageSignature},
     hashes::Hash,
-    secp256k1_zkp::{ecdsa::Signature, Message, PublicKey, Scalar, Secp256k1, Verification},
+    secp256k1_zkp::{ecdsa::Signature, Message, PublicKey, Scalar},
 };
 use rand::RngCore;
 
@@ -45,8 +45,7 @@ pub(crate) fn host_commitment(entropy: &[u8; 32]) -> [u8; 32] {
     S2cDataHash::hash(entropy).to_byte_array()
 }
 
-pub(crate) fn verify<C: Verification>(
-    secp: &Secp256k1<C>,
+pub(crate) fn verify_der(
     public_key: &PublicKey,
     message: &Message,
     host_entropy: &[u8; 32],
@@ -66,36 +65,7 @@ pub(crate) fn verify<C: Verification>(
 
     let signature =
         Signature::from_der(der_signature).map_err(|_| VerifyError::InvalidSignature)?;
-    verify_signature(
-        secp,
-        public_key,
-        message,
-        host_entropy,
-        &opening,
-        &signature,
-    )
-}
-
-pub(crate) fn verify_compact<C: Verification>(
-    secp: &Secp256k1<C>,
-    public_key: &PublicKey,
-    message: &Message,
-    host_entropy: &[u8; 32],
-    signer_commitment: &[u8],
-    signature: &[u8],
-) -> Result<(), VerifyError> {
-    let opening = PublicKey::from_slice(signer_commitment)
-        .map_err(|_| VerifyError::InvalidSignerCommitment)?;
-    let signature =
-        Signature::from_compact(signature).map_err(|_| VerifyError::InvalidSignature)?;
-    verify_signature(
-        secp,
-        public_key,
-        message,
-        host_entropy,
-        &opening,
-        &signature,
-    )
+    verify_anti_exfil(public_key, message, host_entropy, &opening, &signature)
 }
 
 pub(crate) fn verify_message(
@@ -109,27 +79,29 @@ pub(crate) fn verify_message(
     let message = Message::from_digest(digest.to_byte_array());
     let signature = sign_message::parse(public_key, &message, encoded_signature)
         .ok_or(VerifyError::InvalidSignature)?;
+    let opening = PublicKey::from_slice(signer_commitment)
+        .map_err(|_| VerifyError::InvalidSignerCommitment)?;
+    let compact_signature =
+        Signature::from_compact(&signature.compact).map_err(|_| VerifyError::InvalidSignature)?;
 
-    verify_compact(
-        &SECP,
+    verify_anti_exfil(
         public_key,
         &message,
         host_entropy,
-        signer_commitment,
-        &signature.compact,
+        &opening,
+        &compact_signature,
     )?;
     Ok(signature.signature)
 }
 
-fn verify_signature<C: Verification>(
-    secp: &Secp256k1<C>,
+fn verify_anti_exfil(
     public_key: &PublicKey,
     message: &Message,
     host_entropy: &[u8; 32],
     opening: &PublicKey,
     signature: &Signature,
 ) -> Result<(), VerifyError> {
-    secp.verify_ecdsa(message, signature, public_key)
+    SECP.verify_ecdsa(message, signature, public_key)
         .map_err(|_| VerifyError::VerificationFailed)?;
 
     let mut commitment_data = [0u8; 65];
@@ -138,7 +110,7 @@ fn verify_signature<C: Verification>(
     let tweak = S2cPointHash::hash(&commitment_data).to_byte_array();
     let tweak = Scalar::from_be_bytes(tweak).map_err(|_| VerifyError::VerificationFailed)?;
     let committed_nonce = opening
-        .add_exp_tweak(secp, &tweak)
+        .add_exp_tweak(&SECP, &tweak)
         .map_err(|_| VerifyError::VerificationFailed)?;
 
     let compact_signature = signature.serialize_compact();
@@ -171,10 +143,11 @@ fn reduce_mod_curve_order(value: &mut [u8; 32]) {
 
 #[cfg(test)]
 mod tests {
-    use elements::secp256k1_zkp::{ecdsa::Signature, Message, PublicKey, Secp256k1};
+    use elements::secp256k1_zkp::{ecdsa::Signature, Message, PublicKey};
 
     use super::{
-        host_commitment, reduce_mod_curve_order, verify, verify_compact, VerifyError, CURVE_ORDER,
+        host_commitment, reduce_mod_curve_order, verify_anti_exfil, verify_der, VerifyError,
+        CURVE_ORDER,
     };
 
     #[test]
@@ -244,8 +217,7 @@ mod tests {
         );
 
         assert_eq!(
-            verify(
-                &Secp256k1::verification_only(),
+            verify_der(
                 &public_key,
                 &message,
                 &host_entropy,
@@ -259,13 +231,14 @@ mod tests {
         let compact_signature = Signature::from_der(&signature[..signature.len() - 1])
             .unwrap()
             .serialize_compact();
+        let compact_signature = Signature::from_compact(&compact_signature).unwrap();
+        let opening = PublicKey::from_slice(&signer_commitment).unwrap();
         assert_eq!(
-            verify_compact(
-                &Secp256k1::verification_only(),
+            verify_anti_exfil(
                 &public_key,
                 &message,
                 &host_entropy,
-                &signer_commitment,
+                &opening,
                 &compact_signature,
             ),
             Ok(())
@@ -275,8 +248,7 @@ mod tests {
         invalid_signer_commitment[0] = 0x04;
 
         assert_eq!(
-            verify(
-                &Secp256k1::verification_only(),
+            verify_der(
                 &public_key,
                 &message,
                 &host_entropy,
@@ -291,8 +263,7 @@ mod tests {
         invalid_signature[0] = 0x31;
 
         assert_eq!(
-            verify(
-                &Secp256k1::verification_only(),
+            verify_der(
                 &public_key,
                 &message,
                 &host_entropy,

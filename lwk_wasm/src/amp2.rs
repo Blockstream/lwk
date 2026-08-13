@@ -94,24 +94,24 @@ impl Amp2 {
     pub fn elip153_from_signer(
         &self,
         signer: &Signer,
-        account: u32,
+        account_num: u32,
     ) -> Result<Amp2Descriptor, Error> {
         Ok(self
             .inner
-            .elip153_from_signer(&signer.inner, account)?
+            .elip153_from_signer(&signer.inner, account_num)?
             .into())
     }
 
     /// ELIP153 `USER_PATH = m/purpose'/coin_type'/account'`
     #[wasm_bindgen(js_name = elip153UserPath)]
-    pub fn elip153_user_path(&self, account: u32) -> Result<DerivationPath, Error> {
-        Ok(self.inner.elip153_user_path(account)?.into())
+    pub fn elip153_user_path(&self, account_num: u32) -> Result<DerivationPath, Error> {
+        Ok(self.inner.elip153_user_path(account_num)?.into())
     }
 
     /// ELIP153 `VIEW_PATH = m/purpose'/coin_type'/account'/server_fingerprint_masked'`
     #[wasm_bindgen(js_name = elip153ViewPath)]
-    pub fn elip153_view_path(&self, account: u32) -> Result<DerivationPath, Error> {
-        Ok(self.inner.elip153_view_path(account)?.into())
+    pub fn elip153_view_path(&self, account_num: u32) -> Result<DerivationPath, Error> {
+        Ok(self.inner.elip153_view_path(account_num)?.into())
     }
 
     /// Create an AMP2 descriptor ELIP153 compliant from xpub strings.
@@ -120,15 +120,15 @@ impl Amp2 {
     /// Derive the user xpub at [`Amp2::elip153_user_path()`] and
     /// the view xpub at [`Amp2::elip153_view_path()`], and pass the
     /// obtained keyorigin_xpub strings here.
-    #[wasm_bindgen(js_name = elip153FromStr)]
-    pub fn elip153_from_str(
+    #[wasm_bindgen(js_name = elip153FromExternalSigner)]
+    pub fn elip153_from_external_signer(
         &self,
         user_keyorigin_xpub: &str,
         view_keyorigin_xpub: &str,
     ) -> Result<Amp2Descriptor, Error> {
         Ok(self
             .inner
-            .elip153_from_str(user_keyorigin_xpub, view_keyorigin_xpub)?
+            .elip153_from_external_signer(user_keyorigin_xpub, view_keyorigin_xpub)?
             .into())
     }
 

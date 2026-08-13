@@ -156,10 +156,10 @@ impl Amp2 {
     pub fn elip153_from_signer<S: Signer>(
         &self,
         signer: &S,
-        account: u32,
+        account_num: u32,
     ) -> Result<Amp2Descriptor, crate::Error> {
-        let user_path = self.elip153_user_path(account)?;
-        let view_path = self.elip153_view_path(account)?;
+        let user_path = self.elip153_user_path(account_num)?;
+        let view_path = self.elip153_view_path(account_num)?;
 
         // TODO: map signer errors more nicely
         let fingerprint = signer
@@ -181,12 +181,12 @@ impl Amp2 {
     }
 
     /// ELIP153 `USER_PATH = m/purpose'/coin_type'/account'`
-    pub fn elip153_user_path(&self, account: u32) -> Result<DerivationPath, crate::Error> {
+    pub fn elip153_user_path(&self, account_num: u32) -> Result<DerivationPath, crate::Error> {
         let coin_type = if self.is_mainnet { 1776 } else { 1 };
         Ok(DerivationPath::from(vec![
             ChildNumber::from_hardened_idx(ELIP153_PURPOSE)?,
             ChildNumber::from_hardened_idx(coin_type)?,
-            ChildNumber::from_hardened_idx(account)?,
+            ChildNumber::from_hardened_idx(account_num)?,
         ]))
     }
 
@@ -210,8 +210,8 @@ impl Amp2 {
     }
 
     /// ELIP153 `VIEW_PATH = m/purpose'/coin_type'/account'/server_fingerprint_masked'`
-    pub fn elip153_view_path(&self, account: u32) -> Result<DerivationPath, crate::Error> {
-        let user_path = self.elip153_user_path(account)?;
+    pub fn elip153_view_path(&self, account_num: u32) -> Result<DerivationPath, crate::Error> {
+        let user_path = self.elip153_user_path(account_num)?;
         let server_fingerprint_masked =
             u32::from_be_bytes(self.server_xpub.fingerprint().to_bytes()) & 0x7FFF_FFFF;
         Ok(user_path.child(ChildNumber::from_hardened_idx(server_fingerprint_masked)?))
@@ -223,7 +223,7 @@ impl Amp2 {
     /// Derive the user xpub at [`Amp2::elip153_user_path()`] and
     /// the view xpub at [`Amp2::elip153_view_path()`], and pass the
     /// obtained keyorigin_xpub strings here.
-    pub fn elip153_from_str(
+    pub fn elip153_from_external_signer(
         &self,
         user_keyorigin_xpub: &str,
         view_keyorigin_xpub: &str,

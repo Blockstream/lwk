@@ -542,6 +542,8 @@ impl Signer for &Jade {
             path: derivation_path_to_vec(path),
         })?;
         let host_entropy = anti_exfil::new_host_entropy()?;
+        // Keep one lock across both halves of the anti-exfil exchange. `sign_message_inner`
+        // cannot be used here because it acquires this same lock through `send`.
         let mut conn = self.conn.lock()?;
         let signer_commitment: ByteBuf = self.send_with_conn(
             Request::SignMessage(SignMessageParams {

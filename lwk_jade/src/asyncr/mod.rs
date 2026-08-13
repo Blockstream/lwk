@@ -372,6 +372,8 @@ impl<S: Stream<Error = Error>> Jade<S> {
             })
             .await?;
         let host_entropy = anti_exfil::new_host_entropy()?;
+        // Keep one lock across both halves of the anti-exfil exchange. `sign_message_inner`
+        // cannot be used here because it acquires this same lock through `send`.
         let stream = self.stream.lock().await;
         let signer_commitment: ByteBuf = self
             .send_with_stream(

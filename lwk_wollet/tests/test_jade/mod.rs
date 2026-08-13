@@ -505,7 +505,27 @@ fn emul_elip153_flow() {
 #[cfg(feature = "serial")]
 mod serial {
     use super::*;
+    use elements::{bitcoin::sign_message::signed_msg_hash, secp256k1_zkp::Secp256k1};
     use lwk_jade::Jade;
+
+    #[test]
+    #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial; confirm message on device screen"]
+    fn jade_sign_message() {
+        let network = lwk_common::Network::default_regtest();
+        let ports = Jade::available_ports_with_jade();
+        let port_name = &ports.first().unwrap().port_name;
+        let jade = Jade::from_serial(network, port_name, None).unwrap();
+        let message = "Hello serial world!";
+        let path: DerivationPath = "m/0".parse().unwrap();
+
+        let signature = jade.sign_message(message, &path).unwrap();
+        let xpub = jade.derive_xpub(&path).unwrap();
+        let recovered = signature
+            .recover_pubkey(&Secp256k1::verification_only(), signed_msg_hash(message))
+            .unwrap();
+
+        assert_eq!(recovered.inner, xpub.public_key);
+    }
 
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]

@@ -240,6 +240,26 @@ impl PsetDetails {
         &self.balance
     }
 
+    /// The fees of the transaction in the PSET
+    pub fn fees(&self) -> &HashMap<AssetId, u64> {
+        self.balance.fees()
+    }
+
+    /// Return the amount of fee with given asset id
+    pub fn fees_in(&self, asset: &AssetId) -> u64 {
+        self.balance.fees_in(asset)
+    }
+
+    /// The net balance of the assets in the PSET from the point of view of the wallet
+    pub fn balances(&self) -> &SignedBalance {
+        self.balance.balances()
+    }
+
+    /// Outputs going out of the wallet
+    pub fn recipients(&self) -> &[Recipient] {
+        self.balance.recipients()
+    }
+
     /// For each input, existing or missing signatures
     pub fn sig_details(&self) -> &[PsetSignatures] {
         &self.sig_details

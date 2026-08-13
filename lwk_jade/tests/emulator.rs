@@ -462,6 +462,21 @@ async fn async_sign() {
 
     let sign = jade.sign(&mut pset).await.unwrap();
     assert!(sign > 0);
+
+    let message = "Hello async world!";
+    let path: DerivationPath = "m/0".parse().unwrap();
+    let signature = jade.sign_message(message, &path).await.unwrap();
+    let xpub = jade
+        .get_cached_xpub(GetXpubParams {
+            network,
+            path: vec![0],
+        })
+        .await
+        .unwrap();
+    let recovered = signature
+        .recover_pubkey(&Secp256k1::verification_only(), signed_msg_hash(message))
+        .unwrap();
+    assert_eq!(recovered.inner, xpub.public_key);
 }
 
 fn mock_version_info() -> VersionInfoResult {

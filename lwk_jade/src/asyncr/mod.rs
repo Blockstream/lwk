@@ -12,8 +12,12 @@ use crate::register_multisig::{
     RegisteredMultisigDetails,
 };
 use crate::sign_liquid_tx::{SignLiquidTxParams, SignPsbtParams, TxInputParams};
-use crate::{json_to_cbor, try_parse_response, vec_to_derivation_path, Error, Result};
+use crate::{
+    anti_exfil, derivation_path_to_vec, json_to_cbor, try_parse_response, vec_to_derivation_path,
+    Error, Result,
+};
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
+use elements::bitcoin::sign_message::MessageSignature;
 use elements::pset::PartiallySignedTransaction;
 use elements_miniscript::slip77;
 use lwk_common::{Network, Stream};
@@ -353,6 +357,51 @@ impl<S: Stream<Error = Error>> Jade<S> {
         self.network
     }
 
+    /// Sign a message using Bitcoin's message signing format and Jade's anti-exfil protocol.
+    pub async fn sign_message(
+        &self,
+        message: &str,
+        path: &DerivationPath,
+    ) -> Result<MessageSignature> {
+        self.unlock().await?;
+
+        let xpub = self
+            .get_cached_xpub(GetXpubParams {
+                network: self.network,
+                path: derivation_path_to_vec(path),
+            })
+            .await?;
+        let host_entropy = anti_exfil::new_host_entropy()?;
+        let stream = self.stream.lock().await;
+        let signer_commitment: ByteBuf = self
+            .send_with_stream(
+                Request::SignMessage(SignMessageParams {
+                    message: message.to_owned(),
+                    path: derivation_path_to_vec(path),
+                    ae_host_commitment: anti_exfil::host_commitment(&host_entropy).to_vec(),
+                }),
+                &*stream,
+            )
+            .await?;
+        let encoded_signature: String = self
+            .send_with_stream(
+                Request::GetSignature(GetSignatureParams {
+                    ae_host_entropy: host_entropy.to_vec(),
+                }),
+                &*stream,
+            )
+            .await?;
+
+        anti_exfil::verify_message(
+            &xpub.public_key,
+            message,
+            &host_entropy,
+            &signer_commitment,
+            &encoded_signature,
+        )
+        .map_err(|_| Error::MessageSignatureValidationFailed)
+    }
+
     pub async fn sign_psbt(&self, params: SignPsbtParams) -> Result<Vec<u8>> {
         let stream = self.stream.lock().await;
         self.check_network(params.network)?;
@@ -455,6 +504,13 @@ impl<S: Stream<Error = Error>> Jade<S> {
         T: std::fmt::Debug + DeserializeOwned,
     {
         let stream = self.stream.lock().await;
+        self.send_with_stream(request, &*stream).await
+    }
+
+    async fn send_with_stream<T>(&self, request: Request, stream: &S) -> Result<T>
+    where
+        T: std::fmt::Debug + DeserializeOwned,
+    {
         if let Some(network) = request.network() {
             self.check_network(network)?;
         }
@@ -462,7 +518,7 @@ impl<S: Stream<Error = Error>> Jade<S> {
 
         stream.write(&buf).await?;
 
-        let resp: Response<T> = read_loop(&*stream).await?;
+        let resp: Response<T> = read_loop(stream).await?;
         match (resp.result, resp.error) {
             (Some(result), _) => Ok(result),
             (_, Some(error)) => Err(Error::JadeError(error)),

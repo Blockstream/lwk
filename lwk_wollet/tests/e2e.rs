@@ -540,14 +540,8 @@ fn multiple_descriptors() {
     let (asset, token) = &pset.inputs()[0].issuance_ids();
     let details_a = wallet_a.wollet.get_details(&pset).unwrap();
     let details_t = wallet_t.wollet.get_details(&pset).unwrap();
-    assert_eq!(
-        *details_a.balance().balances().get(asset).unwrap(),
-        satoshi_a as i64
-    );
-    assert_eq!(
-        *details_t.balance().balances().get(token).unwrap(),
-        satoshi_t as i64
-    );
+    assert_eq!(*details_a.balances().get(asset).unwrap(), satoshi_a as i64);
+    assert_eq!(*details_t.balances().get(token).unwrap(), satoshi_t as i64);
     wallet_a.sign(&signer_a, &mut pset);
     wallet_a.send(&mut pset);
     wallet_t.sync();
@@ -569,11 +563,8 @@ fn multiple_descriptors() {
     wallet_a.wollet.add_details(&mut pset).unwrap();
     let details_a = wallet_a.wollet.get_details(&pset).unwrap();
     let details_t = wallet_t.wollet.get_details(&pset).unwrap();
-    assert_eq!(
-        *details_a.balance().balances().get(asset).unwrap(),
-        satoshi_ar as i64
-    );
-    assert!(!details_t.balance().balances().contains_key(token));
+    assert_eq!(*details_a.balances().get(asset).unwrap(), satoshi_ar as i64);
+    assert!(!details_t.balances().contains_key(token));
     let mut pset_t1 = pset.clone();
     let mut pset_t2 = pset.clone();
     wallet_t.sign(&signer_t1, &mut pset_t1);
@@ -1524,7 +1515,7 @@ fn ct_discount() {
 
     wallet.sign(&signer, &mut pset);
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee_no_discount = details.balance().fees_in(&policy_asset);
+    let fee_no_discount = details.fees_in(&policy_asset);
     wallet.send(&mut pset);
     assert_fee_rate(compute_fee_rate_without_discount_ct(&pset), None);
 
@@ -1539,7 +1530,7 @@ fn ct_discount() {
 
     wallet.sign(&signer, &mut pset);
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee_with_discount = details.balance().fees_in(&policy_asset);
+    let fee_with_discount = details.fees_in(&policy_asset);
     wallet.send(&mut pset);
     assert_fee_rate(compute_fee_rate(&pset), None);
 
@@ -1567,7 +1558,7 @@ fn ct_discount() {
 
     wallet.sign(&signer, &mut pset);
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee_default = details.balance().fees_in(&policy_asset);
+    let fee_default = details.fees_in(&policy_asset);
     assert_eq!(fee_with_discount, fee_default);
 }
 
@@ -1684,7 +1675,7 @@ fn test_external_utxo() {
     }
 
     let details = w1.wollet.get_details(&pset).unwrap();
-    let fee = details.balance().fees_in(&policy_asset);
+    let fee = details.fees_in(&policy_asset);
 
     w1.send(&mut pset);
 
@@ -2068,7 +2059,7 @@ fn test_spend_blinded_utxo_with_custom_blinding_key() {
     let balance = w.balance(&policy_asset);
 
     let details = w.wollet.get_details(&pset).unwrap();
-    let fee = details.balance().fees_in(&policy_asset);
+    let fee = details.fees_in(&policy_asset);
 
     assert_eq!(balance, amount - fee);
 }
@@ -3376,10 +3367,10 @@ fn test_multiple_reissuances() {
 
     // The first asset units are received by this wallet, the second ones are not, while both
     // tokens are spent and given back
-    assert_eq!(*details.balance().balances().get(&asset0).unwrap(), 5);
-    assert!(!details.balance().balances().contains_key(&asset1));
-    assert!(!details.balance().balances().contains_key(&token0));
-    assert!(!details.balance().balances().contains_key(&token1));
+    assert_eq!(*details.balances().get(&asset0).unwrap(), 5);
+    assert!(!details.balances().contains_key(&asset1));
+    assert!(!details.balances().contains_key(&token0));
+    assert!(!details.balances().contains_key(&token1));
 
     signer.sign(&mut pset).unwrap();
     w.send(&mut pset);
@@ -3710,11 +3701,11 @@ fn liquidex<C: BlockchainBackend>(
         .unwrap();
 
     let details = wallet_maker.wollet.get_details(&pset).unwrap();
-    assert_eq!(details.balance().fees().len(), 0); // ANCHOR: ignore
+    assert_eq!(details.fees().len(), 0); // ANCHOR: ignore
     let asset_send = pset.inputs()[0].asset.unwrap(); // ANCHOR: ignore
     let sats_send = pset.inputs()[0].amount.unwrap(); // ANCHOR: ignore
-    let from_details_send = *details.balance().balances().get(&asset_send).unwrap(); // ANCHOR: ignore
-    let from_details_recv = *details.balance().balances().get(&asset_recv).unwrap(); // ANCHOR: ignore
+    let from_details_send = *details.balances().get(&asset_send).unwrap(); // ANCHOR: ignore
+    let from_details_recv = *details.balances().get(&asset_recv).unwrap(); // ANCHOR: ignore
     assert_eq!(from_details_send, -(sats_send as i64)); // ANCHOR: ignore
     assert_eq!(from_details_recv, sats_recv as i64); // ANCHOR: ignore
 
@@ -3754,11 +3745,11 @@ fn liquidex<C: BlockchainBackend>(
     // ANCHOR_END: liquidex_take
 
     let details = wallet_taker.wollet.get_details(&pset).unwrap();
-    let fee = details.balance().fees_in(&wallet_taker.policy_asset()) as i64;
+    let fee = details.fees_in(&wallet_taker.policy_asset()) as i64;
     assert!(fee > 0);
     // "send" and "recv" are from the maker perspective
-    let mut from_details_send = *details.balance().balances().get(&asset_send).unwrap();
-    let mut from_details_recv = *details.balance().balances().get(&asset_recv).unwrap();
+    let mut from_details_send = *details.balances().get(&asset_send).unwrap();
+    let mut from_details_recv = *details.balances().get(&asset_recv).unwrap();
     let policy_asset = wallet_taker.policy_asset();
     if asset_send == policy_asset {
         from_details_send += fee;
@@ -4001,7 +3992,7 @@ fn test_sh_multi() {
     pset = pset_rt(&pset);
 
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee = details.balance().fees_in(&wallet.policy_asset()) as i64;
+    let fee = details.fees_in(&wallet.policy_asset()) as i64;
     assert!(fee > 0);
     // TODO: fee rate estimation is off, fix it and use send_btc in this test
     assert!(compute_fee_rate(&pset) > 100.0);
@@ -4395,7 +4386,7 @@ fn test_explicit_send() {
         .unwrap();
 
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let recipient = &details.balance().recipients()[0];
+    let recipient = &details.recipients()[0];
     assert_eq!(recipient.asset(), Some(lbtc));
     assert_eq!(recipient.value(), Some(1_000));
     assert_eq!(recipient.address(), Some(&addr_explicit));
@@ -4621,8 +4612,8 @@ fn test_fee_service() {
     // Fee Service checks that the PSET is reasonable for it
 
     // From a Fee Service perspective, transaction only spends the exact fee amount
-    let fee = &details.balance().fees_in(&w.policy_asset());
-    let balances = &details.balance().balances();
+    let fee = &details.fees_in(&w.policy_asset());
+    let balances = &details.balances();
     assert_eq!(balances.len(), 1);
     assert_eq!(balances.get(&lbtc).unwrap() + (*fee as i64), 0);
 
@@ -4884,7 +4875,7 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     // Then Bob uses the wollet to analyze the PSET
     let details = wollet_b.get_details(&pset)?;
     // PSET has a reasonable fee
-    assert!(*details.balance().fees().values().last().unwrap() < 100);
+    assert!(*details.fees().values().last().unwrap() < 100);
     // PSET has a signature from Carol
     let fingerprints_has = details.fingerprints_has();
     assert_eq!(fingerprints_has.len(), 1);
@@ -4895,8 +4886,8 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     assert!(fingerprints_missing.contains(&signer_a.fingerprint()));
     assert!(fingerprints_missing.contains(&signer_b.fingerprint()));
     // PSET has a single recipient, with data matching what was specified above
-    assert_eq!(details.balance().recipients().len(), 1);
-    let recipient = details.balance().recipients()[0].clone();
+    assert_eq!(details.recipients().len(), 1);
+    let recipient = details.recipients()[0].clone();
     assert_eq!(recipient.address().unwrap(), &address);
     assert_eq!(recipient.asset().unwrap(), lbtc);
     assert_eq!(recipient.value().unwrap(), sats);
@@ -5102,14 +5093,10 @@ fn op_return() {
 
     // The OP_RETURN output carries zero value, so only the fee is spent.
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee = details.balance().fees_in(&wallet.policy_asset()) as i64;
+    let fee = details.fees_in(&wallet.policy_asset()) as i64;
     assert!(fee > 0);
     assert_eq!(
-        *details
-            .balance()
-            .balances()
-            .get(&wallet.policy_asset())
-            .unwrap(),
+        *details.balances().get(&wallet.policy_asset()).unwrap(),
         -fee
     );
 
@@ -5542,7 +5529,7 @@ fn test_miniscript_and_threshold() {
         .unwrap();
 
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee = details.balance().fees_in(&policy_asset);
+    let fee = details.fees_in(&policy_asset);
     wallet.sign(&s1, &mut pset);
     wallet.sign(&s2, &mut pset);
     sign_with_seckey(sk_a, &mut pset).unwrap();

@@ -888,7 +888,6 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })
                 .collect();
             let mut balance: HashMap<String, i64> = details
-                .balance()
                 .balances()
                 .as_ref()
                 .iter()
@@ -928,7 +927,6 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .collect();
 
             let fees = details
-                .balance()
                 .fees()
                 .iter()
                 .map(|(&k, &v)| (k.to_string(), v))

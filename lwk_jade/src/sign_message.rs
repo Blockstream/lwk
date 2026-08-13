@@ -18,7 +18,7 @@ pub(crate) struct ParsedMessageSignature {
 ///
 /// Legacy signing returns a 65-byte Bitcoin message signature containing a recovery header and
 /// the 64-byte compact signature. Anti-exfil signing returns only the compact signature because
-/// the signer-to-contract operation does not produce a recovery ID. For the latter, try each
+/// the sign-to-contract operation does not produce a recovery ID. For the latter, try each
 /// possible recovery ID and retain the one that recovers the expected Jade public key.
 /// See <https://github.com/Blockstream/Jade/blob/1f2e4403b351bec2547c780ada1c958a51f74537/main/wallet.c#L1478-L1514>.
 pub(crate) fn parse(

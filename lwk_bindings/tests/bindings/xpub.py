@@ -28,3 +28,11 @@ desc = WolletDescriptor.ss_desc_from_external_signer(
 # Check against the descriptor obtained directly from the signer
 d = signer.singlesig_desc(Singlesig.WPKH, DescriptorBlindingKey.SLIP77)
 assert str(desc) == str(d)
+
+# DescriptorPublicKey from_str/to_str roundtrip, with and without keyorigin
+dpk = DescriptorPublicKey(xpub)
+assert str(dpk) == xpub
+
+keyorigin_xpub = signer.keyorigin_xpub(Bip.new_bip84())
+dpk = DescriptorPublicKey(keyorigin_xpub)
+assert str(dpk).replace("'", "h") == keyorigin_xpub

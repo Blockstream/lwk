@@ -186,6 +186,14 @@ impl From<lwk_common::Error> for LwkError {
     }
 }
 
+impl From<lwk_common::InvalidKeyOriginXpub> for LwkError {
+    fn from(value: lwk_common::InvalidKeyOriginXpub) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
 impl From<String> for LwkError {
     fn from(msg: String) -> Self {
         LwkError::Generic { msg }

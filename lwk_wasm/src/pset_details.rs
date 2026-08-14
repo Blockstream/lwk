@@ -64,6 +64,12 @@ impl PsetDetails {
             .collect()
     }
 
+    /// Whether any PSET input sighash is not the default one
+    #[wasm_bindgen(js_name = hasNonDefaultSighash)]
+    pub fn has_non_default_sighash(&self) -> bool {
+        self.inner.has_non_default_sighash()
+    }
+
     /// Set of fingerprints for which the PSET is missing a signature
     #[wasm_bindgen(js_name = fingerprintsMissing)]
     pub fn fingerprints_missing(&self) -> Vec<String> {

@@ -675,6 +675,9 @@ fn test_liquidex() {
     let pset = get_str(&result, "pset");
     let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
 
+    let r = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
+    assert!(get_str(&r, "warnings").contains("non-default sighash"));
+
     let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
@@ -690,7 +693,8 @@ fn test_liquidex() {
     let pset = get_str(&result, "pset");
 
     let result = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
-    println!("result w1: {result:?}"); // TODO: check
+    assert!(get_str(&result, "warnings").is_empty());
+    // TODO: check the other fields
 
     //let result = sh(&format!("{cli} wallet pset-details --wallet w2 -p {pset}"));
     //println!("result w2: {:?}", result);

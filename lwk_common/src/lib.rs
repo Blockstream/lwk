@@ -491,7 +491,7 @@ mod test {
     use elements::{pset::PartiallySignedTransaction, AssetId};
     use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 
-    use crate::{input_sighash, pset_balance};
+    use crate::{input_sighash, pset_balance, pset_has_non_default_sighash};
 
     fn normalize_newlines(s: &str) -> String {
         s.replace("\r\n", "\n")
@@ -538,6 +538,53 @@ mod test {
         // without any spent output the input cannot be signed, return None
         input.non_witness_utxo = None;
         assert_eq!(input_sighash(&input), None);
+    }
+
+    #[test]
+    fn test_pset_has_non_default_sighash() {
+        let pset_str = include_str!("../test_data/pset_details/pset.base64");
+        let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
+
+        // an input declaring nothing commits to everything, whatever the spent output is
+        assert!(!pset_has_non_default_sighash(&pset));
+
+        let declare = |sighash: u32| {
+            let mut pset = pset.clone();
+            pset.inputs_mut()[0].sighash_type =
+                Some(elements::pset::PsbtSighashType::from_u32(sighash));
+            pset
+        };
+
+        // p2wsh input: only `ALL` commits to everything
+        assert!(!pset_has_non_default_sighash(&declare(1)));
+        assert!(pset_has_non_default_sighash(&declare(131)));
+
+        // non standard values cannot be interpreted, warn about them
+        assert!(pset_has_non_default_sighash(&declare(153)));
+
+        let mut p2tr = vec![0x51, 0x20];
+        p2tr.extend([0u8; 32]);
+        let p2tr = elements::Script::from(p2tr);
+        assert!(p2tr.is_v1_p2tr());
+        let declare_taproot = |sighash: u32| {
+            let mut pset = declare(sighash);
+            pset.inputs_mut()[0]
+                .witness_utxo
+                .as_mut()
+                .unwrap()
+                .script_pubkey = p2tr.clone();
+            pset
+        };
+
+        // taproot input: `DEFAULT` and `ALL` commit to the same data
+        assert!(!pset_has_non_default_sighash(&declare_taproot(0)));
+        assert!(!pset_has_non_default_sighash(&declare_taproot(1)));
+        assert!(pset_has_non_default_sighash(&declare_taproot(3)));
+
+        // without the spent output the script type is unknown, don't warn
+        let mut pset = declare(131);
+        pset.inputs_mut()[0].witness_utxo = None;
+        assert!(!pset_has_non_default_sighash(&pset));
     }
 
     fn setup_pset_details() -> (AssetId, ConfidentialDescriptor<DescriptorPublicKey>) {

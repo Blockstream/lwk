@@ -18,18 +18,41 @@ pub struct TestJadeEmulator<'a> {
 }
 
 impl<'a> TestJadeEmulator<'a> {
-    /// Jade with emulator
+    /// Jade with emulator and a local PIN server
     pub fn new(docker: &'a Cli) -> Self {
         let container = docker.run(JadeEmulator);
         let port = container.get_host_port_ipv4(EMULATOR_PORT);
         let stream = std::net::TcpStream::connect(format!("127.0.0.1:{port}")).unwrap();
         let network = Network::default_regtest();
         let jade = Jade::new(stream.into(), network);
+
+        let tempdir = PinServer::tempdir().unwrap();
+        let pin_server = PinServer::new(&tempdir).unwrap();
+        let pin_server_pub_key = *pin_server.pub_key();
+        assert_eq!(pin_server_pub_key.to_bytes().len(), 33);
+        let pin_container = docker.run(pin_server);
+        let pin_port = pin_container.get_host_port_ipv4(PIN_SERVER_PORT);
+        let pin_server_url = format!("http://127.0.0.1:{pin_port}");
+
+        let params = UpdatePinserverParams {
+            reset_details: false,
+            reset_certificate: false,
+            url_a: pin_server_url.clone(),
+            url_b: "".to_string(),
+            pubkey: pin_server_pub_key.to_bytes(),
+            certificate: "".into(),
+        };
+
+        let result = jade.update_pinserver(params).unwrap();
+        assert!(result);
+
+        jade.unlock().unwrap();
+
         Self {
             jade,
             _jade_emul: container,
-            _pin_server: None,
-            _pin_server_dir: None,
+            _pin_server: Some(pin_container),
+            _pin_server_dir: Some(tempdir),
         }
     }
 
@@ -44,34 +67,8 @@ impl<'a> TestJadeEmulator<'a> {
         assert!(result);
     }
 
-    /// Jade with emulator and dedicated pin server
+    /// Alias for [`Self::new`], retained for compatibility.
     pub fn new_with_pin(docker: &'a Cli) -> Self {
-        let mut test_jade_emul = Self::new(docker);
-
-        let tempdir = PinServer::tempdir().unwrap();
-        let pin_server = PinServer::new(&tempdir).unwrap();
-        let pin_server_pub_key = *pin_server.pub_key();
-        assert_eq!(pin_server_pub_key.to_bytes().len(), 33);
-        let pin_container = docker.run(pin_server);
-        let port = pin_container.get_host_port_ipv4(PIN_SERVER_PORT);
-        let pin_server_url = format!("http://127.0.0.1:{port}");
-
-        let params = UpdatePinserverParams {
-            reset_details: false,
-            reset_certificate: false,
-            url_a: pin_server_url.clone(),
-            url_b: "".to_string(),
-            pubkey: pin_server_pub_key.to_bytes(),
-            certificate: "".into(),
-        };
-
-        let result = test_jade_emul.jade.update_pinserver(params).unwrap();
-        assert!(result);
-
-        test_jade_emul.jade.unlock().unwrap();
-
-        test_jade_emul._pin_server = Some(pin_container);
-        test_jade_emul._pin_server_dir = Some(tempdir);
-        test_jade_emul
+        Self::new(docker)
     }
 }

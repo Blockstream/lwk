@@ -43,7 +43,9 @@ fn debug_set_mnemonic() {
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let result = jade.jade.version_info().unwrap();
-    assert_eq!(result, mock_version_info());
+    let mut expected = mock_version_info();
+    expected.jade_has_pin = true;
+    assert_eq!(result, expected);
 }
 
 #[test]
@@ -71,9 +73,13 @@ fn ping() {
 #[test]
 fn version() {
     let docker = clients::Cli::default();
-    let jade = TestJadeEmulator::new(&docker);
+    let container = docker.run(lwk_containers::JadeEmulator);
+    let port = container.get_host_port_ipv4(lwk_containers::EMULATOR_PORT);
+    let network = lwk_common::Network::default_regtest();
+    let addr = format!("127.0.0.1:{port}").parse().unwrap();
+    let jade = lwk_jade::Jade::from_socket(addr, network).unwrap();
 
-    let result = jade.jade.version_info().unwrap();
+    let result = jade.version_info().unwrap();
     let mut expected = mock_version_info();
     expected.jade_state = JadeState::Uninit;
     assert_eq!(result, expected);

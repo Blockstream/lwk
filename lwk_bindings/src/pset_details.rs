@@ -49,6 +49,11 @@ impl PsetDetails {
             .collect()
     }
 
+    /// Whether any PSET input sighash is not the default one
+    pub fn has_non_default_sighash(&self) -> bool {
+        self.inner.has_non_default_sighash()
+    }
+
     /// Set of fingerprints for which the PSET has a signature
     pub fn fingerprints_has(&self) -> Vec<String> {
         // TODO: return HashSet when upgrading to uniffi-rs 0.29 or later

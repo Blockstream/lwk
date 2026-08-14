@@ -47,6 +47,9 @@ pub enum InnerError {
 
     #[error("Missing or invalid Authorization header")]
     Unauthorized,
+
+    #[error("Request body exceeds the maximum allowed size")]
+    PayloadTooLarge,
 }
 
 impl From<String> for Error {
@@ -87,6 +90,7 @@ impl AsRpcError for InnerError {
             InnerError::ReservedMethodPrefix => (METHOD_RESERVED, None),
             InnerError::InvalidVersion => (INVALID_VERSION, None),
             InnerError::Unauthorized => (UNAUTHORIZED, None),
+            InnerError::PayloadTooLarge => (PAYLOAD_TOO_LARGE, None),
         };
 
         RpcError {
@@ -144,6 +148,7 @@ const NO_CONTENT_TYPE: i64 = -32_001;
 const WRONG_CONTENT_TYPE: i64 = -32_002;
 const METHOD_RESERVED: i64 = -32_003;
 const INVALID_VERSION: i64 = -32_004;
+const PAYLOAD_TOO_LARGE: i64 = -32_006;
 
 const UNAUTHORIZED: i64 = -32_098;
 const STOP_ERROR: i64 = -32_099;

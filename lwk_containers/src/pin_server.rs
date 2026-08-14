@@ -40,6 +40,16 @@ impl PinServer {
         rng.fill_bytes(&mut random_buff);
         file.write_all(&random_buff)?;
 
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            // The container runs uWSGI as www-data, so the bind-mounted key must be
+            // world-readable; the containing temporary directory limits host access.
+            let mut perms = file.metadata()?.permissions();
+            perms.set_mode(0o644);
+            std::fs::set_permissions(&file_path, perms)?;
+        }
+
         let prv_key = PrivateKey::from_slice(&random_buff, NetworkKind::Test).expect("32 bytes");
         let pin_server_pub_key = PublicKey::from_private_key(&Secp256k1::new(), &prv_key);
 

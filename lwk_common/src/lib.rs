@@ -320,12 +320,7 @@ pub fn pset_balance(
             let blinding_pubkey = output.blinding_key.as_ref().map(|k| k.inner);
             let address =
                 elements::Address::from_script(&output.script_pubkey, blinding_pubkey, params);
-            let recipient = Recipient {
-                address,
-                vout: idx as u32,
-                asset: output.asset,
-                value: output.amount,
-            };
+            let recipient = Recipient::new(address, output.asset, output.amount, idx as u32);
 
             recipients.push(recipient);
 
@@ -385,11 +380,7 @@ pub fn pset_balance(
     // For example it happens with reissuance tokens.
     balances.retain(|_, v| *v != 0);
 
-    Ok(PsetBalance {
-        fees,
-        balances: balances.into(),
-        recipients,
-    })
+    Ok(PsetBalance::new(fees, balances.into(), recipients))
 }
 
 /// Return the signatures of a PSET, for each input return a [`PsetSignatures`] which includes a
@@ -407,10 +398,7 @@ pub fn pset_signatures(pset: &PartiallySignedTransaction) -> Vec<PsetSignatures>
                     missing_signature.push((pk, ks));
                 }
             }
-            PsetSignatures {
-                has_signature,
-                missing_signature,
-            }
+            PsetSignatures::new(has_signature, missing_signature)
         })
         .collect()
 }
@@ -539,7 +527,7 @@ mod test {
         let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
         assert!(
-            !balance.balances.contains_key(&asset_id),
+            !balance.balances().contains_key(&asset_id),
             "redeposit (balance = 0) should disappear from the list"
         );
 
@@ -549,7 +537,7 @@ mod test {
         let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
         assert!(
-            !balance.balances.contains_key(&asset_id),
+            !balance.balances().contains_key(&asset_id),
             "redeposit (balance = 0) should disappear from the list"
         );
     }
@@ -560,7 +548,7 @@ mod test {
         let pset_str = include_str!("../test_data/pset_details/pset2.base64");
         let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
-        let v = balance.balances.get(&asset_id).unwrap();
+        let v = balance.balances().get(&asset_id).unwrap();
         assert_eq!(*v, -1);
 
         // Same for newly created psets with blind proofs
@@ -568,7 +556,7 @@ mod test {
             include_str!("../test_data/pset_details/pset2_with_input_blind_proofs.base64");
         let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
-        let v = balance.balances.get(&asset_id).unwrap();
+        let v = balance.balances().get(&asset_id).unwrap();
         assert_eq!(*v, -1);
     }
 
@@ -582,23 +570,23 @@ mod test {
         let expected_asset_id = "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49";
         let expected_value = 120;
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
-        assert_eq!(balance.recipients.len(), 1);
-        let recipient = balance.recipients.first().unwrap();
-        let dest = recipient.address.as_ref().unwrap();
+        assert_eq!(balance.recipients().len(), 1);
+        let recipient = balance.recipients().first().unwrap();
+        let dest = recipient.address().unwrap();
         assert_eq!(dest.to_string(), expected_dest);
-        assert_eq!(recipient.asset.unwrap().to_string(), expected_asset_id);
-        assert_eq!(recipient.value.unwrap(), expected_value);
-        assert_eq!(recipient.vout, 0);
+        assert_eq!(recipient.asset().unwrap().to_string(), expected_asset_id);
+        assert_eq!(recipient.value().unwrap(), expected_value);
+        assert_eq!(recipient.vout(), 0);
 
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID).unwrap();
-        assert_eq!(balance.recipients.len(), 1);
-        let recipient = balance.recipients.first().unwrap();
-        let dest = recipient.address.as_ref().unwrap();
+        assert_eq!(balance.recipients().len(), 1);
+        let recipient = balance.recipients().first().unwrap();
+        let dest = recipient.address().unwrap();
         assert_ne!(dest.to_string(), expected_dest);
         assert_eq!(dest.to_string(), "lq1qqwx9sng3htz6u2yeqrgf2w525att79vnvwtcqsar7xyqj8hf7s32usgvct9q9f4u3nmnnkwhkfayswc853egsw4pnw8lktr6d");
-        assert_eq!(recipient.asset.unwrap().to_string(), expected_asset_id);
-        assert_eq!(recipient.value.unwrap(), expected_value);
-        assert_eq!(recipient.vout, 0);
+        assert_eq!(recipient.asset().unwrap().to_string(), expected_asset_id);
+        assert_eq!(recipient.value().unwrap(), expected_value);
+        assert_eq!(recipient.vout(), 0);
     }
 
     #[test]

@@ -24,8 +24,8 @@ use elements_miniscript::{
 };
 use fxhash::FxHasher;
 use lwk_common::{
-    burn_script, get_genesis_hash, pset_balance, pset_issuances, pset_signatures, Balance,
-    DynStore, EncryptedStore, FakeStore, FileStore, MemoryStore, PsetDetails,
+    burn_script, get_genesis_hash, Balance, DynStore, EncryptedStore, FakeStore, FileStore,
+    MemoryStore, PsetDetails,
 };
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hasher;
@@ -1054,11 +1054,7 @@ impl Wollet {
 
     /// Get the PSET details with respect to the wallet
     pub fn get_details(&self, pset: &PartiallySignedTransaction) -> Result<PsetDetails, Error> {
-        Ok(PsetDetails {
-            balance: pset_balance(pset, self.descriptor()?, self.network.address_params())?,
-            sig_details: pset_signatures(pset),
-            issuances: pset_issuances(pset),
-        })
+        Ok(PsetDetails::new(pset, self.descriptor()?, &self.network)?)
     }
 
     pub(crate) fn index(&self, script_pubkey: &Script) -> Result<(Chain, u32), Error> {

@@ -2,27 +2,51 @@ use elements_miniscript::elements::bitcoin::{
     bip32::{Fingerprint, KeySource},
     key::PublicKey,
 };
-use elements_miniscript::elements::pset::Input;
+use elements_miniscript::elements::pset::{Input, PartiallySignedTransaction};
 use elements_miniscript::elements::secp256k1_zkp::ZERO_TWEAK;
 use elements_miniscript::elements::{AssetId, AssetIssuance, OutPoint, Txid};
+use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use std::collections::{BTreeSet, HashMap};
 
-use crate::SignedBalance;
+use crate::{pset_balance, pset_issuances, pset_signatures, Error, Network, SignedBalance};
 
 /// The details regarding balance and amounts in a PSET
 #[derive(Debug, Clone)]
 pub struct PsetBalance {
-    /// The fees of the transaction in the PSET
-    pub fees: HashMap<AssetId, u64>,
-
-    /// The net balance of the assets in the PSET from the point of view of the wallet
-    pub balances: SignedBalance,
-
-    /// Outputs going out of the wallet
-    pub recipients: Vec<Recipient>,
+    fees: HashMap<AssetId, u64>,
+    balances: SignedBalance,
+    recipients: Vec<Recipient>,
 }
 
 impl PsetBalance {
+    /// Create the balance details of a PSET
+    pub fn new(
+        fees: HashMap<AssetId, u64>,
+        balances: SignedBalance,
+        recipients: Vec<Recipient>,
+    ) -> Self {
+        Self {
+            fees,
+            balances,
+            recipients,
+        }
+    }
+
+    /// The fees of the transaction in the PSET
+    pub fn fees(&self) -> &HashMap<AssetId, u64> {
+        &self.fees
+    }
+
+    /// The net balance of the assets in the PSET from the point of view of the wallet
+    pub fn balances(&self) -> &SignedBalance {
+        &self.balances
+    }
+
+    /// Outputs going out of the wallet
+    pub fn recipients(&self) -> &[Recipient] {
+        &self.recipients
+    }
+
     /// Return the amount of fee with given asset id
     pub fn fees_in(&self, asset: &AssetId) -> u64 {
         *self.fees.get(asset).unwrap_or(&0)
@@ -32,31 +56,81 @@ impl PsetBalance {
 /// The recipient (an output not belonging to the wallet) in a PSET
 #[derive(Debug, Clone)]
 pub struct Recipient {
+    address: Option<elements::Address>,
+    asset: Option<AssetId>,
+    value: Option<u64>,
+    vout: u32,
+}
+
+impl Recipient {
+    /// Create a recipient of a PSET
+    pub fn new(
+        address: Option<elements::Address>,
+        asset: Option<AssetId>,
+        value: Option<u64>,
+        vout: u32,
+    ) -> Self {
+        Self {
+            address,
+            asset,
+            value,
+            vout,
+        }
+    }
+
     /// The confidential address of the recipients.
     ///
     /// Can be None in the following cases:
     ///  - if no blinding key is available in the PSET, FIXME?
     ///  - if the script is not a known template
-    pub address: Option<elements::Address>,
+    pub fn address(&self) -> Option<&elements::Address> {
+        self.address.as_ref()
+    }
 
     /// The asset sent to this recipient if it's available to extract from the PSET
-    pub asset: Option<AssetId>,
+    pub fn asset(&self) -> Option<AssetId> {
+        self.asset
+    }
 
     /// The value sent to this recipient if it's available to extract from the PSET
-    pub value: Option<u64>,
+    pub fn value(&self) -> Option<u64> {
+        self.value
+    }
 
     /// The index of the output in the transaction
-    pub vout: u32,
+    pub fn vout(&self) -> u32 {
+        self.vout
+    }
 }
 
 /// The details of the signatures in a PSET
 #[derive(Debug, Clone)]
 pub struct PsetSignatures {
+    has_signature: Vec<(PublicKey, KeySource)>,
+    missing_signature: Vec<(PublicKey, KeySource)>,
+}
+
+impl PsetSignatures {
+    /// Create the signature details of a PSET input
+    pub fn new(
+        has_signature: Vec<(PublicKey, KeySource)>,
+        missing_signature: Vec<(PublicKey, KeySource)>,
+    ) -> Self {
+        Self {
+            has_signature,
+            missing_signature,
+        }
+    }
+
     /// The signatures that are available
-    pub has_signature: Vec<(PublicKey, KeySource)>,
+    pub fn has_signature(&self) -> &[(PublicKey, KeySource)] {
+        &self.has_signature
+    }
 
     /// The signatures that are missing
-    pub missing_signature: Vec<(PublicKey, KeySource)>,
+    pub fn missing_signature(&self) -> &[(PublicKey, KeySource)] {
+        &self.missing_signature
+    }
 }
 
 /// The details of an issuance or reissuance
@@ -142,17 +216,60 @@ impl Issuance {
 /// - for issuances and reissuances transactions contains the issuance or reissuance details
 #[derive(Debug, Clone)]
 pub struct PsetDetails {
-    /// The net balance of the PSET from the point of view of the wallet
-    pub balance: PsetBalance,
-
-    /// For each input, existing or missing signatures
-    pub sig_details: Vec<PsetSignatures>,
-
-    /// For each input, the corresponding issuance
-    pub issuances: Vec<Issuance>,
+    balance: PsetBalance,
+    sig_details: Vec<PsetSignatures>,
+    issuances: Vec<Issuance>,
 }
 
 impl PsetDetails {
+    /// Compute the details of the given PSET with respect to the given descriptor
+    pub fn new(
+        pset: &PartiallySignedTransaction,
+        descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+        network: &Network,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            balance: pset_balance(pset, descriptor, network.address_params())?,
+            sig_details: pset_signatures(pset),
+            issuances: pset_issuances(pset),
+        })
+    }
+
+    /// The net balance of the PSET from the point of view of the wallet
+    pub fn balance(&self) -> &PsetBalance {
+        &self.balance
+    }
+
+    /// The fees of the transaction in the PSET
+    pub fn fees(&self) -> &HashMap<AssetId, u64> {
+        self.balance.fees()
+    }
+
+    /// Return the amount of fee with given asset id
+    pub fn fees_in(&self, asset: &AssetId) -> u64 {
+        self.balance.fees_in(asset)
+    }
+
+    /// The net balance of the assets in the PSET from the point of view of the wallet
+    pub fn balances(&self) -> &SignedBalance {
+        self.balance.balances()
+    }
+
+    /// Outputs going out of the wallet
+    pub fn recipients(&self) -> &[Recipient] {
+        self.balance.recipients()
+    }
+
+    /// For each input, existing or missing signatures
+    pub fn sig_details(&self) -> &[PsetSignatures] {
+        &self.sig_details
+    }
+
+    /// For each input, the corresponding issuance
+    pub fn issuances(&self) -> &[Issuance] {
+        &self.issuances
+    }
+
     /// Set of fingerprints for which the PSET has a signature
     pub fn fingerprints_has(&self) -> BTreeSet<Fingerprint> {
         let mut r = BTreeSet::new();

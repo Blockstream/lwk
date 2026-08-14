@@ -51,15 +51,15 @@ impl PsetDetails {
     /// Return the balance of the PSET from the point of view of the wallet
     /// that generated this via `psetDetails()`
     pub fn balance(&self) -> PsetBalance {
-        self.inner.balance.clone().into()
+        self.inner.balance().clone().into()
     }
 
     /// For each input existing or missing signatures
     pub fn signatures(&self) -> Vec<PsetSignatures> {
         self.inner
-            .sig_details
-            .clone()
-            .into_iter()
+            .sig_details()
+            .iter()
+            .cloned()
             .map(Into::into)
             .collect()
     }
@@ -91,9 +91,9 @@ impl PsetDetails {
         // with a reference to the relative input. We should problaby move that logic upper so we can reuse?
         // in the meantime, this less ergonomic method should suffice.
         self.inner
-            .issuances
-            .clone()
-            .into_iter()
+            .issuances()
+            .iter()
+            .cloned()
             .map(Into::into)
             .collect()
     }
@@ -107,12 +107,12 @@ impl PsetBalance {
     ///
     /// Deprecated: use `feesIn(assetId)` or `fees()` instead.
     pub fn fee(&self) -> u64 {
-        *self.inner.fees.values().next().unwrap_or(&0)
+        *self.inner.fees().values().next().unwrap_or(&0)
     }
 
     /// Fees paid by this transaction.
     pub fn fees(&self) -> Fees {
-        self.inner.fees.clone().into()
+        self.inner.fees().clone().into()
     }
 
     /// The amount of fee with given asset id
@@ -123,14 +123,14 @@ impl PsetBalance {
 
     /// The net balance for every asset with respect of the wallet asking the pset details
     pub fn balances(&self) -> Balance {
-        self.inner.balances.clone().into()
+        self.inner.balances().clone().into()
     }
 
     pub fn recipients(&self) -> Vec<Recipient> {
         self.inner
-            .recipients
-            .clone()
-            .into_iter()
+            .recipients()
+            .iter()
+            .cloned()
             .map(Into::into)
             .collect()
     }
@@ -141,12 +141,12 @@ impl PsetSignatures {
     /// Returns `Vec<(PublicKey, KeySource)>`
     #[wasm_bindgen(js_name = hasSignature)]
     pub fn has_signature(&self) -> JsValue {
-        convert(&self.inner.has_signature)
+        convert(self.inner.has_signature())
     }
 
     #[wasm_bindgen(js_name = missingSignature)]
     pub fn missing_signature(&self) -> JsValue {
-        convert(&self.inner.missing_signature)
+        convert(self.inner.missing_signature())
     }
 }
 fn convert(data: &[(elements::bitcoin::PublicKey, KeySource)]) -> JsValue {
@@ -199,18 +199,18 @@ impl Issuance {
 #[wasm_bindgen]
 impl Recipient {
     pub fn asset(&self) -> Option<AssetId> {
-        self.inner.asset.map(Into::into)
+        self.inner.asset().map(Into::into)
     }
 
     pub fn value(&self) -> Option<u64> {
-        self.inner.value
+        self.inner.value()
     }
 
     pub fn address(&self) -> Option<Address> {
-        self.inner.address.as_ref().map(Into::into)
+        self.inner.address().map(Into::into)
     }
     pub fn vout(&self) -> u32 {
-        self.inner.vout
+        self.inner.vout()
     }
 }
 

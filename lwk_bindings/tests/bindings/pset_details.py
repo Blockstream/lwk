@@ -25,6 +25,8 @@ assert(len(signatures) == 1)
 assert(signatures[0].has_signature()["02ab89406d9cf32ff1819838136eecb65c07add8e8ef1cd2d6c64bab1d85606453"] == "[6e055509]87'/1'/0'/0/0")
 assert(signatures[0].missing_signature()["03c1d0c7ddab5bd5bffbe0bf04a8a570eeabd9b6356358ecaacc242f658c7d5aad"] == "[281e2239]87'/1'/0'/0/0")
 
+assert(details.has_non_default_sighash() == False)
+
 issuances = details.inputs_issuances()
 assert(len(issuances) == 1)
 assert(issuances[0].is_issuance() == False)

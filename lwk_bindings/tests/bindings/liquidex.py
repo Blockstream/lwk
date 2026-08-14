@@ -35,6 +35,7 @@ utxo = maker.utxos()[0].outpoint()
 builder.liquidex_make(utxo, maker.address(None).address(), issued_asset_units, asset)
 pset = builder.finish(maker)
 assert pset.inputs()[0].sighash() == 131 # ANCHOR: ignore
+assert maker.pset_details(pset).has_non_default_sighash() # ANCHOR: ignore
 signed_pset = signer.sign(pset)
 
 # (maker) Create the proposal  and convert it to string to pass it to the taker

@@ -85,7 +85,8 @@ use elements_miniscript::elements::{
     pset::PartiallySignedTransaction,
     script::Builder,
     secp256k1_zkp::{All, Generator, PedersenCommitment, Secp256k1},
-    AssetId, BlindAssetProofs, BlindValueProofs, OutPoint, Script, TxOutSecrets,
+    AssetId, BlindAssetProofs, BlindValueProofs, EcdsaSighashType, OutPoint, SchnorrSighashType,
+    Script, TxOutSecrets,
 };
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use std::collections::btree_map::BTreeMap;
@@ -422,6 +423,31 @@ pub fn input_sighash(input: &elements::pset::Input) -> Option<u32> {
     }
 
     input_spent_script_pubkey(input).map(|s| if s.is_v1_p2tr() { 0 } else { 1 })
+}
+
+fn input_has_non_default_sighash(input: &elements::pset::Input) -> bool {
+    let Some(sighash) = input.sighash_type else {
+        return false;
+    };
+    let Some(spk) = input_spent_script_pubkey(input) else {
+        return false;
+    };
+
+    if spk.is_v1_p2tr() {
+        // SIGHASH_DEFAULT and SIGHASH_ALL commit to the same data, but only the former can be
+        // implied, so a taproot input declaring SIGHASH_ALL is still a default one.
+        !matches!(
+            sighash.schnorr_hash_ty(),
+            Some(SchnorrSighashType::Default) | Some(SchnorrSighashType::All)
+        )
+    } else {
+        !matches!(sighash.ecdsa_hash_ty(), Some(EcdsaSighashType::All))
+    }
+}
+
+/// Whether any PSET input sighash is not the default one.
+pub(crate) fn pset_has_non_default_sighash(pset: &PartiallySignedTransaction) -> bool {
+    pset.inputs().iter().any(input_has_non_default_sighash)
 }
 
 /// Return the issuances of a PSET, for each input return an Issuance but the struct must be checked with [`Issuance::is_issuance`] if it's a real issuance or reissuance.

@@ -8,7 +8,10 @@ use elements_miniscript::elements::{AssetId, AssetIssuance, OutPoint, Txid};
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use std::collections::{BTreeSet, HashMap};
 
-use crate::{pset_balance, pset_issuances, pset_signatures, Error, Network, SignedBalance};
+use crate::{
+    pset_balance, pset_has_non_default_sighash, pset_issuances, pset_signatures, Error, Network,
+    SignedBalance,
+};
 
 /// The details regarding balance and amounts in a PSET
 #[derive(Debug, Clone)]
@@ -219,6 +222,7 @@ pub struct PsetDetails {
     balance: PsetBalance,
     sig_details: Vec<PsetSignatures>,
     issuances: Vec<Issuance>,
+    has_non_default_sighash: bool,
 }
 
 impl PsetDetails {
@@ -232,6 +236,7 @@ impl PsetDetails {
             balance: pset_balance(pset, descriptor, network.address_params())?,
             sig_details: pset_signatures(pset),
             issuances: pset_issuances(pset),
+            has_non_default_sighash: pset_has_non_default_sighash(pset),
         })
     }
 
@@ -268,6 +273,11 @@ impl PsetDetails {
     /// For each input, the corresponding issuance
     pub fn issuances(&self) -> &[Issuance] {
         &self.issuances
+    }
+
+    /// Whether any PSET input sighash is not the default one
+    pub fn has_non_default_sighash(&self) -> bool {
+        self.has_non_default_sighash
     }
 
     /// Set of fingerprints for which the PSET has a signature

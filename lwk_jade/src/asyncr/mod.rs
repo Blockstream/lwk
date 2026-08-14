@@ -397,7 +397,7 @@ impl<S: Stream<Error = Error>> Jade<S> {
             &signer_commitment,
             &base64_signature,
         )
-        .map_err(|_| Error::MessageSignatureValidationFailed)
+        .map_err(|_| Error::SignatureValidationFailed)
     }
 
     pub async fn sign_psbt(&self, params: SignPsbtParams) -> Result<Vec<u8>> {

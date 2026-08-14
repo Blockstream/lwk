@@ -562,7 +562,7 @@ impl Signer for &Jade {
             &signer_commitment,
             &base64_signature,
         )
-        .map_err(|_| Error::MessageSignatureValidationFailed)
+        .map_err(|_| Error::SignatureValidationFailed)
     }
 }
 

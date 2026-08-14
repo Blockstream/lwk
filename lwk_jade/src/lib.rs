@@ -18,7 +18,7 @@ mod sign_pset_common;
 mod jade_emulator;
 
 #[cfg(feature = "test_emulator")]
-pub use jade_emulator::TestJadeEmulator;
+pub use jade_emulator::{TestJadeEmulator, TestJadeEmulatorGuard};
 
 #[cfg(feature = "sync")]
 mod sync;

@@ -10,7 +10,7 @@ use clap::{Parser, ValueEnum};
 use elements::hex::ToHex;
 use elements::{encode::serialize, Txid};
 use elements::{pset::PartiallySignedTransaction, Address};
-use lwk_containers::{testcontainers::clients, JadeEmulator, EMULATOR_PORT};
+use lwk_containers::testcontainers::clients;
 use serde_json::Value;
 
 use lwk_cli::{
@@ -1041,9 +1041,9 @@ fn test_jade_emulator() {
     let (t, _tmp, cli, _params, env) = setup_cli(env);
 
     let docker = clients::Cli::default();
-    let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(EMULATOR_PORT);
-    let jade_addr = format!("127.0.0.1:{port}");
+    let test_jade = lwk_jade::TestJadeEmulator::new(&docker);
+    let jade_addr = format!("127.0.0.1:{}", test_jade.emulator_port());
+    let _guard = test_jade.release_connection();
 
     let result = sh(&format!("{cli} signer jade-id --emulator {jade_addr}"));
     let identifier = result.get("identifier").unwrap().as_str().unwrap();
@@ -1492,9 +1492,9 @@ fn test_elip151() {
 
     // Load a jade
     let docker = clients::Cli::default();
-    let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(EMULATOR_PORT);
-    let addr = format!("127.0.0.1:{port}");
+    let test_jade = lwk_jade::TestJadeEmulator::new(&docker);
+    let addr = format!("127.0.0.1:{}", test_jade.emulator_port());
+    let _guard = test_jade.release_connection();
     let r = sh(&format!("{cli} signer jade-id --emulator {addr}"));
     let id = r.get("identifier").unwrap().as_str().unwrap();
     assert_eq!(id, "e3ebcc79ebfedb4f2ae34406827dc1c5cb48e11f");

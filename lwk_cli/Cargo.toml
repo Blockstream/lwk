@@ -30,6 +30,7 @@ uniffi = { version = "=0.29.4", features = ["cli"], optional = true }
 [dev-dependencies]
 lwk_containers = { version = "0.18.1" }
 lwk_test_util = { version = "0.18.0" }
+lwk_jade = { version = "0.18.1" }
 
 shellwords = "1.1.0"
 elements.workspace = true

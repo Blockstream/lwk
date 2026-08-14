@@ -71,4 +71,27 @@ impl<'a> TestJadeEmulator<'a> {
     pub fn new_with_pin(docker: &'a Cli) -> Self {
         Self::new(docker)
     }
+
+    /// Get the host port for the emulator
+    pub fn emulator_port(&self) -> u16 {
+        self._jade_emul.get_host_port_ipv4(EMULATOR_PORT)
+    }
+
+    /// Releases the TCP connection to the Jade emulator, returning a guard that keeps the
+    /// containers alive.
+    pub fn release_connection(self) -> TestJadeEmulatorGuard<'a> {
+        TestJadeEmulatorGuard {
+            _jade_emul: self._jade_emul,
+            _pin_server: self._pin_server,
+            _pin_server_dir: self._pin_server_dir,
+        }
+    }
+}
+
+/// A guard that holds the emulator and PIN server containers to keep them alive
+/// after releasing the client connection.
+pub struct TestJadeEmulatorGuard<'a> {
+    _jade_emul: Container<'a, JadeEmulator>,
+    _pin_server: Option<Container<'a, PinServer>>,
+    _pin_server_dir: Option<TempDir>,
 }

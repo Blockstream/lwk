@@ -139,10 +139,6 @@ impl Jade {
         self.send(Request::GetMasterBlindingKey(params))
     }
 
-    pub fn sign_message_inner(&self, params: SignMessageParams) -> Result<ByteBuf> {
-        self.send(Request::SignMessage(params))
-    }
-
     pub fn get_signature_for_msg(&self, params: GetSignatureParams) -> Result<String> {
         self.send(Request::GetSignature(params))
     }
@@ -542,8 +538,8 @@ impl Signer for &Jade {
             path: derivation_path_to_vec(path),
         })?;
         let host_entropy = anti_exfil::new_host_entropy()?;
-        // Keep one lock across both halves of the anti-exfil exchange. `sign_message_inner`
-        // cannot be used here because it acquires this same lock through `send`.
+        // Keep one lock across both halves of the anti-exfil exchange so no other request can
+        // interleave between them.
         let mut conn = self.conn.lock()?;
         let signer_commitment: ByteBuf = self.send_with_conn(
             Request::SignMessage(SignMessageParams {

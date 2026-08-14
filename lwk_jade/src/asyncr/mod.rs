@@ -172,10 +172,6 @@ impl<S: Stream<Error = Error>> Jade<S> {
         self.send(Request::GetMasterBlindingKey(params)).await
     }
 
-    pub async fn sign_message_inner(&self, params: SignMessageParams) -> Result<ByteBuf> {
-        self.send(Request::SignMessage(params)).await
-    }
-
     pub async fn get_signature_for_msg(&self, params: GetSignatureParams) -> Result<String> {
         self.send(Request::GetSignature(params)).await
     }
@@ -372,8 +368,8 @@ impl<S: Stream<Error = Error>> Jade<S> {
             })
             .await?;
         let host_entropy = anti_exfil::new_host_entropy()?;
-        // Keep one lock across both halves of the anti-exfil exchange. `sign_message_inner`
-        // cannot be used here because it acquires this same lock through `send`.
+        // Keep one lock across both halves of the anti-exfil exchange so no other request can
+        // interleave between them.
         let stream = self.stream.lock().await;
         let signer_commitment: ByteBuf = self
             .send_with_stream(

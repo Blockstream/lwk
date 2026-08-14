@@ -184,7 +184,7 @@ test_auth:
     # The closed-source RPC proxy image lives in the gitlab registry; the job token needs
     # read access to explorer/electrum-rpc/electrs-electrum-proxy for this pull to work.
     - echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin glregistry.blockstream.io
-    - docker pull glregistry.blockstream.io/explorer/electrum-rpc/electrs-electrum-proxy/prod/rpcproxy:4540cbae-20260714161505
+    - docker pull glregistry.blockstream.io/explorer/electrum-rpc/electrs-electrum-proxy/prod/rpcproxy:4371ab45-20260812132509
     # smokes: keycloak + apisix + rpc proxy + container->host round-trips, no regtest binaries
     - cargo test -p lwk_test_util auth_stack_smoke -- --ignored
     # full e2e: authenticated esplora/waterfalls/electrum calls served by the regtest servers

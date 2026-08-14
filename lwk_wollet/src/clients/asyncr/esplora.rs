@@ -1029,9 +1029,14 @@ impl EsploraClient {
         }
 
         log::warn!("{url} tried {num_attempts} times, failing");
-        Err(Error::Generic(format!(
-            "Too many retries, last status: {last_status}",
-        )))
+        // Surface the authenticated-backend denial as a common variant. 401 (token invalid or
+        // expired and not refreshable) and 429 (rate limited) reach here only after the retry
+        // loop is exhausted; anything else keeps the generic "too many retries" message.
+        Err(match last_status.as_u16() {
+            401 => Error::AuthenticationRequired,
+            429 => Error::RateLimited,
+            _ => Error::Generic(format!("Too many retries, last status: {last_status}")),
+        })
     }
 
     async fn post_with_retry(&self, url: &str, body: &str) -> Result<Response, Error> {
@@ -1107,9 +1112,14 @@ impl EsploraClient {
         }
 
         log::warn!("{url} tried {num_attempts} times, failing");
-        Err(Error::Generic(format!(
-            "Too many retries, last status: {last_status}",
-        )))
+        // Surface the authenticated-backend denial as a common variant. 401 (token invalid or
+        // expired and not refreshable) and 429 (rate limited) reach here only after the retry
+        // loop is exhausted; anything else keeps the generic "too many retries" message.
+        Err(match last_status.as_u16() {
+            401 => Error::AuthenticationRequired,
+            429 => Error::RateLimited,
+            _ => Error::Generic(format!("Too many retries, last status: {last_status}")),
+        })
     }
 
     /// Returns true if the wallet has any tx using the first gap_limit addresses (default 20)

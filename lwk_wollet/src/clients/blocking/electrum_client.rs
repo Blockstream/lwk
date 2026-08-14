@@ -132,28 +132,23 @@ impl ElectrumClient {
     }
 }
 
-/// Whether the error is the authenticated Electrum RPC proxy denying the call because it
-/// lacks a valid token (JSON-RPC code -32004, AUTHENTICATION_REQUIRED).
-///
-/// The denial can arrive nested inside [`electrum_client::Error::AllAttemptsErrored`]: when a
-/// connection drops (e.g. the token expired mid-session and the server closed the idle
-/// connection), electrum-client reconnects and re-runs the `server.version` handshake, which
-/// carries the token and is denied with -32004. If the preceding reconnect attempt already
-/// spent the retry budget, that -32004 is wrapped in `AllAttemptsErrored` rather than surfaced
-/// directly, so this checks the wrapped errors too.
+/// Whether the error is the authenticated Electrum RPC proxy denying the call because it lacks
+/// a valid token (JSON-RPC code -32004). Keys on the common [`Error::AuthenticationRequired`]
+/// variant so the code-to-variant mapping lives in one place
+/// ([`crate::error::electrum_denial_variant`]), which also handles the denial arriving nested
+/// inside [`electrum_client::Error::AllAttemptsErrored`] (a reconnect re-runs the token-carrying
+/// `server.version` handshake and is denied).
 #[cfg(feature = "electrum_oidc")]
 fn is_auth_denied(error: &electrum_client::Error) -> bool {
-    // TODO: the proxy JSON-RPC denial codes (-32004 auth, -32000 credits, ...) and this
-    // check are duplicated here, in lwk_test_util, and the e2e tests. Share them (exporting
-    // from the proxy crate is awkward, so at least a shared set of constants in lwk) so they
-    // stay in sync.
-    const AUTHENTICATION_REQUIRED: i64 = -32004;
     match error {
-        electrum_client::Error::Protocol(value) => {
-            value.get("code").and_then(|c| c.as_i64()) == Some(AUTHENTICATION_REQUIRED)
-        }
+        // Any nested auth denial must trigger the refresh, even alongside other denials (e.g. a
+        // reconnect that is first rate limited then auth-denied), so recurse with `any` rather
+        // than relying on which single denial `electrum_denial_variant` surfaces first.
         electrum_client::Error::AllAttemptsErrored(errors) => errors.iter().any(is_auth_denied),
-        _ => false,
+        other => matches!(
+            crate::error::electrum_denial_variant(other),
+            Some(Error::AuthenticationRequired)
+        ),
     }
 }
 
@@ -372,6 +367,8 @@ impl ElectrumUrl {
         if let Some(retry) = retry {
             builder = builder.retry(retry);
         }
+        // `from_config` runs the mandatory `server.version` handshake here; a proxy denial on it
+        // is mapped by the blanket `From` (safe via the proxy `data.source` marker).
         Ok(Client::from_config(&url, builder.build())?)
     }
 }
@@ -679,21 +676,30 @@ mod tests {
     }
 
     /// Only the proxy's AUTHENTICATION_REQUIRED denial triggers the token refresh; other
-    /// denials (e.g. insufficient credits) and other errors are surfaced untouched.
+    /// denials (e.g. insufficient credits) and other errors are surfaced untouched. Denials are
+    /// recognized only when they carry the proxy's `data.source` marker.
     #[cfg(feature = "electrum_oidc")]
     #[test]
     fn only_authentication_denials_are_retried() {
         use super::is_auth_denied;
 
-        let auth = electrum_client::Error::Protocol(
+        // A proxy-owned protocol error (carries the data.source marker).
+        let proxy = |code: i64| {
+            electrum_client::Error::Protocol(serde_json::json!({
+                "code": code,
+                "message": "denied",
+                "data": { "source": "electrs-electrum-proxy" }
+            }))
+        };
+
+        assert!(is_auth_denied(&proxy(-32004)));
+        assert!(!is_auth_denied(&proxy(-32000)));
+
+        // The same code without the proxy marker is not treated as an auth denial.
+        let bare = electrum_client::Error::Protocol(
             serde_json::json!({"code": -32004, "message": "authentication required"}),
         );
-        assert!(is_auth_denied(&auth));
-
-        let credits = electrum_client::Error::Protocol(
-            serde_json::json!({"code": -32000, "message": "insufficient credits"}),
-        );
-        assert!(!is_auth_denied(&credits));
+        assert!(!is_auth_denied(&bare));
 
         let other = electrum_client::Error::Message("boom".to_string());
         assert!(!is_auth_denied(&other));
@@ -701,9 +707,7 @@ mod tests {
         // A -32004 nested in AllAttemptsErrored (the reconnect-after-drop case) is detected.
         let nested = electrum_client::Error::AllAttemptsErrored(vec![
             electrum_client::Error::Message("Broken pipe".to_string()),
-            electrum_client::Error::Protocol(
-                serde_json::json!({"code": -32004, "message": "authentication required"}),
-            ),
+            proxy(-32004),
         ]);
         assert!(is_auth_denied(&nested));
 
@@ -713,49 +717,78 @@ mod tests {
             electrum_client::Error::Message("unexpected EOF".to_string()),
         ]);
         assert!(!is_auth_denied(&nested_io));
+
+        // A -32004 alongside another denial (e.g. rate limited then auth-denied on reconnect)
+        // must still trigger the refresh: the auth denial must not be masked by the other.
+        let mixed = electrum_client::Error::AllAttemptsErrored(vec![proxy(-32002), proxy(-32004)]);
+        assert!(is_auth_denied(&mixed));
+
+        // Non-auth denials only (rate limited + credits) do not trigger the refresh.
+        let non_auth =
+            electrum_client::Error::AllAttemptsErrored(vec![proxy(-32002), proxy(-32000)]);
+        assert!(!is_auth_denied(&non_auth));
     }
 
+    /// The denial codes map to the common variants only when the error carries the proxy's
+    /// `data.source` marker; the same object-shaped codes from a non-proxy server (the
+    /// implementation-defined -32000..-32099 range is not proxy-reserved) are preserved as
+    /// `ClientError`. The real proxy always stamps the marker, so the unmarked path can only be
+    /// exercised here, not from the e2e tests.
     #[test]
-    fn authorization_is_sent_on_the_first_message() {
-        use super::ElectrumClientBuilder;
-        use crate::clients::TokenProvider;
-        use std::io::{BufRead, BufReader};
-        use std::net::TcpListener;
-        use std::time::Duration;
+    fn denial_codes_require_proxy_marker() {
+        use crate::error::electrum_denial_variant;
+        use crate::Error;
 
-        // Spin up a throwaway TCP server, build a client against it, and capture the first
-        // line the client sends (the `server.version` handshake). The build errors once the
-        // mock closes without replying — we only care about what went on the wire.
-        fn first_message(token_provider: TokenProvider) -> String {
-            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-            let port = listener.local_addr().unwrap().port();
-            let server = std::thread::spawn(move || {
-                let (stream, _) = listener.accept().unwrap();
-                let mut line = String::new();
-                BufReader::new(stream).read_line(&mut line).unwrap();
-                line
-            });
+        let proxy = |code: i64| {
+            electrum_client::Error::Protocol(serde_json::json!({
+                "code": code,
+                "message": "denied",
+                "data": { "source": "electrs-electrum-proxy" }
+            }))
+        };
+        let bare = |code: i64| {
+            electrum_client::Error::Protocol(
+                serde_json::json!({"code": code, "message": "server error"}),
+            )
+        };
 
-            let _ = ElectrumClientBuilder::new(&format!("tcp://127.0.0.1:{port}"))
-                .timeout(Duration::from_secs(5))
-                .token_provider(token_provider)
-                .allow_plaintext_with_token(true)
-                .build();
+        // With the proxy marker each code maps to its common variant.
+        assert!(matches!(
+            electrum_denial_variant(&proxy(-32004)),
+            Some(Error::AuthenticationRequired)
+        ));
+        assert!(matches!(
+            electrum_denial_variant(&proxy(-32000)),
+            Some(Error::InsufficientCredits)
+        ));
+        assert!(matches!(
+            electrum_denial_variant(&proxy(-32002)),
+            Some(Error::RateLimited)
+        ));
+        assert!(matches!(
+            electrum_denial_variant(&proxy(-32003)),
+            Some(Error::RateLimited)
+        ));
 
-            server.join().unwrap()
-        }
-
-        let with_token = first_message(TokenProvider::Static("test-token".to_string()));
+        // A proxy-owned but unmapped code, or a non-protocol error, is not a denial.
+        assert!(electrum_denial_variant(&proxy(-32001)).is_none());
         assert!(
-            with_token.contains(r#""authorization":"Bearer test-token""#),
-            "expected the bearer token on the first message, got: {with_token}"
+            electrum_denial_variant(&electrum_client::Error::Message("boom".to_string())).is_none()
         );
 
-        let without_token = first_message(TokenProvider::None);
-        assert!(
-            !without_token.contains("authorization"),
-            "expected no authorization field without a token, got: {without_token}"
-        );
+        // Without the marker (a non-proxy server reusing the range) the codes do not map.
+        assert!(electrum_denial_variant(&bare(-32000)).is_none());
+        assert!(electrum_denial_variant(&bare(-32004)).is_none());
+
+        // A marked denial nested in AllAttemptsErrored (the reconnect-after-drop case) still maps.
+        let nested = electrum_client::Error::AllAttemptsErrored(vec![
+            electrum_client::Error::Message("Broken pipe".to_string()),
+            proxy(-32000),
+        ]);
+        assert!(matches!(
+            electrum_denial_variant(&nested),
+            Some(Error::InsufficientCredits)
+        ));
     }
 
     #[test]

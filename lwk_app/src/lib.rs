@@ -871,6 +871,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let txid = pset.extract_tx()?.txid().to_string();
             let details = wollet.get_details(&pset)?;
             let mut warnings = vec![];
+            if details.has_non_default_sighash() {
+                warnings.push("some inputs declare a non-default sighash".to_string());
+            }
             let has_signatures_from = details
                 .fingerprints_has()
                 .iter()

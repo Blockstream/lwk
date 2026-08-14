@@ -15,7 +15,8 @@ use crate::register_multisig::{
 };
 use crate::sign_liquid_tx::{SignLiquidTxParams, SignPsbtParams, TxInputParams};
 use crate::{
-    derivation_path_to_vec, json_to_cbor, try_parse_response, vec_to_derivation_path, Error, Result,
+    anti_exfil, derivation_path_to_vec, json_to_cbor, try_parse_response, vec_to_derivation_path,
+    Error, Result,
 };
 use connection::Connection;
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
@@ -136,10 +137,6 @@ impl Jade {
 
     pub fn get_master_blinding_key(&self, params: GetMasterBlindingKeyParams) -> Result<ByteBuf> {
         self.send(Request::GetMasterBlindingKey(params))
-    }
-
-    pub fn sign_message_inner(&self, params: SignMessageParams) -> Result<ByteBuf> {
-        self.send(Request::SignMessage(params))
     }
 
     pub fn get_signature_for_msg(&self, params: GetSignatureParams) -> Result<String> {
@@ -470,16 +467,22 @@ impl Jade {
     where
         T: std::fmt::Debug + DeserializeOwned,
     {
+        let mut conn = self.conn.lock()?;
+        self.send_with_conn(request, &mut conn)
+    }
+
+    fn send_with_conn<T>(&self, request: Request, conn: &mut Connection) -> Result<T>
+    where
+        T: std::fmt::Debug + DeserializeOwned,
+    {
         if let Some(network) = request.network() {
             self.check_network(network)?;
         }
         let buf = request.serialize()?;
 
-        let mut conn = self.conn.lock()?;
-
         conn.write_all(&buf)?;
 
-        let resp = read_loop::<T>(&mut conn)?;
+        let resp = read_loop::<T>(conn)?;
         match (resp.result, resp.error) {
             (Some(result), _) => Ok(result),
             (_, Some(error)) => Err(Error::JadeError(error)),
@@ -525,10 +528,41 @@ impl Signer for &Jade {
 
     fn sign_message(
         &self,
-        _message: &str,
-        _path: &DerivationPath,
+        message: &str,
+        path: &DerivationPath,
     ) -> std::result::Result<MessageSignature, Self::Error> {
-        todo!(); // TODO: use sign_message_inner
+        self.unlock()?;
+
+        let xpub = self.get_cached_xpub(GetXpubParams {
+            network: self.network,
+            path: derivation_path_to_vec(path),
+        })?;
+        let host_entropy = anti_exfil::new_host_entropy()?;
+        // Keep one lock across both halves of the anti-exfil exchange so no other request can
+        // interleave between them.
+        let mut conn = self.conn.lock()?;
+        let signer_commitment: ByteBuf = self.send_with_conn(
+            Request::SignMessage(SignMessageParams {
+                message: message.to_owned(),
+                path: derivation_path_to_vec(path),
+                ae_host_commitment: anti_exfil::host_commitment(&host_entropy).to_vec(),
+            }),
+            &mut conn,
+        )?;
+        let base64_signature: String = self.send_with_conn(
+            Request::GetSignature(GetSignatureParams {
+                ae_host_entropy: host_entropy.to_vec(),
+            }),
+            &mut conn,
+        )?;
+        anti_exfil::verify_message(
+            &xpub.public_key,
+            message,
+            &host_entropy,
+            &signer_commitment,
+            &base64_signature,
+        )
+        .map_err(|_| Error::SignatureValidationFailed)
     }
 }
 

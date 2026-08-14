@@ -5,7 +5,7 @@ use elements::{
     },
     hashes::Hash,
     pset::{Input, PartiallySignedTransaction},
-    secp256k1_zkp::{schnorr::Signature as SchnorrSignature, Message, Secp256k1},
+    secp256k1_zkp::{schnorr::Signature as SchnorrSignature, Message},
     sighash::SighashCache,
     EcdsaSighashType, SchnorrSig, SchnorrSighashType, Transaction,
 };
@@ -269,7 +269,6 @@ pub(crate) fn validate_signature(
     sign_info: &Option<SignInfo>,
     signer_commitment: &[u8],
     signature: &[u8],
-    i: usize,
 ) -> Result<(), Error> {
     match sign_info {
         Some(SignInfo::Ecdsa {
@@ -277,8 +276,7 @@ pub(crate) fn validate_signature(
             host_entropy,
             message,
             sighash,
-        }) => anti_exfil::verify(
-            &Secp256k1::verification_only(),
+        }) => anti_exfil::verify_der(
             &public_key.inner,
             message,
             host_entropy,
@@ -286,16 +284,16 @@ pub(crate) fn validate_signature(
             signature,
             *sighash,
         )
-        .map_err(|_| Error::SignatureValidationFailed(i)),
+        .map_err(|_| Error::SignatureValidationFailed),
         Some(SignInfo::Taproot) => {
             // TODO: Verify the Schnorr signature against the Taproot key and sighash,
             // even though Jade's anti-exfil protocol only covers ECDSA inputs.
             SchnorrSignature::from_slice(signature)
                 .map(|_| ())
-                .map_err(|_| Error::SignatureValidationFailed(i))
+                .map_err(|_| Error::SignatureValidationFailed)
         }
         None if signature.is_empty() => Ok(()),
-        None => Err(Error::SignatureValidationFailed(i)),
+        None => Err(Error::SignatureValidationFailed),
     }
 }
 

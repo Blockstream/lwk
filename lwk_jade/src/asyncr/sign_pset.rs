@@ -44,7 +44,7 @@ impl<S: Stream<Error = Error>> Jade<S> {
         }
 
         let mut signatures = Vec::with_capacity(signable_inputs.len());
-        for (i, (sign_info, signer_commitment)) in signable_inputs.into_iter().enumerate() {
+        for (sign_info, signer_commitment) in signable_inputs {
             // Jade rejects a non-empty `ae_host_commitment` for taproot inputs outright, so
             // prepare_input always sends an empty commitment for them:
             // https://github.com/Blockstream/Jade/blob/18fdfd074b143b00a1217736b9358de748fa7730/main/process/process_utils.c#L385
@@ -55,7 +55,7 @@ impl<S: Stream<Error = Error>> Jade<S> {
             };
             let params = GetSignatureParams { ae_host_entropy };
             let sig: Vec<u8> = self.get_signature_for_tx(params).await?.to_vec();
-            validate_signature(&sign_info, &signer_commitment, &sig, i)?;
+            validate_signature(&sign_info, &signer_commitment, &sig)?;
             signatures.push((sign_info, sig));
         }
 

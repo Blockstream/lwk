@@ -65,12 +65,12 @@ pub enum Error {
     #[error("Failed to generate secure host entropy: {0}")]
     HostEntropy(#[from] rand::Error),
 
-    // Warning adapted from GDK's anti-exfil verification error:
-    // https://gl.blockstream.io/blockstream/green/gdk/-/blob/13edfdd10e98c3f446b11a36fcdd9ae93807f17b/src/ga_strings.cpp#L893-897
+    // Warning from GDK's anti-exfil verification error:
+    // https://github.com/Blockstream/gdk/blob/13edfdd10e98c3f446b11a36fcdd9ae93807f17b/src/ga_strings.cpp#L893-L897
     #[error(
-        "Signature validation failed for input {0}. If this error is unexpected and has happened repeatedly, it is possible the hardware wallet is faulty or has been compromised. It could be leaking your keys, which could lead to loss of funds. Please consider replacing the hardware wallet."
+        "Signature validation failed. If this error is unexpected and has happened repeatedly, it is possible the hardware wallet is faulty or has been compromised. It could be leaking your keys, which could lead to loss of funds. Please consider replacing the hardware wallet."
     )]
-    SignatureValidationFailed(usize),
+    SignatureValidationFailed,
 
     #[error("Missing asset id in output {0}")]
     MissingAssetIdInOutput(usize),
@@ -152,5 +152,20 @@ impl std::fmt::Display for ErrorDetails {
 impl<T> From<PoisonError<MutexGuard<'_, T>>> for Error {
     fn from(e: PoisonError<MutexGuard<'_, T>>) -> Self {
         Error::PoisonError(e.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Error;
+
+    const GDK_SIGNATURE_VALIDATION_ERROR: &str = "Signature validation failed. If this error is unexpected and has happened repeatedly, it is possible the hardware wallet is faulty or has been compromised. It could be leaking your keys, which could lead to loss of funds. Please consider replacing the hardware wallet.";
+
+    #[test]
+    fn signature_validation_error_matches_gdk() {
+        assert_eq!(
+            Error::SignatureValidationFailed.to_string(),
+            GDK_SIGNATURE_VALIDATION_ERROR
+        );
     }
 }

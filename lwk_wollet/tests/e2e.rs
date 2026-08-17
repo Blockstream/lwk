@@ -2021,6 +2021,77 @@ fn test_unblinded_utxo() {
 }
 
 #[test]
+fn test_all_explicit_tx() {
+    // Create a transaction with all inputs and all outputs explicit
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &desc);
+    let signers = [&AnySigner::Software(signer)];
+
+    let policy_asset = w.policy_asset();
+
+    // Fund the wallet with a blinded UTXO and an unblinded one
+    w.fund_btc(&env);
+    w.fund_explicit(&env, 100_000, None, None);
+
+    let explicit_utxos = w.wollet.explicit_utxos().unwrap();
+    assert_eq!(explicit_utxos.len(), 1);
+    let explicit_utxo = explicit_utxos[0].clone();
+
+    let mut node_explicit = env.elementsd_getnewaddress();
+    node_explicit.blinding_pubkey = None;
+    let own_explicit = w.address().to_unconfidential();
+
+    // Spending a blinded UTXO with all outputs explicit is unbalanceable
+    let err = w
+        .tx_builder()
+        .add_explicit_recipient(&node_explicit, 1_000, policy_asset)
+        .unwrap()
+        .drain_lbtc_to_explicit(&own_explicit)
+        .unwrap()
+        .finish()
+        .unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "The transaction has confidential inputs but no output to blind"
+    );
+
+    // All inputs and all outputs explicit
+    let mut pset = w
+        .tx_builder()
+        .set_wallet_utxos(vec![])
+        .add_external_utxos(vec![explicit_utxo])
+        .unwrap()
+        .add_explicit_recipient(&node_explicit, 1_000, policy_asset)
+        .unwrap()
+        .drain_lbtc_to_explicit(&own_explicit)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let tx = pset.extract_tx().unwrap();
+    assert_eq!(tx.input.len(), 1);
+    assert!(tx.output.iter().all(|o| !o.is_partially_blinded()));
+
+    assert_fee_rate(compute_fee_rate(&pset), None);
+
+    for signer in signers {
+        w.sign(signer, &mut pset);
+    }
+
+    w.send(&mut pset);
+
+    // The explicit change is a new explicit utxo
+    let explicit_utxos = w.wollet.explicit_utxos().unwrap();
+    assert_eq!(explicit_utxos.len(), 1);
+    assert!(explicit_utxos[0].unblinded.value > 90_000);
+}
+
+#[test]
 fn test_spend_blinded_utxo_with_custom_blinding_key() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let signer = generate_signer();

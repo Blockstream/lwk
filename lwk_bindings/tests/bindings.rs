@@ -35,6 +35,7 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/subscribe.py",
     "tests/bindings/xpub.py",
     "tests/bindings/bip44discovery.py",
+    "tests/bindings/network.py",
 );
 
 #[cfg(all(feature = "foreign_bindings", feature = "simplicity"))]

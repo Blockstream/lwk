@@ -178,6 +178,14 @@ impl From<lwk_common::QrError> for LwkError {
     }
 }
 
+impl From<lwk_common::Error> for LwkError {
+    fn from(value: lwk_common::Error) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
 impl From<String> for LwkError {
     fn from(msg: String) -> Self {
         LwkError::Generic { msg }

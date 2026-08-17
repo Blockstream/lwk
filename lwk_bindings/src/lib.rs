@@ -92,7 +92,7 @@ pub use esplora_client::{
 };
 pub use liquidex::{AssetAmount, UnvalidatedLiquidexProposal, ValidatedLiquidexProposal};
 pub use mnemonic::Mnemonic;
-pub use network::Network;
+pub use network::{ElementsParamsBuilder, Network};
 pub use pos::PosConfig;
 pub use precision::Precision;
 pub use pset::{Pset, PsetInput, PsetOutput};

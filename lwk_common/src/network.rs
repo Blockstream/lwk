@@ -32,7 +32,7 @@ pub const GENESIS_LIQUID_REGTEST: [u8; 32] = [
 ];
 
 /// The builder for custom Elements network parameters
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ElementsParamsBuilder {
     policy_asset: Option<AssetId>,
     genesis_hash: Option<BlockHash>,

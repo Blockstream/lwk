@@ -247,6 +247,9 @@ pub enum Error {
     #[error("Private blinding key not available")]
     MissingPrivateBlindingKey,
 
+    #[error("The transaction has confidential inputs but no output to blind")]
+    MissingBlindedOutput,
+
     #[error("Contract does not commit to asset id")]
     ContractDoesNotCommitToAssetId,
 

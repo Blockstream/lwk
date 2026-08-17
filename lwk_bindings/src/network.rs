@@ -107,8 +107,20 @@ impl Network {
     }
 
     /// Return the genesis block hash for this network as hex string.
+    ///
+    /// Deprecated: use `genesis_hash()`
     pub fn genesis_block_hash(&self) -> String {
         self.inner.genesis_hash().to_hex()
+    }
+
+    /// Return the genesis block hash for this network as hex string.
+    pub fn genesis_hash(&self) -> String {
+        self.inner.genesis_hash().to_hex()
+    }
+
+    /// Return the parent-chain genesis block hash for this network as hex string.
+    pub fn parent_genesis_hash(&self) -> String {
+        self.inner.parent_genesis_hash().to_hex()
     }
 
     /// Return a new `TxBuilder` for this network

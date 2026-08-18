@@ -11,7 +11,7 @@
 //! </div>
 
 use crate::{WolletDescriptor, EC};
-use elements::bitcoin::bip32::{ChildNumber, DerivationPath, KeySource, Xpub};
+use elements::bitcoin::bip32::{ChildNumber, DerivationPath, Fingerprint, KeySource, Xpub};
 use elements::hashes::{sha256, Hash};
 use elements::hex::ToHex;
 use elements::pset::PartiallySignedTransaction;
@@ -40,6 +40,7 @@ const ELIP153_PURPOSE: u32 = 0x414d_5032;
 pub struct Amp2 {
     server_key: String,
     server_xpub: Xpub,
+    server_fingerprint: Fingerprint,
     url: String,
     is_mainnet: bool,
 }
@@ -123,7 +124,7 @@ impl Amp2 {
         Url::from_str(&url).map_err(crate::UrlError::Url)?;
 
         let (keysource, server_xpub) = keyorigin_xpub_from_str(&server_key)?;
-        keysource.ok_or(crate::Error::MissingKeyorigin)?;
+        let server_fingerprint = keysource.ok_or(crate::Error::MissingKeyorigin)?.0;
         // TODO: per ELIP153 the server key should be the master xpub, allow it to have missing keyorigin
         // TODO: consider replacing server_key with server_keyorigin
 
@@ -131,6 +132,7 @@ impl Amp2 {
         Ok(Self {
             server_key,
             server_xpub,
+            server_fingerprint,
             url,
             is_mainnet,
         })
@@ -139,9 +141,12 @@ impl Amp2 {
     /// Create a new AMP2 client with the default url and server key for the testnet network.
     pub fn new_testnet() -> Self {
         let server_xpub: Xpub = XPUB_TESTNET.parse().expect("valid xpub constant");
+        let server_fingerprint: Fingerprint =
+            FINGERPRINT_TESTNET.parse().expect("valid fingerprint");
         Self {
             server_key: KEYORIGIN_XPUB_TESTNET.into(),
             server_xpub,
+            server_fingerprint,
             url: URL_TESTNET.into(),
             is_mainnet: false,
         }
@@ -542,6 +547,7 @@ mod test {
             let amp2 = Amp2 {
                 server_key: KEYORIGIN_XPUB_TESTNET.into(),
                 server_xpub,
+                server_fingerprint: server_xpub.fingerprint(),
                 url: URL_TESTNET.into(),
                 is_mainnet,
             };

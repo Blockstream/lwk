@@ -675,7 +675,7 @@ impl LockupResponse {
         .await
     }
 
-    async fn build_and_broadcast_refund(&mut self) -> Result<(), Error> {
+    async fn build_and_broadcast_refund(&mut self, cooperative: bool) -> Result<(), Error> {
         let swap_id = self.swap_id().to_string();
         sleep(WAIT_TIME).await;
         let fee = crate::fallback_swap_fee(&self.api, self.data.from_chain).await?;
@@ -688,7 +688,7 @@ impl LockupResponse {
                 swap_id: swap_id.clone(),
                 chain_client: &self.chain_client,
                 boltz_client: &self.api,
-                options: None,
+                options: Some(TransactionOptions::default().with_cooperative(cooperative)),
             })
             .await?;
 
@@ -819,7 +819,7 @@ impl LockupResponse {
             SwapState::TransactionLockupFailed => {
                 log::warn!("[swap:{swap_id}] User lockup failed, performing refund");
 
-                self.build_and_broadcast_refund().await?;
+                self.build_and_broadcast_refund(true).await?;
                 Ok(ControlFlow::Break(true))
             }
             SwapState::TransactionFailed => {
@@ -828,19 +828,27 @@ impl LockupResponse {
                     update.failure_reason,
                     update.failure_details
                 );
-                self.build_and_broadcast_refund().await?;
+                self.build_and_broadcast_refund(true).await?;
                 Ok(ControlFlow::Break(true))
             }
             SwapState::TransactionRefunded => {
                 log::info!("[swap:{swap_id}] Boltz refunded their stash, we do the same with ours");
 
-                self.build_and_broadcast_refund().await?;
+                self.build_and_broadcast_refund(true).await?;
                 Ok(ControlFlow::Break(true))
             }
             SwapState::SwapExpired => {
                 log::warn!("[swap:{swap_id}] Chain swap expired");
-                // TODO: non-cooperative refund if possible
-                Ok(ControlFlow::Break(false))
+
+                if self.is_lockup_unspent().await? {
+                    self.build_and_broadcast_refund(false).await?;
+                    Ok(ControlFlow::Break(true))
+                } else {
+                    log::warn!(
+                        "[swap:{swap_id}] No UTXO found at address, swap expired without funds being sent"
+                    );
+                    Ok(ControlFlow::Break(false))
+                }
             }
             ref e => Err(Error::UnexpectedUpdate {
                 swap_id,

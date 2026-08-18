@@ -804,6 +804,10 @@ impl<S: Stream> Amp0Inner<S> {
         };
         let v = self.call(msg).await?;
         let challenge: String = rmpv::ext::from_value(v)?;
+        // The challenge is embedded in the message signed by the hardware signer.
+        if challenge.len() != 5 || !challenge.chars().all(|c| c.is_ascii_alphanumeric()) {
+            return Err(Error::Amp0InvalidChallenge);
+        }
         Ok(challenge)
     }
 

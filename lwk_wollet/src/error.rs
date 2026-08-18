@@ -377,6 +377,10 @@ pub enum Error {
     #[error("Cannot generate address for AMP0 wallets using this call, use Amp0::address()")]
     Amp0AddressError,
 
+    #[cfg(feature = "amp0")]
+    #[error("Invalid login challenge received from the server")]
+    Amp0InvalidChallenge,
+
     #[error("Unsupported (wollet does not have CT descriptor)")]
     UnsupportedWithoutDescriptor,
 

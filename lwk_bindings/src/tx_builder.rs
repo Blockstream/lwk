@@ -135,6 +135,14 @@ impl TxBuilder {
         Ok(())
     }
 
+    /// Add an OP_RETURN output with the given data
+    pub fn add_op_return(&self, data: &[u8]) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.add_op_return(data)?);
+        Ok(())
+    }
+
     /// Issue an asset
     ///
     /// There will be `asset_sats` units of this asset that will be received by

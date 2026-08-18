@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.19.0
+
 * Added `DerivationPath`
 * Removed `get_path()`, replaced with `DerivationPath::from_account()`
 * Changed "simplicity" functions `derive_keypair()`, `simplicity_derive_xonly_pubkey()`, `create_p2pk_signature()` to accept `DerivatioPath` instead of `str`

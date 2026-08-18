@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.19.0
+
 * Add Waterfalls descriptor subscription support for wasm/browser clients using `EventSource`.
 * Added `DerivationPath`
 * Added `Jade::getReceiveAddressSingleWithPath()`, `Jade::getReceiveAddressMultiWithPath()`, deprecated `Jade::getReceiveAddressSingle()`, `Jade::getReceiveAddressMulti()`; same for `JadeWebSocket`.

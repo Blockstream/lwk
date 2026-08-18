@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.19.0
+
 * Breaking: `server start` now writes a random RPC auth cookie to `<datadir>/<network>/.cookie`
   and the server rejects requests without a matching `Authorization` header.
   `lwk_cli` reads the cookie automatically; a raw `curl` (or other direct HTTP client) call now

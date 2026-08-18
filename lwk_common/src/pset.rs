@@ -43,6 +43,9 @@ pub enum PsetValidationError {
 
     #[error("added signature is invalid")]
     InvalidSignature,
+
+    #[error("Transaction extraction from PSET failed")]
+    TxExtractionFailed,
 }
 
 // TODO: upstream to rust elements
@@ -232,7 +235,310 @@ fn is_superset<K: Ord, V: PartialEq>(orig: &BTreeMap<K, V>, ret: &BTreeMap<K, V>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use elements::bitcoin::bip32::DerivationPath;
+    use elements::bitcoin::{secp256k1, PublicKey};
     use elements::encode::{deserialize, serialize};
+    use elements::pset::{Input, Output};
+    use elements::secp256k1_zkp::XOnlyPublicKey;
+    use elements::taproot::TapLeafHash;
+    use elements::{confidential, SchnorrSig, Script, TxOut, TxOutWitness};
+    use std::str::FromStr;
+    use std::sync::LazyLock;
+
+    pub static EC: LazyLock<secp256k1::Secp256k1<secp256k1::All>> = LazyLock::new(|| {
+        let mut ctx = secp256k1::Secp256k1::new();
+        let mut rng = rand::thread_rng();
+        ctx.randomize(&mut rng);
+        ctx
+    });
+
+    const PK: &str = "020202020202020202020202020202020202020202020202020202020202020202";
+
+    fn test_pset() -> PartiallySignedTransaction {
+        let mut pset = PartiallySignedTransaction::new_v2();
+        let mut input = Input::default();
+        let pk = PublicKey::from_str(PK).unwrap();
+        input.bip32_derivation.insert(
+            pk,
+            (
+                Fingerprint::from_str("aabbccdd").unwrap(),
+                DerivationPath::master(),
+            ),
+        );
+        pset.add_input(input);
+        pset.add_output(Output {
+            asset: Some(elements::AssetId::LIQUID_BTC),
+            amount: Some(1000),
+            ..Default::default()
+        });
+        pset
+    }
+
+    #[test]
+    fn test_verify_added_sigs() {
+        let fp = Fingerprint::from_str("aabbccdd").unwrap();
+        let other_fp = Fingerprint::from_str("11223344").unwrap();
+
+        let schnorr_sig = SchnorrSig::from_slice(&[0x12u8; 64]).unwrap();
+        let other_schnorr_sig = SchnorrSig::from_slice(&[0x34u8; 64]).unwrap();
+        let xonly = XOnlyPublicKey::from_slice(&[0x02u8; 32]).unwrap();
+
+        let leaf = TapLeafHash::from_slice(&[0x04u8; 32]).unwrap();
+        let other_leaf = TapLeafHash::from_slice(&[0x05u8; 32]).unwrap();
+
+        let ecdsa_sig = vec![0x30, 0x45];
+        let other_ecdsa_sig = vec![0x30, 0x46];
+        let ecdsa_sig_too_short = vec![0x30, 0x46];
+        let ecdsa_sig_mismatch_flag = vec![0x30, 0x01];
+
+        let pk = PublicKey::from_str(PK).unwrap();
+        let s = "030303030303030303030303030303030303030303030303030303030303030302";
+        let other_pk = PublicKey::from_str(s).unwrap();
+
+        // identical pset with no added signatures
+        let original = test_pset();
+        assert_eq!(
+            verify_added_sigs(&original, &original.clone(), fp, &EC).unwrap(),
+            0
+        );
+
+        // add partial sig from a key with no key origin
+        let original = test_pset();
+        let mut returned = original.clone();
+        returned.inputs_mut()[0]
+            .partial_sigs
+            .insert(other_pk, ecdsa_sig.clone());
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(
+            err,
+            PsetValidationError::MissingKeyOrigin { idx: 0 }
+        ));
+
+        // added partial sig from a key with the wrong fingerprint
+        let original = test_pset();
+        let mut returned = original.clone();
+        returned.inputs_mut()[0]
+            .partial_sigs
+            .insert(pk, ecdsa_sig.clone());
+        let err = verify_added_sigs(&original, &returned, other_fp, &EC).unwrap_err();
+        assert!(matches!(
+            err,
+            PsetValidationError::WrongFingerprint { idx: 0 }
+        ));
+
+        // removed partial sig
+        let mut original = test_pset();
+        original.inputs_mut()[0]
+            .partial_sigs
+            .insert(pk, ecdsa_sig.clone());
+        let mut returned = original.clone();
+        returned.inputs_mut()[0].partial_sigs.clear();
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(
+            err,
+            PsetValidationError::PartialSigsRemoved { idx: 0 }
+        ));
+
+        // changed partial sig
+        let mut original = test_pset();
+        original.inputs_mut()[0]
+            .partial_sigs
+            .insert(pk, ecdsa_sig.clone());
+        let mut returned = original.clone();
+        returned.inputs_mut()[0]
+            .partial_sigs
+            .insert(pk, other_ecdsa_sig.clone());
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(
+            err,
+            PsetValidationError::PartialSigsRemoved { idx: 0 }
+        ));
+
+        // partial sig whose sighash byte does not match the input's sighash_type
+        let mut original = test_pset();
+        original.inputs_mut()[0].sighash_type = Some(elements::pset::PsbtSighashType::from_u32(2));
+        let mut returned = original.clone();
+        returned.inputs_mut()[0]
+            .partial_sigs
+            .insert(pk, ecdsa_sig_mismatch_flag);
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(err, PsetValidationError::InvalidSignature));
+
+        // partial sig on a taproot input: the sighash is not an ECDSA sighash
+        let mut original = test_pset();
+        original.inputs_mut()[0].witness_utxo = Some(TxOut {
+            asset: confidential::Asset::Null,
+            value: confidential::Value::Explicit(1000),
+            nonce: confidential::Nonce::Null,
+            script_pubkey: Script::new_v1_p2tr(&EC, xonly, None),
+            witness: TxOutWitness::default(),
+        });
+        let mut returned = original.clone();
+        returned.inputs_mut()[0]
+            .partial_sigs
+            .insert(pk, ecdsa_sig.clone());
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(err, PsetValidationError::InvalidSignature));
+
+        // partial sig that is too short to contain a sighash byte
+        let original = test_pset();
+        let mut returned = original.clone();
+        returned.inputs_mut()[0]
+            .partial_sigs
+            .insert(pk, ecdsa_sig_too_short.clone());
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(err, PsetValidationError::InvalidSignature));
+
+        // tap key sig with no internal key
+        let original = test_pset();
+        let mut returned = original.clone();
+        returned.inputs_mut()[0].tap_key_sig = Some(schnorr_sig);
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(
+            err,
+            PsetValidationError::MissingInternalKey { idx: 0 }
+        ));
+
+        // tap key sig with internal key but no tap_key_origins entry
+        let mut original = test_pset();
+        original.inputs_mut()[0].tap_internal_key = Some(xonly);
+        let mut returned = original.clone();
+        returned.inputs_mut()[0].tap_key_sig = Some(schnorr_sig);
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(
+            err,
+            PsetValidationError::MissingTapKeyOrigin { idx: 0 }
+        ));
+
+        // tap key sig with wrong fingerprint
+        let mut original = test_pset();
+        original.inputs_mut()[0].tap_internal_key = Some(xonly);
+        original.inputs_mut()[0]
+            .tap_key_origins
+            .insert(xonly, (vec![], (other_fp, DerivationPath::master())));
+        let mut returned = original.clone();
+        returned.inputs_mut()[0].tap_key_sig = Some(schnorr_sig);
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(
+            err,
+            PsetValidationError::WrongFingerprint { idx: 0 }
+        ));
+
+        // changed tap key sig
+        let mut original = test_pset();
+        original.inputs_mut()[0].tap_internal_key = Some(xonly);
+        original.inputs_mut()[0]
+            .tap_key_origins
+            .insert(xonly, (vec![], (fp, DerivationPath::master())));
+        original.inputs_mut()[0].tap_key_sig = Some(schnorr_sig);
+        let mut returned = original.clone();
+        returned.inputs_mut()[0].tap_key_sig = Some(other_schnorr_sig);
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(
+            err,
+            PsetValidationError::TapKeySigChanged { idx: 0 }
+        ));
+
+        // tap script sig with no tap_key_origins entry
+        let original = test_pset();
+        let mut returned = original.clone();
+        returned.inputs_mut()[0]
+            .tap_script_sigs
+            .insert((xonly, leaf), schnorr_sig);
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(
+            err,
+            PsetValidationError::MissingTapKeyOrigin { idx: 0 }
+        ));
+
+        // tap script sig with wrong fingerprint
+        let mut original = test_pset();
+        original.inputs_mut()[0]
+            .tap_key_origins
+            .insert(xonly, (vec![leaf], (other_fp, DerivationPath::master())));
+        let mut returned = original.clone();
+        returned.inputs_mut()[0]
+            .tap_script_sigs
+            .insert((xonly, leaf), schnorr_sig);
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(
+            err,
+            PsetValidationError::WrongFingerprint { idx: 0 }
+        ));
+
+        // tap script sig whose key origin lists leaves that don't include this leaf
+        let mut original = test_pset();
+        original.inputs_mut()[0]
+            .tap_key_origins
+            .insert(xonly, (vec![other_leaf], (fp, DerivationPath::master())));
+        let mut returned = original.clone();
+        returned.inputs_mut()[0]
+            .tap_script_sigs
+            .insert((xonly, leaf), schnorr_sig);
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(
+            err,
+            PsetValidationError::MissingTapKeyOrigin { idx: 0 }
+        ));
+
+        // removed tap script sig
+        let mut original = test_pset();
+        original.inputs_mut()[0]
+            .tap_key_origins
+            .insert(xonly, (vec![leaf], (fp, DerivationPath::master())));
+        original.inputs_mut()[0]
+            .tap_script_sigs
+            .insert((xonly, leaf), schnorr_sig);
+        let mut returned = original.clone();
+        returned.inputs_mut()[0].tap_script_sigs.clear();
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(
+            err,
+            PsetValidationError::TapScriptSigsRemoved { idx: 0 }
+        ));
+
+        // tap key sig with a correct fingerprint
+        // TODO: remove this once taproot key spend signature verification is implemented
+        let mut original = test_pset();
+        original.inputs_mut()[0].tap_internal_key = Some(xonly);
+        original.inputs_mut()[0]
+            .tap_key_origins
+            .insert(xonly, (vec![], (fp, DerivationPath::master())));
+        let mut returned = original.clone();
+        returned.inputs_mut()[0].tap_key_sig = Some(schnorr_sig);
+        assert_eq!(verify_added_sigs(&original, &returned, fp, &EC).unwrap(), 1);
+
+        // tap script sig with a correct fingerprint
+        // TODO: remove this once taproot script spend signature verification is implemented
+        let mut original = test_pset();
+        original.inputs_mut()[0]
+            .tap_key_origins
+            .insert(xonly, (vec![leaf], (fp, DerivationPath::master())));
+        let mut returned = original.clone();
+        returned.inputs_mut()[0]
+            .tap_script_sigs
+            .insert((xonly, leaf), schnorr_sig);
+        assert_eq!(verify_added_sigs(&original, &returned, fp, &EC).unwrap(), 1);
+
+        // non-signature fields are protected: any change triggers DataMismatch
+        let original = test_pset();
+        let base = original.clone();
+
+        let mut returned = base.clone();
+        returned.outputs_mut()[0].amount = Some(100_000);
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(err, PsetValidationError::DataMismatch));
+
+        let mut returned = base.clone();
+        returned.inputs_mut()[0].sighash_type = Some(elements::pset::PsbtSighashType::from_u32(1));
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(err, PsetValidationError::DataMismatch));
+
+        let mut returned = base.clone();
+        returned.add_input(Input::default());
+        let err = verify_added_sigs(&original, &returned, fp, &EC).unwrap_err();
+        assert!(matches!(err, PsetValidationError::DataMismatch));
+    }
 
     #[test]
     fn test_genesis_hash_serde_roundtrip() {

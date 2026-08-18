@@ -133,18 +133,18 @@ impl Network {
     }
 }
 
-/// The builder for custom Elements network parameters
+/// The builder for custom Elements networks
 #[derive(uniffi::Object, Debug)]
-pub struct ElementsParamsBuilder {
+pub struct CustomElementsNetworkBuilder {
     inner: Mutex<Option<lwk_common::ElementsParamsBuilder>>,
 }
 
 #[uniffi::export]
-impl ElementsParamsBuilder {
-    /// Construct a builder for custom Elements network parameters
+impl CustomElementsNetworkBuilder {
+    /// Construct a builder for custom Elements networks
     #[uniffi::constructor]
     pub fn new() -> Self {
-        ElementsParamsBuilder {
+        CustomElementsNetworkBuilder {
             inner: Mutex::new(Some(lwk_common::ElementsParamsBuilder::new())),
         }
     }
@@ -175,11 +175,10 @@ impl ElementsParamsBuilder {
         Ok(())
     }
 
-    // lwk_common::ElementsParamsBuilder::build() returns ElementsParams, hence the different fn name
     /// Build the custom Elements `Network`
     ///
     /// Unspecified values are defined as default Liquid regtest parameters
-    pub fn build_network(&self) -> Result<Arc<Network>, LwkError> {
+    pub fn build(&self) -> Result<Arc<Network>, LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         let params = inner.build()?;
@@ -187,7 +186,7 @@ impl ElementsParamsBuilder {
     }
 }
 
-impl Default for ElementsParamsBuilder {
+impl Default for CustomElementsNetworkBuilder {
     fn default() -> Self {
         Self::new()
     }

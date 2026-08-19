@@ -470,6 +470,9 @@ mod test {
     fn test_elip153_vectors() {
         // Generate ELIP153 test vectors with
         // cargo test -p lwk_wollet --features amp2 elip153_vectors -- --nocapture
+        //
+        // Note: expected_dwid must be taken from the ELIP153 test vectors to ensure
+        // we keep following the spec
         use lwk_signer::SwSigner;
 
         let user_mnemonic_1 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
@@ -480,13 +483,14 @@ mod test {
         let server_mnemonic_2 = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong";
 
         let mut i = 0;
-        for (description, network, mnemonic, server_mnemonic, account) in [
+        for (description, network, mnemonic, server_mnemonic, account, expected_dwid) in [
             (
                 "Liquid",
                 Network::Liquid,
                 user_mnemonic_1,
                 server_mnemonic_1,
                 0u32,
+                "4b2f-fca3-1d2e-0a8b-0d58-3ef5-9375-12cd",
             ),
             (
                 "Testnet",
@@ -494,6 +498,7 @@ mod test {
                 user_mnemonic_1,
                 server_mnemonic_1,
                 0,
+                "ded1-9ff5-4291-6309-3c91-a4d8-cfe5-8f74",
             ),
             (
                 "Regtest",
@@ -501,6 +506,7 @@ mod test {
                 user_mnemonic_1,
                 server_mnemonic_1,
                 0,
+                "a73a-c707-978f-cb7c-8912-5868-34c9-ee12",
             ),
             (
                 "Liquid, different account",
@@ -508,6 +514,7 @@ mod test {
                 user_mnemonic_1,
                 server_mnemonic_1,
                 1,
+                "5c5b-05fd-0fe1-58ef-b6a5-c54f-3e56-e478",
             ),
             (
                 "Liquid, different user",
@@ -515,6 +522,7 @@ mod test {
                 user_mnemonic_2,
                 server_mnemonic_1,
                 0,
+                "0328-ea41-7816-2f18-e86d-f110-bec4-f4eb",
             ),
             (
                 "Liquid, different server",
@@ -522,6 +530,7 @@ mod test {
                 user_mnemonic_1,
                 server_mnemonic_2,
                 0,
+                "7e5d-8182-ec4f-cf90-7be8-20f5-b3d8-8694",
             ),
         ] {
             i += 1;
@@ -544,6 +553,7 @@ mod test {
                 .elip153(user_keysource, user_xpub, view_keysource, view_xpub)
                 .unwrap();
             let dwid = desc.descriptor().dwid(network).unwrap();
+            assert_eq!(dwid.to_string(), expected_dwid);
             let network_str = match network {
                 Network::Liquid => "Liquid",
                 Network::TestnetLiquid => "Liquid Testnet",

@@ -54,6 +54,7 @@ pub use simplicity::{
     SimplicityTypedValue, SimplicityWitnessValues, StateTaprootBuilder, StateTaprootSpendInfo,
 };
 
+pub use amp2::{Amp2, Amp2Descriptor};
 pub use blockdata::address::Address;
 pub use blockdata::address_result::AddressResult;
 pub use blockdata::block_header::BlockHeader;

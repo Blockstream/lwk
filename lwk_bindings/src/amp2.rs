@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use crate::{DerivationPath, LwkError, Pset, Signer, WolletDescriptor};
 
-/// Wrapper over [`lwk_wollet::amp2::Amp2`]
+/// Context for actions interacting with AMP2
 #[derive(uniffi::Object)]
 pub struct Amp2 {
     inner: lwk_wollet::amp2::Amp2,
 }
 
-/// Wrapper over [`lwk_wollet::amp2::Amp2Descriptor`]
+/// An AMP2 descriptor
 #[derive(uniffi::Object)]
 #[uniffi::export(Display)]
 pub struct Amp2Descriptor {
@@ -23,6 +23,7 @@ impl std::fmt::Display for Amp2Descriptor {
 
 #[uniffi::export]
 impl Amp2Descriptor {
+    /// The inner `WolletDescriptor`
     pub fn descriptor(&self) -> WolletDescriptor {
         self.inner.descriptor().into()
     }

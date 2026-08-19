@@ -21,6 +21,24 @@ impl FromStr for DescriptorPublicKey {
     }
 }
 
+impl DescriptorPublicKey {
+    /// Master key fingerprint
+    pub fn fingerprint(&self) -> Option<Fingerprint> {
+        self.keysource.as_ref().map(|(fingerprint, _)| *fingerprint)
+    }
+
+    /// Derivation path from the master key
+    pub fn derivation_path(&self) -> Option<&DerivationPath> {
+        self.keysource.as_ref().map(|(_, path)| path)
+    }
+
+    /// Extended public key, without any key origin information
+    pub fn xpub(&self) -> Option<Xpub> {
+        // future extensions might also parse DescriptorPublicKey that are not xpubs
+        Some(self.xpub)
+    }
+}
+
 impl fmt::Display for DescriptorPublicKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.keysource {
@@ -48,13 +66,27 @@ mod test {
 
     #[test]
     fn test_dpk() {
-        let rt = |s: &str| {
-            let dpk = DescriptorPublicKey::from_str(s).unwrap();
-            assert_eq!(dpk.to_string(), s);
-        };
-        rt(XPUB);
-        rt(&format!("[11a345ad/84'/1'/0']{XPUB}"));
-        rt(&format!("[11a345ad]{XPUB}"));
+        let xpub_bare = XPUB.to_string();
+        let xpub_fp = format!("[11a345ad]{XPUB}");
+        let xpub_fp_path = format!("[11a345ad/84'/1'/0']{XPUB}");
+
+        let dpk = DescriptorPublicKey::from_str(&xpub_bare).unwrap();
+        assert_eq!(dpk.to_string(), xpub_bare);
+        assert!(dpk.xpub().is_some());
+        assert!(dpk.fingerprint().is_none());
+        assert!(dpk.derivation_path().is_none());
+
+        let dpk = DescriptorPublicKey::from_str(&xpub_fp).unwrap();
+        assert_eq!(dpk.to_string(), xpub_bare);
+        assert!(dpk.xpub().is_some());
+        assert!(dpk.fingerprint().is_some());
+        assert!(dpk.derivation_path().is_none());
+
+        let dpk = DescriptorPublicKey::from_str(&xpub_fp_path).unwrap();
+        assert_eq!(dpk.to_string(), xpub_bare);
+        assert!(dpk.xpub().is_some());
+        assert!(dpk.fingerprint().is_some());
+        assert!(dpk.derivation_path().is_some());
 
         // "h" are replaced by "'"
         let dpk = DescriptorPublicKey::from_str(&format!("[11a345ad/84h/1h/0h]{XPUB}")).unwrap();

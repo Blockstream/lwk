@@ -1,9 +1,8 @@
 use std::{fmt, str::FromStr, sync::Arc};
 
-use elements::bitcoin::bip32::{Fingerprint, Xpub};
 use elements_miniscript::slip77::MasterBlindingKey;
 
-use crate::{types::SecretKey, Chain, LwkError, Network, Script};
+use crate::{types::SecretKey, Chain, DescriptorPublicKey, LwkError, Network, Script};
 
 /// The output descriptors, wrapper over [`lwk_wollet::WolletDescriptor`]
 #[derive(uniffi::Object)]
@@ -88,14 +87,15 @@ impl fmt::Display for WolletDescriptor {
 
 #[uniffi::export]
 impl WolletDescriptor {
-    /// Same as [`Signer::ss_desc`](crate::Signer::ss_desc) but with data obtained from a
-    /// signer managed externally (e.g. a Jade).
+    /// Same as `Signer::ss_desc` but with data obtained from a
+    /// signer managed externally.
     ///
     /// Caller must ensure that:
-    /// * `master_blinding_key` is derived from the signer, and not wrapped in "slip77(...)"
-    /// * `fingerprint` is the signer master fingerprint
-    /// * `xpub` is the signer xpub derived at path
-    ///    `DerivationPath::ss_path(network, account_type, account_num)`
+    /// * `master_blinding_key` is derived from the signer, and wrapped in "slip77(...)", as
+    ///   returned by `Signer::slip77_master_blinding_key`
+    /// * `key` must be the signer keyorigin xpub, i.e. its fingerprint must be the signer
+    ///    master fingerprint, and its xpub must be the one derived at path
+    ///    `DerivationPath::ss_path(network, account_type, account_num)`.
     ///
     /// Passing incorrect signer data can lead to creating an incorrect
     /// descriptor, which could lead to loss of funds.
@@ -107,17 +107,37 @@ impl WolletDescriptor {
         account_type: &str,
         account_num: u32,
         master_blinding_key: &str,
-        fingerprint: &str,
-        xpub: &str,
+        key: &DescriptorPublicKey,
     ) -> Result<Arc<Self>, LwkError> {
         let account_type: lwk_common::SSAccountType = account_type
             .parse()
             .map_err(|e: &str| LwkError::Generic { msg: e.to_string() })?;
+        let master_blinding_key = master_blinding_key
+            .strip_prefix("slip77(")
+            .and_then(|s| s.strip_suffix(')'))
+            .ok_or_else(|| LwkError::Generic {
+                msg: "master_blinding_key must be wrapped in \"slip77(...)\"".into(),
+            })?;
         let master_blinding_key = MasterBlindingKey::from_str(master_blinding_key)
             .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
-        let fingerprint = Fingerprint::from_hex(fingerprint)
+        let key = key.as_ref();
+        let fingerprint = key.fingerprint().ok_or_else(|| LwkError::Generic {
+            msg: "missing keyorigin fingerprint".into(),
+        })?;
+        let xpub = key.xpub().ok_or_else(|| LwkError::Generic {
+            msg: "missing xpub".into(),
+        })?;
+        let derivation_path = key.derivation_path().ok_or_else(|| LwkError::Generic {
+            msg: "missing keyorigin derivation path".into(),
+        })?;
+        let expected_path = lwk_common::ss_path(&network.into(), account_type, account_num)
             .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
-        let xpub = Xpub::from_str(xpub).map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+        if derivation_path != &expected_path {
+            let msg = format!(
+                "unexpected derivation path: expected {expected_path}, got {derivation_path}"
+            );
+            return Err(LwkError::Generic { msg });
+        }
 
         let inner = lwk_wollet::WolletDescriptor::ss_desc_from_external_signer(
             &network.into(),
@@ -140,7 +160,7 @@ impl WolletDescriptor {
 mod tests {
     use lwk_common::Network;
 
-    use crate::{Chain, DerivationPath, Mnemonic, Signer, WolletDescriptor};
+    use crate::{Chain, DerivationPath, DescriptorPublicKey, Mnemonic, Signer, WolletDescriptor};
     use std::str::FromStr;
 
     #[test]
@@ -180,25 +200,43 @@ mod tests {
         DerivationPath::ss_path(&network, "tr", 0).unwrap();
         assert!(DerivationPath::ss_path(&network, "pkh", 0).is_err());
 
-        let mbk = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+        let bare_mbk = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+        let mbk = format!("slip77({bare_mbk})");
         let fp = "73c5da0a";
         let xpub = "tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M";
-        let d = WolletDescriptor::ss_desc_from_external_signer(&network, "wpkh", 0, mbk, fp, xpub)
+        let key = DescriptorPublicKey::new(&format!("[{fp}/84'/1'/0']{xpub}")).unwrap();
+        let d = WolletDescriptor::ss_desc_from_external_signer(&network, "wpkh", 0, &mbk, &key)
             .unwrap();
         let exp = "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84'/1'/0']tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#2e4n992d";
         assert_eq!(d.to_string(), exp);
 
-        let ss =
-            |n: &crate::Network, type_: &str, num: u32, mbk: &str, fp: &str, xpub: &str| -> bool {
-                WolletDescriptor::ss_desc_from_external_signer(n, type_, num, mbk, fp, xpub)
-                    .is_err()
-            };
-        assert!(ss(&network, "not-wpkh", 0, mbk, fp, xpub));
-        assert!(ss(&network, "wpkh", 1 << 31, mbk, fp, xpub));
-        assert!(ss(&network, "wpkh", 0, "not-mbk", fp, xpub));
-        assert!(ss(&network, "wpkh", 0, mbk, "not-fp", xpub));
-        assert!(ss(&network, "wpkh", 0, mbk, fp, "not-xpub"));
+        let ss = |n: &crate::Network,
+                  type_: &str,
+                  num: u32,
+                  mbk: &str,
+                  key: &DescriptorPublicKey|
+         -> bool {
+            WolletDescriptor::ss_desc_from_external_signer(n, type_, num, mbk, key).is_err()
+        };
+        assert!(ss(&network, "not-wpkh", 0, &mbk, &key));
+        assert!(ss(&network, "wpkh", 1 << 31, &mbk, &key));
+        assert!(ss(&network, "wpkh", 0, "not-mbk", &key));
+        // a bare master_blinding_key, not wrapped in "slip77(...)", must be rejected
+        assert!(ss(&network, "wpkh", 0, bare_mbk, &key));
         let network = crate::Network::mainnet();
-        assert!(ss(&network, "wpkh", 0, mbk, fp, xpub));
+        assert!(ss(&network, "wpkh", 0, &mbk, &key));
+
+        // invalid DescriptorPublicKeys
+        let network = crate::Network::testnet();
+        let no_fp = DescriptorPublicKey::new(xpub).unwrap();
+        assert!(ss(&network, "wpkh", 0, &mbk, &no_fp));
+        let no_path = DescriptorPublicKey::new(&format!("[{fp}]{xpub}")).unwrap();
+        assert!(ss(&network, "wpkh", 0, &mbk, &no_path));
+        let wrong_purpose = DescriptorPublicKey::new(&format!("[{fp}/49'/1'/0']{xpub}")).unwrap();
+        assert!(ss(&network, "wpkh", 0, &mbk, &wrong_purpose));
+        let wrong_network = DescriptorPublicKey::new(&format!("[{fp}/84'/0'/0']{xpub}")).unwrap();
+        assert!(ss(&network, "wpkh", 0, &mbk, &wrong_network));
+        let wrong_account = DescriptorPublicKey::new(&format!("[{fp}/84'/1'/1']{xpub}")).unwrap();
+        assert!(ss(&network, "wpkh", 0, &mbk, &wrong_account));
     }
 }

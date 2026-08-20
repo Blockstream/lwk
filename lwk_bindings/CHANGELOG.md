@@ -10,7 +10,7 @@
 * Added `has_txs()` to `ElectrumClient`, `EsploraClient` and `WaterfallsClient`, to cheaply check if a descriptor has transaction history without a full scan
 * Fixed Boltz chain-swap restoration to use the binding session network instead of Regtest
 * Added `Signer::ss_desc()`
-* Renamed `WolletDescriptor::from_xpub()` to `WolletDescriptor::ss_desc_from_external_signer()`; `account_type` is now restricted to "wpkh"/"shwpkh" (was also "pkh"/"tr"), and `master_blinding_key` must now be the raw SLIP77 key hex, not wrapped in "slip77(...)"
+* Replaced `WolletDescriptor::from_xpub()` with `WolletDescriptor::ss_desc_from_external_signer()`
 
 ## 0.18.3
 

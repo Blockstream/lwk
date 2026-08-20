@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{DerivationPath, LwkError, Pset, Signer, WolletDescriptor};
+use crate::{DerivationPath, DescriptorPublicKey, LwkError, Pset, Signer, WolletDescriptor};
 
 /// Context for actions interacting with AMP2
 #[derive(uniffi::Object)]
@@ -111,20 +111,47 @@ impl Amp2 {
         Ok(Arc::new(self.inner.elip153_view_path(account_num)?.into()))
     }
 
-    /// Create an AMP2 descriptor ELIP153 compliant from xpub strings.
+    /// Create an AMP2 descriptor ELIP153 compliant from a signer managed externally.
     ///
-    /// This is typically used when the signer is managed outside of LWK.
-    /// Derive the user xpub at [`Amp2::elip153_user_path()`] and
-    /// the view xpub at [`Amp2::elip153_view_path()`], and pass the
-    /// obtained keyorigin_xpub strings here.
+    /// `user_key` must be the signer keyorigin xpub derived at
+    /// [`Amp2::elip153_user_path()`], and `view_key` must be the signer keyorigin xpub
+    /// derived at [`Amp2::elip153_view_path()`].
+    ///
+    /// Passing incorrect signer data can lead to creating an incorrect
+    /// descriptor, which could lead to loss of funds.
     pub fn elip153_from_external_signer(
         &self,
-        user_keyorigin_xpub: &str,
-        view_keyorigin_xpub: &str,
+        account_num: u32,
+        user_key: &DescriptorPublicKey,
+        view_key: &DescriptorPublicKey,
     ) -> Result<Amp2Descriptor, LwkError> {
+        let user_key = user_key.as_ref();
+        let view_key = view_key.as_ref();
+        let (Some(user_fp), Some(user_path), Some(user_xpub)) = (
+            user_key.fingerprint(),
+            user_key.derivation_path(),
+            user_key.xpub(),
+        ) else {
+            return Err(LwkError::Generic {
+                msg: "missing keyoring from user_key".into(),
+            });
+        };
+        let (Some(view_fp), Some(view_path), Some(view_xpub)) = (
+            view_key.fingerprint(),
+            view_key.derivation_path(),
+            view_key.xpub(),
+        ) else {
+            return Err(LwkError::Generic {
+                msg: "missing keyorigin from view_key".into(),
+            });
+        };
         Ok(self
             .inner
-            .elip153_from_external_signer(user_keyorigin_xpub, view_keyorigin_xpub)?
+            .elip153_from_external_signer(
+                account_num,
+                ((user_fp, user_path.clone()), user_xpub),
+                ((view_fp, view_path.clone()), view_xpub),
+            )?
             .into())
     }
 

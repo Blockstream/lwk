@@ -123,12 +123,25 @@ impl Amp2 {
     #[wasm_bindgen(js_name = elip153FromExternalSigner)]
     pub fn elip153_from_external_signer(
         &self,
+        account_num: u32,
         user_keyorigin_xpub: &str,
         view_keyorigin_xpub: &str,
     ) -> Result<Amp2Descriptor, Error> {
+        let (user_keysource, user_xpub) = lwk_common::keyorigin_xpub_from_str(user_keyorigin_xpub)?;
+        let user_keysource = user_keysource.ok_or_else(|| {
+            Error::Generic("missing keyorigin in user_keyorigin_xpub".to_string())
+        })?;
+        let (view_keysource, view_xpub) = lwk_common::keyorigin_xpub_from_str(view_keyorigin_xpub)?;
+        let view_keysource = view_keysource.ok_or_else(|| {
+            Error::Generic("missing keyorigin in view_keyorigin_xpub".to_string())
+        })?;
         Ok(self
             .inner
-            .elip153_from_external_signer(user_keyorigin_xpub, view_keyorigin_xpub)?
+            .elip153_from_external_signer(
+                account_num,
+                (user_keysource, user_xpub),
+                (view_keysource, view_xpub),
+            )?
             .into())
     }
 

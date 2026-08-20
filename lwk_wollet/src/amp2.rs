@@ -217,22 +217,37 @@ impl Amp2 {
         Ok(user_path.child(ChildNumber::from_hardened_idx(server_fingerprint_masked)?))
     }
 
-    /// Create an AMP2 descriptor ELIP153 compliant from xpub strings.
+    /// Create an AMP2 descriptor ELIP153 compliant from a signer managed externally.
     ///
     /// This is typically used when the signer is managed outside of LWK.
-    /// Derive the user xpub at [`Amp2::elip153_user_path()`] and
-    /// the view xpub at [`Amp2::elip153_view_path()`], and pass the
-    /// obtained keyorigin_xpub strings here.
+    ///
+    /// `user_keyorigin_xpub` and `view_keyorigin_xpub` must be the keyorigin xpubs of the
+    /// signer, derived respectively at [`Amp2::elip153_user_path()`] and
+    /// [`Amp2::elip153_view_path()`].
+    ///
+    /// Passing incorrect signer data can lead to creating an incorrect
+    /// descriptor, which could lead to loss of funds.
     pub fn elip153_from_external_signer(
         &self,
-        user_keyorigin_xpub: &str,
-        view_keyorigin_xpub: &str,
+        account_num: u32,
+        user_keyorigin_xpub: (KeySource, Xpub),
+        view_keyorigin_xpub: (KeySource, Xpub),
     ) -> Result<Amp2Descriptor, crate::Error> {
-        let (user_keysource, user_xpub) = keyorigin_xpub_from_str(user_keyorigin_xpub)?;
-        let user_keysource = user_keysource.ok_or(crate::Error::MissingKeyorigin)?;
-        let (view_keysource, view_xpub) = keyorigin_xpub_from_str(view_keyorigin_xpub)?;
-        let view_keysource = view_keysource.ok_or(crate::Error::MissingKeyorigin)?;
-        self.elip153(user_keysource, user_xpub, view_keysource, view_xpub)
+        let ((user_fp, user_path), user_xpub) = user_keyorigin_xpub;
+        let ((view_fp, view_path), view_xpub) = view_keyorigin_xpub;
+
+        if user_fp != view_fp {
+            return Err(crate::Error::Generic("fingerprint mismatch".to_string()));
+        }
+        if user_path != self.elip153_user_path(account_num)?
+            || view_path != self.elip153_view_path(account_num)?
+        {
+            return Err(crate::Error::Generic(
+                "unexpected keyorigin derivation path".to_string(),
+            ));
+        }
+
+        self.elip153((user_fp, user_path), user_xpub, (view_fp, view_path), view_xpub)
     }
 
     fn elip153(

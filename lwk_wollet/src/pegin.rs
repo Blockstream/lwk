@@ -479,23 +479,33 @@ impl PeginInput {
 
         let txid = elements::Txid::from_byte_array(bitcoin_outpoint.txid.to_byte_array());
         let outpoint = elements::OutPoint::new(txid, bitcoin_outpoint.vout | PEGIN_FLAG);
+        let claim_script = self
+            .funding
+            .deposit()
+            .pegin_address()
+            .claim_script()
+            .clone();
+        let amount = self.funding.deposit().amount().to_sat();
         let mut input = elements::pset::Input::from_prevout(outpoint);
+        // Elements treats a pegin as spending this synthetic output. Including
+        // it lets standard PSET signers resolve the claim script and amount.
+        input.witness_utxo = Some(elements::TxOut {
+            asset: elements::confidential::Asset::Explicit(self.pegged_asset),
+            value: elements::confidential::Value::Explicit(amount),
+            nonce: elements::confidential::Nonce::Null,
+            script_pubkey: claim_script.clone(),
+            witness: Default::default(),
+        });
         input.pegin_tx = Some(self.funding.deposit().transaction().clone());
         input.pegin_txout_proof = Some(bitcoin::consensus::serialize(self.funding.txout_proof()));
         input.pegin_genesis_hash = Some(elements::BlockHash::from_byte_array(
             self.parent_genesis_hash.to_byte_array(),
         ));
-        input.pegin_claim_script = Some(
-            self.funding
-                .deposit()
-                .pegin_address()
-                .claim_script()
-                .clone(),
-        );
-        input.pegin_value = Some(self.funding.deposit().amount().to_sat());
+        input.pegin_claim_script = Some(claim_script);
+        input.pegin_value = Some(amount);
         input.pegin_witness = Some(self.pegin_witness.clone());
         input.asset = Some(self.pegged_asset);
-        input.amount = Some(self.funding.deposit().amount().to_sat());
+        input.amount = Some(amount);
         Ok(input)
     }
 }
@@ -570,7 +580,7 @@ mod test {
     use elements::bitcoin;
     use elements::bitcoin::hashes::Hash;
 
-    use crate::{Error, Network};
+    use crate::{Error, Network, WolletBuilder};
 
     use super::{
         classify_fedpeg_program, fed_peg_script, height_with_fed_peg_script, FedPeg,
@@ -648,6 +658,15 @@ mod test {
             nonce: 0,
         };
         bitcoin::MerkleBlock::from_header_txids_with_predicate(&header, &[txid], |_| true)
+    }
+
+    fn test_pegin_input() -> super::PeginInput {
+        let pegin_address = test_pegin_address();
+        let transaction = test_deposit_transaction(&pegin_address);
+        let txid = transaction.compute_txid();
+        let deposit = super::PeginDeposit::new(pegin_address, transaction).unwrap();
+        let funding = super::PeginFunding::new(deposit, test_txout_proof(txid)).unwrap();
+        super::PeginInput::from(funding)
     }
 
     #[test]
@@ -825,6 +844,16 @@ mod test {
             pset_input.previous_output_index,
             funding.deposit().outpoint().vout | (1 << 30)
         );
+        assert_eq!(
+            pset_input.witness_utxo,
+            Some(elements::TxOut {
+                asset: elements::confidential::Asset::Explicit(input.pegged_asset()),
+                value: elements::confidential::Value::Explicit(funding.deposit().amount().to_sat()),
+                nonce: elements::confidential::Nonce::Null,
+                script_pubkey: funding.deposit().pegin_address().claim_script().clone(),
+                witness: Default::default(),
+            })
+        );
         assert_eq!(pset_input.pegin_tx.as_ref(), Some(&transaction));
         assert_eq!(
             pset_input.pegin_txout_proof,
@@ -871,6 +900,73 @@ mod test {
         assert!(matches!(
             input.to_pset_input(),
             Err(Error::PeginVoutConflictsWithFlags { vout }) if vout == 1 << 30
+        ));
+    }
+
+    #[test]
+    fn tx_builder_adds_pegin_as_lbtc() {
+        let descriptor: crate::WolletDescriptor = lwk_test_util::PEGIN_TEST_DESC.parse().unwrap();
+        let wollet = WolletBuilder::new(Network::TestnetLiquid, descriptor)
+            .build()
+            .unwrap();
+        let recipient = wollet.address(Some(1)).unwrap();
+        let input = test_pegin_input();
+        let amount = input.funding().deposit().amount().to_sat();
+
+        let pset = wollet
+            .tx_builder()
+            .add_pegin_input(input)
+            .unwrap()
+            .add_lbtc_recipient(recipient.address(), amount / 2)
+            .unwrap()
+            .finish()
+            .unwrap();
+
+        assert_eq!(pset.inputs().len(), 1);
+        let input = &pset.inputs()[0];
+        assert!(input.is_pegin());
+        assert_eq!(input.asset, Some(*Network::TestnetLiquid.policy_asset()));
+        assert_eq!(input.amount, Some(amount));
+        assert!(!input.bip32_derivation.is_empty());
+    }
+
+    #[test]
+    fn tx_builder_rejects_duplicate_pegin() {
+        let input = test_pegin_input();
+        let builder = crate::TxBuilder::new(Network::TestnetLiquid)
+            .add_pegin_input(input.clone())
+            .unwrap();
+
+        assert!(matches!(
+            builder.add_pegin_input(input),
+            Err(Error::DuplicatedOutpoint(_, context)) if context == "pegin inputs"
+        ));
+    }
+
+    #[test]
+    fn tx_builder_rejects_pegin_network_mismatch() {
+        assert!(matches!(
+            crate::TxBuilder::new(Network::Liquid).add_pegin_input(test_pegin_input()),
+            Err(Error::PeginNetworkMismatch { .. })
+        ));
+    }
+
+    #[test]
+    fn tx_builder_rejects_ordered_pegin_inputs() {
+        let descriptor: crate::WolletDescriptor = lwk_test_util::PEGIN_TEST_DESC.parse().unwrap();
+        let wollet = WolletBuilder::new(Network::TestnetLiquid, descriptor)
+            .build()
+            .unwrap();
+
+        assert!(matches!(
+            wollet
+                .tx_builder()
+                .add_pegin_input(test_pegin_input())
+                .unwrap()
+                .set_wallet_utxos(vec![])
+                .set_inputs_order(vec![])
+                .finish(),
+            Err(Error::PeginUnsupportedBuilderMode("manual inputs order"))
         ));
     }
 

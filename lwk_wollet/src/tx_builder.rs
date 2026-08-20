@@ -8,11 +8,12 @@ use crate::{
     issuance::{IssuanceOutput, IssuanceRequest, Issuances, ReissuanceRequest, Reissuances},
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
+    pegin::PeginInput,
     pset_create::{
         validate_address, validate_address_explicit, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS,
     },
-    Contract, DownloadTxResult, Error, LiquidexProposal, Network, UnvalidatedRecipient, Update,
-    WalletTxOut, Wollet, EC,
+    Chain, Contract, DownloadTxResult, Error, LiquidexProposal, Network, UnvalidatedRecipient,
+    Update, WalletTxOut, Wollet, EC,
 };
 use elements::{
     confidential::{AssetBlindingFactor, Nonce, Value, ValueBlindingFactor},
@@ -22,6 +23,7 @@ use elements::{
     Address, AssetId, BlindAssetProofs, BlindValueProofs, EcdsaSighashType, OutPoint, Script,
     Transaction, TxOut, TxOutSecrets,
 };
+use elements_miniscript::psbt::PsbtExt;
 use lwk_common::{calculate_fee, set_genesis_hash};
 use rand::thread_rng;
 
@@ -222,6 +224,7 @@ pub struct TxBuilder {
     drain_lbtc: bool,
     drain_to: Option<Address>,
     external_utxos: Vec<ExternalUtxo>,
+    pegin_inputs: Vec<PeginInput>,
 
     selected_utxos: Option<Vec<OutPoint>>,
     inputs_order: Option<Vec<OutPoint>>,
@@ -246,6 +249,7 @@ impl TxBuilder {
             drain_lbtc: false,
             drain_to: None,
             external_utxos: vec![],
+            pegin_inputs: vec![],
             selected_utxos: None,
             inputs_order: None,
             add_input_rangeproofs: true,
@@ -558,6 +562,48 @@ impl TxBuilder {
     /// Note: unblinded UTXOs with the same scriptpubkeys as the wallet, are considered external.
     pub fn add_external_utxos(mut self, utxos: Vec<ExternalUtxo>) -> Result<Self, Error> {
         self.external_utxos.extend(utxos);
+        Ok(self)
+    }
+
+    /// Add an authenticated pegin as an L-BTC input.
+    ///
+    /// Pegin inputs cannot currently be combined with manual input ordering or
+    /// LiquiDEX transactions.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the pegin belongs to another network, if its
+    /// outpoint has already been added, or if it cannot be represented as a
+    /// PSET input.
+    pub fn add_pegin_input(mut self, input: PeginInput) -> Result<Self, Error> {
+        let fed_peg_network = input
+            .funding()
+            .deposit()
+            .pegin_address()
+            .fed_peg()
+            .network();
+        if self.network() != fed_peg_network {
+            return Err(Error::PeginNetworkMismatch {
+                wallet: self.network().as_str(),
+                fed_peg: fed_peg_network.as_str(),
+            });
+        }
+
+        let pset_input = input.to_pset_input()?;
+        let outpoint = OutPoint::new(pset_input.previous_txid, pset_input.previous_output_index);
+        let bitcoin_outpoint = input.funding().deposit().outpoint();
+        if self
+            .pegin_inputs
+            .iter()
+            .any(|candidate| candidate.funding().deposit().outpoint() == bitcoin_outpoint)
+        {
+            return Err(Error::DuplicatedOutpoint(
+                outpoint,
+                "pegin inputs".to_string(),
+            ));
+        }
+
+        self.pegin_inputs.push(input);
         Ok(self)
     }
 
@@ -1007,6 +1053,15 @@ impl TxBuilder {
     }
 
     fn finish_inner(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
+        if !self.pegin_inputs.is_empty() {
+            if self.inputs_order.is_some() {
+                return Err(Error::PeginUnsupportedBuilderMode("manual inputs order"));
+            }
+            if self.is_liquidex_make || !self.liquidex_proposals.is_empty() {
+                return Err(Error::PeginUnsupportedBuilderMode("LiquiDEX"));
+            }
+        }
+
         if self.is_liquidex_make {
             if self.inputs_order.is_some() {
                 return Err(Error::LiquidexUnsupportedWithInputsOrder);
@@ -1218,6 +1273,38 @@ impl TxBuilder {
         for addressee in addressees_lbtc {
             wollet.add_output(&mut pset, &addressee)?;
             satoshi_out += addressee.satoshi;
+        }
+
+        // Add pegins as explicit L-BTC inputs.
+        for pegin_input in &self.pegin_inputs {
+            if pset.inputs().len() >= SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
+                return Err(Error::TooManyInputs(pset.inputs().len()));
+            }
+
+            let amount = pegin_input.funding().deposit().amount().to_sat();
+            let input = pegin_input.to_pset_input()?;
+            pset.add_input(input);
+            let idx = pset.inputs().len() - 1;
+            let derivation_index = pegin_input
+                .funding()
+                .deposit()
+                .pegin_address()
+                .derivation_index();
+            let descriptor = wollet
+                .wollet_descriptor()
+                .definite_descriptor(Chain::External, derivation_index)?;
+            pset.update_input_with_descriptor(idx, &descriptor)?;
+            inp_txout_sec.insert(
+                idx,
+                TxOutSecrets::new(
+                    policy_asset,
+                    AssetBlindingFactor::zero(),
+                    amount,
+                    ValueBlindingFactor::zero(),
+                ),
+            );
+            inp_weight += wollet.max_weight_to_satisfy();
+            satoshi_in += amount;
         }
 
         // Add all external L-BTC utxos
@@ -1910,6 +1997,14 @@ impl<'a> WolletTxBuilder<'a> {
         Ok(Self {
             wollet: self.wollet,
             inner: self.inner.add_external_utxos(utxos)?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::add_pegin_input()`]
+    pub fn add_pegin_input(self, input: PeginInput) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.add_pegin_input(input)?,
         })
     }
 

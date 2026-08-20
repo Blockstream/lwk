@@ -506,6 +506,23 @@ impl ReissuanceRequest {
         *lock = Some(inner.issuance_tx(tx.into()));
         Ok(())
     }
+
+    /// Pin this reissuance to the reissuance token utxo spent by `input`
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// `input` must hold the reissuance token of the asset being reissued, otherwise
+    /// [`TxBuilder::finish()`] will error. If it is not already an input of the transaction it is
+    /// added, unless a manual inputs order is set, in which case it must be one of the outpoints
+    /// passed to [`TxBuilder::set_inputs_order()`].
+    ///
+    /// If not called, the reissuance is assigned to the first input holding the token.
+    pub fn pin_input(&self, input: &OutPoint) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.pin_input(input.into()));
+        Ok(())
+    }
 }
 
 impl ReissuanceRequest {

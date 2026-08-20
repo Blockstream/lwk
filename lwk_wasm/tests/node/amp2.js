@@ -25,7 +25,7 @@ async function runAmp2Test() {
         const viewPath = amp2.elip153ViewPath(account);
         const userKeyoriginXpub = signer.deriveXpub(userPath);
         const viewKeyoriginXpub = signer.deriveXpub(viewPath);
-        const descFromStr = amp2.elip153FromStr(userKeyoriginXpub, viewKeyoriginXpub);
+        const descFromStr = amp2.elip153FromExternalSigner(account, userKeyoriginXpub, viewKeyoriginXpub);
         assert.strictEqual(desc.descriptor().toString(), descFromStr.descriptor().toString());
 
         const wollet = new lwk.Wollet(network, desc.descriptor());

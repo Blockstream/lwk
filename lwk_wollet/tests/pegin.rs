@@ -142,12 +142,7 @@ fn claim_pegin() {
     ));
     let expected_balance = pegin_amount - transaction.fee_in(*network.policy_asset());
     let transaction_hex = elements::encode::serialize(&transaction).to_hex();
-    let mempool_result =
-        env.elementsd_call("testmempoolaccept", &[serde_json::json!([transaction_hex])]);
-    assert!(
-        mempool_result[0]["allowed"].as_bool().unwrap(),
-        "{mempool_result}"
-    );
+    assert!(env.elementsd_testmempoolaccept(&transaction_hex));
     let liquid_txid = env.elementsd_sendrawtransaction(&transaction_hex);
     assert_eq!(liquid_txid, transaction.txid().to_string());
     env.elementsd_generate(1);

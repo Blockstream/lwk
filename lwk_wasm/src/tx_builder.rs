@@ -457,10 +457,27 @@ impl ReissuanceRequest {
 
     /// Sets the transaction containing the original issuance of the reissued asset
     ///
+    /// **Experimental**: this API might change without notice.
+    ///
     /// Only needed if that issuance transaction does not involve this wallet.
     #[wasm_bindgen(js_name = issuanceTx)]
     pub fn issuance_tx(self, tx: Transaction) -> ReissuanceRequest {
         self.inner.issuance_tx(tx.into()).into()
+    }
+
+    /// Pin this reissuance to the reissuance token utxo spent by `input`
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// `input` must hold the reissuance token of the asset being reissued, otherwise `finish()`
+    /// will error. If it is not already an input of the transaction it is added, unless a manual
+    /// inputs order (`setInputsOrder`) is set, in which case it must be one of the outpoints
+    /// passed there.
+    ///
+    /// If not called, the reissuance is assigned to the first input holding the token.
+    #[wasm_bindgen(js_name = pinInput)]
+    pub fn pin_input(self, input: &OutPoint) -> ReissuanceRequest {
+        self.inner.pin_input(input.into()).into()
     }
 }
 

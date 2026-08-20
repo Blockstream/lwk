@@ -186,6 +186,7 @@
             pkgs.cargo-depgraph
             pkgs.cargo-bloat
             pkgs.cargo-nextest
+            pkgs.cargo-audit
             amp2Mock
             pkgs.grcov
             pkgs.go

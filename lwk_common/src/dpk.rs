@@ -77,16 +77,16 @@ mod test {
         assert!(dpk.derivation_path().is_none());
 
         let dpk = DescriptorPublicKey::from_str(&xpub_fp).unwrap();
-        assert_eq!(dpk.to_string(), xpub_bare);
+        assert_eq!(dpk.to_string(), xpub_fp);
         assert!(dpk.xpub().is_some());
         assert!(dpk.fingerprint().is_some());
-        assert!(dpk.derivation_path().is_none());
+        assert!(dpk.derivation_path().unwrap().is_empty());
 
         let dpk = DescriptorPublicKey::from_str(&xpub_fp_path).unwrap();
-        assert_eq!(dpk.to_string(), xpub_bare);
+        assert_eq!(dpk.to_string(), xpub_fp_path);
         assert!(dpk.xpub().is_some());
         assert!(dpk.fingerprint().is_some());
-        assert!(dpk.derivation_path().is_some());
+        assert!(!dpk.derivation_path().unwrap().is_empty());
 
         // "h" are replaced by "'"
         let dpk = DescriptorPublicKey::from_str(&format!("[11a345ad/84h/1h/0h]{XPUB}")).unwrap();

@@ -118,16 +118,16 @@ pub trait Signer {
         network: &Network,
         account_type: SSAccountType,
         account_num: u32,
-    ) -> Result<String, String> {
-        // TODO consider returning Self::Error
+    ) -> Result<String, Self::Error>
+    where
+        Self::Error: From<bitcoin::bip32::Error>,
+    {
         let (prefix, suffix) = account_type.desc_affixes();
-        let path = ss_path(network, account_type, account_num).map_err(|e| e.to_string())?;
+        let path = ss_path(network, account_type, account_num)?;
 
-        let fingerprint = self.fingerprint().map_err(|e| format!("{e:?}"))?;
-        let xpub = self.derive_xpub(&path).map_err(|e| format!("{e:?}"))?;
-        let blinding_key = self
-            .slip77_master_blinding_key()
-            .map_err(|e| format!("{e:?}"))?;
+        let fingerprint = self.fingerprint()?;
+        let xpub = self.derive_xpub(&path)?;
+        let blinding_key = self.slip77_master_blinding_key()?;
 
         Ok(format!(
             "ct(slip77({blinding_key}),{prefix}([{fingerprint}/{path}]{xpub}/<0;1>/*){suffix})"

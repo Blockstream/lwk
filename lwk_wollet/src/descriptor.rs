@@ -358,15 +358,18 @@ impl WolletDescriptor {
     /// [`lwk_common::Signer::ss_desc`].
     ///
     /// **Experimental**: this API might change without notice.
-    pub fn ss_desc(
+    pub fn ss_desc<S: Signer>(
         network: &Network,
         account_type: SSAccountType,
         account_num: u32,
-        signer: &impl Signer,
-    ) -> Result<Self, Error> {
+        signer: &S,
+    ) -> Result<Self, Error>
+    where
+        S::Error: From<bitcoin::bip32::Error>,
+    {
         let desc = signer
             .ss_desc(network, account_type, account_num)
-            .map_err(|e| Error::Generic(e.to_string()))?;
+            .map_err(|e| Error::Generic(format!("{e:?}")))?;
         desc.parse()
     }
 

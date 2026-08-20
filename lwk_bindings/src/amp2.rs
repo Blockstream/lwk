@@ -133,7 +133,7 @@ impl Amp2 {
             user_key.xpub(),
         ) else {
             return Err(LwkError::Generic {
-                msg: "missing keyoring from user_key".into(),
+                msg: "missing keyorigin from user_key".into(),
             });
         };
         let (Some(view_fp), Some(view_path), Some(view_xpub)) = (

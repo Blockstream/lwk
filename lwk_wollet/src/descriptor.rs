@@ -377,7 +377,7 @@ impl WolletDescriptor {
     /// * `fingerprint` is the signer master fingerprint
     /// * `xpub` is the signer xpub derived at `ss_path(network, account_type, account_num)`
     ///
-    /// Passing incorrect signer data can lead to creating an incorrect
+    /// **Warning**: Passing incorrect signer data can lead to creating an incorrect
     /// descriptor, which could lead to loss of funds.
     ///
     /// **Experimental**: this API might change without notice.

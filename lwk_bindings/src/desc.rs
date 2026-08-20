@@ -94,10 +94,10 @@ impl WolletDescriptor {
     /// * `master_blinding_key` is derived from the signer, and wrapped in "slip77(...)", as
     ///   returned by `Signer::slip77_master_blinding_key`
     /// * `key` must be the signer keyorigin xpub, i.e. its fingerprint must be the signer
-    ///    master fingerprint, and its xpub must be the one derived at path
-    ///    `DerivationPath::ss_path(network, account_type, account_num)`.
+    ///   master fingerprint, and its xpub must be the one derived at path
+    ///   `DerivationPath::ss_path(network, account_type, account_num)`.
     ///
-    /// Passing incorrect signer data can lead to creating an incorrect
+    /// **Warning**: Passing incorrect signer data can lead to creating an incorrect
     /// descriptor, which could lead to loss of funds.
     ///
     /// **Experimental**: this API might change without notice.

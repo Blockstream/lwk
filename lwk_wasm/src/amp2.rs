@@ -114,12 +114,14 @@ impl Amp2 {
         Ok(self.inner.elip153_view_path(account_num)?.into())
     }
 
-    /// Create an AMP2 descriptor ELIP153 compliant from xpub strings.
+    /// Create an AMP2 descriptor ELIP153 compliant from a signer managed externally.
     ///
-    /// This is typically used when the signer is managed outside of LWK.
-    /// Derive the user xpub at [`Amp2::elip153_user_path()`] and
-    /// the view xpub at [`Amp2::elip153_view_path()`], and pass the
-    /// obtained keyorigin_xpub strings here.
+    /// Caller must ensure that:
+    /// * `user_keyorigin_xpub` is the keyorigin xpub derived at `Amp2::elip153_user_path()` for `account_num`
+    /// * `view_keyorigin_xpub` is the keyorigin xpub derived at `Amp2::elip153_view_path()` for `account_num`
+    ///
+    /// **Warning**: Passing incorrect signer data can lead to creating an incorrect
+    /// descriptor, which could lead to loss of funds.
     #[wasm_bindgen(js_name = elip153FromExternalSigner)]
     pub fn elip153_from_external_signer(
         &self,

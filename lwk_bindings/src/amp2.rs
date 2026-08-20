@@ -113,11 +113,11 @@ impl Amp2 {
 
     /// Create an AMP2 descriptor ELIP153 compliant from a signer managed externally.
     ///
-    /// `user_key` must be the signer keyorigin xpub derived at
-    /// [`Amp2::elip153_user_path()`], and `view_key` must be the signer keyorigin xpub
-    /// derived at [`Amp2::elip153_view_path()`].
+    /// Caller must ensure that:
+    /// * `user_keyorigin_xpub` is the keyorigin xpub derived at `Amp2::elip153_user_path()` for `account_num`
+    /// * `view_keyorigin_xpub` is the keyorigin xpub derived at `Amp2::elip153_view_path()` for `account_num`
     ///
-    /// Passing incorrect signer data can lead to creating an incorrect
+    /// **Warning**: Passing incorrect signer data can lead to creating an incorrect
     /// descriptor, which could lead to loss of funds.
     pub fn elip153_from_external_signer(
         &self,

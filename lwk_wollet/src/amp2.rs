@@ -219,13 +219,11 @@ impl Amp2 {
 
     /// Create an AMP2 descriptor ELIP153 compliant from a signer managed externally.
     ///
-    /// This is typically used when the signer is managed outside of LWK.
+    /// Caller must ensure that:
+    /// * `user_keyorigin_xpub` is the keyorigin xpub derived at [`Amp2::elip153_user_path()`] for `account_num`
+    /// * `view_keyorigin_xpub` is the keyorigin xpub derived at [`Amp2::elip153_view_path()`] for `account_num`
     ///
-    /// `user_keyorigin_xpub` and `view_keyorigin_xpub` must be the keyorigin xpubs of the
-    /// signer, derived respectively at [`Amp2::elip153_user_path()`] and
-    /// [`Amp2::elip153_view_path()`].
-    ///
-    /// Passing incorrect signer data can lead to creating an incorrect
+    /// **Warning**: Passing incorrect signer data can lead to creating an incorrect
     /// descriptor, which could lead to loss of funds.
     pub fn elip153_from_external_signer(
         &self,
@@ -247,7 +245,12 @@ impl Amp2 {
             ));
         }
 
-        self.elip153((user_fp, user_path), user_xpub, (view_fp, view_path), view_xpub)
+        self.elip153(
+            (user_fp, user_path),
+            user_xpub,
+            (view_fp, view_path),
+            view_xpub,
+        )
     }
 
     fn elip153(

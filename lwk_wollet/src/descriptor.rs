@@ -1000,7 +1000,7 @@ mod test {
             lwk_common::Network::default_regtest(),
             lwk_common::Network::TestnetLiquid,
         ] {
-            let signer = lwk_signer::SwSigner::new(mnemonic, network.is_mainnet()).unwrap();
+            let signer = lwk_signer::SwSigner::new_with_network(mnemonic, network).unwrap();
 
             // Generate the descriptor using singlesig_desc
             let desc_str = lwk_common::singlesig_desc(
@@ -1388,8 +1388,8 @@ fn test_elip_dwid() {
     use lwk_signer::SwSigner;
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let bip = Bip::Bip84;
-    let signer = SwSigner::new(mnemonic, true).unwrap();
-    let signer_test = SwSigner::new(mnemonic, false).unwrap();
+    let signer = SwSigner::new_with_network(mnemonic, Network::Liquid).unwrap();
+    let signer_test = SwSigner::new_with_network(mnemonic, Network::TestnetLiquid).unwrap();
     let ko_xpub = signer.keyorigin_xpub(bip, true).unwrap();
     let ko_xpub_test = signer_test.keyorigin_xpub(bip, false).unwrap();
     let view = "3e129856c574c66d94023ac98b7f69aca9774d10aee4dc087f0c52a498687189";

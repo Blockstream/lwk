@@ -479,7 +479,8 @@ mod test {
         use lwk_signer::SwSigner;
 
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-        let signer = SwSigner::new(mnemonic, false).unwrap();
+        let signer =
+            SwSigner::new_with_network(mnemonic, lwk_common::Network::TestnetLiquid).unwrap();
 
         let amp2 = Amp2::new_testnet();
         let account = 0;
@@ -569,9 +570,8 @@ mod test {
             ),
         ] {
             i += 1;
-            let is_mainnet = network == Network::Liquid;
-            let signer = SwSigner::new(mnemonic, is_mainnet).unwrap();
-            let server_signer = SwSigner::new(server_mnemonic, is_mainnet).unwrap();
+            let signer = SwSigner::new_with_network(mnemonic, network).unwrap();
+            let server_signer = SwSigner::new_with_network(server_mnemonic, network).unwrap();
             let server_xpub = server_signer.xpub();
 
             let amp2 = Amp2 {
@@ -579,7 +579,7 @@ mod test {
                 server_xpub,
                 server_fingerprint: server_xpub.fingerprint(),
                 url: URL_TESTNET.into(),
-                is_mainnet,
+                is_mainnet: network.is_mainnet(),
             };
             let (user_keysource, user_xpub) =
                 derive(&signer, &amp2.elip153_user_path(account).unwrap());

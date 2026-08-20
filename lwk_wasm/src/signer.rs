@@ -19,7 +19,7 @@ impl Signer {
     /// Creates a `Signer`
     #[wasm_bindgen(constructor)]
     pub fn new(mnemonic: &Mnemonic, network: &Network) -> Result<Signer, Error> {
-        let inner = lwk_signer::SwSigner::new(&mnemonic.to_string(), network.is_mainnet())?;
+        let inner = lwk_signer::SwSigner::new_with_network(&mnemonic.to_string(), network.into())?;
         Ok(Self { inner })
     }
 

@@ -375,8 +375,7 @@ mod tests {
 
         let mnemonic =
             "craft travel attitude order useful orient venue true double motor enable already";
-        let is_mainnet = true;
-        let signer = SwSigner::new(mnemonic, is_mainnet).unwrap();
+        let signer = SwSigner::new_with_network(mnemonic, network).unwrap();
         let index = 26589;
         let word_count = 12;
         let mnemonic_ln = signer.derive_bip85_mnemonic(index, word_count).unwrap();

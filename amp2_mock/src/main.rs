@@ -44,7 +44,8 @@ fn main() {
         "kind they sing appear whip boil divorce essence mask alien teach wire".to_string(),
     );
 
-    let signer = SwSigner::new(&mnemonic, false).expect("invalid mnemonic");
+    let signer =
+        SwSigner::new_with_network(&mnemonic, Network::TestnetLiquid).expect("invalid mnemonic");
     let keyorigin_xpub = signer
         .keyorigin_xpub(Bip::Bip87, false)
         .expect("failed to derive xpub");

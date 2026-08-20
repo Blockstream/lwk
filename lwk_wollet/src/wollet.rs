@@ -1397,7 +1397,8 @@ impl Wollet {
         use lwk_common::Signer;
         use std::str::FromStr;
 
-        let signer = lwk_signer::SwSigner::random(false)?.0;
+        let signer =
+            lwk_signer::SwSigner::random_with_network(lwk_common::Network::TestnetLiquid)?.0;
         let desc = signer.wpkh_slip77_descriptor().map_err(Error::Generic)?;
         let desc = WolletDescriptor::from_str(&desc)?;
         Ok((
@@ -1743,8 +1744,7 @@ mod tests {
                     .expect("static"),
             ),
         ] {
-            let is_mainnet = matches!(network, Network::Liquid);
-            let signer = SwSigner::new(mnemonic, is_mainnet).unwrap();
+            let signer = SwSigner::new_with_network(mnemonic, network).unwrap();
             for script_variant in [Singlesig::Wpkh, Singlesig::ShWpkh] {
                 for blinding_variant in [
                     DescriptorBlindingKey::Slip77,

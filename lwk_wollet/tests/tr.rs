@@ -83,7 +83,7 @@ async fn test_single_address_tr_async() {
 fn test_taproot_singlesig_receive_balance_send() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
 
-    let signer = SwSigner::new(TEST_MNEMONIC, false).unwrap();
+    let signer = SwSigner::new_with_network(TEST_MNEMONIC, Network::default_regtest()).unwrap();
     let desc_str = singlesig_desc(&signer, Singlesig::Tr, DescriptorBlindingKey::Slip77).unwrap();
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::with_opt(

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+* Replaced `Amp2::elip153FromStr()` with `Amp2::elip153FromExternalSigner()`
+* Renamed `Signer::keyoriginXpubFromPath()` to `Signer::deriveXpub()`
+
 ## 0.19.0
 
 * Add Waterfalls descriptor subscription support for wasm/browser clients using `EventSource`.

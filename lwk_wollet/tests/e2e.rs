@@ -3360,10 +3360,15 @@ fn test_multiple_reissuances() {
     assert_eq!(utxos.len(), 2);
 
     // Issue two assets, each with its reissuance token, in a single transaction, so that the
-    // wallet owns both tokens
+    // wallet owns both tokens. The first asset splits its 2 tokens across two outputs, so that
+    // the wallet owns two utxos of the same token and a pin has something to choose between.
     let mut pset = w
         .tx_builder()
-        .issue_asset(10, None, 1, None, None)
+        .add_issuance(
+            IssuanceRequest::new(10, 2)
+                .add_token_output(1, None)
+                .add_token_output(1, None),
+        )
         .unwrap()
         .issue_asset(20, None, 2, None, None)
         .unwrap()
@@ -3376,7 +3381,7 @@ fn test_multiple_reissuances() {
     signer.sign(&mut pset).unwrap();
     w.send(&mut pset);
     assert_eq!(w.balance(&asset0), 10);
-    assert_eq!(w.balance(&token0), 1);
+    assert_eq!(w.balance(&token0), 2);
     assert_eq!(w.balance(&asset1), 20);
     assert_eq!(w.balance(&token1), 2);
     env.elementsd_generate(1);
@@ -3449,8 +3454,94 @@ fn test_multiple_reissuances() {
     assert_eq!(w.balance(&asset0), 15);
     assert_eq!(w.balance(&asset1), 20);
     assert_eq!(w2.balance(&asset1), 7);
-    assert_eq!(w.balance(&token0), 1);
+    assert_eq!(w.balance(&token0), 2);
     assert_eq!(w.balance(&token1), 2);
+
+    // The wallet owns two utxos of the first reissuance token, so a pin picks which is spent
+    let utxos = w.wollet.utxos().unwrap();
+    let mut token0_utxos: Vec<_> = utxos
+        .iter()
+        .filter(|u| u.unblinded.asset == token0)
+        .map(|u| u.outpoint)
+        .collect();
+    token0_utxos.sort();
+    assert_eq!(token0_utxos.len(), 2);
+    let lbtc_utxo = utxos
+        .iter()
+        .find(|u| u.unblinded.asset == w.policy_asset())
+        .unwrap()
+        .outpoint;
+
+    // Outpoint of the single input carrying the reissuance
+    let reissuance_input = |pset: &elements::pset::PartiallySignedTransaction| -> OutPoint {
+        let inputs: Vec<_> = pset
+            .inputs()
+            .iter()
+            .filter(|i| i.issuance_value_amount.is_some())
+            .collect();
+        assert_eq!(inputs.len(), 1);
+        OutPoint::new(inputs[0].previous_txid, inputs[0].previous_output_index)
+    };
+
+    // With automatic coin selection, the pinned token utxo is the one added and reissued from
+    for pinned in [token0_utxos[0], token0_utxos[1]] {
+        let pset = w
+            .tx_builder()
+            .add_reissuance(ReissuanceRequest::new(asset0, 5).pin_input(pinned))
+            .unwrap()
+            .finish()
+            .unwrap();
+        assert_eq!(reissuance_input(&pset), pinned);
+    }
+
+    // Pinning an input that does not hold the reissuance token is rejected
+    let err = w
+        .tx_builder()
+        .add_reissuance(ReissuanceRequest::new(asset0, 5).pin_input(lbtc_utxo))
+        .unwrap()
+        .finish()
+        .unwrap_err();
+    assert!(
+        matches!(err, Error::ReissuancePinnedInputNotToken { outpoint, token } if outpoint == lbtc_utxo && token == token0)
+    );
+
+    // With a manual inputs order holding both token utxos, the pinned one is reissued from
+    let selection = vec![token0_utxos[0], token0_utxos[1], lbtc_utxo];
+    let pset = w
+        .tx_builder()
+        .add_reissuance(ReissuanceRequest::new(asset0, 5).pin_input(token0_utxos[1]))
+        .unwrap()
+        .set_wallet_utxos(selection.clone())
+        .set_inputs_order(selection)
+        .finish()
+        .unwrap();
+    assert_eq!(reissuance_input(&pset), token0_utxos[1]);
+
+    // A manual inputs order omitting the pinned input is rejected
+    let selection = vec![token0_utxos[0], lbtc_utxo];
+    let err = w
+        .tx_builder()
+        .add_reissuance(ReissuanceRequest::new(asset0, 5).pin_input(token0_utxos[1]))
+        .unwrap()
+        .set_wallet_utxos(selection.clone())
+        .set_inputs_order(selection)
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::ReissuanceOutpointNotInInputsOrder(o) if o == token0_utxos[1]));
+
+    // The pinned reissuance is accepted by the chain, and the token is given back
+    let mut pset = w
+        .tx_builder()
+        .add_reissuance(ReissuanceRequest::new(asset0, 5).pin_input(token0_utxos[1]))
+        .unwrap()
+        .finish()
+        .unwrap();
+    assert_eq!(reissuance_input(&pset), token0_utxos[1]);
+    signer.sign(&mut pset).unwrap();
+    w.send(&mut pset);
+    env.elementsd_generate(1);
+    assert_eq!(w.balance(&asset0), 20);
+    assert_eq!(w.balance(&token0), 2);
 }
 
 // TODO: move to lwk_wollet::issuance

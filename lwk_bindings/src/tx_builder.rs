@@ -426,6 +426,8 @@ impl IssuanceRequest {
 
     /// Pin this issuance to a specific input
     ///
+    /// **Experimental**: this API might change without notice.
+    ///
     /// Requires manual inputs order: `input` must be one of the outpoints passed to
     /// [`TxBuilder::set_inputs_order()`], otherwise [`TxBuilder::finish()`] will error.
     ///
@@ -494,6 +496,8 @@ impl ReissuanceRequest {
     }
 
     /// Sets the transaction containing the original issuance of the reissued asset
+    ///
+    /// **Experimental**: this API might change without notice.
     ///
     /// Only needed if that issuance transaction does not involve this wallet.
     pub fn issuance_tx(&self, tx: &Transaction) -> Result<(), LwkError> {

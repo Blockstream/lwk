@@ -392,6 +392,8 @@ impl IssuanceRequest {
 
     /// Pin this issuance to a specific input
     ///
+    /// **Experimental**: this API might change without notice.
+    ///
     /// Requires a manual inputs order (`setInputsOrder`): `input` must be one of the outpoints
     /// passed there, otherwise `finish()` will error.
     ///

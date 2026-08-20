@@ -85,6 +85,7 @@ pub struct SwSigner {
     pub(crate) secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
     pub(crate) mnemonic: Option<Mnemonic>,
     ecdsa_sign_opt: EcdsaSignOpt,
+    pub(crate) network: lwk_common::Network,
 }
 
 impl core::fmt::Debug for SwSigner {
@@ -94,29 +95,50 @@ impl core::fmt::Debug for SwSigner {
 }
 
 impl SwSigner {
-    /// Creates a new software signer from the given mnemonic.
-    ///
-    /// Takes also a flag if the network is mainnet so that generated extended keys are in the
-    /// correct form xpub/tpub (there is no need to discriminate between regtest and testnet)
-    pub fn new(mnemonic: &str, is_mainnet: bool) -> Result<Self, NewError> {
+    /// Creates a new software signer from the given mnemonic and network.
+    pub fn new_with_network(
+        mnemonic: &str,
+        network: lwk_common::Network,
+    ) -> Result<Self, NewError> {
         let secp = Secp256k1::new();
         let mnemonic: Mnemonic = mnemonic.parse()?;
         let seed = mnemonic.to_seed("");
 
-        let network = if is_mainnet {
+        let btc_network = if network.is_mainnet() {
             bitcoin::Network::Bitcoin
         } else {
             bitcoin::Network::Testnet
         };
 
-        let xprv = Xpriv::new_master(network, &seed)?;
+        let xprv = Xpriv::new_master(btc_network, &seed)?;
 
         Ok(Self {
             xprv,
             secp,
             mnemonic: Some(mnemonic),
             ecdsa_sign_opt: EcdsaSignOpt::default(),
+            network,
         })
+    }
+
+    /// Creates a new software signer from the given mnemonic.
+    ///
+    /// Takes also a flag if the network is mainnet so that generated extended keys are in the
+    /// correct form xpub/tpub (there is no need to discriminate between regtest and testnet)
+    #[deprecated(since = "0.20.0", note = "use `SwSigner::new_with_network` instead")]
+    pub fn new(mnemonic: &str, is_mainnet: bool) -> Result<Self, NewError> {
+        let network = if is_mainnet {
+            lwk_common::Network::Liquid
+        } else {
+            lwk_common::Network::TestnetLiquid
+        };
+        Self::new_with_network(mnemonic, network)
+    }
+
+    /// Return the network the signer operates on
+    // TODO: wire this into `lwk_common::Signer` once it gains a `network()` method
+    pub fn network(&self) -> Result<lwk_common::Network, SignError> {
+        Ok(self.network)
     }
 
     /// Return true if the signer is for mainnet. There is no need to discriminate between regtest and testnet.
@@ -124,20 +146,49 @@ impl SwSigner {
         self.xprv.network == bitcoin::NetworkKind::Main
     }
 
-    /// Create a new software signer from a random mnemonic
-    pub fn random(is_mainnet: bool) -> Result<(Self, Mnemonic), NewError> {
+    /// Create a new software signer from a random mnemonic and network
+    pub fn random_with_network(network: lwk_common::Network) -> Result<(Self, Mnemonic), NewError> {
         let mnemonic = Mnemonic::generate(12)?;
-        Ok((SwSigner::new(&mnemonic.to_string(), is_mainnet)?, mnemonic))
+        Ok((
+            SwSigner::new_with_network(&mnemonic.to_string(), network)?,
+            mnemonic,
+        ))
     }
 
-    /// Create a new software signer from a given extended private key
-    pub fn from_xprv(xprv: Xpriv) -> Self {
+    /// Create a new software signer from a random mnemonic
+    #[deprecated(since = "0.20.0", note = "use `SwSigner::random_with_network` instead")]
+    pub fn random(is_mainnet: bool) -> Result<(Self, Mnemonic), NewError> {
+        let network = if is_mainnet {
+            lwk_common::Network::Liquid
+        } else {
+            lwk_common::Network::TestnetLiquid
+        };
+        Self::random_with_network(network)
+    }
+
+    /// Create a new software signer from a given extended private key and network
+    pub fn from_xprv_with_network(xprv: Xpriv, network: lwk_common::Network) -> Self {
         Self {
             xprv,
             secp: Secp256k1::new(),
             mnemonic: None,
             ecdsa_sign_opt: EcdsaSignOpt::default(),
+            network,
         }
+    }
+
+    /// Create a new software signer from a given extended private key
+    #[deprecated(
+        since = "0.20.0",
+        note = "use `SwSigner::from_xprv_with_network` instead"
+    )]
+    pub fn from_xprv(xprv: Xpriv) -> Self {
+        let network = if xprv.network == bitcoin::NetworkKind::Main {
+            lwk_common::Network::Liquid
+        } else {
+            lwk_common::Network::TestnetLiquid
+        };
+        Self::from_xprv_with_network(xprv, network)
     }
 
     /// Produce "low R" ECDSA signatures (default and recommended option)
@@ -521,11 +572,17 @@ mod tests {
 
     #[test]
     fn new_signer() {
-        let signer = SwSigner::new(lwk_test_util::TEST_MNEMONIC, false).unwrap();
+        let signer = SwSigner::new_with_network(
+            lwk_test_util::TEST_MNEMONIC,
+            lwk_common::Network::TestnetLiquid,
+        )
+        .unwrap();
         assert_eq!(format!("{signer:?}"), "Signer(73c5da0a)");
         assert_eq!(
             "mnemonic has an invalid word count: 1. Word count must be 12, 15, 18, 21, or 24",
-            SwSigner::new("bad", false).expect_err("test").to_string()
+            SwSigner::new_with_network("bad", lwk_common::Network::TestnetLiquid)
+                .expect_err("test")
+                .to_string()
         );
         assert_eq!(
             lwk_test_util::TEST_MNEMONIC_XPUB,
@@ -566,7 +623,7 @@ mod tests {
         use std::str::FromStr;
         let xprv = Xpriv::from_str("tprv8bxtvyWEZW9M4n8ByZVSG2NNP4aeiRdhDZXNEv1eVNtrhLLnc6vJ1nf9DN5cHAoxMwqRR1CD6YXBvw2GncSojF8DknPnQVMgbpkjnKHkrGY").unwrap();
         let xpub = Xpub::from_str("tpubD8ew5PYUhsq1xF9ysDA2fS2Ux66askpbns89XS3wuehFXpbZEVjtCHH1PUhj6KAfCs4iCx5wKgswv1n3we2ZHEs2sP5pw9PnLsCFwiVgdjw").unwrap();
-        let signer = SwSigner::from_xprv(xprv);
+        let signer = SwSigner::from_xprv_with_network(xprv, lwk_common::Network::TestnetLiquid);
         assert_eq!(signer.xpub(), xpub);
         assert!(signer.mnemonic().is_none());
         assert!(signer.seed().is_none());
@@ -575,7 +632,11 @@ mod tests {
     #[test]
     fn signer_ecdsa_opt() {
         // Sign with the default option (low R) and then with the "no grind" option
-        let mut signer = SwSigner::new(lwk_test_util::TEST_MNEMONIC, false).unwrap();
+        let mut signer = SwSigner::new_with_network(
+            lwk_test_util::TEST_MNEMONIC,
+            lwk_common::Network::TestnetLiquid,
+        )
+        .unwrap();
         let b64 = include_str!("../../lwk_jade/test_data/pset_to_be_signed.base64");
         let mut pset_low_r: PartiallySignedTransaction = b64.parse().unwrap();
         let sig_added = signer.sign(&mut pset_low_r).unwrap();
@@ -601,7 +662,9 @@ mod tests {
 
     #[test]
     fn test_sign_verify() {
-        let signer = SwSigner::new(lwk_test_util::TEST_MNEMONIC, true).unwrap();
+        let signer =
+            SwSigner::new_with_network(lwk_test_util::TEST_MNEMONIC, lwk_common::Network::Liquid)
+                .unwrap();
         let message = "Hello, world!";
         let path = DerivationPath::master();
         let signature = signer.sign_message(message, &path).unwrap();
@@ -619,7 +682,11 @@ mod tests {
     #[test]
     fn test_bip85_mnemonic_derivation() {
         // Test with a known mnemonic
-        let signer = SwSigner::new(lwk_test_util::TEST_MNEMONIC, false).unwrap();
+        let signer = SwSigner::new_with_network(
+            lwk_test_util::TEST_MNEMONIC,
+            lwk_common::Network::TestnetLiquid,
+        )
+        .unwrap();
 
         // Derive a 12-word mnemonic at index 0
         let derived_0_12 = signer.derive_bip85_mnemonic(0, 12).unwrap();
@@ -661,7 +728,8 @@ mod tests {
     fn test_bip85_mnemonic_derivation_testvectors() {
         // Test with a known mnemonic from jade testvectors
         let mnemonic = "fish inner face ginger orchard permit useful method fence kidney chuckle party favorite sunset draw limb science crane oval letter slot invite sadness banana";
-        let signer = SwSigner::new(mnemonic, false).unwrap();
+        let signer =
+            SwSigner::new_with_network(mnemonic, lwk_common::Network::TestnetLiquid).unwrap();
 
         // Derive menmonics from testvectors
         let derived_0_12 = signer.derive_bip85_mnemonic(0, 12).unwrap();
@@ -715,7 +783,7 @@ mod tests {
         // Test that BIP85 derivation fails when signer was created from xprv
         use std::str::FromStr;
         let xprv = Xpriv::from_str("tprv8bxtvyWEZW9M4n8ByZVSG2NNP4aeiRdhDZXNEv1eVNtrhLLnc6vJ1nf9DN5cHAoxMwqRR1CD6YXBvw2GncSojF8DknPnQVMgbpkjnKHkrGY").unwrap();
-        let signer = SwSigner::from_xprv(xprv);
+        let signer = SwSigner::from_xprv_with_network(xprv, lwk_common::Network::TestnetLiquid);
 
         // Should fail because no mnemonic is available
         let result = signer.derive_bip85_mnemonic(0, 12);
@@ -734,8 +802,8 @@ mod tests {
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
         // Create signer
-        let is_mainnet = false;
-        let signer = SwSigner::new(mnemonic, is_mainnet)?;
+        let network = lwk_common::Network::TestnetLiquid;
+        let signer = SwSigner::new_with_network(mnemonic, network)?;
 
         // Derive menmonics
         let derived_0_12 = signer.derive_bip85_mnemonic(0, 12)?;

@@ -1,4 +1,6 @@
-use crate::{DescriptorPublicKey, DerivationPath, LwkError, Mnemonic, Network, Pset, WolletDescriptor};
+use crate::{
+    DerivationPath, DescriptorPublicKey, LwkError, Mnemonic, Network, Pset, WolletDescriptor,
+};
 use std::sync::Arc;
 
 #[derive(uniffi::Enum)]
@@ -178,7 +180,7 @@ impl Signer {
     pub fn derive_xpub(&self, path: &DerivationPath) -> Result<Arc<DescriptorPublicKey>, LwkError> {
         let fingerprint = self.inner.fingerprint();
         let xpub = lwk_common::Signer::derive_xpub(&self.inner, &path.into())?;
-        Ok(DescriptorPublicKey::new(&format!("[{fingerprint}/{path}]{xpub}"))?)
+        DescriptorPublicKey::new(&format!("[{fingerprint}/{path}]{xpub}"))
     }
 
     /// Return the signer slip77 master blinding key

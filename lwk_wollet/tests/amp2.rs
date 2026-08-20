@@ -1,6 +1,7 @@
 use crate::test_wollet::*;
+use elements::bitcoin::bip32::{DerivationPath, KeySource, Xpub};
 use lwk_common::{Bip, Signer};
-use lwk_signer::AnySigner;
+use lwk_signer::{AnySigner, SwSigner};
 use lwk_test_util::*;
 use lwk_wollet::amp2::Amp2;
 
@@ -106,4 +107,72 @@ pub fn elip153_flow(env: &TestEnv, signer: &AnySigner) {
     pset = cosign_resp.pset;
 
     w.send(&mut pset);
+}
+
+/// Derive an xpub at `path` and its keyorigin, standing in for what a hardware signer
+/// would return for the same request.
+fn derive(signer: &SwSigner, path: &DerivationPath) -> (KeySource, Xpub) {
+    let xpub = signer.derive_xpub(path).unwrap();
+    ((signer.fingerprint(), path.clone()), xpub)
+}
+
+#[test]
+fn test_elip153_from_external_signer() {
+    let signer = generate_signer();
+    let other_signer = generate_signer();
+
+    let amp2 = Amp2::new_testnet();
+    let account = 0;
+
+    let user_path = amp2.elip153_user_path(account).unwrap();
+    let view_path = amp2.elip153_view_path(account).unwrap();
+    let (user_keysource, user_xpub) = derive(&signer, &user_path);
+    let (view_keysource, view_xpub) = derive(&signer, &view_path);
+
+    let expected = amp2
+        .elip153_from_signer(&signer, account)
+        .unwrap()
+        .descriptor()
+        .to_string();
+
+    let desc = amp2
+        .elip153_from_external_signer(
+            account,
+            (user_keysource.clone(), user_xpub),
+            (view_keysource.clone(), view_xpub),
+        )
+        .unwrap();
+    assert_eq!(desc.descriptor().to_string(), expected);
+
+    // user and view keysource must share the same fingerprint
+    let (other_view_keysource, other_view_xpub) = derive(&other_signer, &view_path);
+    assert!(amp2
+        .elip153_from_external_signer(
+            account,
+            (user_keysource.clone(), user_xpub),
+            (other_view_keysource, other_view_xpub),
+        )
+        .is_err());
+
+    // user keysource derivation path must match elip153_user_path(account)
+    let wrong_path = amp2.elip153_user_path(account + 1).unwrap();
+    let (wrong_user_keysource, wrong_user_xpub) = derive(&signer, &wrong_path);
+    assert!(amp2
+        .elip153_from_external_signer(
+            account,
+            (wrong_user_keysource, wrong_user_xpub),
+            (view_keysource.clone(), view_xpub),
+        )
+        .is_err());
+
+    // view keysource derivation path must match elip153_view_path(account)
+    let wrong_path = amp2.elip153_view_path(account + 1).unwrap();
+    let (wrong_view_keysource, wrong_view_xpub) = derive(&signer, &wrong_path);
+    assert!(amp2
+        .elip153_from_external_signer(
+            account,
+            (user_keysource, user_xpub),
+            (wrong_view_keysource, wrong_view_xpub),
+        )
+        .is_err());
 }

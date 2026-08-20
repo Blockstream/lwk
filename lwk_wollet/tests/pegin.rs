@@ -100,10 +100,46 @@ fn claim_pegin() {
         .finish()
         .unwrap();
 
+    let pegin_utxo = pset.inputs()[0].witness_utxo.as_ref().unwrap();
+    assert!(matches!(
+        pegin_utxo.asset,
+        elements::confidential::Asset::Explicit(_)
+    ));
+    assert!(matches!(
+        pegin_utxo.value,
+        elements::confidential::Value::Explicit(_)
+    ));
+
     assert_eq!(signer.sign(&mut pset).unwrap(), 1);
     let transaction = wallet.wollet.finalize(&mut pset).unwrap();
     assert!(transaction.input[0].is_pegin());
     assert_eq!(transaction.input[0].witness.pegin_witness.len(), 6);
+    let destination_output = transaction
+        .output
+        .iter()
+        .find(|output| !output.script_pubkey.is_empty())
+        .unwrap();
+    assert!(matches!(
+        destination_output.asset,
+        elements::confidential::Asset::Confidential(_)
+    ));
+    assert!(matches!(
+        destination_output.value,
+        elements::confidential::Value::Confidential(_)
+    ));
+    let fee_output = transaction
+        .output
+        .iter()
+        .find(|output| output.script_pubkey.is_empty())
+        .unwrap();
+    assert!(matches!(
+        fee_output.asset,
+        elements::confidential::Asset::Explicit(_)
+    ));
+    assert!(matches!(
+        fee_output.value,
+        elements::confidential::Value::Explicit(_)
+    ));
     let expected_balance = pegin_amount - transaction.fee_in(*network.policy_asset());
     let transaction_hex = elements::encode::serialize(&transaction).to_hex();
     let mempool_result =

@@ -359,7 +359,6 @@ impl WolletDescriptor {
     ///
     /// **Experimental**: this API might change without notice.
     pub fn ss_desc<S: Signer>(
-        network: &Network,
         account_type: SSAccountType,
         account_num: u32,
         signer: &S,
@@ -368,7 +367,7 @@ impl WolletDescriptor {
         S::Error: From<bitcoin::bip32::Error>,
     {
         let desc = signer
-            .ss_desc(network, account_type, account_num)
+            .ss_desc(account_type, account_num)
             .map_err(|e| Error::Generic(format!("{e:?}")))?;
         desc.parse()
     }

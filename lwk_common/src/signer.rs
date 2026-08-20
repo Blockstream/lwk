@@ -116,17 +116,13 @@ pub trait Signer {
     /// undesirable consequence that if you share the CT descriptor
     /// for one account, you reveal the descriptor blinding key used
     /// by all other accounts.
-    fn ss_desc(
-        &self,
-        network: &Network,
-        account_type: SSAccountType,
-        account_num: u32,
-    ) -> Result<String, Self::Error>
+    fn ss_desc(&self, account_type: SSAccountType, account_num: u32) -> Result<String, Self::Error>
     where
         Self::Error: From<bitcoin::bip32::Error>,
     {
+        let network = self.network()?;
         let (prefix, suffix) = account_type.desc_affixes();
-        let path = ss_path(network, account_type, account_num)?;
+        let path = ss_path(&network, account_type, account_num)?;
 
         let fingerprint = self.fingerprint()?;
         let xpub = self.derive_xpub(&path)?;

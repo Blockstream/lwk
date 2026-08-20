@@ -146,18 +146,16 @@ impl Signer {
     /// by all other accounts.
     pub fn ss_desc(
         &self,
-        network: &Network,
         account_type: &str,
         account_num: u32,
     ) -> Result<Arc<WolletDescriptor>, LwkError> {
         let account_type: lwk_common::SSAccountType = account_type
             .parse()
             .map_err(|e: &str| LwkError::Generic { msg: e.to_string() })?;
-        let desc_str =
-            lwk_common::Signer::ss_desc(&self.inner, &network.into(), account_type, account_num)
-                .map_err(|e| LwkError::Generic {
-                    msg: format!("{e:?}"),
-                })?;
+        let desc_str = lwk_common::Signer::ss_desc(&self.inner, account_type, account_num)
+            .map_err(|e| LwkError::Generic {
+                msg: format!("{e:?}"),
+            })?;
         WolletDescriptor::new(&desc_str)
     }
 

@@ -23,8 +23,8 @@ async function runAmp2Test() {
         // getting the descriptor with signer managed externally leads to the same descriptor
         const userPath = amp2.elip153UserPath(account);
         const viewPath = amp2.elip153ViewPath(account);
-        const userKeyoriginXpub = signer.keyoriginXpubFromPath(userPath);
-        const viewKeyoriginXpub = signer.keyoriginXpubFromPath(viewPath);
+        const userKeyoriginXpub = signer.deriveXpub(userPath);
+        const viewKeyoriginXpub = signer.deriveXpub(viewPath);
         const descFromStr = amp2.elip153FromStr(userKeyoriginXpub, viewKeyoriginXpub);
         assert.strictEqual(desc.descriptor().toString(), descFromStr.descriptor().toString());
 

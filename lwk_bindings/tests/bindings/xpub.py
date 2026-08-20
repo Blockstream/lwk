@@ -4,8 +4,7 @@ mnemonic = Mnemonic.from_random(12)
 network = Network.regtest_default()
 signer = Signer(mnemonic, network)
 
-# ss_desc_from_external_signer() wants the raw SLIP77 key, not wrapped in "slip77(...)"
-master_blinding_key = signer.slip77_master_blinding_key()[len("slip77("):-1]
+master_blinding_key = signer.slip77_master_blinding_key()
 fingerprint = signer.fingerprint()
 
 path = DerivationPath.ss_path(network, "wpkh", 0)
@@ -13,7 +12,8 @@ assert str(path) == "84'/1'/0'"
 assert str(DerivationPath.from_vec(path.to_vec())) == str(path)
 
 # get xpub from signer, e.g. a Jade which connection is managed outside LWK
-xpub = signer.keyorigin_xpub(Bip.new_bip84()).split("]")[1]  # strip keyorigin
+xpub = signer.keyorigin_xpub(Bip.new_bip84()).split("]")[1]
+dpk = DescriptorPublicKey(f"[{fingerprint}/{path}]{xpub}")
 
 # construct the descriptor from the obtained xpub
 desc = WolletDescriptor.ss_desc_from_external_signer(
@@ -21,8 +21,7 @@ desc = WolletDescriptor.ss_desc_from_external_signer(
     "wpkh",
     0,  # bip32 account number
     master_blinding_key,
-    fingerprint,
-    xpub,
+    dpk,
 )
 
 # Check against the descriptor obtained directly from the signer

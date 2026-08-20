@@ -56,9 +56,9 @@ desc = amp2.elip153_from_signer(signer, account)
 # getting the descriptor with signer managed externally leads to the same descriptor
 user_path = amp2.elip153_user_path(account)
 view_path = amp2.elip153_view_path(account)
-user_keyorigin_xpub = signer.keyorigin_xpub_from_path(user_path)
-view_keyorigin_xpub = signer.keyorigin_xpub_from_path(view_path)
-desc_from_str = amp2.elip_153_from_external_signer(user_keyorigin_xpub, view_keyorigin_xpub)
+user_keyorigin_xpub = signer.derive_xpub(user_path)
+view_keyorigin_xpub = signer.derive_xpub(view_path)
+desc_from_str = amp2.elip153_from_external_signer(account, user_keyorigin_xpub, view_keyorigin_xpub)
 assert str(desc.descriptor()) == str(desc_from_str.descriptor())
 
 dwid = amp2.register_wallet(desc)

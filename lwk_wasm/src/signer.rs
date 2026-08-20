@@ -78,8 +78,8 @@ impl Signer {
     }
 
     /// Derive an xpub at `path` and return it as a keyorigin xpub string
-    #[wasm_bindgen(js_name = keyoriginXpubFromPath)]
-    pub fn keyorigin_xpub_from_path(&self, path: &DerivationPath) -> Result<String, Error> {
+    #[wasm_bindgen(js_name = deriveXpub)]
+    pub fn derive_xpub(&self, path: &DerivationPath) -> Result<String, Error> {
         let path: bip32::DerivationPath = path.into();
         let fingerprint = self.inner.fingerprint();
         let xpub = lwk_common::Signer::derive_xpub(&self.inner, &path)?;

@@ -1111,6 +1111,16 @@ impl TxBuilder {
             if ordered != expected {
                 return Err(Error::InputsOrderUtxosMismatch);
             }
+
+            // `inputs_order` forbids adding any input beyond them, so a pinned
+            // reissuance input must be one of them.
+            for request in &self.reissuances.requests {
+                if let Some(outpoint) = request.pinned_input {
+                    if !ordered.contains(&outpoint) {
+                        return Err(Error::ReissuanceOutpointNotInInputsOrder(outpoint));
+                    }
+                }
+            }
         }
         // Init PSET
         let mut pset = PartiallySignedTransaction::new_v2();
@@ -1356,6 +1366,13 @@ impl TxBuilder {
             }
         }
 
+        let mut inputs_idx_map: HashMap<OutPoint, usize> = pset
+            .inputs()
+            .iter()
+            .enumerate()
+            .map(|(idx, i)| (OutPoint::new(i.previous_txid, i.previous_output_index), idx))
+            .collect();
+
         let mut set_issuance = |idx: usize,
                                 request: IssuanceRequest,
                                 pset: &mut PartiallySignedTransaction|
@@ -1429,12 +1446,6 @@ impl TxBuilder {
                     }
                 }
 
-                let inputs_idx_map = inputs_order
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, outpoint)| (outpoint, idx))
-                    .collect::<HashMap<_, _>>();
-
                 for (request, outpoint) in requests {
                     let idx = inputs_idx_map
                         .get(&outpoint)
@@ -1458,24 +1469,59 @@ impl TxBuilder {
                 wollet.issuance(&request.asset_to_reissue)?
             };
             let token = issuance.token;
-            // Find or add input for the token
-            let (idx, token_asset_bf) = match inp_txout_sec.iter().find(|(_, u)| u.asset == token) {
-                Some((idx, u)) => (*idx, u.asset_bf),
-                None => {
-                    if self.inputs_order.is_some() {
-                        // The token utxo isn't among the pinned inputs, and
-                        // `inputs_order` forbids adding any input beyond them.
-                        return Err(Error::TokenUtxoNotInInputsOrder(token));
-                    }
-                    // Add an input sending the token,
-                    let utxos_token: Vec<_> = utxos
-                        .values()
-                        .filter(|u| u.unblinded.asset == token)
-                        .collect();
-                    let utxo_token = utxos_token
-                        .first()
-                        .ok_or_else(|| Error::MissingReissuanceTokenUtxo(token))?;
 
+            enum TokenInput<'a> {
+                InInputs(usize, AssetBlindingFactor),
+                InWallet(&'a WalletTxOut),
+            }
+
+            // Looks for the (pinned) token among inputs, or in wallet utxos to add one.
+            // A pinned outpoint is checked above to be among inputs_order, when set.
+            let token_input = match request.pinned_input {
+                Some(outpoint) => {
+                    let (pinned, asset) = if let Some(inp_idx) = inputs_idx_map.get(&outpoint) {
+                        let u = inp_txout_sec.get(inp_idx).ok_or(Error::Generic(format!(
+                            "input {inp_idx} has no txout secrets"
+                        )))?;
+                        (TokenInput::InInputs(*inp_idx, u.asset_bf), u.asset)
+                    } else if let Some(u) = utxos.get(&outpoint) {
+                        (TokenInput::InWallet(u), u.unblinded.asset)
+                    } else {
+                        return Err(Error::MissingWalletUtxo(outpoint));
+                    };
+
+                    if asset != token {
+                        return Err(Error::ReissuancePinnedInputNotToken { outpoint, token });
+                    }
+                    pinned
+                }
+                None => match inp_txout_sec
+                    .iter()
+                    .filter(|(_, u)| u.asset == token)
+                    .min_by_key(|(idx, _)| **idx)
+                {
+                    Some((idx, u)) => TokenInput::InInputs(*idx, u.asset_bf),
+                    None => {
+                        if self.inputs_order.is_some() {
+                            // The token utxo isn't among the pinned inputs, and
+                            // `inputs_order` forbids adding any input beyond them.
+                            return Err(Error::TokenUtxoNotInInputsOrder(token));
+                        }
+                        TokenInput::InWallet(
+                            utxos
+                                .values()
+                                .filter(|u| u.unblinded.asset == token)
+                                .min_by_key(|u| u.outpoint)
+                                .ok_or_else(|| Error::MissingReissuanceTokenUtxo(token))?,
+                        )
+                    }
+                },
+            };
+
+            let (idx, token_asset_bf) = match token_input {
+                TokenInput::InInputs(idx, asset_bf) => (idx, asset_bf),
+                TokenInput::InWallet(utxo_token) => {
+                    // Add an input sending the token,
                     let idx = wollet.add_input(
                         pset,
                         &mut inp_txout_sec,
@@ -1483,6 +1529,7 @@ impl TxBuilder {
                         utxo_token,
                         self.add_input_rangeproofs,
                     )?;
+                    inputs_idx_map.insert(utxo_token.outpoint, idx);
 
                     // and an outpout receiving the token
                     let satoshi_token = utxo_token.unblinded.value;

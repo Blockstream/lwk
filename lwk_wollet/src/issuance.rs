@@ -147,6 +147,7 @@ pub struct ReissuanceRequest {
     pub(crate) satoshi_to_reissue: u64,
     pub(crate) asset_outputs: Vec<IssuanceOutput>,
     pub(crate) issuance_tx: Option<Transaction>,
+    pub(crate) pinned_input: Option<OutPoint>,
 }
 
 impl ReissuanceRequest {
@@ -161,6 +162,7 @@ impl ReissuanceRequest {
             satoshi_to_reissue,
             asset_outputs: vec![],
             issuance_tx: None,
+            pinned_input: None,
         }
     }
 
@@ -189,6 +191,21 @@ impl ReissuanceRequest {
     /// Only needed if that issuance transaction does not involve this wallet.
     pub fn issuance_tx(mut self, tx: Transaction) -> Self {
         self.issuance_tx = Some(tx);
+        self
+    }
+
+    /// Pin this reissuance to the reissuance token utxo spent by `input`
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// `input` must hold the reissuance token of `asset_to_reissue`, otherwise
+    /// [`crate::TxBuilder::finish()`] will error. If it is not already an input of the transaction
+    /// it is added, unless a manual inputs order is set, in which case it must be one of the
+    /// outpoints passed to [`crate::TxBuilder::set_inputs_order()`].
+    ///
+    /// If not called, the reissuance is assigned to the first input holding the token.
+    pub fn pin_input(mut self, input: OutPoint) -> Self {
+        self.pinned_input = Some(input);
         self
     }
 }

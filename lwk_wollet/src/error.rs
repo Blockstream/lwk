@@ -328,6 +328,15 @@ pub enum Error {
     #[error("Reissuance token {0} utxo not found in the wallet")]
     MissingReissuanceTokenUtxo(crate::elements::AssetId),
 
+    #[error("Reissuance pinned to outpoint {0} not present in the manual inputs order")]
+    ReissuanceOutpointNotInInputsOrder(OutPoint),
+
+    #[error("Reissuance pinned to outpoint {outpoint} not holding the reissuance token {token}")]
+    ReissuancePinnedInputNotToken {
+        outpoint: OutPoint,
+        token: crate::elements::AssetId,
+    },
+
     #[error("Manual inputs order requires issuances to be pinned to inputs")]
     InputsOrderRequiresPinnedIssuance,
 

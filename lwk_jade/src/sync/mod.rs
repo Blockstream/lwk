@@ -512,6 +512,10 @@ impl Signer for &Jade {
         self.get_cached_xpub(params)
     }
 
+    fn network(&self) -> std::result::Result<Network, Self::Error> {
+        Ok(Jade::network(self))
+    }
+
     fn slip77_master_blinding_key(
         &self,
     ) -> std::result::Result<slip77::MasterBlindingKey, Self::Error> {
@@ -582,6 +586,10 @@ impl Signer for Jade {
 
     fn slip77_master_blinding_key(&self) -> std::result::Result<MasterBlindingKey, Self::Error> {
         Signer::slip77_master_blinding_key(&self)
+    }
+
+    fn network(&self) -> std::result::Result<Network, Self::Error> {
+        Signer::network(&self)
     }
 
     fn sign_message(

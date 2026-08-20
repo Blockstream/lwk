@@ -135,12 +135,6 @@ impl SwSigner {
         Self::new_with_network(mnemonic, network)
     }
 
-    /// Return the network the signer operates on
-    // TODO: wire this into `lwk_common::Signer` once it gains a `network()` method
-    pub fn network(&self) -> Result<lwk_common::Network, SignError> {
-        Ok(self.network)
-    }
-
     /// Return true if the signer is for mainnet. There is no need to discriminate between regtest and testnet.
     pub fn is_mainnet(&self) -> bool {
         self.xprv.network == bitcoin::NetworkKind::Main
@@ -497,6 +491,10 @@ impl Signer for SwSigner {
             .seed()
             .ok_or_else(|| SignError::DeterministicSlip77NotAvailable)?;
         Ok(MasterBlindingKey::from_seed(&seed[..]))
+    }
+
+    fn network(&self) -> Result<lwk_common::Network, Self::Error> {
+        Ok(self.network)
     }
 
     fn sign_message(

@@ -14,7 +14,7 @@ use elements_miniscript::bitcoin::bip32::{self, DerivationPath, Fingerprint};
 use elements_miniscript::bitcoin::sign_message::MessageSignature;
 use elements_miniscript::elements::bitcoin::bip32::Xpub;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
-use lwk_common::Signer;
+use lwk_common::{Network, Signer};
 
 /// Possible errors when signing with [`AnySigner`]
 #[derive(thiserror::Error, Debug)]
@@ -72,6 +72,10 @@ impl Signer for AnySigner {
 
     fn fingerprint(&self) -> Result<Fingerprint, Self::Error> {
         Signer::fingerprint(&self)
+    }
+
+    fn network(&self) -> Result<Network, Self::Error> {
+        Signer::network(&self)
     }
 
     fn sign_message(
@@ -133,6 +137,18 @@ impl Signer for &AnySigner {
 
             #[cfg(feature = "ledger")]
             AnySigner::Ledger(s, _) => s.fingerprint()?,
+        })
+    }
+
+    fn network(&self) -> Result<Network, Self::Error> {
+        Ok(match self {
+            AnySigner::Software(s) => Signer::network(s)?,
+
+            #[cfg(feature = "jade")]
+            AnySigner::Jade(s, _) => Signer::network(s)?,
+
+            #[cfg(feature = "ledger")]
+            AnySigner::Ledger(s, _) => Signer::network(s)?,
         })
     }
 

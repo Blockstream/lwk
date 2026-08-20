@@ -126,6 +126,10 @@ impl lwk_common::Signer for FakeSigner {
         Ok(self.slip77)
     }
 
+    fn network(&self) -> Result<lwk_common::Network, Self::Error> {
+        Ok(lwk_common::Network::default_regtest())
+    }
+
     fn sign_message(
         &self,
         _message: &str,

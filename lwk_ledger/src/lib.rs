@@ -278,6 +278,10 @@ impl<T: Transport> Signer for &Ledger<T> {
         self.client.get_master_fingerprint().map_err(to_dbg)
     }
 
+    fn network(&self) -> std::result::Result<lwk_common::Network, Self::Error> {
+        Ok(self.network)
+    }
+
     fn sign_message(
         &self,
         _message: &str,
@@ -289,13 +293,6 @@ impl<T: Transport> Signer for &Ledger<T> {
 
 fn to_dbg(e: impl std::fmt::Debug) -> Error {
     Error::ClientError(format!("{e:?}"))
-}
-
-impl<T: Transport> Ledger<T> {
-    /// Return the network the signer operates on
-    pub fn network(&self) -> std::result::Result<lwk_common::Network, Error> {
-        Ok(self.network)
-    }
 }
 
 impl<T: Transport> Signer for Ledger<T> {
@@ -317,6 +314,10 @@ impl<T: Transport> Signer for Ledger<T> {
 
     fn fingerprint(&self) -> std::result::Result<Fingerprint, Self::Error> {
         Signer::fingerprint(&self)
+    }
+
+    fn network(&self) -> std::result::Result<lwk_common::Network, Self::Error> {
+        Signer::network(&self)
     }
 
     fn sign_message(

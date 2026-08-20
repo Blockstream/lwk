@@ -31,6 +31,9 @@ pub trait Signer {
     /// Return the slip77 master blinding key
     fn slip77_master_blinding_key(&self) -> Result<MasterBlindingKey, Self::Error>;
 
+    /// Return the network the signer is configured for
+    fn network(&self) -> Result<Network, Self::Error>;
+
     /// Return the master xpub of the signer
     fn xpub(&self) -> Result<Xpub, Self::Error> {
         self.derive_xpub(&DerivationPath::master())

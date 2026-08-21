@@ -65,6 +65,10 @@ pub enum NewError {
     /// Error deriving the extended private key
     #[error(transparent)]
     Bip32(#[from] bip32::Error),
+
+    /// Invalid network
+    #[error("Invalid Network")]
+    InvalidNetwork,
 }
 
 /// Options for ECDSA signing
@@ -161,14 +165,23 @@ impl SwSigner {
     }
 
     /// Create a new software signer from a given extended private key and network
-    pub fn from_xprv_with_network(xprv: Xpriv, network: lwk_common::Network) -> Self {
-        Self {
+    pub fn from_xprv_with_network(
+        xprv: Xpriv,
+        network: lwk_common::Network,
+    ) -> Result<Self, NewError> {
+        if (xprv.network == bitcoin::NetworkKind::Main && network != lwk_common::Network::Liquid)
+            || (xprv.network != bitcoin::NetworkKind::Main
+                && network == lwk_common::Network::Liquid)
+        {
+            return Err(NewError::InvalidNetwork);
+        }
+        Ok(Self {
             xprv,
             secp: Secp256k1::new(),
             mnemonic: None,
             ecdsa_sign_opt: EcdsaSignOpt::default(),
             network,
-        }
+        })
     }
 
     /// Create a new software signer from a given extended private key
@@ -182,7 +195,7 @@ impl SwSigner {
         } else {
             lwk_common::Network::TestnetLiquid
         };
-        Self::from_xprv_with_network(xprv, network)
+        Self::from_xprv_with_network(xprv, network).expect("chose valid network")
     }
 
     /// Produce "low R" ECDSA signatures (default and recommended option)
@@ -621,7 +634,9 @@ mod tests {
         use std::str::FromStr;
         let xprv = Xpriv::from_str("tprv8bxtvyWEZW9M4n8ByZVSG2NNP4aeiRdhDZXNEv1eVNtrhLLnc6vJ1nf9DN5cHAoxMwqRR1CD6YXBvw2GncSojF8DknPnQVMgbpkjnKHkrGY").unwrap();
         let xpub = Xpub::from_str("tpubD8ew5PYUhsq1xF9ysDA2fS2Ux66askpbns89XS3wuehFXpbZEVjtCHH1PUhj6KAfCs4iCx5wKgswv1n3we2ZHEs2sP5pw9PnLsCFwiVgdjw").unwrap();
-        let signer = SwSigner::from_xprv_with_network(xprv, lwk_common::Network::TestnetLiquid);
+        assert!(SwSigner::from_xprv_with_network(xprv, lwk_common::Network::Liquid).is_err());
+        let signer =
+            SwSigner::from_xprv_with_network(xprv, lwk_common::Network::TestnetLiquid).unwrap();
         assert_eq!(signer.xpub(), xpub);
         assert!(signer.mnemonic().is_none());
         assert!(signer.seed().is_none());
@@ -781,7 +796,8 @@ mod tests {
         // Test that BIP85 derivation fails when signer was created from xprv
         use std::str::FromStr;
         let xprv = Xpriv::from_str("tprv8bxtvyWEZW9M4n8ByZVSG2NNP4aeiRdhDZXNEv1eVNtrhLLnc6vJ1nf9DN5cHAoxMwqRR1CD6YXBvw2GncSojF8DknPnQVMgbpkjnKHkrGY").unwrap();
-        let signer = SwSigner::from_xprv_with_network(xprv, lwk_common::Network::TestnetLiquid);
+        let signer =
+            SwSigner::from_xprv_with_network(xprv, lwk_common::Network::TestnetLiquid).unwrap();
 
         // Should fail because no mnemonic is available
         let result = signer.derive_bip85_mnemonic(0, 12);

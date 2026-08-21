@@ -25,6 +25,7 @@ use elements_miniscript::{
     slip77::MasterBlindingKey,
 };
 use lwk_common::{get_genesis_hash, Signer};
+use zeroize::Zeroize;
 
 /// Possible errors when signing with the software signer [`SwSigner`]
 #[derive(thiserror::Error, Debug)]
@@ -95,6 +96,18 @@ pub struct SwSigner {
 impl core::fmt::Debug for SwSigner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Signer({})", self.fingerprint())
+    }
+}
+
+impl Drop for SwSigner {
+    fn drop(&mut self) {
+        // Attempt to erase secrets
+        // * mnemonic zeroizes itself on drop (bip39 "zeroize" feature)
+        AsMut::<[u8]>::as_mut(&mut self.xprv.chain_code).zeroize();
+        // * best effort for private key
+        self.xprv.private_key.non_secure_erase();
+        // Note: SwSigner implements Clone, allows to return mnemonic, seed,
+        // derived xprvs. The attempt erasure here does not affect copied data.
     }
 }
 

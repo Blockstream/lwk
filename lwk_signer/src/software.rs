@@ -85,11 +85,11 @@ enum EcdsaSignOpt {
 /// A software signer
 #[derive(Clone)]
 pub struct SwSigner {
-    pub(crate) xprv: Xpriv,
-    pub(crate) secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
-    pub(crate) mnemonic: Option<Mnemonic>,
+    xprv: Xpriv,
+    secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
+    mnemonic: Option<Mnemonic>,
     ecdsa_sign_opt: EcdsaSignOpt,
-    pub(crate) network: lwk_common::Network,
+    network: lwk_common::Network,
 }
 
 impl core::fmt::Debug for SwSigner {

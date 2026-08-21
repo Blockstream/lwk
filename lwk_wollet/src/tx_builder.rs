@@ -1525,6 +1525,8 @@ impl TxBuilder {
             set_reissuance(request, &mut pset)?;
         }
 
+        // TODO: consider a zero value output to balance the blinders
+
         // Add a temporary fee, and always add a change or drain output,
         // then we'll tweak those values to match the given fee rate.
         let temp_fee = 1;
@@ -1552,7 +1554,9 @@ impl TxBuilder {
         let weight = {
             let mut rng = thread_rng();
             let mut temp_pset = pset.clone();
-            temp_pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
+            if needs_blinding(&temp_pset)? {
+                temp_pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
+            }
             let tx_weight = {
                 let tx = temp_pset.extract_tx()?;
                 if self.ct_discount {
@@ -1583,47 +1587,54 @@ impl TxBuilder {
         // TODO inputs/outputs(except fee) randomization, not trivial because of blinder_index on inputs
 
         // Blind the transaction
-        let mut rng = thread_rng();
+        let mut built_tx = if needs_blinding(&pset)? {
+            let mut rng = thread_rng();
 
-        // TODO: use the next line once we can use elements26 only
-        // let blind_secrets = pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-        use elements26::confidential::{
-            AssetBlindingFactor as Abf26, ValueBlindingFactor as Vbf26,
-        };
-        use elements26::pset::PartiallySignedTransaction as Pset26;
-        use std::str::FromStr;
-        let mut pset26 = Pset26::from_str(&pset.to_string()).map_err(e26conv_err)?;
-        let inp_txout_sec: HashMap<usize, elements26::TxOutSecrets> = inp_txout_sec
-            .iter()
-            .map(|(i, s)| {
-                let asset = elements26::AssetId::from_slice(s.asset.into_inner().as_ref())
-                    .map_err(e26conv_err)?;
-                let abf =
-                    Abf26::from_slice(s.asset_bf.into_inner().as_ref()).map_err(e26conv_err)?;
-                let vbf =
-                    Vbf26::from_slice(s.value_bf.into_inner().as_ref()).map_err(e26conv_err)?;
-                let value = s.value;
-                let s = elements26::TxOutSecrets::new(asset, abf, value, vbf);
-                Ok((*i, s))
-            })
-            .collect::<Result<_, Error>>()?;
-        let blind_secrets = pset26
-            .blind_last(&mut rng, &EC, &inp_txout_sec)
-            .map_err(|e| Error::Generic(format!("elements26 blind error: {e}")))?;
-        // erase all non witness utxo surjection and range proofs
-        // this appears to be necessary for pre-segwit inputs
-        for input in pset26.inputs_mut() {
-            if let Some(ref mut tx) = &mut input.non_witness_utxo {
-                for output in &mut tx.output {
-                    output.witness = Default::default();
+            // TODO: use the next line once we can use elements26 only
+            // let blind_secrets = pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
+            use elements26::confidential::{
+                AssetBlindingFactor as Abf26, ValueBlindingFactor as Vbf26,
+            };
+            use elements26::pset::PartiallySignedTransaction as Pset26;
+            use std::str::FromStr;
+            let mut pset26 = Pset26::from_str(&pset.to_string()).map_err(e26conv_err)?;
+            let inp_txout_sec: HashMap<usize, elements26::TxOutSecrets> = inp_txout_sec
+                .iter()
+                .map(|(i, s)| {
+                    let asset = elements26::AssetId::from_slice(s.asset.into_inner().as_ref())
+                        .map_err(e26conv_err)?;
+                    let abf =
+                        Abf26::from_slice(s.asset_bf.into_inner().as_ref()).map_err(e26conv_err)?;
+                    let vbf =
+                        Vbf26::from_slice(s.value_bf.into_inner().as_ref()).map_err(e26conv_err)?;
+                    let value = s.value;
+                    let s = elements26::TxOutSecrets::new(asset, abf, value, vbf);
+                    Ok((*i, s))
+                })
+                .collect::<Result<_, Error>>()?;
+            let blind_secrets = pset26
+                .blind_last(&mut rng, &EC, &inp_txout_sec)
+                .map_err(|e| Error::Generic(format!("elements26 blind error: {e}")))?;
+            // erase all non witness utxo surjection and range proofs
+            // this appears to be necessary for pre-segwit inputs
+            for input in pset26.inputs_mut() {
+                if let Some(ref mut tx) = &mut input.non_witness_utxo {
+                    for output in &mut tx.output {
+                        output.witness = Default::default();
+                    }
                 }
             }
-        }
-        let pset25 = elements::pset::PartiallySignedTransaction::from_str(&pset26.to_string())
-            .map_err(e26conv_err)?;
-        let mut built_tx = BuiltTx {
-            pset: pset25,
-            blind_secrets,
+            let pset25 = elements::pset::PartiallySignedTransaction::from_str(&pset26.to_string())
+                .map_err(e26conv_err)?;
+            BuiltTx {
+                pset: pset25,
+                blind_secrets,
+            }
+        } else {
+            BuiltTx {
+                pset,
+                blind_secrets: BTreeMap::new(),
+            }
         };
 
         // Add details to the pset from our descriptor, like bip32derivation and keyorigin
@@ -1631,6 +1642,25 @@ impl TxBuilder {
 
         Ok(built_tx)
     }
+}
+
+/// Whether the PSET has outputs to blind, erroring if it has confidential inputs
+/// but no blinded outputs were provided
+fn needs_blinding(pset: &PartiallySignedTransaction) -> Result<bool, Error> {
+    if pset.outputs().iter().any(|o| o.blinding_key.is_some()) {
+        return Ok(true);
+    }
+    // checking the witness utxo is enough, since this pset is created by finish_inner(),
+    // and add_input_inner() always sets it
+    let confidential_input = pset.inputs().iter().any(|i| {
+        i.witness_utxo
+            .as_ref()
+            .is_some_and(|u| u.is_partially_blinded())
+    });
+    if confidential_input {
+        return Err(Error::MissingBlindedOutput);
+    }
+    Ok(false)
 }
 
 /// Error while converting data between the elements 0.25 and 0.26 types

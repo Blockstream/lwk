@@ -11,7 +11,7 @@ lwk_common = { version = "0.19.0" }
 lwk_jade = { version = "0.19.0", optional = true }
 lwk_ledger = { version = "0.19.0", optional = true }
 
-bip39 = { version = "2.0.0", features = ["rand"] }
+bip39 = { version = "2.0.0", features = ["rand", "zeroize"] }
 elements-miniscript.workspace = true
 thiserror = { workspace = true }
 base64 = "0.21.7"

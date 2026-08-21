@@ -1384,6 +1384,99 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_lbtc_btc_expired_funded_swap_refunds() {
+        let _ = env_logger::try_init();
+
+        let network = Network::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client))
+            .create_swap_timeout(TIMEOUT)
+            .build()
+            .await
+            .unwrap();
+
+        let refund_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let claim_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+            .await
+            .unwrap();
+        let refund_address = elements::Address::from_str(&refund_address_str).unwrap();
+        let claim_address = bitcoin::Address::from_str(&claim_address_str)
+            .unwrap()
+            .assume_checked();
+
+        let mut response = session
+            .lbtc_to_btc(50_000, &refund_address, &claim_address, None)
+            .await
+            .unwrap();
+        let serialized = response.serialize().unwrap();
+        let data = lwk_boltz::ChainSwapDataSerializable::deserialize(&serialized).unwrap();
+        let timeout_height = u64::from(
+            data.create_chain_response
+                .lockup_details
+                .timeout_block_height,
+        );
+        let current_height = crate::utils::get_block_count(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let blocks_before_expiry = timeout_height
+            .checked_sub(current_height)
+            .and_then(|blocks| blocks.checked_sub(1))
+            .expect("new swap timeout should be at least two blocks in the future");
+
+        crate::utils::mine_blocks(blocks_before_expiry)
+            .await
+            .unwrap();
+        let lockup_txid = crate::utils::send_to_address(
+            LBTC_CHAIN.into(),
+            response.lockup_address(),
+            response.expected_amount(),
+        )
+        .await
+        .unwrap();
+        response.set_lockup_txid(lockup_txid).unwrap();
+        crate::utils::mine_blocks(1).await.unwrap();
+        sleep(WAIT_TIME).await;
+
+        assert!(
+            response.is_lockup_unspent().await.unwrap(),
+            "the user lockup should exist when the swap expires"
+        );
+
+        let completed = loop {
+            match response.advance().await.unwrap() {
+                ControlFlow::Continue(update) => {
+                    log::info!("Received pre-expiry update: {}", update.status);
+                }
+                ControlFlow::Break(completed) => break completed,
+            }
+        };
+        let serialized = response.serialize().unwrap();
+        let data = lwk_boltz::ChainSwapDataSerializable::deserialize(&serialized).unwrap();
+
+        assert_eq!(data.last_state, SwapState::SwapExpired);
+        assert!(
+            completed,
+            "a funded expired swap should complete only after refunding"
+        );
+        assert!(
+            response.refund_txid().is_some(),
+            "a funded expired swap should record its refund transaction"
+        );
+        let refund_balance =
+            crate::utils::get_address_balance(LBTC_CHAIN.into(), &refund_address_str)
+                .await
+                .unwrap();
+        assert!(
+            refund_balance > 0,
+            "the refund address should receive funds"
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_lbtc_btc_timeout_refund_repro() {
         let _ = env_logger::try_init();
 

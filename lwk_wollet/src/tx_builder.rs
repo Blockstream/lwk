@@ -1294,6 +1294,8 @@ impl TxBuilder {
                 .wollet_descriptor()
                 .definite_descriptor(Chain::External, derivation_index)?;
             pset.update_input_with_descriptor(idx, &descriptor)?;
+            // An explicit input has zero asset and value blinding factors. Supplying
+            // those factors lets `blind_last` balance confidential outputs against it.
             inp_txout_sec.insert(
                 idx,
                 TxOutSecrets::new(

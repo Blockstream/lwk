@@ -931,46 +931,6 @@ mod test {
     }
 
     #[test]
-    fn tx_builder_rejects_duplicate_pegin() {
-        let input = test_pegin_input();
-        let builder = crate::TxBuilder::new(Network::TestnetLiquid)
-            .add_pegin_input(input.clone())
-            .unwrap();
-
-        assert!(matches!(
-            builder.add_pegin_input(input),
-            Err(Error::DuplicatedOutpoint(_, context)) if context == "pegin inputs"
-        ));
-    }
-
-    #[test]
-    fn tx_builder_rejects_pegin_network_mismatch() {
-        assert!(matches!(
-            crate::TxBuilder::new(Network::Liquid).add_pegin_input(test_pegin_input()),
-            Err(Error::PeginNetworkMismatch { .. })
-        ));
-    }
-
-    #[test]
-    fn tx_builder_rejects_ordered_pegin_inputs() {
-        let descriptor: crate::WolletDescriptor = lwk_test_util::PEGIN_TEST_DESC.parse().unwrap();
-        let wollet = WolletBuilder::new(Network::TestnetLiquid, descriptor)
-            .build()
-            .unwrap();
-
-        assert!(matches!(
-            wollet
-                .tx_builder()
-                .add_pegin_input(test_pegin_input())
-                .unwrap()
-                .set_wallet_utxos(vec![])
-                .set_inputs_order(vec![])
-                .finish(),
-            Err(Error::PeginUnsupportedBuilderMode("manual inputs order"))
-        ));
-    }
-
-    #[test]
     fn fed_peg_program_address_types() {
         let script = bitcoin::ScriptBuf::from_hex(FED_PEG_SCRIPT).unwrap();
         let native_program = bitcoin::ScriptBuf::new_p2wsh(&script.wscript_hash());

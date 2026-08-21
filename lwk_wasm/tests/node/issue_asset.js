@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const lwk = require('lwk_node');
 const { fundAddress, waitForTx, WATERFALLS_URL } = require('./scripts/utils');
 
@@ -31,7 +32,7 @@ async function runIssueAssetTest() {
       "TTT",
       0,
     );
-    console.assert(contract.toString() === '{"entity":{"domain":"ciao.it"},"issuer_pubkey":"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904","name":"name","precision":8,"ticker":"TTT","version":0}'); // ANCHOR: ignore
+    assert.equal(contract.toString(), '{"entity":{"domain":"ciao.it"},"issuer_pubkey":"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904","name":"name","precision":8,"ticker":"TTT","version":0}'); // ANCHOR: ignore
     // ANCHOR_END: contract
 
     // ANCHOR: issue_asset
@@ -58,17 +59,17 @@ async function runIssueAssetTest() {
     // ANCHOR_END: test_issue_asset
 
     const issuance = finalizedPset.inputs()[0].issuance();
-    console.assert(issuance.asset().toString() === assetId.toString());
-    console.assert(issuance.token().toString() === tokenId.toString());
-    console.assert(issuance.isIssuance());
-    console.assert(!issuance.isReissuance());
+    assert.equal(issuance.asset().toString(), assetId.toString());
+    assert.equal(issuance.token().toString(), tokenId.toString());
+    assert(issuance.isIssuance());
+    assert(!issuance.isReissuance());
 
     await waitForTx(wollet, client, txid);
 
-    console.assert(wollet.assetsOwned().values().includes(issuance.asset().toString()) == true);
+    assert.equal(wollet.assetsOwned().values().includes(issuance.asset().toString()), true);
 
-    console.assert(wollet.balance().entries().get(assetId.toString()) === issuedAsset);
-    console.assert(wollet.balance().entries().get(tokenId.toString()) === reissuanceTokens);
+    assert.equal(wollet.balance().entries().get(assetId.toString()), issuedAsset);
+    assert.equal(wollet.balance().entries().get(tokenId.toString()), reissuanceTokens);
 
     // ANCHOR: reissue_asset
     const reissueAsset = BigInt(100);
@@ -85,15 +86,15 @@ async function runIssueAssetTest() {
 
     const unsignedInputs = finalizedPset.inputs();
     const reissuanceIssuance = unsignedInputs.find(e => e.issuance());
-    console.assert(reissuanceIssuance.issuance().asset().toString() === assetId.toString());
-    console.assert(reissuanceIssuance.issuance().token().toString() === tokenId.toString());
-    console.assert(!reissuanceIssuance.issuance().isIssuance());
-    console.assert(reissuanceIssuance.issuance().isReissuance());
+    assert.equal(reissuanceIssuance.issuance().asset().toString(), assetId.toString());
+    assert.equal(reissuanceIssuance.issuance().token().toString(), tokenId.toString());
+    assert(!reissuanceIssuance.issuance().isIssuance());
+    assert(reissuanceIssuance.issuance().isReissuance());
 
     await waitForTx(wollet, client, txid);
 
     const balanceAfterReissue = wollet.balance().entries().get(assetId.toString());
-    console.assert(balanceAfterReissue === issuedAsset + reissueAsset);
+    assert.equal(balanceAfterReissue, issuedAsset + reissueAsset);
 
     // ANCHOR: burn_asset
     const burnAsset = BigInt(50);
@@ -109,7 +110,7 @@ async function runIssueAssetTest() {
     await waitForTx(wollet, client, txid);
 
     const balanceAfterBurn = wollet.balance().entries().get(assetId.toString());
-    console.assert(balanceAfterBurn === issuedAsset + reissueAsset - burnAsset);
+    assert.equal(balanceAfterBurn, issuedAsset + reissueAsset - burnAsset);
 
     console.log("Issue asset test passed");
   } catch (error) {

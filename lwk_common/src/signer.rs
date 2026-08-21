@@ -72,15 +72,7 @@ pub trait Signer {
 
     /// Return true if the signer is for mainnet.
     fn is_mainnet(&self) -> Result<bool, Self::Error> {
-        let xpub = match self.xpub() {
-            Ok(xpub) => xpub,
-            Err(_) => {
-                // We are probably on a Ledger that won't return the master xpub
-                let path = [44, 1, 0].map(|index| hardened(index).expect("static")); // TODO: work on mainnet?
-                self.derive_xpub(&DerivationPath::from_iter(path))?
-            }
-        };
-        Ok(xpub.network == bitcoin::NetworkKind::Main)
+        Ok(self.network()?.is_mainnet())
     }
 
     /// Return the Witness Public Key Hash, slip77, descriptor for this signer

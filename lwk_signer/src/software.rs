@@ -141,7 +141,7 @@ impl SwSigner {
 
     /// Return true if the signer is for mainnet. There is no need to discriminate between regtest and testnet.
     pub fn is_mainnet(&self) -> bool {
-        self.xprv.network == bitcoin::NetworkKind::Main
+        self.network.is_mainnet()
     }
 
     /// Create a new software signer from a random mnemonic and network

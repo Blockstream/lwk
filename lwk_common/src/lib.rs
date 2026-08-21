@@ -14,6 +14,7 @@
 mod address;
 mod balance;
 mod descriptor;
+mod dpk;
 mod encrypt;
 mod error;
 mod fee;
@@ -36,6 +37,7 @@ pub use crate::descriptor::{
     InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Multisig,
     Singlesig,
 };
+pub use crate::dpk::DescriptorPublicKey;
 pub use crate::encrypt::{
     cipher_from_key_bytes, decrypt_with_nonce_prefix, encrypt_with_deterministic_nonce,
     encrypt_with_random_nonce, EncryptError,
@@ -50,7 +52,7 @@ pub use crate::qr::*;
 pub use crate::segwit::is_provably_segwit;
 #[cfg(feature = "amp0")]
 pub use crate::signer::amp0::{Amp0Signer, Amp0SignerData};
-pub use crate::signer::Signer;
+pub use crate::signer::{ss_path, SSAccountType, Signer};
 #[cfg(all(feature = "sqlite", not(target_arch = "wasm32")))]
 pub use crate::sqlite::{SqliteStore, SqliteStoreError};
 pub use crate::store::{
@@ -88,7 +90,9 @@ use elements_miniscript::elements::{
     AssetId, BlindAssetProofs, BlindValueProofs, EcdsaSighashType, OutPoint, SchnorrSighashType,
     Script, TxOutSecrets,
 };
-use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
+use elements_miniscript::{
+    ConfidentialDescriptor, DescriptorPublicKey as MiniscriptDescriptorPublicKey,
+};
 use std::collections::btree_map::BTreeMap;
 use std::collections::HashMap;
 
@@ -102,7 +106,7 @@ pub mod electrum_ssl {
 
 /// Derive the script pubkey from a confidential descriptor and an index.
 pub fn derive_script_pubkey(
-    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    descriptor: &ConfidentialDescriptor<MiniscriptDescriptorPublicKey>,
     index: u32,
 ) -> Result<Script, Error> {
     Ok(descriptor
@@ -113,7 +117,7 @@ pub fn derive_script_pubkey(
 
 /// Derive the blinding secret key from a confidential descriptor and a script pubkey.
 pub fn derive_blinding_key(
-    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    descriptor: &ConfidentialDescriptor<MiniscriptDescriptorPublicKey>,
     script_pubkey: &Script,
 ) -> Option<SecretKey> {
     let secp = Secp256k1::new();
@@ -150,7 +154,7 @@ fn commitments(
 
 fn is_mine(
     script_pubkey: &Script,
-    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    descriptor: &ConfidentialDescriptor<MiniscriptDescriptorPublicKey>,
     bip32_derivation: &BTreeMap<BitcoinPublicKey, (Fingerprint, DerivationPath)>,
     tap_key_origins: &BTreeMap<XOnlyPublicKey, (Vec<TapLeafHash>, (Fingerprint, DerivationPath))>,
 ) -> Result<bool, Error> {
@@ -199,7 +203,7 @@ fn is_mine(
 /// It returns also the fee and the recipients (external receivers) of the PSET.
 pub fn pset_balance(
     pset: &PartiallySignedTransaction,
-    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    descriptor: &ConfidentialDescriptor<MiniscriptDescriptorPublicKey>,
     params: &'static elements::AddressParams,
 ) -> Result<PsetBalance, Error> {
     let secp = Secp256k1::new();

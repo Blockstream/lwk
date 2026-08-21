@@ -11,6 +11,7 @@ mod contract;
 mod currency_code;
 mod derivation_path;
 mod desc;
+mod dpk;
 mod electrum_client;
 mod error;
 mod esplora_client;
@@ -53,6 +54,7 @@ pub use simplicity::{
     SimplicityTypedValue, SimplicityWitnessValues, StateTaprootBuilder, StateTaprootSpendInfo,
 };
 
+pub use amp2::{Amp2, Amp2Descriptor};
 pub use blockdata::address::Address;
 pub use blockdata::address_result::AddressResult;
 pub use blockdata::block_header::BlockHeader;
@@ -84,6 +86,7 @@ pub use chain::Chain;
 pub use currency_code::CurrencyCode;
 pub use derivation_path::DerivationPath;
 pub use desc::WolletDescriptor;
+pub use dpk::DescriptorPublicKey;
 pub use electrum_client::{ElectrumClient, ElectrumClientBuilder};
 pub use error::LwkError;
 pub use esplora_client::{

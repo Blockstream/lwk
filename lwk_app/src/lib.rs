@@ -307,7 +307,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             Response::result(request.id, method.schema(r.direction)?)
         }
         Method::SignerGenerate => {
-            let (_signer, mnemonic) = SwSigner::random(state.lock()?.config.is_mainnet())?;
+            let (_signer, mnemonic) = SwSigner::random_with_network(state.lock()?.config.network)?;
             Response::result(
                 request.id,
                 serde_json::to_value(response::SignerGenerate {
@@ -403,7 +403,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::SignerLoadSoftware => {
             let r: request::SignerLoadSoftware = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let signer = AppSigner::new_sw(&r.mnemonic, s.config.is_mainnet(), r.persist)?;
+            let signer = AppSigner::new_sw(&r.mnemonic, s.config.network, r.persist)?;
             let resp: response::Signer = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
             if r.persist {

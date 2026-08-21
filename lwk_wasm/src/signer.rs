@@ -19,7 +19,7 @@ impl Signer {
     /// Creates a `Signer`
     #[wasm_bindgen(constructor)]
     pub fn new(mnemonic: &Mnemonic, network: &Network) -> Result<Signer, Error> {
-        let inner = lwk_signer::SwSigner::new(&mnemonic.to_string(), network.is_mainnet())?;
+        let inner = lwk_signer::SwSigner::new_with_network(&mnemonic.to_string(), network.into())?;
         Ok(Self { inner })
     }
 
@@ -78,8 +78,8 @@ impl Signer {
     }
 
     /// Derive an xpub at `path` and return it as a keyorigin xpub string
-    #[wasm_bindgen(js_name = keyoriginXpubFromPath)]
-    pub fn keyorigin_xpub_from_path(&self, path: &DerivationPath) -> Result<String, Error> {
+    #[wasm_bindgen(js_name = deriveXpub)]
+    pub fn derive_xpub(&self, path: &DerivationPath) -> Result<String, Error> {
         let path: bip32::DerivationPath = path.into();
         let fingerprint = self.inner.fingerprint();
         let xpub = lwk_common::Signer::derive_xpub(&self.inner, &path)?;
@@ -124,6 +124,10 @@ impl lwk_common::Signer for FakeSigner {
 
     fn slip77_master_blinding_key(&self) -> Result<slip77::MasterBlindingKey, Self::Error> {
         Ok(self.slip77)
+    }
+
+    fn network(&self) -> Result<lwk_common::Network, Self::Error> {
+        Ok(lwk_common::Network::default_regtest())
     }
 
     fn sign_message(

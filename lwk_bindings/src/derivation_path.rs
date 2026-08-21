@@ -63,37 +63,16 @@ impl DerivationPath {
 
     /// Construct the account-level derivation path
     ///
-    /// `account_type` must be one of "wpkh", "shwpkh", "pkh" or "tr"
+    /// `account_type` must be one of "wpkh", "shwpkh" or "tr"
     #[uniffi::constructor]
-    pub fn from_account(
+    pub fn ss_path(
         network: &Network,
         account_type: &str,
         account_num: u32,
     ) -> Result<Arc<Self>, LwkError> {
-        let coin_type = if network.is_mainnet() { 1776 } else { 1 };
-        let purpose = match account_type {
-            "wpkh" => 84,
-            "shwpkh" => 49,
-            "pkh" => 44,
-            "tr" => 86,
-            _ => {
-                return Err(LwkError::Generic {
-                    msg: "invalid account type, must be 'wpkh', 'shwpkh', 'pkh' or 'tr'".into(),
-                })
-            }
-        };
-        let h: u32 = 1 << 31;
-        if account_num >= h {
-            return Err(LwkError::Generic {
-                msg: "invalid account number".into(),
-            });
-        }
-
-        Ok(Self::from_vec(vec![
-            purpose + h,
-            coin_type + h,
-            account_num + h,
-        ]))
+        let account_type: lwk_common::SSAccountType = account_type.parse()?;
+        let inner = lwk_common::ss_path(&network.into(), account_type, account_num)?;
+        Ok(Arc::new(Self { inner }))
     }
 
     /// Return the derivation path as a vector of u32

@@ -11,7 +11,7 @@ fn test_version() {
     let ledger = LedgerEmulator::new().expect("test");
     let container = docker.run(ledger);
     let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
-    let client = Ledger::new(port).client;
+    let client = Ledger::new(port, lwk_common::Network::default_regtest()).client;
     let (name, version, _flags) = client.get_version().unwrap();
     assert_eq!(version, "2.2.3");
     assert_eq!(name, "Liquid Regtest");
@@ -23,7 +23,7 @@ fn test_ledger_commands() {
     let ledger = LedgerEmulator::new().expect("test");
     let container = docker.run(ledger);
     let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
-    let client = Ledger::new(port).client;
+    let client = Ledger::new(port, lwk_common::Network::default_regtest()).client;
     let (name, version, _flags) = client.get_version().unwrap();
     assert_eq!(version, "2.2.3");
     assert_eq!(name, "Liquid Regtest");
@@ -147,7 +147,7 @@ fn test_ledger_commands() {
 #[test]
 fn test_physical_device() {
     let _ = env_logger::try_init();
-    let client = Ledger::new_hid().client;
+    let client = Ledger::new_hid(lwk_common::Network::default_regtest()).client;
     let (name, version, _flags) = client.get_version().unwrap();
     assert_eq!(name, "BOLOS");
     assert_eq!(version, "1.6.1");
@@ -322,7 +322,7 @@ fn test_ledger_sign_issuance() {
     let ledger = LedgerEmulator::new().expect("test");
     let container = docker.run(ledger);
     let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
-    let c = Ledger::new(port);
+    let c = Ledger::new(port, lwk_common::Network::default_regtest());
 
     // Get device info for wallet setup
     let fingerprint = c.client.get_master_fingerprint().unwrap();

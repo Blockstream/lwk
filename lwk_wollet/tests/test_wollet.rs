@@ -732,7 +732,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
 
 pub fn generate_signer() -> SwSigner {
     let mnemonic = generate_mnemonic();
-    SwSigner::new(&mnemonic, false).unwrap()
+    SwSigner::new_with_network(&mnemonic, Network::default_regtest()).unwrap()
 }
 
 pub fn multisig_desc(signers: &[&AnySigner], threshold: usize) -> String {

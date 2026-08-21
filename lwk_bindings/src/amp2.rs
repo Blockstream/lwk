@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
-use crate::{DerivationPath, LwkError, Pset, Signer, WolletDescriptor};
+use crate::{DerivationPath, DescriptorPublicKey, LwkError, Pset, Signer, WolletDescriptor};
 
-/// Wrapper over [`lwk_wollet::amp2::Amp2`]
+/// Context for actions interacting with AMP2
 #[derive(uniffi::Object)]
 pub struct Amp2 {
     inner: lwk_wollet::amp2::Amp2,
 }
 
-/// Wrapper over [`lwk_wollet::amp2::Amp2Descriptor`]
+/// An AMP2 descriptor
 #[derive(uniffi::Object)]
 #[uniffi::export(Display)]
 pub struct Amp2Descriptor {
@@ -23,6 +23,7 @@ impl std::fmt::Display for Amp2Descriptor {
 
 #[uniffi::export]
 impl Amp2Descriptor {
+    /// The inner `WolletDescriptor`
     pub fn descriptor(&self) -> WolletDescriptor {
         self.inner.descriptor().into()
     }
@@ -92,38 +93,65 @@ impl Amp2 {
     pub fn elip153_from_signer(
         &self,
         signer: &Signer,
-        account: u32,
+        account_num: u32,
     ) -> Result<Amp2Descriptor, LwkError> {
         Ok(self
             .inner
-            .elip153_from_signer(&signer.inner, account)?
+            .elip153_from_signer(&signer.inner, account_num)?
             .into())
     }
 
     /// ELIP153 `USER_PATH = m/purpose'/coin_type'/account'`
-    pub fn elip153_user_path(&self, account: u32) -> Result<Arc<DerivationPath>, LwkError> {
-        Ok(Arc::new(self.inner.elip153_user_path(account)?.into()))
+    pub fn elip153_user_path(&self, account_num: u32) -> Result<Arc<DerivationPath>, LwkError> {
+        Ok(Arc::new(self.inner.elip153_user_path(account_num)?.into()))
     }
 
     /// ELIP153 `VIEW_PATH = m/purpose'/coin_type'/account'/server_fingerprint_masked'`
-    pub fn elip153_view_path(&self, account: u32) -> Result<Arc<DerivationPath>, LwkError> {
-        Ok(Arc::new(self.inner.elip153_view_path(account)?.into()))
+    pub fn elip153_view_path(&self, account_num: u32) -> Result<Arc<DerivationPath>, LwkError> {
+        Ok(Arc::new(self.inner.elip153_view_path(account_num)?.into()))
     }
 
-    /// Create an AMP2 descriptor ELIP153 compliant from xpub strings.
+    /// Create an AMP2 descriptor ELIP153 compliant from a signer managed externally.
     ///
-    /// This is typically used when the signer is managed outside of LWK.
-    /// Derive the user xpub at [`Amp2::elip153_user_path()`] and
-    /// the view xpub at [`Amp2::elip153_view_path()`], and pass the
-    /// obtained keyorigin_xpub strings here.
-    pub fn elip153_from_str(
+    /// Caller must ensure that:
+    /// * `user_keyorigin_xpub` is the keyorigin xpub derived at `Amp2::elip153_user_path()` for `account_num`
+    /// * `view_keyorigin_xpub` is the keyorigin xpub derived at `Amp2::elip153_view_path()` for `account_num`
+    ///
+    /// **Warning**: Passing incorrect signer data can lead to creating an incorrect
+    /// descriptor, which could lead to loss of funds.
+    pub fn elip153_from_external_signer(
         &self,
-        user_keyorigin_xpub: &str,
-        view_keyorigin_xpub: &str,
+        account_num: u32,
+        user_key: &DescriptorPublicKey,
+        view_key: &DescriptorPublicKey,
     ) -> Result<Amp2Descriptor, LwkError> {
+        let user_key = user_key.as_ref();
+        let view_key = view_key.as_ref();
+        let (Some(user_fp), Some(user_path), Some(user_xpub)) = (
+            user_key.fingerprint(),
+            user_key.derivation_path(),
+            user_key.xpub(),
+        ) else {
+            return Err(LwkError::Generic {
+                msg: "missing keyorigin from user_key".into(),
+            });
+        };
+        let (Some(view_fp), Some(view_path), Some(view_xpub)) = (
+            view_key.fingerprint(),
+            view_key.derivation_path(),
+            view_key.xpub(),
+        ) else {
+            return Err(LwkError::Generic {
+                msg: "missing keyorigin from view_key".into(),
+            });
+        };
         Ok(self
             .inner
-            .elip153_from_str(user_keyorigin_xpub, view_keyorigin_xpub)?
+            .elip153_from_external_signer(
+                account_num,
+                ((user_fp, user_path.clone()), user_xpub),
+                ((view_fp, view_path.clone()), view_xpub),
+            )?
             .into())
     }
 

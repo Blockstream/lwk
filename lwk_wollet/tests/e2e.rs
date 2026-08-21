@@ -50,7 +50,7 @@ fn liquid_send_jade_signer() {
 
 #[test]
 fn liquid_send_software_signer() {
-    let signer = SwSigner::new(TEST_MNEMONIC, false).unwrap();
+    let signer = SwSigner::new_with_network(TEST_MNEMONIC, Network::default_regtest()).unwrap();
     let signers: [&AnySigner; 1] = [&AnySigner::Software(signer)];
     liquid_send(&signers);
 }
@@ -66,7 +66,7 @@ fn liquid_issue_jade_signer() {
 
 #[test]
 fn liquid_issue_software_signer() {
-    let signer = SwSigner::new(TEST_MNEMONIC, false).unwrap();
+    let signer = SwSigner::new_with_network(TEST_MNEMONIC, Network::default_regtest()).unwrap();
     let signers = [&AnySigner::Software(signer)];
     liquid_issue(&signers);
 }
@@ -875,7 +875,7 @@ fn multisig_flow() {
 fn jade_sign_wollet_pset() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let mnemonic = TEST_MNEMONIC;
-    let signer = SwSigner::new(mnemonic, false).unwrap();
+    let signer = SwSigner::new_with_network(mnemonic, Network::default_regtest()).unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
     let client = test_client_electrum(&env.electrum_url());
@@ -920,7 +920,9 @@ fn jade_single_sig() {
         jade_init.jade,
         XKeyIdentifier::from_str("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),
     );
-    let xpub = SwSigner::new(mnemonic, false).unwrap().xpub();
+    let xpub = SwSigner::new_with_network(mnemonic, Network::default_regtest())
+        .unwrap()
+        .xpub();
 
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({slip77_key}),elwpkh({xpub}/*))");
@@ -4860,14 +4862,14 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
     use lwk_signer::{bip39::Mnemonic, SwSigner};
 
     let mnemonic = Mnemonic::generate(12)?;
-    let is_mainnet = false;
+    let network = lwk_common::Network::TestnetLiquid;
 
-    let signer = SwSigner::new(&mnemonic.to_string(), is_mainnet)?;
+    let signer = SwSigner::new_with_network(&mnemonic.to_string(), network)?;
     // ANCHOR_END: generate-signer
 
     // ANCHOR: get-xpub
     let bip = lwk_common::Bip::Bip84;
-    let xpub = signer.keyorigin_xpub(bip, is_mainnet);
+    let xpub = signer.keyorigin_xpub(bip, network.is_mainnet());
     // ANCHOR_END: get-xpub
 
     // ANCHOR: wollet
@@ -4952,23 +4954,24 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     use lwk_wollet::{Network, Wollet, WolletDescriptor};
 
     // ANCHOR: multisig-setup
-    let is_mainnet = false;
+    let network = Network::TestnetLiquid;
+    let is_mainnet = network.is_mainnet();
     // Derivation for multisig
     let bip = lwk_common::Bip::Bip87;
 
     // Alice creates their signer and gets the xpub
     let mnemonic_a = Mnemonic::generate(12)?;
-    let signer_a = SwSigner::new(&mnemonic_a.to_string(), is_mainnet)?;
+    let signer_a = SwSigner::new_with_network(&mnemonic_a.to_string(), network)?;
     let xpub_a = signer_a.keyorigin_xpub(bip, is_mainnet)?;
 
     // Bob creates their signer and gets the xpub
     let mnemonic_b = Mnemonic::generate(12)?;
-    let signer_b = SwSigner::new(&mnemonic_b.to_string(), is_mainnet)?;
+    let signer_b = SwSigner::new_with_network(&mnemonic_b.to_string(), network)?;
     let xpub_b = signer_b.keyorigin_xpub(bip, is_mainnet)?;
 
     // Carol, who acts as a coordinator, creates their signer and gets the xpub
     let mnemonic_c = Mnemonic::generate(12)?;
-    let signer_c = SwSigner::new(&mnemonic_c.to_string(), is_mainnet)?;
+    let signer_c = SwSigner::new_with_network(&mnemonic_c.to_string(), network)?;
     let xpub_c = signer_c.keyorigin_xpub(bip, is_mainnet)?;
 
     // Carol generates a random SLIP77 descriptor blinding key
@@ -5126,7 +5129,7 @@ fn test_issue_asset() -> Result<(), Box<dyn std::error::Error>> {
     // Create wallet
     let mnemonic = Mnemonic::generate(12)?;
 
-    let signer = SwSigner::new(&mnemonic.to_string(), false)?;
+    let signer = SwSigner::new_with_network(&mnemonic.to_string(), network)?;
     let desc = signer.wpkh_slip77_descriptor()?;
 
     let mut wollet = WolletBuilder::new(network, WolletDescriptor::from_str(&desc)?).build()?;

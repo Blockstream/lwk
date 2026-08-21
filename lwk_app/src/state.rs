@@ -43,8 +43,12 @@ pub struct AppSigner {
 }
 
 impl AppSigner {
-    pub fn new_sw(mnemonic: &str, is_mainnet: bool, persist: bool) -> Result<Self, Error> {
-        let sw = SwSigner::new(mnemonic, is_mainnet)?;
+    pub fn new_sw(
+        mnemonic: &str,
+        network: lwk_common::Network,
+        persist: bool,
+    ) -> Result<Self, Error> {
+        let sw = SwSigner::new_with_network(mnemonic, network)?;
         let inner = AppSignerInner::AvailableSigner(AnySigner::Software(sw));
         Ok(AppSigner { inner, persist })
     }

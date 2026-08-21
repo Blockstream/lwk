@@ -17,7 +17,7 @@ fn claim_pegin() {
         .with_fedpeg_script(FED_PEG_SCRIPT)
         .build();
     let network = env.elementsd_network();
-    let signer = SwSigner::new(TEST_MNEMONIC, false).unwrap();
+    let signer = SwSigner::new_with_network(TEST_MNEMONIC, network).unwrap();
     let descriptor = format!(
         "ct(slip77({TEST_MNEMONIC_SLIP77}),elwpkh({}/*))",
         signer.xpub()

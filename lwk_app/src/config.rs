@@ -142,7 +142,7 @@ impl Config {
 
     /// True if Liquid mainnet
     pub fn is_mainnet(&self) -> bool {
-        matches!(self.network, Network::Liquid)
+        self.network.is_mainnet()
     }
 
     pub fn blockchain_client(&self) -> Result<BlockchainClient, Error> {

@@ -102,7 +102,7 @@ impl Network {
 
     /// Return true if the network is the mainnet network
     pub fn is_mainnet(&self) -> bool {
-        matches!(&self.inner, &lwk_common::Network::Liquid)
+        self.inner.is_mainnet()
     }
 
     /// Return the policy asset (eg LBTC for mainnet) for this network

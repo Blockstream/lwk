@@ -2136,7 +2136,7 @@ mod tests {
         let blinding_nonces = amp0pset.blinding_nonces();
 
         // User signs the PSET
-        let signer = SwSigner::new(mnemonic, false).unwrap();
+        let signer = SwSigner::new_with_network(mnemonic, Network::TestnetLiquid).unwrap();
         let sigs = signer.sign(&mut pset).unwrap();
         assert!(sigs > 0);
 
@@ -2241,7 +2241,7 @@ mod tests {
         let subaccount_num = 1;
         let account_xpub = "tpubDA9GDAo3JyS2TaEikypKnu21N8sjLfTawM5te2jy9poCbFvYmRwSCz7Hk3YQiuMyStm1suBGTEW21ztSkisovDnyqo5nK1CgSY3LJesEci7";
 
-        let signer = SwSigner::new(mnemonic, false).unwrap();
+        let signer = SwSigner::new_with_network(mnemonic, Network::TestnetLiquid).unwrap();
         let signer_data = signer.amp0_signer_data().unwrap();
         let master_xpub = signer_data.master_xpub();
         assert_eq!(master_public_key, master_xpub.public_key.to_hex());
@@ -2297,7 +2297,7 @@ mod tests {
         };
 
         // Create signer and watch only credentials
-        let (signer, mnemonic) = SwSigner::random(false).unwrap();
+        let (signer, mnemonic) = SwSigner::random_with_network(Network::TestnetLiquid).unwrap();
         let username = format!("user{}", signer.fingerprint());
         let password = format!("pass{}", signer.fingerprint());
         println!("mnemonic: {mnemonic}");
@@ -2334,7 +2334,7 @@ mod tests {
 
         // Create signer and derive the blob keys
         let mnemonic = "deny forum retreat basic step cook boring say october owner fun trade";
-        let signer = SwSigner::new(mnemonic, false).unwrap();
+        let signer = SwSigner::new_with_network(mnemonic, Network::TestnetLiquid).unwrap();
         let signer_data = signer.amp0_signer_data().unwrap();
         let (enc_key, hmac_key) = derive_blob_keys(signer_data.client_secret_xpub());
 
@@ -2395,7 +2395,7 @@ mod tests {
         use lwk_signer::SwSigner;
 
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-        let signer = SwSigner::new(mnemonic, false).unwrap();
+        let signer = SwSigner::new_with_network(mnemonic, Network::TestnetLiquid).unwrap();
 
         let sd = signer.amp0_signer_data().unwrap();
         let sd_str = sd.to_string();

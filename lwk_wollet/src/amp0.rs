@@ -405,6 +405,82 @@ impl<S: Stream> Amp0<S> {
     }
 }
 
+/// Verify the signatures added by the AMP0 server to the Transaction.
+///
+/// Fails if:
+/// * The signed Tx has changed, aside from signatures for the fingerprint in the witness (nothing removed, nothing added)
+/// * There is a missing expected fingerprint for an input with a changed witness
+/// * Witnesses that have been changed are not signatures for the given fingerprint
+/// * The added signatures are invalid
+fn verify_added_sigs_tx(
+    pset: &PartiallySignedTransaction,
+    original: &Transaction,
+    returned: &Transaction,
+    expected_fingerprint: Fingerprint,
+    dummy_sig: &[u8],
+) -> Result<usize, lwk_common::PsetValidationError> {
+    let mut r = returned.clone();
+
+    let mut signed_pset = pset.clone();
+    let mut original_pset = pset.clone();
+
+    for (idx, (orig_in, ret_in)) in original.input.iter().zip(r.input.iter_mut()).enumerate() {
+        if orig_in.witness.script_witness.len() != ret_in.witness.script_witness.len() {
+            return Err(lwk_common::PsetValidationError::DataMismatch);
+        }
+
+        let pset_in = signed_pset
+            .inputs_mut()
+            .get_mut(idx)
+            .ok_or(lwk_common::PsetValidationError::DataMismatch)?;
+
+        let pubkey = pset_in
+            .bip32_derivation
+            .iter()
+            .find_map(|(pk, (fg, _))| (*fg == expected_fingerprint).then_some(*pk))
+            .ok_or(lwk_common::PsetValidationError::WrongFingerprint { idx })?;
+
+        for (orig_item, ret_item) in orig_in
+            .witness
+            .script_witness
+            .iter()
+            .zip(ret_in.witness.script_witness.iter_mut())
+        {
+            if orig_item != dummy_sig && orig_item != ret_item {
+                return Err(lwk_common::PsetValidationError::DataMismatch);
+            }
+
+            if orig_item != dummy_sig {
+                continue;
+            }
+
+            if ret_item == orig_item {
+                return Err(lwk_common::PsetValidationError::InvalidSignature);
+            }
+
+            pset_in.partial_sigs.insert(pubkey, ret_item.to_vec());
+
+            *ret_item = orig_item.clone();
+        }
+    }
+
+    if *original != r {
+        return Err(lwk_common::PsetValidationError::DataMismatch);
+    }
+
+    // AMP0 server always signs with SIGHASH_ALL
+    for (o, m) in original_pset
+        .inputs_mut()
+        .iter_mut()
+        .zip(signed_pset.inputs_mut().iter_mut())
+    {
+        o.sighash_type = None;
+        m.sighash_type = None;
+    }
+
+    lwk_common::verify_added_sigs(&original_pset, &signed_pset, expected_fingerprint, &EC)
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 impl Amp0Connected<WebSocketClient> {
     /// Connect and register to AMP0

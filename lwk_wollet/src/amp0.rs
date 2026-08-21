@@ -2477,4 +2477,124 @@ mod tests {
         let sd_str = sd.to_string();
         assert_eq!(Amp0SignerData::from_str(&sd_str).unwrap(), sd);
     }
+
+    #[test]
+    fn test_verify_added_tx_sigs() {
+        use elements::bitcoin::PublicKey;
+        use elements::pset::{Input, Output};
+
+        let s = "020202020202020202020202020202020202020202020202020202020202020202";
+        let pk = PublicKey::from_str(s).unwrap();
+
+        let fp = Fingerprint::from_str("aabbccdd").unwrap();
+        let other_fp = Fingerprint::from_str("11223344").unwrap();
+
+        let ecdsa_sig = vec![0x30, 0x45, 0x02, 0x20, 0x7f, 0x01];
+        let ecdsa_sig_too_short = vec![0x30, 0x46];
+        let dummy_hex = "304402207f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f02207f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f01";
+        let dummy = Vec::<u8>::from_hex(dummy_hex).unwrap();
+
+        let mut pset = PartiallySignedTransaction::new_v2();
+        let mut input = Input::default();
+        input.bip32_derivation.insert(
+            pk,
+            (
+                Fingerprint::from_str("aabbccdd").unwrap(),
+                DerivationPath::master(),
+            ),
+        );
+        pset.add_input(input);
+        pset.add_output(Output {
+            asset: Some(elements::AssetId::LIQUID_BTC),
+            amount: Some(1000),
+            ..Default::default()
+        });
+
+        pset.inputs_mut()[0]
+            .bip32_derivation
+            .insert(pk, (fp, DerivationPath::master()));
+
+        let mut original = pset.extract_tx().unwrap();
+        original.input[0].witness.script_witness.push(dummy.clone());
+
+        // identical tx with no added signatures should fail because we didn't add the signature in
+        // place of dummy sig
+        let err =
+            verify_added_sigs_tx(&pset, &original, &original.clone(), fp, &dummy).unwrap_err();
+        assert!(matches!(
+            err,
+            lwk_common::PsetValidationError::InvalidSignature
+        ));
+
+        // added tx sig from a key with the wrong fingerprint
+        let mut returned = original.clone();
+        returned.input[0].witness.script_witness[0] = ecdsa_sig.clone();
+        let err = verify_added_sigs_tx(&pset, &original, &returned, other_fp, &dummy).unwrap_err();
+        assert!(matches!(
+            err,
+            lwk_common::PsetValidationError::WrongFingerprint { idx: 0 }
+        ));
+
+        // added tx sig that is cryptographically invalid
+        let mut returned = original.clone();
+        returned.input[0].witness.script_witness[0] = ecdsa_sig.clone();
+        let err = verify_added_sigs_tx(&pset, &original, &returned, fp, &dummy).unwrap_err();
+        assert!(matches!(
+            err,
+            lwk_common::PsetValidationError::InvalidSignature
+        ));
+
+        // added tx sig that is too short to contain a sighash byte
+        let mut returned = original.clone();
+        returned.input[0].witness.script_witness[0] = ecdsa_sig_too_short.clone();
+        let err = verify_added_sigs_tx(&pset, &original, &returned, fp, &dummy).unwrap_err();
+        assert!(matches!(
+            err,
+            lwk_common::PsetValidationError::InvalidSignature
+        ));
+
+        // non-signature fields are protected: output amount changed
+        let mut returned = original.clone();
+        returned.input[0].witness.script_witness[0] = ecdsa_sig.clone();
+        returned.output[0].value = elements::confidential::Value::Explicit(999_999);
+        let err = verify_added_sigs_tx(&pset, &original, &returned, fp, &dummy).unwrap_err();
+        assert!(matches!(err, lwk_common::PsetValidationError::DataMismatch));
+
+        // non-signature fields are protected: input added
+        let mut returned = original.clone();
+        returned.input[0].witness.script_witness[0] = ecdsa_sig.clone();
+        returned.input.push(elements::TxIn::default());
+        let err = verify_added_sigs_tx(&pset, &original, &returned, fp, &dummy).unwrap_err();
+        assert!(matches!(err, lwk_common::PsetValidationError::DataMismatch));
+
+        // non-signature fields are protected: output removed
+        let mut returned = original.clone();
+        returned.input[0].witness.script_witness[0] = ecdsa_sig.clone();
+        returned.output.pop();
+        let err = verify_added_sigs_tx(&pset, &original, &returned, fp, &dummy).unwrap_err();
+        assert!(matches!(err, lwk_common::PsetValidationError::DataMismatch));
+
+        // witness stack size mismatch
+        let mut returned = original.clone();
+        returned.input[0].witness.script_witness[0] = ecdsa_sig.clone();
+        returned.input[0].witness.script_witness.push(vec![1, 2, 3]);
+        let err = verify_added_sigs_tx(&pset, &original, &returned, fp, &dummy).unwrap_err();
+        assert!(matches!(err, lwk_common::PsetValidationError::DataMismatch));
+
+        // changed non-signature witness element
+        let mut original_multi_witness = original.clone();
+        returned.input[0].witness.script_witness[0] = ecdsa_sig.clone();
+        original_multi_witness.input[0]
+            .witness
+            .script_witness
+            .push(vec![0x00]);
+        let mut returned = original_multi_witness.clone();
+        returned.input[0].witness.script_witness[1] = vec![0x01];
+        let err = verify_added_sigs_tx(&pset, &original_multi_witness, &returned, fp, &dummy)
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            lwk_common::PsetValidationError::InvalidSignature
+        ));
+    }
 }

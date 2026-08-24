@@ -19,6 +19,8 @@ use elements::{AssetIssuance, LockTime, Script, Sequence, Transaction, TxInWitne
 use futures::{stream, StreamExt};
 use serde::{Deserialize, Serialize};
 
+const TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
 /// An asyncronous registry client, allowing to fetch and post assets metadata from the registry.
 #[derive(Clone)]
 pub struct Registry {
@@ -207,7 +209,7 @@ impl Registry {
     pub async fn fetch(&self, asset_id: AssetId) -> Result<RegistryData, Error> {
         // TODO should discriminate between 404 and other errors
         let url = format!("{}/{}", self.base_url.trim_end_matches("/"), asset_id);
-        let response = self.client.get(url).send().await?;
+        let response = self.client.get(url).timeout(TIMEOUT).send().await?;
         let data = response.json::<RegistryData>().await?;
         data.contract.validate()?;
         Ok(data)
@@ -227,7 +229,13 @@ impl Registry {
 
     /// Post a contract to the registry
     pub async fn post(&self, data: &RegistryPost) -> Result<(), Error> {
-        let response = self.client.post(&self.base_url).json(&data).send().await?;
+        let response = self
+            .client
+            .post(&self.base_url)
+            .json(&data)
+            .timeout(TIMEOUT)
+            .send()
+            .await?;
         let status = response.status();
         if status.is_success() {
             Ok(())

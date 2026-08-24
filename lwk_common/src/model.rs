@@ -8,6 +8,7 @@ use elements_miniscript::elements::{AssetId, AssetIssuance, OutPoint, Txid};
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use std::collections::{BTreeSet, HashMap};
 
+use crate::output::{pset_outputs_details, OutputDetails};
 use crate::{
     pset_balance, pset_has_non_default_sighash, pset_issuances, pset_signatures, Error, Network,
     SignedBalance,
@@ -223,6 +224,7 @@ pub struct PsetDetails {
     sig_details: Vec<PsetSignatures>,
     issuances: Vec<Issuance>,
     has_non_default_sighash: bool,
+    outputs: Vec<OutputDetails>,
 }
 
 impl PsetDetails {
@@ -237,6 +239,7 @@ impl PsetDetails {
             sig_details: pset_signatures(pset),
             issuances: pset_issuances(pset),
             has_non_default_sighash: pset_has_non_default_sighash(pset),
+            outputs: pset_outputs_details(pset, descriptor)?,
         })
     }
 
@@ -300,5 +303,10 @@ impl PsetDetails {
             }
         }
         r
+    }
+
+    /// The details of the outputs of the PSET
+    pub fn outputs(&self) -> &[OutputDetails] {
+        &self.outputs
     }
 }

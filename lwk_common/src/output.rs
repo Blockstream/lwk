@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use elements::pset::Output;
+use elements::pset::{Output, PartiallySignedTransaction};
 use elements::secp256k1_zkp::{All, Secp256k1};
 use elements::{AssetId, BlindAssetProofs, BlindValueProofs, Script};
 
@@ -206,4 +206,28 @@ fn verified_asset_value(
     };
 
     Ok((None, None))
+}
+
+/// Return the details of the outputs of a PSET.
+///
+/// The asset and amount of each output are always verified against the commitments when the output
+/// is blinded, using the blind proofs present in the PSET.
+pub(crate) fn pset_outputs_details(
+    pset: &PartiallySignedTransaction,
+    descriptor: &ConfidentialDescriptor<MiniscriptDescriptorPublicKey>,
+) -> Result<Vec<OutputDetails>, Error> {
+    let secp = Secp256k1::new();
+    pset.outputs()
+        .iter()
+        .enumerate()
+        .map(|(idx, output)| {
+            let (is_mine, derivation_path) = is_mine(
+                &output.script_pubkey,
+                descriptor,
+                &output.bip32_derivation,
+                &output.tap_key_origins,
+            )?;
+            OutputDetails::new(&secp, output, idx as u32, is_mine, derivation_path)
+        })
+        .collect()
 }

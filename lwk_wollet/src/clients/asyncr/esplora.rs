@@ -1183,7 +1183,7 @@ impl EsploraClientBuilder {
         let timeout = self
             .timeout
             .map(|t| std::time::Duration::from_secs(t as u64));
-        let client = builder.build().expect("Failed to create client"); // TODO: handle error but note that this is equivalent to the new() which panics
+        let client = builder.build()?;
         Ok(EsploraClient {
             client,
             base_url: self.base_url.clone(),

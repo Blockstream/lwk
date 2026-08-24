@@ -1,7 +1,7 @@
 use lwk_wollet::{bitcoin::bip32::KeySource, elements};
 use wasm_bindgen::prelude::*;
 
-use crate::{Address, AssetId, Balance, Fees, Txid};
+use crate::{Address, AssetId, Balance, DerivationPath, Fees, Script, Txid};
 
 /// The details of a Partially Signed Elements Transaction:
 ///
@@ -46,6 +46,82 @@ pub struct Recipient {
     inner: lwk_common::Recipient,
 }
 
+/// The details of an output of a PSET
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct OutputDetails {
+    inner: lwk_common::OutputDetails,
+}
+
+impl From<lwk_common::OutputDetails> for OutputDetails {
+    fn from(inner: lwk_common::OutputDetails) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<OutputDetails> for lwk_common::OutputDetails {
+    fn from(pset_out: OutputDetails) -> Self {
+        pset_out.inner
+    }
+}
+
+#[wasm_bindgen]
+impl OutputDetails {
+    /// The asset of the output, or None if it couldn't be verified against the commitments
+    pub fn asset(&self) -> Option<AssetId> {
+        self.inner.asset().map(Into::into)
+    }
+
+    /// The amount of the output in satoshis, or None if it couldn't be verified against
+    /// the commitments
+    pub fn satoshi(&self) -> Option<u64> {
+        self.inner.satoshi()
+    }
+
+    /// Whether the output is fully explicit
+    /// with no commitments
+    #[wasm_bindgen(js_name = isFullyExplicit)]
+    pub fn is_fully_explicit(&self) -> bool {
+        self.inner.is_fully_explicit()
+    }
+
+    /// Whether the output is fully confidential
+    /// committed
+    #[wasm_bindgen(js_name = isFullyConfidential)]
+    pub fn is_fully_confidential(&self) -> bool {
+        self.inner.is_fully_confidential()
+    }
+
+    /// Whether this is the fee output
+    #[wasm_bindgen(js_name = isFee)]
+    pub fn is_fee(&self) -> bool {
+        self.inner.is_fee()
+    }
+
+    /// The script pubkey of the output
+    #[wasm_bindgen(js_name = scriptPubkey)]
+    pub fn script_pubkey(&self) -> Script {
+        self.inner.script_pubkey().into()
+    }
+
+    /// The index of the output in the transaction
+    pub fn vout(&self) -> u32 {
+        self.inner.vout()
+    }
+
+    /// The derivation path of the output, if it belongs to the wallet
+    #[wasm_bindgen(js_name = derivationPath)]
+    pub fn derivation_path(&self) -> Option<DerivationPath> {
+        self.inner.derivation_path().cloned().map(Into::into)
+    }
+
+    /// Whether the output belongs to the wallet
+    #[wasm_bindgen(js_name = isOwned)]
+    pub fn is_owned(&self) -> bool {
+        self.inner.is_owned()
+    }
+}
+
 #[wasm_bindgen]
 impl PsetDetails {
     /// Return the balance of the PSET from the point of view of the wallet
@@ -68,6 +144,16 @@ impl PsetDetails {
     #[wasm_bindgen(js_name = hasNonDefaultSighash)]
     pub fn has_non_default_sighash(&self) -> bool {
         self.inner.has_non_default_sighash()
+    }
+
+    /// The details of the outputs of the PSET
+    pub fn outputs(&self) -> Vec<OutputDetails> {
+        self.inner
+            .outputs()
+            .iter()
+            .cloned()
+            .map(Into::into)
+            .collect()
     }
 
     /// Set of fingerprints for which the PSET is missing a signature

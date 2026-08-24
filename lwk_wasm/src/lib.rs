@@ -124,7 +124,7 @@ pub use prices::{ExchangeRates, PricesFetcher, PricesFetcherBuilder};
 pub use pset::{Pset, PsetInput, PsetOutput};
 #[cfg(feature = "simplicity")]
 pub use pset::{PsetBuilder, PsetInputBuilder, PsetOutputBuilder};
-pub use pset_details::{Issuance, PsetDetails};
+pub use pset_details::{Issuance, OutputDetails, PsetDetails};
 #[cfg(feature = "simplicity")]
 pub use public_key::PublicKey;
 pub use registry::{AssetMeta, Registry, RegistryPost};

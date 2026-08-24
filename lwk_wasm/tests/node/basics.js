@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const lwk = require('lwk_node');
 const { fundAddress, waitForTx, WATERFALLS_URL } = require('./scripts/utils');
 
@@ -61,7 +62,7 @@ async function runBasicsTest() {
         // Verify funds exist // ANCHOR: ignore
         const lbtc = network.policyAsset().toString(); // ANCHOR: ignore
         const lbtcBalance = wollet.balance().entries().get(lbtc) || 0n; // ANCHOR: ignore
-        console.assert(lbtcBalance > 0n, "Pre-seeded wallet should have L-BTC"); // ANCHOR: ignore
+        assert(lbtcBalance > 0n, "Pre-seeded wallet should have L-BTC"); // ANCHOR: ignore
 
         // ANCHOR: tx
         const sats = BigInt(1000);

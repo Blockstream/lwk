@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const lwk = require('lwk_node');
 
 // TODO: use regtest instead of testnet:
@@ -20,9 +21,9 @@ async function runBip85Test() {
         const derived_1_12 = await signer.derive_bip85_mnemonic(1, 12);
         // ANCHOR_END: bip85
 
-        console.assert(derived_0_12.toString() === "prosper short ramp prepare exchange stove life snack client enough purpose fold");
-        console.assert(derived_0_24.toString() === "stick exact spice sock filter ginger museum horse kit multiply manual wear grief demand derive alert quiz fault december lava picture immune decade jaguar");
-        console.assert(derived_1_12.toString() === "sing slogan bar group gauge sphere rescue fossil loyal vital model desert");
+        assert.equal(derived_0_12.toString(), "prosper short ramp prepare exchange stove life snack client enough purpose fold");
+        assert.equal(derived_0_24.toString(), "stick exact spice sock filter ginger museum horse kit multiply manual wear grief demand derive alert quiz fault december lava picture immune decade jaguar");
+        assert.equal(derived_1_12.toString(), "sing slogan bar group gauge sphere rescue fossil loyal vital model desert");
     } catch (error) {
 	console.error("Bip85 test failed:", error);
 	throw error;

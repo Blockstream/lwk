@@ -179,7 +179,7 @@ impl WaterfallsClient {
 
     #[cfg(not(target_arch = "wasm32"))]
     async fn subscribe_url(&self, url: &str) -> Result<WaterfallsSubscription, Error> {
-        let response = self.inner.get_with_retry(url).await?;
+        let response = self.inner.get_with_retry_no_timeout(url).await?;
         if !response.status().is_success() {
             return Err(error_for_status(url, response).await);
         }

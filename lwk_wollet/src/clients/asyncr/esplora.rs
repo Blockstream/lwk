@@ -85,6 +85,9 @@ pub struct EsploraClient {
     /// The cached token for authenticated services, it will be Some only when
     /// the token provider is `TokenProvider::Blockstream`
     token: Arc<Mutex<Option<String>>>,
+
+    /// Applied per-request rather than on the reqwest::Client
+    timeout: Option<std::time::Duration>,
 }
 
 impl EsploraClient {
@@ -954,6 +957,18 @@ impl EsploraClient {
     const MAX_HTTP_RETRIES: u32 = 6;
 
     async fn get_with_retry(&self, url: &str) -> Result<Response, Error> {
+        self.get_with_retry_inner(url, true).await
+    }
+
+    async fn get_with_retry_no_timeout(&self, url: &str) -> Result<Response, Error> {
+        self.get_with_retry_inner(url, false).await
+    }
+
+    async fn get_with_retry_inner(
+        &self,
+        url: &str,
+        apply_timeout: bool,
+    ) -> Result<Response, Error> {
         let mut num_attempts = 0;
         let mut last_status = StatusCode::default();
 
@@ -961,6 +976,10 @@ impl EsploraClient {
             self.requests
                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             let builder = self.client.get(url);
+            let builder = match (apply_timeout, self.timeout) {
+                (true, Some(timeout)) => builder.timeout(timeout),
+                _ => builder,
+            };
             let builder = match &self.token_provider {
                 TokenProvider::None => builder,
                 TokenProvider::Static(token) => {
@@ -1050,6 +1069,10 @@ impl EsploraClient {
             self.requests
                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             let builder = self.client.post(url).body(body.to_owned());
+            let builder = match self.timeout {
+                Some(timeout) => builder.timeout(timeout),
+                None => builder,
+            };
             let builder = match &self.token_provider {
                 TokenProvider::None => builder,
                 TokenProvider::Static(token) => {
@@ -1156,15 +1179,10 @@ impl EsploraClientBuilder {
             ));
         }
         let headers = (&self.headers).try_into().expect("Expected valid headers");
-        #[cfg(target_arch = "wasm32")]
         let builder = reqwest::Client::builder().default_headers(headers);
-        #[cfg(not(target_arch = "wasm32"))]
-        let mut builder = reqwest::Client::builder().default_headers(headers);
-        // See https://github.com/seanmonstar/reqwest/issues/1135
-        #[cfg(not(target_arch = "wasm32"))]
-        if let Some(timeout) = self.timeout {
-            builder = builder.timeout(std::time::Duration::from_secs(timeout as u64));
-        }
+        let timeout = self
+            .timeout
+            .map(|t| std::time::Duration::from_secs(t as u64));
         let client = builder.build().expect("Failed to create client"); // TODO: handle error but note that this is equivalent to the new() which panics
         Ok(EsploraClient {
             client,
@@ -1180,6 +1198,7 @@ impl EsploraClientBuilder {
             requests: Arc::new(AtomicUsize::new(0)),
             waterfalls_encrypted_descriptors: HashMap::new(),
             token_provider: self.token_provider,
+            timeout,
             #[cfg(not(target_arch = "wasm32"))]
             token: Arc::new(tokio::sync::Mutex::new(None)),
             #[cfg(target_arch = "wasm32")]

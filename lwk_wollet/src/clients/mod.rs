@@ -37,6 +37,9 @@ pub use waterfalls::{
 #[cfg(any(feature = "esplora", feature = "electrum_oidc"))]
 pub(crate) mod oauth;
 
+#[cfg(feature = "esplora")]
+const DEFAULT_TIMEOUT: u8 = 5;
+
 /// A builder for the [`crate::clients::asyncr::EsploraClient`] or [`crate::clients::blocking::EsploraClient`]
 #[cfg(feature = "esplora")]
 #[derive(Debug, Clone)]
@@ -105,7 +108,7 @@ impl EsploraClientBuilder {
             utxo_only: false,
             network,
             headers: HashMap::new(),
-            timeout: None,
+            timeout: Some(DEFAULT_TIMEOUT),
             concurrency: None,
             token_provider: TokenProvider::None,
         }

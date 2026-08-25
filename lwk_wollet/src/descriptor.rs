@@ -801,16 +801,24 @@ impl WolletDescriptor {
     }
 
     /// Derives scripts for all chains in the descriptor up to a gap limit.
+    ///
+    /// Note: if the descriptor does not have a wildcard, gap limit is ignored.
     pub fn derive_scripts_to_gap_limit(&self, gap_limit: u32) -> Result<Vec<Script>, Error> {
         let mut scripts = Vec::with_capacity(gap_limit as usize * 2);
 
         for descriptor in self.as_single_descriptors()? {
-            let chain = (&descriptor)
-                .try_into()
-                .map_err(|_| Error::Generic("Descriptor to Chain conversion failed".to_string()))?;
-            for index in 0..gap_limit {
-                let script = descriptor.script_pubkey(chain, index)?;
-                scripts.push(script);
+            let chain = (&descriptor).try_into().unwrap_or(Chain::External);
+
+            if let Some(spk_count) = descriptor.spk_count() {
+                for index in 0..spk_count as u32 {
+                    scripts.push(descriptor.script_pubkey(chain, index)?);
+                }
+            } else if descriptor.has_wildcard() {
+                for index in 0..gap_limit {
+                    scripts.push(descriptor.script_pubkey(chain, index)?);
+                }
+            } else {
+                scripts.push(descriptor.script_pubkey(chain, 0)?);
             }
         }
 
@@ -1469,19 +1477,23 @@ fn wd_derive_scripts() {
     let wd: WolletDescriptor = wd.parse().unwrap();
     assert_eq!(wd.derive_scripts_to_gap_limit(20).unwrap().len(), 40);
 
+    // Multipath without a wildcard: one fixed address per chain.
     let wd = format!("ct(slip77({key}),elwpkh({xpub}/<0;1>))");
     let wd: WolletDescriptor = wd.parse().unwrap();
-    assert!(wd.derive_scripts_to_gap_limit(20).is_err());
+    assert_eq!(wd.derive_scripts_to_gap_limit(20).unwrap().len(), 2);
 
+    // Single chain with a wildcard: gap_limit scripts.
     let wd = format!("ct(slip77({key}),elwpkh({xpub}/*))");
     let wd: WolletDescriptor = wd.parse().unwrap();
-    assert!(wd.derive_scripts_to_gap_limit(20).is_err());
+    assert_eq!(wd.derive_scripts_to_gap_limit(20).unwrap().len(), 20);
 
+    // Single fixed address descriptor: just the one script.
     let wd = format!("ct(slip77({key}),elwpkh({xpub}))");
     let wd: WolletDescriptor = wd.parse().unwrap();
-    assert!(wd.derive_scripts_to_gap_limit(20).is_err());
+    assert_eq!(wd.derive_scripts_to_gap_limit(20).unwrap().len(), 1);
 
+    // Raw script pubkeys: all of them, regardless of gap_limit.
     let wd = format!("{key}:{spk_a},{key}:{spk_b}");
     let wd: WolletDescriptor = wd.parse().unwrap();
-    assert!(wd.derive_scripts_to_gap_limit(20).is_err());
+    assert_eq!(wd.derive_scripts_to_gap_limit(20).unwrap().len(), 2);
 }

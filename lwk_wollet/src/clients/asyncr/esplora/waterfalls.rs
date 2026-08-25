@@ -306,7 +306,9 @@ impl WaterfallsClient {
         self.inner.capabilities()
     }
 
-    /// Returns true if the wallet has any tx using the first gap limit addresses.
+    /// Returns true if the wallet has any tx using the first gap_limit addresses (default 20)
+    ///
+    /// Note: if the descriptor does not have a wildcard, gap limit is ignored.
     pub async fn has_txs(
         &self,
         descriptor: &WolletDescriptor,

@@ -156,7 +156,9 @@ impl ElectrumClient {
         Ok(Arc::new(tip.into()))
     }
 
-    /// Whether the descriptor has any tx using the first `gap_limit` addresses (default 20)
+    /// Returns true if the wallet has any tx using the first gap_limit addresses (default 20)
+    ///
+    /// Note: if the descriptor does not have a wildcard, gap limit is ignored.
     pub fn has_txs(
         &self,
         descriptor: &WolletDescriptor,

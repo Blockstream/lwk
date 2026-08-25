@@ -231,3 +231,127 @@ pub(crate) fn pset_outputs_details(
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pset_outputs_details() {
+        let pset_str = include_str!("../test_data/pset_outputs/pset.base64");
+        let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
+        let desc_str = include_str!("../test_data/pset_outputs/descriptor");
+        let desc: ConfidentialDescriptor<MiniscriptDescriptorPublicKey> = desc_str.parse().unwrap();
+        let outputs = pset_outputs_details(&pset, &desc).unwrap();
+        let testnet_asset = *crate::Network::TestnetLiquid.policy_asset();
+
+        assert_eq!(outputs.len(), 3);
+
+        // external recipient
+        let recipient = &outputs[0];
+        assert_eq!(recipient.vout(), 0);
+        assert!(!recipient.is_owned());
+        assert!(!recipient.is_fee());
+        assert!(recipient.is_fully_confidential());
+        assert!(!recipient.is_fully_explicit());
+        assert!(recipient.derivation_path().is_none());
+        assert_eq!(recipient.asset().unwrap(), testnet_asset);
+        assert_eq!(recipient.satoshi(), Some(120));
+
+        // change output
+        let change = &outputs[1];
+        assert_eq!(change.vout(), 1);
+        assert!(change.is_owned());
+        assert!(!change.is_fee());
+        assert!(change.is_fully_confidential());
+        assert_eq!(
+            change.derivation_path().unwrap().to_string(),
+            "84'/1'/0'/1/4"
+        );
+        assert_eq!(change.satoshi(), Some(88643));
+
+        // fee output
+        let fee = &outputs[2];
+        assert_eq!(fee.vout(), 2);
+        assert!(fee.is_fee());
+        assert!(fee.is_fully_explicit());
+        assert!(!fee.is_fully_confidential());
+        assert!(!fee.is_owned());
+        assert!(fee.derivation_path().is_none());
+        assert_eq!(fee.asset().unwrap(), testnet_asset);
+        assert_eq!(fee.satoshi(), Some(26));
+
+        // PsetDetails::outputs() is filled in as well
+        let details =
+            crate::model::PsetDetails::new(&pset, &desc, &crate::Network::TestnetLiquid).unwrap();
+        let outputs = details.outputs();
+        assert_eq!(outputs.len(), 3);
+        assert!(!outputs[0].is_owned());
+        assert!(outputs[1].is_owned());
+        assert!(outputs[2].is_fee());
+
+        // without blind proofs the blinded change output cannot be verified
+        let mut pset_no_proofs = pset.clone();
+        let change = &mut pset_no_proofs.outputs_mut()[1];
+        assert!(change.blind_asset_proof.is_some());
+        assert!(change.blind_value_proof.is_some());
+        change.blind_asset_proof = None;
+        change.blind_value_proof = None;
+
+        let outputs = pset_outputs_details(&pset_no_proofs, &desc).unwrap();
+        let change = &outputs[1];
+        assert!(change.is_owned());
+        assert_eq!(change.asset(), None);
+        assert_eq!(change.satoshi(), None);
+
+        // corrupt the asset of the external recipient so the asset blind proof fails
+        let mut pset_invalid_asset = pset.clone();
+
+        pset_invalid_asset.outputs_mut()[0].asset = Some(*crate::Network::Liquid.policy_asset());
+
+        let err = pset_outputs_details(&pset_invalid_asset, &desc).unwrap_err();
+        assert!(matches!(
+            err,
+            crate::Error::InvalidAssetBlindProof { idx: 0 }
+        ));
+
+        // corrupt the amount of the external recipient so the value blind proof fails
+        // while the asset blind proof still verifies
+        let mut pset_invalid_value = pset.clone();
+        pset_invalid_value.outputs_mut()[0].amount = Some(9999);
+
+        let err = pset_outputs_details(&pset_invalid_value, &desc).unwrap_err();
+        assert!(matches!(
+            err,
+            crate::Error::InvalidValueBlindProof { idx: 0 }
+        ));
+
+        // make the owned change output only partially blinded by removing the amount
+        // commitment, so that neither the asset nor the amount can be verified
+        let mut pset_partially_blinded = pset.clone();
+        pset_partially_blinded.outputs_mut()[1].amount_comm = None;
+
+        let outputs = pset_outputs_details(&pset_partially_blinded, &desc).unwrap();
+        let change = &outputs[1];
+        assert!(change.is_owned());
+        assert_eq!(change.asset(), None);
+        assert_eq!(change.satoshi(), None);
+        assert!(!change.is_fully_confidential());
+        assert!(!change.is_fully_explicit());
+
+        // an explicit output with a blinding field present
+        let mut pset_explicit_with_blinding_key = pset.clone();
+        let secp = elements::secp256k1_zkp::Secp256k1::new();
+        let secret = elements::secp256k1_zkp::SecretKey::from_slice(&[0x01u8; 32]).unwrap();
+        pset_explicit_with_blinding_key.outputs_mut()[2].blinding_key =
+            Some(elements::bitcoin::PublicKey::new(
+                elements::secp256k1_zkp::PublicKey::from_secret_key(&secp, &secret),
+            ));
+
+        let outputs = pset_outputs_details(&pset_explicit_with_blinding_key, &desc).unwrap();
+        let fee = &outputs[2];
+        assert!(!fee.is_fully_explicit());
+        assert_eq!(fee.asset(), None);
+        assert_eq!(fee.satoshi(), None);
+    }
+}

@@ -399,9 +399,20 @@ impl<S: Stream> Amp0<S> {
             )));
         }
 
-        let tx = j.tx.unwrap_or_default();
-        let tx: Transaction = deserialize(&Vec::<u8>::from_hex(&tx)?)?;
-        Ok(tx)
+        let response_tx = j.tx.unwrap_or_default();
+        let response_tx: Transaction = deserialize(&Vec::<u8>::from_hex(&response_tx)?)?;
+
+        let server_master = server_master_xpub(&self.network);
+        let expected_server_fg = server_master.fingerprint();
+
+        verify_added_sigs_tx(
+            amp0pset.pset(),
+            &tx,
+            &response_tx,
+            expected_server_fg,
+            &dummy,
+        )?;
+        Ok(response_tx)
     }
 }
 

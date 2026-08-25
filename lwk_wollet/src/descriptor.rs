@@ -1457,3 +1457,31 @@ fn test_elip_dwid() {
         println!("** DWID: <code>{dwid}</code>\n");
     }
 }
+
+#[test]
+fn wd_derive_scripts() {
+    let xpub = "tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA";
+    let key = "0000000000000000000000000000000000000000000000000000000000000001";
+    let spk_a = "0014000000000000000000000000000000000000000a";
+    let spk_b = "0014000000000000000000000000000000000000000b";
+
+    let wd = format!("ct(slip77({key}),elwpkh({xpub}/<0;1>/*))");
+    let wd: WolletDescriptor = wd.parse().unwrap();
+    assert_eq!(wd.derive_scripts_to_gap_limit(20).unwrap().len(), 40);
+
+    let wd = format!("ct(slip77({key}),elwpkh({xpub}/<0;1>))");
+    let wd: WolletDescriptor = wd.parse().unwrap();
+    assert!(wd.derive_scripts_to_gap_limit(20).is_err());
+
+    let wd = format!("ct(slip77({key}),elwpkh({xpub}/*))");
+    let wd: WolletDescriptor = wd.parse().unwrap();
+    assert!(wd.derive_scripts_to_gap_limit(20).is_err());
+
+    let wd = format!("ct(slip77({key}),elwpkh({xpub}))");
+    let wd: WolletDescriptor = wd.parse().unwrap();
+    assert!(wd.derive_scripts_to_gap_limit(20).is_err());
+
+    let wd = format!("{key}:{spk_a},{key}:{spk_b}");
+    let wd: WolletDescriptor = wd.parse().unwrap();
+    assert!(wd.derive_scripts_to_gap_limit(20).is_err());
+}

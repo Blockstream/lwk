@@ -61,6 +61,7 @@ pub use crate::store::{
     FileStore, MemoryStore, Store,
 };
 pub use fee::*;
+pub use output::OutputDetails;
 
 /// A trait for async read/write operations used by hardware wallet connections
 pub trait Stream {

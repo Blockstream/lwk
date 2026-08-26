@@ -44,6 +44,16 @@ curl -Ls "https://bitcoincore.org/bin/bitcoin-core-${BITCOIND_VERSION}/${BITCOIN
 echo "${BITCOIND_EXPECTED_SHA256}  ${BITCOIND_FILENAME}" | sha256sum -c -
 tar -xzf "${BITCOIND_FILENAME}" && rm "${BITCOIND_FILENAME}"
 
+# lightningd (Core Lightning)
+LIGHTNINGD_VERSION=26.06.6
+LIGHTNINGD_EXPECTED_SHA256="b38b0bcf535d925e37c9b465a0ce6aa580e3f66be36bada860599f3a8e1efc8e"
+
+LIGHTNINGD_FILENAME="clightning-v${LIGHTNINGD_VERSION}-Ubuntu-22.04-amd64.tar.xz"
+curl -Ls "https://github.com/ElementsProject/lightning/releases/download/v${LIGHTNINGD_VERSION}/${LIGHTNINGD_FILENAME}" -o "${LIGHTNINGD_FILENAME}"
+echo "${LIGHTNINGD_EXPECTED_SHA256}  ${LIGHTNINGD_FILENAME}" | sha256sum -c -
+mkdir -p "clightning-${LIGHTNINGD_VERSION}"
+tar -xJf "${LIGHTNINGD_FILENAME}" -C "clightning-${LIGHTNINGD_VERSION}" && rm "${LIGHTNINGD_FILENAME}"
+
 # asset registry
 ASSET_REGISTRY_FILENAME="asset_registry_server_5ecf533.gz"
 ASSET_REGISTRY_EXPECTED_SHA256="fbfbb996954d6e369f3e5202ef3e2d4885f1fc34b49a2af63be5278e267d9d62"

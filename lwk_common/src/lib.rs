@@ -152,25 +152,13 @@ fn commitments(
     (asset_comm, amount_comm)
 }
 
+/// Return whether an output belongs to the given descriptor, along with its derivation path.
 fn is_mine(
     script_pubkey: &Script,
     descriptor: &ConfidentialDescriptor<MiniscriptDescriptorPublicKey>,
     bip32_derivation: &BTreeMap<BitcoinPublicKey, (Fingerprint, DerivationPath)>,
     tap_key_origins: &BTreeMap<XOnlyPublicKey, (Vec<TapLeafHash>, (Fingerprint, DerivationPath))>,
-) -> Result<bool, Error> {
-    // Without a wildcard the derivation index is irrelevant: every index derives the same
-    // script for a given (possibly multi-path) single descriptor. So we can check for a match
-    // directly, without relying on any derivation info from the PSET.
-    if !descriptor.descriptor.has_wildcard() {
-        for d in descriptor.descriptor.clone().into_single_descriptors()? {
-            let mine = d.at_derivation_index(0)?.script_pubkey();
-            if &mine == script_pubkey {
-                return Ok(true);
-            }
-        }
-        return Ok(false);
-    }
-
+) -> Result<(bool, Option<DerivationPath>), Error> {
     let paths: Vec<&DerivationPath> = if script_pubkey.is_v1_p2tr() {
         tap_key_origins
             .values()
@@ -179,6 +167,20 @@ fn is_mine(
     } else {
         bip32_derivation.values().map(|(_, path)| path).collect()
     };
+
+    // Without a wildcard the derivation index is irrelevant: every index derives the same
+    // script for a given (possibly multi-path) single descriptor. So we can check for a match
+    // directly, without relying on any derivation info from the PSET.
+    if !descriptor.descriptor.has_wildcard() {
+        for d in descriptor.descriptor.clone().into_single_descriptors()? {
+            let mine = d.at_derivation_index(0)?.script_pubkey();
+            if &mine == script_pubkey {
+                return Ok((true, paths.first().cloned().cloned()));
+            }
+        }
+        return Ok((false, None));
+    }
+
     for path in paths {
         // TODO should I check descriptor derivation path is compatible with given bip32_derivation?
         // TODO consider fingerprint if available
@@ -192,11 +194,11 @@ fn is_mine(
                 .at_derivation_index(wildcard_index.into())?
                 .script_pubkey();
             if &mine == script_pubkey {
-                return Ok(true);
+                return Ok((true, Some(path.clone())));
             }
         }
     }
-    Ok(false)
+    Ok((false, None))
 }
 
 /// Return the net balance of a PSET from the perspective of the given `descriptor`.
@@ -228,6 +230,7 @@ pub fn pset_balance(
                     &input.bip32_derivation,
                     &input.tap_key_origins,
                 )
+                .map(|(is_owned, _)| is_owned)
                 .unwrap_or(false)
                 {
                     // Ignore outputs we don't own
@@ -319,6 +322,7 @@ pub fn pset_balance(
             &output.bip32_derivation,
             &output.tap_key_origins,
         )
+        .map(|(is_owned, _)| is_owned)
         .unwrap_or(false)
         {
             // external recipients

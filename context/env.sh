@@ -5,6 +5,7 @@ export ELEMENTS_CLI_EXEC="$PWD/bin/elements-23.3.1/bin/elements-cli"
 export BITCOIND_EXEC="$PWD/bin/bitcoin-26.0/bin/bitcoind"
 export WATERFALLS_EXEC="$PWD/bin/waterfalls_c35c3dd"
 export ASSET_REGISTRY_EXEC="$PWD/bin/asset_registry_server_5ecf533"
+export LIGHTNINGD_EXEC="$PWD/bin/clightning-26.06.6/usr/bin/lightningd"
 export JADE_EMULATOR_IMAGE_NAME=xenoky/local-jade-emulator
 export JADE_EMULATOR_IMAGE_VERSION="1.0.41-beta1"
 export PIN_SERVER_IMAGE_NAME=tulipan81/blind_pin_server

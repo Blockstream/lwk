@@ -23,6 +23,7 @@ use serde_json::Value;
 use std::net::TcpListener;
 use std::str::FromStr;
 use std::time::Duration;
+use tempfile::TempDir;
 
 /// Configure and start the test environment
 pub struct TestEnvBuilder {
@@ -35,6 +36,8 @@ pub struct TestEnvBuilder {
     waterfalls_exec: String,
     registry_exec: String,
     amp2_exec: String,
+    anyswap_exec: String,
+    anyswap_config: String,
     with_electrum: bool,
     with_esplora: bool,
     with_bitcoin_esplora: bool,
@@ -47,6 +50,7 @@ pub struct TestEnvBuilder {
     with_amp2: bool,
     with_zmq: bool,
     with_auth: bool,
+    with_anyswap: bool,
     fedpeg_script: Option<String>,
 }
 
@@ -62,6 +66,8 @@ impl TestEnvBuilder {
     /// * WATERFALLS_EXEC
     /// * ASSET_REGISTRY_EXEC
     /// * AMP2_MOCK_EXEC
+    /// * ANYSWAP_EXEC
+    /// * ANYSWAP_CONFIG
     pub fn from_env() -> Self {
         let elementsd_exec = std::env::var("ELEMENTSD_EXEC").unwrap_or_default();
         let electrs_exec = std::env::var("ELECTRS_LIQUID_EXEC").unwrap_or_default();
@@ -72,6 +78,8 @@ impl TestEnvBuilder {
         let waterfalls_exec = std::env::var("WATERFALLS_EXEC").unwrap_or_default();
         let registry_exec = std::env::var("ASSET_REGISTRY_EXEC").unwrap_or_default();
         let amp2_exec = std::env::var("AMP2_MOCK_EXEC").unwrap_or_default();
+        let anyswap_exec = std::env::var("ANYSWAP_EXEC").unwrap_or_default();
+        let anyswap_config = std::env::var("ANYSWAP_CONFIG").unwrap_or_default();
 
         Self {
             elementsd_exec,
@@ -83,6 +91,8 @@ impl TestEnvBuilder {
             waterfalls_exec,
             registry_exec,
             amp2_exec,
+            anyswap_exec,
+            anyswap_config,
             with_electrum: false,
             with_esplora: false,
             with_bitcoin_esplora: false,
@@ -95,6 +105,7 @@ impl TestEnvBuilder {
             with_amp2: false,
             with_zmq: false,
             with_auth: false,
+            with_anyswap: false,
             fedpeg_script: None,
         }
     }
@@ -183,6 +194,12 @@ impl TestEnvBuilder {
         self
     }
 
+    /// Load the `anyswap` CLN plugin into the `lightningd` node
+    pub fn with_anyswap(mut self) -> Self {
+        self.with_anyswap = true;
+        self
+    }
+
     /// Start the test environment
     pub fn build(self) -> TestEnv {
         if self.elementsd_exec.is_empty() {
@@ -228,6 +245,14 @@ impl TestEnvBuilder {
         }
         if self.with_auth && self.with_esplora && self.with_waterfalls {
             panic!("auth gateway fronts either esplora or waterfalls, not both (yet): enable only one of them with 'with_auth()'");
+        }
+        if self.with_anyswap && (self.anyswap_exec.is_empty() || self.anyswap_config.is_empty()) {
+            panic!("ANYSWAP_EXEC and ANYSWAP_CONFIG must be set");
+        }
+        if self.with_anyswap
+            && (!self.with_lightningd || !self.with_esplora || !self.with_bitcoin_esplora)
+        {
+            panic!("anyswap requires 'with_lightningd()', 'with_esplora()' and 'with_bitcoin_esplora()'");
         }
 
         init_logging();
@@ -395,6 +420,9 @@ impl TestEnvBuilder {
             None
         };
 
+        let mut anyswap_config_dir: Option<TempDir> = None;
+        let mut anyswap_url: Option<String> = None;
+
         let lightningd = if self.with_lightningd {
             let node = bitcoind
                 .as_ref()
@@ -402,9 +430,81 @@ impl TestEnvBuilder {
             // lightningd waits for the Bitcoin backend to be in sync; a fresh regtest
             // node otherwise never leaves "not up-to-date with network".
             TestEnv::bitcoind_generate_(&node.client, 1);
-            let args = vec![format!("--bitcoin-cli={}", self.bitcoincli_exec)];
+            let mut args = vec![format!("--bitcoin-cli={}", self.bitcoincli_exec)];
+            let mut envs = vec![];
 
-            let conf = crate::lightningd::Conf { view_stdout, args };
+            if self.with_anyswap {
+                let port = TcpListener::bind(("127.0.0.1", 0))
+                    .unwrap()
+                    .local_addr()
+                    .unwrap()
+                    .port();
+
+                let esplora_liquid = electrsd
+                    .as_ref()
+                    .and_then(|e| e.esplora_url.as_ref())
+                    .expect("with_anyswap() requires with_esplora()");
+                let electrum_liquid = &electrsd
+                    .as_ref()
+                    .expect("with_anyswap() requires with_esplora()")
+                    .electrum_url;
+                let esplora_bitcoin = bitcoin_electrsd
+                    .as_ref()
+                    .and_then(|e| e.esplora_url.as_ref())
+                    .expect("with_anyswap() requires with_bitcoin_esplora()");
+                let elements_cookie = elementsd.params.get_cookie_values().unwrap().unwrap();
+                let policy_asset: Value = elementsd.client.call("getsidechaininfo", &[]).unwrap();
+                let policy_asset = policy_asset.get("pegged_asset").unwrap().as_str().unwrap();
+                // The config's `[elements].wallet_name` addresses this wallet by name.
+                elementsd.create_wallet("anyswap").unwrap();
+
+                let config = std::fs::read_to_string(&self.anyswap_config)
+                    .expect("failed to read ANYSWAP_CONFIG")
+                    .replace("@@PORT@@", &port.to_string())
+                    .replace("@@LIQUID_ASSET_ID@@", policy_asset)
+                    .replace(
+                        "@@ESPLORA_LIQUID_URL@@",
+                        &format!("http://{esplora_liquid}"),
+                    )
+                    .replace(
+                        "@@ELECTRUM_LIQUID_URL@@",
+                        &format!("tcp://{electrum_liquid}"),
+                    )
+                    .replace(
+                        "@@ESPLORA_BITCOIN_URL@@",
+                        &format!("http://{esplora_bitcoin}"),
+                    )
+                    .replace("@@ELEMENTS_RPC_URL@@", &elementsd.rpc_url())
+                    .replace("@@ELEMENTS_RPC_USER@@", &elements_cookie.user)
+                    .replace("@@ELEMENTS_RPC_PASSWORD@@", &elements_cookie.password);
+
+                let config_dir = TempDir::new().unwrap();
+                let config_path = config_dir.path().join("config.toml");
+                std::fs::write(&config_path, config).unwrap();
+
+                args.push(format!("--important-plugin={}", self.anyswap_exec));
+                args.push(format!("--anyswap-config={}", config_path.display()));
+                args.push("--anyswap-reset-policy".to_string());
+
+                envs.push((
+                    "ELEMENTS_RPC_USER".to_string(),
+                    elements_cookie.user.clone(),
+                ));
+                envs.push((
+                    "ELEMENTS_RPC_PASSWORD".to_string(),
+                    elements_cookie.password.clone(),
+                ));
+                envs.push(("ELEMENTS_WALLET_NAME".to_string(), "anyswap".to_string()));
+
+                anyswap_config_dir = Some(config_dir);
+                anyswap_url = Some(format!("http://127.0.0.1:{port}"));
+            }
+
+            let conf = crate::lightningd::Conf {
+                view_stdout,
+                args,
+                envs,
+            };
             Some(LightningD::with_conf(&self.lightningd_exec, node, &conf))
         } else {
             None
@@ -474,6 +574,8 @@ impl TestEnvBuilder {
             esplora_url,
             waterfalls_url,
             electrum_url,
+            _anyswap_config_dir: anyswap_config_dir,
+            anyswap_url,
         }
     }
 }
@@ -498,6 +600,8 @@ pub struct TestEnv {
     esplora_url: Option<String>,
     waterfalls_url: Option<String>,
     electrum_url: Option<String>,
+    _anyswap_config_dir: Option<TempDir>,
+    anyswap_url: Option<String>,
 }
 
 impl TestEnv {
@@ -538,6 +642,12 @@ impl TestEnv {
 
     pub fn amp2_url(&self) -> String {
         self.amp2d.as_ref().unwrap().url().to_string()
+    }
+
+    pub fn anyswap_url(&self) -> String {
+        self.anyswap_url
+            .clone()
+            .expect("anyswap is not enabled, call 'with_anyswap()'")
     }
 
     /// The OAuth2 token endpoint of the auth gateway (requires `with_auth`)

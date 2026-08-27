@@ -51,16 +51,13 @@ pub enum PsetValidationError {
 // TODO: upstream to rust elements
 /// Extract the genesis block hash from the PSET global proprietary fields as defined in
 /// [ELIP-101](https://github.com/ElementsProject/ELIPs/blob/main/elip-0101.mediawiki).
-///
-/// Returns [`BlockHash::all_zeros`] if the field is absent or malformed.
-pub fn get_genesis_hash(pset: &PartiallySignedTransaction) -> BlockHash {
+pub fn get_genesis_hash(pset: &PartiallySignedTransaction) -> Option<BlockHash> {
     let key = ProprietaryKey::from_pset_pair(PSBT_ELEMENTS_GLOBAL_GENESIS_HASH, vec![]);
     pset.global
         .proprietary
         .get(&key)
         .and_then(|v| v.as_slice().try_into().ok())
         .map(BlockHash::from_byte_array)
-        .unwrap_or(BlockHash::all_zeros())
 }
 
 // TODO: upstream to rust elements
@@ -106,7 +103,7 @@ pub fn verify_added_sigs<C: elements::secp256k1_zkp::Verification>(
     let mut env = VerifyEnv {
         pset: returned,
         cache: SighashCache::new(Box::new(tx)),
-        genesis_hash: get_genesis_hash(returned),
+        genesis_hash: get_genesis_hash(returned).unwrap_or(BlockHash::all_zeros()),
         secp,
     };
 
@@ -549,6 +546,9 @@ mod tests {
         let serialized = serialize(&pset);
         let deserialized: PartiallySignedTransaction = deserialize(&serialized).unwrap();
 
-        assert_eq!(get_genesis_hash(&deserialized), network.genesis_hash());
+        assert_eq!(
+            get_genesis_hash(&deserialized),
+            Some(network.genesis_hash())
+        );
     }
 }

@@ -39,7 +39,7 @@ use elements::{
     pset::{serialize::Serialize, PartiallySignedTransaction},
     script::Instruction,
     secp256k1_zkp::{Secp256k1, VerifyOnly},
-    BlockHash, Script,
+    Script,
 };
 pub use error::Error;
 use get_receive_address::{SingleOrMulti, Variant};
@@ -279,11 +279,7 @@ fn create_jade_sign_req(
     let genesis_hash = get_genesis_hash(pset);
 
     let params = SignLiquidTxParams {
-        genesis_hash: if genesis_hash != BlockHash::all_zeros() {
-            Some(genesis_hash.as_byte_array().to_vec())
-        } else {
-            None
-        },
+        genesis_hash: genesis_hash.map(|h| h.as_byte_array().to_vec()),
         network,
         txn,
         num_inputs: tx.input.len() as u32,

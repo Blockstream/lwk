@@ -4,6 +4,7 @@ export ELECTRS_BITCOIN_EXEC="$PWD/bin/electrs_linux_esplora_027e38d3ebc2f85b28ae
 export ELEMENTSD_EXEC="$PWD/bin/elements-23.3.1/bin/elementsd"
 export ELEMENTS_CLI_EXEC="$PWD/bin/elements-23.3.1/bin/elements-cli"
 export BITCOIND_EXEC="$PWD/bin/bitcoin-26.0/bin/bitcoind"
+export BITCOINCLI_EXEC="$PWD/bin/bitcoin-26.0/bin/bitcoin-cli"
 export WATERFALLS_EXEC="$PWD/bin/waterfalls_c35c3dd"
 export ASSET_REGISTRY_EXEC="$PWD/bin/asset_registry_server_5ecf533"
 export LIGHTNINGD_EXEC="$PWD/bin/clightning-26.06.6/usr/bin/lightningd"

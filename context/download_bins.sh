@@ -16,6 +16,16 @@ unzip "${ELECTRS_FILENAME}" && rm "${ELECTRS_FILENAME}"
 ELECTRS_NAME="${ELECTRS_FILENAME%.zip}"
 mv electrs "${ELECTRS_NAME}" && chmod +x "${ELECTRS_NAME}"
 
+# electrs bitcoin
+ELECTRS_BTC_FILENAME="electrs_linux_esplora_027e38d3ebc2f85b28ae76f8f3448438ee4fc7b1.zip"
+ELECTRS_BTC_EXPECTED_SHA256="c7d2abb51b3af8fa1d6d4db8f1d061c7f9095c9187979b4795c746f467bf42a0"
+
+wget "https://github.com/LeoComandini/electrsd/releases/download/027e38d/${ELECTRS_BTC_FILENAME}"
+echo "${ELECTRS_BTC_EXPECTED_SHA256}  ${ELECTRS_BTC_FILENAME}" | sha256sum -c -
+unzip "${ELECTRS_BTC_FILENAME}" && rm "${ELECTRS_BTC_FILENAME}"
+ELECTRS_BTC_NAME="${ELECTRS_BTC_FILENAME%.zip}"
+mv electrs "${ELECTRS_BTC_NAME}" && chmod +x "${ELECTRS_BTC_NAME}"
+
 # waterfalls
 WATERFALLS_FILENAME="waterfalls_c35c3dd.gz"
 WATERFALLS_EXPECTED_SHA256="55c70bf40a86b362055d5d11b406f6f75751f74fdb591c083c99c35e1070e869"

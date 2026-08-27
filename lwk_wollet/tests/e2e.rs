@@ -4,6 +4,7 @@ mod amp2;
 mod auth;
 mod blinders;
 mod blockchain_backend;
+mod coin_selection;
 mod elements_wallet;
 mod fees;
 mod issuance;
@@ -1877,14 +1878,17 @@ fn test_external_not_lwk() {
 
     let utxo = &w2.wollet.utxos().unwrap()[0];
     let external_utxo = w2.make_external(utxo);
+    let w1_utxo = w1.wollet.utxos().unwrap()[0].outpoint;
 
     let node_address = env.elementsd_getnewaddress();
+    // Select w1 utxo explicitly, so that s1 has an input to sign.
     let mut pset = w1
         .tx_builder()
         .add_lbtc_recipient(&node_address, 110_000)
         .unwrap()
         .add_external_utxos(vec![external_utxo])
         .unwrap()
+        .set_wallet_utxos(vec![w1_utxo])
         .finish()
         .unwrap();
 
@@ -2753,15 +2757,17 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
     let (asset, token) = w.issueasset(&signers, 10, 1, None, None);
     env.elementsd_generate(1);
     let utxos = w.wollet.utxos().unwrap();
-    assert_eq!(utxos.len(), 3);
-    let asset_utxo = &utxos[1];
+    // The issuance selected only the L-BTC utxos it needed, so the other one is untouched
+    assert_eq!(utxos.len(), 4);
+    let asset_utxo = &utxos[2];
     assert_eq!(asset_utxo.unblinded.value, 10);
     assert_eq!(asset_utxo.unblinded.asset, asset);
-    let token_utxo = &utxos[2];
+    let token_utxo = &utxos[3];
     assert_eq!(token_utxo.unblinded.value, 1);
     assert_eq!(token_utxo.unblinded.asset, token);
     let lbtc_utxo = &utxos[0];
     assert_eq!(lbtc_utxo.unblinded.asset, policy_asset);
+    assert_eq!(utxos[1].unblinded.asset, policy_asset);
 
     // Asset manual coin selection
     // If some utxos are selected, no other utxos are added

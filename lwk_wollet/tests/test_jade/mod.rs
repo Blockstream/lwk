@@ -175,14 +175,17 @@ fn sign_mixed_jade_input(env: &TestEnv, signer: &AnySigner) {
     sw_wallet.fund_btc(env);
     let utxo = sw_wallet.wollet.utxos().unwrap()[0].clone();
     let external_utxo = sw_wallet.make_external(&utxo);
+    let jade_utxo = jade_wallet.wollet.utxos().unwrap()[0].outpoint;
 
     let node_address = env.elementsd_getnewaddress();
+    // Select the jade utxo explicitly, so that jade has an input to sign.
     let mut pset = jade_wallet
         .tx_builder()
         .add_lbtc_recipient(&node_address, 110_000)
         .unwrap()
         .add_external_utxos(vec![external_utxo])
         .unwrap()
+        .set_wallet_utxos(vec![jade_utxo])
         .finish()
         .unwrap();
 

@@ -203,6 +203,27 @@ pub(crate) fn add_input_inner(
     Ok(idx)
 }
 
+/// Weight of the transaction that the given pset will produce
+fn measure_weight(
+    pset: &PartiallySignedTransaction,
+    inp_txout_sec: &HashMap<usize, TxOutSecrets>,
+    inp_weight: usize,
+    ct_discount: bool,
+) -> Result<usize, Error> {
+    let mut rng = thread_rng();
+    let mut temp_pset = pset.clone();
+    if needs_blinding(&temp_pset)? {
+        temp_pset.blind_last(&mut rng, &EC, inp_txout_sec)?;
+    }
+    let tx = temp_pset.extract_tx()?;
+    let tx_weight = if ct_discount {
+        tx.discount_weight()
+    } else {
+        tx.weight()
+    };
+    Ok(inp_weight + tx_weight)
+}
+
 /// A transaction builder
 ///
 /// See [`WolletTxBuilder`] for usage from rust.
@@ -1276,6 +1297,13 @@ impl TxBuilder {
             }
         }
 
+        let issuances_len = match &self.issuances {
+            Issuances::Sequential(requests) => requests.len(),
+            Issuances::None | Issuances::Pinned(_) => 0,
+        };
+
+        let mut lbtc_candidates: Vec<&WalletTxOut> = vec![];
+
         // L-BTC inputs and outputs
         // Fee and L-BTC change after (re)issuance
         let mut satoshi_out = 0;
@@ -1353,8 +1381,23 @@ impl TxBuilder {
                 satoshi_in += utxo.unblinded.value;
             }
         } else {
-            // FIXME: For implementation simplicity now we always add all L-BTC inputs
-            for utxo in utxos.values().filter(|u| u.unblinded.asset == policy_asset) {
+            // Add L-BTC inputs to cover the recipients, largest utxos first
+            lbtc_candidates = utxos
+                .values()
+                .filter(|u| u.unblinded.asset == policy_asset)
+                .collect();
+
+            lbtc_candidates.sort_by(|a, b| {
+                a.unblinded
+                    .value
+                    .cmp(&b.unblinded.value)
+                    .then(a.outpoint.cmp(&b.outpoint))
+            });
+
+            while self.drain_lbtc || satoshi_in < satoshi_out || pset.n_inputs() < issuances_len {
+                let Some(utxo) = lbtc_candidates.pop() else {
+                    break;
+                };
                 wollet.add_input(
                     &mut pset,
                     &mut inp_txout_sec,
@@ -1574,14 +1617,22 @@ impl TxBuilder {
 
         // TODO: consider a zero value output to balance the blinders
 
-        // Add a temporary fee, and always add a change or drain output,
-        // then we'll tweak those values to match the given fee rate.
         let temp_fee = 1;
-        if satoshi_in <= (satoshi_out + temp_fee) {
-            return Err(Error::InsufficientFunds {
-                missing_sats: (satoshi_out + temp_fee + 1) - satoshi_in, // +1 to ensure we have more than just equal
-                asset_id: wollet.policy_asset(),
-            });
+        while satoshi_in <= (satoshi_out + temp_fee) {
+            let Some(utxo) = lbtc_candidates.pop() else {
+                return Err(Error::InsufficientFunds {
+                    missing_sats: (satoshi_out + temp_fee + 1) - satoshi_in, // +1 to ensure we have more than just equal
+                    asset_id: wollet.policy_asset(),
+                });
+            };
+            wollet.add_input(
+                &mut pset,
+                &mut inp_txout_sec,
+                &mut inp_weight,
+                utxo,
+                self.add_input_rangeproofs,
+            )?;
+            satoshi_in += utxo.unblinded.value;
         }
         let satoshi_change = satoshi_in - satoshi_out - temp_fee;
         let addressee = if let Some(address) = self.drain_to {
@@ -1598,29 +1649,41 @@ impl TxBuilder {
             Output::new_explicit(Script::default(), temp_fee, wollet.policy_asset(), None);
         pset.add_output(fee_output);
 
-        let weight = {
-            let mut rng = thread_rng();
-            let mut temp_pset = pset.clone();
-            if needs_blinding(&temp_pset)? {
-                temp_pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
+        // Measure the fee and, if it's not covered, add more
+        // inputs and measure again.
+        let mut fee = calculate_fee(
+            measure_weight(&pset, &inp_txout_sec, inp_weight, self.ct_discount)?,
+            self.fee_rate,
+        );
+        while satoshi_in <= (satoshi_out + fee) {
+            let missing_sats = (satoshi_out + fee + 1) - satoshi_in; // +1 to ensure we have more than just equal
+            if lbtc_candidates.is_empty() {
+                return Err(Error::InsufficientFunds {
+                    missing_sats,
+                    asset_id: wollet.policy_asset(),
+                });
             }
-            let tx_weight = {
-                let tx = temp_pset.extract_tx()?;
-                if self.ct_discount {
-                    tx.discount_weight()
-                } else {
-                    tx.weight()
-                }
-            };
-            inp_weight + tx_weight
-        };
 
-        let fee = calculate_fee(weight, self.fee_rate);
-        if satoshi_in <= (satoshi_out + fee) {
-            return Err(Error::InsufficientFunds {
-                missing_sats: (satoshi_out + fee + 1) - satoshi_in, // +1 to ensure we have more than just equal
-                asset_id: wollet.policy_asset(),
-            });
+            let mut missing = missing_sats;
+            while missing > 0 {
+                let Some(utxo) = lbtc_candidates.pop() else {
+                    break;
+                };
+                wollet.add_input(
+                    &mut pset,
+                    &mut inp_txout_sec,
+                    &mut inp_weight,
+                    utxo,
+                    self.add_input_rangeproofs,
+                )?;
+                satoshi_in += utxo.unblinded.value;
+                missing = missing.saturating_sub(utxo.unblinded.value);
+            }
+
+            fee = calculate_fee(
+                measure_weight(&pset, &inp_txout_sec, inp_weight, self.ct_discount)?,
+                self.fee_rate,
+            );
         }
         let satoshi_change = satoshi_in - satoshi_out - fee;
         // Replace change and fee outputs

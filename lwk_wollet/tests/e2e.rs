@@ -8,6 +8,7 @@ mod coin_selection;
 mod elements_wallet;
 mod fees;
 mod issuance;
+mod lightning;
 mod pegin;
 mod prune;
 #[cfg(feature = "registry")]

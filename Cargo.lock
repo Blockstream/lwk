@@ -2918,6 +2918,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "lwk_registry"
+version = "0.19.0"
+
+[[package]]
 name = "lwk_rpc_model"
 version = "0.19.0"
 dependencies = [

@@ -1,0 +1,12 @@
+[package]
+name = "lwk_anyswap"
+version = "0.19.0"
+edition = "2021"
+description = "Liquid Wallet Kit - anyswap integration"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_anyswap"
+
+[lib]
+test = false
+
+[dependencies]

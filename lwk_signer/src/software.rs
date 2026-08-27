@@ -18,7 +18,7 @@ use elements_miniscript::{
         schnorr::TapTweak,
         secp256k1_zkp::{All, Secp256k1},
         sighash::SighashCache,
-        EcdsaSighashType, SchnorrSig, SchnorrSighashType,
+        BlockHash, EcdsaSighashType, SchnorrSig, SchnorrSighashType,
     },
     elementssig_to_rawsig,
     psbt::{PsbtExt, PsbtSighashMsg},
@@ -388,7 +388,7 @@ impl Signer for SwSigner {
         let mut sighash_cache = SighashCache::new(&tx);
         let mut signature_added = 0;
 
-        let genesis_hash = get_genesis_hash(pset);
+        let genesis_hash = get_genesis_hash(pset).unwrap_or(BlockHash::all_zeros());
 
         let signer_fingerprint = self.fingerprint();
         let mut messages = vec![];

@@ -1181,7 +1181,7 @@ impl Wollet {
         }
 
         // ELIP-101 key written by TxBuilder: https://github.com/ElementsProject/ELIPs/blob/main/elip-0101.mediawiki
-        let genesis_hash = get_genesis_hash(pset);
+        let genesis_hash = get_genesis_hash(pset).unwrap_or(BlockHash::all_zeros());
 
         // genesis_hash is only used for BIP341 (taproot) sighash computation
         let result = pset.finalize_mut(&EC, genesis_hash);

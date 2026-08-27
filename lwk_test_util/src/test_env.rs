@@ -1,6 +1,7 @@
 use crate::amp2::Amp2D;
 use crate::auth::AuthStack;
 use crate::init_logging;
+use crate::lightningd::LightningD;
 use crate::registry::RegistryD;
 use crate::waterfalls::WaterfallsD;
 
@@ -27,13 +28,19 @@ use std::time::Duration;
 pub struct TestEnvBuilder {
     elementsd_exec: String,
     electrs_exec: String,
+    electrs_bitcoin_exec: String,
     bitcoind_exec: String,
+    bitcoincli_exec: String,
+    lightningd_exec: String,
     waterfalls_exec: String,
     registry_exec: String,
     amp2_exec: String,
     with_electrum: bool,
     with_esplora: bool,
+    with_bitcoin_esplora: bool,
     with_bitcoind: bool,
+    with_bitcoincli: bool,
+    with_lightningd: bool,
     with_waterfalls: bool,
     waterfalls_max_txs_seen: Option<usize>,
     with_registry: bool,
@@ -48,14 +55,20 @@ impl TestEnvBuilder {
     ///
     /// * ELEMENTSD_EXEC
     /// * ELECTRS_LIQUID_EXEC
+    /// * ELECTRS_BITCOIN_EXEC
     /// * BITCOIND_EXEC
+    /// * BITCOINCLI_EXEC
+    /// * LIGHTNINGD_EXEC
     /// * WATERFALLS_EXEC
     /// * ASSET_REGISTRY_EXEC
     /// * AMP2_MOCK_EXEC
     pub fn from_env() -> Self {
         let elementsd_exec = std::env::var("ELEMENTSD_EXEC").unwrap_or_default();
         let electrs_exec = std::env::var("ELECTRS_LIQUID_EXEC").unwrap_or_default();
+        let electrs_bitcoin_exec = std::env::var("ELECTRS_BITCOIN_EXEC").unwrap_or_default();
         let bitcoind_exec = std::env::var("BITCOIND_EXEC").unwrap_or_default();
+        let bitcoincli_exec = std::env::var("BITCOINCLI_EXEC").unwrap_or_default();
+        let lightningd_exec = std::env::var("LIGHTNINGD_EXEC").unwrap_or_default();
         let waterfalls_exec = std::env::var("WATERFALLS_EXEC").unwrap_or_default();
         let registry_exec = std::env::var("ASSET_REGISTRY_EXEC").unwrap_or_default();
         let amp2_exec = std::env::var("AMP2_MOCK_EXEC").unwrap_or_default();
@@ -63,13 +76,19 @@ impl TestEnvBuilder {
         Self {
             elementsd_exec,
             electrs_exec,
+            electrs_bitcoin_exec,
             bitcoind_exec,
+            bitcoincli_exec,
+            lightningd_exec,
             waterfalls_exec,
             registry_exec,
             amp2_exec,
             with_electrum: false,
             with_esplora: false,
+            with_bitcoin_esplora: false,
             with_bitcoind: false,
+            with_bitcoincli: false,
+            with_lightningd: false,
             with_waterfalls: false,
             waterfalls_max_txs_seen: None,
             with_registry: false,
@@ -92,9 +111,27 @@ impl TestEnvBuilder {
         self
     }
 
+    /// Start a Bitcoin Esplora server
+    pub fn with_bitcoin_esplora(mut self) -> Self {
+        self.with_bitcoin_esplora = true;
+        self
+    }
+
     /// Start a Bitcoin node
     pub fn with_bitcoind(mut self) -> Self {
         self.with_bitcoind = true;
+        self
+    }
+
+    /// Load bitcoin-cli
+    pub fn with_bitcoincli(mut self) -> Self {
+        self.with_bitcoincli = true;
+        self
+    }
+
+    /// Start a CLN node, connected to a Bitcoin node
+    pub fn with_lightningd(mut self) -> Self {
+        self.with_lightningd = true;
         self
     }
 
@@ -154,6 +191,12 @@ impl TestEnvBuilder {
         if self.electrs_exec.is_empty() && (self.with_electrum || self.with_esplora) {
             panic!("ELECTRS_LIQUID_EXEC must be set");
         }
+        if self.electrs_bitcoin_exec.is_empty() && self.with_bitcoin_esplora {
+            panic!("ELECTRS_BITCOIN_EXEC must be set");
+        }
+        if self.with_bitcoin_esplora && !self.with_bitcoind {
+            panic!("bitcoin esplora requires a Bitcoin node: call 'with_bitcoind()'");
+        }
         if self.bitcoind_exec.is_empty() && self.with_bitcoind {
             panic!("BITCOIND_EXEC must be set");
         }
@@ -170,6 +213,15 @@ impl TestEnvBuilder {
         }
         if self.amp2_exec.is_empty() && self.with_amp2 {
             panic!("AMP2_MOCK_EXEC must be set");
+        }
+        if self.lightningd_exec.is_empty() && self.with_lightningd {
+            panic!("LIGHTNINGD_EXEC must be set");
+        }
+        if self.bitcoincli_exec.is_empty() && self.with_bitcoincli {
+            panic!("BITCOINCLI_EXEC must be set");
+        }
+        if self.with_lightningd && (!self.with_bitcoind || !self.with_bitcoincli) {
+            panic!("lightningd requires 'with_bitcoind()' and 'with_bitcoincli()'");
         }
         if self.with_auth && !self.with_esplora && !self.with_waterfalls && !self.with_electrum {
             panic!("auth gateway requires an upstream: call 'with_esplora()', 'with_waterfalls()' or 'with_electrum()'");
@@ -297,6 +349,21 @@ impl TestEnvBuilder {
             None
         };
 
+        // Start Electrs Bitcoin
+        let bitcoin_electrsd = if self.with_bitcoin_esplora {
+            let node = bitcoind
+                .as_ref()
+                .expect("with_bitcoin_esplora() requires with_bitcoind()");
+            let mut electrs_conf = electrsd::Conf::default();
+            electrs_conf.view_stderr = view_stdout;
+            electrs_conf.http_enabled = true;
+            electrs_conf.network = "regtest";
+            // TODO: consider waiting for readiness
+            Some(ElectrsD::with_conf(&self.electrs_bitcoin_exec, node, &electrs_conf).unwrap())
+        } else {
+            None
+        };
+
         let waterfallsd = if self.with_waterfalls {
             let rpc = elementsd.rpc_url();
             let cookie_values = elementsd.params.get_cookie_values().unwrap().unwrap();
@@ -324,6 +391,21 @@ impl TestEnvBuilder {
 
         let amp2d = if self.with_amp2 {
             Some(Amp2D::new(&self.amp2_exec))
+        } else {
+            None
+        };
+
+        let lightningd = if self.with_lightningd {
+            let node = bitcoind
+                .as_ref()
+                .expect("with_lightningd() requires with_bitcoind()");
+            // lightningd waits for the Bitcoin backend to be in sync; a fresh regtest
+            // node otherwise never leaves "not up-to-date with network".
+            TestEnv::bitcoind_generate_(&node.client, 1);
+            let args = vec![format!("--bitcoin-cli={}", self.bitcoincli_exec)];
+
+            let conf = crate::lightningd::Conf { view_stdout, args };
+            Some(LightningD::with_conf(&self.lightningd_exec, node, &conf))
         } else {
             None
         };
@@ -382,9 +464,11 @@ impl TestEnvBuilder {
             elementsd,
             bitcoind,
             electrsd,
+            _bitcoin_electrsd: bitcoin_electrsd,
             _waterfallsd: waterfallsd,
             registryd,
             amp2d,
+            lightningd,
             zmq_endpoint,
             auth,
             esplora_url,
@@ -401,10 +485,12 @@ pub struct TestEnv {
     elementsd: BitcoinD,
     bitcoind: Option<BitcoinD>,
     electrsd: Option<ElectrsD>,
+    _bitcoin_electrsd: Option<ElectrsD>,
     /// Kept for its `Drop`, which stops the waterfalls server process.
     _waterfallsd: Option<WaterfallsD>,
     registryd: Option<RegistryD>,
     amp2d: Option<Amp2D>,
+    lightningd: Option<LightningD>,
     zmq_endpoint: Option<String>,
     auth: Option<AuthStack>,
     /// Public endpoint urls, resolved once in `TestEnvBuilder::build`: the gateway url
@@ -478,6 +564,10 @@ impl TestEnv {
     /// Set the credit balance of the test user on the auth gateway (requires `with_auth`)
     pub fn set_credits(&self, credits: u64) {
         self.auth.as_ref().unwrap().set_credits(credits)
+    }
+
+    pub fn lightningd(&self) -> &LightningD {
+        self.lightningd.as_ref().unwrap()
     }
 
     // Functions for Elements RPC client

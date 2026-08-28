@@ -266,7 +266,7 @@ impl Amp2 {
         let server_path = self.elip153_server_path(&user_xpub)?;
         let server_fingerprint = self.server_fingerprint;
         let server_derived_xpub = self.server_xpub.derive_pub(&EC, &server_path)?;
-        let server_path_full = self.server_path_from_master.clone().extend(server_path);
+        let server_path_full = self.server_path_from_master.extend(server_path);
 
         // Descriptor blinding key: hash the pubkey of the user key hardened-derived at
         // VIEW_PATH, so it's both deterministic and only computable by the user.

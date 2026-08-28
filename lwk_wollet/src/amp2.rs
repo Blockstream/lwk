@@ -519,12 +519,21 @@ mod test {
         let server_mnemonic_2 = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong";
 
         let mut i = 0;
-        for (description, network, mnemonic, server_mnemonic, account, expected_dwid) in [
+        for (
+            description,
+            network,
+            mnemonic,
+            server_mnemonic,
+            server_path_from_master,
+            account,
+            expected_dwid,
+        ) in [
             (
                 "Liquid",
                 Network::Liquid,
                 user_mnemonic_1,
                 server_mnemonic_1,
+                "",
                 0u32,
                 "4b2f-fca3-1d2e-0a8b-0d58-3ef5-9375-12cd",
             ),
@@ -533,6 +542,7 @@ mod test {
                 Network::TestnetLiquid,
                 user_mnemonic_1,
                 server_mnemonic_1,
+                "",
                 0,
                 "ded1-9ff5-4291-6309-3c91-a4d8-cfe5-8f74",
             ),
@@ -541,6 +551,7 @@ mod test {
                 Network::default_regtest(),
                 user_mnemonic_1,
                 server_mnemonic_1,
+                "",
                 0,
                 "a73a-c707-978f-cb7c-8912-5868-34c9-ee12",
             ),
@@ -549,6 +560,7 @@ mod test {
                 Network::Liquid,
                 user_mnemonic_1,
                 server_mnemonic_1,
+                "",
                 1,
                 "5c5b-05fd-0fe1-58ef-b6a5-c54f-3e56-e478",
             ),
@@ -557,6 +569,7 @@ mod test {
                 Network::Liquid,
                 user_mnemonic_2,
                 server_mnemonic_1,
+                "",
                 0,
                 "0328-ea41-7816-2f18-e86d-f110-bec4-f4eb",
             ),
@@ -565,6 +578,7 @@ mod test {
                 Network::Liquid,
                 user_mnemonic_1,
                 server_mnemonic_2,
+                "",
                 0,
                 "7e5d-8182-ec4f-cf90-7be8-20f5-b3d8-8694",
             ),
@@ -572,7 +586,8 @@ mod test {
             i += 1;
             let signer = SwSigner::new_with_network(mnemonic, network).unwrap();
             let server_signer = SwSigner::new_with_network(server_mnemonic, network).unwrap();
-            let server_xpub = server_signer.xpub();
+            let server_path_from_master: DerivationPath = server_path_from_master.parse().unwrap();
+            let server_xpub = server_signer.derive_xpub(&server_path_from_master).unwrap();
 
             let amp2 = Amp2 {
                 server_key: KEYORIGIN_XPUB_TESTNET.into(),

@@ -588,14 +588,14 @@ mod test {
             let server_signer = SwSigner::new_with_network(server_mnemonic, network).unwrap();
             let server_path_from_master: DerivationPath = server_path_from_master.parse().unwrap();
             let server_xpub = server_signer.derive_xpub(&server_path_from_master).unwrap();
-
-            let amp2 = Amp2 {
-                server_key: KEYORIGIN_XPUB_TESTNET.into(),
-                server_xpub,
-                server_fingerprint: server_xpub.fingerprint(),
-                url: URL_TESTNET.into(),
-                is_mainnet: network.is_mainnet(),
+            let server_fp = server_signer.fingerprint();
+            let server_keyorigin_xpub = if server_path_from_master.is_empty() {
+                format!("[{server_fp}]{server_xpub}")
+            } else {
+                format!("[{server_fp}/{server_path_from_master}]{server_xpub}")
             };
+
+            let amp2 = Amp2::new(server_keyorigin_xpub.clone(), URL_TESTNET.into()).unwrap();
             let (user_keysource, user_xpub) =
                 derive(&signer, &amp2.elip153_user_path(account).unwrap());
             let (view_keysource, view_xpub) =
@@ -614,7 +614,7 @@ mod test {
             println!("** Description: {description}");
             println!("** Network: {network_str}");
             println!("** User Mnemonic: <code>{mnemonic}</code>");
-            println!("** AMP2 Server Xpub: <code>{server_xpub}</code>");
+            println!("** AMP2 Server Xpub: <code>{server_keyorigin_xpub}</code>");
             println!("** User Account: {account}");
             println!("** CT Descriptor: <code>{}</code>", desc.descriptor());
             println!("** DWID: <code>{dwid}</code>\n");

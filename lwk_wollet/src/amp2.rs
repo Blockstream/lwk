@@ -40,6 +40,7 @@ const ELIP153_PURPOSE: u32 = 0x414d_5032;
 pub struct Amp2 {
     server_key: String,
     server_xpub: Xpub,
+    server_path_from_master: DerivationPath,
     server_fingerprint: Fingerprint,
     url: String,
     is_mainnet: bool,
@@ -124,7 +125,8 @@ impl Amp2 {
         Url::from_str(&url).map_err(crate::UrlError::Url)?;
 
         let (keysource, server_xpub) = keyorigin_xpub_from_str(&server_key)?;
-        let server_fingerprint = keysource.ok_or(crate::Error::MissingKeyorigin)?.0;
+        let (server_fingerprint, server_path_from_master) =
+            keysource.ok_or(crate::Error::MissingKeyorigin)?;
         // TODO: per ELIP153 the server key should be the master xpub, allow it to have missing keyorigin
         // TODO: consider replacing server_key with server_keyorigin
 
@@ -133,6 +135,7 @@ impl Amp2 {
             server_key,
             server_xpub,
             server_fingerprint,
+            server_path_from_master,
             url,
             is_mainnet,
         })
@@ -143,10 +146,13 @@ impl Amp2 {
         let server_xpub: Xpub = XPUB_TESTNET.parse().expect("valid xpub constant");
         let server_fingerprint: Fingerprint =
             FINGERPRINT_TESTNET.parse().expect("valid fingerprint");
+        let server_path_from_master: DerivationPath =
+            DERIVATION_PATH_TESTNET.parse().expect("valid path");
         Self {
             server_key: KEYORIGIN_XPUB_TESTNET.into(),
             server_xpub,
             server_fingerprint,
+            server_path_from_master,
             url: URL_TESTNET.into(),
             is_mainnet: false,
         }
@@ -263,8 +269,9 @@ impl Amp2 {
         // TODO: consider validating view_keysource
 
         let server_path = self.elip153_server_path(&user_xpub)?;
-        let server_fingerprint = self.server_xpub.fingerprint();
+        let server_fingerprint = self.server_fingerprint;
         let server_derived_xpub = self.server_xpub.derive_pub(&EC, &server_path)?;
+        let server_path_full = self.server_path_from_master.clone().extend(server_path);
 
         // Descriptor blinding key: hash the pubkey of the user key hardened-derived at
         // VIEW_PATH, so it's both deterministic and only computable by the user.
@@ -272,7 +279,8 @@ impl Amp2 {
         let key_hex = key_hash.to_byte_array().to_hex();
 
         let user_xpub_str = format!("[{}/{}]{}", user_keysource.0, user_keysource.1, user_xpub);
-        let server_xpub_str = format!("[{server_fingerprint}/{server_path}]{server_derived_xpub}");
+        let server_xpub_str =
+            format!("[{server_fingerprint}/{server_path_full}]{server_derived_xpub}");
 
         let s = format!(
             "ct({key_hex},elwsh(multi(2,{server_xpub_str}/<0;1>/*,{user_xpub_str}/<0;1>/*)))"
@@ -493,7 +501,7 @@ mod test {
             .elip153(user_keysource, user_xpub, view_keysource, view_xpub)
             .unwrap();
 
-        let expected = "ct(4d90c104f07e6f4c3f2c2ef1100b2a24b93093eb3bdf975a85fbe2be5ddf7abe,elwsh(multi(2,[7a3be1b3/2088330946/1132574986/2019598932]tpubDKX4imD1VZt8nMqqLWo2aBwJnJmw9kWhgob65LLKPd2UGcWZ2eCZXmVSM1uAzScUkFDVK3YdKZy49Qz7K1x2xEZ2AJhWaqnj25MbZSb4KYs/<0;1>/*,[73c5da0a/1095585842'/1'/0']tpubDDKAX9d8KBy2HJ5UTMg4xydwC7Jssy9qfnKrs5LTpM8PpBAiwqZ7k2GVA2P5kiWCPjnmHbDMxBng8FzDBHVqHpQkAwwc4VzXtGx1AY7zc9C/<0;1>/*)))#ywc7jzkz";
+        let expected = "ct(4d90c104f07e6f4c3f2c2ef1100b2a24b93093eb3bdf975a85fbe2be5ddf7abe,elwsh(multi(2,[3d970d04/87'/1'/0'/2088330946/1132574986/2019598932]tpubDKX4imD1VZt8nMqqLWo2aBwJnJmw9kWhgob65LLKPd2UGcWZ2eCZXmVSM1uAzScUkFDVK3YdKZy49Qz7K1x2xEZ2AJhWaqnj25MbZSb4KYs/<0;1>/*,[73c5da0a/1095585842'/1'/0']tpubDDKAX9d8KBy2HJ5UTMg4xydwC7Jssy9qfnKrs5LTpM8PpBAiwqZ7k2GVA2P5kiWCPjnmHbDMxBng8FzDBHVqHpQkAwwc4VzXtGx1AY7zc9C/<0;1>/*)))#k8s8pxv0";
         assert_eq!(desc.descriptor().to_string(), expected);
 
         // elip153_from_signer must produce the exact same descriptor as the manual,

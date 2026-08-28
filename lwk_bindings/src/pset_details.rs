@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::{types::AssetId, Address, Txid};
+use crate::{types::AssetId, Address, DerivationPath, Script, Txid};
 
 /// The details of a Partially Signed Elements Transaction:
 ///
@@ -52,6 +52,16 @@ impl PsetDetails {
     /// Whether any PSET input sighash is not the default one
     pub fn has_non_default_sighash(&self) -> bool {
         self.inner.has_non_default_sighash()
+    }
+
+    /// The details of the outputs of the PSET
+    pub fn outputs(&self) -> Vec<Arc<OutputDetails>> {
+        self.inner
+            .outputs()
+            .iter()
+            .cloned()
+            .map(|e| Arc::new(e.into()))
+            .collect()
     }
 
     /// Set of fingerprints for which the PSET has a signature
@@ -261,6 +271,71 @@ impl Recipient {
     }
     pub fn vout(&self) -> u32 {
         self.inner.vout()
+    }
+}
+
+/// The details of an output of a PSET
+#[derive(uniffi::Object, Debug)]
+pub struct OutputDetails {
+    inner: lwk_common::OutputDetails,
+}
+
+impl From<lwk_common::OutputDetails> for OutputDetails {
+    fn from(inner: lwk_common::OutputDetails) -> Self {
+        Self { inner }
+    }
+}
+
+#[uniffi::export]
+impl OutputDetails {
+    /// The asset of the output, or None if it couldn't be verified against the commitments
+    pub fn asset(&self) -> Option<AssetId> {
+        self.inner.asset().map(Into::into)
+    }
+
+    /// The amount of the output in satoshis, or None if it couldn't be verified against
+    /// the commitments
+    pub fn satoshi(&self) -> Option<u64> {
+        self.inner.satoshi()
+    }
+
+    /// Whether the output is fully explicit
+    /// with no commitments
+    pub fn is_fully_explicit(&self) -> bool {
+        self.inner.is_fully_explicit()
+    }
+
+    /// Whether the output is fully confidential
+    /// committed
+    pub fn is_fully_confidential(&self) -> bool {
+        self.inner.is_fully_confidential()
+    }
+
+    /// Whether this is the fee output
+    pub fn is_fee(&self) -> bool {
+        self.inner.is_fee()
+    }
+
+    /// The script pubkey of the output
+    pub fn script_pubkey(&self) -> Arc<Script> {
+        Arc::new(self.inner.script_pubkey().clone().into())
+    }
+
+    /// The index of the output in the transaction
+    pub fn vout(&self) -> u32 {
+        self.inner.vout()
+    }
+
+    /// The derivation path of the output, if it belongs to the wallet
+    pub fn derivation_path(&self) -> Option<Arc<DerivationPath>> {
+        self.inner
+            .derivation_path()
+            .map(|e| Arc::new(e.clone().into()))
+    }
+
+    /// Whether the output belongs to the wallet
+    pub fn is_owned(&self) -> bool {
+        self.inner.is_owned()
     }
 }
 

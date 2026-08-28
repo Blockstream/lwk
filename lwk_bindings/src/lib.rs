@@ -101,7 +101,7 @@ pub use precision::Precision;
 pub use pset::{Pset, PsetInput, PsetOutput};
 #[cfg(feature = "simplicity")]
 pub use pset::{PsetBuilder, PsetInputBuilder, PsetOutputBuilder};
-pub use pset_details::{Issuance, PsetDetails};
+pub use pset_details::{Issuance, OutputDetails, PsetDetails};
 pub use store::{ForeignStore, ForeignStoreLink};
 pub use test_env::{LwkTestEnv, LwkTestStore};
 pub use tx_builder::{IssuanceRequest, ReissuanceRequest, TxBuilder};

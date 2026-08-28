@@ -38,3 +38,39 @@ assert(recipients[0].vout() == 0)
 assert(recipients[0].asset() == "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225")
 assert(recipients[0].value() == 1000)
 assert(str(recipients[0].address()) == "AzpoyU5wJFcfdq6sh5ETbqCBA1oLuoLYk5UGJbYLGj3wKMurrVQiX1Djq67JHFAVt1hA5QVq41iNuVmy")
+
+outputs = details.outputs()
+assert len(outputs) == 3
+
+# external recipient
+recipient = outputs[0]
+assert recipient.vout() == 0
+assert recipient.is_owned() == False
+assert recipient.is_fee() == False
+assert recipient.is_fully_explicit() == False
+assert recipient.is_fully_confidential() == True
+assert recipient.derivation_path() == None
+assert recipient.asset() == "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
+assert recipient.satoshi() == 1000
+assert str(recipient.script_pubkey()) == "a9143aafc364fd42bded00bdb45386eca6dc4aed63f787"
+
+# change output
+change = outputs[1]
+assert change.vout() == 1
+assert change.is_owned() == True
+assert change.is_fee() == False
+assert change.is_fully_explicit() == False
+assert change.is_fully_confidential() == True
+assert change.satoshi() == 998746
+assert str(change.derivation_path()) == "87'/1'/0'/1/0"
+
+# fee output
+fee = outputs[2]
+assert fee.vout() == 2
+assert fee.is_fee() == True
+assert fee.is_owned() == False
+assert fee.is_fully_explicit() == True
+assert fee.is_fully_confidential() == False
+assert fee.derivation_path() == None
+assert fee.satoshi() == 254
+assert fee.script_pubkey().bytes() == b''

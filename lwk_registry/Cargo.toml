@@ -1,0 +1,12 @@
+[package]
+name = "lwk_registry"
+version = "0.19.0"
+edition = "2021"
+description = "Liquid Wallet Kit - asset registry integration"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_registry"
+
+[lib]
+test = false
+
+[dependencies]

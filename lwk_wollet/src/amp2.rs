@@ -590,6 +590,15 @@ mod test {
                 0,
                 "7e5d-8182-ec4f-cf90-7be8-20f5-b3d8-8694",
             ),
+            (
+                "Liquid, non-master server xpub",
+                Network::Liquid,
+                user_mnemonic_1,
+                server_mnemonic_1,
+                "m/1h",
+                0u32,
+                "2d62-9c31-7d9a-1ba3-73ff-3c08-8803-aa1d",
+            ),
         ] {
             i += 1;
             let signer = SwSigner::new_with_network(mnemonic, network).unwrap();

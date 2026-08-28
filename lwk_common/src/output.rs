@@ -38,6 +38,7 @@ pub(crate) fn is_mine(
         for d in descriptor.descriptor.clone().into_single_descriptors()? {
             let mine = d.at_derivation_index(0)?.script_pubkey();
             if &mine == script_pubkey {
+                // TODO: improve by selecting path with matching pubkey
                 return Ok((true, paths.first().cloned().cloned()));
             }
         }

@@ -38,7 +38,6 @@ const ELIP153_PURPOSE: u32 = 0x414d_5032;
 /// Context for actions interacting with AMP2
 #[derive(Debug)]
 pub struct Amp2 {
-    server_key: String,
     server_xpub: Xpub,
     server_path_from_master: DerivationPath,
     server_fingerprint: Fingerprint,
@@ -127,12 +126,9 @@ impl Amp2 {
         let (keysource, server_xpub) = keyorigin_xpub_from_str(&server_key)?;
         let (server_fingerprint, server_path_from_master) =
             keysource.ok_or(crate::Error::MissingKeyorigin)?;
-        // TODO: per ELIP153 the server key should be the master xpub, allow it to have missing keyorigin
-        // TODO: consider replacing server_key with server_keyorigin
 
         let is_mainnet = server_xpub.network.is_mainnet();
         Ok(Self {
-            server_key,
             server_xpub,
             server_fingerprint,
             server_path_from_master,
@@ -149,7 +145,6 @@ impl Amp2 {
         let server_path_from_master: DerivationPath =
             DERIVATION_PATH_TESTNET.parse().expect("valid path");
         Self {
-            server_key: KEYORIGIN_XPUB_TESTNET.into(),
             server_xpub,
             server_fingerprint,
             server_path_from_master,
@@ -307,8 +302,14 @@ impl Amp2 {
         user_xpub: Xpub,
         descriptor_blinding_key: &str,
     ) -> Result<Amp2Descriptor, crate::Error> {
-        // TODO; check Xpub network is consistent
-        let amp2_xpub = &self.server_key;
+        let amp2_xpub = if self.server_path_from_master.is_empty() {
+            format!("[{}]{}", self.server_fingerprint, self.server_xpub)
+        } else {
+            format!(
+                "[{}/{}]{}",
+                self.server_fingerprint, self.server_path_from_master, self.server_xpub
+            )
+        };
         let user_xpub = format!("[{}/{}]{}", user_keysource.0, user_keysource.1, user_xpub);
         let s = format!(
             "ct({descriptor_blinding_key},elwsh(multi(2,{amp2_xpub}/<0;1>/*,{user_xpub}/<0;1>/*)))"
@@ -659,7 +660,6 @@ mod test {
         // Success case
         let amp2 = Amp2::new(KEYORIGIN_XPUB_TESTNET.to_string(), URL_TESTNET.to_string()).unwrap();
 
-        assert_eq!(amp2.server_key, KEYORIGIN_XPUB_TESTNET);
         assert_eq!(amp2.url, URL_TESTNET);
 
         // Invalid URL

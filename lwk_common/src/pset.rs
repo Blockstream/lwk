@@ -240,9 +240,10 @@ mod tests {
     use elements::bitcoin::{secp256k1, PublicKey};
     use elements::encode::{deserialize, serialize};
     use elements::pset::{Input, Output};
+    use elements::secp256k1_zkp::Keypair;
     use elements::secp256k1_zkp::XOnlyPublicKey;
     use elements::taproot::TapLeafHash;
-    use elements::{confidential, SchnorrSig, Script, TxOut, TxOutWitness};
+    use elements::{confidential, SchnorrSig, SchnorrSighashType, Script, TxOut, TxOutWitness};
     use std::str::FromStr;
     use std::sync::LazyLock;
 
@@ -273,6 +274,82 @@ mod tests {
             ..Default::default()
         });
         pset
+    }
+
+    /// A PSET with a single taproot input owned by the returned keypair.
+    ///
+    /// With a leaf the key is registered as a script spend key, without it as the internal key.
+    fn taproot_pset(
+        fp: Fingerprint,
+        leaf: Option<TapLeafHash>,
+    ) -> (PartiallySignedTransaction, Keypair) {
+        let keypair = Keypair::from_seckey_slice(&EC, &[0x11u8; 32]).unwrap();
+        let (internal_key, _) = XOnlyPublicKey::from_keypair(&keypair);
+        let (output_key, _) = internal_key.tap_tweak(&EC, None);
+
+        let mut script_pubkey = vec![0x51, 0x20];
+        script_pubkey.extend(output_key.into_inner().serialize());
+
+        let input = Input {
+            witness_utxo: Some(TxOut {
+                asset: confidential::Asset::Explicit(elements::AssetId::LIQUID_BTC),
+                value: confidential::Value::Explicit(1000),
+                nonce: confidential::Nonce::Null,
+                script_pubkey: Script::from(script_pubkey),
+                witness: TxOutWitness::default(),
+            }),
+            tap_internal_key: Some(internal_key),
+            tap_key_origins: BTreeMap::from([(
+                internal_key,
+                (
+                    leaf.map(|l| vec![l]).unwrap_or_default(),
+                    (fp, DerivationPath::master()),
+                ),
+            )]),
+            ..Default::default()
+        };
+
+        let mut pset = PartiallySignedTransaction::new_v2();
+        pset.add_input(input);
+        pset.add_output(Output {
+            asset: Some(elements::AssetId::LIQUID_BTC),
+            amount: Some(1000),
+            ..Default::default()
+        });
+        set_genesis_hash(&mut pset, &Network::Liquid);
+        (pset, keypair)
+    }
+
+    fn taproot_msg(pset: &PartiallySignedTransaction, leaf: Option<TapLeafHash>) -> Message {
+        let mut ctx = SighashCtx::new(pset, get_genesis_hash(pset)).unwrap();
+        let sighash = ctx.taproot_msg(0, leaf).unwrap();
+        Message::from_digest(sighash.to_byte_array())
+    }
+
+    fn sign_key_spend(
+        pset: &PartiallySignedTransaction,
+        keypair: &Keypair,
+        hash_ty: SchnorrSighashType,
+    ) -> SchnorrSig {
+        let msg = taproot_msg(pset, None);
+        let tweaked = keypair.tap_tweak(&EC, pset.inputs()[0].tap_merkle_root);
+        SchnorrSig {
+            sig: EC.sign_schnorr(&msg, &tweaked.to_inner()),
+            hash_ty,
+        }
+    }
+
+    fn sign_script_spend(
+        pset: &PartiallySignedTransaction,
+        keypair: &Keypair,
+        leaf: TapLeafHash,
+        hash_ty: SchnorrSighashType,
+    ) -> SchnorrSig {
+        let msg = taproot_msg(pset, Some(leaf));
+        SchnorrSig {
+            sig: EC.sign_schnorr(&msg, keypair),
+            hash_ty,
+        }
     }
 
     #[test]
@@ -497,6 +574,26 @@ mod tests {
             err,
             PsetValidationError::TapScriptSigsRemoved { idx: 0 }
         ));
+
+        // a valid tap key spend signature from the expected fingerprint
+        let (original, keypair) = taproot_pset(fp, None);
+        let mut returned = original.clone();
+        returned.inputs_mut()[0].tap_key_sig = Some(sign_key_spend(
+            &original,
+            &keypair,
+            SchnorrSighashType::Default,
+        ));
+        assert_eq!(verify_added_sigs(&original, &returned, fp, &EC).unwrap(), 1);
+
+        // a valid tap script spend signature, verified against the untweaked leaf key
+        let (original, keypair) = taproot_pset(fp, Some(leaf));
+        let leaf_key = XOnlyPublicKey::from_keypair(&keypair).0;
+        let mut returned = original.clone();
+        returned.inputs_mut()[0].tap_script_sigs.insert(
+            (leaf_key, leaf),
+            sign_script_spend(&original, &keypair, leaf, SchnorrSighashType::Default),
+        );
+        assert_eq!(verify_added_sigs(&original, &returned, fp, &EC).unwrap(), 1);
 
         // non-signature fields are protected: any change triggers DataMismatch
         let original = test_pset();

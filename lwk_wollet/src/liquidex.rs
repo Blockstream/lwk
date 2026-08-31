@@ -442,7 +442,7 @@ pub(crate) fn scalar_offset(txoutsecrets: &elements::TxOutSecrets) -> secp256k1_
 mod tests {
     use std::str::FromStr;
 
-    use crate::{liquidex::AssetAmount, Unvalidated};
+    use crate::{liquidex::AssetAmount, Unvalidated, Validated};
 
     use super::LiquidexProposal;
 
@@ -498,5 +498,7 @@ mod tests {
         let proposal2 = LiquidexProposal::<Unvalidated>::from_str(&proposal_str2).unwrap();
         let proposal2 = proposal2.insecure_validate().unwrap();
         assert_eq!(proposal, proposal2);
+        let proposal3: LiquidexProposal::<Validated> = serde_json::from_str(&proposal_str2).unwrap();
+        assert_eq!(proposal, proposal3);
     }
 }

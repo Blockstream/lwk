@@ -113,7 +113,7 @@ pub struct Unvalidated;
 /// The "taker" can "complete" the transaction (using [`crate::TxBuilder::liquidex_take()`]) by
 /// adding more inputs and more outputs to balance the amounts, meaning that the "taker" sends the
 /// output and receives the input.
-#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Serialize, Debug, Clone, Default, PartialEq, Eq)]
 pub struct LiquidexProposal<S> {
     version: u32,
     // TODO: use serde with to make tx a elements::Transaction
@@ -124,6 +124,30 @@ pub struct LiquidexProposal<S> {
 
     #[serde(skip)]
     data: PhantomData<S>,
+}
+
+// Only `LiquidexProposal<Unvalidated>` can be deserialized: this seals the typestate so a
+// `LiquidexProposal<Validated>` can only be obtained by calling `validate()` or
+// `insecure_validate()`, never by deserializing untrusted data directly into it.
+impl<'de> Deserialize<'de> for LiquidexProposal<Unvalidated> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(remote = "LiquidexProposal<Unvalidated>")]
+        struct Def {
+            version: u32,
+            tx: String,
+            inputs: Vec<LiquidexTxOutSecrets>,
+            outputs: Vec<LiquidexTxOutSecrets>,
+            scalars: Vec<secp256k1_zkp::Tweak>,
+            #[serde(skip)]
+            data: PhantomData<Unvalidated>,
+        }
+
+        Def::deserialize(deserializer)
+    }
 }
 
 /// An asset identifier and an amount
@@ -442,7 +466,7 @@ pub(crate) fn scalar_offset(txoutsecrets: &elements::TxOutSecrets) -> secp256k1_
 mod tests {
     use std::str::FromStr;
 
-    use crate::{liquidex::AssetAmount, Unvalidated, Validated};
+    use crate::{liquidex::AssetAmount, Unvalidated};
 
     use super::LiquidexProposal;
 
@@ -498,7 +522,5 @@ mod tests {
         let proposal2 = LiquidexProposal::<Unvalidated>::from_str(&proposal_str2).unwrap();
         let proposal2 = proposal2.insecure_validate().unwrap();
         assert_eq!(proposal, proposal2);
-        let proposal3: LiquidexProposal::<Validated> = serde_json::from_str(&proposal_str2).unwrap();
-        assert_eq!(proposal, proposal3);
     }
 }

@@ -21,6 +21,23 @@ use serde::{Deserialize, Serialize};
 
 const TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 
+/// Trait implemented by types that can fetch a transaction by txid, used by
+/// [`Registry::fetch_with_tx`] and [`blocking::Registry::fetch_with_tx`] to avoid depending on the
+/// concrete blockchain client types.
+pub trait TxFetcher {
+    /// Fetch the transaction with the given txid
+    fn get_transaction(&self, txid: Txid) -> Result<Transaction, Error>;
+}
+
+/// Async variant of [`TxFetcher`], used by the async [`Registry::fetch_with_tx`].
+pub trait TxFetcherAsync {
+    /// Fetch the transaction with the given txid
+    fn get_transaction(
+        &self,
+        txid: Txid,
+    ) -> impl std::future::Future<Output = Result<Transaction, Error>>;
+}
+
 /// An asyncronous registry client, allowing to fetch and post assets metadata from the registry.
 #[derive(Clone)]
 pub struct Registry {
@@ -104,6 +121,15 @@ impl RegistryCache {
         self.token_cache
             .get(&token_id)
             .and_then(|asset_id| self.cache.get(asset_id).cloned())
+    }
+
+    /// Fetch the contract and the issuance transaction of the given asset id from the registry
+    pub async fn fetch_with_tx<T: TxFetcherAsync>(
+        &self,
+        asset_id: AssetId,
+        client: &T,
+    ) -> Result<(Contract, Transaction), Error> {
+        self.inner.fetch_with_tx(asset_id, client).await
     }
 
     /// Post a contract to the registry
@@ -205,6 +231,17 @@ impl Registry {
         Ok(data)
     }
 
+    /// Fetch the contract and the issuance transaction of the given asset id from the registry
+    pub async fn fetch_with_tx<T: TxFetcherAsync>(
+        &self,
+        asset_id: AssetId,
+        client: &T,
+    ) -> Result<(Contract, Transaction), Error> {
+        let data = self.fetch(asset_id).await?;
+        let tx = client.get_transaction(data.issuance_txin.txid).await?;
+        Ok((data.contract, tx))
+    }
+
     /// Post a contract to the registry
     pub async fn post(&self, data: &RegistryPost) -> Result<(), Error> {
         let response = self
@@ -239,13 +276,14 @@ pub mod blocking {
     //! The module contains a blocking registry client, allowing to fetch and post assets metadata from the registry.
     //! The blocking client is based on the async client, it uses a tokio runtime to run the async client in a blocking context.
 
-    use elements::AssetId;
+    use elements::{AssetId, Transaction};
     use tokio::runtime::Runtime;
 
+    use crate::contract::Contract;
     use crate::error::Error;
     use lwk_common::Network;
 
-    use super::RegistryPost;
+    use super::{RegistryPost, TxFetcher};
 
     /// A blocking registry client, allowing to fetch and post assets metadata from the registry.
     pub struct Registry {
@@ -273,6 +311,17 @@ pub mod blocking {
         /// Fetch the contract, the issuance transaction and the issuance prevout of the given asset id from the registry
         pub fn fetch(&self, asset_id: AssetId) -> Result<super::RegistryData, Error> {
             self.rt.block_on(self.inner.fetch(asset_id))
+        }
+
+        /// Fetch the contract and the issuance transaction of the given asset id from the registry
+        pub fn fetch_with_tx<T: TxFetcher>(
+            &self,
+            asset_id: AssetId,
+            client: &T,
+        ) -> Result<(Contract, Transaction), Error> {
+            let data = self.fetch(asset_id)?;
+            let tx = client.get_transaction(data.issuance_txin.txid)?;
+            Ok((data.contract, tx))
         }
 
         /// Post a contract to the registry

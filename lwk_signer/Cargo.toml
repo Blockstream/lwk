@@ -15,6 +15,7 @@ bip39 = { version = "2.0.0", features = ["rand", "zeroize"] }
 elements-miniscript.workspace = true
 thiserror = { workspace = true }
 base64 = "0.21.7"
+zeroize = "1.8.2"
 
 [dev-dependencies]
 lwk_test_util = { version = "0.19.0" }

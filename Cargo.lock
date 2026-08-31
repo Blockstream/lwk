@@ -2943,6 +2943,7 @@ dependencies = [
  "lwk_ledger",
  "lwk_test_util",
  "thiserror 2.0.18",
+ "zeroize",
 ]
 
 [[package]]

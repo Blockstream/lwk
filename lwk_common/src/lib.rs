@@ -27,6 +27,7 @@ pub mod precision;
 mod pset;
 mod qr;
 mod segwit;
+mod sighash;
 mod signer;
 #[cfg(all(feature = "sqlite", not(target_arch = "wasm32")))]
 pub mod sqlite;
@@ -54,6 +55,7 @@ pub use crate::precision::Precision;
 pub use crate::pset::{get_genesis_hash, set_genesis_hash, verify_added_sigs, PsetValidationError};
 pub use crate::qr::*;
 pub use crate::segwit::is_provably_segwit;
+pub use crate::sighash::{SighashCtx, SighashError};
 #[cfg(feature = "amp0")]
 pub use crate::signer::amp0::{Amp0Signer, Amp0SignerData};
 pub use crate::signer::{ss_path, SSAccountType, Signer};

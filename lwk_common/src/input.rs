@@ -2,19 +2,23 @@
 
 use elements::{
     pset::{Input, PartiallySignedTransaction},
-    EcdsaSighashType, SchnorrSighashType, Script,
+    EcdsaSighashType, SchnorrSighashType, TxOut,
 };
 
-fn input_spent_script_pubkey(input: &Input) -> Option<&Script> {
-    if let Some(prevout) = input.witness_utxo.as_ref() {
-        Some(&prevout.script_pubkey)
+pub(crate) fn spent_txout(input: &Input) -> Option<&TxOut> {
+    if let Some(witness_utxo) = input.witness_utxo.as_ref() {
+        Some(witness_utxo)
     } else if let Some(tx) = input.non_witness_utxo.as_ref() {
-        tx.output
-            .get(input.previous_output_index as usize)
-            .map(|o| &o.script_pubkey)
+        tx.output.get(input.previous_output_index as usize)
     } else {
         None
     }
+}
+
+pub(crate) fn is_taproot_input(input: &Input) -> bool {
+    spent_txout(input)
+        .map(|o| o.script_pubkey.is_v1_p2tr())
+        .unwrap_or(false)
 }
 
 /// Return the sighash declared by an input, the default implied by the spent output script, or `None` if the spent output is unknown.
@@ -23,14 +27,14 @@ pub fn input_sighash(input: &Input) -> Option<u32> {
         return Some(sighash.to_u32());
     }
 
-    input_spent_script_pubkey(input).map(|s| if s.is_v1_p2tr() { 0 } else { 1 })
+    spent_txout(input).map(|o| if o.script_pubkey.is_v1_p2tr() { 0 } else { 1 })
 }
 
 fn input_has_non_default_sighash(input: &Input) -> bool {
     let Some(sighash) = input.sighash_type else {
         return false;
     };
-    let Some(spk) = input_spent_script_pubkey(input) else {
+    let Some(spk) = spent_txout(input).map(|o| &o.script_pubkey) else {
         return false;
     };
 

@@ -37,6 +37,9 @@ pub use waterfalls::{
 #[cfg(any(feature = "esplora", feature = "electrum_oidc"))]
 pub(crate) mod oauth;
 
+#[cfg(feature = "registry")]
+mod registry;
+
 #[cfg(feature = "esplora")]
 const DEFAULT_TIMEOUT: u8 = 5;
 

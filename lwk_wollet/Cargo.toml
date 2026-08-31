@@ -13,6 +13,7 @@ crate-type = ["lib"]
 
 [dependencies]
 lwk_common = { version = "0.19.0" }
+lwk_registry = { version = "0.19.0"}
 lwk_signer = { version = "0.19.0", features = [
     "jade",
     "ledger",
@@ -147,7 +148,7 @@ amp0 = [
     "rmp-serde",
 ]
 prices = ["reqwest"]
-registry = ["reqwest"]
+registry = ["reqwest", "lwk_registry/client"]
 
 [[test]]
 name = "e2e"

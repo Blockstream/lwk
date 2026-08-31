@@ -3067,6 +3067,7 @@ dependencies = [
  "lwk_containers",
  "lwk_jade",
  "lwk_ledger",
+ "lwk_registry",
  "lwk_signer",
  "lwk_test_util",
  "once_cell",

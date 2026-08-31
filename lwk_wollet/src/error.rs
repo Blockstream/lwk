@@ -425,6 +425,9 @@ pub enum Error {
     #[cfg(feature = "amp2")]
     #[error("AMP2 cosign didn't add any signatures")]
     Amp2NoSigsAdded,
+
+    #[error("Registry error: {0}")]
+    Registry(#[from] crate::RegistryError),
 }
 
 // cannot derive automatically with this error because of trait bound

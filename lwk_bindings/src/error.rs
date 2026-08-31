@@ -369,6 +369,14 @@ impl From<elements::hashes::FromSliceError> for LwkError {
     }
 }
 
+impl From<lwk_wollet::RegistryError> for LwkError {
+    fn from(value: lwk_wollet::RegistryError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
 #[cfg(feature = "lightning")]
 impl From<lwk_boltz::Error> for LwkError {
     fn from(value: lwk_boltz::Error) -> Self {

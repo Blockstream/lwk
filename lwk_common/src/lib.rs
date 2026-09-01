@@ -91,7 +91,7 @@ use elements_miniscript::elements::{
 use elements_miniscript::{
     ConfidentialDescriptor, DescriptorPublicKey as MiniscriptDescriptorPublicKey,
 };
-use output::is_mine;
+use output::{is_mine, verified_asset_value};
 use std::collections::btree_map::BTreeMap;
 use std::collections::HashMap;
 
@@ -276,10 +276,11 @@ pub fn pset_balance(
         .unwrap_or(false)
         {
             // external recipients
+            let (asset, amount) = verified_asset_value(&secp, output, idx)?;
             let blinding_pubkey = output.blinding_key.as_ref().map(|k| k.inner);
             let address =
                 elements::Address::from_script(&output.script_pubkey, blinding_pubkey, params);
-            let recipient = Recipient::new(address, output.asset, output.amount, idx as u32);
+            let recipient = Recipient::new(address, asset, amount, idx as u32);
 
             recipients.push(recipient);
 

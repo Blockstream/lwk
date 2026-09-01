@@ -173,24 +173,6 @@ pub enum Error {
     #[error("The script is not owned by this wallet")]
     ScriptNotMine,
 
-    #[error("Invalid domain")]
-    InvalidDomain,
-
-    #[error("Invalid version")]
-    InvalidVersion,
-
-    #[error("Invalid precision")]
-    InvalidPrecision,
-
-    #[error("Invalid name")]
-    InvalidName,
-
-    #[error("Invalid ticker")]
-    InvalidTicker,
-
-    #[error("Invalid issuer pubkey")]
-    InvalidIssuerPubkey,
-
     #[error("Descriptor without wildcard not supported")]
     UnsupportedDescriptorWithoutWildcard,
 
@@ -252,9 +234,6 @@ pub enum Error {
 
     #[error("The transaction has confidential inputs but no output to blind")]
     MissingBlindedOutput,
-
-    #[error("Contract does not commit to asset id")]
-    ContractDoesNotCommitToAssetId,
 
     #[error("Update height {update_tip_height} too old (internal height {cache_tip_height})")]
     UpdateHeightTooOld {
@@ -358,12 +337,6 @@ pub enum Error {
     #[error("Cannot use derivation index when the descriptor has no wildcard")]
     IndexWithoutWildcard,
 
-    #[error("Given contract does not commit to asset '{0}'")]
-    InvalidContractForAsset(String),
-
-    #[error("Given transaction does not contain issuance of asset '{0}'")]
-    InvalidIssuanceTxtForAsset(String),
-
     #[cfg(feature = "test_wallet")]
     #[error(transparent)]
     SignerError(#[from] lwk_signer::NewError),
@@ -425,6 +398,9 @@ pub enum Error {
     #[cfg(feature = "amp2")]
     #[error("AMP2 cosign didn't add any signatures")]
     Amp2NoSigsAdded,
+
+    #[error("Registry error: {0}")]
+    Registry(#[from] crate::RegistryError),
 }
 
 // cannot derive automatically with this error because of trait bound

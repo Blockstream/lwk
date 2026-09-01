@@ -486,12 +486,12 @@ fn contract() {
     let contract_i = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"37cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":8,\"ticker\":\"TEST\",\"version\":0}";
 
     for (contract, expected) in [
-        (contract_d, Error::InvalidDomain),
-        (contract_v, Error::InvalidVersion),
-        (contract_p, Error::InvalidPrecision),
-        (contract_n, Error::InvalidName),
-        (contract_t, Error::InvalidTicker),
-        (contract_i, Error::InvalidIssuerPubkey),
+        (contract_d, lwk_registry::error::Error::InvalidDomain),
+        (contract_v, lwk_registry::error::Error::InvalidVersion),
+        (contract_p, lwk_registry::error::Error::InvalidPrecision),
+        (contract_n, lwk_registry::error::Error::InvalidName),
+        (contract_t, lwk_registry::error::Error::InvalidTicker),
+        (contract_i, lwk_registry::error::Error::InvalidIssuerPubkey),
     ] {
         let err = Contract::from_str(contract).unwrap_err();
         assert_eq!(err.to_string(), expected.to_string());

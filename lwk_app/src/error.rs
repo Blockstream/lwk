@@ -23,6 +23,9 @@ pub enum Error {
     #[error("Wollet Error: {0}")]
     Wollet(#[from] lwk_wollet::Error),
 
+    #[error("Registry Error: {0}")]
+    Registry(#[from] lwk_wollet::RegistryError),
+
     #[error("Address Error: {0}")]
     Address(#[from] lwk_wollet::elements::AddressError),
 

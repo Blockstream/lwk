@@ -1,5 +1,5 @@
-use crate::contract::Contract;
 use crate::elements::{Address, AssetId, OutPoint, Transaction};
+use crate::Contract;
 use crate::Error;
 use std::collections::HashSet;
 

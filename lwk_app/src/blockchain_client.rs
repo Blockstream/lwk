@@ -52,3 +52,10 @@ impl BlockchainBackend for BlockchainClient {
         }
     }
 }
+
+impl lwk_wollet::registry::TxFetcher for BlockchainClient {
+    fn get_transaction(&self, txid: Txid) -> Result<Transaction, lwk_wollet::RegistryError> {
+        BlockchainBackend::get_transaction(self, txid)
+            .map_err(|e| lwk_wollet::RegistryError::Generic(e.to_string()))
+    }
+}

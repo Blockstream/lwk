@@ -7,19 +7,36 @@ use std::fmt;
 use std::str::FromStr;
 
 use crate::contract::{asset_ids, Contract, Entity};
-use crate::elements::{AssetId, OutPoint};
 use crate::error::Error;
+use elements::{AssetId, OutPoint};
 
-use crate::Network;
 use elements::hashes::sha256::Midstate;
 use elements::pset::elip100::AssetMetadata;
 use elements::pset::elip100::TokenMetadata;
 use elements::pset::PartiallySignedTransaction;
 use elements::{AssetIssuance, LockTime, Script, Sequence, Transaction, TxInWitness, Txid};
 use futures::{stream, StreamExt};
+use lwk_common::Network;
 use serde::{Deserialize, Serialize};
 
 const TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// Trait implemented by types that can fetch a transaction by txid, used by
+/// [`Registry::fetch_with_tx`] and [`blocking::Registry::fetch_with_tx`] to avoid depending on the
+/// concrete blockchain client types.
+pub trait TxFetcher {
+    /// Fetch the transaction with the given txid
+    fn get_transaction(&self, txid: Txid) -> Result<Transaction, Error>;
+}
+
+/// Async variant of [`TxFetcher`], used by the async [`Registry::fetch_with_tx`].
+pub trait TxFetcherAsync {
+    /// Fetch the transaction with the given txid
+    fn get_transaction(
+        &self,
+        txid: Txid,
+    ) -> impl std::future::Future<Output = Result<Transaction, Error>>;
+}
 
 /// An asyncronous registry client, allowing to fetch and post assets metadata from the registry.
 #[derive(Clone)]
@@ -107,11 +124,10 @@ impl RegistryCache {
     }
 
     /// Fetch the contract and the issuance transaction of the given asset id from the registry
-    #[cfg(feature = "esplora")]
-    pub async fn fetch_with_tx(
+    pub async fn fetch_with_tx<T: TxFetcherAsync>(
         &self,
         asset_id: AssetId,
-        client: &crate::asyncr::EsploraClient,
+        client: &T,
     ) -> Result<(Contract, Transaction), Error> {
         self.inner.fetch_with_tx(asset_id, client).await
     }
@@ -216,11 +232,10 @@ impl Registry {
     }
 
     /// Fetch the contract and the issuance transaction of the given asset id from the registry
-    #[cfg(feature = "esplora")]
-    pub async fn fetch_with_tx(
+    pub async fn fetch_with_tx<T: TxFetcherAsync>(
         &self,
         asset_id: AssetId,
-        client: &crate::asyncr::EsploraClient,
+        client: &T,
     ) -> Result<(Contract, Transaction), Error> {
         let data = self.fetch(asset_id).await?;
         let tx = client.get_transaction(data.issuance_txin.txid).await?;
@@ -264,9 +279,11 @@ pub mod blocking {
     use elements::{AssetId, Transaction};
     use tokio::runtime::Runtime;
 
-    use crate::{Error, Network};
+    use crate::contract::Contract;
+    use crate::error::Error;
+    use lwk_common::Network;
 
-    use super::RegistryPost;
+    use super::{RegistryPost, TxFetcher};
 
     /// A blocking registry client, allowing to fetch and post assets metadata from the registry.
     pub struct Registry {
@@ -297,11 +314,11 @@ pub mod blocking {
         }
 
         /// Fetch the contract and the issuance transaction of the given asset id from the registry
-        pub fn fetch_with_tx(
+        pub fn fetch_with_tx<T: TxFetcher>(
             &self,
             asset_id: AssetId,
-            client: &impl crate::clients::blocking::BlockchainBackend,
-        ) -> Result<(super::Contract, Transaction), Error> {
+            client: &T,
+        ) -> Result<(Contract, Transaction), Error> {
             let data = self.fetch(asset_id)?;
             let tx = client.get_transaction(data.issuance_txin.txid)?;
             Ok((data.contract, tx))

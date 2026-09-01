@@ -2921,6 +2921,20 @@ dependencies = [
 [[package]]
 name = "lwk_registry"
 version = "0.19.0"
+dependencies = [
+ "elements 0.25.3",
+ "futures",
+ "idna",
+ "lwk_common",
+ "lwk_test_util",
+ "once_cell",
+ "regex-lite",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+]
 
 [[package]]
 name = "lwk_rpc_model"
@@ -3048,19 +3062,18 @@ dependencies = [
  "futures",
  "fxhash",
  "hmac",
- "idna",
  "js-sys",
  "log",
  "lwk_common",
  "lwk_containers",
  "lwk_jade",
  "lwk_ledger",
+ "lwk_registry",
  "lwk_signer",
  "lwk_test_util",
  "once_cell",
  "pbkdf2",
  "rand 0.8.5",
- "regex-lite",
  "reqwest",
  "rmp-serde",
  "rmpv",

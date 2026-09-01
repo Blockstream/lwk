@@ -5,10 +5,10 @@
 use std::str::FromStr;
 
 use crate::domain::verify_domain_name;
-use crate::elements::hashes::{sha256, Hash};
-use crate::elements::{AssetId, ContractHash, OutPoint};
 use crate::error::Error;
 use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
+use elements::hashes::{sha256, Hash};
+use elements::{AssetId, ContractHash, OutPoint};
 use once_cell::sync::Lazy;
 use regex_lite::Regex;
 use serde::{Deserialize, Serialize};
@@ -327,7 +327,7 @@ mod tests {
         assert!(contract.validate().is_ok());
 
         // https://blockstream.info/liquid/api/tx/abb4080d91849e933ee2ed65da6b436f7c385cf363fb4aa08399f1e27c58ff3d/hex
-        let tx_hex = include_str!("../tests/data/usdt-issuance-tx.hex");
+        let tx_hex = include_str!("../../lwk_wollet/tests/data/usdt-issuance-tx.hex");
         let tx: elements::Transaction =
             elements::encode::deserialize(&Vec::<u8>::from_hex(tx_hex).unwrap()).unwrap();
 

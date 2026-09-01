@@ -3,9 +3,7 @@
 
 use std::{
     fmt::Display,
-    fs::File,
-    io::{ErrorKind, Read},
-    str::FromStr,
+    io::Read,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
@@ -19,8 +17,8 @@ pub use error::Error;
 use error::{AsRpcError, InnerError, METHOD_NOT_FOUND};
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
+use tiny_http::Response as HttpResponse;
 use tiny_http::Server;
-use tiny_http::{Header, Response as HttpResponse};
 
 pub mod config;
 pub mod error;
@@ -102,81 +100,6 @@ impl JsonRpcServer {
 
                     // check request method
                     match http_request.method() {
-                        tiny_http::Method::Get => {
-                            // respond to the http GET request
-                            let Some(mut path) = config.serve_dir.clone() else {
-                                let message = "No serve_dir defined in server config.";
-                                let response =
-                                    HttpResponse::from_string(message).with_status_code(500);
-                                send_http_response(http_request, response, message);
-                                continue;
-                            };
-                            // remove starting slash
-                            let Some(file_name) = http_request.url().strip_prefix('/') else {
-                                let message = "400: Bad request - URL must start with '/'";
-                                let response =
-                                    HttpResponse::from_string(message).with_status_code(400);
-                                send_http_response(http_request, response, message);
-                                continue;
-                            };
-                            path.push(file_name);
-                            // add index.html to directories
-                            if path.is_dir() {
-                                path.push("index.html");
-                            }
-                            match File::open(path) {
-                                Ok(mut file) => {
-                                    let mut buf = Vec::new();
-                                    match file.read_to_end(&mut buf) {
-                                        Ok(n) => log::trace!("GET: read {n} bytes"),
-                                        Err(e) => {
-                                            let message = "500: Internal error";
-                                            let response = HttpResponse::from_string(message)
-                                                .with_status_code(500);
-                                            send_http_response(
-                                                http_request,
-                                                response,
-                                                format!("{message}: {e}").as_str(),
-                                            );
-                                            continue;
-                                        }
-                                    }
-                                    // todo: content-type headers, this is non-trivial and not strictly necessary right now
-                                    let response = HttpResponse::from_data(buf);
-                                    let message = "File for GET request";
-                                    send_http_response(http_request, response, message);
-                                }
-                                Err(e) if matches!(e.kind(), ErrorKind::NotFound) => {
-                                    // 404
-                                    let message = "404: File not found";
-                                    let response =
-                                        HttpResponse::from_string(message).with_status_code(404);
-                                    send_http_response(http_request, response, message);
-                                }
-                                Err(e) => {
-                                    // 500
-                                    let message = "500: Internal error";
-                                    let response =
-                                        HttpResponse::from_string(message).with_status_code(500);
-                                    send_http_response(
-                                        http_request,
-                                        response,
-                                        format!("{message}: {e}").as_str(),
-                                    );
-                                }
-                            }
-                        }
-                        tiny_http::Method::Options => {
-                            // respond to the http OPTIONS request, normally for CORS
-                            let allow = Header::from_str("Allow: GET, POST, OPTIONS")
-                                .expect("valid header");
-                            let mut response = HttpResponse::empty(204).with_header(allow);
-                            for header in config.headers.clone().into_iter() {
-                                response.add_header(header);
-                            }
-                            let message = "OPTIONS request";
-                            send_http_response(http_request, response, message);
-                        }
                         tiny_http::Method::Post => {
                             // validate/parse the jsonrpc POST request
                             let result = validate_jsonrpc_request(&mut http_request, &config);
@@ -213,9 +136,7 @@ impl JsonRpcServer {
                             };
 
                             // send the response
-                            if let Err(err) =
-                                send_jsonrpc_response(http_request, response, &config.headers)
-                            {
+                            if let Err(err) = send_jsonrpc_response(http_request, response) {
                                 log::error!("send_response error: {err}");
                             }
                         }
@@ -273,11 +194,9 @@ where
     }
 }
 
-fn validate_jsonrpc_request(
-    http_request: &mut tiny_http::Request,
-    config: &Config,
-) -> Result<Request, InnerError> {
-    // check authorization, if configured
+/// Checks the `Authorization` header against `config.expected_auth_header`, if set,
+/// using a constant-time comparison.
+fn check_auth(http_request: &tiny_http::Request, config: &Config) -> Result<(), InnerError> {
     if let Some(expected) = &config.expected_auth_header {
         let provided = http_request
             .headers()
@@ -300,6 +219,15 @@ fn validate_jsonrpc_request(
             return Err(InnerError::Unauthorized);
         }
     }
+    Ok(())
+}
+
+fn validate_jsonrpc_request(
+    http_request: &mut tiny_http::Request,
+    config: &Config,
+) -> Result<Request, InnerError> {
+    // check authorization, if configured
+    check_auth(http_request, config)?;
 
     // check content-type header exists
     let content_header = http_request
@@ -385,13 +313,9 @@ where
 fn send_jsonrpc_response(
     request: tiny_http::Request,
     response: Response,
-    headers: &[Header],
 ) -> Result<(), InnerError> {
     let data = serde_json::to_string(&response)?;
-    let mut response = HttpResponse::from_string(data);
-    for header in headers.iter() {
-        response.add_header(header.clone());
-    }
+    let response = HttpResponse::from_string(data);
     Ok(request.respond(response)?)
 }
 
@@ -449,14 +373,6 @@ impl Response {
     pub fn unimplemented(id: Option<Id>, message: String) -> Self {
         Self::error(id, METHOD_NOT_FOUND, message, None)
     }
-
-    pub fn is_error(&self) -> bool {
-        self.error.is_some()
-    }
-
-    pub fn is_result(&self) -> bool {
-        self.result.is_some()
-    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -481,13 +397,6 @@ pub enum Id {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        fs::File,
-        io::{Read, Write},
-        net::TcpStream,
-        path::PathBuf,
-    };
-
     use super::*;
     use jsonrpc::Client;
     use serde_json::{json, value::to_raw_value};
@@ -504,20 +413,6 @@ mod test {
             _ => unimplemented!(),
         };
         Ok(response)
-    }
-
-    fn send_http_request(stream: &mut TcpStream, request: &str) -> Vec<u8> {
-        // Add Connection: close header to all requests
-        let request = request.trim_end_matches("\r\n\r\n");
-        let request = format!("{request}\r\nConnection: close\r\n\r\n");
-        stream.write_all(request.as_bytes()).unwrap();
-        let mut response = Vec::new();
-        stream.read_to_end(&mut response).unwrap();
-        response
-    }
-
-    fn assert_response_contains(response: &[u8], expected: &str) {
-        assert!(String::from_utf8_lossy(response).contains(expected));
     }
 
     #[test]
@@ -604,97 +499,5 @@ mod test {
         });
         assert_eq!(actual, expected);
         assert!(actual.get("result").is_none());
-    }
-
-    #[test]
-    fn http_options() {
-        let addr = "127.0.0.1:0";
-        let server = Server::http(addr).unwrap();
-        let state = Arc::new(Mutex::new(()));
-        let config = Config {
-            headers: vec![
-                Header::from_str("Access-Control-Allow-Origin: http://127.0.0.1:8000").unwrap(),
-                Header::from_str("Access-Control-Allow-Headers: content-type").unwrap(),
-            ],
-            ..Default::default()
-        };
-        let rpc = JsonRpcServer::new(server, config, state, process);
-        let port = rpc.port().unwrap();
-
-        let mut stream = TcpStream::connect(format!("127.0.0.1:{port}")).unwrap();
-        let request = "OPTIONS / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n";
-        let response = send_http_request(&mut stream, request);
-
-        assert_response_contains(&response, "HTTP/1.1 204");
-        assert_response_contains(&response, "Allow: GET, POST, OPTIONS");
-        assert_response_contains(
-            &response,
-            "Access-Control-Allow-Origin: http://127.0.0.1:8000",
-        );
-        assert_response_contains(&response, "Access-Control-Allow-Headers: content-type");
-    }
-
-    fn make_file(dir_path: PathBuf, file_name: String, data: &[u8]) -> File {
-        let mut path = dir_path;
-        path.push(file_name);
-        let mut file = File::create(path).unwrap();
-        file.write_all(data).unwrap();
-        file
-    }
-
-    #[test]
-    fn http_get() {
-        let addr = "127.0.0.1:0";
-        let server = Server::http(addr).unwrap();
-        let state = Arc::new(Mutex::new(()));
-
-        // create the http serve dir
-        let dir = tempfile::tempdir().unwrap();
-
-        let dir_path = dir.keep();
-
-        let config = Config {
-            serve_dir: Some(dir_path.clone()),
-            ..Default::default()
-        };
-        let rpc = JsonRpcServer::new(server, config, state, process);
-        let port = rpc.port().unwrap();
-
-        // create files to GET
-        let file_types = [
-            ("html", "<!doctype html>".as_bytes()),
-            ("css", include_bytes!("../test/data/file.css")),
-            ("js", include_bytes!("../test/data/file.js")),
-            ("ico", include_bytes!("../test/data/file.ico")),
-            ("jpg", include_bytes!("../test/data/file.jpg")),
-            ("png", include_bytes!("../test/data/file.png")),
-            ("svg", include_bytes!("../test/data/file.svg")),
-        ];
-
-        for (ext, data) in file_types.into_iter() {
-            let file_name = format!("file.{ext}");
-            make_file(dir_path.clone(), file_name.clone(), data);
-
-            let mut stream = TcpStream::connect(format!("127.0.0.1:{port}")).unwrap();
-            let request = format!("GET /{file_name} HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
-            let response = send_http_request(&mut stream, &request);
-
-            assert_response_contains(&response, "HTTP/1.1 200");
-            // Find the body after the headers
-            if let Some(body_start) = response.windows(4).position(|window| window == b"\r\n\r\n") {
-                let body = &response[body_start + 4..];
-                assert_eq!(body, data);
-            } else {
-                panic!("No body found in response");
-            }
-        }
-
-        // 404
-        let mut stream = TcpStream::connect(format!("127.0.0.1:{port}")).unwrap();
-        let request = "GET /missing.file HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n";
-        let response = send_http_request(&mut stream, request);
-
-        assert_response_contains(&response, "HTTP/1.1 404");
-        assert_response_contains(&response, "404: File not found");
     }
 }

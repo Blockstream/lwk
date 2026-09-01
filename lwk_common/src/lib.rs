@@ -299,25 +299,10 @@ pub fn pset_balance(
             (None, _, _, None, _, _) => return Err(Error::OutputAssetValueNone { idx }),
             (None, _, _, Some(_), _, _) => return Err(Error::OutputValueNone { idx }),
             (Some(_), _, _, None, _, _) => return Err(Error::OutputAssetNone { idx }),
-            (
-                Some(asset),
-                Some(asset_comm),
-                Some(blind_asset_proof),
-                Some(amount),
-                Some(amount_comm),
-                Some(blind_value_proof),
-            ) => {
-                if !blind_asset_proof.blind_asset_proof_verify(&secp, asset, asset_comm) {
-                    return Err(Error::InvalidAssetBlindProof { idx });
-                }
-                if !blind_value_proof.blind_value_proof_verify(
-                    &secp,
-                    amount,
-                    asset_comm,
-                    amount_comm,
-                ) {
-                    return Err(Error::InvalidValueBlindProof { idx });
-                }
+            (Some(_), Some(asset_comm), Some(_), Some(_), Some(amount_comm), Some(_)) => {
+                let (Some(asset), Some(amount)) = verified_asset_value(&secp, output, idx)? else {
+                    return Err(Error::OutputNotBlinded { idx });
+                };
 
                 // Check that we can later unblind the output
                 let private_blinding_key = derive_blinding_key(descriptor, &output.script_pubkey)
@@ -326,6 +311,15 @@ pub fn pset_balance(
                     .to_txout()
                     .unblind(&secp, private_blinding_key)
                     .map_err(|_| Error::OutputMineNotUnblindable { idx })?;
+
+                if txout_secrets.asset != asset {
+                    return Err(Error::InvalidTxOutSecretsAsset { idx });
+                }
+
+                if txout_secrets.value != amount {
+                    return Err(Error::InvalidTxOutSecretsValue { idx });
+                }
+
                 if (asset_comm, amount_comm) != commitments(&secp, &txout_secrets) {
                     return Err(Error::OutputCommitmentsMismatch { idx });
                 }

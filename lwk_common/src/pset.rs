@@ -3,13 +3,14 @@ use std::collections::BTreeMap;
 use elements::{
     bitcoin::{bip32::Fingerprint, PublicKey},
     hashes::Hash,
-    pset::{raw::ProprietaryKey, PartiallySignedTransaction},
-    secp256k1_zkp::{ecdsa, Secp256k1},
-    sighash::SighashCache,
-    BlockHash, Transaction,
+    pset::{raw::ProprietaryKey, Input, PartiallySignedTransaction},
+    schnorr::TapTweak,
+    secp256k1_zkp::{ecdsa, Message, Secp256k1, XOnlyPublicKey},
+    taproot::TapLeafHash,
+    BlockHash, SchnorrSig,
 };
-use elements_miniscript::psbt::{PsbtExt, PsbtSighashMsg};
 
+use crate::sighash::{SighashCtx, SighashError};
 use crate::Network;
 
 const PSBT_ELEMENTS_GLOBAL_GENESIS_HASH: u8 = 0x02;
@@ -44,8 +45,8 @@ pub enum PsetValidationError {
     #[error("added signature is invalid")]
     InvalidSignature,
 
-    #[error("Transaction extraction from PSET failed")]
-    TxExtractionFailed,
+    #[error(transparent)]
+    Sighash(#[from] SighashError),
 }
 
 // TODO: upstream to rust elements
@@ -97,15 +98,7 @@ pub fn verify_added_sigs<C: elements::secp256k1_zkp::Verification>(
         return Err(PsetValidationError::DataMismatch);
     }
 
-    let tx = returned
-        .extract_tx()
-        .map_err(|_| PsetValidationError::TxExtractionFailed)?;
-    let mut env = VerifyEnv {
-        pset: returned,
-        cache: SighashCache::new(Box::new(tx)),
-        genesis_hash: get_genesis_hash(returned).unwrap_or(BlockHash::all_zeros()),
-        secp,
-    };
+    let mut ctx = SighashCtx::new(returned, get_genesis_hash(returned))?;
 
     let mut added = 0;
 
@@ -125,7 +118,7 @@ pub fn verify_added_sigs<C: elements::secp256k1_zkp::Verification>(
                     return Err(PsetValidationError::WrongFingerprint { idx });
                 }
 
-                env.verify_ecdsa(idx, pk, sig)?;
+                verify_ecdsa(&mut ctx, ret_in, secp, idx, pk, sig)?;
                 added += 1;
             }
         }
@@ -135,7 +128,7 @@ pub fn verify_added_sigs<C: elements::secp256k1_zkp::Verification>(
             return Err(PsetValidationError::TapKeySigChanged { idx });
         }
 
-        if let (Some(_), None) = (&ret_in.tap_key_sig, &orig_in.tap_key_sig) {
+        if let (Some(sig), None) = (&ret_in.tap_key_sig, &orig_in.tap_key_sig) {
             let internal_key = ret_in
                 .tap_internal_key
                 .ok_or(PsetValidationError::MissingInternalKey { idx })?;
@@ -147,7 +140,16 @@ pub fn verify_added_sigs<C: elements::secp256k1_zkp::Verification>(
                 return Err(PsetValidationError::WrongFingerprint { idx });
             }
 
-            // TODO: verify taproot key spend signature
+            let (output_key, _) = internal_key.tap_tweak(secp, ret_in.tap_merkle_root);
+            verify_schnorr(
+                &mut ctx,
+                ret_in,
+                secp,
+                idx,
+                None,
+                sig,
+                &output_key.into_inner(),
+            )?;
             added += 1;
         }
 
@@ -156,7 +158,7 @@ pub fn verify_added_sigs<C: elements::secp256k1_zkp::Verification>(
             return Err(PsetValidationError::TapScriptSigsRemoved { idx });
         }
 
-        for ((pk, leaf), _) in ret_in.tap_script_sigs.iter() {
+        for ((pk, leaf), sig) in ret_in.tap_script_sigs.iter() {
             if !orig_in.tap_script_sigs.contains_key(&(*pk, *leaf)) {
                 let (leaves, (fp, _)) = ret_in
                     .tap_key_origins
@@ -170,7 +172,7 @@ pub fn verify_added_sigs<C: elements::secp256k1_zkp::Verification>(
                     return Err(PsetValidationError::WrongFingerprint { idx });
                 }
 
-                // TODO: verify taproot script spend signatures
+                verify_schnorr(&mut ctx, ret_in, secp, idx, Some(*leaf), sig, pk)?;
                 added += 1;
             }
         }
@@ -179,49 +181,51 @@ pub fn verify_added_sigs<C: elements::secp256k1_zkp::Verification>(
     Ok(added)
 }
 
-/// Shared context for the sighash-based signature verification.
-struct VerifyEnv<'a, C: elements::secp256k1_zkp::Verification> {
-    pset: &'a PartiallySignedTransaction,
-    cache: SighashCache<Box<Transaction>>,
-    genesis_hash: BlockHash,
-    secp: &'a Secp256k1<C>,
+fn verify_ecdsa<C: elements::secp256k1_zkp::Verification>(
+    ctx: &mut SighashCtx,
+    input: &Input,
+    secp: &Secp256k1<C>,
+    idx: usize,
+    pk: &PublicKey,
+    sig: &[u8],
+) -> Result<(), PsetValidationError> {
+    if sig.len() <= 1 {
+        return Err(PsetValidationError::InvalidSignature);
+    }
+    let (der, hash_ty) = sig.split_at(sig.len() - 1);
+
+    let expected = input
+        .ecdsa_hash_ty()
+        .ok_or(PsetValidationError::InvalidSignature)?;
+    if expected as u8 != hash_ty[0] {
+        return Err(PsetValidationError::InvalidSignature);
+    }
+
+    let msg = Message::from_digest(ctx.ecdsa_msg(idx)?.to_byte_array());
+    let der = ecdsa::Signature::from_der(der).map_err(|_| PsetValidationError::InvalidSignature)?;
+    secp.verify_ecdsa(&msg, &der, &pk.inner)
+        .map_err(|_| PsetValidationError::InvalidSignature)
 }
 
-impl<C: elements::secp256k1_zkp::Verification> VerifyEnv<'_, C> {
-    fn verify_ecdsa(
-        &mut self,
-        idx: usize,
-        pk: &PublicKey,
-        sig: &[u8],
-    ) -> Result<(), PsetValidationError> {
-        if sig.len() <= 1 {
-            return Err(PsetValidationError::InvalidSignature);
-        }
-
-        let sig_hash_byte = sig[sig.len() - 1];
-
-        let input = &self.pset.inputs()[idx];
-        if let Some(expected_sighash) = input.sighash_type {
-            if expected_sighash.to_u32() as u8 != sig_hash_byte {
-                return Err(PsetValidationError::InvalidSignature);
-            }
-        }
-
-        let msg = self
-            .pset
-            .sighash_msg(idx, &mut self.cache, None, self.genesis_hash)
-            .map_err(|_| PsetValidationError::InvalidSignature)?;
-
-        if !matches!(&msg, PsbtSighashMsg::EcdsaSighash(_)) {
-            return Err(PsetValidationError::InvalidSignature);
-        }
-        let der = ecdsa::Signature::from_der(&sig[..sig.len() - 1])
-            .map_err(|_| PsetValidationError::InvalidSignature)?;
-        self.secp
-            .verify_ecdsa(&msg.to_secp_msg(), &der, &pk.inner)
-            .map_err(|_| PsetValidationError::InvalidSignature)?;
-        Ok(())
+fn verify_schnorr<C: elements::secp256k1_zkp::Verification>(
+    ctx: &mut SighashCtx,
+    input: &Input,
+    secp: &Secp256k1<C>,
+    idx: usize,
+    leaf: Option<TapLeafHash>,
+    sig: &SchnorrSig,
+    pk: &XOnlyPublicKey,
+) -> Result<(), PsetValidationError> {
+    let expected = input
+        .schnorr_hash_ty()
+        .ok_or(PsetValidationError::InvalidSignature)?;
+    if expected != sig.hash_ty {
+        return Err(PsetValidationError::InvalidSignature);
     }
+
+    let msg = Message::from_digest(ctx.taproot_msg(idx, leaf)?.to_byte_array());
+    secp.verify_schnorr(&sig.sig, &msg, pk)
+        .map_err(|_| PsetValidationError::InvalidSignature)
 }
 
 /// Checks if `ret` contains every entry of `orig` with the same value
@@ -236,9 +240,10 @@ mod tests {
     use elements::bitcoin::{secp256k1, PublicKey};
     use elements::encode::{deserialize, serialize};
     use elements::pset::{Input, Output};
+    use elements::secp256k1_zkp::Keypair;
     use elements::secp256k1_zkp::XOnlyPublicKey;
     use elements::taproot::TapLeafHash;
-    use elements::{confidential, SchnorrSig, Script, TxOut, TxOutWitness};
+    use elements::{confidential, SchnorrSig, SchnorrSighashType, Script, TxOut, TxOutWitness};
     use std::str::FromStr;
     use std::sync::LazyLock;
 
@@ -269,6 +274,82 @@ mod tests {
             ..Default::default()
         });
         pset
+    }
+
+    /// A PSET with a single taproot input owned by the returned keypair.
+    ///
+    /// With a leaf the key is registered as a script spend key, without it as the internal key.
+    fn taproot_pset(
+        fp: Fingerprint,
+        leaf: Option<TapLeafHash>,
+    ) -> (PartiallySignedTransaction, Keypair) {
+        let keypair = Keypair::from_seckey_slice(&EC, &[0x11u8; 32]).unwrap();
+        let (internal_key, _) = XOnlyPublicKey::from_keypair(&keypair);
+        let (output_key, _) = internal_key.tap_tweak(&EC, None);
+
+        let mut script_pubkey = vec![0x51, 0x20];
+        script_pubkey.extend(output_key.into_inner().serialize());
+
+        let input = Input {
+            witness_utxo: Some(TxOut {
+                asset: confidential::Asset::Explicit(elements::AssetId::LIQUID_BTC),
+                value: confidential::Value::Explicit(1000),
+                nonce: confidential::Nonce::Null,
+                script_pubkey: Script::from(script_pubkey),
+                witness: TxOutWitness::default(),
+            }),
+            tap_internal_key: Some(internal_key),
+            tap_key_origins: BTreeMap::from([(
+                internal_key,
+                (
+                    leaf.map(|l| vec![l]).unwrap_or_default(),
+                    (fp, DerivationPath::master()),
+                ),
+            )]),
+            ..Default::default()
+        };
+
+        let mut pset = PartiallySignedTransaction::new_v2();
+        pset.add_input(input);
+        pset.add_output(Output {
+            asset: Some(elements::AssetId::LIQUID_BTC),
+            amount: Some(1000),
+            ..Default::default()
+        });
+        set_genesis_hash(&mut pset, &Network::Liquid);
+        (pset, keypair)
+    }
+
+    fn taproot_msg(pset: &PartiallySignedTransaction, leaf: Option<TapLeafHash>) -> Message {
+        let mut ctx = SighashCtx::new(pset, get_genesis_hash(pset)).unwrap();
+        let sighash = ctx.taproot_msg(0, leaf).unwrap();
+        Message::from_digest(sighash.to_byte_array())
+    }
+
+    fn sign_key_spend(
+        pset: &PartiallySignedTransaction,
+        keypair: &Keypair,
+        hash_ty: SchnorrSighashType,
+    ) -> SchnorrSig {
+        let msg = taproot_msg(pset, None);
+        let tweaked = keypair.tap_tweak(&EC, pset.inputs()[0].tap_merkle_root);
+        SchnorrSig {
+            sig: EC.sign_schnorr(&msg, &tweaked.to_inner()),
+            hash_ty,
+        }
+    }
+
+    fn sign_script_spend(
+        pset: &PartiallySignedTransaction,
+        keypair: &Keypair,
+        leaf: TapLeafHash,
+        hash_ty: SchnorrSighashType,
+    ) -> SchnorrSig {
+        let msg = taproot_msg(pset, Some(leaf));
+        SchnorrSig {
+            sig: EC.sign_schnorr(&msg, keypair),
+            hash_ty,
+        }
     }
 
     #[test]
@@ -494,27 +575,24 @@ mod tests {
             PsetValidationError::TapScriptSigsRemoved { idx: 0 }
         ));
 
-        // tap key sig with a correct fingerprint
-        // TODO: remove this once taproot key spend signature verification is implemented
-        let mut original = test_pset();
-        original.inputs_mut()[0].tap_internal_key = Some(xonly);
-        original.inputs_mut()[0]
-            .tap_key_origins
-            .insert(xonly, (vec![], (fp, DerivationPath::master())));
+        // a valid tap key spend signature from the expected fingerprint
+        let (original, keypair) = taproot_pset(fp, None);
         let mut returned = original.clone();
-        returned.inputs_mut()[0].tap_key_sig = Some(schnorr_sig);
+        returned.inputs_mut()[0].tap_key_sig = Some(sign_key_spend(
+            &original,
+            &keypair,
+            SchnorrSighashType::Default,
+        ));
         assert_eq!(verify_added_sigs(&original, &returned, fp, &EC).unwrap(), 1);
 
-        // tap script sig with a correct fingerprint
-        // TODO: remove this once taproot script spend signature verification is implemented
-        let mut original = test_pset();
-        original.inputs_mut()[0]
-            .tap_key_origins
-            .insert(xonly, (vec![leaf], (fp, DerivationPath::master())));
+        // a valid tap script spend signature, verified against the untweaked leaf key
+        let (original, keypair) = taproot_pset(fp, Some(leaf));
+        let leaf_key = XOnlyPublicKey::from_keypair(&keypair).0;
         let mut returned = original.clone();
-        returned.inputs_mut()[0]
-            .tap_script_sigs
-            .insert((xonly, leaf), schnorr_sig);
+        returned.inputs_mut()[0].tap_script_sigs.insert(
+            (leaf_key, leaf),
+            sign_script_spend(&original, &keypair, leaf, SchnorrSighashType::Default),
+        );
         assert_eq!(verify_added_sigs(&original, &returned, fp, &EC).unwrap(), 1);
 
         // non-signature fields are protected: any change triggers DataMismatch

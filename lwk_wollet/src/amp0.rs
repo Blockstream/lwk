@@ -2493,6 +2493,8 @@ mod tests {
     fn test_verify_added_tx_sigs() {
         use elements::bitcoin::PublicKey;
         use elements::pset::{Input, Output};
+        use elements::secp256k1_zkp::ecdsa;
+        use elements::EcdsaSighashType;
 
         let s = "020202020202020202020202020202020202020202020202020202020202020202";
         let pk = PublicKey::from_str(s).unwrap();
@@ -2500,8 +2502,12 @@ mod tests {
         let fp = Fingerprint::from_str("aabbccdd").unwrap();
         let other_fp = Fingerprint::from_str("11223344").unwrap();
 
-        let ecdsa_sig = vec![0x30, 0x45, 0x02, 0x20, 0x7f, 0x01];
-        let ecdsa_sig_too_short = vec![0x30, 0x46];
+        let mut ecdsa_sig = ecdsa::Signature::from_compact(&[0x7e; 64])
+            .unwrap()
+            .serialize_der()
+            .to_vec();
+        ecdsa_sig.push(EcdsaSighashType::All as u8);
+        let ecdsa_sig_too_short = vec![EcdsaSighashType::All as u8];
         let dummy_hex = "304402207f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f02207f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f01";
         let dummy = Vec::<u8>::from_hex(dummy_hex).unwrap();
 
@@ -2524,6 +2530,8 @@ mod tests {
         pset.inputs_mut()[0]
             .bip32_derivation
             .insert(pk, (fp, DerivationPath::master()));
+
+        pset.inputs_mut()[0].witness_utxo = Some(elements::TxOut::default());
 
         let mut original = pset.extract_tx().unwrap();
         original.input[0].witness.script_witness.push(dummy.clone());

@@ -175,7 +175,7 @@ fn output_is_fully_explicit(output: &Output) -> bool {
 ///
 /// The values are reported as `None` when they cannot be verified, e.g., for a blinded output
 /// without blind proofs in the PSET.
-fn verified_asset_value(
+pub(crate) fn verified_asset_value(
     secp: &Secp256k1<All>,
     output: &Output,
     idx: usize,

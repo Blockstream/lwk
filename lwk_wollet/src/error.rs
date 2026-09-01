@@ -158,6 +158,9 @@ pub enum Error {
     #[error("Missing transaction")]
     MissingTransaction,
 
+    #[error("Downloaded transaction txid does not match the requested txid")]
+    TxidMismatch,
+
     #[error("Missing vin")]
     MissingVin,
 

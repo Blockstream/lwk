@@ -476,6 +476,9 @@ impl Cache {
 
     fn extend_all_txs(&mut self, txs: &[(Txid, Transaction)]) -> Result<(), Error> {
         for (txid, tx) in txs {
+            if tx.txid() != *txid {
+                return Err(Error::TxidMismatch);
+            }
             self.txs_store
                 .put(&tx_key(txid), &elements::encode::serialize(tx))
                 .map_err(Error::StoreError)?;

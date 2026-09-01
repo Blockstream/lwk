@@ -287,9 +287,14 @@ impl BlockchainBackend for ElectrumClient {
             .map(|t| bitcoin::Txid::from_raw_hash(t.to_raw_hash()))
             .collect();
 
+        let raw_txs = self.with_token_refresh(|client| client.batch_transaction_get_raw(&txids))?;
+
         let mut result = vec![];
-        for tx in self.with_token_refresh(|client| client.batch_transaction_get_raw(&txids))? {
-            let tx: Transaction = elements::encode::deserialize(&tx)?;
+        for (requested, raw_tx) in txids.iter().zip(raw_txs) {
+            let tx: Transaction = elements::encode::deserialize(&raw_tx)?;
+            if tx.txid() != Txid::from_raw_hash(requested.to_raw_hash()) {
+                return Err(Error::TxidMismatch);
+            }
             result.push(tx);
         }
         Ok(result)

@@ -239,6 +239,9 @@ impl Registry {
     ) -> Result<(Contract, Transaction), Error> {
         let data = self.fetch(asset_id).await?;
         let tx = client.get_transaction(data.issuance_txin.txid).await?;
+        if tx.txid() != data.issuance_txin.txid {
+            return Err(Error::TxidMismatch);
+        }
         Ok((data.contract, tx))
     }
 
@@ -321,6 +324,9 @@ pub mod blocking {
         ) -> Result<(Contract, Transaction), Error> {
             let data = self.fetch(asset_id)?;
             let tx = client.get_transaction(data.issuance_txin.txid)?;
+            if tx.txid() != data.issuance_txin.txid {
+                return Err(Error::TxidMismatch);
+            }
             Ok((data.contract, tx))
         }
 

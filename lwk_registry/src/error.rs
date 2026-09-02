@@ -3,6 +3,9 @@ pub enum Error {
     #[error("{0}")]
     Generic(String),
 
+    #[error("Downloaded transaction txid does not match the requested txid")]
+    TxidMismatch,
+
     #[cfg(feature = "client")]
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),

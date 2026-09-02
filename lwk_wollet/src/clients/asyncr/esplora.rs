@@ -145,6 +145,10 @@ impl EsploraClient {
         let response = self.get_with_retry(&tx_url).await?;
         let tx = elements::Transaction::consensus_decode(&response.bytes().await?[..])?;
 
+        if tx.txid() != txid {
+            return Err(Error::TxidMismatch);
+        }
+
         Ok(tx)
     }
 

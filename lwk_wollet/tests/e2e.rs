@@ -3915,6 +3915,9 @@ fn liquidex<C: BlockchainBackend>(
     // ANCHOR_END: liquidex_take
 
     let details = wallet_taker.wollet.get_details(&pset).unwrap();
+    let recipient = details.recipients().first().unwrap();
+    assert_eq!(recipient.value(), Some(sats_recv));
+    assert_eq!(recipient.asset(), Some(asset_recv));
     let fee = details.fees_in(&wallet_taker.policy_asset()) as i64;
     assert!(fee > 0);
     // "send" and "recv" are from the maker perspective

@@ -8,7 +8,7 @@ use elements::{
     hashes::Hash,
     hex::{FromHex, ToHex},
     pset::PartiallySignedTransaction,
-    secp256k1_zkp, AssetId, BlindValueProofs, BlockHash, Transaction, Txid,
+    secp256k1_zkp, AssetId, BlindAssetProofs, BlindValueProofs, BlockHash, Transaction, Txid,
 };
 use elements_miniscript::psbt;
 
@@ -307,6 +307,7 @@ impl LiquidexProposal<Validated> {
     /// Create a PSET from the info in a proposal
     pub(crate) fn to_pset(&self) -> Result<PartiallySignedTransaction, Error> {
         let mut pset = PartiallySignedTransaction::new_v2();
+        let mut rng = rand::thread_rng();
 
         let tx = self.transaction()?;
         if tx.input.len() != 1 {
@@ -337,6 +338,13 @@ impl LiquidexProposal<Validated> {
             .as_ref()
             .map(|p| Box::new(p.clone()));
         pset_input.set_abf(input.asset_blinder);
+        pset_input.blind_asset_proof =
+            Some(Box::new(secp256k1_zkp::SurjectionProof::blind_asset_proof(
+                &mut rng,
+                &EC,
+                input.asset,
+                input.asset_blinder,
+            )?));
         // Set the witness utxo since rust-elements needs it to blind
         let asset = Asset::new_confidential(&EC, input.asset, input.asset_blinder);
         pset_input.witness_utxo = Some(elements::TxOut {
@@ -364,6 +372,13 @@ impl LiquidexProposal<Validated> {
             ..Default::default()
         };
         pset_output.set_abf(output.asset_blinder);
+        pset_output.blind_asset_proof =
+            Some(Box::new(secp256k1_zkp::SurjectionProof::blind_asset_proof(
+                &mut rng,
+                &EC,
+                output.asset,
+                output.asset_blinder,
+            )?));
         pset.add_output(pset_output);
 
         pset.global.scalars = self.scalars.clone();

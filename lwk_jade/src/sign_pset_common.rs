@@ -7,7 +7,7 @@ use elements::{
     pset::{Input, PartiallySignedTransaction},
     secp256k1_zkp::{schnorr::Signature as SchnorrSignature, Message},
     sighash::SighashCache,
-    EcdsaSighashType, SchnorrSig, SchnorrSighashType, Transaction,
+    EcdsaSighashType, SchnorrSig, Transaction,
 };
 use elements_miniscript::psbt::SighashError;
 
@@ -95,12 +95,9 @@ pub(crate) fn apply_sig(
 
             match sign_info {
                 SignInfo::Taproot => {
-                    let schnorr_sig = SchnorrSignature::from_slice(&sig)
-                        .map_err(|e| Error::Generic(e.to_string()))?;
-                    input.tap_key_sig = Some(SchnorrSig {
-                        sig: schnorr_sig,
-                        hash_ty: SchnorrSighashType::Default,
-                    });
+                    let schnorr_sig =
+                        SchnorrSig::from_slice(&sig).map_err(|e| Error::Generic(e.to_string()))?;
+                    input.tap_key_sig = Some(schnorr_sig);
                     *sigs_added_or_overwritten += 1;
                 }
                 SignInfo::Ecdsa { public_key, .. } => {
@@ -156,6 +153,9 @@ pub(crate) fn prepare_input(
         Derivation::Taproot(Some(derivation_path)) => {
             let previous_output_script =
                 &txout.expect("is_signable => txout present").script_pubkey;
+            let hash_ty = input
+                .schnorr_hash_ty()
+                .ok_or(SighashError::InvalidSighashType)?;
             (
                 Some(SignInfo::Taproot),
                 TxInputParams {
@@ -163,7 +163,7 @@ pub(crate) fn prepare_input(
                     script_code: previous_output_script.as_bytes().to_vec(),
                     value_commitment,
                     path: Some(derivation_path_to_vec(derivation_path)),
-                    sighash: Some(0), // SIGHASH_DEFAULT per BIP341
+                    sighash: Some(hash_ty as u32),
                     // Must be empty for taproot: AE is not supported for P2TR inputs
                     ae_host_commitment: vec![],
                     // `scriptpubkey` is stored in the scriptpubkeys map used for the

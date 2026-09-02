@@ -180,3 +180,16 @@ impl Display for ImplementationDefinedCode {
         write!(f, "{}", self.0)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ImplementationDefinedCode;
+
+    #[test]
+    fn implementation_defined_code_range() {
+        assert!(ImplementationDefinedCode::new(-32_004).is_some());
+        assert!(ImplementationDefinedCode::new(-32_099).is_some());
+        assert!(ImplementationDefinedCode::new(-32_003).is_none());
+        assert!(ImplementationDefinedCode::new(-32_100).is_none());
+    }
+}

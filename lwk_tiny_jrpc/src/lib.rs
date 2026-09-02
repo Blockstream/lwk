@@ -397,22 +397,38 @@ pub enum Id {
 
 #[cfg(test)]
 mod test {
+    use std::{io::Write, net::TcpStream};
+
     use super::*;
     use jsonrpc::Client;
     use serde_json::{json, value::to_raw_value};
     use tiny_http::Server;
 
     fn process(request: Request, _state: Arc<Mutex<()>>) -> Result<Response, Error> {
-        let response = match request.method.as_str() {
-            "echo" => Response {
+        match request.method.as_str() {
+            "echo" => Ok(Response {
                 jsonrpc: request.jsonrpc,
                 id: request.id,
                 result: request.params,
                 error: None,
-            },
+            }),
+            "stop" => Err(Error::Stop),
             _ => unimplemented!(),
-        };
-        Ok(response)
+        }
+    }
+
+    // sends a raw HTTP request over `stream` and returns the raw response bytes
+    fn send_http_request(stream: &mut TcpStream, request: &str) -> Vec<u8> {
+        stream.write_all(request.as_bytes()).unwrap();
+        let mut response = Vec::new();
+        stream.read_to_end(&mut response).unwrap();
+        response
+    }
+
+    // parses the JSON-RPC body out of a raw HTTP response
+    fn parse_response(raw: &[u8]) -> Response {
+        let body_start = raw.windows(4).position(|w| w == b"\r\n\r\n").unwrap() + 4;
+        serde_json::from_slice(&raw[body_start..]).unwrap()
     }
 
     #[test]
@@ -443,19 +459,110 @@ mod test {
     }
 
     #[test]
-    fn rpc_dot_reserved() {
+    fn post_error_and_stop_paths() {
         let addr = "127.0.0.1:0";
         let server = Server::http(addr).unwrap();
         let state = Arc::new(Mutex::new(()));
-        let rpc = JsonRpcServer::new(server, Config::default(), state, process);
+        let token = "s3cr3t-token";
+        let config = Config {
+            expected_auth_header: Some(token.to_string()),
+            ..Default::default()
+        };
+        let mut rpc = JsonRpcServer::new(server, config, state, process);
         let port = rpc.port().unwrap();
-        let url = format!("127.0.0.1:{port}");
+        let addr = format!("127.0.0.1:{port}");
+        let auth = format!("Authorization: {token}\r\n");
 
-        let client = Client::simple_http(&url, None, None).unwrap();
-        let request = client.build_request("rpc.reserved", None);
+        let post = |extra_headers: &str, body: &str| -> Response {
+            let request = format!(
+                "POST / HTTP/1.1\r\nHost: 127.0.0.1\r\n{extra_headers}Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            let mut stream = TcpStream::connect(&addr).unwrap();
+            let raw = send_http_request(&mut stream, &request);
+            parse_response(&raw)
+        };
 
-        let response = client.send_request(request).unwrap();
-        assert!(response.error.is_some());
+        // reserved method prefix
+        let response = post(
+            &format!("{auth}Content-Type: application/json\r\n"),
+            r#"{"jsonrpc":"2.0","id":1,"method":"rpc.reserved"}"#,
+        );
+        assert_eq!(response.error.unwrap().code, -32_003); // METHOD_RESERVED
+
+        // invalid jsonrpc version
+        let response = post(
+            &format!("{auth}Content-Type: application/json\r\n"),
+            r#"{"jsonrpc":"1.0","id":1,"method":"echo"}"#,
+        );
+        assert_eq!(response.error.unwrap().code, -32_004); // INVALID_VERSION
+
+        // malformed JSON body
+        let response = post(
+            &format!("{auth}Content-Type: application/json\r\n"),
+            "not json",
+        );
+        assert_eq!(response.error.unwrap().code, -32_700); // PARSE_ERROR
+
+        // missing Content-Type
+        let response = post(&auth, r#"{"jsonrpc":"2.0","id":1,"method":"echo"}"#);
+        assert_eq!(response.error.unwrap().code, -32_001); // NO_CONTENT_TYPE
+
+        // wrong Content-Type
+        let response = post(
+            &format!("{auth}Content-Type: text/plain\r\n"),
+            r#"{"jsonrpc":"2.0","id":1,"method":"echo"}"#,
+        );
+        assert_eq!(response.error.unwrap().code, -32_002); // WRONG_CONTENT_TYPE
+
+        // missing Authorization
+        let response = post(
+            "Content-Type: application/json\r\n",
+            r#"{"jsonrpc":"2.0","id":1,"method":"echo"}"#,
+        );
+        assert_eq!(response.error.unwrap().code, -32_098); // UNAUTHORIZED
+
+        // wrong Authorization
+        let response = post(
+            "Authorization: wrong\r\nContent-Type: application/json\r\n",
+            r#"{"jsonrpc":"2.0","id":1,"method":"echo"}"#,
+        );
+        assert_eq!(response.error.unwrap().code, -32_098); // UNAUTHORIZED
+
+        // oversized payload: the size check runs against the declared Content-Length
+        // before the body is read, so the server responds before we finish sending it
+        let big_len = MAX_REQUEST_BODY_BYTES + 1;
+        let header = format!(
+            "POST / HTTP/1.1\r\nHost: 127.0.0.1\r\n{auth}Content-Type: application/json\r\nContent-Length: {big_len}\r\nConnection: close\r\n\r\n"
+        );
+        let mut stream = TcpStream::connect(&addr).unwrap();
+        let _ = stream.write_all(header.as_bytes());
+        let chunk = vec![b'x'; 64 * 1024];
+        for _ in 0..(big_len / chunk.len() + 1) {
+            if stream.write_all(&chunk).is_err() {
+                break;
+            }
+        }
+        let mut raw = Vec::new();
+        std::io::Read::read_to_end(&mut stream, &mut raw).unwrap();
+        assert!(String::from_utf8_lossy(&raw).starts_with("HTTP/1.1 413"));
+
+        // valid authenticated request still works
+        let response = post(
+            &format!("{auth}Content-Type: application/json\r\n"),
+            r#"{"jsonrpc":"2.0","id":1,"method":"echo","params":"hi"}"#,
+        );
+        assert_eq!(response.result.unwrap(), "hi");
+
+        // a handler returning Error::Stop shuts the server down
+        let response = post(
+            &format!("{auth}Content-Type: application/json\r\n"),
+            r#"{"jsonrpc":"2.0","id":1,"method":"stop"}"#,
+        );
+        assert_eq!(response.error.unwrap().code, -32_099); // STOP_ERROR
+        assert!(!rpc.is_running());
+
+        rpc.join_threads();
     }
 
     #[test]
@@ -499,5 +606,13 @@ mod test {
         });
         assert_eq!(actual, expected);
         assert!(actual.get("result").is_none());
+
+        // Response::error() and Response::unimplemented() build the same shape directly
+        let err_response = Response::error(Some(Id::Number(1)), -32_000, "boom".into(), None);
+        assert!(err_response.result.is_none());
+        assert_eq!(err_response.error.unwrap().code, -32_000);
+
+        let unimpl = Response::unimplemented(Some(Id::Number(1)), "nope".into());
+        assert_eq!(unimpl.error.unwrap().code, METHOD_NOT_FOUND);
     }
 }

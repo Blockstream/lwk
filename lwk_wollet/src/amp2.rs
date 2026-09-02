@@ -38,8 +38,8 @@ const ELIP153_PURPOSE: u32 = 0x414d_5032;
 /// Context for actions interacting with AMP2
 #[derive(Debug)]
 pub struct Amp2 {
-    server_key: String,
     server_xpub: Xpub,
+    server_path_from_master: DerivationPath,
     server_fingerprint: Fingerprint,
     url: String,
     is_mainnet: bool,
@@ -124,15 +124,14 @@ impl Amp2 {
         Url::from_str(&url).map_err(crate::UrlError::Url)?;
 
         let (keysource, server_xpub) = keyorigin_xpub_from_str(&server_key)?;
-        let server_fingerprint = keysource.ok_or(crate::Error::MissingKeyorigin)?.0;
-        // TODO: per ELIP153 the server key should be the master xpub, allow it to have missing keyorigin
-        // TODO: consider replacing server_key with server_keyorigin
+        let (server_fingerprint, server_path_from_master) =
+            keysource.ok_or(crate::Error::MissingKeyorigin)?;
 
         let is_mainnet = server_xpub.network.is_mainnet();
         Ok(Self {
-            server_key,
             server_xpub,
             server_fingerprint,
+            server_path_from_master,
             url,
             is_mainnet,
         })
@@ -143,10 +142,12 @@ impl Amp2 {
         let server_xpub: Xpub = XPUB_TESTNET.parse().expect("valid xpub constant");
         let server_fingerprint: Fingerprint =
             FINGERPRINT_TESTNET.parse().expect("valid fingerprint");
+        let server_path_from_master: DerivationPath =
+            DERIVATION_PATH_TESTNET.parse().expect("valid path");
         Self {
-            server_key: KEYORIGIN_XPUB_TESTNET.into(),
             server_xpub,
             server_fingerprint,
+            server_path_from_master,
             url: URL_TESTNET.into(),
             is_mainnet: false,
         }
@@ -263,8 +264,9 @@ impl Amp2 {
         // TODO: consider validating view_keysource
 
         let server_path = self.elip153_server_path(&user_xpub)?;
-        let server_fingerprint = self.server_xpub.fingerprint();
+        let server_fingerprint = self.server_fingerprint;
         let server_derived_xpub = self.server_xpub.derive_pub(&EC, &server_path)?;
+        let server_path_full = self.server_path_from_master.extend(server_path);
 
         // Descriptor blinding key: hash the pubkey of the user key hardened-derived at
         // VIEW_PATH, so it's both deterministic and only computable by the user.
@@ -272,7 +274,8 @@ impl Amp2 {
         let key_hex = key_hash.to_byte_array().to_hex();
 
         let user_xpub_str = format!("[{}/{}]{}", user_keysource.0, user_keysource.1, user_xpub);
-        let server_xpub_str = format!("[{server_fingerprint}/{server_path}]{server_derived_xpub}");
+        let server_xpub_str =
+            format!("[{server_fingerprint}/{server_path_full}]{server_derived_xpub}");
 
         let s = format!(
             "ct({key_hex},elwsh(multi(2,{server_xpub_str}/<0;1>/*,{user_xpub_str}/<0;1>/*)))"
@@ -299,8 +302,14 @@ impl Amp2 {
         user_xpub: Xpub,
         descriptor_blinding_key: &str,
     ) -> Result<Amp2Descriptor, crate::Error> {
-        // TODO; check Xpub network is consistent
-        let amp2_xpub = &self.server_key;
+        let amp2_xpub = if self.server_path_from_master.is_empty() {
+            format!("[{}]{}", self.server_fingerprint, self.server_xpub)
+        } else {
+            format!(
+                "[{}/{}]{}",
+                self.server_fingerprint, self.server_path_from_master, self.server_xpub
+            )
+        };
         let user_xpub = format!("[{}/{}]{}", user_keysource.0, user_keysource.1, user_xpub);
         let s = format!(
             "ct({descriptor_blinding_key},elwsh(multi(2,{amp2_xpub}/<0;1>/*,{user_xpub}/<0;1>/*)))"
@@ -493,7 +502,7 @@ mod test {
             .elip153(user_keysource, user_xpub, view_keysource, view_xpub)
             .unwrap();
 
-        let expected = "ct(4d90c104f07e6f4c3f2c2ef1100b2a24b93093eb3bdf975a85fbe2be5ddf7abe,elwsh(multi(2,[7a3be1b3/2088330946/1132574986/2019598932]tpubDKX4imD1VZt8nMqqLWo2aBwJnJmw9kWhgob65LLKPd2UGcWZ2eCZXmVSM1uAzScUkFDVK3YdKZy49Qz7K1x2xEZ2AJhWaqnj25MbZSb4KYs/<0;1>/*,[73c5da0a/1095585842'/1'/0']tpubDDKAX9d8KBy2HJ5UTMg4xydwC7Jssy9qfnKrs5LTpM8PpBAiwqZ7k2GVA2P5kiWCPjnmHbDMxBng8FzDBHVqHpQkAwwc4VzXtGx1AY7zc9C/<0;1>/*)))#ywc7jzkz";
+        let expected = "ct(4d90c104f07e6f4c3f2c2ef1100b2a24b93093eb3bdf975a85fbe2be5ddf7abe,elwsh(multi(2,[3d970d04/87'/1'/0'/2088330946/1132574986/2019598932]tpubDKX4imD1VZt8nMqqLWo2aBwJnJmw9kWhgob65LLKPd2UGcWZ2eCZXmVSM1uAzScUkFDVK3YdKZy49Qz7K1x2xEZ2AJhWaqnj25MbZSb4KYs/<0;1>/*,[73c5da0a/1095585842'/1'/0']tpubDDKAX9d8KBy2HJ5UTMg4xydwC7Jssy9qfnKrs5LTpM8PpBAiwqZ7k2GVA2P5kiWCPjnmHbDMxBng8FzDBHVqHpQkAwwc4VzXtGx1AY7zc9C/<0;1>/*)))#k8s8pxv0";
         assert_eq!(desc.descriptor().to_string(), expected);
 
         // elip153_from_signer must produce the exact same descriptor as the manual,
@@ -519,12 +528,21 @@ mod test {
         let server_mnemonic_2 = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong";
 
         let mut i = 0;
-        for (description, network, mnemonic, server_mnemonic, account, expected_dwid) in [
+        for (
+            description,
+            network,
+            mnemonic,
+            server_mnemonic,
+            server_path_from_master,
+            account,
+            expected_dwid,
+        ) in [
             (
                 "Liquid",
                 Network::Liquid,
                 user_mnemonic_1,
                 server_mnemonic_1,
+                "",
                 0u32,
                 "4b2f-fca3-1d2e-0a8b-0d58-3ef5-9375-12cd",
             ),
@@ -533,6 +551,7 @@ mod test {
                 Network::TestnetLiquid,
                 user_mnemonic_1,
                 server_mnemonic_1,
+                "",
                 0,
                 "ded1-9ff5-4291-6309-3c91-a4d8-cfe5-8f74",
             ),
@@ -541,6 +560,7 @@ mod test {
                 Network::default_regtest(),
                 user_mnemonic_1,
                 server_mnemonic_1,
+                "",
                 0,
                 "a73a-c707-978f-cb7c-8912-5868-34c9-ee12",
             ),
@@ -549,6 +569,7 @@ mod test {
                 Network::Liquid,
                 user_mnemonic_1,
                 server_mnemonic_1,
+                "",
                 1,
                 "5c5b-05fd-0fe1-58ef-b6a5-c54f-3e56-e478",
             ),
@@ -557,6 +578,7 @@ mod test {
                 Network::Liquid,
                 user_mnemonic_2,
                 server_mnemonic_1,
+                "",
                 0,
                 "0328-ea41-7816-2f18-e86d-f110-bec4-f4eb",
             ),
@@ -565,22 +587,33 @@ mod test {
                 Network::Liquid,
                 user_mnemonic_1,
                 server_mnemonic_2,
+                "",
                 0,
                 "7e5d-8182-ec4f-cf90-7be8-20f5-b3d8-8694",
+            ),
+            (
+                "Liquid, non-master server xpub",
+                Network::Liquid,
+                user_mnemonic_1,
+                server_mnemonic_1,
+                "m/1h",
+                0u32,
+                "2d62-9c31-7d9a-1ba3-73ff-3c08-8803-aa1d",
             ),
         ] {
             i += 1;
             let signer = SwSigner::new_with_network(mnemonic, network).unwrap();
             let server_signer = SwSigner::new_with_network(server_mnemonic, network).unwrap();
-            let server_xpub = server_signer.xpub();
-
-            let amp2 = Amp2 {
-                server_key: KEYORIGIN_XPUB_TESTNET.into(),
-                server_xpub,
-                server_fingerprint: server_xpub.fingerprint(),
-                url: URL_TESTNET.into(),
-                is_mainnet: network.is_mainnet(),
+            let server_path_from_master: DerivationPath = server_path_from_master.parse().unwrap();
+            let server_xpub = server_signer.derive_xpub(&server_path_from_master).unwrap();
+            let server_fp = server_signer.fingerprint();
+            let server_keyorigin_xpub = if server_path_from_master.is_empty() {
+                format!("[{server_fp}]{server_xpub}")
+            } else {
+                format!("[{server_fp}/{server_path_from_master}]{server_xpub}")
             };
+
+            let amp2 = Amp2::new(server_keyorigin_xpub.clone(), URL_TESTNET.into()).unwrap();
             let (user_keysource, user_xpub) =
                 derive(&signer, &amp2.elip153_user_path(account).unwrap());
             let (view_keysource, view_xpub) =
@@ -599,7 +632,7 @@ mod test {
             println!("** Description: {description}");
             println!("** Network: {network_str}");
             println!("** User Mnemonic: <code>{mnemonic}</code>");
-            println!("** AMP2 Server Xpub: <code>{server_xpub}</code>");
+            println!("** AMP2 Server Xpub: <code>{server_keyorigin_xpub}</code>");
             println!("** User Account: {account}");
             println!("** CT Descriptor: <code>{}</code>", desc.descriptor());
             println!("** DWID: <code>{dwid}</code>\n");
@@ -627,7 +660,6 @@ mod test {
         // Success case
         let amp2 = Amp2::new(KEYORIGIN_XPUB_TESTNET.to_string(), URL_TESTNET.to_string()).unwrap();
 
-        assert_eq!(amp2.server_key, KEYORIGIN_XPUB_TESTNET);
         assert_eq!(amp2.url, URL_TESTNET);
 
         // Invalid URL

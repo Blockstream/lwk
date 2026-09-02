@@ -410,7 +410,7 @@ fn sighash_messages(
         let msg = if is_taproot {
             let hash_ty = input
                 .schnorr_hash_ty()
-                .ok_or(SighashError::InvalidSchnorrSighashType(i))?;
+                .ok_or(SighashError::InvalidSighashType(i))?;
             InputMsg::Taproot {
                 sighash: ctx.taproot_msg(i, None)?,
                 hash_ty,

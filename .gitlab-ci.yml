@@ -332,7 +332,7 @@ test_simplicity:
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     # installing from fork with 1.85 rust version
-    - cargo install --git https://github.com/gerau/simplicity-lending.git --rev 79f67678d27fd768de13af288ebfad7dd0ba0396 --locked lending-indexer --root ./lending
+    - cargo install --git https://github.com/gerau/simplicity-lending.git --rev 0a894ced7443ac12447ce62561d0d715b9a21fb4 --locked lending-indexer --root ./lending
     - export LENDING_INDEXER_EXEC="$(pwd)/lending/bin/simplicity-lending-indexer"
     - cargo test -p lwk_simplicity --features lending
 

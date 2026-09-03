@@ -90,7 +90,7 @@ pub(crate) fn parse_and_verify_lending_offer(
         parse_explicit(out).map_err(|msg| LendingError::InvalidLendingOffer(msg.to_string()))?;
     }
 
-    let offer = LendingOffer::try_from_tx(tx, protocol_fee_keeper_asset_id, network)?;
+    let offer = LendingOffer::try_from_tx(tx, protocol_fee_keeper_asset_id, network)?.offer;
     let params = offer.get_parameters();
     let script_auth = ScriptAuth::from_simplex_program(&offer);
     let factory = get_issuance_factory(&network);

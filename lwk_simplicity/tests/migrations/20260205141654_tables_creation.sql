@@ -91,11 +91,9 @@ CREATE INDEX idx_offers_updated_at_height ON offers (updated_at_height DESC);
 CREATE TYPE utxo_type AS ENUM (
     'pending_offer',
     'active_offer',
+    'borrower_principal',
     'cancellation',
-    'repayment',
-    'liquidation',
-    'claim',
-    'borrower_principal'
+    'liquidation'
 );
 
 CREATE TABLE offer_utxos (

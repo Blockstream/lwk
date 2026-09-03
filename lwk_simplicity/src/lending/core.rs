@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use lwk_common::{calculate_fee, Network};
 use lwk_wollet::{
     bitcoin,
@@ -26,7 +24,6 @@ use lending_contracts::programs::{
 };
 use lending_contracts::programs::{lending::LendingOffer, program::SimplexProgram};
 use lending_contracts::utils::get_random_seed;
-use simplicityhl::WitnessValues;
 
 use crate::lending::network::to_simplicity_network;
 use crate::lending::{client::AnyClient, indexer::response::FactoryDetailsResponse};
@@ -755,7 +752,7 @@ impl LendingSession {
         )?;
         let offer_params = *offer.get_parameters();
 
-        let finalized_vault = offer_params.get_finalized_lender_vault();
+        let finalized_vault = offer_params.get_lender_vault(0);
 
         let repayment_tx = self.get_transaction(&details.repayment_txid)?;
         let vault_txout = repayment_tx
@@ -985,15 +982,7 @@ impl LendingSession {
                 continue;
             };
 
-            let witness_map: HashMap<simplicityhl::str::WitnessName, simplicityhl::Value> =
-                program_input
-                    .witness
-                    .build_witness()
-                    .iter()
-                    .map(|(k, v)| (k.clone(), v.clone()))
-                    .collect();
-
-            let witness_values = WitnessValues::from(witness_map);
+            let witness_values = program_input.witness.build_witness();
 
             let pruned_witness = program_input
                 .program

@@ -1,8 +1,9 @@
 use crate::test_wollet::*;
 use lwk_common::{singlesig_desc, DescriptorBlindingKey, Signer, Singlesig};
-use lwk_signer::{AnySigner, SwSigner};
+use lwk_signer::{sign_with_seckey, AnySigner, SwSigner};
 use lwk_test_util::*;
-use lwk_wollet::{Network, WolletBuilder, WolletDescriptor};
+use lwk_wollet::{secp256k1, Network, WolletBuilder, WolletDescriptor, EC};
+use std::str::FromStr;
 
 #[test]
 fn test_single_address_tr() {
@@ -112,4 +113,40 @@ fn test_taproot_singlesig_receive_balance_send() {
     assert!(balance_after < balance, "balance should decrease by fee");
     // 1_000 sat is a generous upper bound for a regtest fee
     assert!(balance_after > balance - 1_000, "fee should be reasonable");
+}
+
+#[test]
+fn test_singlekey_taproot() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
+    let sk_a = secp256k1::SecretKey::from_str(
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    )
+    .unwrap();
+    let pk_a = sk_a.public_key(&EC);
+    let desc = format!("ct({view_key},eltr({pk_a}))");
+    let client = test_client_electrum(&env.electrum_url());
+    let opt = TestWolletOpt {
+        network: Some(env.elementsd_network()),
+        ..Default::default()
+    };
+    let mut wallet = TestWollet::with_opt(client, &desc, &opt);
+
+    wallet.fund_btc(&env);
+
+    // Send some L-BTC to another address
+    let node_addr = env.elementsd_getnewaddress();
+
+    // Create tx
+    let mut pset = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&node_addr, 5000)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    assert_eq!(sign_with_seckey(sk_a, &mut pset).unwrap(), 1);
+
+    // Finalize and send the PSET
+    wallet.send(&mut pset);
 }

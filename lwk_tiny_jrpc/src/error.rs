@@ -141,10 +141,10 @@ const INVALID_REQUEST: i64 = -32_600;
 pub(crate) const METHOD_NOT_FOUND: i64 = -32_601;
 
 // -32602 	Invalid params 	Invalid method parameter(s).
-// const INVALID_PARAMS: i64 = -32_602;
+pub(crate) const INVALID_PARAMS: i64 = -32_602;
 
 // -32603 	Internal error 	Internal JSON-RPC error.
-// const INTERNAL_ERROR: i64 = -32_603;
+pub(crate) const INTERNAL_ERROR: i64 = -32_603;
 
 // -32000 to -32099 	Server error 	Reserved for implementation-defined server-errors.
 const IO_ERROR: i64 = -32_000;

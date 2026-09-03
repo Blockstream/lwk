@@ -14,7 +14,7 @@ use std::{
 
 pub use config::Config;
 pub use error::Error;
-use error::{AsRpcError, InnerError, METHOD_NOT_FOUND};
+use error::{AsRpcError, InnerError, INTERNAL_ERROR, INVALID_PARAMS, METHOD_NOT_FOUND};
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
 use tiny_http::Response as HttpResponse;
@@ -376,6 +376,14 @@ impl Response {
     pub fn unimplemented(id: Option<Id>, message: String) -> Self {
         Self::error(id, METHOD_NOT_FOUND, message, None)
     }
+
+    pub fn invalid_params(id: Option<Id>, message: String) -> Self {
+        Self::error(id, INVALID_PARAMS, message, None)
+    }
+
+    pub fn internal_error(id: Option<Id>, message: String) -> Self {
+        Self::error(id, INTERNAL_ERROR, message, None)
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -624,5 +632,11 @@ mod test {
 
         let unimpl = Response::unimplemented(Some(Id::Number(1)), "nope".into());
         assert_eq!(unimpl.error.unwrap().code, METHOD_NOT_FOUND);
+
+        let bad_params = Response::invalid_params(Some(Id::Number(1)), "".into());
+        assert_eq!(bad_params.error.unwrap().code, INVALID_PARAMS);
+
+        let internal = Response::internal_error(Some(Id::Number(1)), "".into());
+        assert_eq!(internal.error.unwrap().code, INTERNAL_ERROR);
     }
 }

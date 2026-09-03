@@ -15,7 +15,8 @@ pub(crate) fn spent_txout(input: &Input) -> Option<&TxOut> {
     }
 }
 
-pub(crate) fn is_taproot_input(input: &Input) -> bool {
+/// Whether the input spends a v1 p2tr output.
+pub fn is_taproot_input(input: &Input) -> bool {
     spent_txout(input)
         .map(|o| o.script_pubkey.is_v1_p2tr())
         .unwrap_or(false)

@@ -46,8 +46,8 @@ pub use crate::encrypt::{
     encrypt_with_random_nonce, EncryptError,
 };
 pub use crate::error::Error;
-pub use crate::input::input_sighash;
 pub(crate) use crate::input::pset_has_non_default_sighash;
+pub use crate::input::{input_sighash, is_taproot_input};
 pub use crate::keyorigin_xpub::{keyorigin_xpub_from_str, InvalidKeyOriginXpub};
 pub use crate::model::*;
 pub use crate::network::{ElementsParamsBuilder, Network};

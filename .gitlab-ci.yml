@@ -162,8 +162,8 @@ test_ln:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     # TODO: remove once CLN is in docker image
     - apt-get -qq update && apt-get install -y libsodium23
-    - export LIGHTNINGD_VERSION=26.06.6
-    - export LIGHTNINGD_EXPECTED_SHA256="b38b0bcf535d925e37c9b465a0ce6aa580e3f66be36bada860599f3a8e1efc8e"
+    - export LIGHTNINGD_VERSION=26.06.7
+    - export LIGHTNINGD_EXPECTED_SHA256="53ddf124fe7058b6a2fc059d104976cc54ba5be21dc55b295cd82d01cabeb39c"
     - export LIGHTNINGD_FILENAME="clightning-v${LIGHTNINGD_VERSION}-Ubuntu-22.04-amd64.tar.xz"
     - curl -Ls "https://github.com/ElementsProject/lightning/releases/download/v${LIGHTNINGD_VERSION}/${LIGHTNINGD_FILENAME}" -o "${LIGHTNINGD_FILENAME}"
     - echo "${LIGHTNINGD_EXPECTED_SHA256}  ${LIGHTNINGD_FILENAME}" | sha256sum -c -

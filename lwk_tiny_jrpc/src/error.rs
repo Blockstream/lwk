@@ -33,6 +33,9 @@ pub enum InnerError {
     #[error("Serde JSON Error: {0}")]
     Serde(#[from] serde_json::Error),
 
+    #[error("The JSON sent is not a valid Request object")]
+    InvalidRequest,
+
     #[error("Request is missing Content-Type Header")]
     NoContentType,
 
@@ -85,6 +88,7 @@ impl AsRpcError for InnerError {
         let (code, data) = match self {
             InnerError::Io(_) => (IO_ERROR, None),
             InnerError::Serde(_) => (PARSE_ERROR, None),
+            InnerError::InvalidRequest => (INVALID_REQUEST, None),
             InnerError::NoContentType => (NO_CONTENT_TYPE, None),
             InnerError::WrongContentType => (WRONG_CONTENT_TYPE, None),
             InnerError::ReservedMethodPrefix => (METHOD_RESERVED, None),
@@ -131,7 +135,7 @@ impl AsRpcError for Error {
 const PARSE_ERROR: i64 = -32_700;
 
 // -32600 	Invalid Request 	The JSON sent is not a valid Request object.
-// const INVALID_REQUEST: i64 = -32_600; // TODO if failing to parse the request object, try to parse as Value and if succesfull return this instead of PARSE_ERROR
+const INVALID_REQUEST: i64 = -32_600;
 
 // -32601 	Method not found 	The method does not exist / is not available.
 pub(crate) const METHOD_NOT_FOUND: i64 = -32_601;

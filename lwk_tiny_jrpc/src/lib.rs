@@ -271,7 +271,10 @@ fn validate_jsonrpc_request(
         return Err(InnerError::PayloadTooLarge);
     }
 
-    let request: Request = serde_json::from_str(&s)?;
+    // parse as generic JSON first, so a syntactically valid document that just isn't a
+    // valid Request object is reported as InvalidRequest rather than as a parse error
+    let value: Value = serde_json::from_str(&s)?;
+    let request: Request = serde_json::from_value(value).map_err(|_| InnerError::InvalidRequest)?;
 
     Ok(request)
 }
@@ -503,6 +506,13 @@ mod test {
             "not json",
         );
         assert_eq!(response.error.unwrap().code, -32_700); // PARSE_ERROR
+
+        // valid JSON, but not a valid Request object (missing "method")
+        let response = post(
+            &format!("{auth}Content-Type: application/json\r\n"),
+            r#"{"jsonrpc":"2.0","id":1}"#,
+        );
+        assert_eq!(response.error.unwrap().code, -32_600); // INVALID_REQUEST
 
         // missing Content-Type
         let response = post(&auth, r#"{"jsonrpc":"2.0","id":1,"method":"echo"}"#);

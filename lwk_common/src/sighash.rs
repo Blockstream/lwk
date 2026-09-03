@@ -144,3 +144,55 @@ fn input(pset: &PartiallySignedTransaction, idx: usize) -> Result<&Input, Sighas
         .get(idx)
         .ok_or(SighashError::IndexOutOfBounds(idx))
 }
+
+#[cfg(test)]
+mod tests {
+    use elements::{
+        confidential::Value, opcodes, pset::Input, script::Builder, sighash::SighashCache,
+        EcdsaSighashType, OutPoint, Script, TxOut, Txid,
+    };
+
+    use super::*;
+
+    #[test]
+    fn ecdsa_msg_masks_the_pegin_outpoint_flag() {
+        let witness_script = Builder::new()
+            .push_opcode(opcodes::all::OP_PUSHNUM_1)
+            .into_script();
+        let value = Value::Explicit(1000);
+        let txout = TxOut {
+            script_pubkey: Script::new_v0_wsh(&witness_script.wscript_hash()),
+            value,
+            ..Default::default()
+        };
+
+        let mut input = Input::from_prevout(OutPoint::new(Txid::all_zeros(), 7 | PEGIN_FLAG));
+        input.witness_script = Some(witness_script.clone());
+        input.witness_utxo = Some(txout);
+
+        let mut pset = PartiallySignedTransaction::new_v2();
+        pset.add_input(input);
+
+        let tx = pset.extract_tx().unwrap();
+        assert!(tx.input[0].is_pegin());
+        let mut masked = tx.clone();
+        masked.input[0].previous_output.vout &= !PEGIN_FLAG;
+
+        let unmasked_msg = SighashCache::new(&tx).segwitv0_sighash(
+            0,
+            &witness_script,
+            value,
+            EcdsaSighashType::All,
+        );
+        let masked_msg = SighashCache::new(&masked).segwitv0_sighash(
+            0,
+            &witness_script,
+            value,
+            EcdsaSighashType::All,
+        );
+        assert_ne!(unmasked_msg, masked_msg);
+
+        let msg = SighashCtx::new(&pset, None).unwrap().ecdsa_msg(0).unwrap();
+        assert_eq!(msg, masked_msg);
+    }
+}

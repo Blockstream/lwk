@@ -5,6 +5,7 @@ use crate::lightningd::LightningD;
 use crate::registry::RegistryD;
 use crate::waterfalls::WaterfallsD;
 
+use clightningrpc::requests::AmountOrAll;
 use electrsd::bitcoind;
 use electrsd::electrum_client::ElectrumApi;
 use electrsd::ElectrsD;
@@ -194,7 +195,7 @@ impl TestEnvBuilder {
         self
     }
 
-    /// Load the `anyswap` CLN plugin into the `lightningd` node
+    /// Start with anyswap
     pub fn with_anyswap(mut self) -> Self {
         self.with_anyswap = true;
         self
@@ -427,85 +428,135 @@ impl TestEnvBuilder {
             let node = bitcoind
                 .as_ref()
                 .expect("with_lightningd() requires with_bitcoind()");
-            // lightningd waits for the Bitcoin backend to be in sync; a fresh regtest
-            // node otherwise never leaves "not up-to-date with network".
             TestEnv::bitcoind_generate_(&node.client, 1);
-            let mut args = vec![format!("--bitcoin-cli={}", self.bitcoincli_exec)];
-            let mut envs = vec![];
 
-            if self.with_anyswap {
-                let port = TcpListener::bind(("127.0.0.1", 0))
-                    .unwrap()
-                    .local_addr()
-                    .unwrap()
-                    .port();
-
-                let esplora_liquid = electrsd
-                    .as_ref()
-                    .and_then(|e| e.esplora_url.as_ref())
-                    .expect("with_anyswap() requires with_esplora()");
-                let electrum_liquid = &electrsd
-                    .as_ref()
-                    .expect("with_anyswap() requires with_esplora()")
-                    .electrum_url;
-                let esplora_bitcoin = bitcoin_electrsd
-                    .as_ref()
-                    .and_then(|e| e.esplora_url.as_ref())
-                    .expect("with_anyswap() requires with_bitcoin_esplora()");
-                let elements_cookie = elementsd.params.get_cookie_values().unwrap().unwrap();
-                let policy_asset: Value = elementsd.client.call("getsidechaininfo", &[]).unwrap();
-                let policy_asset = policy_asset.get("pegged_asset").unwrap().as_str().unwrap();
-                // The config's `[elements].wallet_name` addresses this wallet by name.
-                elementsd.create_wallet("anyswap").unwrap();
-
-                let config = std::fs::read_to_string(&self.anyswap_config)
-                    .expect("failed to read ANYSWAP_CONFIG")
-                    .replace("@@PORT@@", &port.to_string())
-                    .replace("@@LIQUID_ASSET_ID@@", policy_asset)
-                    .replace(
-                        "@@ESPLORA_LIQUID_URL@@",
-                        &format!("http://{esplora_liquid}"),
-                    )
-                    .replace(
-                        "@@ELECTRUM_LIQUID_URL@@",
-                        &format!("tcp://{electrum_liquid}"),
-                    )
-                    .replace(
-                        "@@ESPLORA_BITCOIN_URL@@",
-                        &format!("http://{esplora_bitcoin}"),
-                    )
-                    .replace("@@ELEMENTS_RPC_URL@@", &elementsd.rpc_url())
-                    .replace("@@ELEMENTS_RPC_USER@@", &elements_cookie.user)
-                    .replace("@@ELEMENTS_RPC_PASSWORD@@", &elements_cookie.password);
-
-                let config_dir = TempDir::new().unwrap();
-                let config_path = config_dir.path().join("config.toml");
-                std::fs::write(&config_path, config).unwrap();
-
-                args.push(format!("--important-plugin={}", self.anyswap_exec));
-                args.push(format!("--anyswap-config={}", config_path.display()));
-                args.push("--anyswap-reset-policy".to_string());
-
-                envs.push((
-                    "ELEMENTS_RPC_USER".to_string(),
-                    elements_cookie.user.clone(),
-                ));
-                envs.push((
-                    "ELEMENTS_RPC_PASSWORD".to_string(),
-                    elements_cookie.password.clone(),
-                ));
-                envs.push(("ELEMENTS_WALLET_NAME".to_string(), "anyswap".to_string()));
-
-                anyswap_config_dir = Some(config_dir);
-                anyswap_url = Some(format!("http://127.0.0.1:{port}"));
-            }
-
+            let addr = TcpListener::bind(("127.0.0.1", 0))
+                .unwrap()
+                .local_addr()
+                .unwrap()
+                .to_string();
             let conf = crate::lightningd::Conf {
                 view_stdout,
-                args,
-                envs,
+                args: vec![
+                    format!("--bitcoin-cli={}", self.bitcoincli_exec),
+                    format!("--addr={addr}"),
+                    // disable plugin to avoid usage of the same port
+                    "--disable-plugin=cln-grpc".to_string(),
+                    // Speed up polling
+                    "--developer".to_string(),
+                    "--dev-bitcoind-poll=1".to_string(),
+                ],
+                envs: vec![],
             };
             Some(LightningD::with_conf(&self.lightningd_exec, node, &conf))
+        } else {
+            None
+        };
+
+        let lightningd_anyswap = if self.with_anyswap {
+            let node = bitcoind
+                .as_ref()
+                .expect("with_anyswap() requires with_bitcoind()");
+
+            let port = TcpListener::bind(("0.0.0.0", 0))
+                .unwrap()
+                .local_addr()
+                .unwrap()
+                .port();
+
+            let esplora_liquid = electrsd
+                .as_ref()
+                .and_then(|e| e.esplora_url.as_ref())
+                .expect("with_anyswap() requires with_esplora()");
+            let electrum_liquid = &electrsd
+                .as_ref()
+                .expect("with_anyswap() requires with_esplora()")
+                .electrum_url;
+            let esplora_bitcoin = bitcoin_electrsd
+                .as_ref()
+                .and_then(|e| e.esplora_url.as_ref())
+                .expect("with_anyswap() requires with_bitcoin_esplora()");
+            let elements_cookie = elementsd.params.get_cookie_values().unwrap().unwrap();
+            let policy_asset: Value = elementsd.client.call("getsidechaininfo", &[]).unwrap();
+            let policy_asset = policy_asset.get("pegged_asset").unwrap().as_str().unwrap();
+            // The config's `[elements].wallet_name` addresses this wallet by name.
+            elementsd.create_wallet("anyswap").unwrap();
+
+            let config = std::fs::read_to_string(&self.anyswap_config)
+                .expect("failed to read ANYSWAP_CONFIG")
+                .replace("@@PORT@@", &port.to_string())
+                .replace("@@LIQUID_ASSET_ID@@", policy_asset)
+                .replace(
+                    "@@ESPLORA_LIQUID_URL@@",
+                    &format!("http://{esplora_liquid}"),
+                )
+                .replace(
+                    "@@ELECTRUM_LIQUID_URL@@",
+                    &format!("tcp://{electrum_liquid}"),
+                )
+                .replace(
+                    "@@ESPLORA_BITCOIN_URL@@",
+                    &format!("http://{esplora_bitcoin}"),
+                )
+                .replace("@@ELEMENTS_RPC_URL@@", &elementsd.rpc_url())
+                .replace("@@ELEMENTS_RPC_USER@@", &elements_cookie.user)
+                .replace("@@ELEMENTS_RPC_PASSWORD@@", &elements_cookie.password);
+
+            let envs = vec![
+                (
+                    "ELEMENTS_RPC_USER".to_string(),
+                    elements_cookie.user.clone(),
+                ),
+                (
+                    "ELEMENTS_RPC_PASSWORD".to_string(),
+                    elements_cookie.password.clone(),
+                ),
+                ("ELEMENTS_WALLET_NAME".to_string(), "anyswap".to_string()),
+            ];
+
+            let config_dir = TempDir::new().unwrap();
+            let config_path = config_dir.path().join("config.toml");
+            std::fs::write(&config_path, config).unwrap();
+
+            let addr = TcpListener::bind(("127.0.0.1", 0))
+                .unwrap()
+                .local_addr()
+                .unwrap()
+                .to_string();
+            let conf = crate::lightningd::Conf {
+                view_stdout,
+                args: vec![
+                    format!("--bitcoin-cli={}", self.bitcoincli_exec),
+                    format!("--addr={addr}"),
+                    // disable plugin to avoid usage of the same port
+                    "--disable-plugin=cln-grpc".to_string(),
+                    // Speed up polling
+                    "--developer".to_string(),
+                    "--dev-bitcoind-poll=1".to_string(),
+                    // Anyswap params
+                    format!("--important-plugin={}", self.anyswap_exec),
+                    format!("--anyswap-config={}", config_path.display()),
+                    "--anyswap-reset-policy".to_string(),
+                ],
+                envs,
+            };
+            let node = LightningD::with_conf(&self.lightningd_exec, node, &conf);
+
+            anyswap_config_dir = Some(config_dir);
+            anyswap_url = Some(format!("http://127.0.0.1:{port}"));
+
+            // Open channel
+            let plain = lightningd
+                .as_ref()
+                .expect("with_anyswap() requires with_lightningd()");
+            let bitcoind_client = &bitcoind.as_ref().unwrap().client;
+            // Mature bitcoin coinbase so it has spendable funds to send
+            TestEnv::bitcoind_generate_(bitcoind_client, 100);
+            let channel_sats = 5_000_000;
+            TestEnv::fund_lightningd_(bitcoind_client, plain, channel_sats * 2);
+            TestEnv::open_channel_(bitcoind_client, plain, &node, &addr, channel_sats);
+
+            Some(node)
         } else {
             None
         };
@@ -569,6 +620,7 @@ impl TestEnvBuilder {
             registryd,
             amp2d,
             lightningd,
+            lightningd_anyswap,
             zmq_endpoint,
             auth,
             esplora_url,
@@ -593,6 +645,7 @@ pub struct TestEnv {
     registryd: Option<RegistryD>,
     amp2d: Option<Amp2D>,
     lightningd: Option<LightningD>,
+    lightningd_anyswap: Option<LightningD>,
     zmq_endpoint: Option<String>,
     auth: Option<AuthStack>,
     /// Public endpoint urls, resolved once in `TestEnvBuilder::build`: the gateway url
@@ -678,6 +731,12 @@ impl TestEnv {
 
     pub fn lightningd(&self) -> &LightningD {
         self.lightningd.as_ref().unwrap()
+    }
+
+    /// The CLN node running the `anyswap` plugin (requires `with_anyswap()`); it has a
+    /// channel open with the plain node returned by [`TestEnv::lightningd`].
+    pub fn lightningd_anyswap(&self) -> &LightningD {
+        self.lightningd_anyswap.as_ref().unwrap()
     }
 
     // Functions for Elements RPC client
@@ -967,6 +1026,73 @@ impl TestEnv {
             .call::<Value>("gettxoutproof", &[arr.into()])
             .unwrap();
         r.as_str().unwrap().to_string()
+    }
+
+    // Functions for lightningd
+
+    fn fund_lightningd_(bitcoind: &Client, ln_node: &LightningD, amount_sat: u64) {
+        let raw: Value = ln_node
+            .client
+            .call("newaddr", serde_json::json!({}))
+            .unwrap();
+        let address = raw
+            .as_object()
+            .and_then(|m| m.values().next())
+            .and_then(|v| v.as_str())
+            .expect("newaddr response has no address")
+            .to_string();
+
+        let btc = sat2btc(amount_sat);
+        bitcoind
+            .call::<Value>("sendtoaddress", &[address.into(), btc.into()])
+            .unwrap();
+        Self::bitcoind_generate_(bitcoind, 6);
+
+        for i in 0.. {
+            let funds = ln_node.client.listfunds().unwrap();
+            if funds.outputs.iter().any(|o| o.status == "confirmed") {
+                break;
+            }
+            assert!(i < 60, "lightningd funding hasn't confirmed after 30s");
+            std::thread::sleep(Duration::from_millis(500));
+        }
+    }
+
+    fn open_channel_(
+        bitcoind: &Client,
+        opener: &LightningD,
+        acceptor: &LightningD,
+        acceptor_p2p_addr: &str,
+        amount_sat: u64,
+    ) {
+        let acceptor_id = acceptor.client.getinfo().unwrap().id;
+
+        opener
+            .client
+            .connect(&acceptor_id, Some(acceptor_p2p_addr))
+            .unwrap();
+        opener
+            .client
+            .fundchannel(&acceptor_id, AmountOrAll::Amount(amount_sat), None)
+            .unwrap();
+
+        Self::bitcoind_generate_(bitcoind, 6);
+
+        let channel_normal = |node: &LightningD| -> bool {
+            let resp: Result<Value, _> =
+                node.client.call("listpeerchannels", serde_json::json!({}));
+            resp.ok()
+                .and_then(|v| v["channels"][0]["state"].as_str().map(str::to_string))
+                .as_deref()
+                == Some("CHANNELD_NORMAL")
+        };
+        for i in 0.. {
+            if channel_normal(opener) && channel_normal(acceptor) {
+                break;
+            }
+            assert!(i < 120, "channel hasn't reached CHANNELD_NORMAL after 60s");
+            std::thread::sleep(Duration::from_millis(500));
+        }
     }
 }
 

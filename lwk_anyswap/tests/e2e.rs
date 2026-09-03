@@ -1,7 +1,8 @@
+use clightningrpc::lightningrpc::PayOptions;
 use lwk_test_util::*;
 
 #[test]
-fn lightningd_getinfo() {
+fn anyswap_ping() {
     let env = TestEnvBuilder::from_env()
         .with_bitcoind()
         .with_bitcoincli()
@@ -11,13 +12,14 @@ fn lightningd_getinfo() {
         .with_anyswap()
         .build();
 
-    let info = env.lightningd().client.getinfo().unwrap();
+    let info = env.lightningd_anyswap().client.getinfo().unwrap();
     assert_eq!(info.network, "regtest");
     assert!(info.warning_bitcoind_sync.is_none());
     assert!(info.warning_lightningd_sync.is_none());
+    assert_eq!(info.num_active_channels, 1);
 
     let invoice = env
-        .lightningd()
+        .lightningd_anyswap()
         .client
         .invoice(
             Some(1_000_000),
@@ -31,7 +33,17 @@ fn lightningd_getinfo() {
     assert!(invoice.bolt11.starts_with("lnbcrt"));
     assert_eq!(invoice.payment_hash.len(), 64);
 
-    // Ping the anyswap plugin loaded into this same lightningd node.
+    // Pay the invoice over the channel, from the plain node to the anyswap node.
+    let pay = env
+        .lightningd()
+        .client
+        .pay(&invoice.bolt11, PayOptions::default())
+        .unwrap();
+    assert_eq!(pay.status, "complete");
+    assert_eq!(pay.payment_hash, invoice.payment_hash);
+    assert_eq!(pay.amount_msat.0, 1_000_000);
+
+    // Ping anyswap
     let url = format!("{}/v1/info", env.anyswap_url());
     let response = reqwest::blocking::get(&url).unwrap();
     assert_eq!(response.status(), 200);

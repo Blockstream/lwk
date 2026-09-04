@@ -15,14 +15,17 @@ Many types are wrappers of types in LWK crates, in this cases we mostly duplicat
 If a function is complex or has non-obvious behavior, add extra caller-facing context (for example by copying/adapting the relevant explanation from upstream docs).
 
 ## Tests
-Rust unit tests are welcome, however testing the Rust intermediate interface is not enough.
-We must have coverage also from a destination language, and we should treat that coverage as required for interface changes.
 
-Python is a common choice for tests due to its simplicity and popularity.
+This crate is a thin wrapper that maps Rust functions and structs from other LWK crates into destination languages.
+Rust unit tests add little value here: the wrapper logic is trivial, error paths are already covered in the inner crates,
+and what matters is what the destination languages actually see.
+So every interface change requires destination-language coverage.
 
-Tests in destination languages also serve as examples, try to make them useful for devs using that language.
+For new tests, use Python: it is simple, popular, and most existing tests are written in it.
 
-When adding/changing API surface, include destination-language checks for expected behavior and roundtrip consistency when serialization is involved.
+Destination-language tests double as usage examples: write them so a developer in that language can learn from them.
+
+When adding or changing API surface, cover the expected behavior, and when serialization is involved also check roundtrip consistency.
 
 ## Build and test
 

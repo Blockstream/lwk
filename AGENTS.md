@@ -15,15 +15,34 @@ If instructions conflict, follow the higher-priority rule and document the trade
 ## Project Overview
 
 LWK is a Rust workspace containing libraries for Liquid wallets. It consists of multiple crates:
-- `lwk_wollet` - Watch-only wallets based on CT descriptors
-- `lwk_signer` - Signing operations
-- `lwk_jade` / `lwk_ledger` - Hardware wallet integrations
-- `lwk_bindings` - UniFFI bindings for Python/Kotlin/Swift/C#
-- `lwk_common` - Shared utilities
-- `lwk_cli` - Command line interface
-- `lwk_wasm` - WebAssembly bindings
-- `lwk_simplicity` - Tools for working with the Simplicity language. Highly experimental and NOT production-ready.
-- and others
+* Main crates:
+  - `lwk_wollet` - Watch-only wallets based on CT descriptors
+  - `lwk_signer` - Signing operations
+  - `lwk_common` - Shared utilities
+* Specific actions:
+  - `lwk_registry` - Asset registry integration
+  - `lwk_payment_instructions` - Parser for addresses, invoices and other payment instructions
+* Cross chain swaps:
+  - `lwk_boltz` - Boltz integration
+  - `lwk_anyswap` - Anyswap integration. Work in progress.
+* Hardware wallets integration:
+  - `lwk_jade` - Jade integration.
+  - `lwk_ledger` - Ledger integration. Work in progress.
+  - `lwk_hwi` - Hardware wallet interface. Currently unused.
+* Build bindings for other languages:
+  - `lwk_bindings` - UniFFI bindings for Python/Kotlin/Swift/C#
+  - `lwk_wasm` - WebAssembly bindings
+* CLI:
+  - `lwk_tiny_jrpc` - Tiny JSON-RPC server
+  - `lwk_rpc_model` - Data model for the RPC server
+  - `lwk_app` - RPC server app
+  - `lwk_cli` - Command line interface
+* Experimental:
+  - `lwk_simplicity` - Tools for working with the Simplicity language. Highly experimental and NOT production-ready.
+* Test utilities:
+  - `lwk_containers` - Docker containers for the test environment
+  - `lwk_test_util` - Shared test utilities
+  - `amp2_mock` - AMP2 mock server for testing
 
 ## Build Commands
 
@@ -41,7 +60,6 @@ cargo -q check --target wasm32-unknown-unknown -p lwk_wollet
 ## Test Commands
 
 ```bash
-
 # Run all tests, including integration tests that spawn executables and Docker containers
 cargo -q test
 
@@ -101,7 +119,7 @@ just kotlin                          # Generate Kotlin bindings
 just mdbook                          # Build documentation
 ```
 
-if you're adding a complex flow, please add a just command.
+Add a `just` recipe when adding a complex flow.
 
 ## Code Style Guidelines
 

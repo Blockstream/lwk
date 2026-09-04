@@ -170,4 +170,4 @@ just go-test-bindings
 
 ## Guidelines
 
-If you're changing the interface, adding a new object, method or function, follow our [guidelines](GUIDE.md).
+If you're changing the interface, adding a new object, method or function, follow our [guidelines](AGENTS.md).

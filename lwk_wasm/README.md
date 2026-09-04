@@ -123,4 +123,4 @@ node network.js
 
 ## Javascript code conventions
 
-For new additions and improvements, follow our [guidelines](GUIDE.md).
+For new additions and improvements, follow our [guidelines](AGENTS.md).

@@ -33,6 +33,9 @@ pub struct Conf {
     /// automatically and must not be passed here.
     pub args: Vec<String>,
 
+    /// Extra environment variables to set on the `lightningd` process.
+    pub envs: Vec<(String, String)>,
+
     /// If `true`, `lightningd`'s stdout and stderr are not suppressed.
     pub view_stdout: bool,
 }
@@ -81,6 +84,7 @@ impl LightningD {
             .arg(format!("--bitcoin-rpcuser={}", cookie.user))
             .arg(format!("--bitcoin-rpcpassword={}", cookie.password))
             .args(&conf.args)
+            .envs(conf.envs.iter().map(|(k, v)| (k.as_str(), v.as_str())))
             .stdout(stdio(conf.view_stdout))
             .stderr(stdio(conf.view_stdout))
             .spawn()

@@ -228,6 +228,48 @@ test_ledger:
   script:
     - cargo test -p lwk_ledger --features asyncr
 
+anyswap:
+  stage: test
+  needs: []
+  extends:
+    - .base
+    - .coverage_mixin
+  script:
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    # TODO: remove once CLN is in docker image
+    - apt-get update -qq
+    - apt-get install -y --no-install-recommends libsqlite3-dev libssl-dev pkg-config sqlite3 libsodium23 unzip
+    - export LIGHTNINGD_VERSION=26.06.7
+    - export LIGHTNINGD_EXPECTED_SHA256="53ddf124fe7058b6a2fc059d104976cc54ba5be21dc55b295cd82d01cabeb39c"
+    - export LIGHTNINGD_FILENAME="clightning-v${LIGHTNINGD_VERSION}-Ubuntu-22.04-amd64.tar.xz"
+    - curl -Ls "https://github.com/ElementsProject/lightning/releases/download/v${LIGHTNINGD_VERSION}/${LIGHTNINGD_FILENAME}" -o "${LIGHTNINGD_FILENAME}"
+    - echo "${LIGHTNINGD_EXPECTED_SHA256}  ${LIGHTNINGD_FILENAME}" | sha256sum -c -
+    - mkdir -p "clightning-${LIGHTNINGD_VERSION}"
+    - tar -xJf "${LIGHTNINGD_FILENAME}" -C "clightning-${LIGHTNINGD_VERSION}" && rm "${LIGHTNINGD_FILENAME}"
+    - export LIGHTNINGD_EXEC="$PWD/clightning-${LIGHTNINGD_VERSION}/usr/bin/lightningd"
+    - ELECTRS_BTC_FILENAME="electrs_linux_esplora_027e38d3ebc2f85b28ae76f8f3448438ee4fc7b1.zip"
+    - ELECTRS_BTC_EXPECTED_SHA256="c7d2abb51b3af8fa1d6d4db8f1d061c7f9095c9187979b4795c746f467bf42a0"
+    - wget "https://github.com/LeoComandini/electrsd/releases/download/027e38d/${ELECTRS_BTC_FILENAME}"
+    - echo "${ELECTRS_BTC_EXPECTED_SHA256}  ${ELECTRS_BTC_FILENAME}" | sha256sum -c -
+    - unzip "${ELECTRS_BTC_FILENAME}" && rm "${ELECTRS_BTC_FILENAME}"
+    - ELECTRS_BTC_NAME="${ELECTRS_BTC_FILENAME%.zip}"
+    - mv electrs "${ELECTRS_BTC_NAME}" && chmod +x "${ELECTRS_BTC_NAME}"
+    - export ELECTRS_BITCOIN_EXEC="$PWD/electrs_linux_esplora_027e38d3ebc2f85b28ae76f8f3448438ee4fc7b1"
+    # build anyswap
+    - git clone "https://gitlab-ci-token:${CI_JOB_TOKEN}@${ANYSWAP_REPO_URL}.git" /tmp/anyswap
+    - git -C /tmp/anyswap checkout "$ANYSWAP_REV"
+    - cd /tmp/anyswap
+    - cargo install sqlx-cli --no-default-features --features sqlite --locked
+    - DATABASE_URL="sqlite:$PWD/dev.db" sqlx database create
+    - DATABASE_URL="sqlite:$PWD/dev.db" sqlx migrate run --source crates/plugin/migrations
+    - DATABASE_URL="sqlite:$PWD/dev.db" cargo build --release -p anyswap-plugin --bin anyswap
+    - export ANYSWAP_EXEC="/tmp/anyswap/target/release/anyswap"
+    - cd -
+    - cp "${ANYSWAP_CONFIG_STR}" /tmp/anyswap_config.toml
+    - export ANYSWAP_CONFIG="/tmp/anyswap_config.toml"
+    # run anyswap tests
+    - cargo test -p lwk_anyswap --test e2e
+
 test_serial:
   stage: test
   needs: []
@@ -317,6 +359,8 @@ coverage_report:
     - job: boltz_submarine
       artifacts: true
     - job: test_ln
+      artifacts: true
+    - job: anyswap
       artifacts: true
   extends: .base
   script:

@@ -149,6 +149,7 @@ impl BoltzSession {
             .ok_or(Error::MissingInvoiceInResponse(reverse_resp.id.clone()))?
             .clone();
         let invoice = Bolt11Invoice::from_str(&invoice_str)?;
+        validate_reverse_response(&reverse_resp, &preimage, &claim_public_key, to_chain)?;
         let fee = amount.checked_sub(reverse_resp.onchain_amount).ok_or(
             Error::ExpectedAmountLowerThanInvoice(amount, reverse_resp.id.clone()),
         )?;
@@ -637,6 +638,41 @@ impl InvoiceResponse {
     }
 }
 
+fn validate_reverse_response(
+    response: &CreateReverseResponse,
+    preimage: &boltz_client::util::secrets::Preimage,
+    claim_public_key: &PublicKey,
+    chain: Chain,
+) -> Result<(), Error> {
+    response.validate(preimage, claim_public_key, chain)?;
+
+    // The upstream validator checks the invoice and address, but takes the
+    // script's hashlock from the server. Bind it to our local preimage too.
+    let hashlock = match chain {
+        Chain::Bitcoin(_) => {
+            boltz_client::swaps::bitcoin::BtcSwapScript::reverse_from_swap_resp(
+                response,
+                *claim_public_key,
+            )?
+            .hashlock
+        }
+        Chain::Liquid(_) => {
+            boltz_client::swaps::liquid::LBtcSwapScript::reverse_from_swap_resp(
+                response,
+                *claim_public_key,
+            )?
+            .hashlock
+        }
+    };
+    if hashlock != preimage.hash160 {
+        return Err(boltz_client::error::Error::Protocol(
+            "Reverse swap script preimage hash mismatch".to_string(),
+        )
+        .into());
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use boltz_client::network::LiquidChain;
@@ -646,6 +682,72 @@ mod tests {
     fn test_mnemonic() -> Mnemonic {
         Mnemonic::from_str("damp cart merit asset obvious idea chef traffic absent armed road link")
             .unwrap()
+    }
+
+    #[test]
+    fn reverse_response_validation() {
+        use boltz_client::lightning_invoice::{Currency, InvoiceBuilder};
+        use boltz_client::swaps::liquid::LBtcSwapScript;
+        use boltz_client::util::secrets::Preimage;
+
+        let swaps: Vec<SwapRestoreResponse> =
+            serde_json::from_str(include_str!("../tests/data/swap_restore_response.json")).unwrap();
+        let restored = swaps
+            .iter()
+            .find(|swap| matches!(swap.swap_type, SwapRestoreType::Reverse))
+            .unwrap();
+        let chain = Chain::Liquid(LiquidChain::LiquidRegtest);
+        let data = convert_swap_restore_response_to_invoice_data(
+            restored,
+            &test_mnemonic(),
+            "claim-address",
+            chain,
+        )
+        .unwrap();
+        let key = PublicKey::new(data.our_keys.public_key());
+        let preimage =
+            Preimage::from_sha256_str(&restored.claim_details.as_ref().unwrap().preimage_hash)
+                .unwrap();
+        let mut response = data.create_reverse_response;
+        let mut script = LBtcSwapScript::reverse_from_swap_resp(&response, key).unwrap();
+        script.funding_addrs = None;
+        response.lockup_address = script
+            .to_address(LiquidChain::LiquidRegtest)
+            .unwrap()
+            .to_string();
+        let invoice = InvoiceBuilder::new(Currency::Regtest)
+            .description("validation test".to_string())
+            .payment_hash(preimage.sha256)
+            .payment_secret(boltz_client::lightning_invoice::PaymentSecret([1; 32]))
+            .duration_since_epoch(Duration::from_secs(1))
+            .min_final_cltv_expiry_delta(18)
+            .build_signed(|hash| {
+                bitcoin::secp256k1::Secp256k1::new()
+                    .sign_ecdsa_recoverable(hash, &data.our_keys.secret_key())
+            })
+            .unwrap();
+        response.invoice = Some(invoice.to_string());
+        validate_reverse_response(&response, &preimage, &key, chain).unwrap();
+
+        let wrong_preimage = Preimage::from_vec(vec![42; 32]).unwrap();
+        assert!(validate_reverse_response(&response, &wrong_preimage, &key, chain).is_err());
+
+        // An internally consistent script/address with a different hashlock
+        // passes upstream validation, but must fail our additional check.
+        let mut wrong_script = script;
+        wrong_script.hashlock = wrong_preimage.hash160;
+        response.swap_tree.claim_leaf.output = response.swap_tree.claim_leaf.output.replace(
+            &preimage.hash160.to_string(),
+            &wrong_preimage.hash160.to_string(),
+        );
+        assert!(validate_reverse_response(&response, &preimage, &key, chain).is_err());
+        response.lockup_address = wrong_script
+            .to_address(LiquidChain::LiquidRegtest)
+            .unwrap()
+            .to_string();
+        response.validate(&preimage, &key, chain).unwrap();
+        let err = validate_reverse_response(&response, &preimage, &key, chain).unwrap_err();
+        assert!(err.to_string().contains("script preimage hash mismatch"));
     }
 
     #[test]

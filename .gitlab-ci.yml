@@ -267,6 +267,7 @@ anyswap:
     - cd -
     - cp "${ANYSWAP_CONFIG_STR}" /tmp/anyswap_config.toml
     - export ANYSWAP_CONFIG="/tmp/anyswap_config.toml"
+    - cat "$ANYSWAP_CONFIG"
     # run anyswap tests
     - cargo test -p lwk_anyswap --test e2e
 

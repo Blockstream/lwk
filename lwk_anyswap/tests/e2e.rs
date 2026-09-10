@@ -1,8 +1,10 @@
+use anyswap_sdk::client::HttpClient;
+use anyswap_sdk::types::SwapNetwork;
 use clightningrpc::lightningrpc::PayOptions;
 use lwk_test_util::*;
 
-#[test]
-fn anyswap_ping() {
+#[tokio::test]
+async fn anyswap_ping() {
     let env = TestEnvBuilder::from_env()
         .with_bitcoind()
         .with_bitcoincli()
@@ -44,10 +46,8 @@ fn anyswap_ping() {
     assert_eq!(pay.amount_msat.0, 1_000_000);
 
     // Ping anyswap
-    let url = format!("{}/v1/info", env.anyswap_url());
-    let response = reqwest::blocking::get(&url).unwrap();
-    assert_eq!(response.status(), 200);
-    let info: serde_json::Value = response.json().unwrap();
-    assert_eq!(info["policy"]["protocol_version"], "1.1.0");
-    assert_eq!(info["policy"]["network"], "regtest");
+    let client = HttpClient::new(&env.anyswap_url(), None);
+    let info = client.get_info().await.unwrap();
+    assert_eq!(info.policy.protocol_version, "1.2.0-rc.2");
+    assert_eq!(info.policy.network, SwapNetwork::Regtest);
 }

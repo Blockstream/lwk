@@ -31,7 +31,10 @@ pub fn input_sighash(input: &Input) -> Option<u32> {
     spent_txout(input).map(|o| if o.script_pubkey.is_v1_p2tr() { 0 } else { 1 })
 }
 
-fn input_has_non_default_sighash(input: &Input) -> bool {
+/// Whether the input declares a sighash type that is not the default one.
+///
+/// If the spent output is missing, returns `false`.
+pub fn input_has_non_default_sighash(input: &Input) -> bool {
     let Some(sighash) = input.sighash_type else {
         return false;
     };
@@ -58,9 +61,10 @@ pub(crate) fn pset_has_non_default_sighash(pset: &PartiallySignedTransaction) ->
 
 #[cfg(test)]
 mod test {
-    use elements::pset::PartiallySignedTransaction;
+    use elements::pset::{Input, PartiallySignedTransaction, PsbtSighashType};
+    use elements::{EcdsaSighashType, LockTime, SchnorrSighashType, Script, Transaction, TxOut};
 
-    use super::{input_sighash, pset_has_non_default_sighash};
+    use super::{input_has_non_default_sighash, input_sighash, pset_has_non_default_sighash};
 
     #[test]
     fn test_input_sighash() {
@@ -106,49 +110,96 @@ mod test {
     }
 
     #[test]
-    fn test_pset_has_non_default_sighash() {
+    fn test_non_default_sighash() {
+        let p2tr = Script::from([&[0x51, 0x20][..], &[0u8; 32]].concat());
+        let txout = |script_pubkey: &Script| TxOut {
+            script_pubkey: script_pubkey.clone(),
+            ..Default::default()
+        };
+
+        let mut ecdsa = Input {
+            witness_utxo: Some(txout(&Script::new())),
+            ..Default::default()
+        };
+        let mut tr = Input {
+            witness_utxo: Some(txout(&p2tr)),
+            ..Default::default()
+        };
+        let mut tr_non_witness = Input {
+            non_witness_utxo: Some(Transaction {
+                version: 2,
+                lock_time: LockTime::ZERO,
+                input: vec![],
+                output: vec![txout(&p2tr)],
+            }),
+            ..Default::default()
+        };
+        let mut unknown = Input::default();
+
+        let ecdsa_def = [EcdsaSighashType::All];
+        let ecdsa_non_def = [
+            EcdsaSighashType::None,
+            EcdsaSighashType::Single,
+            EcdsaSighashType::AllPlusAnyoneCanPay,
+            EcdsaSighashType::NonePlusAnyoneCanPay,
+            EcdsaSighashType::SinglePlusAnyoneCanPay,
+        ];
+        let tr_def = [SchnorrSighashType::Default, SchnorrSighashType::All];
+        let tr_non_def = [
+            SchnorrSighashType::None,
+            SchnorrSighashType::Single,
+            SchnorrSighashType::AllPlusAnyoneCanPay,
+            SchnorrSighashType::NonePlusAnyoneCanPay,
+            SchnorrSighashType::SinglePlusAnyoneCanPay,
+        ];
+
+        // nothing declared
+        for input in [&ecdsa, &tr, &tr_non_witness, &unknown] {
+            assert!(!input_has_non_default_sighash(input));
+        }
+
+        for sighash in ecdsa_def {
+            ecdsa.sighash_type = Some(sighash.into());
+            assert!(!input_has_non_default_sighash(&ecdsa), "{sighash}");
+        }
+        for sighash in ecdsa_non_def {
+            ecdsa.sighash_type = Some(sighash.into());
+            assert!(input_has_non_default_sighash(&ecdsa), "{sighash}");
+        }
+        for input in [&mut tr, &mut tr_non_witness] {
+            for sighash in tr_def {
+                input.sighash_type = Some(sighash.into());
+                assert!(!input_has_non_default_sighash(input), "{sighash}");
+            }
+            for sighash in tr_non_def {
+                input.sighash_type = Some(sighash.into());
+                assert!(input_has_non_default_sighash(input), "{sighash}");
+            }
+        }
+
+        // `DEFAULT` is taproot only
+        ecdsa.sighash_type = Some(SchnorrSighashType::Default.into());
+        assert!(input_has_non_default_sighash(&ecdsa));
+
+        // non standard values cannot be interpreted
+        for input in [&mut ecdsa, &mut tr] {
+            input.sighash_type = Some(PsbtSighashType::from_u32(153));
+            assert!(input_has_non_default_sighash(input));
+        }
+
+        // without the spent output value is not interpreted
+        unknown.sighash_type = Some(SchnorrSighashType::Default.into());
+        assert!(!input_has_non_default_sighash(&unknown));
+        for sighash in ecdsa_def.into_iter().chain(ecdsa_non_def) {
+            unknown.sighash_type = Some(sighash.into());
+            assert!(!input_has_non_default_sighash(&unknown), "{sighash}");
+        }
+
+        // a pset is non default as soon as one of its inputs is
         let pset_str = include_str!("../test_data/pset_details/pset.base64");
-        let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
-
-        // an input declaring nothing commits to everything, whatever the spent output is
+        let mut pset: PartiallySignedTransaction = pset_str.parse().unwrap();
         assert!(!pset_has_non_default_sighash(&pset));
-
-        let declare = |sighash: u32| {
-            let mut pset = pset.clone();
-            pset.inputs_mut()[0].sighash_type =
-                Some(elements::pset::PsbtSighashType::from_u32(sighash));
-            pset
-        };
-
-        // p2wsh input: only `ALL` commits to everything
-        assert!(!pset_has_non_default_sighash(&declare(1)));
-        assert!(pset_has_non_default_sighash(&declare(131)));
-
-        // non standard values cannot be interpreted, warn about them
-        assert!(pset_has_non_default_sighash(&declare(153)));
-
-        let mut p2tr = vec![0x51, 0x20];
-        p2tr.extend([0u8; 32]);
-        let p2tr = elements::Script::from(p2tr);
-        assert!(p2tr.is_v1_p2tr());
-        let declare_taproot = |sighash: u32| {
-            let mut pset = declare(sighash);
-            pset.inputs_mut()[0]
-                .witness_utxo
-                .as_mut()
-                .unwrap()
-                .script_pubkey = p2tr.clone();
-            pset
-        };
-
-        // taproot input: `DEFAULT` and `ALL` commit to the same data
-        assert!(!pset_has_non_default_sighash(&declare_taproot(0)));
-        assert!(!pset_has_non_default_sighash(&declare_taproot(1)));
-        assert!(pset_has_non_default_sighash(&declare_taproot(3)));
-
-        // without the spent output the script type is unknown, don't warn
-        let mut pset = declare(131);
-        pset.inputs_mut()[0].witness_utxo = None;
-        assert!(!pset_has_non_default_sighash(&pset));
+        pset.inputs_mut()[0].sighash_type = Some(EcdsaSighashType::SinglePlusAnyoneCanPay.into());
+        assert!(pset_has_non_default_sighash(&pset));
     }
 }

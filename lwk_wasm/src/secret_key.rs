@@ -53,6 +53,7 @@ impl SecretKey {
     /// Sign the given `pset`
     pub fn sign(&self, pset: &Pset) -> Result<Pset, Error> {
         let mut pset_inner = pset.clone().into();
+        // TODO: allow passing `SignOptions`, either by breaking this signature or adding a new function
         lwk_signer::sign_with_seckey(self.inner, &mut pset_inner)?;
         Ok(pset_inner.into())
     }

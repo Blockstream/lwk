@@ -9,6 +9,40 @@ use lwk_wollet::{
 };
 use wasm_bindgen::prelude::*;
 
+/// Options for a signing operation
+#[wasm_bindgen]
+#[derive(Default)]
+pub struct SignOptions {
+    inner: lwk_signer::SignOptions,
+}
+
+#[wasm_bindgen]
+impl SignOptions {
+    /// Create the default signing options, only signing default sighash types
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> SignOptions {
+        Self::default()
+    }
+
+    /// Also sign inputs with `SINGLE|ANYONECANPAY`
+    #[wasm_bindgen(js_name = allowSighashSingleAnyonecanpay)]
+    pub fn allow_sighash_single_anyonecanpay() -> SignOptions {
+        Self {
+            inner: lwk_signer::SignOptions::allow_sighash_single_anyonecanpay(),
+        }
+    }
+
+    /// Sign inputs with any sighash type
+    ///
+    /// **Warning**: using this method can lead to loss of funds.
+    #[wasm_bindgen(js_name = dangerousAllowAnySighash)]
+    pub fn dangerous_allow_any_sighash() -> SignOptions {
+        Self {
+            inner: lwk_signer::SignOptions::dangerous_allow_any_sighash(),
+        }
+    }
+}
+
 /// A Software signer.
 #[wasm_bindgen]
 pub struct Signer {
@@ -26,8 +60,14 @@ impl Signer {
 
     /// Sign and consume the given PSET, returning the signed one
     pub fn sign(&self, pset: Pset) -> Result<Pset, Error> {
+        self.sign_with_options(pset, &SignOptions::default())
+    }
+
+    /// Sign the given `pset` with the given `options`
+    #[wasm_bindgen(js_name = signWithOptions)]
+    pub fn sign_with_options(&self, pset: Pset, options: &SignOptions) -> Result<Pset, Error> {
         let mut pset: PartiallySignedTransaction = pset.into();
-        let added = lwk_common::Signer::sign(&self.inner, &mut pset)?;
+        let added = self.inner.sign_with_options(&mut pset, &options.inner)?;
         if added == 0 {
             return Err(Error::Generic("No signature added".to_string()));
         }

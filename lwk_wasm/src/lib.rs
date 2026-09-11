@@ -130,7 +130,7 @@ pub use public_key::PublicKey;
 pub use registry::{AssetMeta, Registry, RegistryPost};
 #[cfg(feature = "simplicity")]
 pub use secret_key::SecretKey;
-pub use signer::Signer;
+pub use signer::{SignOptions, Signer};
 pub use store::{JsStorage, JsStoreLink, JsTestStore};
 #[cfg(feature = "simplicity")]
 pub use tweak::Tweak;

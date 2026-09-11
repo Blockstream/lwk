@@ -40,7 +40,8 @@ async function runLiquidexTest() {
         const pset = builder.finish(maker);
         assert.strictEqual(pset.inputs()[0].sighash(), 131); // ANCHOR: ignore
         assert(maker.psetDetails(pset).hasNonDefaultSighash()); // ANCHOR: ignore
-        const signedPset = makerSigner.sign(pset);
+        const options = lwk.SignOptions.allowSighashSingleAnyonecanpay();
+        const signedPset = makerSigner.signWithOptions(pset, options);
 
         // (maker) Create the proposal and convert it to string to pass it to the taker
         const proposal = lwk.UnvalidatedLiquidexProposal.fromPset(signedPset);

@@ -143,7 +143,7 @@ mod tests {
     use wasm_bindgen_test::*;
 
     use super::UnvalidatedLiquidexProposal;
-    use crate::{Network, TxBuilder, Wollet, WolletDescriptor};
+    use crate::{Network, SignOptions, TxBuilder, Wollet, WolletDescriptor};
 
     #[wasm_bindgen_test]
     fn test_liquidex_proposal() {
@@ -210,7 +210,8 @@ mod tests {
             .finish(&wollet)
             .unwrap();
 
-        let signed_pset_maker = signer.sign(pset_maker).unwrap();
+        let options = SignOptions::allow_sighash_single_anyonecanpay();
+        let signed_pset_maker = signer.sign_with_options(pset_maker, &options).unwrap();
 
         // TODO How do lwk_wasm users securely extract amounts and assets from the proposal?
         let proposal = UnvalidatedLiquidexProposal::from_pset(signed_pset_maker).unwrap();

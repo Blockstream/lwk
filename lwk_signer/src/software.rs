@@ -13,7 +13,7 @@ use elements_miniscript::{
             bip32::{self, Fingerprint, Xpriv, Xpub},
             Network,
         },
-        pset::{Input, PartiallySignedTransaction},
+        pset::{Input, PartiallySignedTransaction, PsbtSighashType},
         schnorr::TapTweak,
         secp256k1_zkp::{All, Secp256k1},
         taproot::TapSighashHash,
@@ -82,6 +82,47 @@ enum EcdsaSignOpt {
 
     /// Create signatures without grinding the nonce
     NoGrind,
+}
+
+/// Policy on the sighash type for PSET inputs
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+enum SighashPolicy {
+    /// Refuse to sign inputs with a non-default sighash type
+    #[default]
+    DefaultOnly,
+
+    /// Also sign inputs declaring this sighash type
+    // TODO: scale it to Vec<> if few allowed sighash types needed
+    Allow(PsbtSighashType),
+
+    /// Sign inputs with any sighash type
+    DangerousAllowAny,
+}
+
+/// Options for a signing operation
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SignOptions {
+    sighash_policy: SighashPolicy,
+}
+
+impl SignOptions {
+    /// Also sign inputs with `SINGLE|ANYONECANPAY`
+    pub fn allow_sighash_single_anyonecanpay() -> Self {
+        Self {
+            sighash_policy: SighashPolicy::Allow(EcdsaSighashType::SinglePlusAnyoneCanPay.into()),
+        }
+    }
+
+    // TODO: add methods for the other non-default sighash types when needed
+
+    /// Sign inputs with any sighash type
+    ///
+    /// **Warning**: using this method can lead to loss of funds.
+    pub fn dangerous_allow_any_sighash() -> Self {
+        Self {
+            sighash_policy: SighashPolicy::DangerousAllowAny,
+        }
+    }
 }
 
 /// A software signer
@@ -478,10 +519,13 @@ fn add_partial_sig(
         .is_none()
 }
 
-impl Signer for SwSigner {
-    type Error = SignError;
-
-    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
+impl SwSigner {
+    /// Sign the given `pset` with the given `options`, returning the number of signatures added
+    pub fn sign_with_options(
+        &self,
+        pset: &mut PartiallySignedTransaction,
+        _options: &SignOptions,
+    ) -> Result<u32, SignError> {
         let signer_fingerprint = self.fingerprint();
         let messages = sighash_messages(pset, |input, is_taproot| {
             if is_taproot {
@@ -543,6 +587,14 @@ impl Signer for SwSigner {
         }
 
         Ok(signature_added)
+    }
+}
+
+impl Signer for SwSigner {
+    type Error = SignError;
+
+    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
+        self.sign_with_options(pset, &SignOptions::default())
     }
 
     fn derive_xpub(&self, path: &DerivationPath) -> Result<Xpub, Self::Error> {

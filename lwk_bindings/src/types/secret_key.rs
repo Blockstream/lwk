@@ -53,6 +53,7 @@ impl SecretKey {
     /// Sign the given `pset`
     pub fn sign(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
         let mut pset = pset.inner();
+        // TODO: allow passing `SignOptions`, either by breaking this signature or adding a new function
         lwk_signer::sign_with_seckey(self.inner, &mut pset)?;
         Ok(Arc::new(pset.into()))
     }

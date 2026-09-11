@@ -35,6 +35,39 @@ impl From<DescriptorBlindingKey> for lwk_common::DescriptorBlindingKey {
     }
 }
 
+/// Options for a signing operation
+#[derive(uniffi::Object, Default)]
+pub struct SignOptions {
+    inner: lwk_signer::SignOptions,
+}
+
+#[uniffi::export]
+impl SignOptions {
+    /// Create the default signing options, only signing default sighash types
+    #[uniffi::constructor]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Also sign inputs with `SINGLE|ANYONECANPAY`
+    #[uniffi::constructor]
+    pub fn allow_sighash_single_anyonecanpay() -> Self {
+        Self {
+            inner: lwk_signer::SignOptions::allow_sighash_single_anyonecanpay(),
+        }
+    }
+
+    /// Sign inputs with any sighash type
+    ///
+    /// **Warning**: using this method can lead to loss of funds.
+    #[uniffi::constructor]
+    pub fn dangerous_allow_any_sighash() -> Self {
+        Self {
+            inner: lwk_signer::SignOptions::dangerous_allow_any_sighash(),
+        }
+    }
+}
+
 /// wrapper over [`lwk_common::Bip`]
 #[derive(uniffi::Object)]
 pub struct Bip {
@@ -103,8 +136,17 @@ impl Signer {
     /// Note from an API perspective it would be better to consume the `pset` parameter so it would
     /// be clear the signed PSET is the returned one, but it's not possible with uniffi bindings
     pub fn sign(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
+        self.sign_with_options(pset, &SignOptions::default())
+    }
+
+    /// Sign the given `pset` with the given `options`
+    pub fn sign_with_options(
+        &self,
+        pset: &Pset,
+        options: &SignOptions,
+    ) -> Result<Arc<Pset>, LwkError> {
         let mut pset = pset.inner();
-        let added = lwk_common::Signer::sign(&self.inner, &mut pset)?;
+        let added = self.inner.sign_with_options(&mut pset, &options.inner)?;
         if added == 0 {
             return Err(LwkError::Generic {
                 msg: "No signature added".into(),

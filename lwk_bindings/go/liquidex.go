@@ -134,7 +134,8 @@ func main() {
 		panic("expected sighash 131") // ANCHOR: ignore
 	} // ANCHOR: ignore
 
-	signedPset, err := signer.Sign(pset)
+	options := lwk.SignOptionsAllowSighashSingleAnyonecanpay()
+	signedPset, err := signer.SignWithOptions(pset, options)
 	if err != nil {
 		log.Fatal(err)
 	}

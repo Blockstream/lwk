@@ -36,7 +36,8 @@ builder.liquidex_make(utxo, maker.address(None).address(), issued_asset_units, a
 pset = builder.finish(maker)
 assert pset.inputs()[0].sighash() == 131 # ANCHOR: ignore
 assert maker.pset_details(pset).has_non_default_sighash() # ANCHOR: ignore
-signed_pset = signer.sign(pset)
+options = SignOptions.allow_sighash_single_anyonecanpay()
+signed_pset = signer.sign_with_options(pset, options)
 
 # (maker) Create the proposal  and convert it to string to pass it to the taker
 proposal = UnvalidatedLiquidexProposal.from_pset(signed_pset)

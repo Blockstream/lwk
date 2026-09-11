@@ -3028,7 +3028,8 @@ fn test_inputs_order() {
         .unwrap()
         .finish()
         .unwrap();
-    signer.sign(&mut pset).unwrap();
+    let options = SignOptions::allow_sighash_single_anyonecanpay();
+    signer.sign_with_options(&mut pset, &options).unwrap();
     let proposal = LiquidexProposal::from_pset(&pset).unwrap();
     let txid = proposal.needed_tx().unwrap();
     let tx = w.wollet.transaction(&txid).unwrap().unwrap().tx;
@@ -3201,9 +3202,9 @@ fn test_update_transaction() {
 
 fn liquidex<C: BlockchainBackend>(
     wallet_maker: &mut TestWollet<C>,
-    signer_maker: &AnySigner,
+    signer_maker: &SwSigner,
     wallet_taker: &mut TestWollet<C>,
-    signer_taker: &AnySigner,
+    signer_taker: &SwSigner,
     utxo_send: OutPoint,
     sats_recv: u64,
     asset_recv: elements::AssetId,
@@ -3227,7 +3228,8 @@ fn liquidex<C: BlockchainBackend>(
     assert_eq!(from_details_send, -(sats_send as i64)); // ANCHOR: ignore
     assert_eq!(from_details_recv, sats_recv as i64); // ANCHOR: ignore
 
-    wallet_maker.sign(signer_maker, &mut pset);
+    let options = SignOptions::allow_sighash_single_anyonecanpay();
+    wallet_maker.sign_with_options(signer_maker, &mut pset, &options);
     let proposal = LiquidexProposal::from_pset(&pset).unwrap();
     // ANCHOR_END: liquidex_make
 
@@ -3296,7 +3298,7 @@ fn test_liquidex() {
     let signer_a = generate_signer();
     let view_key = generate_view_key();
     let desc_a = format!("ct({},elwpkh({}/*))", view_key, signer_a.xpub());
-    let sa = AnySigner::Software(signer_a);
+    let sa = AnySigner::Software(signer_a.clone());
     let client = test_client_electrum(&env.electrum_url());
     let mut wa = TestWollet::new(client, &desc_a);
 
@@ -3304,7 +3306,7 @@ fn test_liquidex() {
     let signer_b = generate_signer();
     let view_key = generate_view_key();
     let desc_b = format!("ct({},elwpkh({}/*))", view_key, signer_b.xpub());
-    let sb = AnySigner::Software(signer_b);
+    let sb = AnySigner::Software(signer_b.clone());
     let client = test_client_electrum(&env.electrum_url());
     let mut wb = TestWollet::new(client, &desc_b);
 
@@ -3329,7 +3331,7 @@ fn test_liquidex() {
         .find(|u| u.unblinded.asset == policy_asset)
         .unwrap()
         .outpoint;
-    liquidex(&mut wa, &sa, &mut wb, &sb, utxo, 1, asset_2);
+    liquidex(&mut wa, &signer_a, &mut wb, &signer_b, utxo, 1, asset_2);
     assert_eq!(wa.balance(&asset_1), 10);
     assert_eq!(wa.balance(&asset_2), 1);
     assert_eq!(wa.balance(&policy_asset), 0);
@@ -3345,7 +3347,15 @@ fn test_liquidex() {
         .find(|u| u.unblinded.asset == asset_2)
         .unwrap()
         .outpoint;
-    liquidex(&mut wa, &sa, &mut wb, &sb, utxo, 10_000, policy_asset);
+    liquidex(
+        &mut wa,
+        &signer_a,
+        &mut wb,
+        &signer_b,
+        utxo,
+        10_000,
+        policy_asset,
+    );
     assert_eq!(wa.balance(&asset_1), 10);
     assert_eq!(wa.balance(&asset_2), 0);
     assert_eq!(wa.balance(&policy_asset), 10_000);
@@ -3361,7 +3371,7 @@ fn test_liquidex() {
         .find(|u| u.unblinded.asset == asset_1)
         .unwrap()
         .outpoint;
-    liquidex(&mut wa, &sa, &mut wb, &sb, utxo, 1, asset_2);
+    liquidex(&mut wa, &signer_a, &mut wb, &signer_b, utxo, 1, asset_2);
     assert_eq!(wa.balance(&asset_1), 0);
     assert_eq!(wa.balance(&asset_2), 1);
     assert_eq!(wa.balance(&policy_asset), 10_000);
@@ -3943,7 +3953,8 @@ fn test_finalize_diff_sighashes() {
     input.sighash_type = Some(PsbtSighashType::from_u32(
         EcdsaSighashType::SinglePlusAnyoneCanPay.as_u32(),
     ));
-    let sigs = s2.sign(&mut pset).unwrap();
+    let options = SignOptions::allow_sighash_single_anyonecanpay();
+    let sigs = s2.sign_with_options(&mut pset, &options).unwrap();
     assert!(sigs > 0);
 
     let tx = wallet.wollet.finalize(&mut pset).unwrap();

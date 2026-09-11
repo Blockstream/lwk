@@ -6,6 +6,7 @@ use elements_miniscript::DescriptorPublicKey;
 use elements_miniscript::ForEachKey;
 use lwk_common::Signer;
 use lwk_signer::AnySigner;
+use lwk_signer::SignOptions;
 use lwk_signer::SwSigner;
 use lwk_test_util::{
     add_checksum, assert_fee_rate, compute_fee_rate, n_issuances, n_reissuances, pset_rt, TestEnv,
@@ -632,6 +633,17 @@ impl<C: BlockchainBackend> TestWollet<C> {
     pub fn sign<S: Signer>(&self, signer: &S, pset: &mut PartiallySignedTransaction) {
         *pset = pset_rt(pset);
         let sigs_added_or_overwritten = signer.sign(pset).unwrap();
+        assert!(sigs_added_or_overwritten > 0);
+    }
+
+    pub fn sign_with_options(
+        &self,
+        signer: &SwSigner,
+        pset: &mut PartiallySignedTransaction,
+        options: &SignOptions,
+    ) {
+        *pset = pset_rt(pset);
+        let sigs_added_or_overwritten = signer.sign_with_options(pset, options).unwrap();
         assert!(sigs_added_or_overwritten > 0);
     }
 

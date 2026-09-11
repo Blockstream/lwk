@@ -22,7 +22,10 @@ use elements_miniscript::{
     elementssig_to_rawsig,
     slip77::MasterBlindingKey,
 };
-use lwk_common::{get_genesis_hash, is_taproot_input, SighashCtx, SighashError, Signer};
+use lwk_common::{
+    get_genesis_hash, input_has_non_default_sighash, is_taproot_input, SighashCtx, SighashError,
+    Signer,
+};
 use zeroize::Zeroize;
 
 /// Possible errors when signing with the software signer [`SwSigner`]
@@ -55,6 +58,12 @@ pub enum SignError {
 
     #[error("BIP85 derivation failed: {0}")]
     Bip85Derivation(String),
+
+    #[error("refusing to sign input #{index}: unexpected {sighash}, possibly malicious PSET")]
+    NonDefaultSighash {
+        index: usize,
+        sighash: PsbtSighashType,
+    },
 }
 
 /// Possible errors when creating a new software signer [`SwSigner`]
@@ -97,6 +106,27 @@ enum SighashPolicy {
 
     /// Sign inputs with any sighash type
     DangerousAllowAny,
+}
+
+impl SighashPolicy {
+    fn is_sighash_allowed(&self, index: usize, input: &Input) -> Result<(), SignError> {
+        let Some(sighash) = input.sighash_type else {
+            return Ok(());
+        };
+        if !input_has_non_default_sighash(input) {
+            return Ok(());
+        }
+        let allowed = match self {
+            SighashPolicy::DefaultOnly => false,
+            SighashPolicy::Allow(allowed) => *allowed == sighash,
+            SighashPolicy::DangerousAllowAny => true,
+        };
+        if allowed {
+            Ok(())
+        } else {
+            Err(SignError::NonDefaultSighash { index, sighash })
+        }
+    }
 }
 
 /// Options for a signing operation
@@ -433,6 +463,7 @@ enum InputMsg {
 /// The messages to sign for the inputs selected by `is_mine`, `None` for the others.
 fn sighash_messages(
     pset: &PartiallySignedTransaction,
+    options: &SignOptions,
     mut is_mine: impl FnMut(&Input, bool) -> bool,
 ) -> Result<Vec<Option<InputMsg>>, SignError> {
     let mut ctx = SighashCtx::new(pset, get_genesis_hash(pset))?;
@@ -446,6 +477,8 @@ fn sighash_messages(
             messages.push(None);
             continue;
         }
+
+        options.sighash_policy.is_sighash_allowed(i, input)?;
 
         let msg = if is_taproot {
             let hash_ty = input
@@ -524,10 +557,10 @@ impl SwSigner {
     pub fn sign_with_options(
         &self,
         pset: &mut PartiallySignedTransaction,
-        _options: &SignOptions,
+        options: &SignOptions,
     ) -> Result<u32, SignError> {
         let signer_fingerprint = self.fingerprint();
-        let messages = sighash_messages(pset, |input, is_taproot| {
+        let messages = sighash_messages(pset, options, |input, is_taproot| {
             if is_taproot {
                 my_tap_key_derivation(input, signer_fingerprint).is_some()
             } else {
@@ -646,7 +679,8 @@ pub fn sign_with_seckey(
     let keypair = seckey.keypair(&secp);
     let (signing_x_only_pk, _) = bitcoin::XOnlyPublicKey::from_keypair(&keypair);
 
-    let messages = sighash_messages(pset, |input, is_taproot| {
+    let options = SignOptions::default();
+    let messages = sighash_messages(pset, &options, |input, is_taproot| {
         if is_taproot {
             input.tap_internal_key == Some(signing_x_only_pk)
         } else {
@@ -760,6 +794,58 @@ mod tests {
         let sig_low_r = pset_low_r.inputs()[0].partial_sigs.values().next().unwrap();
         assert_ne!(sig_low_r, sig_no_grind);
         assert!(sig_low_r.len() < sig_no_grind.len());
+    }
+
+    #[test]
+    fn signer_sighash_policy() {
+        let signer = SwSigner::new_with_network(
+            lwk_test_util::TEST_MNEMONIC,
+            lwk_common::Network::TestnetLiquid,
+        )
+        .unwrap();
+        let b64 = include_str!("../../lwk_jade/test_data/pset_to_be_signed.base64");
+
+        let new_pset = || -> PartiallySignedTransaction { b64.parse().unwrap() };
+
+        // An input with default sighash type is signed
+        let mut pset = new_pset();
+        assert_eq!(signer.sign(&mut pset).unwrap(), 1);
+
+        // sign() refuses a non-default sighash
+        let mut pset = new_pset();
+        pset.inputs_mut()[0].sighash_type = Some(EcdsaSighashType::SinglePlusAnyoneCanPay.into());
+        assert!(matches!(
+            signer.sign(&mut pset),
+            Err(SignError::NonDefaultSighash { index: 0, .. })
+        ));
+        assert!(pset.inputs()[0].partial_sigs.is_empty());
+
+        // Allow to sign some non-default sighash
+        let options = SignOptions::allow_sighash_single_anyonecanpay();
+        let mut pset_other = new_pset();
+        pset_other.inputs_mut()[0].sighash_type =
+            Some(EcdsaSighashType::SinglePlusAnyoneCanPay.into());
+        assert_eq!(
+            signer.sign_with_options(&mut pset_other, &options).unwrap(),
+            1
+        );
+
+        // But will fail on non-allowed sighash type
+        let mut pset_other = new_pset();
+        pset_other.inputs_mut()[0].sighash_type = Some(EcdsaSighashType::Single.into());
+        assert!(matches!(
+            signer.sign_with_options(&mut pset_other, &options),
+            Err(SignError::NonDefaultSighash { index: 0, .. })
+        ));
+
+        // Allowing any sighash type
+        let options = SignOptions::dangerous_allow_any_sighash();
+        let mut pset_any = new_pset();
+        pset_any.inputs_mut()[0].sighash_type = Some(EcdsaSighashType::AllPlusAnyoneCanPay.into());
+        assert_eq!(
+            signer.sign_with_options(&mut pset_any, &options).unwrap(),
+            1
+        );
     }
 
     #[test]

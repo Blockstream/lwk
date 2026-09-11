@@ -29,7 +29,7 @@ use lwk_jade::derivation_path_to_vec;
 use lwk_jade::get_receive_address::Variant;
 use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use lwk_jade::Jade;
-use lwk_signer::{AnySigner, SwSigner};
+use lwk_signer::{AnySigner, SignOptions, SignerError, SwSigner};
 use lwk_tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use lwk_wollet::bitcoin::bip32::Fingerprint;
 use lwk_wollet::bitcoin::XKeyIdentifier;
@@ -729,7 +729,32 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             let mut pset = PartiallySignedTransaction::from_str(&r.pset)?;
 
-            signer.sign(&mut pset)?;
+            if r.allow_sighash_single_anyonecanpay && r.dangerous_allow_any_sighash {
+                return Err(Error::Generic(
+                    "Cannot both allow a specific sighash type and any sighash type".to_string(),
+                ));
+            }
+
+            if r.allow_sighash_single_anyonecanpay || r.dangerous_allow_any_sighash {
+                // Only software signers can be told which sighash types to accept
+                let sw_signer = match signer {
+                    AnySigner::Software(sw) => sw,
+                    _ => return Err(Error::Generic(
+                        "Allowing non-default sighash types is only supported for software signers"
+                            .to_string(),
+                    )),
+                };
+                let options = if r.dangerous_allow_any_sighash {
+                    SignOptions::dangerous_allow_any_sighash()
+                } else {
+                    SignOptions::allow_sighash_single_anyonecanpay()
+                };
+                sw_signer
+                    .sign_with_options(&mut pset, &options)
+                    .map_err(SignerError::from)?;
+            } else {
+                signer.sign(&mut pset)?;
+            }
 
             // TODO we may want to return other details such as if signatures have been added
 

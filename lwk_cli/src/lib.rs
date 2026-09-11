@@ -180,8 +180,18 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let j = client.signer_jade_id(emulator)?;
                 serde_json::to_value(j)?
             }
-            SignerCommand::Sign { signer, pset } => {
-                let r = client.signer_sign(signer, pset)?;
+            SignerCommand::Sign {
+                signer,
+                pset,
+                allow_sighash_single_anyonecanpay,
+                dangerous_allow_any_sighash,
+            } => {
+                let r = client.signer_sign(
+                    signer,
+                    pset,
+                    allow_sighash_single_anyonecanpay,
+                    dangerous_allow_any_sighash,
+                )?;
                 serde_json::to_value(r)?
             }
             SignerCommand::LoadSoftware {

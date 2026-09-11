@@ -346,6 +346,15 @@ pub enum SignerCommand {
 
         #[arg(long)]
         pset: String,
+
+        /// Also sign inputs with `SINGLE|ANYONECANPAY`, as LiquiDEX proposals do
+        #[arg(long, conflicts_with = "dangerous_allow_any_sighash")]
+        allow_sighash_single_anyonecanpay: bool,
+
+        /// Sign inputs with any sighash type.
+        /// Dangerous: the PSET creator chooses what the signature commits to.
+        #[arg(long)]
+        dangerous_allow_any_sighash: bool,
     },
 
     ///  Prints a singlesig descriptor using this signer key

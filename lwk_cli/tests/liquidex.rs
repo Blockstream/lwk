@@ -51,10 +51,19 @@ fn test_liquidex() {
     let r = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
     assert!(get_str(&r, "warnings").contains("non-default sighash"));
 
-    let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
+    let r = sh(&format!(
+        "{cli} signer sign --signer s1 --pset {pset} --dangerous-allow-any-sighash"
+    ));
+    let pset_signed_any = get_str(&r, "pset").to_string();
+
+    let r = sh(&format!(
+        "{cli} signer sign --signer s1 --pset {pset} --allow-sighash-single-anyonecanpay"
+    ));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
     assert_ne!(pset_signed, pset_unsigned);
+    // Allowing any sighash signs the maker input the same way
+    assert_eq!(pset, pset_signed_any);
 
     let r = sh(&format!("{cli} liquidex to-proposal --pset {pset}"));
     let json = &r.get("proposal").unwrap();

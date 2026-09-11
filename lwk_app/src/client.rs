@@ -222,8 +222,19 @@ impl Client {
         self.make_request(Method::SignerRegisterMultisig, Some(req))
     }
 
-    pub fn signer_sign(&self, name: String, pset: String) -> Result<response::Pset, Error> {
-        let req = request::SignerSign { name, pset };
+    pub fn signer_sign(
+        &self,
+        name: String,
+        pset: String,
+        allow_sighash_single_anyonecanpay: bool,
+        dangerous_allow_any_sighash: bool,
+    ) -> Result<response::Pset, Error> {
+        let req = request::SignerSign {
+            name,
+            pset,
+            allow_sighash_single_anyonecanpay,
+            dangerous_allow_any_sighash,
+        };
         self.make_request(Method::SignerSign, Some(req))
     }
 

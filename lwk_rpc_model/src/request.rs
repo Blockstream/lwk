@@ -242,6 +242,12 @@ pub struct SignerSign {
 
     /// The PSET in base64
     pub pset: String,
+
+    /// Also sign inputs with `SINGLE|ANYONECANPAY`
+    pub allow_sighash_single_anyonecanpay: bool,
+
+    /// Sign inputs with any sighash type, dangerous
+    pub dangerous_allow_any_sighash: bool,
 }
 
 /// Request to broadcast a transaction

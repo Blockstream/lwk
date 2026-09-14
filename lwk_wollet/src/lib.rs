@@ -118,23 +118,24 @@ mod wollet;
 #[cfg(feature = "prices")]
 pub mod prices;
 
-#[cfg(feature = "registry")]
 pub mod registry {
     //! Registry related functions
 
+    #[cfg(feature = "registry")]
     pub use lwk_registry::{
-        add_contracts, Registry, RegistryAssetData, RegistryCache, RegistryData, RegistryPost,
-        TxFetcher, TxFetcherAsync,
+        Registry, RegistryCache, RegistryData, RegistryPost, TxFetcher, TxFetcherAsync,
     };
 
+    #[cfg(feature = "registry")]
     #[cfg(not(target_arch = "wasm32"))]
     pub use lwk_registry::registry::blocking;
+
+    pub use lwk_registry::asset_data::{add_contracts, RegistryAssetData};
 }
 
 pub use lwk_registry::error::Error as RegistryError;
 
-#[cfg(feature = "registry")]
-pub use lwk_registry::registry::RegistryAssetData;
+pub use lwk_registry::asset_data::RegistryAssetData;
 
 pub use lwk_registry::contract::{asset_ids, issuance_ids, Contract, Entity};
 

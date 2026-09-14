@@ -7,7 +7,9 @@
 #![warn(missing_docs)]
 
 mod software;
-pub use crate::software::{sign_with_seckey, NewError, SignError, SignOptions, SwSigner};
+pub use crate::software::{
+    sign_with_seckey, sign_with_seckey_with_options, NewError, SignError, SignOptions, SwSigner,
+};
 pub use bip39;
 
 use elements_miniscript::bitcoin::bip32::{self, DerivationPath, Fingerprint};

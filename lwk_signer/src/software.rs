@@ -673,14 +673,22 @@ pub fn sign_with_seckey(
     seckey: bitcoin::secp256k1::SecretKey,
     pset: &mut PartiallySignedTransaction,
 ) -> Result<u32, SignError> {
+    sign_with_seckey_with_options(seckey, pset, &SignOptions::default())
+}
+
+/// Sign a PSET with a given secret key and the given `options`
+pub fn sign_with_seckey_with_options(
+    seckey: bitcoin::secp256k1::SecretKey,
+    pset: &mut PartiallySignedTransaction,
+    options: &SignOptions,
+) -> Result<u32, SignError> {
     let secp = Secp256k1::new();
     let private_key = PrivateKey::new(seckey, Network::Bitcoin);
     let signing_pk = private_key.public_key(&secp);
     let keypair = seckey.keypair(&secp);
     let (signing_x_only_pk, _) = bitcoin::XOnlyPublicKey::from_keypair(&keypair);
 
-    let options = SignOptions::default();
-    let messages = sighash_messages(pset, &options, |input, is_taproot| {
+    let messages = sighash_messages(pset, options, |input, is_taproot| {
         if is_taproot {
             input.tap_internal_key == Some(signing_x_only_pk)
         } else {

@@ -1,9 +1,12 @@
-# Guidelines
+# lwk_bindings guidelines
 
 ## Rust interface
 This crate has a Rust interface, however that's not the focus.
 What we care about are the interfaces in the destination languages.
 For this reason we don't necessarily follow Rust guidelines.
+
+The object model is uniform: FFI objects are declared with `#[derive(uniffi::Object)]`, returned as `Arc<Self>`, and fallible operations return `Result<_, LwkError>`.
+For constructors, returning `Arc<Self>` is not necessary, return `Self` instead.
 
 ## Docs
 Documentation of this crate should not use link to rust types such as [`elements::Transaction`] because they are not usable in end-user languages.
@@ -12,14 +15,27 @@ Many types are wrappers of types in LWK crates, in this cases we mostly duplicat
 If a function is complex or has non-obvious behavior, add extra caller-facing context (for example by copying/adapting the relevant explanation from upstream docs).
 
 ## Tests
-Rust unit tests are welcome, however testing the Rust intermediate interface is not enough.
-We must have coverage also from a destination language, and we should treat that coverage as required for interface changes.
 
-Python is a common choice for tests due to its simplicity and popularity.
+This crate is a thin wrapper that maps Rust functions and structs from other LWK crates into destination languages.
+Rust unit tests add little value here: the wrapper logic is trivial, error paths are already covered in the inner crates,
+and what matters is what the destination languages actually see.
+So every interface change requires destination-language coverage.
 
-Tests in destination languages also serve as examples, try to make them useful for devs using that language.
+For new tests, use Python: it is simple, popular, and most existing tests are written in it.
 
-When adding/changing API surface, include destination-language checks for expected behavior and roundtrip consistency when serialization is involved.
+Destination-language tests double as usage examples: write them so a developer in that language can learn from them.
+
+When adding or changing API surface, cover the expected behavior, and when serialization is involved also check roundtrip consistency.
+
+## Build and test
+
+Use the `just` recipes from the root `justfile`:
+- `just build-bindings-lib` - build the `liblwk` library
+- `just python-test-bindings` - generate the Python interface and run the smoke test
+- `just kotlin` - generate the Kotlin bindings
+- `just go-test-bindings` - generate the Go interface and run the examples
+- `just csharp-windows` - generate the C# bindings (Windows only)
+- `just swift` - build the Swift framework (macOS only)
 
 ## Function/method arguments
 Always accept a function argument by an immutable reference.
@@ -64,7 +80,7 @@ If the object has a bytes representation:
 ```
 impl MyType {
     #[uniffi::constructor]
-    pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> { }
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, LwkError> { }
 
     fn to_bytes(&self) -> Vec<u8> {}
 }
@@ -79,7 +95,7 @@ Use a single canonical string interface for parsing/serialization:
 ```
 impl MyType {
     #[uniffi::constructor]
-    pub fn from_string(s: &str) -> Result<Arc<Self>, LwkError> { }
+    pub fn from_string(s: &str) -> Result<Self, LwkError> { }
 }
 ```
 
@@ -94,12 +110,15 @@ Always accept or return a BIP32 derivation path as a string (e.g. `"m/87'/1'/0'"
 
 Strings are human-readable and copy-pastable across destination languages, and they avoid needing a convention (e.g. a high bit) to encode hardened vs. normal derivation in a plain integer.
 
+## Changelog
+Add an entry to `CHANGELOG.md` (crate root) for every change to the FFI surface: new objects, methods, or functions, removals, and breaking changes.
+
 ## Deprecating functions
 If there are functions that contradict the guidelines above and should be marked as deprecated, add the following comment:
 ```
 Deprecated: use `function_name()` instead.
 ```
-We do not use deprecation macros because they are ignored in the targeted bindings:
+We do not use deprecation macros because they are ignored in the targeted bindings.
 
 Make sure that deprecated functions are not referenced in examples/tests by running CI or local tests without them.
 

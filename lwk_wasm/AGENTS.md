@@ -1,6 +1,6 @@
 # Guidelines
 
-Follow the [guidelines from the bindings crate](../lwk_bindings/GUIDE.md).
+Follow the [guidelines from the bindings crate](../lwk_bindings/AGENTS.md).
 However for WASM/JS we need a slightly different approach.
 
 ### String

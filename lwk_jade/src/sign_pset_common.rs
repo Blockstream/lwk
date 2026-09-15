@@ -346,10 +346,14 @@ pub(crate) fn validate_signature(
 
 #[cfg(test)]
 mod tests {
-    use elements::{pset::PsbtSighashType, EcdsaSighashType};
+    use elements::{
+        pset::PsbtSighashType,
+        secp256k1_zkp::{Keypair, Secp256k1, XOnlyPublicKey},
+        EcdsaSighashType, SchnorrSig, SchnorrSighashType,
+    };
     use elements_miniscript::psbt::SighashError;
 
-    use super::{ecdsa_sighash, Input};
+    use super::{ecdsa_sighash, validate_signature, Error, Input, Message, SignInfo};
 
     #[test]
     fn ecdsa_sighash_defaults_and_validates() {
@@ -368,6 +372,47 @@ mod tests {
         assert!(matches!(
             ecdsa_sighash(&input),
             Err(SighashError::InvalidSighashType)
+        ));
+    }
+
+    #[test]
+    fn validate_taproot_signature() {
+        let secp = Secp256k1::new();
+        let keypair = Keypair::from_seckey_slice(&secp, &[0x11; 32]).unwrap();
+        let (output_key, _) = XOnlyPublicKey::from_keypair(&keypair);
+        let message = Message::from_digest([0x22u8; 32]);
+        let sig = secp.sign_schnorr_no_aux_rand(&message, &keypair);
+
+        let sign_info = |hash_ty| {
+            Some(SignInfo::Taproot {
+                message,
+                output_key,
+                hash_ty,
+            })
+        };
+        let signature = |hash_ty| SchnorrSig { sig, hash_ty }.to_vec();
+
+        let default_sig = signature(SchnorrSighashType::Default);
+        let all_sig = signature(SchnorrSighashType::All);
+
+        validate_signature(&sign_info(SchnorrSighashType::Default), &[], &default_sig).unwrap();
+        validate_signature(&sign_info(SchnorrSighashType::All), &[], &all_sig).unwrap();
+
+        let mut corrupted = default_sig.clone();
+        corrupted[10] ^= 0x01;
+        assert!(matches!(
+            validate_signature(&sign_info(SchnorrSighashType::Default), &[], &corrupted),
+            Err(Error::SignatureValidationFailed)
+        ));
+
+        // the signature is valid, but it does not commit to the sighash we asked for
+        assert!(matches!(
+            validate_signature(&sign_info(SchnorrSighashType::All), &[], &default_sig),
+            Err(Error::SignatureValidationFailed)
+        ));
+        assert!(matches!(
+            validate_signature(&sign_info(SchnorrSighashType::Default), &[], &all_sig),
+            Err(Error::SignatureValidationFailed)
         ));
     }
 }

@@ -5,14 +5,15 @@ use elements::{
     },
     hashes::Hash,
     pset::{Input, PartiallySignedTransaction},
-    secp256k1_zkp::{schnorr::Signature as SchnorrSignature, Message},
-    sighash::SighashCache,
-    EcdsaSighashType, SchnorrSig, SchnorrSighashType, Transaction,
+    secp256k1_zkp::{Message, XOnlyPublicKey},
+    EcdsaSighashType, SchnorrSig, SchnorrSighashType,
 };
 use elements_miniscript::psbt::SighashError;
+use lwk_common::{get_genesis_hash, is_taproot_input, Network, SighashCtx};
 
 use crate::{
     anti_exfil, derivation_path_to_vec, script_code_wpkh, sign_liquid_tx::TxInputParams, Error,
+    SECP,
 };
 
 pub(crate) enum SignInfo {
@@ -22,7 +23,11 @@ pub(crate) enum SignInfo {
         message: Message,
         sighash: u8,
     },
-    Taproot,
+    Taproot {
+        message: Message,
+        output_key: XOnlyPublicKey,
+        hash_ty: SchnorrSighashType,
+    },
 }
 
 enum Derivation<'a> {
@@ -94,13 +99,10 @@ pub(crate) fn apply_sig(
             ))?;
 
             match sign_info {
-                SignInfo::Taproot => {
-                    let schnorr_sig = SchnorrSignature::from_slice(&sig)
-                        .map_err(|e| Error::Generic(e.to_string()))?;
-                    input.tap_key_sig = Some(SchnorrSig {
-                        sig: schnorr_sig,
-                        hash_ty: SchnorrSighashType::Default,
-                    });
+                SignInfo::Taproot { .. } => {
+                    let schnorr_sig =
+                        SchnorrSig::from_slice(&sig).map_err(|e| Error::Generic(e.to_string()))?;
+                    input.tap_key_sig = Some(schnorr_sig);
                     *sigs_added_or_overwritten += 1;
                 }
                 SignInfo::Ecdsa { public_key, .. } => {
@@ -114,21 +116,54 @@ pub(crate) fn apply_sig(
     Ok(())
 }
 
-pub(crate) fn prepare_input(
-    input: &Input,
+pub(crate) fn prepare_inputs(
+    pset: &PartiallySignedTransaction,
     my_fingerprint: Fingerprint,
+    network: Network,
+) -> Result<Vec<(Option<SignInfo>, TxInputParams)>, Error> {
+    let inputs = pset.inputs();
+
+    let signing_taproot = inputs.iter().any(|input| {
+        input
+            .tap_key_origins
+            .values()
+            .any(|(_, (fingerprint, _))| fingerprint == &my_fingerprint)
+    });
+
+    let mut derivations = Vec::with_capacity(inputs.len());
+    for (i, input) in inputs.iter().enumerate() {
+        derivations.push(Derivation::from_input(
+            input,
+            my_fingerprint,
+            i,
+            is_taproot_input(input),
+        )?);
+    }
+
+    let genesis_hash = get_genesis_hash(pset).unwrap_or(network.genesis_hash());
+    let mut ctx = SighashCtx::new(pset, Some(genesis_hash))?;
+
+    let mut prepared = Vec::with_capacity(inputs.len());
+    for ((i, input), derivation) in inputs.iter().enumerate().zip(derivations) {
+        prepared.push(prepare_input(
+            input,
+            i,
+            derivation,
+            signing_taproot,
+            &mut ctx,
+        )?);
+    }
+
+    Ok(prepared)
+}
+
+fn prepare_input(
+    input: &Input,
     i: usize,
+    derivation: Derivation<'_>,
     signing_taproot: bool,
-    sighash_cache: &mut SighashCache<Box<Transaction>>,
+    ctx: &mut SighashCtx,
 ) -> Result<(Option<SignInfo>, TxInputParams), Error> {
-    let is_taproot = input
-        .witness_utxo
-        .as_ref()
-        .map(|txout| txout.script_pubkey.is_v1_p2tr())
-        .unwrap_or(false);
-
-    let derivation = Derivation::from_input(input, my_fingerprint, i, is_taproot)?;
-
     let is_signable = matches!(
         derivation,
         Derivation::Taproot(Some(_)) | Derivation::Ecdsa(Some(_))
@@ -156,14 +191,28 @@ pub(crate) fn prepare_input(
         Derivation::Taproot(Some(derivation_path)) => {
             let previous_output_script =
                 &txout.expect("is_signable => txout present").script_pubkey;
+            let hash_ty = input
+                .schnorr_hash_ty()
+                .ok_or(SighashError::InvalidSighashType)?;
+
+            let sighash = ctx.taproot_msg(i, None)?;
+
+            // A P2TR scriptPubKey is OP_PUSHNUM_1, OP_PUSHBYTES_32, then the 32-byte output key.
+            let output_key = XOnlyPublicKey::from_slice(&previous_output_script.as_bytes()[2..])
+                .map_err(|_| Error::InvalidTaprootOutputKey(i))?;
+
             (
-                Some(SignInfo::Taproot),
+                Some(SignInfo::Taproot {
+                    message: Message::from_digest(sighash.to_byte_array()),
+                    output_key,
+                    hash_ty,
+                }),
                 TxInputParams {
                     is_witness: Some(true),
                     script_code: previous_output_script.as_bytes().to_vec(),
                     value_commitment,
                     path: Some(derivation_path_to_vec(derivation_path)),
-                    sighash: Some(0), // SIGHASH_DEFAULT per BIP341
+                    sighash: Some(hash_ty as u32),
                     // Must be empty for taproot: AE is not supported for P2TR inputs
                     ae_host_commitment: vec![],
                     // `scriptpubkey` is stored in the scriptpubkeys map used for the
@@ -204,16 +253,7 @@ pub(crate) fn prepare_input(
             };
 
             let sighash = ecdsa_sighash(input)?;
-            let message = Message::from_digest(
-                sighash_cache
-                    .segwitv0_sighash(
-                        i,
-                        &script_code,
-                        txout.expect("is_signable => txout present").value,
-                        sighash,
-                    )
-                    .to_byte_array(),
-            );
+            let message = Message::from_digest(ctx.segwitv0_msg(i, &script_code)?.to_byte_array());
             let host_entropy = anti_exfil::new_host_entropy()?;
             let host_commitment = anti_exfil::host_commitment(&host_entropy);
 
@@ -285,11 +325,18 @@ pub(crate) fn validate_signature(
             *sighash,
         )
         .map_err(|_| Error::SignatureValidationFailed),
-        Some(SignInfo::Taproot) => {
-            // TODO: Verify the Schnorr signature against the Taproot key and sighash,
-            // even though Jade's anti-exfil protocol only covers ECDSA inputs.
-            SchnorrSignature::from_slice(signature)
-                .map(|_| ())
+        Some(SignInfo::Taproot {
+            message,
+            output_key,
+            hash_ty,
+        }) => {
+            // AE covers ECDSA only
+            let signature =
+                SchnorrSig::from_slice(signature).map_err(|_| Error::SignatureValidationFailed)?;
+            if signature.hash_ty != *hash_ty {
+                return Err(Error::SignatureValidationFailed);
+            }
+            SECP.verify_schnorr(&signature.sig, message, output_key)
                 .map_err(|_| Error::SignatureValidationFailed)
         }
         None if signature.is_empty() => Ok(()),
@@ -299,10 +346,14 @@ pub(crate) fn validate_signature(
 
 #[cfg(test)]
 mod tests {
-    use elements::{pset::PsbtSighashType, EcdsaSighashType};
+    use elements::{
+        pset::PsbtSighashType,
+        secp256k1_zkp::{Keypair, Secp256k1, XOnlyPublicKey},
+        EcdsaSighashType, SchnorrSig, SchnorrSighashType,
+    };
     use elements_miniscript::psbt::SighashError;
 
-    use super::{ecdsa_sighash, Input};
+    use super::{ecdsa_sighash, validate_signature, Error, Input, Message, SignInfo};
 
     #[test]
     fn ecdsa_sighash_defaults_and_validates() {
@@ -321,6 +372,47 @@ mod tests {
         assert!(matches!(
             ecdsa_sighash(&input),
             Err(SighashError::InvalidSighashType)
+        ));
+    }
+
+    #[test]
+    fn validate_taproot_signature() {
+        let secp = Secp256k1::new();
+        let keypair = Keypair::from_seckey_slice(&secp, &[0x11; 32]).unwrap();
+        let (output_key, _) = XOnlyPublicKey::from_keypair(&keypair);
+        let message = Message::from_digest([0x22u8; 32]);
+        let sig = secp.sign_schnorr_no_aux_rand(&message, &keypair);
+
+        let sign_info = |hash_ty| {
+            Some(SignInfo::Taproot {
+                message,
+                output_key,
+                hash_ty,
+            })
+        };
+        let signature = |hash_ty| SchnorrSig { sig, hash_ty }.to_vec();
+
+        let default_sig = signature(SchnorrSighashType::Default);
+        let all_sig = signature(SchnorrSighashType::All);
+
+        validate_signature(&sign_info(SchnorrSighashType::Default), &[], &default_sig).unwrap();
+        validate_signature(&sign_info(SchnorrSighashType::All), &[], &all_sig).unwrap();
+
+        let mut corrupted = default_sig.clone();
+        corrupted[10] ^= 0x01;
+        assert!(matches!(
+            validate_signature(&sign_info(SchnorrSighashType::Default), &[], &corrupted),
+            Err(Error::SignatureValidationFailed)
+        ));
+
+        // the signature is valid, but it does not commit to the sighash we asked for
+        assert!(matches!(
+            validate_signature(&sign_info(SchnorrSighashType::All), &[], &default_sig),
+            Err(Error::SignatureValidationFailed)
+        ));
+        assert!(matches!(
+            validate_signature(&sign_info(SchnorrSighashType::Default), &[], &all_sig),
+            Err(Error::SignatureValidationFailed)
         ));
     }
 }

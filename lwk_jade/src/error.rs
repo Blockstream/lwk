@@ -62,6 +62,12 @@ pub enum Error {
     #[error(transparent)]
     Sighash(#[from] elements_miniscript::psbt::SighashError),
 
+    #[error(transparent)]
+    PsetSighash(#[from] lwk_common::SighashError),
+
+    #[error("Invalid taproot output key in input {0}")]
+    InvalidTaprootOutputKey(usize),
+
     #[error("Failed to generate secure host entropy: {0}")]
     HostEntropy(#[from] rand::Error),
 

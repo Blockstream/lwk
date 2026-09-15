@@ -5,7 +5,7 @@ use elements::{
     pset::{Input, PartiallySignedTransaction},
     sighash::{Prevouts, SighashCache},
     taproot::{TapLeafHash, TapSighashHash},
-    BlockHash, Sighash, Transaction,
+    BlockHash, Script, Sighash, Transaction,
 };
 use elements_miniscript::psbt::{PsbtExt, PsbtSighashMsg};
 
@@ -32,8 +32,8 @@ pub enum SighashError {
     #[error("input #{0}: expected a non-taproot input")]
     UnexpectedTaproot(usize),
 
-    #[error("input #{0}: the declared sighash type is not a valid schnorr one")]
-    InvalidSchnorrSighashType(usize),
+    #[error("input #{0}: the declared sighash type is not valid for this input")]
+    InvalidSighashType(usize),
 
     #[error("taproot input requires the ELIP-101 genesis hash, absent from the PSET")]
     MissingGenesisHash,
@@ -96,6 +96,29 @@ impl<'a> SighashCtx<'a> {
         }
     }
 
+    /// The segwit v0 message, with a caller supplied script code.
+    ///
+    /// **Experimental**: this API might change without notice.
+    pub fn segwitv0_msg(
+        &mut self,
+        idx: usize,
+        script_code: &Script,
+    ) -> Result<Sighash, SighashError> {
+        let input = input(self.pset, idx)?;
+        if is_taproot_input(input) {
+            return Err(SighashError::UnexpectedTaproot(idx));
+        }
+        let hash_ty = input
+            .ecdsa_hash_ty()
+            .ok_or(SighashError::InvalidSighashType(idx))?;
+        let value = spent_txout(input)
+            .ok_or(SighashError::MissingSpentOutput(idx))?
+            .value;
+        Ok(self
+            .cache
+            .segwitv0_sighash(idx, script_code, value, hash_ty))
+    }
+
     /// The taproot message: key spend with no leaf, script spend with one.
     ///
     /// **Experimental**: this API might change without notice.
@@ -111,7 +134,7 @@ impl<'a> SighashCtx<'a> {
         }
         let hash_ty = input
             .schnorr_hash_ty()
-            .ok_or(SighashError::InvalidSchnorrSighashType(idx))?;
+            .ok_or(SighashError::InvalidSighashType(idx))?;
         let genesis_hash = self.genesis_hash.ok_or(SighashError::MissingGenesisHash)?;
 
         let mut prevouts = Vec::with_capacity(pset.inputs().len());

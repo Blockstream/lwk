@@ -1,4 +1,9 @@
-//! **Experimental**: This API may change without notice.
+//! WARNING: NOT PRODUCTION READY.
+//!
+//! This crate and all functionality behind the `simplicity` feature flag is
+//! intended only for tinkering and experimentation with Simplicity. APIs may
+//! change or be removed without notice. Do not use in production environments
+//! or with real funds.
 
 pub mod error;
 #[cfg(feature = "lending")]

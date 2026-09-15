@@ -4,9 +4,11 @@ mod amp2;
 mod auth;
 mod blinders;
 mod blockchain_backend;
+mod coin_selection;
 mod elements_wallet;
 mod fees;
 mod issuance;
+mod lightning;
 mod pegin;
 mod prune;
 #[cfg(feature = "registry")]
@@ -29,7 +31,7 @@ use elements::bitcoin::bip32::Xpub;
 use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
 use elements::encode::{deserialize, serialize};
 use elements::hex::{FromHex, ToHex};
-use elements::{OutPoint, Transaction};
+use elements::{Address, OutPoint, Transaction};
 use lwk_common::electrum_ssl::LIQUID_TESTNET_SOCKET;
 use lwk_common::Signer;
 use lwk_containers::testcontainers::clients::Cli;
@@ -50,7 +52,7 @@ fn liquid_send_jade_signer() {
 
 #[test]
 fn liquid_send_software_signer() {
-    let signer = SwSigner::new(TEST_MNEMONIC, false).unwrap();
+    let signer = SwSigner::new_with_network(TEST_MNEMONIC, Network::default_regtest()).unwrap();
     let signers: [&AnySigner; 1] = [&AnySigner::Software(signer)];
     liquid_send(&signers);
 }
@@ -66,7 +68,7 @@ fn liquid_issue_jade_signer() {
 
 #[test]
 fn liquid_issue_software_signer() {
-    let signer = SwSigner::new(TEST_MNEMONIC, false).unwrap();
+    let signer = SwSigner::new_with_network(TEST_MNEMONIC, Network::default_regtest()).unwrap();
     let signers = [&AnySigner::Software(signer)];
     liquid_issue(&signers);
 }
@@ -485,12 +487,12 @@ fn contract() {
     let contract_i = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"37cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":8,\"ticker\":\"TEST\",\"version\":0}";
 
     for (contract, expected) in [
-        (contract_d, Error::InvalidDomain),
-        (contract_v, Error::InvalidVersion),
-        (contract_p, Error::InvalidPrecision),
-        (contract_n, Error::InvalidName),
-        (contract_t, Error::InvalidTicker),
-        (contract_i, Error::InvalidIssuerPubkey),
+        (contract_d, lwk_registry::error::Error::InvalidDomain),
+        (contract_v, lwk_registry::error::Error::InvalidVersion),
+        (contract_p, lwk_registry::error::Error::InvalidPrecision),
+        (contract_n, lwk_registry::error::Error::InvalidName),
+        (contract_t, lwk_registry::error::Error::InvalidTicker),
+        (contract_i, lwk_registry::error::Error::InvalidIssuerPubkey),
     ] {
         let err = Contract::from_str(contract).unwrap_err();
         assert_eq!(err.to_string(), expected.to_string());
@@ -540,14 +542,8 @@ fn multiple_descriptors() {
     let (asset, token) = &pset.inputs()[0].issuance_ids();
     let details_a = wallet_a.wollet.get_details(&pset).unwrap();
     let details_t = wallet_t.wollet.get_details(&pset).unwrap();
-    assert_eq!(
-        *details_a.balance.balances.get(asset).unwrap(),
-        satoshi_a as i64
-    );
-    assert_eq!(
-        *details_t.balance.balances.get(token).unwrap(),
-        satoshi_t as i64
-    );
+    assert_eq!(*details_a.balances().get(asset).unwrap(), satoshi_a as i64);
+    assert_eq!(*details_t.balances().get(token).unwrap(), satoshi_t as i64);
     wallet_a.sign(&signer_a, &mut pset);
     wallet_a.send(&mut pset);
     wallet_t.sync();
@@ -569,11 +565,8 @@ fn multiple_descriptors() {
     wallet_a.wollet.add_details(&mut pset).unwrap();
     let details_a = wallet_a.wollet.get_details(&pset).unwrap();
     let details_t = wallet_t.wollet.get_details(&pset).unwrap();
-    assert_eq!(
-        *details_a.balance.balances.get(asset).unwrap(),
-        satoshi_ar as i64
-    );
-    assert!(!details_t.balance.balances.contains_key(token));
+    assert_eq!(*details_a.balances().get(asset).unwrap(), satoshi_ar as i64);
+    assert!(!details_t.balances().contains_key(token));
     let mut pset_t1 = pset.clone();
     let mut pset_t2 = pset.clone();
     wallet_t.sign(&signer_t1, &mut pset_t1);
@@ -861,11 +854,15 @@ fn multisig_flow() {
     let details = wallet.wollet.get_details(&pset).unwrap();
     for idx in 0..pset.n_inputs() {
         // Each input has 2 misaing signatures
-        let sig = &details.sig_details[idx];
-        assert_eq!(sig.has_signature.len(), 0);
-        assert_eq!(sig.missing_signature.len(), 2);
+        let sig = &details.sig_details()[idx];
+        assert_eq!(sig.has_signature().len(), 0);
+        assert_eq!(sig.missing_signature().len(), 2);
         // Signatures are expected from signer1 and signer2
-        let fingerprints: HashSet<_> = sig.missing_signature.iter().map(|(_, (f, _))| f).collect();
+        let fingerprints: HashSet<_> = sig
+            .missing_signature()
+            .iter()
+            .map(|(_, (f, _))| f)
+            .collect();
         assert!(fingerprints.contains(&signer1.fingerprint()));
         assert!(fingerprints.contains(&signer2_fingerprint));
     }
@@ -880,7 +877,7 @@ fn multisig_flow() {
 fn jade_sign_wollet_pset() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let mnemonic = TEST_MNEMONIC;
-    let signer = SwSigner::new(mnemonic, false).unwrap();
+    let signer = SwSigner::new_with_network(mnemonic, Network::default_regtest()).unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
     let client = test_client_electrum(&env.electrum_url());
@@ -925,7 +922,9 @@ fn jade_single_sig() {
         jade_init.jade,
         XKeyIdentifier::from_str("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),
     );
-    let xpub = SwSigner::new(mnemonic, false).unwrap().xpub();
+    let xpub = SwSigner::new_with_network(mnemonic, Network::default_regtest())
+        .unwrap()
+        .xpub();
 
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({slip77_key}),elwpkh({xpub}/*))");
@@ -1377,6 +1376,107 @@ fn drain() {
         assert!(tx.height.is_some());
         assert!(tx.timestamp.is_some());
     }
+
+    // Drain explicit
+    wallet.fund_btc(&env);
+    let addr = env.elementsd_getnewaddress();
+    let mut addr_explicit = addr.clone();
+    addr_explicit.blinding_pubkey = None;
+    let mut pset = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&addr, 1_000)
+        .unwrap()
+        .drain_lbtc_wallet()
+        .drain_lbtc_to_explicit(&addr_explicit)
+        .unwrap()
+        .finish()
+        .unwrap();
+    for signer in signers {
+        wallet.sign(signer, &mut pset);
+    }
+    wallet.send(&mut pset);
+    assert_eq!(wallet.wollet.explicit_utxos().unwrap().len(), 0);
+}
+
+#[test]
+fn tx_builder_rejects_wrong_network_address() {
+    let wd = WolletDescriptor::from_str(TEST_DESCRIPTOR).unwrap();
+    let network = Network::default_regtest();
+    let wollet = WolletBuilder::new(network, wd).build().unwrap();
+    let lbtc = *network.policy_asset();
+
+    let testnet_address = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
+    let confidential = Address::from_str(testnet_address).unwrap();
+    let mut explicit = confidential.clone();
+    explicit.blinding_pubkey = None;
+
+    let err = wollet
+        .tx_builder()
+        .add_recipient(&confidential, 1_000, lbtc)
+        .unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
+
+    let err = wollet
+        .tx_builder()
+        .add_lbtc_recipient(&confidential, 1_000)
+        .unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
+
+    let err = wollet
+        .tx_builder()
+        .add_explicit_recipient(&explicit, 1_000, lbtc)
+        .unwrap_err();
+    assert!(matches!(err, Error::InvalidNetwork));
+
+    let err = wollet
+        .tx_builder()
+        .drain_lbtc_to(&confidential)
+        .unwrap_err();
+    assert!(matches!(err, Error::InvalidNetwork));
+
+    let err = wollet
+        .tx_builder()
+        .drain_lbtc_to_explicit(&explicit)
+        .unwrap_err();
+    assert!(matches!(err, Error::InvalidNetwork));
+
+    let err = wollet
+        .tx_builder()
+        .liquidex_make(OutPoint::null(), &confidential, 1_000, lbtc)
+        .unwrap_err();
+    assert!(matches!(err, Error::AddressError(_)));
+
+    let err = wollet
+        .tx_builder()
+        .issue_asset(1_000, Some(confidential.clone()), 0, None, None)
+        .unwrap_err();
+    assert!(matches!(err, Error::InvalidNetwork));
+
+    let err = wollet
+        .tx_builder()
+        .issue_asset(0, None, 1_000, Some(confidential.clone()), None)
+        .unwrap_err();
+    assert!(matches!(err, Error::InvalidNetwork));
+
+    let err = wollet
+        .tx_builder()
+        .reissue_asset(lbtc, 1_000, Some(confidential.clone()), None)
+        .unwrap_err();
+    assert!(matches!(err, Error::InvalidNetwork));
+
+    let request =
+        IssuanceRequest::new(1_000, 0).add_asset_output(1_000, Some(confidential.clone()));
+    let err = wollet.tx_builder().add_issuance(request).unwrap_err();
+    assert!(matches!(err, Error::InvalidNetwork));
+
+    let request =
+        IssuanceRequest::new(0, 1_000).add_token_output(1_000, Some(confidential.clone()));
+    let err = wollet.tx_builder().add_issuance(request).unwrap_err();
+    assert!(matches!(err, Error::InvalidNetwork));
+
+    let request = ReissuanceRequest::new(lbtc, 1_000).add_asset_output(1_000, Some(confidential));
+    let err = wollet.tx_builder().add_reissuance(request).unwrap_err();
+    assert!(matches!(err, Error::InvalidNetwork));
 }
 
 fn wait_tx_update<C: BlockchainBackend>(wallet: &mut TestWollet<C>) {
@@ -1423,7 +1523,7 @@ fn ct_discount() {
 
     wallet.sign(&signer, &mut pset);
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee_no_discount = details.balance.fees_in(&policy_asset);
+    let fee_no_discount = details.fees_in(&policy_asset);
     wallet.send(&mut pset);
     assert_fee_rate(compute_fee_rate_without_discount_ct(&pset), None);
 
@@ -1438,7 +1538,7 @@ fn ct_discount() {
 
     wallet.sign(&signer, &mut pset);
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee_with_discount = details.balance.fees_in(&policy_asset);
+    let fee_with_discount = details.fees_in(&policy_asset);
     wallet.send(&mut pset);
     assert_fee_rate(compute_fee_rate(&pset), None);
 
@@ -1466,7 +1566,7 @@ fn ct_discount() {
 
     wallet.sign(&signer, &mut pset);
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee_default = details.balance.fees_in(&policy_asset);
+    let fee_default = details.fees_in(&policy_asset);
     assert_eq!(fee_with_discount, fee_default);
 }
 
@@ -1573,9 +1673,9 @@ fn test_external_utxo() {
     // Add the details for the extenal wallet to sign
     w2.wollet.add_details(&mut pset).unwrap();
     let details = w1.wollet.get_details(&pset).unwrap();
-    assert_eq!(details.sig_details.len(), 2); // ANCHOR: ignore
-    assert_eq!(details.sig_details[0].missing_signature.len(), 1); // ANCHOR: ignore
-    assert_eq!(details.sig_details[1].missing_signature.len(), 1); // ANCHOR: ignore
+    assert_eq!(details.sig_details().len(), 2); // ANCHOR: ignore
+    assert_eq!(details.sig_details()[0].missing_signature().len(), 1); // ANCHOR: ignore
+    assert_eq!(details.sig_details()[1].missing_signature().len(), 1); // ANCHOR: ignore
 
     let signers = [&AnySigner::Software(signer1), &AnySigner::Software(signer2)];
     for signer in signers {
@@ -1583,7 +1683,7 @@ fn test_external_utxo() {
     }
 
     let details = w1.wollet.get_details(&pset).unwrap();
-    let fee = details.balance.fees_in(&policy_asset);
+    let fee = details.fees_in(&policy_asset);
 
     w1.send(&mut pset);
 
@@ -1738,7 +1838,7 @@ fn test_docs_external_utxo() -> Result<(), Box<dyn std::error::Error>> {
         .add_recipient(&node_address, 1, asset)?
         // Send LBTC back to external wollet
         .drain_lbtc_wallet()
-        .drain_lbtc_to(external_wollet_address)
+        .drain_lbtc_to(&external_wollet_address)?
         .finish()?;
     // ANCHOR_END: external_utxo_add
     // ANCHOR: external_utxo_sign
@@ -1783,14 +1883,17 @@ fn test_external_not_lwk() {
 
     let utxo = &w2.wollet.utxos().unwrap()[0];
     let external_utxo = w2.make_external(utxo);
+    let w1_utxo = w1.wollet.utxos().unwrap()[0].outpoint;
 
     let node_address = env.elementsd_getnewaddress();
+    // Select w1 utxo explicitly, so that s1 has an input to sign.
     let mut pset = w1
         .tx_builder()
         .add_lbtc_recipient(&node_address, 110_000)
         .unwrap()
         .add_external_utxos(vec![external_utxo])
         .unwrap()
+        .set_wallet_utxos(vec![w1_utxo])
         .finish()
         .unwrap();
 
@@ -1881,7 +1984,8 @@ fn test_unblinded_utxo() {
         .add_external_utxos(vec![external_utxo])
         .unwrap()
         .drain_lbtc_wallet()
-        .drain_lbtc_to(node_address)
+        .drain_lbtc_to(&node_address)
+        .unwrap()
         .finish()
         .unwrap();
 
@@ -1911,7 +2015,8 @@ fn test_unblinded_utxo() {
         .add_external_utxos(vec![external_utxo])
         .unwrap()
         .drain_lbtc_wallet()
-        .drain_lbtc_to(node_address)
+        .drain_lbtc_to(&node_address)
+        .unwrap()
         .finish()
         .unwrap();
 
@@ -1924,6 +2029,77 @@ fn test_unblinded_utxo() {
     assert_eq!(w.balance(&policy_asset), 0);
     let explicit_utxos = w.wollet.explicit_utxos().unwrap();
     assert_eq!(explicit_utxos.len(), 0);
+}
+
+#[test]
+fn test_all_explicit_tx() {
+    // Create a transaction with all inputs and all outputs explicit
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &desc);
+    let signers = [&AnySigner::Software(signer)];
+
+    let policy_asset = w.policy_asset();
+
+    // Fund the wallet with a blinded UTXO and an unblinded one
+    w.fund_btc(&env);
+    w.fund_explicit(&env, 100_000, None, None);
+
+    let explicit_utxos = w.wollet.explicit_utxos().unwrap();
+    assert_eq!(explicit_utxos.len(), 1);
+    let explicit_utxo = explicit_utxos[0].clone();
+
+    let mut node_explicit = env.elementsd_getnewaddress();
+    node_explicit.blinding_pubkey = None;
+    let own_explicit = w.address().to_unconfidential();
+
+    // Spending a blinded UTXO with all outputs explicit is unbalanceable
+    let err = w
+        .tx_builder()
+        .add_explicit_recipient(&node_explicit, 1_000, policy_asset)
+        .unwrap()
+        .drain_lbtc_to_explicit(&own_explicit)
+        .unwrap()
+        .finish()
+        .unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "The transaction has confidential inputs but no output to blind"
+    );
+
+    // All inputs and all outputs explicit
+    let mut pset = w
+        .tx_builder()
+        .set_wallet_utxos(vec![])
+        .add_external_utxos(vec![explicit_utxo])
+        .unwrap()
+        .add_explicit_recipient(&node_explicit, 1_000, policy_asset)
+        .unwrap()
+        .drain_lbtc_to_explicit(&own_explicit)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let tx = pset.extract_tx().unwrap();
+    assert_eq!(tx.input.len(), 1);
+    assert!(tx.output.iter().all(|o| !o.is_partially_blinded()));
+
+    assert_fee_rate(compute_fee_rate(&pset), None);
+
+    for signer in signers {
+        w.sign(signer, &mut pset);
+    }
+
+    w.send(&mut pset);
+
+    // The explicit change is a new explicit utxo
+    let explicit_utxos = w.wollet.explicit_utxos().unwrap();
+    assert_eq!(explicit_utxos.len(), 1);
+    assert!(explicit_utxos[0].unblinded.value > 90_000);
 }
 
 #[test]
@@ -1965,7 +2141,7 @@ fn test_spend_blinded_utxo_with_custom_blinding_key() {
     let balance = w.balance(&policy_asset);
 
     let details = w.wollet.get_details(&pset).unwrap();
-    let fee = details.balance.fees_in(&policy_asset);
+    let fee = details.fees_in(&policy_asset);
 
     assert_eq!(balance, amount - fee);
 }
@@ -2084,7 +2260,7 @@ fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
     let mut pset = wollet
         .tx_builder()
         .drain_lbtc_wallet()
-        .drain_lbtc_to(address.clone())
+        .drain_lbtc_to(&address)?
         .finish()?;
     // ANCHOR_END: drain_lbtc_wallet
 
@@ -2586,15 +2762,17 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
     let (asset, token) = w.issueasset(&signers, 10, 1, None, None);
     env.elementsd_generate(1);
     let utxos = w.wollet.utxos().unwrap();
-    assert_eq!(utxos.len(), 3);
-    let asset_utxo = &utxos[1];
+    // The issuance selected only the L-BTC utxos it needed, so the other one is untouched
+    assert_eq!(utxos.len(), 4);
+    let asset_utxo = &utxos[2];
     assert_eq!(asset_utxo.unblinded.value, 10);
     assert_eq!(asset_utxo.unblinded.asset, asset);
-    let token_utxo = &utxos[2];
+    let token_utxo = &utxos[3];
     assert_eq!(token_utxo.unblinded.value, 1);
     assert_eq!(token_utxo.unblinded.asset, token);
     let lbtc_utxo = &utxos[0];
     assert_eq!(lbtc_utxo.unblinded.asset, policy_asset);
+    assert_eq!(utxos[1].unblinded.asset, policy_asset);
 
     // Asset manual coin selection
     // If some utxos are selected, no other utxos are added
@@ -3195,10 +3373,15 @@ fn test_multiple_reissuances() {
     assert_eq!(utxos.len(), 2);
 
     // Issue two assets, each with its reissuance token, in a single transaction, so that the
-    // wallet owns both tokens
+    // wallet owns both tokens. The first asset splits its 2 tokens across two outputs, so that
+    // the wallet owns two utxos of the same token and a pin has something to choose between.
     let mut pset = w
         .tx_builder()
-        .issue_asset(10, None, 1, None, None)
+        .add_issuance(
+            IssuanceRequest::new(10, 2)
+                .add_token_output(1, None)
+                .add_token_output(1, None),
+        )
         .unwrap()
         .issue_asset(20, None, 2, None, None)
         .unwrap()
@@ -3211,7 +3394,7 @@ fn test_multiple_reissuances() {
     signer.sign(&mut pset).unwrap();
     w.send(&mut pset);
     assert_eq!(w.balance(&asset0), 10);
-    assert_eq!(w.balance(&token0), 1);
+    assert_eq!(w.balance(&token0), 2);
     assert_eq!(w.balance(&asset1), 20);
     assert_eq!(w.balance(&token1), 2);
     env.elementsd_generate(1);
@@ -3255,7 +3438,7 @@ fn test_multiple_reissuances() {
     // Each reissuance is assigned to the input holding the matching token, whose position depends
     // on coin selection, so compare them as a set rather than positionally
     let mut reissued: Vec<_> = details
-        .issuances
+        .issuances()
         .iter()
         .filter(|e| e.is_reissuance())
         .map(|e| {
@@ -3273,10 +3456,10 @@ fn test_multiple_reissuances() {
 
     // The first asset units are received by this wallet, the second ones are not, while both
     // tokens are spent and given back
-    assert_eq!(*details.balance.balances.get(&asset0).unwrap(), 5);
-    assert!(!details.balance.balances.contains_key(&asset1));
-    assert!(!details.balance.balances.contains_key(&token0));
-    assert!(!details.balance.balances.contains_key(&token1));
+    assert_eq!(*details.balances().get(&asset0).unwrap(), 5);
+    assert!(!details.balances().contains_key(&asset1));
+    assert!(!details.balances().contains_key(&token0));
+    assert!(!details.balances().contains_key(&token1));
 
     signer.sign(&mut pset).unwrap();
     w.send(&mut pset);
@@ -3284,8 +3467,94 @@ fn test_multiple_reissuances() {
     assert_eq!(w.balance(&asset0), 15);
     assert_eq!(w.balance(&asset1), 20);
     assert_eq!(w2.balance(&asset1), 7);
-    assert_eq!(w.balance(&token0), 1);
+    assert_eq!(w.balance(&token0), 2);
     assert_eq!(w.balance(&token1), 2);
+
+    // The wallet owns two utxos of the first reissuance token, so a pin picks which is spent
+    let utxos = w.wollet.utxos().unwrap();
+    let mut token0_utxos: Vec<_> = utxos
+        .iter()
+        .filter(|u| u.unblinded.asset == token0)
+        .map(|u| u.outpoint)
+        .collect();
+    token0_utxos.sort();
+    assert_eq!(token0_utxos.len(), 2);
+    let lbtc_utxo = utxos
+        .iter()
+        .find(|u| u.unblinded.asset == w.policy_asset())
+        .unwrap()
+        .outpoint;
+
+    // Outpoint of the single input carrying the reissuance
+    let reissuance_input = |pset: &elements::pset::PartiallySignedTransaction| -> OutPoint {
+        let inputs: Vec<_> = pset
+            .inputs()
+            .iter()
+            .filter(|i| i.issuance_value_amount.is_some())
+            .collect();
+        assert_eq!(inputs.len(), 1);
+        OutPoint::new(inputs[0].previous_txid, inputs[0].previous_output_index)
+    };
+
+    // With automatic coin selection, the pinned token utxo is the one added and reissued from
+    for pinned in [token0_utxos[0], token0_utxos[1]] {
+        let pset = w
+            .tx_builder()
+            .add_reissuance(ReissuanceRequest::new(asset0, 5).pin_input(pinned))
+            .unwrap()
+            .finish()
+            .unwrap();
+        assert_eq!(reissuance_input(&pset), pinned);
+    }
+
+    // Pinning an input that does not hold the reissuance token is rejected
+    let err = w
+        .tx_builder()
+        .add_reissuance(ReissuanceRequest::new(asset0, 5).pin_input(lbtc_utxo))
+        .unwrap()
+        .finish()
+        .unwrap_err();
+    assert!(
+        matches!(err, Error::ReissuancePinnedInputNotToken { outpoint, token } if outpoint == lbtc_utxo && token == token0)
+    );
+
+    // With a manual inputs order holding both token utxos, the pinned one is reissued from
+    let selection = vec![token0_utxos[0], token0_utxos[1], lbtc_utxo];
+    let pset = w
+        .tx_builder()
+        .add_reissuance(ReissuanceRequest::new(asset0, 5).pin_input(token0_utxos[1]))
+        .unwrap()
+        .set_wallet_utxos(selection.clone())
+        .set_inputs_order(selection)
+        .finish()
+        .unwrap();
+    assert_eq!(reissuance_input(&pset), token0_utxos[1]);
+
+    // A manual inputs order omitting the pinned input is rejected
+    let selection = vec![token0_utxos[0], lbtc_utxo];
+    let err = w
+        .tx_builder()
+        .add_reissuance(ReissuanceRequest::new(asset0, 5).pin_input(token0_utxos[1]))
+        .unwrap()
+        .set_wallet_utxos(selection.clone())
+        .set_inputs_order(selection)
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::ReissuanceOutpointNotInInputsOrder(o) if o == token0_utxos[1]));
+
+    // The pinned reissuance is accepted by the chain, and the token is given back
+    let mut pset = w
+        .tx_builder()
+        .add_reissuance(ReissuanceRequest::new(asset0, 5).pin_input(token0_utxos[1]))
+        .unwrap()
+        .finish()
+        .unwrap();
+    assert_eq!(reissuance_input(&pset), token0_utxos[1]);
+    signer.sign(&mut pset).unwrap();
+    w.send(&mut pset);
+    env.elementsd_generate(1);
+    assert_eq!(w.balance(&asset0), 20);
+    assert_eq!(w.balance(&token0), 2);
 }
 
 // TODO: move to lwk_wollet::issuance
@@ -3607,11 +3876,11 @@ fn liquidex<C: BlockchainBackend>(
         .unwrap();
 
     let details = wallet_maker.wollet.get_details(&pset).unwrap();
-    assert_eq!(details.balance.fees.len(), 0); // ANCHOR: ignore
+    assert_eq!(details.fees().len(), 0); // ANCHOR: ignore
     let asset_send = pset.inputs()[0].asset.unwrap(); // ANCHOR: ignore
     let sats_send = pset.inputs()[0].amount.unwrap(); // ANCHOR: ignore
-    let from_details_send = *details.balance.balances.get(&asset_send).unwrap(); // ANCHOR: ignore
-    let from_details_recv = *details.balance.balances.get(&asset_recv).unwrap(); // ANCHOR: ignore
+    let from_details_send = *details.balances().get(&asset_send).unwrap(); // ANCHOR: ignore
+    let from_details_recv = *details.balances().get(&asset_recv).unwrap(); // ANCHOR: ignore
     assert_eq!(from_details_send, -(sats_send as i64)); // ANCHOR: ignore
     assert_eq!(from_details_recv, sats_recv as i64); // ANCHOR: ignore
 
@@ -3651,11 +3920,14 @@ fn liquidex<C: BlockchainBackend>(
     // ANCHOR_END: liquidex_take
 
     let details = wallet_taker.wollet.get_details(&pset).unwrap();
-    let fee = details.balance.fees_in(&wallet_taker.policy_asset()) as i64;
+    let recipient = details.recipients().first().unwrap();
+    assert_eq!(recipient.value(), Some(sats_recv));
+    assert_eq!(recipient.asset(), Some(asset_recv));
+    let fee = details.fees_in(&wallet_taker.policy_asset()) as i64;
     assert!(fee > 0);
     // "send" and "recv" are from the maker perspective
-    let mut from_details_send = *details.balance.balances.get(&asset_send).unwrap();
-    let mut from_details_recv = *details.balance.balances.get(&asset_recv).unwrap();
+    let mut from_details_send = *details.balances().get(&asset_send).unwrap();
+    let mut from_details_recv = *details.balances().get(&asset_recv).unwrap();
     let policy_asset = wallet_taker.policy_asset();
     if asset_send == policy_asset {
         from_details_send += fee;
@@ -3898,7 +4170,7 @@ fn test_sh_multi() {
     pset = pset_rt(&pset);
 
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee = details.balance.fees_in(&wallet.policy_asset()) as i64;
+    let fee = details.fees_in(&wallet.policy_asset()) as i64;
     assert!(fee > 0);
     // TODO: fee rate estimation is off, fix it and use send_btc in this test
     assert!(compute_fee_rate(&pset) > 100.0);
@@ -4083,7 +4355,8 @@ fn test_non_std_legacy_multisig() {
         .add_recipient(&recv_addr, satoshi, asset)
         .unwrap()
         .drain_lbtc_wallet()
-        .drain_lbtc_to(recv_addr)
+        .drain_lbtc_to(&recv_addr)
+        .unwrap()
         .finish()
         .unwrap();
 
@@ -4291,10 +4564,10 @@ fn test_explicit_send() {
         .unwrap();
 
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let recipient = &details.balance.recipients[0];
-    assert_eq!(recipient.asset, Some(lbtc));
-    assert_eq!(recipient.value, Some(1_000));
-    assert_eq!(recipient.address, Some(addr_explicit));
+    let recipient = &details.recipients()[0];
+    assert_eq!(recipient.asset(), Some(lbtc));
+    assert_eq!(recipient.value(), Some(1_000));
+    assert_eq!(recipient.address(), Some(&addr_explicit));
 
     // Sign tx
     let sigs = signer.sign(&mut pset).unwrap();
@@ -4405,8 +4678,8 @@ fn test_skip_signing_utxo() {
     assert_eq!(pset.inputs().len(), 2);
 
     let details = w.wollet.get_details(&pset).unwrap();
-    assert_eq!(details.sig_details[0].missing_signature[0].1 .0, fp);
-    assert_eq!(details.sig_details[1].missing_signature[0].1 .0, fp);
+    assert_eq!(details.sig_details()[0].missing_signature()[0].1 .0, fp);
+    assert_eq!(details.sig_details()[1].missing_signature()[0].1 .0, fp);
 
     // Sign first input only
     let mut pset1 = pset.clone();
@@ -4417,8 +4690,8 @@ fn test_skip_signing_utxo() {
     assert!(sigs > 0);
 
     let details = w.wollet.get_details(&pset1).unwrap();
-    assert_eq!(details.sig_details[0].has_signature[0].1 .0, fp);
-    assert_eq!(details.sig_details[1].missing_signature.len(), 0);
+    assert_eq!(details.sig_details()[0].has_signature()[0].1 .0, fp);
+    assert_eq!(details.sig_details()[1].missing_signature().len(), 0);
 
     // Sign second input only
     let mut pset2 = pset.clone();
@@ -4429,15 +4702,15 @@ fn test_skip_signing_utxo() {
     assert!(sigs > 0);
 
     let details = w.wollet.get_details(&pset2).unwrap();
-    assert_eq!(details.sig_details[0].missing_signature.len(), 0);
-    assert_eq!(details.sig_details[1].has_signature[0].1 .0, fp);
+    assert_eq!(details.sig_details()[0].missing_signature().len(), 0);
+    assert_eq!(details.sig_details()[1].has_signature()[0].1 .0, fp);
 
     // Combine PSETs
     let mut pset = w.wollet.combine(&vec![pset1, pset2]).unwrap();
 
     let details = w.wollet.get_details(&pset).unwrap();
-    assert_eq!(details.sig_details[0].has_signature[0].1 .0, fp);
-    assert_eq!(details.sig_details[1].has_signature[0].1 .0, fp);
+    assert_eq!(details.sig_details()[0].has_signature()[0].1 .0, fp);
+    assert_eq!(details.sig_details()[1].has_signature()[0].1 .0, fp);
 
     // Broadcast
     let tx = w.wollet.finalize(&mut pset).unwrap();
@@ -4503,7 +4776,8 @@ fn test_fee_service() {
         .unwrap()
         // Send all (change) LBTC to the Fee Service
         .drain_lbtc_wallet()
-        .drain_lbtc_to(addr_fs)
+        .drain_lbtc_to(&addr_fs)
+        .unwrap()
         .finish()
         .unwrap();
 
@@ -4516,8 +4790,8 @@ fn test_fee_service() {
     // Fee Service checks that the PSET is reasonable for it
 
     // From a Fee Service perspective, transaction only spends the exact fee amount
-    let fee = &details.balance.fees_in(&w.policy_asset());
-    let balances = &details.balance.balances;
+    let fee = &details.fees_in(&w.policy_asset());
+    let balances = &details.balances();
     assert_eq!(balances.len(), 1);
     assert_eq!(balances.get(&lbtc).unwrap() + (*fee as i64), 0);
 
@@ -4527,8 +4801,8 @@ fn test_fee_service() {
 
     // Fee Service signs a single (singlesig) input
     let mut input_to_sign = 0;
-    for input in details.sig_details {
-        if let [(_, (fingerprint, _))] = input.missing_signature[..] {
+    for input in details.sig_details() {
+        if let [(_, (fingerprint, _))] = input.missing_signature()[..] {
             if fingerprint == signer_fee.fingerprint() {
                 input_to_sign += 1;
             }
@@ -4555,55 +4829,12 @@ fn test_fee_service() {
 #[allow(unused)]
 async fn async_clients() -> Result<(), Box<dyn std::error::Error>> {
     init_logging();
-    // ANCHOR: authenticated_esplora_client
-    use lwk_wollet::clients::asyncr::{
-        EsploraClient as AsyncEsploraClient, EsploraClientBuilder, WaterfallsClientBuilder,
-    };
-    use lwk_wollet::clients::TokenProvider;
-
-    let base_url = "https://enterprise.blockstream.info/liquid/api";
-    let client_id = "your_client_id";
-    let client_secret = "your_client_secret";
-    let client_id = std::env::var("CLIENT_ID").unwrap(); // ANCHOR: ignore
-    let client_secret = std::env::var("CLIENT_SECRET").unwrap(); // ANCHOR: ignore
-    let login_url =
-        "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
-
-    let mut client = EsploraClientBuilder::new(base_url, Network::Liquid)
-        .token_provider(TokenProvider::Blockstream {
-            url: login_url.to_string(),
-            client_id: client_id.to_string(),
-            client_secret: client_secret.to_string(),
-        })
-        .build()?;
-    // ANCHOR_END: authenticated_esplora_client
-    let tip = client.tip().await.unwrap();
-    assert!(tip.height > 100);
+    use lwk_wollet::clients::asyncr::WaterfallsClientBuilder;
 
     // ANCHOR: waterfalls_client
     let waterfalls_url = "https://waterfalls.liquidwebwallet.org/liquid/api";
     let mut client = WaterfallsClientBuilder::new(waterfalls_url, Network::Liquid).build()?;
     // ANCHOR_END: waterfalls_client
-    let tip = client.tip().await.unwrap();
-    assert!(tip.height > 100);
-
-    // ANCHOR: authenticated_waterfalls_client
-    let base_url = "https://enterprise.blockstream.info/liquid/api/waterfalls"; // <- changed
-    let client_id = "your_client_id";
-    let client_secret = "your_client_secret";
-    let client_id = std::env::var("CLIENT_ID").unwrap(); // ANCHOR: ignore
-    let client_secret = std::env::var("CLIENT_SECRET").unwrap(); // ANCHOR: ignore
-    let login_url =
-        "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
-
-    let mut client = WaterfallsClientBuilder::new(base_url, Network::Liquid)
-        .token_provider(TokenProvider::Blockstream {
-            url: login_url.to_string(),
-            client_id: client_id.to_string(),
-            client_secret: client_secret.to_string(),
-        })
-        .build()?;
-    // ANCHOR_END: authenticated_waterfalls_client
     let tip = client.tip().await.unwrap();
     assert!(tip.height > 100);
 
@@ -4633,31 +4864,6 @@ fn blocking_clients() -> Result<(), Box<dyn std::error::Error>> {
     let tip = client.tip().unwrap();
     assert!(tip.height > 100);
 
-    // ANCHOR: authenticated_electrum_client
-    use lwk_wollet::clients::TokenProvider;
-    use lwk_wollet::ElectrumClientBuilder;
-
-    // Mainnet Liquid enterprise Electrum RPC endpoint.
-    let url = "ssl://elements-mainnet.enterprise.blockstream.info:50002";
-    let client_id = "your_client_id";
-    let client_secret = "your_client_secret";
-    let client_id = std::env::var("CLIENT_ID").unwrap(); // ANCHOR: ignore
-    let client_secret = std::env::var("CLIENT_SECRET").unwrap(); // ANCHOR: ignore
-    let login_url =
-        "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
-
-    // The token provider needs the `electrum_oidc` cargo feature.
-    let mut client = ElectrumClientBuilder::new(url)
-        .token_provider(TokenProvider::Blockstream {
-            url: login_url.to_string(),
-            client_id: client_id.to_string(),
-            client_secret: client_secret.to_string(),
-        })
-        .build()?;
-    // ANCHOR_END: authenticated_electrum_client
-    let tip = client.tip().unwrap();
-    assert!(tip.height > 100);
-
     Ok(())
 }
 
@@ -4670,14 +4876,14 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
     use lwk_signer::{bip39::Mnemonic, SwSigner};
 
     let mnemonic = Mnemonic::generate(12)?;
-    let is_mainnet = false;
+    let network = lwk_common::Network::TestnetLiquid;
 
-    let signer = SwSigner::new(&mnemonic.to_string(), is_mainnet)?;
+    let signer = SwSigner::new_with_network(&mnemonic.to_string(), network)?;
     // ANCHOR_END: generate-signer
 
     // ANCHOR: get-xpub
     let bip = lwk_common::Bip::Bip84;
-    let xpub = signer.keyorigin_xpub(bip, is_mainnet);
+    let xpub = signer.keyorigin_xpub(bip, network.is_mainnet());
     // ANCHOR_END: get-xpub
 
     // ANCHOR: wollet
@@ -4762,23 +4968,24 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     use lwk_wollet::{Network, Wollet, WolletDescriptor};
 
     // ANCHOR: multisig-setup
-    let is_mainnet = false;
+    let network = Network::TestnetLiquid;
+    let is_mainnet = network.is_mainnet();
     // Derivation for multisig
     let bip = lwk_common::Bip::Bip87;
 
     // Alice creates their signer and gets the xpub
     let mnemonic_a = Mnemonic::generate(12)?;
-    let signer_a = SwSigner::new(&mnemonic_a.to_string(), is_mainnet)?;
+    let signer_a = SwSigner::new_with_network(&mnemonic_a.to_string(), network)?;
     let xpub_a = signer_a.keyorigin_xpub(bip, is_mainnet)?;
 
     // Bob creates their signer and gets the xpub
     let mnemonic_b = Mnemonic::generate(12)?;
-    let signer_b = SwSigner::new(&mnemonic_b.to_string(), is_mainnet)?;
+    let signer_b = SwSigner::new_with_network(&mnemonic_b.to_string(), network)?;
     let xpub_b = signer_b.keyorigin_xpub(bip, is_mainnet)?;
 
     // Carol, who acts as a coordinator, creates their signer and gets the xpub
     let mnemonic_c = Mnemonic::generate(12)?;
-    let signer_c = SwSigner::new(&mnemonic_c.to_string(), is_mainnet)?;
+    let signer_c = SwSigner::new_with_network(&mnemonic_c.to_string(), network)?;
     let xpub_c = signer_c.keyorigin_xpub(bip, is_mainnet)?;
 
     // Carol generates a random SLIP77 descriptor blinding key
@@ -4847,7 +5054,7 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     // Then Bob uses the wollet to analyze the PSET
     let details = wollet_b.get_details(&pset)?;
     // PSET has a reasonable fee
-    assert!(*details.balance.fees.values().last().unwrap() < 100);
+    assert!(*details.fees().values().last().unwrap() < 100);
     // PSET has a signature from Carol
     let fingerprints_has = details.fingerprints_has();
     assert_eq!(fingerprints_has.len(), 1);
@@ -4858,11 +5065,11 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     assert!(fingerprints_missing.contains(&signer_a.fingerprint()));
     assert!(fingerprints_missing.contains(&signer_b.fingerprint()));
     // PSET has a single recipient, with data matching what was specified above
-    assert_eq!(details.balance.recipients.len(), 1);
-    let recipient = details.balance.recipients[0].clone();
-    assert_eq!(recipient.address.unwrap(), address);
-    assert_eq!(recipient.asset.unwrap(), lbtc);
-    assert_eq!(recipient.value.unwrap(), sats);
+    assert_eq!(details.recipients().len(), 1);
+    let recipient = details.recipients()[0].clone();
+    assert_eq!(recipient.address().unwrap(), &address);
+    assert_eq!(recipient.asset().unwrap(), lbtc);
+    assert_eq!(recipient.value().unwrap(), sats);
 
     // Bob is satisified with the PSET and signs it
     let sigs_added = signer_b.sign(&mut pset)?;
@@ -4936,7 +5143,7 @@ fn test_issue_asset() -> Result<(), Box<dyn std::error::Error>> {
     // Create wallet
     let mnemonic = Mnemonic::generate(12)?;
 
-    let signer = SwSigner::new(&mnemonic.to_string(), false)?;
+    let signer = SwSigner::new_with_network(&mnemonic.to_string(), network)?;
     let desc = signer.wpkh_slip77_descriptor()?;
 
     let mut wollet = WolletBuilder::new(network, WolletDescriptor::from_str(&desc)?).build()?;
@@ -5065,14 +5272,10 @@ fn op_return() {
 
     // The OP_RETURN output carries zero value, so only the fee is spent.
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee = details.balance.fees_in(&wallet.policy_asset()) as i64;
+    let fee = details.fees_in(&wallet.policy_asset()) as i64;
     assert!(fee > 0);
     assert_eq!(
-        *details
-            .balance
-            .balances
-            .get(&wallet.policy_asset())
-            .unwrap(),
+        *details.balances().get(&wallet.policy_asset()).unwrap(),
         -fee
     );
 
@@ -5505,7 +5708,7 @@ fn test_miniscript_and_threshold() {
         .unwrap();
 
     let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee = details.balance.fees_in(&policy_asset);
+    let fee = details.fees_in(&policy_asset);
     wallet.sign(&s1, &mut pset);
     wallet.sign(&s2, &mut pset);
     sign_with_seckey(sk_a, &mut pset).unwrap();

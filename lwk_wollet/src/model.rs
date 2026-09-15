@@ -1,7 +1,7 @@
 use crate::cache::Timestamp;
 use crate::descriptor::Chain;
 use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOutSecrets, Txid};
-use crate::pset_create::validate_address;
+use crate::pset_create::validate_address_str;
 use crate::secp256k1::PublicKey;
 use crate::{Error, Network};
 use lwk_common::{burn_script, SignedBalance};
@@ -217,7 +217,7 @@ impl UnvalidatedRecipient {
                 asset,
             })
         } else {
-            let address = validate_address(&self.address, network)?;
+            let address = validate_address_str(&self.address, network)?;
             Ok(Recipient::from_address(self.satoshi, &address, asset))
         }
     }

@@ -23,6 +23,9 @@ pub enum Error {
     #[error("Wollet Error: {0}")]
     Wollet(#[from] lwk_wollet::Error),
 
+    #[error("Registry Error: {0}")]
+    Registry(#[from] lwk_wollet::RegistryError),
+
     #[error("Address Error: {0}")]
     Address(#[from] lwk_wollet::elements::AddressError),
 
@@ -79,6 +82,9 @@ pub enum Error {
 
     #[error("Tx '{0}' was not found in wallet '{1}'")]
     WalletTxNotFound(String, String),
+
+    #[error("Tx '{0}' was not found")]
+    TxNotFound(String),
 
     #[error("Signer '{0}' does not exist")]
     SignerNotExist(String),

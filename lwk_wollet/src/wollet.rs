@@ -24,8 +24,8 @@ use elements_miniscript::{
 };
 use fxhash::FxHasher;
 use lwk_common::{
-    burn_script, get_genesis_hash, pset_balance, pset_issuances, pset_signatures, Balance,
-    DynStore, EncryptedStore, FakeStore, FileStore, MemoryStore, PsetDetails,
+    burn_script, get_genesis_hash, Balance, DynStore, EncryptedStore, FakeStore, FileStore,
+    MemoryStore, PsetDetails,
 };
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hasher;
@@ -1054,11 +1054,7 @@ impl Wollet {
 
     /// Get the PSET details with respect to the wallet
     pub fn get_details(&self, pset: &PartiallySignedTransaction) -> Result<PsetDetails, Error> {
-        Ok(PsetDetails {
-            balance: pset_balance(pset, self.descriptor()?, self.network.address_params())?,
-            sig_details: pset_signatures(pset),
-            issuances: pset_issuances(pset),
-        })
+        Ok(PsetDetails::new(pset, self.descriptor()?, &self.network)?)
     }
 
     pub(crate) fn index(&self, script_pubkey: &Script) -> Result<(Chain, u32), Error> {
@@ -1185,7 +1181,7 @@ impl Wollet {
         }
 
         // ELIP-101 key written by TxBuilder: https://github.com/ElementsProject/ELIPs/blob/main/elip-0101.mediawiki
-        let genesis_hash = get_genesis_hash(pset);
+        let genesis_hash = get_genesis_hash(pset).unwrap_or(BlockHash::all_zeros());
 
         // genesis_hash is only used for BIP341 (taproot) sighash computation
         let result = pset.finalize_mut(&EC, genesis_hash);
@@ -1401,7 +1397,8 @@ impl Wollet {
         use lwk_common::Signer;
         use std::str::FromStr;
 
-        let signer = lwk_signer::SwSigner::random(false)?.0;
+        let signer =
+            lwk_signer::SwSigner::random_with_network(lwk_common::Network::TestnetLiquid)?.0;
         let desc = signer.wpkh_slip77_descriptor().map_err(Error::Generic)?;
         let desc = WolletDescriptor::from_str(&desc)?;
         Ok((
@@ -1747,8 +1744,7 @@ mod tests {
                     .expect("static"),
             ),
         ] {
-            let is_mainnet = matches!(network, Network::Liquid);
-            let signer = SwSigner::new(mnemonic, is_mainnet).unwrap();
+            let signer = SwSigner::new_with_network(mnemonic, network).unwrap();
             for script_variant in [Singlesig::Wpkh, Singlesig::ShWpkh] {
                 for blinding_variant in [
                     DescriptorBlindingKey::Slip77,

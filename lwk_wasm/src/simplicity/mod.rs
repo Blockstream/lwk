@@ -1,3 +1,9 @@
+//! WARNING: NOT PRODUCTION READY.
+//!
+//! All types and functions in this module are intended only for tinkering and
+//! experimentation. APIs may change or be removed without notice. Do not
+//! use in production environments or with real funds.
+
 mod arguments;
 mod cmr;
 mod log_level;

@@ -15,7 +15,8 @@ use crate::register_multisig::{
 };
 use crate::sign_liquid_tx::{SignLiquidTxParams, SignPsbtParams, TxInputParams};
 use crate::{
-    derivation_path_to_vec, json_to_cbor, try_parse_response, vec_to_derivation_path, Error, Result,
+    anti_exfil, derivation_path_to_vec, json_to_cbor, try_parse_response, vec_to_derivation_path,
+    Error, ParseStep, Result,
 };
 use connection::Connection;
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
@@ -23,7 +24,6 @@ use elements::bitcoin::sign_message::MessageSignature;
 use elements::pset::PartiallySignedTransaction;
 use elements_miniscript::slip77::{self, MasterBlindingKey};
 use lwk_common::{Network, Signer};
-use rand::RngCore;
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
 
@@ -54,7 +54,7 @@ pub struct Jade {
     multisigs_details: Mutex<Option<Vec<RegisteredMultisigDetails>>>,
 }
 
-fn read_loop<T>(conn: &mut Connection) -> Result<Response<T>>
+fn read_loop<T>(conn: &mut Connection, expected_id: &str) -> Result<Response<T>>
 where
     T: std::fmt::Debug + DeserializeOwned,
 {
@@ -70,9 +70,16 @@ where
             }
             Ok(len) => {
                 total += len;
-                let reader = &rx[..total];
-                if let Some(value) = try_parse_response::<T>(reader) {
-                    return value;
+
+                loop {
+                    match try_parse_response::<T>(&rx[..total], expected_id) {
+                        ParseStep::Incomplete => break,
+                        ParseStep::Mine(response) => return response,
+                        ParseStep::Skip { consumed } => {
+                            rx.copy_within(consumed..total, 0);
+                            total -= consumed;
+                        }
+                    }
                 }
             }
             Err(e) => {
@@ -136,10 +143,6 @@ impl Jade {
 
     pub fn get_master_blinding_key(&self, params: GetMasterBlindingKeyParams) -> Result<ByteBuf> {
         self.send(Request::GetMasterBlindingKey(params))
-    }
-
-    pub fn sign_message_inner(&self, params: SignMessageParams) -> Result<ByteBuf> {
-        self.send(Request::SignMessage(params))
     }
 
     pub fn get_signature_for_msg(&self, params: GetSignatureParams) -> Result<String> {
@@ -391,32 +394,19 @@ impl Jade {
     pub fn sign_psbt(&self, params: SignPsbtParams) -> Result<Vec<u8>> {
         self.check_network(params.network)?;
 
-        let mut rng = rand::thread_rng();
-        let msgid = rng.next_u32().to_string();
-
-        let request = FullRequest {
-            id: msgid.clone(),
-            method: "sign_psbt".to_string(),
-            params: Request::SignPsbt(params),
-        };
+        let request = FullRequest::new(Request::SignPsbt(params));
+        let msgid = request.id.clone();
 
         let mut conn = self.conn.lock()?;
-        let buf = serde_cbor::to_vec(&request)?;
-        log::debug!("sign_psbt request: {buf_len} bytes", buf_len = buf.len());
+        let buf = request.serialize()?;
         conn.write_all(&buf)?;
 
         let mut result = vec![];
         let mut newid = msgid.clone();
 
         loop {
-            let resp = read_loop::<ByteBuf>(&mut conn)?;
-
-            if resp.id != newid {
-                return Err(Error::Generic(format!(
-                    "reply id mismatch: expected {newid}, got {}",
-                    resp.id
-                )));
-            }
+            // `read_loop` only returns the answer to `newid`, so no id check is needed here
+            let resp = read_loop::<ByteBuf>(&mut conn, &newid)?;
 
             if let Some(error) = resp.error {
                 return Err(Error::JadeError(error));
@@ -431,18 +421,15 @@ impl Jade {
                 break;
             }
 
-            newid = rng.next_u32().to_string();
-            let ext_request = FullRequest {
-                id: newid.clone(),
-                method: "get_extended_data".to_string(),
-                params: Request::GetExtendedData(GetExtendedDataParams {
-                    origid: msgid.clone(),
-                    orig: "sign_psbt".to_string(),
-                    seqnum: seqnum + 1,
-                    seqlen,
-                }),
-            };
-            let buf = serde_cbor::to_vec(&ext_request)?;
+            let ext_request = FullRequest::new(Request::GetExtendedData(GetExtendedDataParams {
+                origid: msgid.clone(),
+                orig: "sign_psbt".to_string(),
+                seqnum: seqnum + 1,
+                seqlen,
+            }));
+            newid = ext_request.id.clone();
+
+            let buf = ext_request.serialize()?;
             conn.write_all(&buf)?;
         }
 
@@ -470,16 +457,23 @@ impl Jade {
     where
         T: std::fmt::Debug + DeserializeOwned,
     {
+        let mut conn = self.conn.lock()?;
+        self.send_with_conn(request, &mut conn)
+    }
+
+    fn send_with_conn<T>(&self, request: Request, conn: &mut Connection) -> Result<T>
+    where
+        T: std::fmt::Debug + DeserializeOwned,
+    {
         if let Some(network) = request.network() {
             self.check_network(network)?;
         }
+        let request = FullRequest::new(request);
         let buf = request.serialize()?;
-
-        let mut conn = self.conn.lock()?;
 
         conn.write_all(&buf)?;
 
-        let resp = read_loop::<T>(&mut conn)?;
+        let resp = read_loop::<T>(conn, &request.id)?;
         match (resp.result, resp.error) {
             (Some(result), _) => Ok(result),
             (_, Some(error)) => Err(Error::JadeError(error)),
@@ -509,6 +503,10 @@ impl Signer for &Jade {
         self.get_cached_xpub(params)
     }
 
+    fn network(&self) -> std::result::Result<Network, Self::Error> {
+        Ok(Jade::network(self))
+    }
+
     fn slip77_master_blinding_key(
         &self,
     ) -> std::result::Result<slip77::MasterBlindingKey, Self::Error> {
@@ -525,10 +523,41 @@ impl Signer for &Jade {
 
     fn sign_message(
         &self,
-        _message: &str,
-        _path: &DerivationPath,
+        message: &str,
+        path: &DerivationPath,
     ) -> std::result::Result<MessageSignature, Self::Error> {
-        todo!(); // TODO: use sign_message_inner
+        self.unlock()?;
+
+        let xpub = self.get_cached_xpub(GetXpubParams {
+            network: self.network,
+            path: derivation_path_to_vec(path),
+        })?;
+        let host_entropy = anti_exfil::new_host_entropy()?;
+        // Keep one lock across both halves of the anti-exfil exchange so no other request can
+        // interleave between them.
+        let mut conn = self.conn.lock()?;
+        let signer_commitment: ByteBuf = self.send_with_conn(
+            Request::SignMessage(SignMessageParams {
+                message: message.to_owned(),
+                path: derivation_path_to_vec(path),
+                ae_host_commitment: anti_exfil::host_commitment(&host_entropy).to_vec(),
+            }),
+            &mut conn,
+        )?;
+        let base64_signature: String = self.send_with_conn(
+            Request::GetSignature(GetSignatureParams {
+                ae_host_entropy: host_entropy.to_vec(),
+            }),
+            &mut conn,
+        )?;
+        anti_exfil::verify_message(
+            &xpub.public_key,
+            message,
+            &host_entropy,
+            &signer_commitment,
+            &base64_signature,
+        )
+        .map_err(|_| Error::SignatureValidationFailed)
     }
 }
 
@@ -548,6 +577,10 @@ impl Signer for Jade {
 
     fn slip77_master_blinding_key(&self) -> std::result::Result<MasterBlindingKey, Self::Error> {
         Signer::slip77_master_blinding_key(&self)
+    }
+
+    fn network(&self) -> std::result::Result<Network, Self::Error> {
+        Signer::network(&self)
     }
 
     fn sign_message(

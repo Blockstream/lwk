@@ -14,6 +14,21 @@ pub enum Error {
         body: Option<String>,
     },
 
+    /// An authenticated backend denied the request because it lacks a valid token
+    /// (esplora/waterfalls HTTP 401, electrum proxy JSON-RPC -32004).
+    #[error("authentication required")]
+    AuthenticationRequired,
+
+    /// An authenticated backend denied the request because the account is out of credits
+    /// (esplora/waterfalls HTTP 402, electrum proxy JSON-RPC -32000).
+    #[error("insufficient credits")]
+    InsufficientCredits,
+
+    /// An authenticated backend denied the request because it is rate limited
+    /// (esplora/waterfalls HTTP 429, electrum proxy JSON-RPC -32002/-32003).
+    #[error("rate limited")]
+    RateLimited,
+
     #[error("Aes {0}")]
     Aes(String),
 
@@ -37,7 +52,7 @@ pub enum Error {
 
     #[cfg(feature = "electrum")]
     #[error(transparent)]
-    ClientError(#[from] electrum_client::Error),
+    ClientError(electrum_client::Error),
 
     #[cfg(feature = "elements_rpc")]
     #[error(transparent)]
@@ -49,6 +64,9 @@ pub enum Error {
 
     #[error(transparent)]
     ElementsEncode(#[from] crate::elements::encode::Error),
+
+    #[error(transparent)]
+    BitcoinEncode(#[from] crate::bitcoin::consensus::encode::Error),
 
     #[error("Hex Error: {0}")]
     ElementsHex(crate::elements::hex::Error),
@@ -140,6 +158,9 @@ pub enum Error {
     #[error("Missing transaction")]
     MissingTransaction,
 
+    #[error("Downloaded transaction txid does not match the requested txid")]
+    TxidMismatch,
+
     #[error("Missing vin")]
     MissingVin,
 
@@ -154,24 +175,6 @@ pub enum Error {
 
     #[error("The script is not owned by this wallet")]
     ScriptNotMine,
-
-    #[error("Invalid domain")]
-    InvalidDomain,
-
-    #[error("Invalid version")]
-    InvalidVersion,
-
-    #[error("Invalid precision")]
-    InvalidPrecision,
-
-    #[error("Invalid name")]
-    InvalidName,
-
-    #[error("Invalid ticker")]
-    InvalidTicker,
-
-    #[error("Invalid issuer pubkey")]
-    InvalidIssuerPubkey,
 
     #[error("Descriptor without wildcard not supported")]
     UnsupportedDescriptorWithoutWildcard,
@@ -202,6 +205,27 @@ pub enum Error {
         fed_peg: &'static str,
     },
 
+    #[error("Pegin transaction does not pay the expected address")]
+    PeginOutputNotFound,
+
+    #[error("Pegin transaction pays the expected address more than once")]
+    PeginOutputAmbiguous,
+
+    #[error("Pegin transaction output index {vout} does not fit in an outpoint")]
+    PeginOutputIndexOverflow { vout: usize },
+
+    #[error("Pegin transaction output index {vout} conflicts with Elements input flags")]
+    PeginVoutConflictsWithFlags { vout: u32 },
+
+    #[error("Invalid pegin txout proof: {0}")]
+    InvalidPeginProof(String),
+
+    #[error("Pegin transaction {txid} is not included in the txout proof")]
+    PeginTransactionNotInProof { txid: crate::bitcoin::Txid },
+
+    #[error("Pegin inputs cannot be used with {0}")]
+    PeginUnsupportedBuilderMode(&'static str),
+
     #[error("Missing PSET")]
     MissingPset,
 
@@ -211,8 +235,8 @@ pub enum Error {
     #[error("Private blinding key not available")]
     MissingPrivateBlindingKey,
 
-    #[error("Contract does not commit to asset id")]
-    ContractDoesNotCommitToAssetId,
+    #[error("The transaction has confidential inputs but no output to blind")]
+    MissingBlindedOutput,
 
     #[error("Update height {update_tip_height} too old (internal height {cache_tip_height})")]
     UpdateHeightTooOld {
@@ -286,6 +310,15 @@ pub enum Error {
     #[error("Reissuance token {0} utxo not found in the wallet")]
     MissingReissuanceTokenUtxo(crate::elements::AssetId),
 
+    #[error("Reissuance pinned to outpoint {0} not present in the manual inputs order")]
+    ReissuanceOutpointNotInInputsOrder(OutPoint),
+
+    #[error("Reissuance pinned to outpoint {outpoint} not holding the reissuance token {token}")]
+    ReissuancePinnedInputNotToken {
+        outpoint: OutPoint,
+        token: crate::elements::AssetId,
+    },
+
     #[error("Manual inputs order requires issuances to be pinned to inputs")]
     InputsOrderRequiresPinnedIssuance,
 
@@ -306,12 +339,6 @@ pub enum Error {
 
     #[error("Cannot use derivation index when the descriptor has no wildcard")]
     IndexWithoutWildcard,
-
-    #[error("Given contract does not commit to asset '{0}'")]
-    InvalidContractForAsset(String),
-
-    #[error("Given transaction does not contain issuance of asset '{0}'")]
-    InvalidIssuanceTxtForAsset(String),
 
     #[cfg(feature = "test_wallet")]
     #[error(transparent)]
@@ -341,6 +368,10 @@ pub enum Error {
     #[error("Cannot generate address for AMP0 wallets using this call, use Amp0::address()")]
     Amp0AddressError,
 
+    #[cfg(feature = "amp0")]
+    #[error("Invalid login challenge received from the server")]
+    Amp0InvalidChallenge,
+
     #[error("Unsupported (wollet does not have CT descriptor)")]
     UnsupportedWithoutDescriptor,
 
@@ -360,6 +391,19 @@ pub enum Error {
 
     #[error("Async sleep failed: {0}")]
     AsyncSleepFailed(String),
+
+    #[error("Invalid network")]
+    InvalidNetwork,
+
+    #[error("PSET validation failed: {0}")]
+    PsetValidationError(#[from] lwk_common::PsetValidationError),
+
+    #[cfg(feature = "amp2")]
+    #[error("AMP2 cosign didn't add any signatures")]
+    Amp2NoSigsAdded,
+
+    #[error("Registry error: {0}")]
+    Registry(#[from] crate::RegistryError),
 }
 
 // cannot derive automatically with this error because of trait bound
@@ -383,6 +427,57 @@ impl From<lwk_common::EncryptError> for Error {
 impl From<elements::hex::Error> for Error {
     fn from(err: elements::hex::Error) -> Self {
         Self::ElementsHex(err)
+    }
+}
+
+/// The `error.data.source` value the Blockstream Electrum RPC proxy stamps on the denials it
+/// owns, so its JSON-RPC codes can be told apart from another server's use of the same numbers.
+#[cfg(feature = "electrum")]
+const ELECTRUM_PROXY_SOURCE: &str = "electrs-electrum-proxy";
+
+/// Maps the Blockstream Electrum RPC proxy's JSON-RPC denial codes to the common [`Error`] denial
+/// variants, so callers handle them the same way as the esplora/waterfalls HTTP denials. Returns
+/// `None` for any other electrum error.
+///
+/// The codes live in the JSON-RPC implementation-defined range (-32000..-32099), which is not
+/// globally unique: any other Electrum/JSON-RPC server assigns them different meanings (our own
+/// `lwk_tiny_jrpc`, for instance, uses -32000/-32002/-32004 for unrelated errors). So the mapping
+/// keys on the proxy-owned `error.data.source` marker rather than the code alone; without that
+/// marker the error is left untouched. A denial can arrive nested inside
+/// [`electrum_client::Error::AllAttemptsErrored`] (a reconnect re-runs the token-carrying
+/// handshake and is denied), so this recurses into it.
+#[cfg(feature = "electrum")]
+pub(crate) fn electrum_denial_variant(error: &electrum_client::Error) -> Option<Error> {
+    match error {
+        electrum_client::Error::Protocol(value) => {
+            let from_proxy = value
+                .get("data")
+                .and_then(|d| d.get("source"))
+                .and_then(|s| s.as_str())
+                == Some(ELECTRUM_PROXY_SOURCE);
+            if !from_proxy {
+                return None;
+            }
+            match value.get("code").and_then(|c| c.as_i64()) {
+                Some(-32004) => Some(Error::AuthenticationRequired),
+                Some(-32000) => Some(Error::InsufficientCredits),
+                Some(-32002) | Some(-32003) => Some(Error::RateLimited),
+                _ => None,
+            }
+        }
+        electrum_client::Error::AllAttemptsErrored(errors) => {
+            errors.iter().find_map(electrum_denial_variant)
+        }
+        _ => None,
+    }
+}
+
+// The proxy-owned `data.source` marker makes the denial codes safe to map globally (a non-proxy
+// server lacks the marker), so the blanket conversion maps them; everything else stays ClientError.
+#[cfg(feature = "electrum")]
+impl From<electrum_client::Error> for Error {
+    fn from(err: electrum_client::Error) -> Self {
+        electrum_denial_variant(&err).unwrap_or(Error::ClientError(err))
     }
 }
 

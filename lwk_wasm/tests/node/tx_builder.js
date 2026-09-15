@@ -191,7 +191,9 @@ async function runReissueAssetTest() {
 
         // Issue two assets in the same transaction, each with a reissuance token, and
         // broadcast so the wallet actually owns the tokens needed to reissue them
-        const issuanceRequest0 = new lwk.IssuanceRequest(BigInt(1000), BigInt(1));
+        const issuanceRequest0 = new lwk.IssuanceRequest(BigInt(1000), BigInt(2))
+            .addTokenOutput(BigInt(1), undefined)
+            .addTokenOutput(BigInt(1), undefined);
         const issuanceRequest1 = new lwk.IssuanceRequest(BigInt(2000), BigInt(1));
         let builder = new lwk.TxBuilder(network);
         builder = builder.addIssuance(issuanceRequest0);
@@ -225,6 +227,31 @@ async function runReissueAssetTest() {
         const reissuedAssets = reissuanceInputs.map((i) => i.issuanceAsset().toString()).sort();
         const expectedAssets = [asset0.toString(), asset1.toString()].sort();
         assert.deepStrictEqual(reissuedAssets, expectedAssets);
+
+        // Spend both utxos holding the first token, and pin the reissuance to the second one.
+        // Without a pin the lowest indexed input holding the token is used, so this fails if
+        // the pin is ignored.
+        const token0 = issuanceInputs[0].issuanceToken().toString();
+        const lbtc = network.policyAsset().toString();
+        const tokenUtxos = wollet.utxos().filter((u) => u.unblinded().asset().toString() === token0);
+        assert.strictEqual(tokenUtxos.length, 2);
+        const lbtcUtxo = wollet.utxos().find((u) => u.unblinded().asset().toString() === lbtc);
+
+        const pinned = tokenUtxos[1];
+        const pinnedRequest = new lwk.ReissuanceRequest(asset0, BigInt(500)).pinInput(pinned.outpoint());
+        let pinnedBuilder = new lwk.TxBuilder(network);
+        pinnedBuilder = pinnedBuilder.addReissuance(pinnedRequest);
+        pinnedBuilder = pinnedBuilder.setWalletUtxos([
+            tokenUtxos[0].outpoint(),
+            tokenUtxos[1].outpoint(),
+            lbtcUtxo.outpoint(),
+        ]);
+        const pinnedPset = pinnedBuilder.finish(wollet);
+
+        const pinnedInputs = pinnedPset.inputs().filter((i) => i.issuance() !== undefined);
+        assert.strictEqual(pinnedInputs.length, 1);
+        assert.strictEqual(pinnedInputs[0].previousTxid().toString(), pinned.outpoint().txid().toString());
+        assert.strictEqual(pinnedInputs[0].previousVout(), pinned.outpoint().vout());
     } catch (error) {
         console.error("Reissue asset test failed:", error);
         throw error;

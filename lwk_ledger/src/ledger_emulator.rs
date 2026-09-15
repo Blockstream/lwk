@@ -15,7 +15,7 @@ impl<'a> TestLedgerEmulator<'a> {
         let ledger = LedgerEmulator::new().expect("test");
         let container = docker.run(ledger);
         let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
-        let ledger = Ledger::new(port);
+        let ledger = Ledger::new(port, lwk_common::Network::default_regtest());
         Self {
             ledger,
             _ledger_emul: container,

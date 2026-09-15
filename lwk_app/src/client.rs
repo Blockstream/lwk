@@ -1,4 +1,5 @@
 use std::net::SocketAddr;
+use std::path::PathBuf;
 
 use lwk_jade::TIMEOUT;
 use lwk_wollet::UnvalidatedRecipient;
@@ -19,8 +20,12 @@ pub struct Client {
 
 impl Client {
     pub fn new(addr: SocketAddr) -> Result<Self, Error> {
+        Self::new_with_cookie(addr, None)
+    }
+
+    pub fn new_with_cookie(addr: SocketAddr, cookie_path: Option<PathBuf>) -> Result<Self, Error> {
         let url = format!("http://{addr}");
-        let transport = ReqwestHttpTransport::new(url, TIMEOUT);
+        let transport = ReqwestHttpTransport::new(url, TIMEOUT, cookie_path);
         let client = jsonrpc::Client::with_transport(transport);
         Ok(Self { client })
     }
@@ -37,9 +42,10 @@ impl Client {
         let params = req.map(|req| to_raw_value(&req)).transpose()?;
         let method = method.to_string();
         let request = self.client.build_request(&method, params.as_deref());
-        log::trace!("---> {}", serde_json::to_string(&request)?);
+        log::debug!("method: {method}");
+        // log::trace!("---> {}", serde_json::to_string(&request)?); // for local debugging
         let response = self.client.send_request(request)?;
-        log::trace!("<--- {}", serde_json::to_string(&response)?);
+        // log::trace!("<--- {}", serde_json::to_string(&response)?); // for local debugging
         match response.result.as_ref() {
             Some(result) => Ok(serde_json::from_str(result.get())?),
             None => match response.error {

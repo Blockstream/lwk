@@ -14,17 +14,17 @@ use elements_miniscript::{
             Network,
         },
         hashes::Hash,
-        pset::PartiallySignedTransaction,
+        pset::{Input, PartiallySignedTransaction},
         schnorr::TapTweak,
         secp256k1_zkp::{All, Secp256k1},
-        sighash::SighashCache,
-        EcdsaSighashType, SchnorrSig, SchnorrSighashType,
+        taproot::TapSighashHash,
+        EcdsaSighashType, SchnorrSig, SchnorrSighashType, Sighash,
     },
     elementssig_to_rawsig,
-    psbt::{PsbtExt, PsbtSighashMsg},
     slip77::MasterBlindingKey,
 };
-use lwk_common::{get_genesis_hash, Signer};
+use lwk_common::{get_genesis_hash, is_taproot_input, SighashCtx, SighashError, Signer};
+use zeroize::Zeroize;
 
 /// Possible errors when signing with the software signer [`SwSigner`]
 #[derive(thiserror::Error, Debug)]
@@ -38,6 +38,9 @@ pub enum SignError {
 
     #[error(transparent)]
     Sighash(#[from] elements_miniscript::psbt::SighashError),
+
+    #[error(transparent)]
+    PsetSighash(#[from] SighashError),
 
     #[error(transparent)]
     PsetParse(#[from] elements_miniscript::elements::pset::ParseError),
@@ -65,6 +68,10 @@ pub enum NewError {
     /// Error deriving the extended private key
     #[error(transparent)]
     Bip32(#[from] bip32::Error),
+
+    /// Invalid network
+    #[error("Invalid Network")]
+    InvalidNetwork,
 }
 
 /// Options for ECDSA signing
@@ -81,10 +88,11 @@ enum EcdsaSignOpt {
 /// A software signer
 #[derive(Clone)]
 pub struct SwSigner {
-    pub(crate) xprv: Xpriv,
-    pub(crate) secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
-    pub(crate) mnemonic: Option<Mnemonic>,
+    xprv: Xpriv,
+    secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
+    mnemonic: Option<Mnemonic>,
     ecdsa_sign_opt: EcdsaSignOpt,
+    network: lwk_common::Network,
 }
 
 impl core::fmt::Debug for SwSigner {
@@ -93,51 +101,116 @@ impl core::fmt::Debug for SwSigner {
     }
 }
 
+impl Drop for SwSigner {
+    fn drop(&mut self) {
+        // Attempt to erase secrets
+        // * mnemonic zeroizes itself on drop (bip39 "zeroize" feature)
+        AsMut::<[u8]>::as_mut(&mut self.xprv.chain_code).zeroize();
+        // * best effort for private key
+        self.xprv.private_key.non_secure_erase();
+        // Note: SwSigner implements Clone, allows to return mnemonic, seed,
+        // derived xprvs. The attempt erasure here does not affect copied data.
+    }
+}
+
 impl SwSigner {
-    /// Creates a new software signer from the given mnemonic.
-    ///
-    /// Takes also a flag if the network is mainnet so that generated extended keys are in the
-    /// correct form xpub/tpub (there is no need to discriminate between regtest and testnet)
-    pub fn new(mnemonic: &str, is_mainnet: bool) -> Result<Self, NewError> {
+    /// Creates a new software signer from the given mnemonic and network.
+    pub fn new_with_network(
+        mnemonic: &str,
+        network: lwk_common::Network,
+    ) -> Result<Self, NewError> {
         let secp = Secp256k1::new();
         let mnemonic: Mnemonic = mnemonic.parse()?;
         let seed = mnemonic.to_seed("");
 
-        let network = if is_mainnet {
+        let btc_network = if network.is_mainnet() {
             bitcoin::Network::Bitcoin
         } else {
             bitcoin::Network::Testnet
         };
 
-        let xprv = Xpriv::new_master(network, &seed)?;
+        let xprv = Xpriv::new_master(btc_network, &seed)?;
 
         Ok(Self {
             xprv,
             secp,
             mnemonic: Some(mnemonic),
             ecdsa_sign_opt: EcdsaSignOpt::default(),
+            network,
         })
+    }
+
+    /// Creates a new software signer from the given mnemonic.
+    ///
+    /// Takes also a flag if the network is mainnet so that generated extended keys are in the
+    /// correct form xpub/tpub (there is no need to discriminate between regtest and testnet)
+    #[deprecated(since = "0.20.0", note = "use `SwSigner::new_with_network` instead")]
+    pub fn new(mnemonic: &str, is_mainnet: bool) -> Result<Self, NewError> {
+        let network = if is_mainnet {
+            lwk_common::Network::Liquid
+        } else {
+            lwk_common::Network::TestnetLiquid
+        };
+        Self::new_with_network(mnemonic, network)
     }
 
     /// Return true if the signer is for mainnet. There is no need to discriminate between regtest and testnet.
     pub fn is_mainnet(&self) -> bool {
-        self.xprv.network == bitcoin::NetworkKind::Main
+        self.network.is_mainnet()
+    }
+
+    /// Create a new software signer from a random mnemonic and network
+    pub fn random_with_network(network: lwk_common::Network) -> Result<(Self, Mnemonic), NewError> {
+        let mnemonic = Mnemonic::generate(12)?;
+        Ok((
+            SwSigner::new_with_network(&mnemonic.to_string(), network)?,
+            mnemonic,
+        ))
     }
 
     /// Create a new software signer from a random mnemonic
+    #[deprecated(since = "0.20.0", note = "use `SwSigner::random_with_network` instead")]
     pub fn random(is_mainnet: bool) -> Result<(Self, Mnemonic), NewError> {
-        let mnemonic = Mnemonic::generate(12)?;
-        Ok((SwSigner::new(&mnemonic.to_string(), is_mainnet)?, mnemonic))
+        let network = if is_mainnet {
+            lwk_common::Network::Liquid
+        } else {
+            lwk_common::Network::TestnetLiquid
+        };
+        Self::random_with_network(network)
     }
 
-    /// Create a new software signer from a given extended private key
-    pub fn from_xprv(xprv: Xpriv) -> Self {
-        Self {
+    /// Create a new software signer from a given extended private key and network
+    pub fn from_xprv_with_network(
+        xprv: Xpriv,
+        network: lwk_common::Network,
+    ) -> Result<Self, NewError> {
+        if (xprv.network == bitcoin::NetworkKind::Main && network != lwk_common::Network::Liquid)
+            || (xprv.network != bitcoin::NetworkKind::Main
+                && network == lwk_common::Network::Liquid)
+        {
+            return Err(NewError::InvalidNetwork);
+        }
+        Ok(Self {
             xprv,
             secp: Secp256k1::new(),
             mnemonic: None,
             ecdsa_sign_opt: EcdsaSignOpt::default(),
-        }
+            network,
+        })
+    }
+
+    /// Create a new software signer from a given extended private key
+    #[deprecated(
+        since = "0.20.0",
+        note = "use `SwSigner::from_xprv_with_network` instead"
+    )]
+    pub fn from_xprv(xprv: Xpriv) -> Self {
+        let network = if xprv.network == bitcoin::NetworkKind::Main {
+            lwk_common::Network::Liquid
+        } else {
+            lwk_common::Network::TestnetLiquid
+        };
+        Self::from_xprv_with_network(xprv, network).expect("chose valid network")
     }
 
     /// Produce "low R" ECDSA signatures (default and recommended option)
@@ -306,111 +379,164 @@ fn p2pkh(xpub: &Xpub) -> bitcoin::Address {
     bitcoin::Address::p2pkh(bitcoin_pubkey, xpub.network)
 }
 
+enum InputMsg {
+    Ecdsa {
+        sighash: Sighash,
+        hash_ty: EcdsaSighashType,
+    },
+    Taproot {
+        sighash: TapSighashHash,
+        hash_ty: SchnorrSighashType,
+    },
+}
+
+/// The messages to sign for the inputs selected by `is_mine`, `None` for the others.
+fn sighash_messages(
+    pset: &PartiallySignedTransaction,
+    mut is_mine: impl FnMut(&Input, bool) -> bool,
+) -> Result<Vec<Option<InputMsg>>, SignError> {
+    let mut ctx = SighashCtx::new(pset, get_genesis_hash(pset))?;
+
+    let mut messages = Vec::with_capacity(pset.inputs().len());
+    for (i, input) in pset.inputs().iter().enumerate() {
+        // computing all the messages to sign
+        // since the pset is borrowed, we can't do this action in a inputs_mut() for loop
+        let is_taproot = is_taproot_input(input);
+        if !is_mine(input, is_taproot) {
+            messages.push(None);
+            continue;
+        }
+
+        let msg = if is_taproot {
+            let hash_ty = input
+                .schnorr_hash_ty()
+                .ok_or(SighashError::InvalidSchnorrSighashType(i))?;
+            InputMsg::Taproot {
+                sighash: ctx.taproot_msg(i, None)?,
+                hash_ty,
+            }
+        } else {
+            let hash_ty = input
+                .sighash_type
+                .map(|h| h.ecdsa_hash_ty().unwrap_or(EcdsaSighashType::All))
+                .unwrap_or(EcdsaSighashType::All);
+            InputMsg::Ecdsa {
+                sighash: ctx.ecdsa_msg(i)?,
+                hash_ty,
+            }
+        };
+        messages.push(Some(msg));
+    }
+    Ok(messages)
+}
+
+fn my_tap_key_derivation(input: &Input, fingerprint: Fingerprint) -> Option<&DerivationPath> {
+    let internal_key = input.tap_internal_key?;
+    let (_, (fp, path)) = input.tap_key_origins.get(&internal_key)?;
+    (fp == &fingerprint).then_some(path)
+}
+
+/// Add a taproot key spend signature, returning whether it was added.
+fn add_tap_key_sig(
+    input: &mut Input,
+    hash: TapSighashHash,
+    hash_ty: SchnorrSighashType,
+    keypair: &bitcoin::secp256k1::Keypair,
+    secp: &Secp256k1<All>,
+) -> bool {
+    let (x_only_pubkey, _) = bitcoin::XOnlyPublicKey::from_keypair(keypair);
+    if input.tap_internal_key != Some(x_only_pubkey) || input.tap_key_sig.is_some() {
+        return false;
+    }
+
+    let msg = Message::from_digest(hash.to_byte_array());
+    let tweaked_keypair = keypair.tap_tweak(secp, input.tap_merkle_root);
+    let sig = secp.sign_schnorr(&msg, &tweaked_keypair.to_inner());
+
+    input.tap_key_sig = Some(SchnorrSig { sig, hash_ty });
+    true
+}
+
+/// Add an ECDSA partial signature, returning whether it was added.
+fn add_partial_sig(
+    input: &mut Input,
+    sighash: Sighash,
+    hash_ty: EcdsaSighashType,
+    private_key: &PrivateKey,
+    ecdsa_sign_opt: &EcdsaSignOpt,
+    secp: &Secp256k1<All>,
+) -> bool {
+    let msg = Message::from_digest(sighash.to_byte_array());
+    let sig = match ecdsa_sign_opt {
+        EcdsaSignOpt::LowR => secp.sign_ecdsa_low_r(&msg, &private_key.inner),
+        EcdsaSignOpt::NoGrind => secp.sign_ecdsa(&msg, &private_key.inner),
+    };
+    let sig = elementssig_to_rawsig(&(sig, hash_ty));
+
+    input
+        .partial_sigs
+        .insert(private_key.public_key(secp), sig)
+        .is_none()
+}
+
 impl Signer for SwSigner {
     type Error = SignError;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
-        let tx = pset.extract_tx()?;
-        let mut sighash_cache = SighashCache::new(&tx);
-        let mut signature_added = 0;
-
-        let genesis_hash = get_genesis_hash(pset);
-
         let signer_fingerprint = self.fingerprint();
-        let mut messages = vec![];
-        for (i, inp) in pset.inputs().iter().enumerate() {
-            // computing all the messages to sign
-            // since the pset is borrowed, we can't do this action in a inputs_mut() for loop
-            let is_taproot = inp
-                .witness_utxo
-                .as_ref()
-                .map(|o| o.script_pubkey.is_v1_p2tr())
-                .unwrap_or(false);
-
-            let mine = if is_taproot {
-                inp.tap_key_origins
-                    .values()
-                    .any(|(_, (fp, _))| fp == &signer_fingerprint)
+        let messages = sighash_messages(pset, |input, is_taproot| {
+            if is_taproot {
+                my_tap_key_derivation(input, signer_fingerprint).is_some()
             } else {
-                inp.bip32_derivation
+                input
+                    .bip32_derivation
                     .values()
                     .any(|(fp, _)| fp == &signer_fingerprint)
-            };
+            }
+        })?;
 
-            let msg = if mine {
-                Some(pset.sighash_msg(i, &mut sighash_cache, None, genesis_hash)?)
-            } else {
-                None
-            };
-            messages.push((msg, is_taproot));
-        }
-
-        for (input, (msg, is_taproot)) in pset.inputs_mut().iter_mut().zip(messages) {
-            let msg = match msg {
+        let mut signature_added = 0;
+        for (input, msg) in pset.inputs_mut().iter_mut().zip(messages) {
+            match msg {
                 None => continue,
-                Some(m) => m,
-            };
-
-            if is_taproot {
-                for (pubkey, (_, (fingerprint, derivation_path))) in input.tap_key_origins.iter() {
-                    if fingerprint == &signer_fingerprint {
-                        let derived = self.xprv.derive_priv(&self.secp, derivation_path)?;
-                        let keypair = derived.to_keypair(&self.secp);
-
-                        let (x_only_pubkey, _) = bitcoin::XOnlyPublicKey::from_keypair(&keypair);
-
-                        if input.tap_internal_key != Some(x_only_pubkey)
-                            || input.tap_key_sig.is_some()
-                            || &x_only_pubkey != pubkey
-                        {
-                            continue;
-                        }
-
-                        if let PsbtSighashMsg::TapSighash(hash) = msg {
-                            let msg = Message::from_digest(hash.to_byte_array());
-
-                            let tweaked_keypair =
-                                keypair.tap_tweak(&self.secp, input.tap_merkle_root);
-
-                            let sig = self.secp.sign_schnorr(&msg, &tweaked_keypair.to_inner());
-                            let hash_ty = input
-                                .sighash_type
-                                .and_then(|h| h.schnorr_hash_ty())
-                                .unwrap_or(SchnorrSighashType::Default);
-
-                            input.tap_key_sig = Some(SchnorrSig { sig, hash_ty });
-                            signature_added += 1;
-                        }
+                Some(InputMsg::Taproot {
+                    sighash: hash,
+                    hash_ty,
+                }) => {
+                    let Some(derivation_path) =
+                        my_tap_key_derivation(input, signer_fingerprint).cloned()
+                    else {
+                        continue;
+                    };
+                    let derived = self.xprv.derive_priv(&self.secp, &derivation_path)?;
+                    let keypair = derived.to_keypair(&self.secp);
+                    if add_tap_key_sig(input, hash, hash_ty, &keypair, &self.secp) {
+                        signature_added += 1;
                     }
                 }
-            } else {
-                let hash_ty = input
-                    .sighash_type
-                    .map(|h| h.ecdsa_hash_ty().unwrap_or(EcdsaSighashType::All))
-                    .unwrap_or(EcdsaSighashType::All);
-                for (want_public_key, (fingerprint, derivation_path)) in
-                    input.bip32_derivation.iter()
-                {
-                    if &signer_fingerprint == fingerprint {
-                        let ext_derived = self.xprv.derive_priv(&self.secp, derivation_path)?;
+                Some(InputMsg::Ecdsa { sighash, hash_ty }) => {
+                    let derivations: Vec<_> = input
+                        .bip32_derivation
+                        .iter()
+                        .filter(|(_, (fp, _))| fp == &signer_fingerprint)
+                        .map(|(pk, (_, path))| (*pk, path.clone()))
+                        .collect();
+                    for (want_public_key, derivation_path) in derivations {
+                        let ext_derived = self.xprv.derive_priv(&self.secp, &derivation_path)?;
                         let private_key =
                             PrivateKey::new(ext_derived.private_key, Network::Bitcoin);
-                        let public_key = private_key.public_key(&self.secp);
-                        if want_public_key == &public_key {
-                            let sig = match self.ecdsa_sign_opt {
-                                EcdsaSignOpt::LowR => self
-                                    .secp
-                                    .sign_ecdsa_low_r(&msg.to_secp_msg(), &private_key.inner),
-                                EcdsaSignOpt::NoGrind => {
-                                    self.secp.sign_ecdsa(&msg.to_secp_msg(), &private_key.inner)
-                                }
-                            };
-                            let sig = elementssig_to_rawsig(&(sig, hash_ty));
-
-                            let inserted = input.partial_sigs.insert(public_key, sig);
-                            if inserted.is_none() {
-                                signature_added += 1;
-                            }
+                        if private_key.public_key(&self.secp) != want_public_key {
+                            continue;
+                        }
+                        if add_partial_sig(
+                            input,
+                            sighash,
+                            hash_ty,
+                            &private_key,
+                            &self.ecdsa_sign_opt,
+                            &self.secp,
+                        ) {
+                            signature_added += 1;
                         }
                     }
                 }
@@ -430,6 +556,10 @@ impl Signer for SwSigner {
             .seed()
             .ok_or_else(|| SignError::DeterministicSlip77NotAvailable)?;
         Ok(MasterBlindingKey::from_seed(&seed[..]))
+    }
+
+    fn network(&self) -> Result<lwk_common::Network, Self::Error> {
+        Ok(self.network)
     }
 
     fn sign_message(
@@ -459,38 +589,39 @@ pub fn sign_with_seckey(
     seckey: bitcoin::secp256k1::SecretKey,
     pset: &mut PartiallySignedTransaction,
 ) -> Result<u32, SignError> {
-    // TODO: share code with fn.sign above
     let secp = Secp256k1::new();
-    let signing_pk = seckey.public_key(&secp);
-    let signing_pk = bitcoin::key::PublicKey::new(signing_pk);
+    let private_key = PrivateKey::new(seckey, Network::Bitcoin);
+    let signing_pk = private_key.public_key(&secp);
+    let keypair = seckey.keypair(&secp);
+    let (signing_x_only_pk, _) = bitcoin::XOnlyPublicKey::from_keypair(&keypair);
 
-    let tx = pset.extract_tx()?;
-    let mut sighash_cache = SighashCache::new(&tx);
+    let messages = sighash_messages(pset, |input, is_taproot| {
+        if is_taproot {
+            input.tap_internal_key == Some(signing_x_only_pk)
+        } else {
+            input.bip32_derivation.contains_key(&signing_pk)
+        }
+    })?;
+
     let mut signature_added = 0;
-    let genesis_hash = elements_miniscript::elements::BlockHash::all_zeros();
-    let mut messages = vec![];
-    for i in 0..pset.inputs().len() {
-        let msg = pset
-            .sighash_msg(i, &mut sighash_cache, None, genesis_hash)?
-            .to_secp_msg();
-        messages.push(msg);
-    }
-
     for (input, msg) in pset.inputs_mut().iter_mut().zip(messages) {
-        let hash_ty = input
-            .sighash_type
-            .map(|h| h.ecdsa_hash_ty().unwrap_or(EcdsaSighashType::All))
-            .unwrap_or(EcdsaSighashType::All);
-        for pk in input.bip32_derivation.keys() {
-            if pk == &signing_pk {
-                let sig = secp.sign_ecdsa_low_r(&msg, &seckey);
-                let sig = elementssig_to_rawsig(&(sig, hash_ty));
-
-                let inserted = input.partial_sigs.insert(signing_pk, sig);
-                if inserted.is_none() {
-                    signature_added += 1;
-                }
-            }
+        let added = match msg {
+            None => continue,
+            Some(InputMsg::Taproot {
+                sighash: hash,
+                hash_ty,
+            }) => add_tap_key_sig(input, hash, hash_ty, &keypair, &secp),
+            Some(InputMsg::Ecdsa { sighash, hash_ty }) => add_partial_sig(
+                input,
+                sighash,
+                hash_ty,
+                &private_key,
+                &EcdsaSignOpt::LowR,
+                &secp,
+            ),
+        };
+        if added {
+            signature_added += 1;
         }
     }
 
@@ -505,11 +636,17 @@ mod tests {
 
     #[test]
     fn new_signer() {
-        let signer = SwSigner::new(lwk_test_util::TEST_MNEMONIC, false).unwrap();
+        let signer = SwSigner::new_with_network(
+            lwk_test_util::TEST_MNEMONIC,
+            lwk_common::Network::TestnetLiquid,
+        )
+        .unwrap();
         assert_eq!(format!("{signer:?}"), "Signer(73c5da0a)");
         assert_eq!(
             "mnemonic has an invalid word count: 1. Word count must be 12, 15, 18, 21, or 24",
-            SwSigner::new("bad", false).expect_err("test").to_string()
+            SwSigner::new_with_network("bad", lwk_common::Network::TestnetLiquid)
+                .expect_err("test")
+                .to_string()
         );
         assert_eq!(
             lwk_test_util::TEST_MNEMONIC_XPUB,
@@ -535,7 +672,9 @@ mod tests {
         use std::str::FromStr;
         let xprv = Xpriv::from_str("tprv8bxtvyWEZW9M4n8ByZVSG2NNP4aeiRdhDZXNEv1eVNtrhLLnc6vJ1nf9DN5cHAoxMwqRR1CD6YXBvw2GncSojF8DknPnQVMgbpkjnKHkrGY").unwrap();
         let xpub = Xpub::from_str("tpubD8ew5PYUhsq1xF9ysDA2fS2Ux66askpbns89XS3wuehFXpbZEVjtCHH1PUhj6KAfCs4iCx5wKgswv1n3we2ZHEs2sP5pw9PnLsCFwiVgdjw").unwrap();
-        let signer = SwSigner::from_xprv(xprv);
+        assert!(SwSigner::from_xprv_with_network(xprv, lwk_common::Network::Liquid).is_err());
+        let signer =
+            SwSigner::from_xprv_with_network(xprv, lwk_common::Network::TestnetLiquid).unwrap();
         assert_eq!(signer.xpub(), xpub);
         assert!(signer.mnemonic().is_none());
         assert!(signer.seed().is_none());
@@ -544,7 +683,11 @@ mod tests {
     #[test]
     fn signer_ecdsa_opt() {
         // Sign with the default option (low R) and then with the "no grind" option
-        let mut signer = SwSigner::new(lwk_test_util::TEST_MNEMONIC, false).unwrap();
+        let mut signer = SwSigner::new_with_network(
+            lwk_test_util::TEST_MNEMONIC,
+            lwk_common::Network::TestnetLiquid,
+        )
+        .unwrap();
         let b64 = include_str!("../../lwk_jade/test_data/pset_to_be_signed.base64");
         let mut pset_low_r: PartiallySignedTransaction = b64.parse().unwrap();
         let sig_added = signer.sign(&mut pset_low_r).unwrap();
@@ -570,7 +713,9 @@ mod tests {
 
     #[test]
     fn test_sign_verify() {
-        let signer = SwSigner::new(lwk_test_util::TEST_MNEMONIC, true).unwrap();
+        let signer =
+            SwSigner::new_with_network(lwk_test_util::TEST_MNEMONIC, lwk_common::Network::Liquid)
+                .unwrap();
         let message = "Hello, world!";
         let path = DerivationPath::master();
         let signature = signer.sign_message(message, &path).unwrap();
@@ -588,7 +733,11 @@ mod tests {
     #[test]
     fn test_bip85_mnemonic_derivation() {
         // Test with a known mnemonic
-        let signer = SwSigner::new(lwk_test_util::TEST_MNEMONIC, false).unwrap();
+        let signer = SwSigner::new_with_network(
+            lwk_test_util::TEST_MNEMONIC,
+            lwk_common::Network::TestnetLiquid,
+        )
+        .unwrap();
 
         // Derive a 12-word mnemonic at index 0
         let derived_0_12 = signer.derive_bip85_mnemonic(0, 12).unwrap();
@@ -630,7 +779,8 @@ mod tests {
     fn test_bip85_mnemonic_derivation_testvectors() {
         // Test with a known mnemonic from jade testvectors
         let mnemonic = "fish inner face ginger orchard permit useful method fence kidney chuckle party favorite sunset draw limb science crane oval letter slot invite sadness banana";
-        let signer = SwSigner::new(mnemonic, false).unwrap();
+        let signer =
+            SwSigner::new_with_network(mnemonic, lwk_common::Network::TestnetLiquid).unwrap();
 
         // Derive menmonics from testvectors
         let derived_0_12 = signer.derive_bip85_mnemonic(0, 12).unwrap();
@@ -684,7 +834,8 @@ mod tests {
         // Test that BIP85 derivation fails when signer was created from xprv
         use std::str::FromStr;
         let xprv = Xpriv::from_str("tprv8bxtvyWEZW9M4n8ByZVSG2NNP4aeiRdhDZXNEv1eVNtrhLLnc6vJ1nf9DN5cHAoxMwqRR1CD6YXBvw2GncSojF8DknPnQVMgbpkjnKHkrGY").unwrap();
-        let signer = SwSigner::from_xprv(xprv);
+        let signer =
+            SwSigner::from_xprv_with_network(xprv, lwk_common::Network::TestnetLiquid).unwrap();
 
         // Should fail because no mnemonic is available
         let result = signer.derive_bip85_mnemonic(0, 12);
@@ -703,8 +854,8 @@ mod tests {
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
         // Create signer
-        let is_mainnet = false;
-        let signer = SwSigner::new(mnemonic, is_mainnet)?;
+        let network = lwk_common::Network::TestnetLiquid;
+        let signer = SwSigner::new_with_network(mnemonic, network)?;
 
         // Derive menmonics
         let derived_0_12 = signer.derive_bip85_mnemonic(0, 12)?;

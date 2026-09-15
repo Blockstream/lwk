@@ -9,7 +9,7 @@ use boltz_client::boltz::{
     Side, SwapRestoreResponse, SwapRestoreType, SwapStatus, Webhook,
 };
 use boltz_client::fees::Fee;
-use boltz_client::network::Chain;
+use boltz_client::network::{Chain, LiquidChain};
 use boltz_client::swaps::{
     BtcLikeTransaction, ChainClient, SwapScript, SwapTransactionParams, TransactionOptions,
 };
@@ -241,7 +241,7 @@ impl BoltzSession {
         &self,
         data: ChainSwapDataSerializable,
     ) -> Result<LockupResponse, Error> {
-        let mut data = to_chain_data(data, &self.mnemonic)?;
+        let mut data = to_chain_data(data, &self.mnemonic, self.liquid_chain)?;
         if data.lockup_txid.is_none() {
             data.lockup_txid =
                 fetch_lockup_txid(self.api.as_ref(), &data.create_chain_response.id).await;
@@ -316,6 +316,7 @@ impl BoltzSession {
                 convert_swap_restore_response_to_chain_swap_data(
                     e,
                     &self.mnemonic,
+                    self.liquid_chain,
                     &claim_address,
                     &refund_address,
                 )
@@ -346,6 +347,7 @@ impl BoltzSession {
                 convert_swap_restore_response_to_chain_swap_data(
                     e,
                     &self.mnemonic,
+                    self.liquid_chain,
                     &claim_address,
                     &refund_address,
                 )
@@ -368,7 +370,11 @@ impl BoltzSession {
         &self,
         data: &ChainSwapDataSerializable,
     ) -> Result<bool, Error> {
-        let from_chain = chain_from_str(&data.from_chain, Some(&data.create_chain_response.id))?;
+        let from_chain = chain_from_str(
+            &data.from_chain,
+            self.liquid_chain,
+            Some(&data.create_chain_response.id),
+        )?;
         is_lockup_unspent(self.chain_client.as_ref(), from_chain, &data.lockup_address).await
     }
 }
@@ -433,6 +439,7 @@ async fn is_lockup_unspent(
 pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
     e: &SwapRestoreResponse,
     mnemonic: &Mnemonic,
+    liquid_chain: LiquidChain,
     claim_address: &str,
     refund_address: &str,
 ) -> Result<ChainSwapData, Error> {
@@ -476,8 +483,8 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
     let preimage = preimage_from_keypair(&claim_keys);
 
     // Parse chains from the response
-    let from_chain = chain_from_str(&e.from, Some(&e.id))?;
-    let to_chain = chain_from_str(&e.to, Some(&e.id))?;
+    let from_chain = chain_from_str(&e.from, liquid_chain, Some(&e.id))?;
+    let to_chain = chain_from_str(&e.to, liquid_chain, Some(&e.id))?;
 
     // Parse server public keys
     let claim_server_pubkey_bitcoin = BitcoinPublicKey::from_str(&claim_details.server_public_key)
@@ -668,7 +675,7 @@ impl LockupResponse {
         .await
     }
 
-    async fn build_and_broadcast_refund(&mut self) -> Result<(), Error> {
+    async fn build_and_broadcast_refund(&mut self, cooperative: bool) -> Result<(), Error> {
         let swap_id = self.swap_id().to_string();
         sleep(WAIT_TIME).await;
         let fee = crate::fallback_swap_fee(&self.api, self.data.from_chain).await?;
@@ -681,7 +688,7 @@ impl LockupResponse {
                 swap_id: swap_id.clone(),
                 chain_client: &self.chain_client,
                 boltz_client: &self.api,
-                options: None,
+                options: Some(TransactionOptions::default().with_cooperative(cooperative)),
             })
             .await?;
 
@@ -812,7 +819,7 @@ impl LockupResponse {
             SwapState::TransactionLockupFailed => {
                 log::warn!("[swap:{swap_id}] User lockup failed, performing refund");
 
-                self.build_and_broadcast_refund().await?;
+                self.build_and_broadcast_refund(true).await?;
                 Ok(ControlFlow::Break(true))
             }
             SwapState::TransactionFailed => {
@@ -821,19 +828,27 @@ impl LockupResponse {
                     update.failure_reason,
                     update.failure_details
                 );
-                self.build_and_broadcast_refund().await?;
+                self.build_and_broadcast_refund(true).await?;
                 Ok(ControlFlow::Break(true))
             }
             SwapState::TransactionRefunded => {
                 log::info!("[swap:{swap_id}] Boltz refunded their stash, we do the same with ours");
 
-                self.build_and_broadcast_refund().await?;
+                self.build_and_broadcast_refund(true).await?;
                 Ok(ControlFlow::Break(true))
             }
             SwapState::SwapExpired => {
                 log::warn!("[swap:{swap_id}] Chain swap expired");
-                // TODO: non-cooperative refund if possible
-                Ok(ControlFlow::Break(false))
+
+                if self.is_lockup_unspent().await? {
+                    self.build_and_broadcast_refund(false).await?;
+                    Ok(ControlFlow::Break(true))
+                } else {
+                    log::warn!(
+                        "[swap:{swap_id}] No UTXO found at address, swap expired without funds being sent"
+                    );
+                    Ok(ControlFlow::Break(false))
+                }
             }
             ref e => Err(Error::UnexpectedUpdate {
                 swap_id,
@@ -970,6 +985,8 @@ impl LockupResponse {
 
 #[cfg(test)]
 mod tests {
+    use boltz_client::network::BitcoinChain;
+
     use super::*;
 
     #[test]
@@ -988,12 +1005,15 @@ mod tests {
         let typed = convert_swap_restore_response_to_chain_swap_data(
             restored,
             &mnemonic,
+            LiquidChain::LiquidRegtest,
             "claim-address",
             "refund-address",
         )
         .unwrap();
 
         assert_eq!(typed.created_at, Some(restored.created_at));
+        assert_eq!(typed.from_chain, Chain::Liquid(LiquidChain::LiquidRegtest));
+        assert_eq!(typed.to_chain, Chain::Bitcoin(BitcoinChain::BitcoinRegtest));
         let serializable = ChainSwapDataSerializable::from(typed);
         assert_eq!(serializable.created_at, Some(restored.created_at));
     }

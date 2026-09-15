@@ -85,9 +85,9 @@ impl PsetInput {
             .then(|| Arc::new(lwk_common::Issuance::new(&self.inner).into()))
     }
 
-    /// Input sighash.
-    pub fn sighash(&self) -> u32 {
-        self.inner.sighash_type.map(|s| s.to_u32()).unwrap_or(1)
+    /// Return the sighash declared by an input, the default implied by the spent output script, or `None` if the spent output is unknown.
+    pub fn sighash(&self) -> Option<u32> {
+        lwk_common::input_sighash(&self.inner)
     }
 
     /// If the input has an issuance, returns (asset_id, token_id).

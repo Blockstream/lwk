@@ -96,9 +96,7 @@ pub mod amp2;
 mod async_util;
 mod cache;
 pub mod clients;
-mod contract;
 mod descriptor;
-mod domain;
 mod elements_wallet;
 mod error;
 mod issuance;
@@ -110,8 +108,6 @@ mod pos;
 mod tx_details;
 
 mod pset_create;
-#[cfg(feature = "registry")]
-pub mod registry;
 mod tx_builder;
 mod update;
 mod util;
@@ -122,9 +118,29 @@ mod wollet;
 #[cfg(feature = "prices")]
 pub mod prices;
 
+pub mod registry {
+    //! Registry related functions
+
+    #[cfg(feature = "registry")]
+    pub use lwk_registry::{
+        Registry, RegistryCache, RegistryData, RegistryPost, TxFetcher, TxFetcherAsync,
+    };
+
+    #[cfg(feature = "registry")]
+    #[cfg(not(target_arch = "wasm32"))]
+    pub use lwk_registry::registry::blocking;
+
+    pub use lwk_registry::asset_data::{add_contracts, RegistryAssetData};
+}
+
+pub use lwk_registry::error::Error as RegistryError;
+
+pub use lwk_registry::asset_data::RegistryAssetData;
+
+pub use lwk_registry::contract::{asset_ids, issuance_ids, Contract, Entity};
+
 pub use crate::clients::electrum_url::ElectrumUrl;
 pub use crate::clients::{Capability, History};
-pub use crate::contract::{asset_ids, issuance_ids, Contract, Entity};
 pub use crate::descriptor::{Chain, WolletDescriptor};
 pub use crate::error::{Error, UrlError};
 pub use crate::liquidex::{AssetAmount, LiquidexProposal, Unvalidated, Validated};
@@ -134,9 +150,9 @@ pub use crate::model::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use crate::pegin::fetch_fed_peg;
-pub use crate::pegin::{fed_peg_script, FedPeg, PeginAddress, PeginAddressType};
-#[cfg(feature = "registry")]
-pub use crate::registry::RegistryAssetData;
+pub use crate::pegin::{
+    fed_peg_script, FedPeg, PeginAddress, PeginAddressType, PeginDeposit, PeginFunding, PeginInput,
+};
 pub use crate::tx_details::{TxDetails, TxOpt, TxOutDetails, TxsOpt};
 pub use crate::wollet::DirectoryIdHash;
 

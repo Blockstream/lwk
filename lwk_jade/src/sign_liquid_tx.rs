@@ -213,7 +213,7 @@ pub struct TxInputParams {
 
     // Not listed here: https://github.com/Blockstream/Jade/blob/3edd8f4b03ae65d6ee38fb8620b46aad88ab341e/docs/index.rst#sign_tx-input-request-legacy (see first point in bullet section),
     // so we do not skip serialization for it.
-    /// 32 bytes anti-exfiltration commitment (random data not verified for now). TODO verify
+    /// 32-byte anti-exfiltration commitment derived from the host entropy.
     #[serde(with = "serde_bytes")]
     pub ae_host_commitment: Vec<u8>,
 

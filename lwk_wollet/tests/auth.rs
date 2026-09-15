@@ -23,16 +23,25 @@ async fn test_esplora_authenticated() {
         .unwrap();
     assert!(client.tip().await.is_err());
 
-    // with the token provider the token is fetched from keycloak and the call is served
-    let token_provider = clients::TokenProvider::Blockstream {
-        url: env.oidc_token_url(),
-        client_id: lwk_test_util::AUTH_CLIENT_ID.to_string(),
-        client_secret: lwk_test_util::AUTH_CLIENT_SECRET.to_string(),
-    };
-    let mut client = clients::asyncr::EsploraClientBuilder::new(&gateway_url, network)
-        .token_provider(token_provider)
+    // with the token provider the token is fetched from keycloak and the call is served.
+    // The doc snippet (`authenticated_esplora_client`) covers only the client build; the
+    // endpoint urls live in the docs table, so this test's local gateway values are set here,
+    // outside the anchor.
+    let base_url = gateway_url.as_str();
+    let login_url = env.oidc_token_url();
+    let client_id = AUTH_CLIENT_ID;
+    let client_secret = AUTH_CLIENT_SECRET;
+
+    // ANCHOR: authenticated_esplora_client
+    let mut client = clients::asyncr::EsploraClientBuilder::new(base_url, network)
+        .token_provider(clients::TokenProvider::Blockstream {
+            url: login_url.to_string(),
+            client_id: client_id.to_string(),
+            client_secret: client_secret.to_string(),
+        })
         .build()
         .unwrap();
+    // ANCHOR_END: authenticated_esplora_client
     let tip = client.tip().await.unwrap();
     assert_eq!(tip.height, 101);
 }
@@ -56,10 +65,26 @@ fn test_waterfalls_authenticated() {
         client_id: lwk_test_util::AUTH_CLIENT_ID.to_string(),
         client_secret: lwk_test_util::AUTH_CLIENT_SECRET.to_string(),
     };
-    let client = clients::WaterfallsClientBuilder::new(&env.waterfalls_url(), network)
-        .token_provider(token_provider())
+
+    // The doc snippet (`authenticated_waterfalls_client`) covers only the client build; the
+    // endpoint urls live in the docs table, so this test's local gateway values are set here,
+    // outside the anchor.
+    let waterfalls_url = env.waterfalls_url();
+    let base_url = waterfalls_url.as_str();
+    let login_url = env.oidc_token_url();
+    let client_id = AUTH_CLIENT_ID;
+    let client_secret = AUTH_CLIENT_SECRET;
+
+    // ANCHOR: authenticated_waterfalls_client
+    let client = clients::WaterfallsClientBuilder::new(base_url, network)
+        .token_provider(clients::TokenProvider::Blockstream {
+            url: login_url.to_string(),
+            client_id: client_id.to_string(),
+            client_secret: client_secret.to_string(),
+        })
         .build_blocking()
         .unwrap();
+    // ANCHOR_END: authenticated_waterfalls_client
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -76,10 +101,7 @@ fn test_waterfalls_authenticated() {
         .build_blocking()
         .unwrap();
     let err = denied_client.full_scan(&wallet.wollet).unwrap_err();
-    assert!(
-        matches!(err, Error::EsploraHttpError { status: 402, .. }),
-        "expected an EsploraHttpError with status 402, got: {err:?}"
-    );
+    assert!(matches!(err, Error::InsufficientCredits));
 }
 
 /// Authenticated Electrum RPC through the electrs-electrum-proxy (in-band JWT validated
@@ -114,21 +136,8 @@ fn test_electrum_authenticated() {
             .and_then(|mut client| client.tip())
     };
 
-    // The proxy denies with well-defined JSON-RPC error codes, surfaced today inside the
-    // wrapped electrum_client protocol error.
-    // TODO: map these (and the esplora 401/402/429) to common lwk error variants so
-    // callers don't need transport-specific handling.
-    let assert_denied_with = |result: Result<elements::BlockHeader, Error>, code: i64| {
-        let err = result.unwrap_err();
-        match &err {
-            Error::ClientError(electrum_client::Error::Protocol(value)) => assert_eq!(
-                value.get("code").and_then(|c| c.as_i64()),
-                Some(code),
-                "expected a denial with JSON-RPC code {code}, got: {value}"
-            ),
-            other => panic!("expected a protocol error with code {code}, got: {other:?}"),
-        }
-    };
+    // The proxy's JSON-RPC denial codes are mapped to common lwk error variants at the error
+    // boundary (see error::electrum_denial_variant), so the assertions below match those variants.
 
     // --- static / missing token, before any block is mined (tip is at 101) ---
 
@@ -141,13 +150,17 @@ fn test_electrum_authenticated() {
         .height,
         101
     );
-    // bogus token -> denied with AUTHENTICATION_REQUIRED
-    assert_denied_with(
-        tip_with(clients::TokenProvider::Static("not-a-jwt".to_string())),
-        -32004,
-    );
-    // missing token -> denied with AUTHENTICATION_REQUIRED
-    assert_denied_with(tip_with(clients::TokenProvider::None), -32004);
+    // bogus token -> denied with AuthenticationRequired
+    assert!(matches!(
+        tip_with(clients::TokenProvider::Static("not-a-jwt".to_string())).unwrap_err(),
+        Error::AuthenticationRequired
+    ));
+    // missing token -> denied with AuthenticationRequired (the proxy stamps its data.source
+    // marker on the denial, so it maps regardless of whether a token provider was configured)
+    assert!(matches!(
+        tip_with(clients::TokenProvider::None).unwrap_err(),
+        Error::AuthenticationRequired
+    ));
 
     // --- Blockstream OAuth token: minted at build, refreshed on reconnection after expiry ---
 
@@ -167,15 +180,27 @@ fn test_electrum_authenticated() {
     );
 
     // The token is minted when the client is built and the connection is served.
-    let mut client = ElectrumClientBuilder::new(&gateway_url)
+    // The doc snippet (`authenticated_electrum_client`) covers only the client build; the
+    // endpoint url lives in the docs table, so this test's local gateway values are set here,
+    // outside the anchor. `allow_plaintext_with_token` is ignored in the doc too (it is needed
+    // only for the localhost tcp:// gateway; the documented ssl:// endpoint does not need it).
+    let url = gateway_url.as_str();
+    let login_url = env.oidc_token_url();
+    let client_id = AUTH_SHORT_CLIENT_ID;
+    let client_secret = AUTH_SHORT_CLIENT_SECRET;
+
+    // ANCHOR: authenticated_electrum_client
+    // The token provider needs the `electrum_oidc` cargo feature.
+    let mut client = ElectrumClientBuilder::new(url)
         .token_provider(clients::TokenProvider::Blockstream {
-            url: env.oidc_token_url(),
-            client_id: AUTH_SHORT_CLIENT_ID.to_string(),
-            client_secret: AUTH_SHORT_CLIENT_SECRET.to_string(),
+            url: login_url.to_string(),
+            client_id: client_id.to_string(),
+            client_secret: client_secret.to_string(),
         })
-        .allow_plaintext_with_token(true)
+        .allow_plaintext_with_token(true) // ANCHOR: ignore
         .build()
         .unwrap();
+    // ANCHOR_END: authenticated_electrum_client
     assert_eq!(client.tip().unwrap().height, 101);
 
     // Mine a block so a served tip() is distinguishable from the last known header
@@ -195,12 +220,12 @@ fn test_electrum_authenticated() {
             .build();
         match denied {
             Ok(_) => {} // the token is still accepted on new connections, keep waiting
-            Err(Error::ClientError(electrum_client::Error::Protocol(value)))
-                if value.get("code").and_then(|c| c.as_i64()) == Some(-32004) =>
-            {
-                break;
+            Err(Error::AuthenticationRequired) => break,
+            Err(e) => {
+                panic!(
+                    "expected an AuthenticationRequired denial once the token expires, got: {e:?}"
+                )
             }
-            Err(e) => panic!("expected a -32004 denial once the token expires, got: {e:?}"),
         }
         assert!(std::time::Instant::now() < deadline);
         std::thread::sleep(std::time::Duration::from_secs(5));
@@ -234,12 +259,13 @@ fn test_electrum_authenticated() {
     // --- credit exhaustion (last, since it zeroes the shared balance) ---
     // valid token but exhausted credits -> denied with INSUFFICIENT_CREDITS
     env.set_credits(0);
-    assert_denied_with(
+    assert!(matches!(
         tip_with(clients::TokenProvider::Static(
             env.fetch_oidc_token_for(AUTH_CLIENT_ID, AUTH_CLIENT_SECRET),
-        )),
-        -32000,
-    );
+        ))
+        .unwrap_err(),
+        Error::InsufficientCredits
+    ));
 }
 
 /// Automatic OAuth2 token refetch for the esplora client against real token expiry: the
@@ -288,13 +314,11 @@ async fn test_esplora_token_expiry_authenticated() {
             Ok(_) => {} // the token is still accepted, keep waiting for the expiry
             Err(e) => {
                 // The esplora client retries the 401 to exhaustion (a static token can't
-                // refresh) and collapses it into a Generic "too many retries" error, so
-                // there is no structured HTTP status to match on here (unlike the 402 case,
-                // which returns a structured error). Surfacing a structured error through
-                // retry-exhaustion is left as a follow-up.
+                // refresh); the retry-exhaustion path maps it to the common AuthenticationRequired
+                // variant (the same one the electrum proxy's -32004 maps to).
                 assert!(
-                    matches!(&e, Error::Generic(m) if m.contains("401")),
-                    "expected a 401 denial once the token expires, got: {e:?}"
+                    matches!(&e, Error::AuthenticationRequired),
+                    "expected an AuthenticationRequired denial once the token expires, got: {e:?}"
                 );
                 break;
             }

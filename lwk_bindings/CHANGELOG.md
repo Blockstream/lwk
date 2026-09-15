@@ -2,9 +2,20 @@
 
 ## Unreleased
 
+* Added `DescriptorPublicKey`
+* Added `Signer::ss_desc()`
+* Renamed `DerivationPath::from_account()` to `DerivationPath::ss_path()`
+* Replaced `WolletDescriptor::from_xpub()` with `WolletDescriptor::ss_desc_from_external_signer()`
+* Replaced `Amp2::elip153_from_str()` with `Amp2::elip153_from_external_signer()`
+* Replaced `Signer::keyorigin_xpub_from_path()` with `Signer::derive_xpub()`
+
+## 0.19.0
+
 * Added `DerivationPath`
 * Removed `get_path()`, replaced with `DerivationPath::from_account()`
 * Changed "simplicity" functions `derive_keypair()`, `simplicity_derive_xonly_pubkey()`, `create_p2pk_signature()` to accept `DerivatioPath` instead of `str`
+* Added `has_txs()` to `ElectrumClient`, `EsploraClient` and `WaterfallsClient`, to cheaply check if a descriptor has transaction history without a full scan
+* Fixed Boltz chain-swap restoration to use the binding session network instead of Regtest
 
 ## 0.18.3
 

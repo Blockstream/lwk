@@ -54,7 +54,15 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     let addr = args
         .addr
         .unwrap_or_else(|| SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), default_port));
-    let client = lwk_app::Client::new(addr)?;
+
+    // Every command needs the datadir to find the RPC auth cookie the server wrote there, not
+    // just `server start`.
+    let datadir = args
+        .datadir
+        .clone()
+        .unwrap_or_else(|| Config::default_home().unwrap_or(std::path::PathBuf::from(".")));
+    let cookie_path = datadir.join(network).join(".cookie");
+    let client = lwk_app::Client::new_with_cookie(addr, Some(cookie_path))?;
 
     // verify the server is up if needed
     if args.command.requires_server_running() {
@@ -77,7 +85,6 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     server_url,
                     server_type,
                     registry_url,
-                    datadir,
                     timeout,
                     scanning_interval,
                     amp2_url,
@@ -90,10 +97,6 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                         tx.send(()).expect("Could not send signal on channel.")
                     });
 
-                    // start the app with default host/port
-                    let datadir = datadir.unwrap_or_else(|| {
-                        Config::default_home().unwrap_or(std::path::PathBuf::from("."))
-                    });
                     let mut config = match args.network {
                         Network::Mainnet => Config::default_mainnet(datadir),
                         Network::Testnet => Config::default_testnet(datadir),

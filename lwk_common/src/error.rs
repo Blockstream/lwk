@@ -47,6 +47,12 @@ pub enum Error {
     #[error("Output #{idx} has invalid value blind proof")]
     InvalidValueBlindProof { idx: usize },
 
+    #[error("Output #{idx} unblinded secrets has invalid asset")]
+    InvalidTxOutSecretsAsset { idx: usize },
+
+    #[error("Output #{idx} unblinded secrets has invalid value")]
+    InvalidTxOutSecretsValue { idx: usize },
+
     #[error("Output #{idx} is not blinded")]
     OutputNotBlinded { idx: usize },
 

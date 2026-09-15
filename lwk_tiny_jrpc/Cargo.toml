@@ -1,6 +1,6 @@
 [package]
 name = "lwk_tiny_jrpc"
-version = "0.18.0"
+version = "0.19.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Tiny JSON RPC Server"
 license = "MIT OR BSD-2-Clause"
@@ -15,7 +15,5 @@ serde_derive = "1.0.188"
 serde_json.workspace = true
 thiserror = { workspace = true }
 tiny_http = "0.12.0"
+subtle = "2.6.1"
 log.workspace = true
-
-[dev-dependencies]
-tempfile.workspace = true

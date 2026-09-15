@@ -24,3 +24,4 @@ lwk_bindings/examples/swaps/
 .cursorrules
 swaps/
 .codex
+anyswap_config.toml

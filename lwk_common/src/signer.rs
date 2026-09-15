@@ -10,6 +10,7 @@ use elements::{
 use elements_miniscript::slip77::MasterBlindingKey;
 
 use crate::descriptor::Bip;
+use crate::Network;
 
 fn hardened(index: u32) -> Result<ChildNumber, bitcoin::bip32::Error> {
     ChildNumber::from_hardened_idx(index)
@@ -29,6 +30,9 @@ pub trait Signer {
 
     /// Return the slip77 master blinding key
     fn slip77_master_blinding_key(&self) -> Result<MasterBlindingKey, Self::Error>;
+
+    /// Return the network the signer is configured for
+    fn network(&self) -> Result<Network, Self::Error>;
 
     /// Return the master xpub of the signer
     fn xpub(&self) -> Result<Xpub, Self::Error> {
@@ -68,15 +72,7 @@ pub trait Signer {
 
     /// Return true if the signer is for mainnet.
     fn is_mainnet(&self) -> Result<bool, Self::Error> {
-        let xpub = match self.xpub() {
-            Ok(xpub) => xpub,
-            Err(_) => {
-                // We are probably on a Ledger that won't return the master xpub
-                let path = [44, 1, 0].map(|index| hardened(index).expect("static")); // TODO: work on mainnet?
-                self.derive_xpub(&DerivationPath::from_iter(path))?
-            }
-        };
-        Ok(xpub.network == bitcoin::NetworkKind::Main)
+        Ok(self.network()?.is_mainnet())
     }
 
     /// Return the Witness Public Key Hash, slip77, descriptor for this signer
@@ -96,6 +92,144 @@ pub trait Signer {
         message: &str,
         path: &DerivationPath,
     ) -> Result<MessageSignature, Self::Error>;
+
+    /// Derive a "standard" single sig descriptor
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// These are the "standard" single sig descriptors derived and
+    /// used by common Liquid wallets. Their derivation is not
+    /// specified in any ELIP.
+    ///
+    /// The unblinded descriptor follows BIP44/BIP49/BIP84/BIP86.
+    ///
+    /// They use a SLIP77 descriptor blinding key, however all
+    /// accounts use the same descriptor blinding key. This has the
+    /// undesirable consequence that if you share the CT descriptor
+    /// for one account, you reveal the descriptor blinding key used
+    /// by all other accounts.
+    fn ss_desc(&self, account_type: SSAccountType, account_num: u32) -> Result<String, Self::Error>
+    where
+        Self::Error: From<bitcoin::bip32::Error>,
+    {
+        let network = self.network()?;
+        let (prefix, suffix) = account_type.desc_affixes();
+        let path = ss_path(&network, account_type, account_num)?;
+
+        let fingerprint = self.fingerprint()?;
+        let xpub = self.derive_xpub(&path)?;
+        let blinding_key = self.slip77_master_blinding_key()?;
+
+        Ok(format!(
+            "ct(slip77({blinding_key}),{prefix}([{fingerprint}/{path}]{xpub}/<0;1>/*){suffix})"
+        ))
+    }
+}
+
+/// Derive the account-level path for a "standard" single sig account.
+///
+/// **Experimental**: this API might change without notice.
+pub fn ss_path(
+    network: &Network,
+    account_type: SSAccountType,
+    account_num: u32,
+) -> Result<DerivationPath, bitcoin::bip32::Error> {
+    let coin_type = if network.is_mainnet() { 1776 } else { 1 };
+    let purpose = account_type.purpose();
+    let path = [
+        hardened(purpose).expect("static"),
+        hardened(coin_type).expect("static"),
+        hardened(account_num)?,
+    ];
+    Ok(DerivationPath::from_iter(path))
+}
+
+/// The variant of a "standard" single sig account, see [`Signer::ss_desc`].
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SSAccountType {
+    /// For WPKH accounts (BIP84)
+    Wpkh,
+
+    /// For SH-WPKH accounts (BIP49)
+    ShWpkh,
+
+    /// For taproot accounts (BIP86)
+    Tr,
+}
+
+impl SSAccountType {
+    fn purpose(self) -> u32 {
+        match self {
+            SSAccountType::Wpkh => 84,
+            SSAccountType::ShWpkh => 49,
+            SSAccountType::Tr => 86,
+        }
+    }
+
+    /// Return the descriptor prefix and suffix
+    pub fn desc_affixes(self) -> (&'static str, &'static str) {
+        match self {
+            SSAccountType::Wpkh => ("elwpkh", ""),
+            SSAccountType::ShWpkh => ("elsh(wpkh", ")"),
+            SSAccountType::Tr => ("eltr", ""),
+        }
+    }
+}
+
+impl std::fmt::Display for SSAccountType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SSAccountType::Wpkh => write!(f, "wpkh"),
+            SSAccountType::ShWpkh => write!(f, "shwpkh"),
+            SSAccountType::Tr => write!(f, "tr"),
+        }
+    }
+}
+
+impl std::str::FromStr for SSAccountType {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "wpkh" => Ok(SSAccountType::Wpkh),
+            "shwpkh" => Ok(SSAccountType::ShWpkh),
+            "tr" => Ok(SSAccountType::Tr),
+            _ => Err(
+                "Invalid single sig account type, supported variants are: 'wpkh', 'shwpkh', 'tr'",
+            ),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn ss_account() {
+        for el in ["wpkh", "shwpkh", "tr"] {
+            let account_type = SSAccountType::from_str(el).unwrap();
+            assert_eq!(el, account_type.to_string());
+        }
+        SSAccountType::from_str("invalid").unwrap_err();
+
+        let mainnet = Network::Liquid;
+        let testnet = Network::TestnetLiquid;
+
+        let path = ss_path(&mainnet, SSAccountType::Wpkh, 0).unwrap();
+        assert_eq!(path.to_string(), "84'/1776'/0'");
+        let path = ss_path(&testnet, SSAccountType::Wpkh, 1).unwrap();
+        assert_eq!(path.to_string(), "84'/1'/1'");
+        let path = ss_path(&testnet, SSAccountType::ShWpkh, 0).unwrap();
+        assert_eq!(path.to_string(), "49'/1'/0'");
+        let path = ss_path(&testnet, SSAccountType::Tr, 0).unwrap();
+        assert_eq!(path.to_string(), "86'/1'/0'");
+
+        // account_num is caller-supplied and can be out of the hardened range
+        assert!(ss_path(&testnet, SSAccountType::Wpkh, 1 << 31).is_err());
+    }
 }
 
 #[cfg(feature = "amp0")]

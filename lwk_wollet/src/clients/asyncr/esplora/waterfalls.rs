@@ -179,7 +179,7 @@ impl WaterfallsClient {
 
     #[cfg(not(target_arch = "wasm32"))]
     async fn subscribe_url(&self, url: &str) -> Result<WaterfallsSubscription, Error> {
-        let response = self.inner.get_with_retry(url).await?;
+        let response = self.inner.get_with_retry_no_timeout(url).await?;
         if !response.status().is_success() {
             return Err(error_for_status(url, response).await);
         }
@@ -306,7 +306,9 @@ impl WaterfallsClient {
         self.inner.capabilities()
     }
 
-    /// Returns true if the wallet has any tx using the first gap limit addresses.
+    /// Returns true if the wallet has any tx using the first gap_limit addresses (default 20)
+    ///
+    /// Note: if the descriptor does not have a wildcard, gap limit is ignored.
     pub async fn has_txs(
         &self,
         descriptor: &WolletDescriptor,

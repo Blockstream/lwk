@@ -56,8 +56,7 @@ fn test_amp0_setup() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create signer and watch only credentials
     let network = Network::TestnetLiquid;
-    let is_mainnet = false;
-    let (signer, mnemonic) = SwSigner::random(is_mainnet)?;
+    let (signer, mnemonic) = SwSigner::random_with_network(network)?;
     let username = "<username>";
     let password = "<password>";
     let username = format!("user{}", signer.fingerprint()); // ANCHOR: ignore
@@ -163,8 +162,7 @@ fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
     let blinding_nonces = amp0pset.blinding_nonces();
 
     // User signs the PSET
-    let is_mainnet = false;
-    let signer = SwSigner::new(mnemonic, is_mainnet)?;
+    let signer = SwSigner::new_with_network(mnemonic, Network::TestnetLiquid)?;
     let sigs = signer.sign(&mut pset)?;
     assert!(sigs > 0);
 

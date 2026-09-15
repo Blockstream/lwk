@@ -80,7 +80,15 @@ impl TxBuilder {
     pub fn drain_lbtc_to(&self, address: &Address) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
-        *lock = Some(inner.drain_lbtc_to(address.into()));
+        *lock = Some(inner.drain_lbtc_to(&address.into())?);
+        Ok(())
+    }
+
+    /// Sets the (explicit, non-confidential) address to drain excess L-BTC to
+    pub fn drain_lbtc_to_explicit(&self, address: &Address) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.drain_lbtc_to_explicit(&address.into())?);
         Ok(())
     }
 
@@ -124,6 +132,14 @@ impl TxBuilder {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock = Some(inner.add_explicit_recipient(&(address.into()), satoshi, (*asset).into())?);
+        Ok(())
+    }
+
+    /// Add an OP_RETURN output with the given data
+    pub fn add_op_return(&self, data: &[u8]) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.add_op_return(data)?);
         Ok(())
     }
 
@@ -410,6 +426,8 @@ impl IssuanceRequest {
 
     /// Pin this issuance to a specific input
     ///
+    /// **Experimental**: this API might change without notice.
+    ///
     /// Requires manual inputs order: `input` must be one of the outpoints passed to
     /// [`TxBuilder::set_inputs_order()`], otherwise [`TxBuilder::finish()`] will error.
     ///
@@ -479,11 +497,30 @@ impl ReissuanceRequest {
 
     /// Sets the transaction containing the original issuance of the reissued asset
     ///
+    /// **Experimental**: this API might change without notice.
+    ///
     /// Only needed if that issuance transaction does not involve this wallet.
     pub fn issuance_tx(&self, tx: &Transaction) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock = Some(inner.issuance_tx(tx.into()));
+        Ok(())
+    }
+
+    /// Pin this reissuance to the reissuance token utxo spent by `input`
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// `input` must hold the reissuance token of the asset being reissued, otherwise
+    /// [`TxBuilder::finish()`] will error. If it is not already an input of the transaction it is
+    /// added, unless a manual inputs order is set, in which case it must be one of the outpoints
+    /// passed to [`TxBuilder::set_inputs_order()`].
+    ///
+    /// If not called, the reissuance is assigned to the first input holding the token.
+    pub fn pin_input(&self, input: &OutPoint) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.pin_input(input.into()));
         Ok(())
     }
 }

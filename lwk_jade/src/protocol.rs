@@ -20,6 +20,27 @@ pub struct FullRequest {
     pub params: Request,
 }
 
+impl FullRequest {
+    /// Wrap a request with a freshly generated id, ready to be serialized.
+    pub fn new(params: Request) -> Self {
+        Self {
+            id: rand::thread_rng().next_u32().to_string(),
+            method: params.to_string(),
+            params,
+        }
+    }
+
+    pub fn serialize(&self) -> Result<Vec<u8>, crate::Error> {
+        let mut buf = Vec::new();
+        serde_cbor::to_writer(&mut buf, self)?;
+        log::debug!("\n--->\t{:#?}\n\t({} bytes)", self, buf.len());
+        // Uncomment only for local debugging; this exposes sensitive request data as hex.
+        // Never leave this log uncommented.
+        // log::debug!("\n--->\t{}", hex::encode(&buf));
+        Ok(buf)
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum Request {
@@ -83,6 +104,11 @@ impl std::fmt::Display for Request {
 }
 
 impl Request {
+    /// Discards the generated id, so the response cannot be correlated; use [`FullRequest::serialize`] instead.
+    pub fn serialize(self) -> Result<Vec<u8>, crate::Error> {
+        FullRequest::new(self).serialize()
+    }
+
     pub fn network(&self) -> Option<Network> {
         match self {
             Request::GetXpub(e) => Some(e.network),
@@ -92,28 +118,6 @@ impl Request {
             Request::RegisterMultisig(e) => Some(e.network),
             _ => None,
         }
-    }
-}
-
-impl Request {
-    pub fn serialize(self) -> Result<Vec<u8>, crate::Error> {
-        let mut rng = rand::thread_rng();
-        let id = rng.next_u32().to_string();
-        let method = self.to_string();
-        let req = FullRequest {
-            id,
-            method,
-            params: self,
-        };
-        let mut buf = Vec::new();
-        serde_cbor::to_writer(&mut buf, &req)?;
-        log::debug!(
-            "\n--->\t{:#?}\n\t({} bytes) {}",
-            &req,
-            buf.len(),
-            &hex::encode(&buf),
-        );
-        Ok(buf)
     }
 }
 
@@ -201,11 +205,21 @@ pub struct HandshakeComplete {
     pub ske: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct DebugSetMnemonicParams {
     pub mnemonic: String,
     pub passphrase: Option<String>,
     pub temporary_wallet: bool,
+}
+
+impl Debug for DebugSetMnemonicParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DebugSetMnemonicParams")
+            .field("mnemonic", &"<redacted>")
+            .field("passphrase", &"<redacted>")
+            .field("temporary_wallet", &self.temporary_wallet)
+            .finish()
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -355,7 +369,22 @@ pub struct GetMasterBlindingKeyParams {
 
 #[cfg(test)]
 mod test {
-    use crate::protocol::select_url;
+    use crate::protocol::{select_url, DebugSetMnemonicParams};
+
+    #[test]
+    fn debug_set_mnemonic_redacts_secrets() {
+        let params = DebugSetMnemonicParams {
+            mnemonic: "abandon abandon abandon".to_owned(),
+            passphrase: Some("secret passphrase".to_owned()),
+            temporary_wallet: true,
+        };
+
+        let debug = format!("{params:?}");
+        assert_eq!(
+            debug,
+            "DebugSetMnemonicParams { mnemonic: \"<redacted>\", passphrase: \"<redacted>\", temporary_wallet: true }"
+        );
+    }
 
     #[test]
     fn serialize_empty() {

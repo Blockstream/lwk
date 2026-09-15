@@ -32,10 +32,10 @@ client_secret = os.environ.get("CLIENT_SECRET", "your_client_secret")
 
 def offline_checks():
     """Build authenticated clients and assert the wiring, without any network."""
-    # ANCHOR: authenticated_esplora_client
     base_url = "https://enterprise.blockstream.info/liquid/api"
     login_url = "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token"
 
+    # ANCHOR: authenticated_esplora_client
     builder = EsploraClientBuilder(
         base_url=base_url,
         network=network,
@@ -83,16 +83,16 @@ def live_check():
         return
 
     base_url = os.environ.get(
-        "ESPLORA_BASE_URL", "https://enterprise.uat.blockstream.info/liquid/api"
+        "ESPLORA_BASE_URL", "https://enterprise.blockstream.info/liquidtestnet/api"
     )
     login_url = os.environ.get(
         "ESPLORA_LOGIN_URL",
-        "https://login.uat.blockstream.com/realms/blockstream-public/protocol/openid-connect/token",
+        "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token",
     )
 
     builder = EsploraClientBuilder(
         base_url=base_url,
-        network=network,
+        network=Network.testnet(),
         token_provider=TokenProvider.BLOCKSTREAM(
             url=login_url, client_id=client_id, client_secret=client_secret
         ),

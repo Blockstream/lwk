@@ -2,6 +2,11 @@
 
 Library to interact with Simplicity language using LWK.
 
+> [!WARNING]
+> This crate and all `simplicity`-gated functionality across the entire LWK workspace is NOT production ready.
+> It is intended only for tinkering and experimentation with the Simplicity language.
+> Do not use in production or with real funds.
+
 ## Lending
 
 ### Run the integration tests of lending flow

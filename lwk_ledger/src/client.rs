@@ -325,6 +325,12 @@ impl<T: Transport> LiquidClient<T> {
         let message_commitment_root = intpr.add_known_list(&chunks);
         let cmd = command::sign_message(message.len(), &message_commitment_root, path);
         self.make_request(&cmd, Some(&mut intpr)).and_then(|data| {
+            if data.len() < 2 {
+                return Err(LiquidClientError::UnexpectedResult {
+                    command: cmd.ins,
+                    data,
+                });
+            }
             Ok((
                 data[0],
                 ecdsa::Signature::from_compact(&data[1..]).map_err(|_| {

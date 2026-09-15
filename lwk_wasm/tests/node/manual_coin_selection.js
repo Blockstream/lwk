@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const lwk = require('lwk_node');
 const { fundAddress, waitForTx, generateAddress, WATERFALLS_URL } = require('./scripts/utils');
 
@@ -33,7 +34,7 @@ async function runManualCoinSelectionTest() {
     builder = builder.setWalletUtxos([utxos[0].outpoint()])
     var unsignedPset = builder.finish(wollet);
 
-    console.assert(unsignedPset.inputs().length === 1); // ANCHOR: ignore
+    assert.equal(unsignedPset.inputs().length, 1); // ANCHOR: ignore
 
     var signedPset = signer.sign(unsignedPset);
     var finalizedPset = wollet.finalize(signedPset);

@@ -206,11 +206,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783691759,
-        "narHash": "sha256-4EPqNx5oqLtPc++ZEmFetM/TrSm4/185iQk8TmWZtgk=",
+        "lastModified": 1785837292,
+        "narHash": "sha256-LkrGf7YSIFfrNPcEWY9nM1L+g+gcAYBccDkrrg1XZeM=",
         "owner": "RCasatta",
         "repo": "waterfalls",
-        "rev": "6b505c5da4c578251affdc5dc000b11193ebd171",
+        "rev": "c35c3dd5926113678681c29123335b6113573a69",
         "type": "github"
       },
       "original": {

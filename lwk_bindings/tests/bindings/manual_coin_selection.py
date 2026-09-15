@@ -21,7 +21,7 @@ wollet.wait_for_tx(txid, client)
 txid = node.send_to_address(wollet.address(1).address(), funded_satoshi, asset=None)
 wollet.wait_for_tx(txid, client)
 
-# Create and sign a transaction selecting only 1 utxo, without manual coin selection they would be 2
+# Create and sign a transaction spending the chosen utxo, instead of letting the wallet pick which one
 address = wollet.address(1)
 sent_satoshi = 1000
 node_address = node.get_new_address()

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use lwk_common::{calculate_fee, Network};
 use lwk_wollet::{
     bitcoin,
-    blocking::{BlockchainBackend, EsploraClient},
+    blocking::EsploraClient,
     elements::{
         confidential::{AssetBlindingFactor, ValueBlindingFactor},
         pset::{PartiallySignedTransaction, PsetBlindError},
@@ -28,49 +28,9 @@ use lending_contracts::programs::{lending::LendingOffer, program::SimplexProgram
 use lending_contracts::utils::get_random_seed;
 use simplicityhl::WitnessValues;
 
-use crate::lending::error::LendingError;
 use crate::lending::network::to_simplicity_network;
-
-use super::indexer::response::FactoryDetailsResponse;
-
-enum AnyClient {
-    Electrum(Box<ElectrumClient>),
-    Esplora(EsploraClient),
-}
-
-impl AnyClient {
-    #[allow(dead_code)]
-    fn broadcast(&self, tx: &Transaction) -> Result<Txid, lwk_wollet::Error> {
-        match self {
-            AnyClient::Electrum(c) => c.broadcast(tx),
-            AnyClient::Esplora(c) => c.broadcast(tx),
-        }
-    }
-
-    fn full_scan(
-        &mut self,
-        wollet: &Wollet,
-    ) -> Result<Option<lwk_wollet::Update>, lwk_wollet::Error> {
-        match self {
-            AnyClient::Electrum(c) => c.full_scan(wollet),
-            AnyClient::Esplora(c) => c.full_scan(wollet),
-        }
-    }
-
-    fn get_transaction(&self, txid: Txid) -> Result<Transaction, lwk_wollet::Error> {
-        match self {
-            AnyClient::Electrum(c) => c.get_transaction(txid),
-            AnyClient::Esplora(c) => c.get_transaction(txid),
-        }
-    }
-
-    fn tip(&mut self) -> Result<lwk_wollet::elements::BlockHeader, lwk_wollet::Error> {
-        match self {
-            AnyClient::Electrum(c) => c.tip(),
-            AnyClient::Esplora(c) => c.tip(),
-        }
-    }
-}
+use crate::lending::{client::AnyClient, indexer::response::FactoryDetailsResponse};
+use crate::lending::{error::LendingError, verification::parse_and_verify_lending_offer};
 
 pub struct LendingSession {
     network: Network,
@@ -329,11 +289,14 @@ impl LendingSession {
             .txid;
 
         let creation_tx = self.get_transaction(&creation_txid)?;
+        let (factory_auth_tx, factory_tx) = self.extract_auth_and_factory_tx(&creation_tx)?;
 
-        let offer = LendingOffer::try_from_tx(
+        let offer = parse_and_verify_lending_offer(
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
             simplex_network,
+            &factory_auth_tx,
+            &factory_tx,
         )?;
 
         let offer_params = *offer.get_parameters();
@@ -438,10 +401,14 @@ impl LendingSession {
         let simplex_network = to_simplicity_network(self.network);
 
         let creation_tx = self.get_transaction(&details.creation_txid)?;
-        let offer = LendingOffer::try_from_tx(
+        let (factory_auth_tx, factory_tx) = self.extract_auth_and_factory_tx(&creation_tx)?;
+
+        let offer = parse_and_verify_lending_offer(
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
             simplex_network,
+            &factory_auth_tx,
+            &factory_tx,
         )?;
         let offer_params = *offer.get_parameters();
 
@@ -530,15 +497,19 @@ impl LendingSession {
         const COVENANT_VOUT: usize = 5;
 
         let policy_asset = *self.network.policy_asset();
+        let simplex_network = to_simplicity_network(self.network);
 
         // Fetch the pending offer creation transaction
         let creation_tx = self.get_transaction(&details.pending_offer_creation_txid)?;
+        let (factory_auth_tx, factory_tx) = self.extract_auth_and_factory_tx(&creation_tx)?;
 
         // Reconstruct the LendingOffer from the creation transaction
-        let mut offer = LendingOffer::try_from_tx(
+        let mut offer = parse_and_verify_lending_offer(
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
-            to_simplicity_network(self.network),
+            simplex_network,
+            &factory_auth_tx,
+            &factory_tx,
         )?;
 
         let offer_params = *offer.get_parameters();
@@ -672,13 +643,15 @@ impl LendingSession {
             .txid;
 
         let creation_tx = self.get_transaction(&creation_txid)?;
+        let (factory_auth_tx, factory_tx) = self.extract_auth_and_factory_tx(&creation_tx)?;
 
-        let offer = LendingOffer::try_from_tx(
+        let offer = parse_and_verify_lending_offer(
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
             simplex_network,
+            &factory_auth_tx,
+            &factory_tx,
         )?;
-
         let offer_params = *offer.get_parameters();
 
         let principal_auth_txout = acceptance_tx
@@ -771,10 +744,14 @@ impl LendingSession {
         let simplex_network = to_simplicity_network(self.network);
 
         let creation_tx = self.get_transaction(&details.lending_creation_txid)?;
-        let offer = LendingOffer::try_from_tx(
+        let (factory_auth_tx, factory_tx) = self.extract_auth_and_factory_tx(&creation_tx)?;
+
+        let offer = parse_and_verify_lending_offer(
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
             simplex_network,
+            &factory_auth_tx,
+            &factory_tx,
         )?;
         let offer_params = *offer.get_parameters();
 
@@ -881,11 +858,14 @@ impl LendingSession {
             .txid;
 
         let creation_tx = self.get_transaction(&creation_txid)?;
+        let (factory_auth_tx, factory_tx) = self.extract_auth_and_factory_tx(&creation_tx)?;
 
-        let offer = LendingOffer::try_from_tx(
+        let offer = parse_and_verify_lending_offer(
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
             simplex_network,
+            &factory_auth_tx,
+            &factory_tx,
         )?;
 
         let offer_params = *offer.get_parameters();
@@ -1180,6 +1160,31 @@ impl LendingSession {
         } else {
             self.client.get_transaction(*txid).map_err(|e| e.into())
         }
+    }
+
+    /// Get Factory auth and factory program from the offer creation transaction
+    fn extract_auth_and_factory_tx(
+        &self,
+        creation_tx: &Transaction,
+    ) -> Result<(Transaction, Transaction), LendingError> {
+        Ok((
+            self.get_transaction(
+                &creation_tx
+                    .input
+                    .first()
+                    .ok_or_else(|| LendingError::Generic("tx has no inputs".to_string()))?
+                    .previous_output
+                    .txid,
+            )?,
+            self.get_transaction(
+                &creation_tx
+                    .input
+                    .get(1)
+                    .ok_or_else(|| LendingError::Generic("tx has no inputs".to_string()))?
+                    .previous_output
+                    .txid,
+            )?,
+        ))
     }
 
     pub fn wollet(&self) -> &Wollet {

@@ -1,14 +1,17 @@
-use base64::Engine;
 use elements::{
-    bitcoin::{self, bip32::Fingerprint, bip32::Xpub, sign_message::signed_msg_hash},
-    hashes::Hash,
+    bitcoin::{
+        self,
+        bip32::{DerivationPath, Fingerprint, Xpub},
+        sign_message::signed_msg_hash,
+    },
     pset::PartiallySignedTransaction,
-    secp256k1_zkp::{ecdsa::Signature, Message, Secp256k1},
+    secp256k1_zkp::Secp256k1,
     Address, AddressParams,
 };
 use elements_miniscript::{
     confidential::Key, ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey,
 };
+use lwk_common::Signer;
 use lwk_containers::{
     testcontainers::clients::{self},
     PinServer, PIN_SERVER_PORT,
@@ -16,8 +19,8 @@ use lwk_containers::{
 use lwk_jade::{
     get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
     protocol::{
-        GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, JadeState,
-        SignMessageParams, UpdatePinserverParams, VersionInfoResult,
+        GetMasterBlindingKeyParams, GetXpubParams, JadeState, UpdatePinserverParams,
+        VersionInfoResult,
     },
     register_multisig::{
         GetRegisteredMultisigParams, JadeDescriptor, MultisigSigner, RegisterMultisigParams,
@@ -43,7 +46,9 @@ fn debug_set_mnemonic() {
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let result = jade.jade.version_info().unwrap();
-    assert_eq!(result, mock_version_info());
+    let mut expected = mock_version_info();
+    expected.jade_has_pin = true;
+    assert_eq!(result, expected);
 }
 
 #[test]
@@ -71,9 +76,13 @@ fn ping() {
 #[test]
 fn version() {
     let docker = clients::Cli::default();
-    let jade = TestJadeEmulator::new(&docker);
+    let container = docker.run(lwk_containers::JadeEmulator);
+    let port = container.get_host_port_ipv4(lwk_containers::EMULATOR_PORT);
+    let network = lwk_common::Network::default_regtest();
+    let addr = format!("127.0.0.1:{port}").parse().unwrap();
+    let jade = lwk_jade::Jade::from_socket(addr, network).unwrap();
 
-    let result = jade.jade.version_info().unwrap();
+    let result = jade.version_info().unwrap();
     let mut expected = mock_version_info();
     expected.jade_state = JadeState::Uninit;
     assert_eq!(result, expected);
@@ -344,27 +353,9 @@ fn jade_sign_message() {
     let mut jade = TestJadeEmulator::new(&docker);
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
-    // TODO create anti exfil commitments
-    // The following are taken from jade tests, even though they may be random if we are not verifying.
-    // To create the commitment jade use wally_ae_host_commit_from_bytes, rust-secp at the moment
-    // doesn't expose exfil methods
-    let ae_host_commitment =
-        hex::decode("7b61fad27ce2d95abca09f76bd7226e50212a8542f3ca274ee546cec4bc5c3bb").unwrap();
-    let ae_host_entropy =
-        hex::decode("3f5540b9336af9bdd50a5b7f69fc2045a12e3b3e0740f7461902d882bf8a8820").unwrap();
     let message = "Hello world!";
-    let params = SignMessageParams {
-        message: message.to_string(),
-        path: vec![0],
-        ae_host_commitment,
-    };
-    let _signer_commitment: Vec<u8> = jade.jade.sign_message_inner(params).unwrap().to_vec();
-
-    let params = GetSignatureParams { ae_host_entropy };
-    let signature = jade.jade.get_signature_for_msg(params).unwrap();
-    let signature_bytes = base64::engine::general_purpose::STANDARD
-        .decode(signature)
-        .unwrap();
+    let path: DerivationPath = "m/0".parse().unwrap();
+    let signature = jade.jade.sign_message(message, &path).unwrap();
 
     let params = GetXpubParams {
         network: lwk_common::Network::default_regtest(),
@@ -372,14 +363,10 @@ fn jade_sign_message() {
     };
     let xpub = jade.jade.get_cached_xpub(params).unwrap();
     let msg_hash = signed_msg_hash(message);
-    let message = Message::from_digest_slice(msg_hash.as_byte_array()).unwrap();
-    let signature = Signature::from_compact(&signature_bytes).unwrap();
-
-    assert!(Secp256k1::verification_only()
-        .verify_ecdsa(&message, &signature, &xpub.public_key)
-        .is_ok());
-
-    //TODO verify anti-exfil
+    let recovered = signature
+        .recover_pubkey(&Secp256k1::verification_only(), msg_hash)
+        .unwrap();
+    assert_eq!(recovered.inner, xpub.public_key);
 }
 
 #[test]
@@ -481,6 +468,21 @@ async fn async_sign() {
 
     let sign = jade.sign(&mut pset).await.unwrap();
     assert!(sign > 0);
+
+    let message = "Hello async world!";
+    let path: DerivationPath = "m/0".parse().unwrap();
+    let signature = jade.sign_message(message, &path).await.unwrap();
+    let xpub = jade
+        .get_cached_xpub(GetXpubParams {
+            network,
+            path: vec![0],
+        })
+        .await
+        .unwrap();
+    let recovered = signature
+        .recover_pubkey(&Secp256k1::verification_only(), signed_msg_hash(message))
+        .unwrap();
+    assert_eq!(recovered.inner, xpub.public_key);
 }
 
 fn mock_version_info() -> VersionInfoResult {

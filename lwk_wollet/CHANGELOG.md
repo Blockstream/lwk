@@ -2,11 +2,27 @@
 
 ## Unreleased
 
+* All registry-related code was moved to `lwk_registry`. Notes for migration:
+  * Registry-related methods return `lwk_registry::Error` instead of an `lwk_wollet::Error`.
+  * In order to use a blockchain client with the `fetch_with_tx` method in the `Registry`, the provided client should implement the `TxFetcher` trait or the `TxFetcherAsync` trait for asynchronous clients.
+
+## 0.19.0
+
 * Add Waterfalls descriptor subscriptions, returning `tip`, `mempool`, `block`, and `reorg` events that callers can use as wallet rescan hints.
 * Add the `electrum_oidc` feature: `TokenProvider::Blockstream` support for `ElectrumClient` (automatic OAuth2 token fetch, plus invalidate and retry once when the server denies a call with an authentication error). Not available on wasm.
 * `Wollet::assets_owned()` returns all assets ever owned instead of only unspent ones.
 * `Contract` no longer contains public fields. To build a `Contract` for issuance, use `Contract::builder`.
 * Esplora client: address history requests within a scan batch run concurrently, honoring `EsploraClientBuilder::concurrency` (default 1, so behavior is unchanged unless opted in).
+* Changed `TxBuilder::drain_lbtc_to()` to take `&Address`, return a `Result`, and validate the address network, rejecting non confidential addresses.
+* Add `TxBuilder::drain_lbtc_to_explicit()`, like `drain_lbtc_to()` but for a non-confidential (explicit) address.
+* `TxBuilder::add_explicit_recipient()` now validates the address network.
+* `lwk_common::PsetDetails`, `lwk_common::PsetBalance`, `lwk_common::Recipient` and `lwk_common::PsetSignatures` no longer contain public fields, the fields are now read with accessors of the same name:
+  * `PsetDetails`: `balance()`, `sig_details()`, `issuances()`
+  * `PsetBalance`: `fees()`, `balances()`, `recipients()`
+  * `Recipient`: `address()`, `asset()`, `value()`, `vout()`
+  * `PsetSignatures`: `has_signature()`, `missing_signature()`
+* To build these types, use `PsetDetails::new(pset, descriptor, network)`, `PsetBalance::new()`, `Recipient::new()` and `PsetSignatures::new()`.
+* Add `PsetDetails::fees()`, `PsetDetails::fees_in()`, `PsetDetails::balances()` and `PsetDetails::recipients()`, forwarding to the inner `PsetBalance`.
 
 ## 0.18.0
 

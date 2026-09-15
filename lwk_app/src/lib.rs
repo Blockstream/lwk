@@ -62,6 +62,7 @@ mod blockchain_client;
 mod client;
 mod config;
 pub mod consts;
+mod cookie;
 mod error;
 pub mod method;
 mod reqwest_transport;
@@ -101,6 +102,15 @@ impl App {
         if self.rpc.is_some() {
             return Err(error::Error::AlreadyStarted);
         }
+
+        // Restrict permissions on every file and directory this process creates from here on
+        // matching Bitcoin Core's `SetupEnvironment()`
+        #[cfg(unix)]
+        // SAFETY: umask(2) has no unsafe precondition beyond the FFI call itself; it cannot fail.
+        unsafe {
+            libc::umask(0o077);
+        }
+
         let mut state = State {
             config: self.config.clone(),
             wollets: Default::default(),
@@ -118,10 +128,17 @@ impl App {
         let server = tiny_http::Server::http(self.config.addr)
             .map_err(|_| Error::ServerStart(self.config.addr.to_string()))?;
 
+        // Fresh cookie per run, so a client needs same-user filesystem access to authenticate.
+        // TODO: support an explicit --rpcauth / config-file username+password (for remote access,
+        // multiple users, or containers without a shared filesystem) that skips cookie generation
+        // entirely when configured.
+        let expected_auth_header = cookie::generate(&self.config.cookie_path()?)?;
+
         // TODO, for some reasons, using the default number of threads (4) cause a request to be
         // replied after 15 seconds, using 1 instead seems to not have that issue.
         let config = lwk_tiny_jrpc::Config::builder()
             .with_num_threads(NonZeroU8::new(1).expect("static"))
+            .with_expected_auth_header(Some(expected_auth_header))
             .build();
 
         let rpc = lwk_tiny_jrpc::JsonRpcServer::new(server, config, state.clone(), method_handler);
@@ -227,6 +244,7 @@ impl App {
     }
 
     pub fn stop(&self) -> Result<(), Error> {
+        // TODO: delete the cookie file on clean shutdown, so its absence signals "not running".
         self.is_scanning.store(false, Ordering::Relaxed);
         match self.rpc.as_ref() {
             Some(rpc) => {
@@ -260,7 +278,7 @@ impl App {
     }
 
     fn client(&self) -> Result<Client, Error> {
-        Client::new(self.config.addr)
+        Client::new_with_cookie(self.config.addr, Some(self.config.cookie_path()?))
     }
 }
 
@@ -272,11 +290,6 @@ fn method_handler(
 }
 
 fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Response, Error> {
-    log::debug!(
-        "method: {} params: {:?} ",
-        request.method.as_str(),
-        request.params
-    );
     let method: Method = match request.method.as_str().parse() {
         Ok(method) => method,
         Err(e) => return Ok(Response::unimplemented(request.id, e.to_string())),
@@ -294,7 +307,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             Response::result(request.id, method.schema(r.direction)?)
         }
         Method::SignerGenerate => {
-            let (_signer, mnemonic) = SwSigner::random(state.lock()?.config.is_mainnet())?;
+            let (_signer, mnemonic) = SwSigner::random_with_network(state.lock()?.config.network)?;
             Response::result(
                 request.id,
                 serde_json::to_value(response::SignerGenerate {
@@ -390,7 +403,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::SignerLoadSoftware => {
             let r: request::SignerLoadSoftware = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let signer = AppSigner::new_sw(&r.mnemonic, s.config.is_mainnet(), r.persist)?;
+            let signer = AppSigner::new_sw(&r.mnemonic, s.config.network, r.persist)?;
             let resp: response::Signer = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
             if r.persist {
@@ -603,7 +616,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let built_tx = wollet
                 .tx_builder()
                 .drain_lbtc_wallet()
-                .drain_lbtc_to(address)
+                .drain_lbtc_to(&address)?
                 .fee_rate(r.fee_rate)
                 .build()?;
             if with_experimental_blinders {
@@ -858,6 +871,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let txid = pset.extract_tx()?.txid().to_string();
             let details = wollet.get_details(&pset)?;
             let mut warnings = vec![];
+            if details.has_non_default_sighash() {
+                warnings.push("some inputs declare a non-default sighash".to_string());
+            }
             let has_signatures_from = details
                 .fingerprints_has()
                 .iter()
@@ -875,8 +891,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })
                 .collect();
             let mut balance: HashMap<String, i64> = details
-                .balance
-                .balances
+                .balances()
                 .as_ref()
                 .iter()
                 .map(|(k, v)| (k.to_string(), *v))
@@ -885,7 +900,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 balance = s.replace_id_with_ticker(balance);
             }
             let issuances = details
-                .issuances
+                .issuances()
                 .iter()
                 .enumerate()
                 .filter(|(_, e)| e.is_issuance())
@@ -901,7 +916,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })
                 .collect();
             let reissuances = details
-                .issuances
+                .issuances()
                 .iter()
                 .enumerate()
                 .filter(|(_, e)| e.is_reissuance())
@@ -915,8 +930,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .collect();
 
             let fees = details
-                .balance
-                .fees
+                .fees()
                 .iter()
                 .map(|(&k, &v)| (k.to_string(), v))
                 .collect();
@@ -1110,7 +1124,10 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 let s = state.lock()?;
                 s.config.blockchain_client()?
             };
-            let tx = client.get_transactions(&[txid])?.pop().expect("tx");
+            let tx = client
+                .get_transactions(&[txid])?
+                .pop()
+                .ok_or_else(|| Error::TxNotFound(txid.to_string()))?;
             let proposal = proposal.validate(tx)?;
 
             let mut s = state.lock()?;
@@ -1295,7 +1312,10 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 registry.fetch_with_tx(asset_id, &s.config.blockchain_client()?)?;
             s.insert_asset(asset_id, issuance_tx, contract)?;
             // convert the request to an AssetInsert to skip network calls
-            let asset_insert_request = s.get_asset(&asset_id)?.request().expect("asset");
+            let asset_insert_request = s
+                .get_asset(&asset_id)?
+                .request()
+                .ok_or_else(|| Error::AssetNotExist(asset_id.to_string()))?;
             s.persist(&asset_insert_request)?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
@@ -1526,26 +1546,32 @@ mod tests {
     use std::net::TcpListener;
     use std::str::FromStr;
 
-    fn app_random_port() -> App {
+    fn app_random_port() -> (App, Config) {
         let addr = TcpListener::bind("127.0.0.1:0")
             .unwrap()
             .local_addr()
             .unwrap();
-        let tempdir = tempfile::tempdir().unwrap();
-        let mut config = Config::default_testnet(tempdir.path().to_path_buf());
+        // keep() so the datadir (and the cookie file the server writes in it) outlives this
+        // function; a plain TempDir would delete it as soon as it drops here.
+        let tempdir = tempfile::tempdir().unwrap().keep();
+        let mut config = Config::default_testnet(tempdir);
         config.addr = addr;
-        let mut app = App::new(config).unwrap();
+        let mut app = App::new(config.clone()).unwrap();
         app.run().unwrap();
-        app
+        (app, config)
     }
 
     #[test]
     fn version() {
-        let mut app = app_random_port();
+        let (mut app, config) = app_random_port();
         let addr = app.addr();
         let url = addr.to_string();
 
-        let client = jsonrpc::Client::simple_http(&url, None, None).unwrap();
+        let cookie = std::fs::read_to_string(config.cookie_path().unwrap()).unwrap();
+        let (user, pass) = cookie.trim().split_once(':').unwrap();
+        let client =
+            jsonrpc::Client::simple_http(&url, Some(user.to_string()), Some(pass.to_string()))
+                .unwrap();
         let request = client.build_request("version", None);
         let response = client.send_request(request).unwrap();
 

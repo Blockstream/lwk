@@ -14,16 +14,20 @@
 mod address;
 mod balance;
 mod descriptor;
+mod dpk;
 mod encrypt;
 mod error;
 mod fee;
+mod input;
 mod keyorigin_xpub;
 mod model;
 mod network;
+mod output;
 pub mod precision;
 mod pset;
 mod qr;
 mod segwit;
+mod sighash;
 mod signer;
 #[cfg(all(feature = "sqlite", not(target_arch = "wasm32")))]
 pub mod sqlite;
@@ -36,32 +40,33 @@ pub use crate::descriptor::{
     InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Multisig,
     Singlesig,
 };
+pub use crate::dpk::DescriptorPublicKey;
 pub use crate::encrypt::{
     cipher_from_key_bytes, decrypt_with_nonce_prefix, encrypt_with_deterministic_nonce,
     encrypt_with_random_nonce, EncryptError,
 };
 pub use crate::error::Error;
+pub(crate) use crate::input::pset_has_non_default_sighash;
+pub use crate::input::{input_sighash, is_taproot_input};
 pub use crate::keyorigin_xpub::{keyorigin_xpub_from_str, InvalidKeyOriginXpub};
 pub use crate::model::*;
 pub use crate::network::{ElementsParamsBuilder, Network};
 pub use crate::precision::Precision;
-pub use crate::pset::{get_genesis_hash, set_genesis_hash};
+pub use crate::pset::{get_genesis_hash, set_genesis_hash, verify_added_sigs, PsetValidationError};
 pub use crate::qr::*;
 pub use crate::segwit::is_provably_segwit;
+pub use crate::sighash::{SighashCtx, SighashError};
 #[cfg(feature = "amp0")]
 pub use crate::signer::amp0::{Amp0Signer, Amp0SignerData};
-pub use crate::signer::Signer;
+pub use crate::signer::{ss_path, SSAccountType, Signer};
 #[cfg(all(feature = "sqlite", not(target_arch = "wasm32")))]
 pub use crate::sqlite::{SqliteStore, SqliteStoreError};
 pub use crate::store::{
     ArcDynStoreError, BoxError, DynStore, EncryptedStore, EncryptedStoreError, FakeStore,
     FileStore, MemoryStore, Store,
 };
-use elements::bitcoin::bip32::{DerivationPath, Fingerprint};
-use elements::bitcoin::PublicKey as BitcoinPublicKey;
-use elements::taproot::TapLeafHash;
-use elements_miniscript::elements::secp256k1_zkp::XOnlyPublicKey;
 pub use fee::*;
+pub use output::OutputDetails;
 
 /// A trait for async read/write operations used by hardware wallet connections
 pub trait Stream {
@@ -87,7 +92,10 @@ use elements_miniscript::elements::{
     secp256k1_zkp::{All, Generator, PedersenCommitment, Secp256k1},
     AssetId, BlindAssetProofs, BlindValueProofs, OutPoint, Script, TxOutSecrets,
 };
-use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
+use elements_miniscript::{
+    ConfidentialDescriptor, DescriptorPublicKey as MiniscriptDescriptorPublicKey,
+};
+use output::{is_mine, verified_asset_value};
 use std::collections::btree_map::BTreeMap;
 use std::collections::HashMap;
 
@@ -101,7 +109,7 @@ pub mod electrum_ssl {
 
 /// Derive the script pubkey from a confidential descriptor and an index.
 pub fn derive_script_pubkey(
-    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    descriptor: &ConfidentialDescriptor<MiniscriptDescriptorPublicKey>,
     index: u32,
 ) -> Result<Script, Error> {
     Ok(descriptor
@@ -112,7 +120,7 @@ pub fn derive_script_pubkey(
 
 /// Derive the blinding secret key from a confidential descriptor and a script pubkey.
 pub fn derive_blinding_key(
-    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    descriptor: &ConfidentialDescriptor<MiniscriptDescriptorPublicKey>,
     script_pubkey: &Script,
 ) -> Option<SecretKey> {
     let secp = Secp256k1::new();
@@ -147,58 +155,11 @@ fn commitments(
     (asset_comm, amount_comm)
 }
 
-fn is_mine(
-    script_pubkey: &Script,
-    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
-    bip32_derivation: &BTreeMap<BitcoinPublicKey, (Fingerprint, DerivationPath)>,
-    tap_key_origins: &BTreeMap<XOnlyPublicKey, (Vec<TapLeafHash>, (Fingerprint, DerivationPath))>,
-) -> Result<bool, Error> {
-    // Without a wildcard the derivation index is irrelevant: every index derives the same
-    // script for a given (possibly multi-path) single descriptor. So we can check for a match
-    // directly, without relying on any derivation info from the PSET.
-    if !descriptor.descriptor.has_wildcard() {
-        for d in descriptor.descriptor.clone().into_single_descriptors()? {
-            let mine = d.at_derivation_index(0)?.script_pubkey();
-            if &mine == script_pubkey {
-                return Ok(true);
-            }
-        }
-        return Ok(false);
-    }
-
-    let paths: Vec<&DerivationPath> = if script_pubkey.is_v1_p2tr() {
-        tap_key_origins
-            .values()
-            .map(|(_, (_, path))| path)
-            .collect()
-    } else {
-        bip32_derivation.values().map(|(_, path)| path).collect()
-    };
-    for path in paths {
-        // TODO should I check descriptor derivation path is compatible with given bip32_derivation?
-        // TODO consider fingerprint if available
-        if path.is_empty() {
-            continue;
-        }
-        let wildcard_index = path[path.len() - 1];
-        for d in descriptor.descriptor.clone().into_single_descriptors()? {
-            // TODO improve by checking only the descriptor ending with the given path
-            let mine = d
-                .at_derivation_index(wildcard_index.into())?
-                .script_pubkey();
-            if &mine == script_pubkey {
-                return Ok(true);
-            }
-        }
-    }
-    Ok(false)
-}
-
 /// Return the net balance of a PSET from the perspective of the given `descriptor`.
 /// It returns also the fee and the recipients (external receivers) of the PSET.
 pub fn pset_balance(
     pset: &PartiallySignedTransaction,
-    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    descriptor: &ConfidentialDescriptor<MiniscriptDescriptorPublicKey>,
     params: &'static elements::AddressParams,
 ) -> Result<PsetBalance, Error> {
     let secp = Secp256k1::new();
@@ -223,6 +184,7 @@ pub fn pset_balance(
                     &input.bip32_derivation,
                     &input.tap_key_origins,
                 )
+                .map(|(is_owned, _)| is_owned)
                 .unwrap_or(false)
                 {
                     // Ignore outputs we don't own
@@ -314,18 +276,15 @@ pub fn pset_balance(
             &output.bip32_derivation,
             &output.tap_key_origins,
         )
+        .map(|(is_owned, _)| is_owned)
         .unwrap_or(false)
         {
             // external recipients
+            let (asset, amount) = verified_asset_value(&secp, output, idx)?;
             let blinding_pubkey = output.blinding_key.as_ref().map(|k| k.inner);
             let address =
                 elements::Address::from_script(&output.script_pubkey, blinding_pubkey, params);
-            let recipient = Recipient {
-                address,
-                vout: idx as u32,
-                asset: output.asset,
-                value: output.amount,
-            };
+            let recipient = Recipient::new(address, asset, amount, idx as u32);
 
             recipients.push(recipient);
 
@@ -344,25 +303,10 @@ pub fn pset_balance(
             (None, _, _, None, _, _) => return Err(Error::OutputAssetValueNone { idx }),
             (None, _, _, Some(_), _, _) => return Err(Error::OutputValueNone { idx }),
             (Some(_), _, _, None, _, _) => return Err(Error::OutputAssetNone { idx }),
-            (
-                Some(asset),
-                Some(asset_comm),
-                Some(blind_asset_proof),
-                Some(amount),
-                Some(amount_comm),
-                Some(blind_value_proof),
-            ) => {
-                if !blind_asset_proof.blind_asset_proof_verify(&secp, asset, asset_comm) {
-                    return Err(Error::InvalidAssetBlindProof { idx });
-                }
-                if !blind_value_proof.blind_value_proof_verify(
-                    &secp,
-                    amount,
-                    asset_comm,
-                    amount_comm,
-                ) {
-                    return Err(Error::InvalidValueBlindProof { idx });
-                }
+            (Some(_), Some(asset_comm), Some(_), Some(_), Some(amount_comm), Some(_)) => {
+                let (Some(asset), Some(amount)) = verified_asset_value(&secp, output, idx)? else {
+                    return Err(Error::OutputNotBlinded { idx });
+                };
 
                 // Check that we can later unblind the output
                 let private_blinding_key = derive_blinding_key(descriptor, &output.script_pubkey)
@@ -371,6 +315,15 @@ pub fn pset_balance(
                     .to_txout()
                     .unblind(&secp, private_blinding_key)
                     .map_err(|_| Error::OutputMineNotUnblindable { idx })?;
+
+                if txout_secrets.asset != asset {
+                    return Err(Error::InvalidTxOutSecretsAsset { idx });
+                }
+
+                if txout_secrets.value != amount {
+                    return Err(Error::InvalidTxOutSecretsValue { idx });
+                }
+
                 if (asset_comm, amount_comm) != commitments(&secp, &txout_secrets) {
                     return Err(Error::OutputCommitmentsMismatch { idx });
                 }
@@ -385,11 +338,7 @@ pub fn pset_balance(
     // For example it happens with reissuance tokens.
     balances.retain(|_, v| *v != 0);
 
-    Ok(PsetBalance {
-        fees,
-        balances: balances.into(),
-        recipients,
-    })
+    Ok(PsetBalance::new(fees, balances.into(), recipients))
 }
 
 /// Return the signatures of a PSET, for each input return a [`PsetSignatures`] which includes a
@@ -407,10 +356,7 @@ pub fn pset_signatures(pset: &PartiallySignedTransaction) -> Vec<PsetSignatures>
                     missing_signature.push((pk, ks));
                 }
             }
-            PsetSignatures {
-                has_signature,
-                missing_signature,
-            }
+            PsetSignatures::new(has_signature, missing_signature)
         })
         .collect()
 }
@@ -477,7 +423,7 @@ mod test {
         let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
         assert!(
-            !balance.balances.contains_key(&asset_id),
+            !balance.balances().contains_key(&asset_id),
             "redeposit (balance = 0) should disappear from the list"
         );
 
@@ -487,7 +433,7 @@ mod test {
         let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
         assert!(
-            !balance.balances.contains_key(&asset_id),
+            !balance.balances().contains_key(&asset_id),
             "redeposit (balance = 0) should disappear from the list"
         );
     }
@@ -498,7 +444,7 @@ mod test {
         let pset_str = include_str!("../test_data/pset_details/pset2.base64");
         let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
-        let v = balance.balances.get(&asset_id).unwrap();
+        let v = balance.balances().get(&asset_id).unwrap();
         assert_eq!(*v, -1);
 
         // Same for newly created psets with blind proofs
@@ -506,7 +452,7 @@ mod test {
             include_str!("../test_data/pset_details/pset2_with_input_blind_proofs.base64");
         let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
-        let v = balance.balances.get(&asset_id).unwrap();
+        let v = balance.balances().get(&asset_id).unwrap();
         assert_eq!(*v, -1);
     }
 
@@ -520,23 +466,23 @@ mod test {
         let expected_asset_id = "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49";
         let expected_value = 120;
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
-        assert_eq!(balance.recipients.len(), 1);
-        let recipient = balance.recipients.first().unwrap();
-        let dest = recipient.address.as_ref().unwrap();
+        assert_eq!(balance.recipients().len(), 1);
+        let recipient = balance.recipients().first().unwrap();
+        let dest = recipient.address().unwrap();
         assert_eq!(dest.to_string(), expected_dest);
-        assert_eq!(recipient.asset.unwrap().to_string(), expected_asset_id);
-        assert_eq!(recipient.value.unwrap(), expected_value);
-        assert_eq!(recipient.vout, 0);
+        assert_eq!(recipient.asset().unwrap().to_string(), expected_asset_id);
+        assert_eq!(recipient.value().unwrap(), expected_value);
+        assert_eq!(recipient.vout(), 0);
 
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID).unwrap();
-        assert_eq!(balance.recipients.len(), 1);
-        let recipient = balance.recipients.first().unwrap();
-        let dest = recipient.address.as_ref().unwrap();
+        assert_eq!(balance.recipients().len(), 1);
+        let recipient = balance.recipients().first().unwrap();
+        let dest = recipient.address().unwrap();
         assert_ne!(dest.to_string(), expected_dest);
         assert_eq!(dest.to_string(), "lq1qqwx9sng3htz6u2yeqrgf2w525att79vnvwtcqsar7xyqj8hf7s32usgvct9q9f4u3nmnnkwhkfayswc853egsw4pnw8lktr6d");
-        assert_eq!(recipient.asset.unwrap().to_string(), expected_asset_id);
-        assert_eq!(recipient.value.unwrap(), expected_value);
-        assert_eq!(recipient.vout, 0);
+        assert_eq!(recipient.asset().unwrap().to_string(), expected_asset_id);
+        assert_eq!(recipient.value().unwrap(), expected_value);
+        assert_eq!(recipient.vout(), 0);
     }
 
     #[test]

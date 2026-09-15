@@ -1,4 +1,8 @@
-use std::{fmt::Display, sync::Arc};
+use std::{
+    fmt::Display,
+    str::FromStr,
+    sync::{Arc, Mutex},
+};
 
 use lwk_common::electrum_ssl::{LIQUID_SOCKET, LIQUID_TESTNET_SOCKET};
 
@@ -98,7 +102,7 @@ impl Network {
 
     /// Return true if the network is the mainnet network
     pub fn is_mainnet(&self) -> bool {
-        matches!(&self.inner, &lwk_common::Network::Liquid)
+        self.inner.is_mainnet()
     }
 
     /// Return the policy asset (eg LBTC for mainnet) for this network
@@ -107,12 +111,83 @@ impl Network {
     }
 
     /// Return the genesis block hash for this network as hex string.
+    ///
+    /// Deprecated: use `genesis_hash()`
     pub fn genesis_block_hash(&self) -> String {
         self.inner.genesis_hash().to_hex()
+    }
+
+    /// Return the genesis block hash for this network as hex string.
+    pub fn genesis_hash(&self) -> String {
+        self.inner.genesis_hash().to_hex()
+    }
+
+    /// Return the parent-chain genesis block hash for this network as hex string.
+    pub fn parent_genesis_hash(&self) -> String {
+        self.inner.parent_genesis_hash().to_hex()
     }
 
     /// Return a new `TxBuilder` for this network
     pub fn tx_builder(&self) -> Arc<TxBuilder> {
         Arc::new(TxBuilder::new(self))
+    }
+}
+
+/// The builder for custom Elements networks
+#[derive(uniffi::Object, Debug)]
+pub struct CustomElementsNetworkBuilder {
+    inner: Mutex<Option<lwk_common::ElementsParamsBuilder>>,
+}
+
+#[uniffi::export]
+impl CustomElementsNetworkBuilder {
+    /// Construct a builder for custom Elements networks
+    #[uniffi::constructor]
+    pub fn new() -> Self {
+        CustomElementsNetworkBuilder {
+            inner: Mutex::new(Some(lwk_common::ElementsParamsBuilder::new())),
+        }
+    }
+
+    /// Specify the policy asset
+    pub fn with_policy_asset(&self, policy_asset: AssetId) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.with_policy_asset(policy_asset.into()));
+        Ok(())
+    }
+
+    /// Specify the genesis block hash, as an hex string
+    pub fn with_genesis_hash(&self, genesis_hash: &str) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        let genesis_hash = elements::BlockHash::from_str(genesis_hash)?;
+        *lock = Some(inner.with_genesis_hash(genesis_hash));
+        Ok(())
+    }
+
+    /// Specify the parent-chain genesis block hash, as an hex string
+    pub fn with_parent_genesis_hash(&self, parent_genesis_hash: &str) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        let parent_genesis_hash = elements::bitcoin::BlockHash::from_str(parent_genesis_hash)?;
+        *lock = Some(inner.with_parent_genesis_hash(parent_genesis_hash));
+        Ok(())
+    }
+
+    /// Build the custom Elements `Network`
+    ///
+    /// Unspecified values are defined as default Liquid regtest parameters
+    pub fn build(&self) -> Result<Arc<Network>, LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        let params = inner.build()?;
+        Ok(Arc::new(lwk_common::Network::CustomElements(params).into()))
+    }
+}
+
+impl Default for CustomElementsNetworkBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }

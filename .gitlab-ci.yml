@@ -32,7 +32,7 @@ stages:
   - deploy
 
 .base:
-  image: xenoky/lwk-builder@sha256:01ca1d6c3ab82efd1dc93f158d2006ffd611515c2804c176dc68a26d2c294bd1
+  image: xenoky/lwk-builder@sha256:1f4a7c096ca2cc2110a88c383f5445df89b6d102f646ba19a49fa7568f23fac3
   tags:
     - cloud
   retry:
@@ -152,6 +152,26 @@ test_wollet:
     - nproc
     - cargo test -p lwk_wollet -p lwk_signer -- --test-threads=2
 
+test_ln:
+  stage: test
+  needs: []
+  extends:
+    - .base
+    - .coverage_mixin
+  script:
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    # TODO: remove once CLN is in docker image
+    - apt-get -qq update && apt-get install -y libsodium23
+    - export LIGHTNINGD_VERSION=26.06.7
+    - export LIGHTNINGD_EXPECTED_SHA256="53ddf124fe7058b6a2fc059d104976cc54ba5be21dc55b295cd82d01cabeb39c"
+    - export LIGHTNINGD_FILENAME="clightning-v${LIGHTNINGD_VERSION}-Ubuntu-22.04-amd64.tar.xz"
+    - curl -Ls "https://github.com/ElementsProject/lightning/releases/download/v${LIGHTNINGD_VERSION}/${LIGHTNINGD_FILENAME}" -o "${LIGHTNINGD_FILENAME}"
+    - echo "${LIGHTNINGD_EXPECTED_SHA256}  ${LIGHTNINGD_FILENAME}" | sha256sum -c -
+    - mkdir -p "clightning-${LIGHTNINGD_VERSION}"
+    - tar -xJf "${LIGHTNINGD_FILENAME}" -C "clightning-${LIGHTNINGD_VERSION}" && rm "${LIGHTNINGD_FILENAME}"
+    - export LIGHTNINGD_EXEC="$PWD/clightning-${LIGHTNINGD_VERSION}/usr/bin/lightningd"
+    - cargo test -p lwk_wollet lightning -- --include-ignored
+
 test_jade:
   stage: test
   needs: []
@@ -184,7 +204,7 @@ test_auth:
     # The closed-source RPC proxy image lives in the gitlab registry; the job token needs
     # read access to explorer/electrum-rpc/electrs-electrum-proxy for this pull to work.
     - echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin glregistry.blockstream.io
-    - docker pull glregistry.blockstream.io/explorer/electrum-rpc/electrs-electrum-proxy/prod/rpcproxy:4540cbae-20260714161505
+    - docker pull glregistry.blockstream.io/explorer/electrum-rpc/electrs-electrum-proxy/prod/rpcproxy:4371ab45-20260812132509
     # smokes: keycloak + apisix + rpc proxy + container->host round-trips, no regtest binaries
     - cargo test -p lwk_test_util auth_stack_smoke -- --ignored
     # full e2e: authenticated esplora/waterfalls/electrum calls served by the regtest servers
@@ -194,9 +214,10 @@ test_auth:
     # the authenticated-Electrum expiry e2e (TokenProvider::Blockstream) is gated on the
     # electrum_oidc feature, now enabled by default
     - cargo test -p lwk_wollet --test e2e authenticated -- --ignored
-    # authenticated Electrum end to end through the CLI: funds a wallet through the proxy
-    # (lwk_app enables electrum_oidc, so the CLI's Blockstream provider works)
-    - cargo test -p lwk_cli test_auth_electrum_authenticated -- --ignored
+    # authenticated Electrum/Esplora/Waterfalls end to end through the CLI: each funds a wallet
+    # through the proxy (lwk_app enables electrum_oidc, so the CLI's Blockstream provider works).
+    # `--ignored` runs only the three `#[ignore]`d authenticated tests, not test_auth_err/success.
+    - cargo test -p lwk_cli test_auth -- --ignored
 
 test_ledger:
   stage: test
@@ -206,6 +227,49 @@ test_ledger:
     - .coverage_mixin
   script:
     - cargo test -p lwk_ledger --features asyncr
+
+anyswap:
+  stage: test
+  needs: []
+  extends:
+    - .base
+    - .coverage_mixin
+  script:
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    # TODO: remove once CLN is in docker image
+    - apt-get update -qq
+    - apt-get install -y --no-install-recommends libsqlite3-dev libssl-dev pkg-config sqlite3 libsodium23 unzip
+    - export LIGHTNINGD_VERSION=26.06.7
+    - export LIGHTNINGD_EXPECTED_SHA256="53ddf124fe7058b6a2fc059d104976cc54ba5be21dc55b295cd82d01cabeb39c"
+    - export LIGHTNINGD_FILENAME="clightning-v${LIGHTNINGD_VERSION}-Ubuntu-22.04-amd64.tar.xz"
+    - curl -Ls "https://github.com/ElementsProject/lightning/releases/download/v${LIGHTNINGD_VERSION}/${LIGHTNINGD_FILENAME}" -o "${LIGHTNINGD_FILENAME}"
+    - echo "${LIGHTNINGD_EXPECTED_SHA256}  ${LIGHTNINGD_FILENAME}" | sha256sum -c -
+    - mkdir -p "clightning-${LIGHTNINGD_VERSION}"
+    - tar -xJf "${LIGHTNINGD_FILENAME}" -C "clightning-${LIGHTNINGD_VERSION}" && rm "${LIGHTNINGD_FILENAME}"
+    - export LIGHTNINGD_EXEC="$PWD/clightning-${LIGHTNINGD_VERSION}/usr/bin/lightningd"
+    - ELECTRS_BTC_FILENAME="electrs_linux_esplora_027e38d3ebc2f85b28ae76f8f3448438ee4fc7b1.zip"
+    - ELECTRS_BTC_EXPECTED_SHA256="c7d2abb51b3af8fa1d6d4db8f1d061c7f9095c9187979b4795c746f467bf42a0"
+    - wget "https://github.com/LeoComandini/electrsd/releases/download/027e38d/${ELECTRS_BTC_FILENAME}"
+    - echo "${ELECTRS_BTC_EXPECTED_SHA256}  ${ELECTRS_BTC_FILENAME}" | sha256sum -c -
+    - unzip "${ELECTRS_BTC_FILENAME}" && rm "${ELECTRS_BTC_FILENAME}"
+    - ELECTRS_BTC_NAME="${ELECTRS_BTC_FILENAME%.zip}"
+    - mv electrs "${ELECTRS_BTC_NAME}" && chmod +x "${ELECTRS_BTC_NAME}"
+    - export ELECTRS_BITCOIN_EXEC="$PWD/electrs_linux_esplora_027e38d3ebc2f85b28ae76f8f3448438ee4fc7b1"
+    # build anyswap
+    - git clone "https://gitlab-ci-token:${CI_JOB_TOKEN}@${ANYSWAP_REPO_URL}.git" /tmp/anyswap
+    - git -C /tmp/anyswap checkout "$ANYSWAP_REV"
+    - cd /tmp/anyswap
+    - cargo install sqlx-cli --no-default-features --features sqlite --locked
+    - DATABASE_URL="sqlite:$PWD/dev.db" sqlx database create
+    - DATABASE_URL="sqlite:$PWD/dev.db" sqlx migrate run --source crates/plugin/migrations
+    - DATABASE_URL="sqlite:$PWD/dev.db" cargo build --release -p anyswap-plugin --bin anyswap
+    - export ANYSWAP_EXEC="/tmp/anyswap/target/release/anyswap"
+    - cd -
+    - cp "${ANYSWAP_CONFIG_STR}" /tmp/anyswap_config.toml
+    - export ANYSWAP_CONFIG="/tmp/anyswap_config.toml"
+    - cat "$ANYSWAP_CONFIG"
+    # run anyswap tests
+    - cargo test -p lwk_anyswap --test e2e
 
 test_serial:
   stage: test
@@ -257,9 +321,20 @@ unit_tests:
   script:
     - cargo nextest run --lib --profile unit # ensure unit tests don't take more than a sec each
 
+unit_tests_coverage:
+  stage: test
+  needs: []
+  extends:
+    - .base
+    - .coverage_mixin
+  script:
+    - cargo nextest run --lib
+
 coverage_report:
   stage: coverage
   needs:
+    - job: unit_tests_coverage
+      artifacts: true
     - job: test_wollet
       artifacts: true
     - job: test_jade
@@ -283,6 +358,10 @@ coverage_report:
     - job: boltz_reverse
       artifacts: true
     - job: boltz_submarine
+      artifacts: true
+    - job: test_ln
+      artifacts: true
+    - job: anyswap
       artifacts: true
   extends: .base
   script:
@@ -324,7 +403,8 @@ audit:
   needs: []
   extends: .base
   script:
-    - cargo audit --deny yanked
+    - cargo audit
+    # - cargo audit --deny yanked # FIXME: restore once boltz-rust updates
 
 doc:
   stage: test

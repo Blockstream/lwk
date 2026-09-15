@@ -11,7 +11,7 @@ use boltz_client::boltz::{
 };
 use boltz_client::network::Chain;
 use boltz_client::swaps::magic_routing::check_for_mrh;
-use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams};
+use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams, TransactionOptions};
 use boltz_client::util::sleep;
 use boltz_client::PublicKey;
 use lwk_wollet::bitcoin::{Denomination, PublicKey as BitcoinPublicKey};
@@ -606,7 +606,7 @@ impl PreparePayResponse {
 
                 if self.lockup_utxo_exists().await? {
                     // UTXO exists, make refund transaction
-                    let tx = self.make_refund_tx_with_retry().await?;
+                    let tx = self.make_refund_tx_with_retry(true).await?;
                     let txid = broadcast_tx_with_retry(&self.chain_client, &tx, &swap_id).await?;
                     self.data.refund_txid = Some(txid.clone());
                     log::info!(
@@ -625,7 +625,7 @@ impl PreparePayResponse {
                 log::warn!(
                     "[swap:{swap_id}] transaction.lockupFailed Boltz failed to lockup funding tx"
                 );
-                let tx = self.make_refund_tx_with_retry().await?;
+                let tx = self.make_refund_tx_with_retry(true).await?;
 
                 let txid = broadcast_tx_with_retry(&self.chain_client, &tx, &swap_id).await?;
                 self.data.refund_txid = Some(txid.clone());
@@ -663,9 +663,20 @@ impl PreparePayResponse {
             SwapState::SwapExpired => {
                 log::warn!("[swap:{swap_id}] swap.expired Boltz swap expired");
 
-                // TODO: Non cooperative refund if needed
-
-                Ok(ControlFlow::Break(false))
+                if self.lockup_utxo_exists().await? {
+                    let tx = self.make_refund_tx_with_retry(false).await?;
+                    let txid = broadcast_tx_with_retry(&self.chain_client, &tx, &swap_id).await?;
+                    self.data.refund_txid = Some(txid.clone());
+                    log::info!(
+                        "[swap:{swap_id}] Non-cooperative refund successfully broadcasted: {txid}"
+                    );
+                    Ok(ControlFlow::Break(true))
+                } else {
+                    log::warn!(
+                        "[swap:{swap_id}] No UTXO found at address, swap expired without funds being sent"
+                    );
+                    Ok(ControlFlow::Break(false))
+                }
             }
             ref e => Err(Error::UnexpectedUpdate {
                 swap_id,
@@ -701,10 +712,11 @@ impl PreparePayResponse {
 
     async fn make_refund_tx_with_retry(
         &mut self,
+        cooperative: bool,
     ) -> Result<boltz_client::swaps::BtcLikeTransaction, Error> {
         let swap_id = self.swap_id().to_string();
         for _ in 0..5 {
-            match self.make_refund_tx().await {
+            match self.make_refund_tx(cooperative).await {
                 Ok(tx) => {
                     return Ok(tx);
                 }
@@ -717,7 +729,10 @@ impl PreparePayResponse {
         Err(Error::FailBuildingRefundTransaction { swap_id })
     }
 
-    async fn make_refund_tx(&mut self) -> Result<boltz_client::swaps::BtcLikeTransaction, Error> {
+    async fn make_refund_tx(
+        &mut self,
+        cooperative: bool,
+    ) -> Result<boltz_client::swaps::BtcLikeTransaction, Error> {
         let fee = crate::fallback_swap_fee(&self.api, self.data.from_chain).await?;
         Ok(self
             .swap_script
@@ -728,7 +743,7 @@ impl PreparePayResponse {
                 swap_id: self.swap_id().to_string(),
                 chain_client: &self.chain_client,
                 boltz_client: &self.api,
-                options: None,
+                options: Some(TransactionOptions::default().with_cooperative(cooperative)),
             })
             .await?)
     }

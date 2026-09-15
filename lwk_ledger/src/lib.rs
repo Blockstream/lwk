@@ -57,22 +57,25 @@ use lwk_common::Signer;
 pub struct Ledger<T: Transport> {
     /// Ledger Liquid Client
     pub client: LiquidClient<T>,
+
+    /// The network the signer operates on
+    pub network: lwk_common::Network,
 }
 
 impl Ledger<TransportTcp> {
-    pub fn new(port: u16) -> Self {
+    pub fn new(port: u16, network: lwk_common::Network) -> Self {
         let client = LiquidClient::new(TransportTcp::new(port).expect("TODO"));
-        Self { client }
+        Self { client, network }
     }
 }
 
 #[cfg(feature = "serial")]
 impl Ledger<transport_hid::TransportHID> {
-    pub fn new_hid() -> Self {
+    pub fn new_hid(network: lwk_common::Network) -> Self {
         let h = ledger_transport_hid::hidapi::HidApi::new().expect("unable to get HIDAPI");
         let hid = ledger_transport_hid::TransportNativeHID::new(&h).unwrap();
         let client = LiquidClient::new(transport_hid::TransportHID::new(hid));
-        Self { client }
+        Self { client, network }
     }
 }
 
@@ -275,6 +278,10 @@ impl<T: Transport> Signer for &Ledger<T> {
         self.client.get_master_fingerprint().map_err(to_dbg)
     }
 
+    fn network(&self) -> std::result::Result<lwk_common::Network, Self::Error> {
+        Ok(self.network)
+    }
+
     fn sign_message(
         &self,
         _message: &str,
@@ -307,6 +314,10 @@ impl<T: Transport> Signer for Ledger<T> {
 
     fn fingerprint(&self) -> std::result::Result<Fingerprint, Self::Error> {
         Signer::fingerprint(&self)
+    }
+
+    fn network(&self) -> std::result::Result<lwk_common::Network, Self::Error> {
+        Signer::network(&self)
     }
 
     fn sign_message(

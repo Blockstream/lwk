@@ -12,7 +12,7 @@ To send all LBTC, use `TxBuilder::drain_lbtc_wallet()`. By default LBTC are sent
 The methods take the following arguments:
 
 1. **`drain_lbtc_wallet()`**: No arguments. Selects all available LBTC UTXOs from the wallet to be spent.
-2. **`drain_lbtc_to(address)`**: Takes an `Address` parameter specifying where to send all the LBTC after fees are deducted.
+2. **`drain_lbtc_to(address)`**: Takes an `Address` parameter specifying where the remaining LBTC is sent after fees are deducted. Pair it with `drain_lbtc_wallet()` to send all the LBTC.
 
 <custom-tabs category="lang">
 <div slot="title">Rust</div>

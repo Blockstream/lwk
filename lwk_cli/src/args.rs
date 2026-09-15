@@ -24,6 +24,14 @@ pub struct Cli {
     #[arg(long, env)]
     pub addr: Option<SocketAddr>,
 
+    /// Location for logs, server state, and other LWK data
+    ///
+    /// Default is `$HOME/.lwk`, or `./.lwk` if unable to determine the home dir.
+    /// If you pass a non-default `--datadir` to `server start`, pass the same
+    /// one to every other command too.
+    #[arg(long, env)]
+    pub datadir: Option<PathBuf>,
+
     /// The sub command
     #[command(subcommand)]
     pub command: CliCommand,
@@ -1062,12 +1070,6 @@ pub enum ServerCommand {
         #[arg(long)]
         /// Needed only in regtest because public network have their official defaults
         registry_url: Option<String>,
-
-        /// Location for logs, server state, and other LWK data
-        ///
-        /// Default is `$HOME/.lwk`, or `./.lwk` if unable to determine the home dir
-        #[arg(long)]
-        datadir: Option<PathBuf>,
 
         /// Timeout for RPC and HWW requests (seconds)
         #[arg(long)]

@@ -102,11 +102,18 @@ impl From<ChainSwapData> for ChainSwapDataSerializable {
     }
 }
 
-pub(crate) fn chain_from_str(chain: &str, swap_id: Option<&str>) -> Result<Chain, Error> {
-    // Display format of the chain is "BTC" or "L-BTC" for regtest/testnet/mainnet
+pub(crate) fn chain_from_str(
+    chain: &str,
+    liquid_chain: LiquidChain,
+    swap_id: Option<&str>,
+) -> Result<Chain, Error> {
     match chain {
-        "BTC" => Ok(Chain::Bitcoin(BitcoinChain::BitcoinRegtest)),
-        "L-BTC" => Ok(Chain::Liquid(LiquidChain::LiquidRegtest)),
+        "BTC" => Ok(Chain::Bitcoin(match liquid_chain {
+            LiquidChain::Liquid => BitcoinChain::Bitcoin,
+            LiquidChain::LiquidTestnet => BitcoinChain::BitcoinTestnet,
+            LiquidChain::LiquidRegtest => BitcoinChain::BitcoinRegtest,
+        })),
+        "L-BTC" => Ok(Chain::Liquid(liquid_chain)),
         s => Err(Error::SwapRestoration {
             swap_id: swap_id.map(str::to_owned),
             msg: format!("Unknown chain: {s}"),
@@ -117,6 +124,7 @@ pub(crate) fn chain_from_str(chain: &str, swap_id: Option<&str>) -> Result<Chain
 pub fn to_chain_data(
     data: ChainSwapDataSerializable,
     mnemonic: &Mnemonic,
+    liquid_chain: LiquidChain,
 ) -> Result<ChainSwapData, Error> {
     let claim_keys = derive_keypair(data.claim_key_index, mnemonic)?;
     let refund_keys = derive_keypair(data.refund_key_index, mnemonic)?;
@@ -132,8 +140,16 @@ pub fn to_chain_data(
             data.mnemonic_identifier,
         ));
     }
-    let from_chain: Chain = chain_from_str(&data.from_chain, Some(&data.create_chain_response.id))?;
-    let to_chain: Chain = chain_from_str(&data.to_chain, Some(&data.create_chain_response.id))?;
+    let from_chain = chain_from_str(
+        &data.from_chain,
+        liquid_chain,
+        Some(&data.create_chain_response.id),
+    )?;
+    let to_chain = chain_from_str(
+        &data.to_chain,
+        liquid_chain,
+        Some(&data.create_chain_response.id),
+    )?;
     Ok(ChainSwapData {
         last_state: data.last_state,
         swap_type: data.swap_type,
@@ -169,7 +185,11 @@ impl ChainSwapDataSerializable {
 
 #[cfg(test)]
 mod tests {
-    use super::ChainSwapDataSerializable;
+    use std::str::FromStr;
+
+    use super::*;
+
+    const MNEMONIC: &str = "damp cart merit asset obvious idea chef traffic absent armed road link";
 
     #[test]
     fn deserialize_legacy_chain_swap_without_created_at() {
@@ -179,5 +199,80 @@ mod tests {
 
         assert_eq!(data.create_chain_response.id, "legacy-swap");
         assert_eq!(data.created_at, None);
+    }
+
+    #[test]
+    fn chain_from_str_uses_session_network() {
+        let cases = [
+            (
+                LiquidChain::Liquid,
+                BitcoinChain::Bitcoin,
+                LiquidChain::Liquid,
+            ),
+            (
+                LiquidChain::LiquidTestnet,
+                BitcoinChain::BitcoinTestnet,
+                LiquidChain::LiquidTestnet,
+            ),
+            (
+                LiquidChain::LiquidRegtest,
+                BitcoinChain::BitcoinRegtest,
+                LiquidChain::LiquidRegtest,
+            ),
+        ];
+
+        for (session_chain, expected_bitcoin, expected_liquid) in cases {
+            assert_eq!(
+                chain_from_str("BTC", session_chain, Some("swap-id")).unwrap(),
+                Chain::Bitcoin(expected_bitcoin)
+            );
+            assert_eq!(
+                chain_from_str("L-BTC", session_chain, Some("swap-id")).unwrap(),
+                Chain::Liquid(expected_liquid)
+            );
+        }
+    }
+
+    #[test]
+    fn chain_from_str_rejects_unknown_chain() {
+        let result = chain_from_str("unknown", LiquidChain::Liquid, Some("swap-id"));
+        assert!(matches!(result, Err(Error::SwapRestoration { .. })));
+    }
+
+    #[test]
+    fn serialized_chain_data_uses_session_network() {
+        let mnemonic = Mnemonic::from_str(MNEMONIC).unwrap();
+        let expected_networks = [
+            (
+                LiquidChain::Liquid,
+                BitcoinChain::Bitcoin,
+                LiquidChain::Liquid,
+            ),
+            (
+                LiquidChain::LiquidTestnet,
+                BitcoinChain::BitcoinTestnet,
+                LiquidChain::LiquidTestnet,
+            ),
+            (
+                LiquidChain::LiquidRegtest,
+                BitcoinChain::BitcoinRegtest,
+                LiquidChain::LiquidRegtest,
+            ),
+        ];
+
+        for (session_chain, expected_bitcoin, expected_liquid) in expected_networks {
+            let data = ChainSwapDataSerializable::deserialize(include_str!(
+                "../tests/data/chain_data_serializable_legacy.json"
+            ))
+            .unwrap();
+            let restored = to_chain_data(data, &mnemonic, session_chain).unwrap();
+
+            assert_eq!(restored.from_chain, Chain::Bitcoin(expected_bitcoin));
+            assert_eq!(restored.to_chain, Chain::Liquid(expected_liquid));
+
+            let serialized = ChainSwapDataSerializable::from(restored);
+            assert_eq!(serialized.from_chain, "BTC");
+            assert_eq!(serialized.to_chain, "L-BTC");
+        }
     }
 }

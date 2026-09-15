@@ -1,4 +1,4 @@
-use std::{fmt, time::Duration};
+use std::{fmt, path::PathBuf, time::Duration};
 
 use jsonrpc::{Request, Response};
 
@@ -8,11 +8,17 @@ pub struct ReqwestHttpTransport {
     url: String,
     /// timeout only supports second granularity.
     timeout: Duration,
+    /// Path of the cookie file to authenticate with, read on every request.
+    cookie_path: Option<PathBuf>,
 }
 
 impl ReqwestHttpTransport {
-    pub fn new(url: String, timeout: Duration) -> Self {
-        ReqwestHttpTransport { url, timeout }
+    pub fn new(url: String, timeout: Duration, cookie_path: Option<PathBuf>) -> Self {
+        ReqwestHttpTransport {
+            url,
+            timeout,
+            cookie_path,
+        }
     }
     fn request<R>(&self, req: impl serde::Serialize) -> Result<R, crate::Error>
     where
@@ -21,7 +27,13 @@ impl ReqwestHttpTransport {
         let client = reqwest::blocking::ClientBuilder::new()
             .timeout(self.timeout)
             .build()?;
-        let response = client.post(&self.url).json(&req).send()?;
+        let mut builder = client.post(&self.url).json(&req);
+        if let Some(cookie_path) = &self.cookie_path {
+            if let Some(header) = crate::cookie::read(cookie_path) {
+                builder = builder.header(reqwest::header::AUTHORIZATION, header);
+            }
+        }
+        let response = builder.send()?;
         Ok(response.json()?)
     }
 }

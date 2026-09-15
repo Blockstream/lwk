@@ -67,6 +67,7 @@ impl lwk_common::Store for PanicStore {
 
 mod amp2;
 mod auth;
+mod lightningd;
 mod registry;
 mod test_env;
 mod waterfalls;
@@ -275,12 +276,16 @@ pub fn generate_xprv() -> Xpriv {
 }
 
 pub fn n_issuances(details: &lwk_common::PsetDetails) -> usize {
-    details.issuances.iter().filter(|e| e.is_issuance()).count()
+    details
+        .issuances()
+        .iter()
+        .filter(|e| e.is_issuance())
+        .count()
 }
 
 pub fn n_reissuances(details: &lwk_common::PsetDetails) -> usize {
     details
-        .issuances
+        .issuances()
         .iter()
         .filter(|e| e.is_reissuance())
         .count()

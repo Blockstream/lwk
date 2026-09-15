@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::{types::AssetId, Address, Txid};
+use crate::{types::AssetId, Address, DerivationPath, Script, Txid};
 
 /// The details of a Partially Signed Elements Transaction:
 ///
@@ -23,15 +23,15 @@ impl PsetDetails {
     /// Return the balance of the PSET from the point of view of the wallet
     /// that generated this via `psetDetails()`
     pub fn balance(&self) -> Arc<PsetBalance> {
-        Arc::new(self.inner.balance.clone().into())
+        Arc::new(self.inner.balance().clone().into())
     }
 
     /// For each input its existing or missing signatures
     pub fn signatures(&self) -> Vec<Arc<PsetSignatures>> {
         self.inner
-            .sig_details
-            .clone()
-            .into_iter()
+            .sig_details()
+            .iter()
+            .cloned()
             .map(|s| Arc::new(s.into()))
             .collect()
     }
@@ -42,9 +42,24 @@ impl PsetDetails {
         // with a reference to the relative input. We should problaby move that logic upper so we can reuse?
         // in the meantime, this less ergonomic method should suffice.
         self.inner
-            .issuances
-            .clone()
-            .into_iter()
+            .issuances()
+            .iter()
+            .cloned()
+            .map(|e| Arc::new(e.into()))
+            .collect()
+    }
+
+    /// Whether any PSET input sighash is not the default one
+    pub fn has_non_default_sighash(&self) -> bool {
+        self.inner.has_non_default_sighash()
+    }
+
+    /// The details of the outputs of the PSET
+    pub fn outputs(&self) -> Vec<Arc<OutputDetails>> {
+        self.inner
+            .outputs()
+            .iter()
+            .cloned()
             .map(|e| Arc::new(e.into()))
             .collect()
     }
@@ -89,12 +104,12 @@ impl PsetBalance {
     ///
     /// Deprecated: use `fees_in(asset_id)` or `fees()` instead.
     pub fn fee(&self) -> u64 {
-        *self.inner.fees.values().next().unwrap_or(&0)
+        *self.inner.fees().values().next().unwrap_or(&0)
     }
 
     pub fn fees(&self) -> HashMap<AssetId, u64> {
         self.inner
-            .fees
+            .fees()
             .iter()
             .map(|(k, v)| ((*k).into(), *v))
             .collect()
@@ -106,7 +121,7 @@ impl PsetBalance {
 
     pub fn balances(&self) -> HashMap<AssetId, i64> {
         self.inner
-            .balances
+            .balances()
             .iter()
             .map(|(k, v)| ((*k).into(), *v))
             .collect()
@@ -114,9 +129,9 @@ impl PsetBalance {
 
     pub fn recipients(&self) -> Vec<Arc<Recipient>> {
         self.inner
-            .recipients
-            .clone()
-            .into_iter()
+            .recipients()
+            .iter()
+            .cloned()
             .map(|e| Arc::new(e.into()))
             .collect()
     }
@@ -140,7 +155,7 @@ type KeySource = String;
 impl PsetSignatures {
     pub fn has_signature(&self) -> HashMap<PublicKey, KeySource> {
         self.inner
-            .has_signature
+            .has_signature()
             .iter()
             .map(|(k, v)| (k.to_string(), key_source_to_string(v)))
             .collect()
@@ -148,7 +163,7 @@ impl PsetSignatures {
 
     pub fn missing_signature(&self) -> HashMap<PublicKey, KeySource> {
         self.inner
-            .missing_signature
+            .missing_signature()
             .iter()
             .map(|(k, v)| (k.to_string(), key_source_to_string(v)))
             .collect()
@@ -244,21 +259,83 @@ impl From<lwk_common::Recipient> for Recipient {
 #[uniffi::export]
 impl Recipient {
     pub fn asset(&self) -> Option<AssetId> {
-        self.inner.asset.map(Into::into)
+        self.inner.asset().map(Into::into)
     }
 
     pub fn value(&self) -> Option<u64> {
-        self.inner.value
+        self.inner.value()
     }
 
     pub fn address(&self) -> Option<Arc<Address>> {
-        self.inner
-            .address
-            .as_ref()
-            .map(|e| Arc::new(e.clone().into()))
+        self.inner.address().map(|e| Arc::new(e.clone().into()))
     }
     pub fn vout(&self) -> u32 {
-        self.inner.vout
+        self.inner.vout()
+    }
+}
+
+/// The details of an output of a PSET
+#[derive(uniffi::Object, Debug)]
+pub struct OutputDetails {
+    inner: lwk_common::OutputDetails,
+}
+
+impl From<lwk_common::OutputDetails> for OutputDetails {
+    fn from(inner: lwk_common::OutputDetails) -> Self {
+        Self { inner }
+    }
+}
+
+#[uniffi::export]
+impl OutputDetails {
+    /// The asset of the output, or None if it couldn't be verified against the commitments
+    pub fn asset(&self) -> Option<AssetId> {
+        self.inner.asset().map(Into::into)
+    }
+
+    /// The amount of the output in satoshis, or None if it couldn't be verified against
+    /// the commitments
+    pub fn satoshi(&self) -> Option<u64> {
+        self.inner.satoshi()
+    }
+
+    /// Whether the output is fully explicit
+    /// with no commitments
+    pub fn is_fully_explicit(&self) -> bool {
+        self.inner.is_fully_explicit()
+    }
+
+    /// Whether the output is fully confidential
+    /// committed
+    pub fn is_fully_confidential(&self) -> bool {
+        self.inner.is_fully_confidential()
+    }
+
+    /// Whether this is the fee output
+    pub fn is_fee(&self) -> bool {
+        self.inner.is_fee()
+    }
+
+    /// The script pubkey of the output
+    pub fn script_pubkey(&self) -> Arc<Script> {
+        Arc::new(self.inner.script_pubkey().clone().into())
+    }
+
+    /// The index of the output in the transaction
+    pub fn vout(&self) -> u32 {
+        self.inner.vout()
+    }
+
+    /// The derivation path of the output, if it belongs to the wallet
+    pub fn derivation_path(&self) -> Option<Arc<DerivationPath>> {
+        self.inner
+            .derivation_path()
+            .map(|e| Arc::new(e.clone().into()))
+    }
+
+    /// Whether the output belongs to the wallet
+    pub fn is_owned(&self) -> bool {
+        self.inner.is_owned()
     }
 }
 
@@ -305,6 +382,8 @@ mod tests {
 
         assert_eq!(format!("{:?}", signatures[0].has_signature()), "{\"02ab89406d9cf32ff1819838136eecb65c07add8e8ef1cd2d6c64bab1d85606453\": \"[6e055509]87'/1'/0'/0/0\"}");
         assert_eq!(format!("{:?}", signatures[0].missing_signature()), "{\"03c1d0c7ddab5bd5bffbe0bf04a8a570eeabd9b6356358ecaacc242f658c7d5aad\": \"[281e2239]87'/1'/0'/0/0\"}");
+
+        assert!(!details.has_non_default_sighash());
 
         let issuances = details.inputs_issuances();
         assert_eq!(issuances.len(), 1);

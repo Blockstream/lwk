@@ -7,7 +7,8 @@ LWK supports different ways to retrieve wallet data from the Liquid blockchain:
 - **Waterfalls** - Optimized HTTP-based protocol with reduced roundtrips
 
 Some clients also come in different flavors: blocking or async.
-It's also possible to connect to authenticated backends for enterprise deployments.
+
+For production, all three clients can connect to Blockstream Enterprise authenticated, paid instances, see [Authenticated connections](#authenticated-connections).
 
 ## Quick Comparison
 
@@ -69,30 +70,6 @@ This client is recommended for desktop, mobile, and server applications where in
 </section>
 </custom-tabs>
 
-### Authenticated Electrum
-
-Electrum RPC proxies can also require authentication, e.g. [Blockstream Enterprise](https://blockstream.info/explorer-api). LWK supports the same OAuth2 token provider as the Esplora client, with automatic refresh; it needs the `electrum_oidc` cargo feature.
-
-The token is only sent over an encrypted `ssl://` connection. On a plaintext `tcp://` url it is refused unless explicitly allowed (for a localhost or already-tunneled proxy: `allow_plaintext_with_token` in the bindings builder, or `--auth-allow-plaintext-with-token` in `lwk_cli`).
-
-<custom-tabs category="lang">
-<div slot="title">Rust</div>
-<section>
-
-```rust,ignore
-{{#include ../../lwk_wollet/tests/e2e.rs:authenticated_electrum_client}}
-```
-</section>
-
-<div slot="title">Python</div>
-<section>
-
-```python
-{{#include ../../lwk_bindings/tests/bindings/authenticated_electrum_client.py:authenticated_electrum_client}}
-```
-</section>
-</custom-tabs>
-
 ## Esplora
 
 The Esplora client is based on the [Esplora API](https://github.com/Blockstream/esplora/blob/master/API.md), a popular HTTP-based blockchain explorer API.
@@ -136,48 +113,6 @@ This client is ideal for web applications and scenarios where HTTP-based communi
 
 ```go
 {{#include ../../lwk_bindings/go/basics.go:esplora_client}}
-```
-</section>
-</custom-tabs>
-
-### Authenticated Esplora
-
-Some Esplora servers, particularly enterprise deployments like [Blockstream Enterprise](https://blockstream.info/explorer-api), require authentication for access. LWK supports OAuth2-based authentication with automatic token refresh.
-
-Use authenticated clients when:
-- Connecting to private or enterprise Esplora instances
-- Requiring guaranteed rate limits and service quality
-- Needing additional privacy and dedicated infrastructure
-
-<custom-tabs category="lang">
-<div slot="title">Rust</div>
-<section>
-
-```rust,ignore
-{{#include ../../lwk_wollet/tests/e2e.rs:authenticated_esplora_client}}
-```
-</section>
-
-<div slot="title">Python</div>
-<section>
-
-```python
-{{#include ../../lwk_bindings/tests/bindings/authenticated_esplora_client.py:authenticated_esplora_client}}
-```
-</section>
-
-<div slot="title">Javascript</div>
-<section>
-
-```typescript
-```
-</section>
-
-<div slot="title">Go</div>
-<section>
-
-```go
-{{#include ../../lwk_bindings/go/authenticated_esplora_client.go:authenticated_esplora_client}}
 ```
 </section>
 </custom-tabs>
@@ -229,21 +164,7 @@ Use authenticated clients when:
 </section>
 </custom-tabs>
 
-### Authenticated Waterfalls
-
-Waterfalls clients also support OAuth2-based authentication for enterprise deployments, similar to the [Blockstream Enterprise](https://blockstream.info/explorer-api) authenticated Esplora clients.
-
-<custom-tabs category="lang">
-<div slot="title">Rust</div>
-<section>
-
-```rust,ignore
-{{#include ../../lwk_wollet/tests/e2e.rs:authenticated_waterfalls_client}}
-```
-</section>
-</custom-tabs>
-
-### Fallback Client
+## Fallback Client
 
 For improved resilience, implement a fallback strategy to handle transient errors.
 This pattern is useful when dealing with unreliable network conditions or temporary server issues.
@@ -280,6 +201,98 @@ When a primary request fails, manually evaluate the error to determine if a retr
 
 ```go
 {{#include ../../lwk_bindings/go/fallback_client.go:fallback_client}}
+```
+</section>
+</custom-tabs>
+
+## Authenticated connections
+
+Blockstream runs paid, authenticated instances of these APIs for production use, [Blockstream Enterprise](https://blockstream.info/explorer-api): dedicated infrastructure with guaranteed rate limits, higher quotas, and greater privacy than the shared public servers. If you are shipping a product on Liquid, these are the endpoints to build against.
+
+All three clients authenticate the same way. Point the client at your enterprise endpoint and add an OAuth2 **token provider**; the client fetches a token with your credentials and refreshes it automatically, so the rest of your code is unchanged from the public client.
+
+### Endpoints
+
+Mainnet Liquid enterprise endpoints:
+
+| API | Endpoint | Transport |
+|-----|----------|-----------|
+| Esplora (REST) | `https://enterprise.blockstream.info/liquid/api` | HTTPS |
+| Waterfalls | `https://enterprise.blockstream.info/liquid/api/waterfalls` | HTTPS |
+| Electrum RPC | `ssl://elements-mainnet.enterprise.blockstream.info:50002` | TLS |
+| OAuth2 token | `https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token` | HTTPS |
+
+The table lists mainnet Liquid. For Liquid testnet, swap the host prefix and path to `elements-testnet` and `liquidtestnet` (for example `ssl://elements-testnet.enterprise.blockstream.info:50002` and `https://enterprise.blockstream.info/liquidtestnet/api`); the OAuth2 token endpoint is unchanged.
+
+### Token providers
+
+- `TokenProvider::Blockstream { url, client_id, client_secret }` fetches a token from the OAuth2 endpoint and refreshes it automatically.
+- `TokenProvider::Static(token)` uses a token you already hold (no refresh).
+
+Notes:
+- Electrum needs the `electrum_oidc` cargo feature (a default feature of `lwk_wollet`).
+- The token is only sent over an encrypted connection. On a plaintext `tcp://` Electrum url it is refused unless explicitly allowed (for a localhost or already-tunneled proxy: `allow_plaintext_with_token` in the builder, or `--auth-allow-plaintext-with-token` in `lwk_cli`).
+- Esplora and Waterfalls address the enterprise load balancer by path (`/liquid/api`, `/liquid/api/waterfalls`); Electrum uses a network-prefixed host.
+- In the browser (wasm), authenticated Esplora/Waterfalls is not yet available, and Electrum has no browser path.
+
+The snippets below show the client wiring; take the endpoint urls from the table above.
+
+### Esplora
+
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/auth.rs:authenticated_esplora_client}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+{{#include ../../lwk_bindings/tests/bindings/authenticated_esplora_client.py:authenticated_esplora_client}}
+```
+</section>
+
+<div slot="title">Go</div>
+<section>
+
+```go
+{{#include ../../lwk_bindings/go/authenticated_esplora_client.go:authenticated_esplora_client}}
+```
+</section>
+</custom-tabs>
+
+### Waterfalls
+
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/auth.rs:authenticated_waterfalls_client}}
+```
+</section>
+</custom-tabs>
+
+### Electrum
+
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/auth.rs:authenticated_electrum_client}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+{{#include ../../lwk_bindings/tests/bindings/authenticated_electrum_client.py:authenticated_electrum_client}}
 ```
 </section>
 </custom-tabs>

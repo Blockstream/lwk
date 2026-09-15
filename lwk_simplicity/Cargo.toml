@@ -1,6 +1,6 @@
 [package]
 name = "lwk_simplicity"
-version = "0.18.0"
+version = "0.19.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Utilities to deal with Simplicity transactions"
 license = "MIT OR BSD-2-Clause"
@@ -8,9 +8,9 @@ exclude = ["tests/", "data/"]
 documentation = "https://docs.rs/lwk_simplicity"
 
 [dependencies]
-lwk_common = { version = "0.18.0" }
-lwk_signer = { version = "0.18.0", default-features = false }
-lwk_wollet = { version = "0.18.0", default-features = false }
+lwk_common = { version = "0.19.0" }
+lwk_signer = { version = "0.19.0", default-features = false }
+lwk_wollet = { version = "0.19.0", default-features = false }
 
 simplicityhl = { version = "0.5.0" }
 
@@ -19,7 +19,7 @@ thiserror = { workspace = true }
 serde_json.workspace = true
 serde = { workspace = true, features = ["derive"] }
 
-uuid = { version = "~1.20", default-features = false, features = [
+uuid = { version = "1.20", default-features = false, features = [
     "serde",
     "v4",
 ] }
@@ -32,7 +32,7 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 tokio = { version = "1.36.0", features = ["rt", "macros"], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-uuid = { version = "~1.20", default-features = false, features = ["js"] }
+uuid = { version = "1.20", default-features = false, features = ["js"] }
 
 [features]
 lending = ["lending-contracts", "simplex", "reqwest", "lwk_wollet/electrum", "lwk_wollet/esplora", "tokio"]
@@ -46,8 +46,8 @@ name = "indexer_client"
 required-features = ["lending"]
 
 [dev-dependencies]
-lwk_test_util = { version = "0.18.0" }
-lwk_wollet = { version = "0.18.0", default-features = false, features = [
+lwk_test_util = { version = "0.19.0" }
+lwk_wollet = { version = "0.19.0", default-features = false, features = [
     "esplora",
     "electrum",
 ] }

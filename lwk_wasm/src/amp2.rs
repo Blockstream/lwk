@@ -94,41 +94,56 @@ impl Amp2 {
     pub fn elip153_from_signer(
         &self,
         signer: &Signer,
-        account: u32,
+        account_num: u32,
     ) -> Result<Amp2Descriptor, Error> {
         Ok(self
             .inner
-            .elip153_from_signer(&signer.inner, account)?
+            .elip153_from_signer(&signer.inner, account_num)?
             .into())
     }
 
     /// ELIP153 `USER_PATH = m/purpose'/coin_type'/account'`
     #[wasm_bindgen(js_name = elip153UserPath)]
-    pub fn elip153_user_path(&self, account: u32) -> Result<DerivationPath, Error> {
-        Ok(self.inner.elip153_user_path(account)?.into())
+    pub fn elip153_user_path(&self, account_num: u32) -> Result<DerivationPath, Error> {
+        Ok(self.inner.elip153_user_path(account_num)?.into())
     }
 
     /// ELIP153 `VIEW_PATH = m/purpose'/coin_type'/account'/server_fingerprint_masked'`
     #[wasm_bindgen(js_name = elip153ViewPath)]
-    pub fn elip153_view_path(&self, account: u32) -> Result<DerivationPath, Error> {
-        Ok(self.inner.elip153_view_path(account)?.into())
+    pub fn elip153_view_path(&self, account_num: u32) -> Result<DerivationPath, Error> {
+        Ok(self.inner.elip153_view_path(account_num)?.into())
     }
 
-    /// Create an AMP2 descriptor ELIP153 compliant from xpub strings.
+    /// Create an AMP2 descriptor ELIP153 compliant from a signer managed externally.
     ///
-    /// This is typically used when the signer is managed outside of LWK.
-    /// Derive the user xpub at [`Amp2::elip153_user_path()`] and
-    /// the view xpub at [`Amp2::elip153_view_path()`], and pass the
-    /// obtained keyorigin_xpub strings here.
-    #[wasm_bindgen(js_name = elip153FromStr)]
-    pub fn elip153_from_str(
+    /// Caller must ensure that:
+    /// * `user_keyorigin_xpub` is the keyorigin xpub derived at `Amp2::elip153_user_path()` for `account_num`
+    /// * `view_keyorigin_xpub` is the keyorigin xpub derived at `Amp2::elip153_view_path()` for `account_num`
+    ///
+    /// **Warning**: Passing incorrect signer data can lead to creating an incorrect
+    /// descriptor, which could lead to loss of funds.
+    #[wasm_bindgen(js_name = elip153FromExternalSigner)]
+    pub fn elip153_from_external_signer(
         &self,
+        account_num: u32,
         user_keyorigin_xpub: &str,
         view_keyorigin_xpub: &str,
     ) -> Result<Amp2Descriptor, Error> {
+        let (user_keysource, user_xpub) = lwk_common::keyorigin_xpub_from_str(user_keyorigin_xpub)?;
+        let user_keysource = user_keysource.ok_or_else(|| {
+            Error::Generic("missing keyorigin in user_keyorigin_xpub".to_string())
+        })?;
+        let (view_keysource, view_xpub) = lwk_common::keyorigin_xpub_from_str(view_keyorigin_xpub)?;
+        let view_keysource = view_keysource.ok_or_else(|| {
+            Error::Generic("missing keyorigin in view_keyorigin_xpub".to_string())
+        })?;
         Ok(self
             .inner
-            .elip153_from_str(user_keyorigin_xpub, view_keyorigin_xpub)?
+            .elip153_from_external_signer(
+                account_num,
+                (user_keysource, user_xpub),
+                (view_keysource, view_xpub),
+            )?
             .into())
     }
 

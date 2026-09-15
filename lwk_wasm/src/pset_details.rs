@@ -1,7 +1,7 @@
 use lwk_wollet::{bitcoin::bip32::KeySource, elements};
 use wasm_bindgen::prelude::*;
 
-use crate::{Address, AssetId, Balance, Fees, Txid};
+use crate::{Address, AssetId, Balance, DerivationPath, Fees, Script, Txid};
 
 /// The details of a Partially Signed Elements Transaction:
 ///
@@ -46,20 +46,112 @@ pub struct Recipient {
     inner: lwk_common::Recipient,
 }
 
+/// The details of an output of a PSET
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct OutputDetails {
+    inner: lwk_common::OutputDetails,
+}
+
+impl From<lwk_common::OutputDetails> for OutputDetails {
+    fn from(inner: lwk_common::OutputDetails) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<OutputDetails> for lwk_common::OutputDetails {
+    fn from(pset_out: OutputDetails) -> Self {
+        pset_out.inner
+    }
+}
+
+#[wasm_bindgen]
+impl OutputDetails {
+    /// The asset of the output, or None if it couldn't be verified against the commitments
+    pub fn asset(&self) -> Option<AssetId> {
+        self.inner.asset().map(Into::into)
+    }
+
+    /// The amount of the output in satoshis, or None if it couldn't be verified against
+    /// the commitments
+    pub fn satoshi(&self) -> Option<u64> {
+        self.inner.satoshi()
+    }
+
+    /// Whether the output is fully explicit
+    /// with no commitments
+    #[wasm_bindgen(js_name = isFullyExplicit)]
+    pub fn is_fully_explicit(&self) -> bool {
+        self.inner.is_fully_explicit()
+    }
+
+    /// Whether the output is fully confidential
+    /// committed
+    #[wasm_bindgen(js_name = isFullyConfidential)]
+    pub fn is_fully_confidential(&self) -> bool {
+        self.inner.is_fully_confidential()
+    }
+
+    /// Whether this is the fee output
+    #[wasm_bindgen(js_name = isFee)]
+    pub fn is_fee(&self) -> bool {
+        self.inner.is_fee()
+    }
+
+    /// The script pubkey of the output
+    #[wasm_bindgen(js_name = scriptPubkey)]
+    pub fn script_pubkey(&self) -> Script {
+        self.inner.script_pubkey().into()
+    }
+
+    /// The index of the output in the transaction
+    pub fn vout(&self) -> u32 {
+        self.inner.vout()
+    }
+
+    /// The derivation path of the output, if it belongs to the wallet
+    #[wasm_bindgen(js_name = derivationPath)]
+    pub fn derivation_path(&self) -> Option<DerivationPath> {
+        self.inner.derivation_path().cloned().map(Into::into)
+    }
+
+    /// Whether the output belongs to the wallet
+    #[wasm_bindgen(js_name = isOwned)]
+    pub fn is_owned(&self) -> bool {
+        self.inner.is_owned()
+    }
+}
+
 #[wasm_bindgen]
 impl PsetDetails {
     /// Return the balance of the PSET from the point of view of the wallet
     /// that generated this via `psetDetails()`
     pub fn balance(&self) -> PsetBalance {
-        self.inner.balance.clone().into()
+        self.inner.balance().clone().into()
     }
 
     /// For each input existing or missing signatures
     pub fn signatures(&self) -> Vec<PsetSignatures> {
         self.inner
-            .sig_details
-            .clone()
-            .into_iter()
+            .sig_details()
+            .iter()
+            .cloned()
+            .map(Into::into)
+            .collect()
+    }
+
+    /// Whether any PSET input sighash is not the default one
+    #[wasm_bindgen(js_name = hasNonDefaultSighash)]
+    pub fn has_non_default_sighash(&self) -> bool {
+        self.inner.has_non_default_sighash()
+    }
+
+    /// The details of the outputs of the PSET
+    pub fn outputs(&self) -> Vec<OutputDetails> {
+        self.inner
+            .outputs()
+            .iter()
+            .cloned()
             .map(Into::into)
             .collect()
     }
@@ -91,9 +183,9 @@ impl PsetDetails {
         // with a reference to the relative input. We should problaby move that logic upper so we can reuse?
         // in the meantime, this less ergonomic method should suffice.
         self.inner
-            .issuances
-            .clone()
-            .into_iter()
+            .issuances()
+            .iter()
+            .cloned()
             .map(Into::into)
             .collect()
     }
@@ -107,12 +199,12 @@ impl PsetBalance {
     ///
     /// Deprecated: use `feesIn(assetId)` or `fees()` instead.
     pub fn fee(&self) -> u64 {
-        *self.inner.fees.values().next().unwrap_or(&0)
+        *self.inner.fees().values().next().unwrap_or(&0)
     }
 
     /// Fees paid by this transaction.
     pub fn fees(&self) -> Fees {
-        self.inner.fees.clone().into()
+        self.inner.fees().clone().into()
     }
 
     /// The amount of fee with given asset id
@@ -123,14 +215,14 @@ impl PsetBalance {
 
     /// The net balance for every asset with respect of the wallet asking the pset details
     pub fn balances(&self) -> Balance {
-        self.inner.balances.clone().into()
+        self.inner.balances().clone().into()
     }
 
     pub fn recipients(&self) -> Vec<Recipient> {
         self.inner
-            .recipients
-            .clone()
-            .into_iter()
+            .recipients()
+            .iter()
+            .cloned()
             .map(Into::into)
             .collect()
     }
@@ -141,12 +233,12 @@ impl PsetSignatures {
     /// Returns `Vec<(PublicKey, KeySource)>`
     #[wasm_bindgen(js_name = hasSignature)]
     pub fn has_signature(&self) -> JsValue {
-        convert(&self.inner.has_signature)
+        convert(self.inner.has_signature())
     }
 
     #[wasm_bindgen(js_name = missingSignature)]
     pub fn missing_signature(&self) -> JsValue {
-        convert(&self.inner.missing_signature)
+        convert(self.inner.missing_signature())
     }
 }
 fn convert(data: &[(elements::bitcoin::PublicKey, KeySource)]) -> JsValue {
@@ -199,18 +291,18 @@ impl Issuance {
 #[wasm_bindgen]
 impl Recipient {
     pub fn asset(&self) -> Option<AssetId> {
-        self.inner.asset.map(Into::into)
+        self.inner.asset().map(Into::into)
     }
 
     pub fn value(&self) -> Option<u64> {
-        self.inner.value
+        self.inner.value()
     }
 
     pub fn address(&self) -> Option<Address> {
-        self.inner.address.as_ref().map(Into::into)
+        self.inner.address().map(Into::into)
     }
     pub fn vout(&self) -> u32 {
-        self.inner.vout
+        self.inner.vout()
     }
 }
 
@@ -314,6 +406,8 @@ mod tests {
 
         assert_eq!(format!("{:?}", signatures[0].has_signature()), "JsValue([[\"02ab89406d9cf32ff1819838136eecb65c07add8e8ef1cd2d6c64bab1d85606453\", \"6e055509\", \"87'/1'/0'/0/0\"]])");
         assert_eq!(format!("{:?}", signatures[0].missing_signature()), "JsValue([[\"03c1d0c7ddab5bd5bffbe0bf04a8a570eeabd9b6356358ecaacc242f658c7d5aad\", \"281e2239\", \"87'/1'/0'/0/0\"]])");
+
+        assert!(!details.has_non_default_sighash());
 
         let issuances = details.inputs_issuances();
         assert_eq!(issuances.len(), 1);

@@ -16,6 +16,16 @@ unzip "${ELECTRS_FILENAME}" && rm "${ELECTRS_FILENAME}"
 ELECTRS_NAME="${ELECTRS_FILENAME%.zip}"
 mv electrs "${ELECTRS_NAME}" && chmod +x "${ELECTRS_NAME}"
 
+# electrs bitcoin
+ELECTRS_BTC_FILENAME="electrs_linux_esplora_027e38d3ebc2f85b28ae76f8f3448438ee4fc7b1.zip"
+ELECTRS_BTC_EXPECTED_SHA256="c7d2abb51b3af8fa1d6d4db8f1d061c7f9095c9187979b4795c746f467bf42a0"
+
+wget "https://github.com/LeoComandini/electrsd/releases/download/027e38d/${ELECTRS_BTC_FILENAME}"
+echo "${ELECTRS_BTC_EXPECTED_SHA256}  ${ELECTRS_BTC_FILENAME}" | sha256sum -c -
+unzip "${ELECTRS_BTC_FILENAME}" && rm "${ELECTRS_BTC_FILENAME}"
+ELECTRS_BTC_NAME="${ELECTRS_BTC_FILENAME%.zip}"
+mv electrs "${ELECTRS_BTC_NAME}" && chmod +x "${ELECTRS_BTC_NAME}"
+
 # waterfalls
 WATERFALLS_FILENAME="waterfalls_c35c3dd.gz"
 WATERFALLS_EXPECTED_SHA256="55c70bf40a86b362055d5d11b406f6f75751f74fdb591c083c99c35e1070e869"
@@ -43,6 +53,16 @@ BITCOIND_FILENAME="bitcoin-${BITCOIND_VERSION}-x86_64-linux-gnu.tar.gz"
 curl -Ls "https://bitcoincore.org/bin/bitcoin-core-${BITCOIND_VERSION}/${BITCOIND_FILENAME}" -o "${BITCOIND_FILENAME}"
 echo "${BITCOIND_EXPECTED_SHA256}  ${BITCOIND_FILENAME}" | sha256sum -c -
 tar -xzf "${BITCOIND_FILENAME}" && rm "${BITCOIND_FILENAME}"
+
+# lightningd (Core Lightning)
+LIGHTNINGD_VERSION=26.06.7
+LIGHTNINGD_EXPECTED_SHA256="53ddf124fe7058b6a2fc059d104976cc54ba5be21dc55b295cd82d01cabeb39c"
+
+LIGHTNINGD_FILENAME="clightning-v${LIGHTNINGD_VERSION}-Ubuntu-22.04-amd64.tar.xz"
+curl -Ls "https://github.com/ElementsProject/lightning/releases/download/v${LIGHTNINGD_VERSION}/${LIGHTNINGD_FILENAME}" -o "${LIGHTNINGD_FILENAME}"
+echo "${LIGHTNINGD_EXPECTED_SHA256}  ${LIGHTNINGD_FILENAME}" | sha256sum -c -
+mkdir -p "clightning-${LIGHTNINGD_VERSION}"
+tar -xJf "${LIGHTNINGD_FILENAME}" -C "clightning-${LIGHTNINGD_VERSION}" && rm "${LIGHTNINGD_FILENAME}"
 
 # asset registry
 ASSET_REGISTRY_FILENAME="asset_registry_server_5ecf533.gz"

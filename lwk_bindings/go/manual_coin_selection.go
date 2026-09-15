@@ -63,7 +63,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Create and sign a transaction selecting only 1 utxo, without manual coin selection they would be 2
+	// Create and sign a transaction spending the chosen utxo, instead of letting the wallet pick which one
 	sentSatoshi := uint64(1000)
 	nodeAddress := node.GetNewAddress()
 

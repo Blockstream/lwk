@@ -1,4 +1,6 @@
-use crate::{DerivationPath, LwkError, Mnemonic, Network, Pset, WolletDescriptor};
+use crate::{
+    DerivationPath, DescriptorPublicKey, LwkError, Mnemonic, Network, Pset, WolletDescriptor,
+};
 use std::sync::Arc;
 
 #[derive(uniffi::Enum)]
@@ -85,14 +87,14 @@ impl Signer {
     /// Construct a software signer
     #[uniffi::constructor]
     pub fn new(mnemonic: &Mnemonic, network: &Network) -> Result<Arc<Self>, LwkError> {
-        let inner = lwk_signer::SwSigner::new(&mnemonic.to_string(), network.is_mainnet())?;
+        let inner = lwk_signer::SwSigner::new_with_network(&mnemonic.to_string(), network.into())?;
         Ok(Arc::new(Self { inner }))
     }
 
     /// Generate a new random software signer
     #[uniffi::constructor]
     pub fn random(network: &Network) -> Result<Arc<Self>, LwkError> {
-        let (inner, _mnemonic) = lwk_signer::SwSigner::random(network.is_mainnet())?;
+        let (inner, _mnemonic) = lwk_signer::SwSigner::random_with_network(network.into())?;
         Ok(Arc::new(Self { inner }))
     }
 
@@ -125,6 +127,38 @@ impl Signer {
         WolletDescriptor::new(&desc_str)
     }
 
+    /// Derive a "standard" single sig descriptor
+    ///
+    /// **Experimental**: this API might change without notice.
+    ///
+    /// `account_type` must "wpkh", "shwpkh" or "tr".
+    ///
+    /// These are the "standard" single sig descriptors derived and
+    /// used by common Liquid wallets. Their derivation is not
+    /// specified in any ELIP.
+    ///
+    /// The unblinded descriptor follows BIP44/BIP49/BIP84/BIP86.
+    ///
+    /// They use a SLIP77 descriptor blinding key, however all
+    /// accounts use the same descriptor blinding key. This has the
+    /// undesirable consequence that if you share the CT descriptor
+    /// for one account, you reveal the descriptor blinding key used
+    /// by all other accounts.
+    pub fn ss_desc(
+        &self,
+        account_type: &str,
+        account_num: u32,
+    ) -> Result<Arc<WolletDescriptor>, LwkError> {
+        let account_type: lwk_common::SSAccountType = account_type
+            .parse()
+            .map_err(|e: &str| LwkError::Generic { msg: e.to_string() })?;
+        let desc_str = lwk_common::Signer::ss_desc(&self.inner, account_type, account_num)
+            .map_err(|e| LwkError::Generic {
+                msg: format!("{e:?}"),
+            })?;
+        WolletDescriptor::new(&desc_str)
+    }
+
     /// Return keyorigin and xpub, like "[73c5da0a/84h/1h/0h]tpub..."
     pub fn keyorigin_xpub(&self, bip: &Bip) -> Result<String, LwkError> {
         let is_mainnet = lwk_common::Signer::is_mainnet(&self.inner)?;
@@ -140,11 +174,11 @@ impl Signer {
         Ok(self.inner.fingerprint().to_string())
     }
 
-    /// Derive an xpub at `path` and return it as a keyorigin xpub string
-    pub fn keyorigin_xpub_from_path(&self, path: &DerivationPath) -> Result<String, LwkError> {
+    /// Derive an xpub at `path`
+    pub fn derive_xpub(&self, path: &DerivationPath) -> Result<Arc<DescriptorPublicKey>, LwkError> {
         let fingerprint = self.inner.fingerprint();
         let xpub = lwk_common::Signer::derive_xpub(&self.inner, &path.into())?;
-        Ok(format!("[{fingerprint}/{path}]{xpub}"))
+        DescriptorPublicKey::new(&format!("[{fingerprint}/{path}]{xpub}"))
     }
 
     /// Return the signer slip77 master blinding key

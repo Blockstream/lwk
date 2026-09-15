@@ -1,9 +1,11 @@
 use crate::amp2::Amp2D;
 use crate::auth::AuthStack;
 use crate::init_logging;
+use crate::lightningd::LightningD;
 use crate::registry::RegistryD;
 use crate::waterfalls::WaterfallsD;
 
+use clightningrpc::requests::AmountOrAll;
 use electrsd::bitcoind;
 use electrsd::electrum_client::ElectrumApi;
 use electrsd::ElectrsD;
@@ -22,24 +24,35 @@ use serde_json::Value;
 use std::net::TcpListener;
 use std::str::FromStr;
 use std::time::Duration;
+use tempfile::TempDir;
 
 /// Configure and start the test environment
 pub struct TestEnvBuilder {
     elementsd_exec: String,
     electrs_exec: String,
+    electrs_bitcoin_exec: String,
     bitcoind_exec: String,
+    bitcoincli_exec: String,
+    lightningd_exec: String,
     waterfalls_exec: String,
     registry_exec: String,
     amp2_exec: String,
+    anyswap_exec: String,
+    anyswap_config: String,
     with_electrum: bool,
     with_esplora: bool,
+    with_bitcoin_esplora: bool,
     with_bitcoind: bool,
+    with_bitcoincli: bool,
+    with_lightningd: bool,
     with_waterfalls: bool,
     waterfalls_max_txs_seen: Option<usize>,
     with_registry: bool,
     with_amp2: bool,
     with_zmq: bool,
     with_auth: bool,
+    with_anyswap: bool,
+    fedpeg_script: Option<String>,
 }
 
 impl TestEnvBuilder {
@@ -47,34 +60,54 @@ impl TestEnvBuilder {
     ///
     /// * ELEMENTSD_EXEC
     /// * ELECTRS_LIQUID_EXEC
+    /// * ELECTRS_BITCOIN_EXEC
     /// * BITCOIND_EXEC
+    /// * BITCOINCLI_EXEC
+    /// * LIGHTNINGD_EXEC
     /// * WATERFALLS_EXEC
     /// * ASSET_REGISTRY_EXEC
     /// * AMP2_MOCK_EXEC
+    /// * ANYSWAP_EXEC
+    /// * ANYSWAP_CONFIG
     pub fn from_env() -> Self {
         let elementsd_exec = std::env::var("ELEMENTSD_EXEC").unwrap_or_default();
         let electrs_exec = std::env::var("ELECTRS_LIQUID_EXEC").unwrap_or_default();
+        let electrs_bitcoin_exec = std::env::var("ELECTRS_BITCOIN_EXEC").unwrap_or_default();
         let bitcoind_exec = std::env::var("BITCOIND_EXEC").unwrap_or_default();
+        let bitcoincli_exec = std::env::var("BITCOINCLI_EXEC").unwrap_or_default();
+        let lightningd_exec = std::env::var("LIGHTNINGD_EXEC").unwrap_or_default();
         let waterfalls_exec = std::env::var("WATERFALLS_EXEC").unwrap_or_default();
         let registry_exec = std::env::var("ASSET_REGISTRY_EXEC").unwrap_or_default();
         let amp2_exec = std::env::var("AMP2_MOCK_EXEC").unwrap_or_default();
+        let anyswap_exec = std::env::var("ANYSWAP_EXEC").unwrap_or_default();
+        let anyswap_config = std::env::var("ANYSWAP_CONFIG").unwrap_or_default();
 
         Self {
             elementsd_exec,
             electrs_exec,
+            electrs_bitcoin_exec,
             bitcoind_exec,
+            bitcoincli_exec,
+            lightningd_exec,
             waterfalls_exec,
             registry_exec,
             amp2_exec,
+            anyswap_exec,
+            anyswap_config,
             with_electrum: false,
             with_esplora: false,
+            with_bitcoin_esplora: false,
             with_bitcoind: false,
+            with_bitcoincli: false,
+            with_lightningd: false,
             with_waterfalls: false,
             waterfalls_max_txs_seen: None,
             with_registry: false,
             with_amp2: false,
             with_zmq: false,
             with_auth: false,
+            with_anyswap: false,
+            fedpeg_script: None,
         }
     }
 
@@ -90,9 +123,33 @@ impl TestEnvBuilder {
         self
     }
 
+    /// Start a Bitcoin Esplora server
+    pub fn with_bitcoin_esplora(mut self) -> Self {
+        self.with_bitcoin_esplora = true;
+        self
+    }
+
     /// Start a Bitcoin node
     pub fn with_bitcoind(mut self) -> Self {
         self.with_bitcoind = true;
+        self
+    }
+
+    /// Load bitcoin-cli
+    pub fn with_bitcoincli(mut self) -> Self {
+        self.with_bitcoincli = true;
+        self
+    }
+
+    /// Start a CLN node, connected to a Bitcoin node
+    pub fn with_lightningd(mut self) -> Self {
+        self.with_lightningd = true;
+        self
+    }
+
+    /// Configure the federation peg script used by Elements
+    pub fn with_fedpeg_script(mut self, fedpeg_script: impl Into<String>) -> Self {
+        self.fedpeg_script = Some(fedpeg_script.into());
         self
     }
 
@@ -138,6 +195,12 @@ impl TestEnvBuilder {
         self
     }
 
+    /// Start with anyswap
+    pub fn with_anyswap(mut self) -> Self {
+        self.with_anyswap = true;
+        self
+    }
+
     /// Start the test environment
     pub fn build(self) -> TestEnv {
         if self.elementsd_exec.is_empty() {
@@ -145,6 +208,12 @@ impl TestEnvBuilder {
         }
         if self.electrs_exec.is_empty() && (self.with_electrum || self.with_esplora) {
             panic!("ELECTRS_LIQUID_EXEC must be set");
+        }
+        if self.electrs_bitcoin_exec.is_empty() && self.with_bitcoin_esplora {
+            panic!("ELECTRS_BITCOIN_EXEC must be set");
+        }
+        if self.with_bitcoin_esplora && !self.with_bitcoind {
+            panic!("bitcoin esplora requires a Bitcoin node: call 'with_bitcoind()'");
         }
         if self.bitcoind_exec.is_empty() && self.with_bitcoind {
             panic!("BITCOIND_EXEC must be set");
@@ -163,11 +232,28 @@ impl TestEnvBuilder {
         if self.amp2_exec.is_empty() && self.with_amp2 {
             panic!("AMP2_MOCK_EXEC must be set");
         }
+        if self.lightningd_exec.is_empty() && self.with_lightningd {
+            panic!("LIGHTNINGD_EXEC must be set");
+        }
+        if self.bitcoincli_exec.is_empty() && self.with_bitcoincli {
+            panic!("BITCOINCLI_EXEC must be set");
+        }
+        if self.with_lightningd && (!self.with_bitcoind || !self.with_bitcoincli) {
+            panic!("lightningd requires 'with_bitcoind()' and 'with_bitcoincli()'");
+        }
         if self.with_auth && !self.with_esplora && !self.with_waterfalls && !self.with_electrum {
             panic!("auth gateway requires an upstream: call 'with_esplora()', 'with_waterfalls()' or 'with_electrum()'");
         }
         if self.with_auth && self.with_esplora && self.with_waterfalls {
             panic!("auth gateway fronts either esplora or waterfalls, not both (yet): enable only one of them with 'with_auth()'");
+        }
+        if self.with_anyswap && (self.anyswap_exec.is_empty() || self.anyswap_config.is_empty()) {
+            panic!("ANYSWAP_EXEC and ANYSWAP_CONFIG must be set");
+        }
+        if self.with_anyswap
+            && (!self.with_lightningd || !self.with_esplora || !self.with_bitcoin_esplora)
+        {
+            panic!("anyswap requires 'with_lightningd()', 'with_esplora()' and 'with_bitcoin_esplora()'");
         }
 
         init_logging();
@@ -217,6 +303,11 @@ impl TestEnvBuilder {
         } else {
             args.push("-validatepegin=0");
         };
+        if let Some(fedpeg_script) = self.fedpeg_script {
+            args.push(string_to_static_str(format!(
+                "-fedpegscript={fedpeg_script}"
+            )));
+        }
 
         let zmq_endpoint = if self.with_zmq {
             let addr = TcpListener::bind("0.0.0.0:0")
@@ -284,6 +375,21 @@ impl TestEnvBuilder {
             None
         };
 
+        // Start Electrs Bitcoin
+        let bitcoin_electrsd = if self.with_bitcoin_esplora {
+            let node = bitcoind
+                .as_ref()
+                .expect("with_bitcoin_esplora() requires with_bitcoind()");
+            let mut electrs_conf = electrsd::Conf::default();
+            electrs_conf.view_stderr = view_stdout;
+            electrs_conf.http_enabled = true;
+            electrs_conf.network = "regtest";
+            // TODO: consider waiting for readiness
+            Some(ElectrsD::with_conf(&self.electrs_bitcoin_exec, node, &electrs_conf).unwrap())
+        } else {
+            None
+        };
+
         let waterfallsd = if self.with_waterfalls {
             let rpc = elementsd.rpc_url();
             let cookie_values = elementsd.params.get_cookie_values().unwrap().unwrap();
@@ -311,6 +417,146 @@ impl TestEnvBuilder {
 
         let amp2d = if self.with_amp2 {
             Some(Amp2D::new(&self.amp2_exec))
+        } else {
+            None
+        };
+
+        let mut anyswap_config_dir: Option<TempDir> = None;
+        let mut anyswap_url: Option<String> = None;
+
+        let lightningd = if self.with_lightningd {
+            let node = bitcoind
+                .as_ref()
+                .expect("with_lightningd() requires with_bitcoind()");
+            TestEnv::bitcoind_generate_(&node.client, 1);
+
+            let addr = TcpListener::bind(("127.0.0.1", 0))
+                .unwrap()
+                .local_addr()
+                .unwrap()
+                .to_string();
+            let conf = crate::lightningd::Conf {
+                view_stdout,
+                args: vec![
+                    format!("--bitcoin-cli={}", self.bitcoincli_exec),
+                    format!("--addr={addr}"),
+                    // disable plugin to avoid usage of the same port
+                    "--disable-plugin=cln-grpc".to_string(),
+                    // Speed up polling
+                    "--developer".to_string(),
+                    "--dev-bitcoind-poll=1".to_string(),
+                ],
+                envs: vec![],
+            };
+            Some(LightningD::with_conf(&self.lightningd_exec, node, &conf))
+        } else {
+            None
+        };
+
+        let lightningd_anyswap = if self.with_anyswap {
+            let node = bitcoind
+                .as_ref()
+                .expect("with_anyswap() requires with_bitcoind()");
+
+            let port = TcpListener::bind(("0.0.0.0", 0))
+                .unwrap()
+                .local_addr()
+                .unwrap()
+                .port();
+
+            let esplora_liquid = electrsd
+                .as_ref()
+                .and_then(|e| e.esplora_url.as_ref())
+                .expect("with_anyswap() requires with_esplora()");
+            let electrum_liquid = &electrsd
+                .as_ref()
+                .expect("with_anyswap() requires with_esplora()")
+                .electrum_url;
+            let esplora_bitcoin = bitcoin_electrsd
+                .as_ref()
+                .and_then(|e| e.esplora_url.as_ref())
+                .expect("with_anyswap() requires with_bitcoin_esplora()");
+            let elements_cookie = elementsd.params.get_cookie_values().unwrap().unwrap();
+            let policy_asset: Value = elementsd.client.call("getsidechaininfo", &[]).unwrap();
+            let policy_asset = policy_asset.get("pegged_asset").unwrap().as_str().unwrap();
+            // The config's `[elements].wallet_name` addresses this wallet by name.
+            elementsd.create_wallet("anyswap").unwrap();
+
+            let config = std::fs::read_to_string(&self.anyswap_config)
+                .expect("failed to read ANYSWAP_CONFIG")
+                .replace("@@PORT@@", &port.to_string())
+                .replace("@@LIQUID_ASSET_ID@@", policy_asset)
+                .replace(
+                    "@@ESPLORA_LIQUID_URL@@",
+                    &format!("http://{esplora_liquid}"),
+                )
+                .replace(
+                    "@@ELECTRUM_LIQUID_URL@@",
+                    &format!("tcp://{electrum_liquid}"),
+                )
+                .replace(
+                    "@@ESPLORA_BITCOIN_URL@@",
+                    &format!("http://{esplora_bitcoin}"),
+                )
+                .replace("@@ELEMENTS_RPC_URL@@", &elementsd.rpc_url())
+                .replace("@@ELEMENTS_RPC_USER@@", &elements_cookie.user)
+                .replace("@@ELEMENTS_RPC_PASSWORD@@", &elements_cookie.password);
+
+            let envs = vec![
+                (
+                    "ELEMENTS_RPC_USER".to_string(),
+                    elements_cookie.user.clone(),
+                ),
+                (
+                    "ELEMENTS_RPC_PASSWORD".to_string(),
+                    elements_cookie.password.clone(),
+                ),
+                ("ELEMENTS_WALLET_NAME".to_string(), "anyswap".to_string()),
+            ];
+
+            let config_dir = TempDir::new().unwrap();
+            let config_path = config_dir.path().join("config.toml");
+            std::fs::write(&config_path, config).unwrap();
+
+            let addr = TcpListener::bind(("127.0.0.1", 0))
+                .unwrap()
+                .local_addr()
+                .unwrap()
+                .to_string();
+            let conf = crate::lightningd::Conf {
+                view_stdout,
+                args: vec![
+                    format!("--bitcoin-cli={}", self.bitcoincli_exec),
+                    format!("--addr={addr}"),
+                    // disable plugin to avoid usage of the same port
+                    "--disable-plugin=cln-grpc".to_string(),
+                    // Speed up polling
+                    "--developer".to_string(),
+                    "--dev-bitcoind-poll=1".to_string(),
+                    // Anyswap params
+                    format!("--important-plugin={}", self.anyswap_exec),
+                    format!("--anyswap-config={}", config_path.display()),
+                    "--anyswap-reset-policy".to_string(),
+                ],
+                envs,
+            };
+            let node = LightningD::with_conf(&self.lightningd_exec, node, &conf);
+
+            anyswap_config_dir = Some(config_dir);
+            anyswap_url = Some(format!("http://127.0.0.1:{port}"));
+
+            // Open channel
+            let plain = lightningd
+                .as_ref()
+                .expect("with_anyswap() requires with_lightningd()");
+            let bitcoind_client = &bitcoind.as_ref().unwrap().client;
+            // Mature bitcoin coinbase so it has spendable funds to send
+            TestEnv::bitcoind_generate_(bitcoind_client, 100);
+            let channel_sats = 5_000_000;
+            TestEnv::fund_lightningd_(bitcoind_client, plain, channel_sats * 2);
+            TestEnv::open_channel_(bitcoind_client, plain, &node, &addr, channel_sats);
+
+            Some(node)
         } else {
             None
         };
@@ -369,14 +615,19 @@ impl TestEnvBuilder {
             elementsd,
             bitcoind,
             electrsd,
+            _bitcoin_electrsd: bitcoin_electrsd,
             _waterfallsd: waterfallsd,
             registryd,
             amp2d,
+            lightningd,
+            lightningd_anyswap,
             zmq_endpoint,
             auth,
             esplora_url,
             waterfalls_url,
             electrum_url,
+            _anyswap_config_dir: anyswap_config_dir,
+            anyswap_url,
         }
     }
 }
@@ -388,10 +639,13 @@ pub struct TestEnv {
     elementsd: BitcoinD,
     bitcoind: Option<BitcoinD>,
     electrsd: Option<ElectrsD>,
+    _bitcoin_electrsd: Option<ElectrsD>,
     /// Kept for its `Drop`, which stops the waterfalls server process.
     _waterfallsd: Option<WaterfallsD>,
     registryd: Option<RegistryD>,
     amp2d: Option<Amp2D>,
+    lightningd: Option<LightningD>,
+    lightningd_anyswap: Option<LightningD>,
     zmq_endpoint: Option<String>,
     auth: Option<AuthStack>,
     /// Public endpoint urls, resolved once in `TestEnvBuilder::build`: the gateway url
@@ -399,6 +653,8 @@ pub struct TestEnv {
     esplora_url: Option<String>,
     waterfalls_url: Option<String>,
     electrum_url: Option<String>,
+    _anyswap_config_dir: Option<TempDir>,
+    anyswap_url: Option<String>,
 }
 
 impl TestEnv {
@@ -441,6 +697,12 @@ impl TestEnv {
         self.amp2d.as_ref().unwrap().url().to_string()
     }
 
+    pub fn anyswap_url(&self) -> String {
+        self.anyswap_url
+            .clone()
+            .expect("anyswap is not enabled, call 'with_anyswap()'")
+    }
+
     /// The OAuth2 token endpoint of the auth gateway (requires `with_auth`)
     pub fn oidc_token_url(&self) -> String {
         self.auth.as_ref().unwrap().token_url()
@@ -465,6 +727,16 @@ impl TestEnv {
     /// Set the credit balance of the test user on the auth gateway (requires `with_auth`)
     pub fn set_credits(&self, credits: u64) {
         self.auth.as_ref().unwrap().set_credits(credits)
+    }
+
+    pub fn lightningd(&self) -> &LightningD {
+        self.lightningd.as_ref().unwrap()
+    }
+
+    /// The CLN node running the `anyswap` plugin (requires `with_anyswap()`); it has a
+    /// channel open with the plain node returned by [`TestEnv::lightningd`].
+    pub fn lightningd_anyswap(&self) -> &LightningD {
+        self.lightningd_anyswap.as_ref().unwrap()
     }
 
     // Functions for Elements RPC client
@@ -754,6 +1026,73 @@ impl TestEnv {
             .call::<Value>("gettxoutproof", &[arr.into()])
             .unwrap();
         r.as_str().unwrap().to_string()
+    }
+
+    // Functions for lightningd
+
+    fn fund_lightningd_(bitcoind: &Client, ln_node: &LightningD, amount_sat: u64) {
+        let raw: Value = ln_node
+            .client
+            .call("newaddr", serde_json::json!({}))
+            .unwrap();
+        let address = raw
+            .as_object()
+            .and_then(|m| m.values().next())
+            .and_then(|v| v.as_str())
+            .expect("newaddr response has no address")
+            .to_string();
+
+        let btc = sat2btc(amount_sat);
+        bitcoind
+            .call::<Value>("sendtoaddress", &[address.into(), btc.into()])
+            .unwrap();
+        Self::bitcoind_generate_(bitcoind, 6);
+
+        for i in 0.. {
+            let funds = ln_node.client.listfunds().unwrap();
+            if funds.outputs.iter().any(|o| o.status == "confirmed") {
+                break;
+            }
+            assert!(i < 60, "lightningd funding hasn't confirmed after 30s");
+            std::thread::sleep(Duration::from_millis(500));
+        }
+    }
+
+    fn open_channel_(
+        bitcoind: &Client,
+        opener: &LightningD,
+        acceptor: &LightningD,
+        acceptor_p2p_addr: &str,
+        amount_sat: u64,
+    ) {
+        let acceptor_id = acceptor.client.getinfo().unwrap().id;
+
+        opener
+            .client
+            .connect(&acceptor_id, Some(acceptor_p2p_addr))
+            .unwrap();
+        opener
+            .client
+            .fundchannel(&acceptor_id, AmountOrAll::Amount(amount_sat), None)
+            .unwrap();
+
+        Self::bitcoind_generate_(bitcoind, 6);
+
+        let channel_normal = |node: &LightningD| -> bool {
+            let resp: Result<Value, _> =
+                node.client.call("listpeerchannels", serde_json::json!({}));
+            resp.ok()
+                .and_then(|v| v["channels"][0]["state"].as_str().map(str::to_string))
+                .as_deref()
+                == Some("CHANNELD_NORMAL")
+        };
+        for i in 0.. {
+            if channel_normal(opener) && channel_normal(acceptor) {
+                break;
+            }
+            assert!(i < 120, "channel hasn't reached CHANNELD_NORMAL after 60s");
+            std::thread::sleep(Duration::from_millis(500));
+        }
     }
 }
 

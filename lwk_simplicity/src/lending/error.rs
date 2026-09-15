@@ -23,6 +23,14 @@ pub enum LendingError {
     #[error("Lending offer error: {0}")]
     LendingOfferError(#[from] lending_contracts::programs::lending::LendingOfferError),
 
+    #[error("Factory error: {0}")]
+    IssuanceFactoryError(
+        #[from] lending_contracts::programs::issuance_factory::IssuanceFactoryError,
+    ),
+
+    #[error("Invalid lending offer: {0}")]
+    InvalidLendingOffer(String),
+
     #[error("Blinding error: {0}")]
     BlindingError(#[from] lwk_wollet::elements::pset::PsetBlindError),
 

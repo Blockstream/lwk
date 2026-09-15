@@ -175,14 +175,17 @@ fn sign_mixed_jade_input(env: &TestEnv, signer: &AnySigner) {
     sw_wallet.fund_btc(env);
     let utxo = sw_wallet.wollet.utxos().unwrap()[0].clone();
     let external_utxo = sw_wallet.make_external(&utxo);
+    let jade_utxo = jade_wallet.wollet.utxos().unwrap()[0].outpoint;
 
     let node_address = env.elementsd_getnewaddress();
+    // Select the jade utxo explicitly, so that jade has an input to sign.
     let mut pset = jade_wallet
         .tx_builder()
         .add_lbtc_recipient(&node_address, 110_000)
         .unwrap()
         .add_external_utxos(vec![external_utxo])
         .unwrap()
+        .set_wallet_utxos(vec![jade_utxo])
         .finish()
         .unwrap();
 
@@ -434,7 +437,8 @@ fn large_pset_sign_psbt() {
     let mut pset = wallet
         .tx_builder()
         .drain_lbtc_wallet()
-        .drain_lbtc_to(node_address)
+        .drain_lbtc_to(&node_address)
+        .unwrap()
         .finish()
         .unwrap();
 
@@ -504,7 +508,27 @@ fn emul_elip153_flow() {
 #[cfg(feature = "serial")]
 mod serial {
     use super::*;
+    use elements::{bitcoin::sign_message::signed_msg_hash, secp256k1_zkp::Secp256k1};
     use lwk_jade::Jade;
+
+    #[test]
+    #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial; confirm message on device screen"]
+    fn jade_sign_message() {
+        let network = lwk_common::Network::default_regtest();
+        let ports = Jade::available_ports_with_jade();
+        let port_name = &ports.first().unwrap().port_name;
+        let jade = Jade::from_serial(network, port_name, None).unwrap();
+        let message = "Hello serial world!";
+        let path: DerivationPath = "m/0".parse().unwrap();
+
+        let signature = jade.sign_message(message, &path).unwrap();
+        let xpub = jade.derive_xpub(&path).unwrap();
+        let recovered = signature
+            .recover_pubkey(&Secp256k1::verification_only(), signed_msg_hash(message))
+            .unwrap();
+
+        assert_eq!(recovered.inner, xpub.public_key);
+    }
 
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]

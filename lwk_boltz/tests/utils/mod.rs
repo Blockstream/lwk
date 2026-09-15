@@ -98,13 +98,21 @@ async fn json_rpc_request(
         "params": params
     });
 
-    let res = client
+    #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+    let request = client.post(url).header(
+        "Authorization",
+        format!("Basic {}", STANDARD.encode(cookie)),
+    );
+    #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+    let request = client
         .post(PROXY_URL)
         .header(
             "Authorization",
             format!("Basic {}", STANDARD.encode(cookie)),
         )
-        .header("X-Proxy-URL", url)
+        .header("X-Proxy-URL", url);
+
+    let res = request
         .json(&req_body)
         .send()
         .await?
@@ -338,6 +346,13 @@ pub async fn mine_blocks(n_blocks: u64) -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+pub async fn get_block_count(chain: Chain) -> Result<u64, Box<dyn Error>> {
+    json_rpc_request(chain, "getblockcount", json!([]))
+        .await?
+        .as_u64()
+        .ok_or_else(|| "Invalid block count response".into())
 }
 
 /// Get the total balance at a specific address by querying listunspent

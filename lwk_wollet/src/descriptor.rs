@@ -2,16 +2,20 @@ use std::{fmt::Display, str::FromStr};
 
 use aes_gcm_siv::Aes256GcmSiv;
 use elements::bitcoin::secp256k1::SecretKey;
-use elements::bitcoin::{bip32::ChildNumber, WitnessVersion};
+use elements::bitcoin::{
+    bip32::{ChildNumber, Fingerprint, Xpub},
+    WitnessVersion,
+};
 use elements::hashes::{sha256t_hash_newtype, Hash};
 use elements::{bitcoin, Address, AddressParams, Script};
 use elements_miniscript::DefiniteDescriptorKey;
 use elements_miniscript::{
     confidential::Key,
     descriptor::{DescriptorSecretKey, Wildcard},
+    slip77::MasterBlindingKey,
     ConfidentialDescriptor, Descriptor, DescriptorPublicKey, ForEachKey,
 };
-use lwk_common::cipher_from_key_bytes;
+use lwk_common::{cipher_from_key_bytes, ss_path, Network, SSAccountType, Signer};
 use serde::{Deserialize, Serialize};
 
 use crate::{Error, FedPeg, PeginAddress, PeginAddressType, EC};
@@ -350,6 +354,52 @@ impl TryFrom<&WolletDescriptor> for Chain {
 }
 
 impl WolletDescriptor {
+    /// Build the "standard" single sig descriptor for the given account, see
+    /// [`lwk_common::Signer::ss_desc`].
+    ///
+    /// **Experimental**: this API might change without notice.
+    pub fn ss_desc<S: Signer>(
+        account_type: SSAccountType,
+        account_num: u32,
+        signer: &S,
+    ) -> Result<Self, Error>
+    where
+        S::Error: From<bitcoin::bip32::Error>,
+    {
+        let desc = signer
+            .ss_desc(account_type, account_num)
+            .map_err(|e| Error::Generic(format!("{e:?}")))?;
+        desc.parse()
+    }
+
+    /// Same as `WolletDescriptor::ss_desc()` but with data obtain from a signer managed externally
+    ///
+    /// Caller must ensure that:
+    /// * `master_blinding_key` is derived from the signer
+    /// * `fingerprint` is the signer master fingerprint
+    /// * `xpub` is the signer xpub derived at `ss_path(network, account_type, account_num)`
+    ///
+    /// **Warning**: Passing incorrect signer data can lead to creating an incorrect
+    /// descriptor, which could lead to loss of funds.
+    ///
+    /// **Experimental**: this API might change without notice.
+    pub fn ss_desc_from_external_signer(
+        network: &Network,
+        account_type: SSAccountType,
+        account_num: u32,
+        master_blinding_key: MasterBlindingKey,
+        fingerprint: Fingerprint,
+        xpub: Xpub,
+    ) -> Result<Self, Error> {
+        let (prefix, suffix) = account_type.desc_affixes();
+        let path = ss_path(network, account_type, account_num)
+            .map_err(|e| Error::Generic(e.to_string()))?;
+        let desc = format!(
+            "ct(slip77({master_blinding_key}),{prefix}([{fingerprint}/{path}]{xpub}/<0;1>/*){suffix})"
+        );
+        desc.parse()
+    }
+
     /// Return a reference to the underlying descriptor.
     pub fn descriptor(&self) -> Result<&Descriptor<DescriptorPublicKey>, Error> {
         match &self.inner {
@@ -751,16 +801,24 @@ impl WolletDescriptor {
     }
 
     /// Derives scripts for all chains in the descriptor up to a gap limit.
+    ///
+    /// Note: if the descriptor does not have a wildcard, gap limit is ignored.
     pub fn derive_scripts_to_gap_limit(&self, gap_limit: u32) -> Result<Vec<Script>, Error> {
         let mut scripts = Vec::with_capacity(gap_limit as usize * 2);
 
         for descriptor in self.as_single_descriptors()? {
-            let chain = (&descriptor)
-                .try_into()
-                .map_err(|_| Error::Generic("Descriptor to Chain conversion failed".to_string()))?;
-            for index in 0..gap_limit {
-                let script = descriptor.script_pubkey(chain, index)?;
-                scripts.push(script);
+            let chain = (&descriptor).try_into().unwrap_or(Chain::External);
+
+            if let Some(spk_count) = descriptor.spk_count() {
+                for index in 0..spk_count as u32 {
+                    scripts.push(descriptor.script_pubkey(chain, index)?);
+                }
+            } else if descriptor.has_wildcard() {
+                for index in 0..gap_limit {
+                    scripts.push(descriptor.script_pubkey(chain, index)?);
+                }
+            } else {
+                scripts.push(descriptor.script_pubkey(chain, 0)?);
             }
         }
 
@@ -949,7 +1007,7 @@ mod test {
             lwk_common::Network::default_regtest(),
             lwk_common::Network::TestnetLiquid,
         ] {
-            let signer = lwk_signer::SwSigner::new(mnemonic, network.is_mainnet()).unwrap();
+            let signer = lwk_signer::SwSigner::new_with_network(mnemonic, network).unwrap();
 
             // Generate the descriptor using singlesig_desc
             let desc_str = lwk_common::singlesig_desc(
@@ -1337,8 +1395,8 @@ fn test_elip_dwid() {
     use lwk_signer::SwSigner;
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let bip = Bip::Bip84;
-    let signer = SwSigner::new(mnemonic, true).unwrap();
-    let signer_test = SwSigner::new(mnemonic, false).unwrap();
+    let signer = SwSigner::new_with_network(mnemonic, Network::Liquid).unwrap();
+    let signer_test = SwSigner::new_with_network(mnemonic, Network::TestnetLiquid).unwrap();
     let ko_xpub = signer.keyorigin_xpub(bip, true).unwrap();
     let ko_xpub_test = signer_test.keyorigin_xpub(bip, false).unwrap();
     let view = "3e129856c574c66d94023ac98b7f69aca9774d10aee4dc087f0c52a498687189";
@@ -1406,4 +1464,36 @@ fn test_elip_dwid() {
         println!("** CT Descriptor: <code>{descriptor}</code>");
         println!("** DWID: <code>{dwid}</code>\n");
     }
+}
+
+#[test]
+fn wd_derive_scripts() {
+    let xpub = "tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA";
+    let key = "0000000000000000000000000000000000000000000000000000000000000001";
+    let spk_a = "0014000000000000000000000000000000000000000a";
+    let spk_b = "0014000000000000000000000000000000000000000b";
+
+    let wd = format!("ct(slip77({key}),elwpkh({xpub}/<0;1>/*))");
+    let wd: WolletDescriptor = wd.parse().unwrap();
+    assert_eq!(wd.derive_scripts_to_gap_limit(20).unwrap().len(), 40);
+
+    // Multipath without a wildcard: one fixed address per chain.
+    let wd = format!("ct(slip77({key}),elwpkh({xpub}/<0;1>))");
+    let wd: WolletDescriptor = wd.parse().unwrap();
+    assert_eq!(wd.derive_scripts_to_gap_limit(20).unwrap().len(), 2);
+
+    // Single chain with a wildcard: gap_limit scripts.
+    let wd = format!("ct(slip77({key}),elwpkh({xpub}/*))");
+    let wd: WolletDescriptor = wd.parse().unwrap();
+    assert_eq!(wd.derive_scripts_to_gap_limit(20).unwrap().len(), 20);
+
+    // Single fixed address descriptor: just the one script.
+    let wd = format!("ct(slip77({key}),elwpkh({xpub}))");
+    let wd: WolletDescriptor = wd.parse().unwrap();
+    assert_eq!(wd.derive_scripts_to_gap_limit(20).unwrap().len(), 1);
+
+    // Raw script pubkeys: all of them, regardless of gap_limit.
+    let wd = format!("{key}:{spk_a},{key}:{spk_b}");
+    let wd: WolletDescriptor = wd.parse().unwrap();
+    assert_eq!(wd.derive_scripts_to_gap_limit(20).unwrap().len(), 2);
 }

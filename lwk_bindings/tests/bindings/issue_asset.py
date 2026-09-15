@@ -131,7 +131,8 @@ asset_receiver0 = wollet.address(4).address()
 token_receiver0 = wollet.address(5).address()
 request0 = IssuanceRequest(30, 3)
 request0.add_asset_output(30, asset_receiver0)
-request0.add_token_output(3, token_receiver0)
+request0.add_token_output(1, token_receiver0)
+request0.add_token_output(2, token_receiver0)
 builder.add_issuance(request0)
 
 asset_receiver1 = wollet.address(6).address()
@@ -246,6 +247,26 @@ wollet.wait_for_tx(txid, client)
 
 assert(wollet.balance()[multi_asset0] == 30 + reissue_multi_asset0)
 assert(wollet.balance()[multi_asset1] == 40 + reissue_multi_asset1)
+
+# Spend both utxos holding the first token, and pin the reissuance to the second one. Without a
+# pin the lowest indexed input holding the token is used, so this fails if the pin is ignored.
+token_outpoints = [u.outpoint() for u in wollet.utxos() if u.unblinded().asset() == multi_token0]
+assert len(token_outpoints) == 2
+lbtc_outpoint = next(u.outpoint() for u in wollet.utxos() if u.unblinded().asset() == policy_asset)
+
+pinned = token_outpoints[1]
+pinned_request = ReissuanceRequest(multi_asset0, 9)
+pinned_request.pin_input(pinned)
+
+builder = network.tx_builder()
+builder.add_reissuance(pinned_request)
+builder.set_wallet_utxos([token_outpoints[0], token_outpoints[1], lbtc_outpoint])
+unsigned_pset = builder.finish(wollet)
+
+pinned_reissuance_inputs = [e for e in unsigned_pset.inputs() if e.issuance()]
+assert len(pinned_reissuance_inputs) == 1
+assert str(pinned_reissuance_inputs[0].previous_txid()) == str(pinned.txid())
+assert pinned_reissuance_inputs[0].previous_vout() == pinned.vout()
 
 # Split a single issuance across multiple outputs
 request = IssuanceRequest(2, 1)

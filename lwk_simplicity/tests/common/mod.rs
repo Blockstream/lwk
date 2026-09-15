@@ -12,7 +12,7 @@ use lwk_wollet::*;
 
 pub fn generate_signer() -> SwSigner {
     let mnemonic = generate_mnemonic();
-    SwSigner::new(&mnemonic, false).unwrap()
+    SwSigner::new_with_network(&mnemonic, Network::TestnetLiquid).unwrap()
 }
 
 pub fn electrum_client(env: &TestEnv) -> ElectrumClient {

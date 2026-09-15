@@ -26,6 +26,7 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/bip85.py",
     "tests/bindings/dwid.py",
     "tests/bindings/drain_lbtc.py",
+    "tests/bindings/txbuilder.py",
     "tests/bindings/payment_instructions.py",
     "tests/bindings/fallback_client.py",
     "tests/bindings/serde_roundtrip.py",
@@ -33,6 +34,8 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/authenticated_electrum_client.py",
     "tests/bindings/subscribe.py",
     "tests/bindings/xpub.py",
+    "tests/bindings/bip44discovery.py",
+    "tests/bindings/network.py",
 );
 
 #[cfg(all(feature = "foreign_bindings", feature = "simplicity"))]

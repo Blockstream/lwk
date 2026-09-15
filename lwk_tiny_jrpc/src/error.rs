@@ -33,6 +33,9 @@ pub enum InnerError {
     #[error("Serde JSON Error: {0}")]
     Serde(#[from] serde_json::Error),
 
+    #[error("The JSON sent is not a valid Request object")]
+    InvalidRequest,
+
     #[error("Request is missing Content-Type Header")]
     NoContentType,
 
@@ -44,6 +47,12 @@ pub enum InnerError {
 
     #[error("'jsonrpc' version should be '2.0'")]
     InvalidVersion,
+
+    #[error("Missing or invalid Authorization header")]
+    Unauthorized,
+
+    #[error("Request body exceeds the maximum allowed size")]
+    PayloadTooLarge,
 }
 
 impl From<String> for Error {
@@ -79,10 +88,13 @@ impl AsRpcError for InnerError {
         let (code, data) = match self {
             InnerError::Io(_) => (IO_ERROR, None),
             InnerError::Serde(_) => (PARSE_ERROR, None),
+            InnerError::InvalidRequest => (INVALID_REQUEST, None),
             InnerError::NoContentType => (NO_CONTENT_TYPE, None),
             InnerError::WrongContentType => (WRONG_CONTENT_TYPE, None),
             InnerError::ReservedMethodPrefix => (METHOD_RESERVED, None),
             InnerError::InvalidVersion => (INVALID_VERSION, None),
+            InnerError::Unauthorized => (UNAUTHORIZED, None),
+            InnerError::PayloadTooLarge => (PAYLOAD_TOO_LARGE, None),
         };
 
         RpcError {
@@ -123,16 +135,16 @@ impl AsRpcError for Error {
 const PARSE_ERROR: i64 = -32_700;
 
 // -32600 	Invalid Request 	The JSON sent is not a valid Request object.
-// const INVALID_REQUEST: i64 = -32_600; // TODO if failing to parse the request object, try to parse as Value and if succesfull return this instead of PARSE_ERROR
+const INVALID_REQUEST: i64 = -32_600;
 
 // -32601 	Method not found 	The method does not exist / is not available.
 pub(crate) const METHOD_NOT_FOUND: i64 = -32_601;
 
 // -32602 	Invalid params 	Invalid method parameter(s).
-// const INVALID_PARAMS: i64 = -32_602;
+pub(crate) const INVALID_PARAMS: i64 = -32_602;
 
 // -32603 	Internal error 	Internal JSON-RPC error.
-// const INTERNAL_ERROR: i64 = -32_603;
+pub(crate) const INTERNAL_ERROR: i64 = -32_603;
 
 // -32000 to -32099 	Server error 	Reserved for implementation-defined server-errors.
 const IO_ERROR: i64 = -32_000;
@@ -140,8 +152,9 @@ const NO_CONTENT_TYPE: i64 = -32_001;
 const WRONG_CONTENT_TYPE: i64 = -32_002;
 const METHOD_RESERVED: i64 = -32_003;
 const INVALID_VERSION: i64 = -32_004;
+const PAYLOAD_TOO_LARGE: i64 = -32_006;
 
-// GENERIC = -32_098, // TODO remove
+const UNAUTHORIZED: i64 = -32_098;
 const STOP_ERROR: i64 = -32_099;
 
 #[derive(Debug)]
@@ -169,5 +182,18 @@ impl From<&ImplementationDefinedCode> for i64 {
 impl Display for ImplementationDefinedCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ImplementationDefinedCode;
+
+    #[test]
+    fn implementation_defined_code_range() {
+        assert!(ImplementationDefinedCode::new(-32_004).is_some());
+        assert!(ImplementationDefinedCode::new(-32_099).is_some());
+        assert!(ImplementationDefinedCode::new(-32_003).is_none());
+        assert!(ImplementationDefinedCode::new(-32_100).is_none());
     }
 }

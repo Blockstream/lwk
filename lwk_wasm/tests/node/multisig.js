@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const lwk = require('lwk_node');
 const { fundAddress, generateAddress, waitForTx, WATERFALLS_URL } = require("./scripts/utils.js")
 
@@ -97,20 +98,20 @@ async function runMultisigTest() {
 	// Then Bob uses the wollet to analyze the PSET
 	const details = wollet_b.psetDetails(pset);
 	// PSET has a reasonable fee
-	console.assert(details.balance().feesIn(lbtc) < 100);
+	assert(details.balance().feesIn(lbtc) < 100);
 	// PSET has a signature from Carol
-	console.assert(details.fingerprintsHas().length === 1);
-	console.assert(details.fingerprintsHas().includes(signer_c.fingerprint()));
+	assert.equal(details.fingerprintsHas().length, 1);
+	assert(details.fingerprintsHas().includes(signer_c.fingerprint()));
 	// PSET needs a signature from either Bob or Carol
-	console.assert(details.fingerprintsMissing().length === 2);
-	console.assert(details.fingerprintsMissing().includes(signer_a.fingerprint()));
-	console.assert(details.fingerprintsMissing().includes(signer_b.fingerprint()));
+	assert.equal(details.fingerprintsMissing().length, 2);
+	assert(details.fingerprintsMissing().includes(signer_a.fingerprint()));
+	assert(details.fingerprintsMissing().includes(signer_b.fingerprint()));
 	// PSET has a single recipient, with data matching what was specified above
-	console.assert(details.balance().recipients().length === 1);
+	assert.equal(details.balance().recipients().length, 1);
 	const recipient = details.balance().recipients()[0];
-	console.assert(recipient.address().toString() === address.toString());
-	console.assert(recipient.asset().toString() === asset.toString());
-	console.assert(recipient.value() === sats);
+	assert.equal(recipient.address().toString(), address.toString());
+	assert.equal(recipient.asset().toString(), asset.toString());
+	assert.equal(recipient.value(), sats);
 
 	// Bob is satisified with the PSET and signs it
 	pset = signer_b.sign(pset)
@@ -118,7 +119,7 @@ async function runMultisigTest() {
 	// Bob sends the PSET back to Carol
 	// Carol checks that the PSET has enough signatures
 	const details_b = wollet_b.psetDetails(pset);
-	console.assert(details_b.fingerprintsHas().length === 2);
+	assert.equal(details_b.fingerprintsHas().length, 2);
 
 	// Carol finalizes the PSET and broadcast the transaction
 	pset = wollet_c.finalize(pset)

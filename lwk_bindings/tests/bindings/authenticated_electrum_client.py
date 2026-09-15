@@ -59,11 +59,11 @@ def live_check():
         return
 
     print("authenticating ...")
-    # ANCHOR: authenticated_electrum_client
-    # Mainnet Liquid enterprise Electrum RPC endpoint.
-    url = "ssl://elements-mainnet.enterprise.blockstream.info:50002"
-    login_url = "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token"
+    # Endpoint and OAuth url (testnet by default; override with ELECTRUM_URL / ELECTRUM_LOGIN_URL).
+    url = os.environ.get("ELECTRUM_URL", "ssl://elements-testnet.enterprise.blockstream.info:50002")
+    login_url = os.environ.get("ELECTRUM_LOGIN_URL", "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token")
 
+    # ANCHOR: authenticated_electrum_client
     builder = ElectrumClientBuilder(
         url=url,
         token_provider=TokenProvider.BLOCKSTREAM(

@@ -15,6 +15,7 @@ mod prune;
 #[cfg(feature = "registry")]
 mod registry;
 mod spks;
+mod spv;
 mod stores;
 mod test_jade;
 mod test_ledger;

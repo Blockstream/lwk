@@ -32,6 +32,7 @@ mod signer;
 #[cfg(all(feature = "sqlite", not(target_arch = "wasm32")))]
 pub mod sqlite;
 mod store;
+mod tx_inclusion;
 
 pub use crate::address::{Address, AddressParseError};
 pub use crate::balance::{Balance, SignedBalance};
@@ -65,6 +66,7 @@ pub use crate::store::{
     ArcDynStoreError, BoxError, DynStore, EncryptedStore, EncryptedStoreError, FakeStore,
     FileStore, MemoryStore, Store,
 };
+pub use crate::tx_inclusion::{verify_tx_inclusion, TxInclusionProof};
 pub use fee::*;
 pub use output::OutputDetails;
 

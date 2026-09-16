@@ -67,7 +67,7 @@ lwk_containers = { version = "0.19.0" }
 tokio = { version = "1.36.0", features = ["time"] }
 
 tempfile.workspace = true
-base64 = "0.21.4"
+base64 = { workspace = true }
 serde_json.workspace = true
 
 [package.metadata.docs.rs]

@@ -2911,7 +2911,7 @@ name = "lwk_common"
 version = "0.19.0"
 dependencies = [
  "aes-gcm-siv",
- "base64 0.21.7",
+ "base64 0.22.1",
  "elements 0.25.3",
  "elements-miniscript",
  "getrandom 0.2.16",
@@ -2942,7 +2942,7 @@ version = "0.10.0"
 name = "lwk_jade"
 version = "0.19.0"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.1",
  "elements 0.25.3",
  "elements-miniscript",
  "getrandom 0.2.16",
@@ -3029,7 +3029,7 @@ dependencies = [
 name = "lwk_signer"
 version = "0.19.0"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.1",
  "bip39",
  "elements-miniscript",
  "lwk_common",
@@ -3129,7 +3129,7 @@ dependencies = [
  "aes-gcm",
  "aes-gcm-siv",
  "age",
- "base64 0.21.7",
+ "base64 0.22.1",
  "bip39",
  "bitcoincore-rpc",
  "cbc",

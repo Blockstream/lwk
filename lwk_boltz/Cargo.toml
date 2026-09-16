@@ -42,5 +42,5 @@ rustls = { version = "0.23", default-features = false, features = ["ring", "std"
 
 [dev-dependencies]
 reqwest = { version = "0.12", default-features = false, features = ["json"] }
-base64 = "0.22"
+base64 = { workspace = true }
 lwk_signer = { version = "0.19.0" }

@@ -8,7 +8,6 @@ pub use crate::currency_code::CurrencyCode;
 mod codes;
 mod currency_code;
 mod sources;
-mod util;
 
 /// A fetcher for exchange rates
 pub struct PricesFetcher {

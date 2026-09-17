@@ -23,9 +23,7 @@ reqwest = { version = "0.12", default-features = false, features = [
     "json",
     "rustls-tls",
 ] }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-js-sys = { version = "0.3.68" }
+web-time = "1.1.0"
 
 [dev-dependencies]
 tokio = { version = "1.36.0", default-features = false, features = [

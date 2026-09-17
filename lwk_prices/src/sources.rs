@@ -1,5 +1,4 @@
 use crate::currency_code::CurrencyCode;
-use crate::util::async_now;
 use crate::{Error, ExchangeRate};
 use serde::Deserialize;
 use serde_json::Value;
@@ -35,7 +34,10 @@ impl Source {
         client: &reqwest::Client,
         currency: &CurrencyCode,
     ) -> Result<ExchangeRate, Error> {
-        let timestamp = async_now().await;
+        let timestamp = web_time::SystemTime::now()
+            .duration_since(web_time::SystemTime::UNIX_EPOCH)
+            .expect("system time is before the Unix epoch")
+            .as_millis() as u64;
 
         match self {
             Source::Coinbase => {

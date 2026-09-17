@@ -11,4 +11,4 @@ pub use esplora::{EsploraClient, LastUsedIndexResponse, WaterfallsClient};
 #[cfg(all(feature = "esplora", not(target_arch = "wasm32")))]
 pub use esplora::{WaterfallsReconnectingSubscription, WaterfallsSubscription};
 
-pub use crate::async_util::{async_now, async_sleep};
+pub use crate::async_util::async_sleep;

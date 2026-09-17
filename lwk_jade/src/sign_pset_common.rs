@@ -6,7 +6,7 @@ use elements::{
     hashes::Hash,
     pset::{Input, PartiallySignedTransaction},
     secp256k1_zkp::{Message, XOnlyPublicKey},
-    EcdsaSighashType, SchnorrSig, SchnorrSighashType,
+    EcdsaSighashType, SchnorrSig, SchnorrSighashType, TxInWitness, TxOutWitness,
 };
 use elements_miniscript::psbt::SighashError;
 use lwk_common::{get_genesis_hash, is_taproot_input, Network, SighashCtx};
@@ -303,6 +303,39 @@ fn prepare_input(
     };
 
     Ok((sign_info, params))
+}
+
+/// Prepare PSET for signature verifaction after the `sign_psbt`.
+///
+/// We are doing this because `sign_psbt` not only appends signatures, but also makes these changes:
+/// - if the `genesis_hash` as in the ELIP-101 specification is not present, it sets it in the PSET, and
+///   returns a version with the `genesis_hash` included;
+///   (source: https://github.com/Blockstream/Jade/blob/9c097297f58339c15fb9b8df4c7fe105efefb902/main/process/sign_psbt.c#L735-L747)
+/// - witnesses for the `txout` of `witness_utxo` and the `txin`/`txout` of `non_witness_utxo`
+///   are being dropped during serialization, so they are cleared as well.
+///   (source: https://github.com/ElementsProject/libwally-core/blob/3bf543cd06a67fdd877688a6304808f270351aee/src/psbt.c#L3107-L3114)
+pub(crate) fn prepare_pset_sign_psbt(
+    pset: &PartiallySignedTransaction,
+    network: &Network,
+) -> PartiallySignedTransaction {
+    let mut pset = pset.clone();
+
+    lwk_common::set_genesis_hash(&mut pset, network);
+
+    for input in pset.inputs_mut() {
+        if let Some(txout) = input.witness_utxo.as_mut() {
+            txout.witness = TxOutWitness::empty();
+        }
+        if let Some(tx) = input.non_witness_utxo.as_mut() {
+            for txin in tx.input.iter_mut() {
+                txin.witness = TxInWitness::empty();
+            }
+            for txout in tx.output.iter_mut() {
+                txout.witness = TxOutWitness::empty();
+            }
+        }
+    }
+    pset
 }
 
 pub(crate) fn validate_signature(

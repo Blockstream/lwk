@@ -65,6 +65,9 @@ pub enum Error {
     #[error(transparent)]
     PsetSighash(#[from] lwk_common::SighashError),
 
+    #[error(transparent)]
+    PsetValidation(#[from] lwk_common::PsetValidationError),
+
     #[error("Invalid taproot output key in input {0}")]
     InvalidTaprootOutputKey(usize),
 

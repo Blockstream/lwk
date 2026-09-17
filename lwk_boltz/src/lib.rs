@@ -55,7 +55,6 @@ use boltz_client::util::sleep;
 use boltz_client::Keypair;
 use lightning::bitcoin::XKeyIdentifier;
 use lwk_common::Network;
-use lwk_wollet::asyncr::async_now;
 use lwk_wollet::asyncr::async_sleep;
 use lwk_wollet::bitcoin::bip32::ChildNumber;
 use lwk_wollet::bitcoin::bip32::DerivationPath;
@@ -66,10 +65,11 @@ use lwk_wollet::ElectrumUrl;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast::error::{RecvError, TryRecvError};
 use tokio::sync::Mutex;
+use web_time::Instant;
 
 pub use crate::chain_data::{to_chain_data, ChainSwapData, ChainSwapDataSerializable};
 pub use crate::chain_swaps::LockupResponse;
-use crate::clients::{AnyClient, BitcoinClientExt, LiquidClientExt};
+use crate::clients::AnyClient;
 pub use crate::error::Error;
 pub use crate::invoice_data::to_invoice_data;
 pub use crate::invoice_data::InvoiceData;
@@ -866,7 +866,7 @@ pub async fn next_status(
     swap_id: &str,
     polling: bool,
 ) -> Result<SwapStatus, Error> {
-    let deadline = async_now().await + timeout.as_millis() as u64;
+    let start = Instant::now();
 
     loop {
         let update = if polling {
@@ -885,8 +885,8 @@ pub async fn next_status(
             }
         } else {
             // since we can receive updates for all swaps, we need to check the deadline
-            let remaining = deadline.saturating_sub(async_now().await);
-            if remaining == 0 {
+            let remaining = timeout.saturating_sub(start.elapsed());
+            if remaining.is_zero() {
                 log::warn!("Timeout while waiting state for swap id {swap_id}");
                 return Err(Error::Timeout(swap_id.to_string()));
             }
@@ -901,7 +901,7 @@ pub async fn next_status(
                     }
                     Err(e) => return Err(e.into()),
                 },
-                sleep_result = async_sleep(remaining) => {
+                sleep_result = async_sleep(remaining.as_millis() as u64) => {
                     sleep_result?;
                     log::warn!("Timeout while waiting state for swap id {swap_id}");
                     return Err(Error::Timeout(swap_id.to_string()));
@@ -976,7 +976,7 @@ pub(crate) async fn wait_for_chain_tx(
     txid: &str,
     timeout: Duration,
 ) -> Result<BtcLikeTransaction, Error> {
-    let deadline = async_now().await + timeout.as_millis() as u64;
+    let interval = Duration::from_secs(1);
     match chain {
         Chain::Bitcoin(_) => {
             let txid = txid
@@ -986,7 +986,7 @@ pub(crate) async fn wait_for_chain_tx(
                 .bitcoin_client()
                 .ok_or_else(|| Error::Generic("Expected Bitcoin client".to_string()))?;
             Ok(BtcLikeTransaction::Bitcoin(
-                client.wait_for_tx(txid, deadline).await?,
+                clients::wait_for_tx(txid, timeout, interval, || client.get_tx(txid)).await?,
             ))
         }
         Chain::Liquid(_) => {
@@ -997,7 +997,7 @@ pub(crate) async fn wait_for_chain_tx(
                 .liquid_client()
                 .ok_or(Error::MissingLiquidClient)?;
             Ok(BtcLikeTransaction::Liquid(
-                client.wait_for_tx(txid, deadline).await?,
+                clients::wait_for_tx(txid, timeout, interval, || client.get_tx(txid)).await?,
             ))
         }
     }

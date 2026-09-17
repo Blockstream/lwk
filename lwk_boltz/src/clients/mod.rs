@@ -15,15 +15,16 @@ pub use waterfalls::WaterfallsClient;
 
 use async_trait::async_trait;
 use boltz_client::{
-    bitcoin, elements,
+    elements,
     error::Error,
-    network::{BitcoinClient, LiquidChain, LiquidClient},
+    network::{LiquidChain, LiquidClient},
 };
-use lwk_wollet::asyncr::{async_now, async_sleep};
+use lwk_wollet::asyncr::async_sleep;
+use web_time::Instant;
 
-async fn wait_for_tx<Tx, F, Fut, Txid>(
+pub(crate) async fn wait_for_tx<Tx, F, Fut, Txid>(
     txid: Txid,
-    deadline: u64,
+    timeout: Duration,
     interval: Duration,
     mut get_tx: F,
 ) -> Result<Tx, Error>
@@ -32,7 +33,7 @@ where
     Fut: Future<Output = Result<Tx, Error>>,
     Txid: Display + Copy,
 {
-    let interval = interval.as_millis() as u64;
+    let start = Instant::now();
 
     loop {
         let err = match get_tx().await {
@@ -40,55 +41,18 @@ where
             Err(err) => err,
         };
 
-        let now = async_now().await;
-        if now >= deadline {
+        let remaining = timeout.saturating_sub(start.elapsed());
+        if remaining.is_zero() {
             return Err(Error::Protocol(format!(
                 "timed out waiting for transaction {txid}: {err}"
             )));
         }
 
-        let sleep_for = (deadline - now).min(interval);
-        async_sleep(sleep_for)
+        async_sleep(remaining.min(interval).as_millis() as u64)
             .await
             .map_err(|err| Error::Protocol(err.to_string()))?;
     }
 }
-
-/// Extension methods for Liquid clients.
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait LiquidClientExt: LiquidClient {
-    /// Poll `get_tx` once per second until the transaction is available or the deadline is reached.
-    ///
-    /// The deadline is a UNIX timestamp in milliseconds.
-    async fn wait_for_tx(
-        &self,
-        txid: elements::Txid,
-        deadline: u64,
-    ) -> Result<elements::Transaction, Error> {
-        wait_for_tx(txid, deadline, Duration::from_secs(1), || self.get_tx(txid)).await
-    }
-}
-
-impl<T: LiquidClient + ?Sized> LiquidClientExt for T {}
-
-/// Extension methods for Bitcoin clients.
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait BitcoinClientExt: BitcoinClient {
-    /// Poll `get_tx` once per second until the transaction is available or the deadline is reached.
-    ///
-    /// The deadline is a UNIX timestamp in milliseconds.
-    async fn wait_for_tx(
-        &self,
-        txid: bitcoin::Txid,
-        deadline: u64,
-    ) -> Result<bitcoin::Transaction, Error> {
-        wait_for_tx(txid, deadline, Duration::from_secs(1), || self.get_tx(txid)).await
-    }
-}
-
-impl<T: BitcoinClient + ?Sized> BitcoinClientExt for T {}
 
 pub enum AnyClient {
     #[cfg(feature = "blocking")]
@@ -153,7 +117,8 @@ impl LiquidClient for AnyClient {
 mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use boltz_client::network::{BitcoinChain, LiquidChain};
+    use boltz_client::bitcoin;
+    use boltz_client::network::{BitcoinChain, BitcoinClient, LiquidChain};
 
     use super::*;
 
@@ -256,11 +221,12 @@ mod tests {
         let txid = "0000000000000000000000000000000000000000000000000000000000000000"
             .parse()
             .unwrap();
-        let deadline = async_now().await + 50;
-
-        let result = wait_for_tx(txid, deadline, Duration::from_millis(1), || {
-            client.get_tx(txid)
-        })
+        let result = wait_for_tx(
+            txid,
+            Duration::from_millis(50),
+            Duration::from_millis(1),
+            || client.get_tx(txid),
+        )
         .await;
 
         assert!(result.is_ok());
@@ -276,11 +242,12 @@ mod tests {
         let txid = "0000000000000000000000000000000000000000000000000000000000000000"
             .parse()
             .unwrap();
-        let deadline = async_now().await + 5;
-
-        let result = wait_for_tx(txid, deadline, Duration::from_millis(1), || {
-            client.get_tx(txid)
-        })
+        let result = wait_for_tx(
+            txid,
+            Duration::from_millis(5),
+            Duration::from_millis(1),
+            || client.get_tx(txid),
+        )
         .await;
 
         assert!(matches!(result, Err(Error::Protocol(_))));

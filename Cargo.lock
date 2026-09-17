@@ -2873,6 +2873,7 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "wasm-bindgen-futures",
+ "web-time",
 ]
 
 [[package]]

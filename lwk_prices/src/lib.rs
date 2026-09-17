@@ -1,12 +1,14 @@
-//! # Prices
-//!
-//! This module provides a fetcher for exchange rates of fiat currencies against BTC.
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
+#![warn(missing_docs)]
 
-pub use crate::prices::currency_code::CurrencyCode;
+//! Exchange rates of fiat currencies against BTC, fetched from multiple sources.
+
+pub use crate::currency_code::CurrencyCode;
 
 mod codes;
 mod currency_code;
 mod sources;
+mod util;
 
 /// A fetcher for exchange rates
 pub struct PricesFetcher {
@@ -78,7 +80,7 @@ pub struct ExchangeRate {
 mod currency_code_serde {
     use serde::{Deserialize, Deserializer, Serializer};
 
-    use crate::prices::currency_code::{self, CurrencyCode};
+    use crate::currency_code::{self, CurrencyCode};
 
     pub fn serialize<S>(currency: &CurrencyCode, serializer: S) -> Result<S::Ok, S::Error>
     where

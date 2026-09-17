@@ -20,6 +20,7 @@ members = [
     "lwk_simplicity",
     "lwk_anyswap",
     "lwk_registry",
+    "lwk_prices",
     "amp2_mock",
 ]
 resolver = "2"
@@ -40,6 +41,7 @@ lwk_payment_instructions = { path = "lwk_payment_instructions" }
 lwk_simplicity = { path = "lwk_simplicity" }
 lwk_anyswap = { path = "lwk_anyswap" }
 lwk_registry = { path = "lwk_registry" }
+lwk_prices = { path = "lwk_prices" }
 
 [profile.release-smaller]
 inherits = "release"

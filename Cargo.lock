@@ -2999,6 +2999,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "lwk_prices"
+version = "0.19.0"
+dependencies = [
+ "futures",
+ "js-sys",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+]
+
+[[package]]
 name = "lwk_registry"
 version = "0.19.0"
 dependencies = [
@@ -3148,6 +3161,7 @@ dependencies = [
  "lwk_containers",
  "lwk_jade",
  "lwk_ledger",
+ "lwk_prices",
  "lwk_registry",
  "lwk_signer",
  "lwk_test_util",

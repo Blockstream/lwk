@@ -116,7 +116,13 @@ mod wamp;
 mod wollet;
 
 #[cfg(feature = "prices")]
-pub mod prices;
+pub mod prices {
+    //! Exchange rates related functions
+
+    pub use lwk_prices::{
+        CurrencyCode, Error, ExchangeRate, ExchangeRates, PricesFetcher, PricesFetcherBuilder,
+    };
+}
 
 pub mod registry {
     //! Registry related functions

@@ -1,7 +1,6 @@
-use crate::async_util::async_now;
-
-use super::{Error, ExchangeRate};
-use crate::prices::currency_code::CurrencyCode;
+use crate::currency_code::CurrencyCode;
+use crate::util::async_now;
+use crate::{Error, ExchangeRate};
 use serde::Deserialize;
 use serde_json::Value;
 

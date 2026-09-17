@@ -24,7 +24,7 @@
 //
 // Originally by zeyla on GitHub.
 
-use crate::prices::currency_code::CurrencyCode;
+use crate::currency_code::CurrencyCode;
 
 const ALL: [CurrencyCode; 155] = [
     // Sorted by num.

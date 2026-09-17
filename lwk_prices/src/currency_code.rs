@@ -24,7 +24,7 @@
 //
 // Originally by zeyla on GitHub.
 
-use crate::prices::Error;
+use crate::Error;
 
 pub use super::codes::all;
 

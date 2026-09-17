@@ -16,7 +16,7 @@ use elements::hash_types::TxMerkleNode;
 use elements::{BlockExtData, BlockHash, BlockHeader, TxInWitness, TxOutWitness};
 use lwk_common::SignedBalance;
 use lwk_common::{decrypt_with_nonce_prefix, encrypt_with_random_nonce, DynStore};
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::{atomic, Arc, Mutex};
 
 /// Transactions downloaded and unblinded
@@ -34,14 +34,14 @@ impl DownloadTxResult {
         self.txs.is_empty() && self.unblinds.is_empty()
     }
 
-    fn prune(&mut self, scripts: &HashMap<Script, (Chain, ChildNumber)>) {
+    fn prune(&mut self, is_wallet_script: impl Fn(&Script) -> bool) {
         for (_, tx) in self.txs.iter_mut() {
             for input in tx.input.iter_mut() {
                 input.witness = TxInWitness::empty();
             }
 
             for output in tx.output.iter_mut() {
-                if scripts.contains_key(&output.script_pubkey) {
+                if is_wallet_script(&output.script_pubkey) {
                     // we are keeping the rangeproof because it's needed for pset details
                     output.witness.surjection_proof = None;
                 } else {
@@ -236,9 +236,20 @@ impl Update {
     ///
     /// Note: this function removes less data than
     /// [`Update::prune_witnesses()`] since it keeps the rangeproofs
-    /// of the outputs the [`Wollet`] owns.
+    /// of the outputs the [`Wollet`] owns, including the outputs paying
+    /// to the scripts introduced by this update.
     pub fn prune(&mut self, wallet: &Wollet) {
-        self.new_txs.prune(&wallet.cache.paths);
+        // The scripts introduced by this update are not in the wallet cache yet
+        // (they are inserted when the update is applied), but the outputs paying
+        // to them are wallet outputs: keep their rangeproofs as well.
+        let new_scripts: HashSet<&Script> = self
+            .scripts_with_blinding_pubkey
+            .iter()
+            .map(|(_, _, script, _)| script)
+            .collect();
+        self.new_txs.prune(|script| {
+            wallet.cache.paths.contains_key(script) || new_scripts.contains(script)
+        });
     }
 
     /// Prune witnesses from transactions
@@ -1376,6 +1387,79 @@ mod test {
         assert_eq!(update_pruned.serialize().unwrap().len(), 1106);
         assert_eq!(update.new_txs.txs.len(), update_pruned.new_txs.txs.len());
         assert_eq!(update.new_txs.unblinds, update_pruned.new_txs.unblinds);
+    }
+
+    #[test]
+    fn test_update_prune_keeps_rangeproofs_of_new_scripts() {
+        use std::collections::{HashMap, HashSet};
+
+        // A wallet that never applied an update has no scripts in its cache, like
+        // a wallet restored from its descriptor at its first sync. The update
+        // carries the scripts its transactions pay to: those outputs are wallet
+        // outputs and must keep their rangeproofs when the update is pruned.
+        let update_bytes = lwk_test_util::update_test_vector_many_transactions();
+        let update = Update::deserialize(&update_bytes).unwrap();
+        let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_many_transactions()
+            .parse()
+            .unwrap();
+        let wollet = WolletBuilder::new(Network::TestnetLiquid, desc.clone())
+            .build()
+            .unwrap();
+        assert!(wollet.cache.paths.is_empty());
+        let new_scripts: HashSet<&Script> = update
+            .scripts_with_blinding_pubkey
+            .iter()
+            .map(|(_, _, script, _)| script)
+            .collect();
+        assert!(!new_scripts.is_empty());
+
+        let mut pruned = update.clone();
+        pruned.prune(&wollet);
+
+        let mut kept_rangeproofs = 0;
+        for ((txid, tx), (pruned_txid, pruned_tx)) in
+            update.new_txs.txs.iter().zip(pruned.new_txs.txs.iter())
+        {
+            assert_eq!(txid, pruned_txid);
+            assert!(pruned_tx.input.iter().all(|i| i.witness.is_empty()));
+            for (output, pruned_output) in tx.output.iter().zip(pruned_tx.output.iter()) {
+                if new_scripts.contains(&output.script_pubkey) {
+                    assert_eq!(pruned_output.witness.rangeproof, output.witness.rangeproof);
+                    assert!(pruned_output.witness.surjection_proof.is_none());
+                    if output.witness.rangeproof.is_some() {
+                        kept_rangeproofs += 1;
+                    }
+                } else {
+                    assert!(pruned_output.witness.is_empty());
+                }
+            }
+        }
+        assert!(kept_rangeproofs > 0);
+
+        // Applying the pruned update gives the same utxos and balance as the full one
+        let mut wollet_full = WolletBuilder::new(Network::TestnetLiquid, desc.clone())
+            .build()
+            .unwrap();
+        wollet_full.apply_update(update).unwrap();
+        let mut wollet_pruned = WolletBuilder::new(Network::TestnetLiquid, desc)
+            .build()
+            .unwrap();
+        wollet_pruned.apply_update(pruned).unwrap();
+        let by_outpoint = |wollet: &crate::Wollet| -> HashMap<_, _> {
+            wollet
+                .utxos()
+                .unwrap()
+                .into_iter()
+                .map(|utxo| (utxo.outpoint, utxo))
+                .collect()
+        };
+        let utxos_full = by_outpoint(&wollet_full);
+        assert!(!utxos_full.is_empty());
+        assert_eq!(utxos_full, by_outpoint(&wollet_pruned));
+        assert_eq!(
+            wollet_full.balance().unwrap(),
+            wollet_pruned.balance().unwrap()
+        );
     }
 
     /// Test that verifies the merge functionality works correctly.

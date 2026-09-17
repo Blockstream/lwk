@@ -5,6 +5,7 @@
 * All registry-related code was moved to `lwk_registry`. Notes for migration:
   * Registry-related methods return `lwk_registry::Error` instead of an `lwk_wollet::Error`.
   * In order to use a blockchain client with the `fetch_with_tx` method in the `Registry`, the provided client should implement the `TxFetcher` trait or the `TxFetcherAsync` trait for asynchronous clients.
+* `Update::prune()` now keeps the rangeproofs of the outputs paying to scripts introduced by the update itself (first sync of a wallet with existing transactions, newly derived addresses). Previously they were removed as if the outputs were not owned by the wallet.
 
 ## 0.19.0
 

@@ -9,7 +9,6 @@ use elements::pset::PartiallySignedTransaction;
 use elements::{AssetId, TxOutWitness, Txid};
 use elements::{Block, TxOutSecrets};
 use elements_miniscript::descriptor::checksum::desc_checksum;
-use pulldown_cmark::{CodeBlockKind, Event, Tag};
 use rand::{thread_rng, Rng};
 use std::{
     io::{Read, Write},
@@ -179,38 +178,6 @@ pub fn assert_fee_rate(fee_rate: f32, expected: Option<f32>) {
     let toll = 0.45;
     assert!(fee_rate > expected * (1.0 - toll));
     assert!(fee_rate < expected * (1.0 + toll));
-}
-
-pub fn parse_code_from_markdown(markdown_input: &str, code_kind: &str) -> Vec<String> {
-    let parser = pulldown_cmark::Parser::new(markdown_input);
-    let mut result = vec![];
-    let mut str = String::new();
-    let mut active = false;
-
-    for el in parser {
-        match el {
-            Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(current)))
-                if code_kind == current.as_ref() =>
-            {
-                active = true
-            }
-            Event::Text(t) => {
-                if active {
-                    str.push_str(t.as_ref())
-                }
-            }
-            Event::End(Tag::CodeBlock(CodeBlockKind::Fenced(current)))
-                if code_kind == current.as_ref() =>
-            {
-                result.push(str.clone());
-                str.clear();
-                active = false;
-            }
-            _ => (),
-        }
-    }
-
-    result
 }
 
 /// Serialize and deserialize a PSET
@@ -423,39 +390,4 @@ pub fn pset_usdt_no_contracts() -> &'static str {
 
 pub fn pset_usdt_with_contract() -> &'static str {
     include_str!("../test_data/pset_usdt/pset_usdt_with_contract.base64")
-}
-
-#[cfg(test)]
-mod test {
-
-    use crate::parse_code_from_markdown;
-
-    #[test]
-    fn test_parse_code_from_markdown() {
-        let mkdown = r#"
-```python
-python
-code
-```
-```rust
-rust
-code
-```
-
-```python
-some more
-python code
-"#;
-        let res = parse_code_from_markdown(mkdown, "python");
-        assert_eq!(
-            res,
-            vec![
-                "python\ncode\n".to_string(),
-                "some more\npython code\n".to_string()
-            ]
-        );
-
-        let res = parse_code_from_markdown(mkdown, "rust");
-        assert_eq!(res, vec!["rust\ncode\n".to_string()])
-    }
 }

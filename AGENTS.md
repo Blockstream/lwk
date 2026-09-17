@@ -44,6 +44,8 @@ LWK is a Rust workspace containing libraries for Liquid wallets. It consists of 
   - `lwk_test_util` - Shared test utilities
   - `amp2_mock` - AMP2 mock server for testing
 
+If you are doing changes in a crate, you must read the crate README.md.
+
 ## Build Commands
 
 ```bash

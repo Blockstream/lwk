@@ -22,6 +22,7 @@ LWK is a Rust workspace containing libraries for Liquid wallets. It consists of 
 * Specific actions:
   - `lwk_registry` - Asset registry integration
   - `lwk_payment_instructions` - Parser for addresses, invoices and other payment instructions
+  - `lwk_prices` - Exchange rates between currencies
 * Cross chain swaps:
   - `lwk_boltz` - Boltz integration
   - `lwk_anyswap` - Anyswap integration. Work in progress.
@@ -43,6 +44,8 @@ LWK is a Rust workspace containing libraries for Liquid wallets. It consists of 
   - `lwk_containers` - Docker containers for the test environment
   - `lwk_test_util` - Shared test utilities
   - `amp2_mock` - AMP2 mock server for testing
+
+If you are doing changes in a crate, you must read the crate README.md.
 
 ## Build Commands
 

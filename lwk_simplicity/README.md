@@ -1,4 +1,4 @@
-# Simplicity
+# LWK Simplicity
 
 Library to interact with Simplicity language using LWK.
 
@@ -28,5 +28,3 @@ Run tests of `lwk_simplicity` with `lending` feature:
 ```shell
 cargo test -p lwk_simplicity --features lending
 ```
-
-

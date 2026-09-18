@@ -1,5 +1,6 @@
-# hwi
+# LWK HWI
 
-this is just a placeholder for an HWI crate
+This crate is currently unused.
+At the moment it is just a placeholder.
 
 first evaluate [async-hwi](https://github.com/wizardsardine/async-hwi) which requires tokio

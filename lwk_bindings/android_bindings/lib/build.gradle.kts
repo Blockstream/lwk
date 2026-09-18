@@ -13,7 +13,7 @@ plugins {
 kotlin {
     android {
         namespace = "com.blockstream.lwk_bindings"
-        compileSdk = 36
+        compileSdk = 37
         minSdk = 24
 
         compilerOptions { jvmTarget.set(JvmTarget.JVM_1_8) }

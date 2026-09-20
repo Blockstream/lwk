@@ -17,4 +17,4 @@ Liquid Wallet Kit (LWK) is a comprehensive, Rust-based toolkit for building Liqu
 
 ## LICENSE
 
-[MIT](LICENSE.md)
+[MIT](LICENSE)

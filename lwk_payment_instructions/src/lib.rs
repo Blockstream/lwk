@@ -232,6 +232,9 @@ impl Payment {
     }
 }
 
+// LUD-06 requires the invoice amount to equal the amount requested by the user. It does not
+// require validating the invoice description or description hash against the LNURL metadata.
+// See <https://github.com/lnurl/luds/blob/luds/06.md>.
 fn validate_lnurl_invoice_amount(invoice: &Bolt11Invoice, amount_msat: u64) -> Result<(), Error> {
     let actual_msat = invoice.amount_milli_satoshis();
     if actual_msat != Some(amount_msat) {

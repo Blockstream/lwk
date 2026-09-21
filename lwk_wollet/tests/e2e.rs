@@ -5713,3 +5713,41 @@ fn test_miniscript_and_threshold() {
     let balance_after = wallet.balance_btc();
     assert_eq!(balance_after, balance_before - satoshi - fee);
 }
+
+#[test]
+fn stale_utxo() {
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let client = test_client_electrum(&env.electrum_url());
+    let signer = AnySigner::Software(generate_signer());
+    let desc = signer.wpkh_slip77_descriptor().unwrap();
+    let mut wallet = TestWollet::new(client, &desc);
+
+    // Chain of 2 unconfirmed transactions, only the child outputs are wallet utxos
+    let txid_parent = wallet.fund_btc(&env);
+    let txid_child = wallet.send_btc(&[&signer], None, None);
+
+    let utxos = wallet.wollet.utxos().unwrap();
+    assert!(utxos.iter().all(|u| u.outpoint.txid == txid_child));
+    assert!(utxos.iter().all(|u| u.height.is_none()));
+
+    // Confirm the parent tx, but not the child tx
+    env.elementsd_call(
+        "prioritisetransaction",
+        &[
+            txid_child.to_string().into(),
+            0.0.into(),          // dummy argument, ignored by elementsd
+            (-1_000_000).into(), // fee delta: keeps the child tx unconfirmed
+        ],
+    );
+    env.elementsd_generate(1);
+
+    // Wait until the parent tx is confirmed
+    wait_for_tx_confirmation(&mut wallet.wollet, &mut wallet.client, &txid_parent);
+
+    let utxos = wallet.wollet.utxos().unwrap();
+    // FIXME: parent tx output is reported as unspent, but it's spent
+    assert!(utxos.iter().any(|u| u.outpoint.txid == txid_child));
+    assert!(utxos.iter().any(|u| u.outpoint.txid == txid_parent));
+    assert!(utxos.iter().any(|u| u.height.is_none()));
+    assert!(utxos.iter().any(|u| u.height.is_some()));
+}

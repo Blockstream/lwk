@@ -9,7 +9,6 @@ documentation = "https://docs.rs/lwk_tiny_jrpc"
 
 [dependencies]
 jsonrpc = { version = "0.18.0" }
-anyhow = "1.0.75"
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 thiserror = { workspace = true }

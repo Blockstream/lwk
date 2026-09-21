@@ -2436,6 +2436,10 @@ fn test_waterfalls_has_more_reused_address_balance() {
         env.elementsd_generate(1);
     }
 
+    // Wait until Waterfalls reports the reused address as truncated (`has_more`).
+    // Note: `has_more` appears as soon as Waterfalls has seen more than
+    // max_txs_seen (3) txs for the address, so the 5th tx can still be missing
+    // when this loop exits: Waterfalls indexes the mined txs asynchronously.
     for i in 0..50 {
         let response: serde_json::Value = reqwest::blocking::Client::new()
             .get(format!("{}/v2/waterfalls", env.waterfalls_url()))
@@ -2467,17 +2471,21 @@ fn test_waterfalls_has_more_reused_address_balance() {
         std::thread::sleep(std::time::Duration::from_millis(200));
     }
 
-    wallet.sync();
-
-    let txs = wallet.wollet.transactions().unwrap().len();
-    let policy_balance = wallet.balance(network.policy_asset());
+    // Sync until the wallet sees all the txs: the last mined tx can be indexed
+    // by Waterfalls after `has_more` first appeared.
     let expected_balance = receive_amount * receive_count;
-
-    assert_eq!(
-        (txs, policy_balance),
-        (receive_count as usize, expected_balance),
-        "LWK should not silently report a truncated balance when Waterfalls returns has_more"
-    );
+    let mut found = false;
+    for _ in 0..50 {
+        wallet.sync();
+        let txs = wallet.wollet.transactions().unwrap().len();
+        let policy_balance = wallet.balance(network.policy_asset());
+        if (txs, policy_balance) == (receive_count as usize, expected_balance) {
+            found = true;
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    assert!(found);
 }
 
 #[cfg(feature = "esplora")]

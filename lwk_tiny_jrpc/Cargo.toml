@@ -10,10 +10,11 @@ documentation = "https://docs.rs/lwk_tiny_jrpc"
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-thiserror = { workspace = true }
+thiserror.workspace = true
+log.workspace = true
+
 tiny_http = "0.12.0"
 subtle = "2.6.1"
-log.workspace = true
 
 [dev-dependencies]
 jsonrpc = { version = "0.18.0", default-features = false, features = ["simple_http"] }

@@ -3093,7 +3093,6 @@ dependencies = [
  "jsonrpc",
  "log",
  "serde",
- "serde_derive",
  "serde_json",
  "subtle",
  "thiserror 2.0.18",

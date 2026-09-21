@@ -484,7 +484,7 @@ mod tests {
         },
     };
     use elements::bitcoin::hashes::{sha256, Hash};
-    use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
+    use lightning_invoice::{Bolt11InvoiceDescriptionRef, Currency, InvoiceBuilder, PaymentSecret};
 
     use super::*;
 
@@ -1144,6 +1144,51 @@ mod tests {
                 expected_msat: 10_000,
                 actual_msat: None,
             })
+        );
+    }
+
+    #[tokio::test]
+    async fn test_lnurl_invoice_accepts_wos_description_formats() {
+        let metadata = "[[\"text/plain\",\"unrelated metadata\"]]";
+        let description_hash_invoice = Bolt11Invoice::from_str(concat!(
+            "lnbc10n1p4tzryfpp5km76qsjfwhx8tx764ewnsu60kzr0tt6jlex222urquy2vluzpd4qhp5p7htqsu",
+            "cc00rzlaxadk09r9q0nh4zrnacg0fhtwwm8gp4wdqn00qcqzzsxqyz5vqsp5fdrz28dg0xdauv6x8r6a94",
+            "yxukaecrknxjumk8zly0hleg4zk72q9qxpqysgqdsxkqf8rnjfpqhq4jwnlncx4ycqph6mvq8m0lftxyakr",
+            "3qtkc9mzu938jqky87qawlayj7k7lhl98nru3gh4mzhldlwfwjkgtrej0nqqlyx4gr",
+        ))
+        .unwrap();
+        assert!(matches!(
+            description_hash_invoice.description(),
+            Bolt11InvoiceDescriptionRef::Hash(_)
+        ));
+        let payment = fetch_stubbed_lnurl_invoice(&description_hash_invoice, metadata, 1)
+            .await
+            .unwrap();
+        assert_eq!(
+            payment.lightning_invoice().unwrap(),
+            &description_hash_invoice
+        );
+
+        let direct_description_invoice = Bolt11Invoice::from_str(concat!(
+            "lnbc10n1p4tzr89pp5p425lz3tdwsnprg4p5vfzqz6jgmwnlmsrf2h9ffl5u0uzyq66lhqsp5dm9mx4za",
+            "pms7vagwcyfguv97akpnkd0vfelsws753pf989mlpkusxq9z0rgqnp4qvyndeaqzman7h898jxm98dzkm0ml",
+            "rsx36s93smrur7h0azyyuxc5rzjqwghf7zxvfkxq5a6sr65g0gdkv768p83mhsnt0msszapamzx2qvuxqq",
+            "qqrt49lmtcqqqqqqqqqqq86qq9qrzjqwlf7895khd38n6efw0juzyyfpm65efnx3d9dzmapd4ngtygwk0e",
+            "papyqr6zgqqqq8hxk2qqae4jsqyugqcqzpudzv2pshjgr5dus9wctvd3jhggr0vcs9xct5daeks6fqw4ek2",
+            "u36ypch2ctvd968jumhd96xx6p3xccq9qyyssqm5rgp4why8fqfvu8s0lwywaxphgx3w4y3fme0ecz255lf",
+            "7c8rap44998827xdv053ctztp2tshqwf7y03y9fqpl3nsh5xh4vrzk4l0sptsuf5n",
+        ))
+        .unwrap();
+        assert!(matches!(
+            direct_description_invoice.description(),
+            Bolt11InvoiceDescriptionRef::Direct(_)
+        ));
+        let payment = fetch_stubbed_lnurl_invoice(&direct_description_invoice, metadata, 1)
+            .await
+            .unwrap();
+        assert_eq!(
+            payment.lightning_invoice().unwrap(),
+            &direct_description_invoice
         );
     }
 

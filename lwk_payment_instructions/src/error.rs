@@ -47,10 +47,6 @@ pub enum Error {
         actual_msat: Option<u64>,
     },
 
-    /// The LNURL callback returned an invoice not bound to the advertised metadata.
-    #[error("LNURL invoice metadata hash mismatch")]
-    LnUrlInvoiceMetadataMismatch,
-
     /// Generic error.
     #[error("{0}")]
     Generic(String),

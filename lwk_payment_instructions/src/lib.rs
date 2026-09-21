@@ -8,15 +8,11 @@ use bitcoin_payment_instructions::{
     PossiblyResolvedPaymentMethod,
 };
 use elements::{
-    bitcoin::{
-        self,
-        address::NetworkUnchecked,
-        hashes::{sha256, Hash},
-    },
+    bitcoin::{self, address::NetworkUnchecked},
     AddressParams, AssetId,
 };
 use lightning::offers::offer::Offer;
-use lightning_invoice::{Bolt11Invoice, Bolt11InvoiceDescriptionRef};
+use lightning_invoice::Bolt11Invoice;
 
 mod bip21;
 mod bip321;
@@ -218,7 +214,7 @@ impl Payment {
         }
 
         let invoice = Bolt11Invoice::from_str(&res.pr).map_err(|e| e.to_string())?;
-        validate_lnurl_invoice(&invoice, info, amount_msat)?;
+        validate_lnurl_invoice_amount(&invoice, amount_msat)?;
         Ok(Payment::LightningInvoice(invoice))
     }
 
@@ -236,11 +232,7 @@ impl Payment {
     }
 }
 
-fn validate_lnurl_invoice(
-    invoice: &Bolt11Invoice,
-    info: &LnUrlPayResponse,
-    amount_msat: u64,
-) -> Result<(), Error> {
+fn validate_lnurl_invoice_amount(invoice: &Bolt11Invoice, amount_msat: u64) -> Result<(), Error> {
     let actual_msat = invoice.amount_milli_satoshis();
     if actual_msat != Some(amount_msat) {
         return Err(Error::LnUrlInvoiceAmountMismatch {
@@ -249,11 +241,7 @@ fn validate_lnurl_invoice(
         });
     }
 
-    let expected_hash = sha256::Hash::hash(info.metadata.as_bytes());
-    match invoice.description() {
-        Bolt11InvoiceDescriptionRef::Hash(actual_hash) if actual_hash.0 == expected_hash => Ok(()),
-        _ => Err(Error::LnUrlInvoiceMetadataMismatch),
-    }
+    Ok(())
 }
 
 async fn resolve_bip353_with_resolver<R: HrnResolver>(
@@ -495,18 +483,38 @@ mod tests {
             HrnResolution, HrnResolutionFuture, HumanReadableName, LNURLResolutionFuture,
         },
     };
+    use elements::bitcoin::hashes::{sha256, Hash};
     use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
 
     use super::*;
 
-    fn lnurl_test_invoice(amount_msat: u64, metadata: &str) -> Bolt11Invoice {
+    enum TestInvoiceDescription<'a> {
+        Direct(&'a str),
+        Hash(&'a str),
+    }
+
+    fn lnurl_test_invoice(
+        amount_msat: Option<u64>,
+        description: TestInvoiceDescription<'_>,
+    ) -> Bolt11Invoice {
         let secp = bitcoin::secp256k1::Secp256k1::new();
         let private_key = bitcoin::secp256k1::SecretKey::from_slice(&[42; 32]).unwrap();
 
-        InvoiceBuilder::new(Currency::Bitcoin)
-            .amount_milli_satoshis(amount_msat)
+        let mut builder = InvoiceBuilder::new(Currency::Bitcoin);
+        if let Some(amount_msat) = amount_msat {
+            builder = builder.amount_milli_satoshis(amount_msat);
+        }
+        let builder = match description {
+            TestInvoiceDescription::Direct(description) => {
+                builder.description(description.to_string())
+            }
+            TestInvoiceDescription::Hash(metadata) => {
+                builder.description_hash(sha256::Hash::hash(metadata.as_bytes()))
+            }
+        };
+
+        builder
             .duration_since_epoch(Duration::from_secs(1_700_000_000))
-            .description_hash(sha256::Hash::hash(metadata.as_bytes()))
             .payment_hash(sha256::Hash::hash(b"LNURL test payment hash"))
             .payment_secret(PaymentSecret([1; 32]))
             .min_final_cltv_expiry_delta(18)
@@ -1044,7 +1052,8 @@ mod tests {
             .create_async()
             .await;
 
-        let invoice = lnurl_test_invoice(10_000, metadata).to_string();
+        let invoice =
+            lnurl_test_invoice(Some(10_000), TestInvoiceDescription::Hash(metadata)).to_string();
         let _m2 = server
             .mock("GET", callback_path)
             .match_query(mockito::Matcher::UrlEncoded(
@@ -1096,36 +1105,52 @@ mod tests {
     }
 
     #[test]
-    fn test_lnurl_invoice_must_match_amount_and_metadata() {
-        let metadata = "[[\"text/plain\",\"test metadata\"]]";
-        let info = LnUrlPayResponse {
-            callback: "https://example.com/callback".to_string(),
-            max_sendable: 1_000_000,
-            min_sendable: 1_000,
-            metadata: metadata.to_string(),
-            tag: "payRequest".to_string(),
-        };
-
-        let wrong_amount = lnurl_test_invoice(11_000, metadata);
+    fn test_lnurl_invoice_must_match_amount() {
+        let direct_description = lnurl_test_invoice(
+            Some(10_000),
+            TestInvoiceDescription::Direct("test description"),
+        );
         assert_eq!(
-            validate_lnurl_invoice(&wrong_amount, &info, 10_000),
+            validate_lnurl_invoice_amount(&direct_description, 10_000),
+            Ok(())
+        );
+
+        let description_hash = lnurl_test_invoice(
+            Some(10_000),
+            TestInvoiceDescription::Hash("unrelated metadata"),
+        );
+        assert_eq!(
+            validate_lnurl_invoice_amount(&description_hash, 10_000),
+            Ok(())
+        );
+
+        let wrong_amount = lnurl_test_invoice(
+            Some(11_000),
+            TestInvoiceDescription::Direct("test description"),
+        );
+        assert_eq!(
+            validate_lnurl_invoice_amount(&wrong_amount, 10_000),
             Err(Error::LnUrlInvoiceAmountMismatch {
                 expected_msat: 10_000,
                 actual_msat: Some(11_000),
             })
         );
 
-        let wrong_metadata = lnurl_test_invoice(10_000, "different metadata");
+        let missing_amount =
+            lnurl_test_invoice(None, TestInvoiceDescription::Direct("test description"));
         assert_eq!(
-            validate_lnurl_invoice(&wrong_metadata, &info, 10_000),
-            Err(Error::LnUrlInvoiceMetadataMismatch)
+            validate_lnurl_invoice_amount(&missing_amount, 10_000),
+            Err(Error::LnUrlInvoiceAmountMismatch {
+                expected_msat: 10_000,
+                actual_msat: None,
+            })
         );
     }
 
     #[tokio::test]
     async fn test_fetch_lnurl_invoice_rejects_wrong_amount() {
         let metadata = "[[\"text/plain\",\"test metadata\"]]";
-        let invoice = lnurl_test_invoice(50_000, metadata);
+        let invoice = lnurl_test_invoice(Some(50_000), TestInvoiceDescription::Hash(metadata));
 
         let err = fetch_stubbed_lnurl_invoice(&invoice, metadata, 5)
             .await
@@ -1141,15 +1166,25 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fetch_lnurl_invoice_rejects_wrong_metadata() {
+    async fn test_fetch_lnurl_invoice_accepts_any_description() {
         let metadata = "[[\"text/plain\",\"test metadata\"]]";
-        let invoice = lnurl_test_invoice(5_000, "different metadata");
+        let invoices = [
+            lnurl_test_invoice(
+                Some(5_000),
+                TestInvoiceDescription::Direct("different description"),
+            ),
+            lnurl_test_invoice(
+                Some(5_000),
+                TestInvoiceDescription::Hash("different metadata"),
+            ),
+        ];
 
-        let err = fetch_stubbed_lnurl_invoice(&invoice, metadata, 5)
-            .await
-            .unwrap_err();
-
-        assert_eq!(err, Error::LnUrlInvoiceMetadataMismatch);
+        for invoice in invoices {
+            let payment = fetch_stubbed_lnurl_invoice(&invoice, metadata, 5)
+                .await
+                .unwrap();
+            assert_eq!(payment.lightning_invoice().unwrap(), &invoice);
+        }
     }
 
     #[tokio::test]

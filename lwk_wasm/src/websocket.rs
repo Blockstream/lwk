@@ -201,6 +201,7 @@ mod tests {
     /// Note: Uses the "wamp.2.json" WebSocket subprotocol as required by the server.
     /// This test is ignored by default as it requires network connectivity.
     /// Run with: wasm-pack test --headless --chrome -- --ignored
+    #[ignore = "require network calls"]
     #[wasm_bindgen_test]
     async fn test_blockstream_green_websocket_connection() {
         console_error_panic_hook::set_once();

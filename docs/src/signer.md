@@ -12,7 +12,7 @@ LWK has two signer types:
 
 While hardware signers are inherently more secure, LWK's design allows you to enhance the security of software signers as well. For example, a software signer can be run on an isolated machine or a mobile app might store the mnemonic (seed) encrypted, only decrypting it when a signature is required.
 
-This guide will focus on software signers. For more details on hardware signers, please see the [Jade documentation](jade.md).
+This guide will focus on software signers. For more details on the supported Jade hardware signer, see the [`lwk_jade` crate](../../lwk_jade).
 
 ## Create Signer
 To create a signer you need a mnemonic.

@@ -136,4 +136,4 @@ Once validated, the taker can accept the proposal by using `liquidex_take()` to 
 
 ---
 
-Previous: [Ledger](ledger.md)
+Previous: [AMP0](amp0.md)

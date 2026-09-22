@@ -35,6 +35,8 @@ jobs:
             trusted-public-keys = nix.casatta.it:HseKZh7436/vKXfZDBHbhr7wwAkzjLwY5BIq+OOrITg= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
             substituters = https://nix.casatta.it https://cache.nixos.org/
       - run: nix build .
+      - name: Check documentation links
+        run: nix develop --command bash docs/check.sh
 
   just-swift: # swift framework is built in the lwk-swift repo, here we care `just swift` doesn't brake
       runs-on: macos-15

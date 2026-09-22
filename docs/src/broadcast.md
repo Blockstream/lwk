@@ -51,4 +51,4 @@ you can call `Wollet::apply_tx()`.
 
 ----
 
-Next: [Advanced Features](advanced.md)
+Next: [Blockchain Clients](clients.md)

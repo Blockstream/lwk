@@ -1,3 +1,5 @@
+#![cfg(unix)]
+
 use lwk_test_util::*;
 
 #[test]

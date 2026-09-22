@@ -66,6 +66,7 @@ impl lwk_common::Store for PanicStore {
 
 mod amp2;
 mod auth;
+#[cfg(unix)]
 mod lightningd;
 mod registry;
 mod test_env;

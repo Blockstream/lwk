@@ -83,7 +83,7 @@ jobs:
           path: target/
       - uses: dtolnay/rust-toolchain@stable
       - run: |
-          cargo install uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --tag v0.8.1+v0.29.4
+          cargo install --locked uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --tag v0.8.1+v0.29.4
           uniffi-bindgen-cpp --library target/liblwk.so --out-dir target
       - run: ls -l target
       - name: Archive cpp language interface
@@ -104,7 +104,7 @@ jobs:
           path: target/
       - uses: dtolnay/rust-toolchain@stable
       - run: |
-          cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.10.0+v0.29.4
+          cargo install --locked uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.10.0+v0.29.4
           uniffi-bindgen-cs --library target/liblwk.so --out-dir target
       - run: python3 scripts/patch_csharp_finalize.py target/lwk.cs
       - run: ls -l target

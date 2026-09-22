@@ -1,3 +1,5 @@
+#![cfg(unix)]
+
 use anyswap_sdk::client::HttpClient;
 use anyswap_sdk::types::SwapNetwork;
 use clightningrpc::lightningrpc::PayOptions;

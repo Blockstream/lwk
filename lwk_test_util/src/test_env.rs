@@ -1,10 +1,12 @@
 use crate::amp2::Amp2D;
 use crate::auth::AuthStack;
 use crate::init_logging;
+#[cfg(unix)]
 use crate::lightningd::LightningD;
 use crate::registry::RegistryD;
 use crate::waterfalls::WaterfallsD;
 
+#[cfg(unix)]
 use clightningrpc::requests::AmountOrAll;
 use electrsd::bitcoind;
 use electrsd::electrum_client::ElectrumApi;
@@ -141,7 +143,8 @@ impl TestEnvBuilder {
         self
     }
 
-    /// Start a CLN node, connected to a Bitcoin node
+    /// Start a CLN node, connected to a Bitcoin node (Unix only).
+    #[cfg(unix)]
     pub fn with_lightningd(mut self) -> Self {
         self.with_lightningd = true;
         self
@@ -195,7 +198,8 @@ impl TestEnvBuilder {
         self
     }
 
-    /// Start with anyswap
+    /// Start with anyswap (Unix only, requires a CLN node).
+    #[cfg(unix)]
     pub fn with_anyswap(mut self) -> Self {
         self.with_anyswap = true;
         self
@@ -421,9 +425,7 @@ impl TestEnvBuilder {
             None
         };
 
-        let mut anyswap_config_dir: Option<TempDir> = None;
-        let mut anyswap_url: Option<String> = None;
-
+        #[cfg(unix)]
         let lightningd = if self.with_lightningd {
             let node = bitcoind
                 .as_ref()
@@ -453,7 +455,10 @@ impl TestEnvBuilder {
             None
         };
 
-        let lightningd_anyswap = if self.with_anyswap {
+        #[cfg(not(unix))]
+        let (anyswap_config_dir, anyswap_url) = (None, None);
+        #[cfg(unix)]
+        let (lightningd_anyswap, anyswap_config_dir, anyswap_url) = if self.with_anyswap {
             let node = bitcoind
                 .as_ref()
                 .expect("with_anyswap() requires with_bitcoind()");
@@ -542,9 +547,6 @@ impl TestEnvBuilder {
             };
             let node = LightningD::with_conf(&self.lightningd_exec, node, &conf);
 
-            anyswap_config_dir = Some(config_dir);
-            anyswap_url = Some(format!("http://127.0.0.1:{port}"));
-
             // Open channel
             let plain = lightningd
                 .as_ref()
@@ -556,9 +558,13 @@ impl TestEnvBuilder {
             TestEnv::fund_lightningd_(bitcoind_client, plain, channel_sats * 2);
             TestEnv::open_channel_(bitcoind_client, plain, &node, &addr, channel_sats);
 
-            Some(node)
+            (
+                Some(node),
+                Some(config_dir),
+                Some(format!("http://127.0.0.1:{port}")),
+            )
         } else {
-            None
+            (None, None, None)
         };
 
         // Plain endpoint urls as served by the processes themselves; with auth (below)
@@ -619,7 +625,9 @@ impl TestEnvBuilder {
             _waterfallsd: waterfallsd,
             registryd,
             amp2d,
+            #[cfg(unix)]
             lightningd,
+            #[cfg(unix)]
             lightningd_anyswap,
             zmq_endpoint,
             auth,
@@ -644,7 +652,9 @@ pub struct TestEnv {
     _waterfallsd: Option<WaterfallsD>,
     registryd: Option<RegistryD>,
     amp2d: Option<Amp2D>,
+    #[cfg(unix)]
     lightningd: Option<LightningD>,
+    #[cfg(unix)]
     lightningd_anyswap: Option<LightningD>,
     zmq_endpoint: Option<String>,
     auth: Option<AuthStack>,
@@ -729,12 +739,14 @@ impl TestEnv {
         self.auth.as_ref().unwrap().set_credits(credits)
     }
 
+    #[cfg(unix)]
     pub fn lightningd(&self) -> &LightningD {
         self.lightningd.as_ref().unwrap()
     }
 
     /// The CLN node running the `anyswap` plugin (requires `with_anyswap()`); it has a
     /// channel open with the plain node returned by [`TestEnv::lightningd`].
+    #[cfg(unix)]
     pub fn lightningd_anyswap(&self) -> &LightningD {
         self.lightningd_anyswap.as_ref().unwrap()
     }
@@ -1030,6 +1042,7 @@ impl TestEnv {
 
     // Functions for lightningd
 
+    #[cfg(unix)]
     fn fund_lightningd_(bitcoind: &Client, ln_node: &LightningD, amount_sat: u64) {
         let raw: Value = ln_node
             .client
@@ -1058,6 +1071,7 @@ impl TestEnv {
         }
     }
 
+    #[cfg(unix)]
     fn open_channel_(
         bitcoind: &Client,
         opener: &LightningD,

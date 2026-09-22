@@ -184,7 +184,7 @@ test_jade:
     - docker pull tulipan81/blind_pin_server:v0.0.7
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - docker pull $JADE_EMULATOR_IMAGE_NAME:$JADE_EMULATOR_IMAGE_VERSION
-    - cargo test -p lwk_jade --features asyncr
+    - cargo test -p lwk_jade --features asyncr,test_emulator
 
 # Authenticated Explorer API tests: Keycloak + APISIX (openid-connect) fronting the TestEnv
 # esplora, plus the Electrum RPC proxy. Tests are #[ignore] so they only run here (they need

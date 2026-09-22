@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* `test_emulator` is not a default feature anymore.
+
 ## 0.19.0
 
 * `asyncr::Jade::stream` returns `&Mutex<S>` instead of `&S`.

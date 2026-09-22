@@ -22,6 +22,7 @@
   * `PsetSignatures`: `has_signature()`, `missing_signature()`
 * To build these types, use `PsetDetails::new(pset, descriptor, network)`, `PsetBalance::new()`, `Recipient::new()` and `PsetSignatures::new()`.
 * Add `PsetDetails::fees()`, `PsetDetails::fees_in()`, `PsetDetails::balances()` and `PsetDetails::recipients()`, forwarding to the inner `PsetBalance`.
+* Esplora client: address history requests within a scan batch run concurrently, honoring `EsploraClientBuilder::concurrency` (default 1, so behavior is unchanged unless opted in).
 
 ## 0.18.0
 

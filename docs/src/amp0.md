@@ -206,4 +206,4 @@ If all the AMP0 rules are respected, the transaction is cosigned by AMP0 and can
 ## Examples
 We provide a few examples on how to use AMP0 with LWK:
 * [liquidwebwallet.org](https://liquidwebwallet.org) integrates AMP0 using WASM
-* Rust tests in [amp0.rs](../lwk_wollet/src/amp0.rs)
+* Rust tests in [amp0.rs](../../lwk_wollet/src/amp0.rs)

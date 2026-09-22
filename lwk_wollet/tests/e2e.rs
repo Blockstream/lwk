@@ -5745,9 +5745,6 @@ fn stale_utxo() {
     wait_for_tx_confirmation(&mut wallet.wollet, &mut wallet.client, &txid_parent);
 
     let utxos = wallet.wollet.utxos().unwrap();
-    // FIXME: parent tx output is reported as unspent, but it's spent
-    assert!(utxos.iter().any(|u| u.outpoint.txid == txid_child));
-    assert!(utxos.iter().any(|u| u.outpoint.txid == txid_parent));
-    assert!(utxos.iter().any(|u| u.height.is_none()));
-    assert!(utxos.iter().any(|u| u.height.is_some()));
+    assert!(utxos.iter().all(|u| u.outpoint.txid == txid_child));
+    assert!(utxos.iter().all(|u| u.height.is_none()));
 }

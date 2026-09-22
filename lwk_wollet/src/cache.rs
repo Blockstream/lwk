@@ -331,6 +331,7 @@ impl Cache {
         txid_height_new: &[(Txid, Option<u32>)],
         deleted_txids: &[Txid],
         new_txs: &[(Txid, Transaction)],
+        known_txids: &HashSet<Txid>,
     ) {
         let txids_new: HashSet<&Txid> = txid_height_new.iter().map(|(txid, _)| txid).collect();
 
@@ -338,6 +339,8 @@ impl Cache {
             .unblinded
             .keys()
             .filter(|op| txids_new.contains(&op.txid))
+            // Do not (re)add new outputs from txs already known (e.g. height-only change)
+            .filter(|op| !known_txids.contains(&op.txid))
             .filter_map(|op| {
                 self.outpoint_script(op, new_txs)
                     .map(|script| (*op, script))
@@ -507,6 +510,9 @@ impl Cache {
     ) -> Result<(), Error> {
         // TODO: cleanup this functions
         self.extend_all_txs(txs)?;
+        // Txids known before this update, so `update_unspent` can distinguish new
+        // txs from txs whose height only changed.
+        let known_txids: HashSet<Txid> = self.heights.keys().cloned().collect();
         self.update_heights(txid_height_new, deleted_txids);
         // Unlike client delta updates, a persisted v5 update is a snapshot and
         // must reconstruct txids without transaction payloads, which are already
@@ -521,7 +527,7 @@ impl Cache {
         if use_unspent_snapshot || utxo_only {
             self.update_unspent_from_snapshot(unspent, txs);
         } else {
-            self.update_unspent(txid_height_new, deleted_txids, txs);
+            self.update_unspent(txid_height_new, deleted_txids, txs, &known_txids);
         }
         Ok(())
     }

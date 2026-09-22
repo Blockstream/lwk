@@ -6,9 +6,10 @@ use std::net::TcpListener;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
-use testcontainers::clients::Cli;
-use testcontainers::images::postgres::Postgres;
-use testcontainers::RunnableImage;
+use testcontainers::core::Mount;
+use testcontainers::runners::AsyncRunner;
+use testcontainers::ImageExt;
+use testcontainers_modules::postgres::Postgres;
 
 fn random_port() -> u16 {
     TcpListener::bind("127.0.0.1:0")
@@ -60,10 +61,7 @@ pub async fn wait_factory(spk: String, indexer: &IndexerClient) -> FactoryDetail
     panic!("Factory for given {spk} was not found in indexer");
 }
 
-pub async fn launch_indexer<'a>(
-    env: &TestEnv,
-    cli: &'a Cli,
-) -> (IndexerClient, IndexerContext<'a>) {
+pub async fn launch_indexer(env: &TestEnv) -> (IndexerClient, IndexerContext) {
     let binary = std::fs::canonicalize(
         std::env::var("LENDING_INDEXER_EXEC").expect("LENDING_INDEXER_EXEC must be set"),
     )
@@ -71,7 +69,7 @@ pub async fn launch_indexer<'a>(
 
     let api_port = random_port();
     let scanner_port = random_port();
-    let indexer = start_indexer(env, cli, &binary, scanner_port, api_port).await;
+    let indexer = start_indexer(env, &binary, scanner_port, api_port).await;
     let indexer_client = IndexerClient::builder(indexer.api_url().to_string())
         .build()
         .unwrap();
@@ -81,16 +79,15 @@ pub async fn launch_indexer<'a>(
 /// Test protocol fee keeper asset id
 pub const PROTOCOL_FEE_KEEPER_ASSET_ID: AssetId = AssetId::from_inner(sha256::Midstate([1; 32]));
 
-pub struct IndexerContext<'a> {
-    _pg_container: testcontainers::Container<'a, Postgres>,
-    _docker: &'a Cli,
+pub struct IndexerContext {
+    _pg_container: testcontainers::ContainerAsync<Postgres>,
     _tmpdir: tempfile::TempDir,
     _scanner: ChildGuard,
     _api: ChildGuard,
     api_url: String,
 }
 
-impl IndexerContext<'_> {
+impl IndexerContext {
     pub fn api_url(&self) -> &str {
         &self.api_url
     }
@@ -116,13 +113,12 @@ impl Drop for ChildGuard {
     }
 }
 
-pub async fn start_indexer<'a>(
+pub async fn start_indexer(
     env: &lwk_test_util::TestEnv,
-    cli: &'a Cli,
     binary: &Path,
     scanner_port: u16,
     api_port: u16,
-) -> IndexerContext<'a> {
+) -> IndexerContext {
     let host_path = std::env::current_dir()
         .unwrap()
         .join("tests")
@@ -132,12 +128,13 @@ pub async fn start_indexer<'a>(
 
     let container_path = "/docker-entrypoint-initdb.d/";
 
-    let pg_image = RunnableImage::from(Postgres::default())
-        .with_volume((host_path, container_path.to_string()))
-        .with_env_var(("POSTGRES_PASSWORD", "password"));
-
-    let pg_container = cli.run(pg_image);
-    let pg_port = pg_container.get_host_port_ipv4(5432);
+    let pg_container = Postgres::default()
+        .with_mount(Mount::bind_mount(host_path, container_path))
+        .with_env_var("POSTGRES_PASSWORD", "password")
+        .start()
+        .await
+        .unwrap();
+    let pg_port = pg_container.get_host_port_ipv4(5432).await.unwrap();
 
     let esplora_url = env.esplora_url();
     let chain_height = env.elementsd_height();
@@ -212,7 +209,6 @@ indexer:
     assert!(ready, "API health check failed to pass within timeout");
 
     IndexerContext {
-        _docker: cli,
         _pg_container: pg_container,
         _tmpdir: tmpdir,
         _scanner: scanner,

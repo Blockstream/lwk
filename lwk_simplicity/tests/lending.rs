@@ -1,7 +1,6 @@
 use indexer::*;
 use lwk_common::Signer;
 use std::str::FromStr;
-use testcontainers::clients::Cli;
 
 use elements::hex::ToHex;
 use lwk_simplicity::lending::*;
@@ -20,8 +19,7 @@ async fn test_borrow_flow() {
         .with_esplora()
         .build();
     let mut client = electrum_client(&env);
-    let cli = Cli::default();
-    let (indexer_client, _indexer_ctx) = launch_indexer(&env, &cli).await;
+    let (indexer_client, _indexer_ctx) = launch_indexer(&env).await;
     let network = env.elementsd_network();
 
     // Create borrower
@@ -240,8 +238,7 @@ async fn test_cancel_offer() {
         .with_esplora()
         .build();
     let mut client = electrum_client(&env);
-    let cli = Cli::default();
-    let (indexer_client, _indexer_ctx) = launch_indexer(&env, &cli).await;
+    let (indexer_client, _indexer_ctx) = launch_indexer(&env).await;
     let network = env.elementsd_network();
 
     let borrower_signer = generate_signer();
@@ -343,8 +340,7 @@ async fn test_liquidate_offer() {
         .with_esplora()
         .build();
     let mut client = electrum_client(&env);
-    let cli = Cli::default();
-    let (indexer_client, _indexer_ctx) = launch_indexer(&env, &cli).await;
+    let (indexer_client, _indexer_ctx) = launch_indexer(&env).await;
     let network = env.elementsd_network();
 
     let borrower_signer = generate_signer();

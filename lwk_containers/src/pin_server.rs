@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, io::Write};
+use std::{env, io::Write};
 
 use elements::{
     bitcoin::{NetworkKind, PrivateKey, PublicKey},
@@ -6,13 +6,16 @@ use elements::{
 };
 use rand::{thread_rng, RngCore};
 use tempfile::TempDir;
-use testcontainers::{core::WaitFor, Image};
+use testcontainers::core::{ContainerPort, Image, Mount, WaitFor};
 
 pub const PIN_SERVER_PORT: u16 = 8_096;
 
 #[derive(Debug)]
 pub struct PinServer {
-    volumes: HashMap<String, String>,
+    name: String,
+    tag: String,
+    mounts: Vec<Mount>,
+    ports: Vec<ContainerPort>,
     pub_key: PublicKey,
 }
 
@@ -55,15 +58,19 @@ impl PinServer {
 
         assert!(file_path.is_absolute() && file_path.exists());
 
-        let mut volumes = HashMap::new();
-        volumes.insert(
-            format!("{}", file_path.display()),
-            format!("/{SERVER_PRIVATE_KEY}"),
-        );
-        volumes.insert(format!("{}", dir.path().display()), format!("/{PINS}"));
+        let mounts = vec![
+            Mount::bind_mount(
+                file_path.display().to_string(),
+                format!("/{SERVER_PRIVATE_KEY}"),
+            ),
+            Mount::bind_mount(dir.path().display().to_string(), format!("/{PINS}")),
+        ];
 
         Ok(Self {
-            volumes,
+            name: env::var("PIN_SERVER_IMAGE_NAME").unwrap_or("tulipan81/blind_pin_server".into()),
+            tag: env::var("PIN_SERVER_IMAGE_VERSION").unwrap_or("v0.0.7".into()),
+            mounts,
+            ports: vec![ContainerPort::from(PIN_SERVER_PORT)],
             pub_key: pin_server_pub_key,
         })
     }
@@ -81,27 +88,23 @@ impl PinServer {
 }
 
 impl Image for PinServer {
-    type Args = ();
-
-    fn name(&self) -> String {
-        env::var("PIN_SERVER_IMAGE_NAME").unwrap_or("tulipan81/blind_pin_server".into())
+    fn name(&self) -> &str {
+        &self.name
     }
 
-    fn tag(&self) -> String {
-        env::var("PIN_SERVER_IMAGE_VERSION").unwrap_or("v0.0.7".into())
+    fn tag(&self) -> &str {
+        &self.tag
     }
 
     fn ready_conditions(&self) -> Vec<WaitFor> {
-        vec![WaitFor::StdOutMessage {
-            message: "run: wsgi:".into(),
-        }]
+        vec![WaitFor::message_on_stdout("run: wsgi:")]
     }
 
-    fn expose_ports(&self) -> Vec<u16> {
-        [PIN_SERVER_PORT].into()
+    fn expose_ports(&self) -> &[ContainerPort] {
+        &self.ports
     }
 
-    fn volumes(&self) -> Box<dyn Iterator<Item = (&String, &String)> + '_> {
-        Box::new(self.volumes.iter())
+    fn mounts(&self) -> impl IntoIterator<Item = &Mount> {
+        &self.mounts
     }
 }

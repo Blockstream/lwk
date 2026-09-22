@@ -1,5 +1,4 @@
 use lwk_common::{singlesig_desc, Singlesig};
-use lwk_containers::testcontainers::clients::Cli;
 use lwk_ledger::TestLedgerEmulator;
 use lwk_signer::AnySigner;
 use lwk_test_util::{TestEnv, TestEnvBuilder};
@@ -40,8 +39,7 @@ fn roundtrip(
 
 fn emul_roundtrip_singlesig(variant: Singlesig) {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let docker = Cli::default();
-    let ledger = TestLedgerEmulator::new(&docker);
+    let ledger = TestLedgerEmulator::new();
     // TODO
     let xpub_identifier = elements_miniscript::bitcoin::XKeyIdentifier::all_zeros();
     let signers = &[&AnySigner::Ledger(ledger.ledger, xpub_identifier)];
@@ -50,8 +48,7 @@ fn emul_roundtrip_singlesig(variant: Singlesig) {
 
 fn emul_roundtrip_multisig(threshold: usize) {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let docker = Cli::default();
-    let ledger = TestLedgerEmulator::new(&docker);
+    let ledger = TestLedgerEmulator::new();
     let xpub_identifier = elements_miniscript::bitcoin::XKeyIdentifier::all_zeros();
     let sw_signer = generate_signer();
     let signers = &[

@@ -1,16 +1,15 @@
 use elements_miniscript::elements::bitcoin::bip32::DerivationPath;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use elements_miniscript::elements::AddressParams;
-use lwk_containers::testcontainers::clients;
+use lwk_containers::testcontainers::runners::{AsyncRunner, SyncRunner};
 use lwk_containers::{LedgerEmulator, LEDGER_EMULATOR_PORT};
 use lwk_ledger::*;
 
 #[test]
 fn test_version() {
-    let docker = clients::Cli::default();
     let ledger = LedgerEmulator::new().expect("test");
-    let container = docker.run(ledger);
-    let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
+    let container = SyncRunner::start(ledger).unwrap();
+    let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT).unwrap();
     let client = Ledger::new(port, lwk_common::Network::default_regtest()).client;
     let (name, version, _flags) = client.get_version().unwrap();
     assert_eq!(version, "2.2.3");
@@ -19,10 +18,9 @@ fn test_version() {
 
 #[test]
 fn test_ledger_commands() {
-    let docker = clients::Cli::default();
     let ledger = LedgerEmulator::new().expect("test");
-    let container = docker.run(ledger);
-    let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
+    let container = SyncRunner::start(ledger).unwrap();
+    let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT).unwrap();
     let client = Ledger::new(port, lwk_common::Network::default_regtest()).client;
     let (name, version, _flags) = client.get_version().unwrap();
     assert_eq!(version, "2.2.3");
@@ -156,10 +154,12 @@ fn test_physical_device() {
 #[cfg(feature = "asyncr")]
 #[tokio::test]
 async fn test_asyncr_ledger() {
-    let docker = clients::Cli::default();
     let ledger = LedgerEmulator::new().expect("test");
-    let container = docker.run(ledger);
-    let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
+    let container = AsyncRunner::start(ledger).await.unwrap();
+    let port = container
+        .get_host_port_ipv4(LEDGER_EMULATOR_PORT)
+        .await
+        .unwrap();
     let ledger = asyncr::Ledger::new(port, lwk_common::Network::default_regtest());
     let client = &ledger.client;
     let (name, version, _flags) = client.get_version().await.unwrap();
@@ -318,10 +318,9 @@ async fn test_asyncr_ledger() {
 
 #[test]
 fn test_ledger_sign_issuance() {
-    let docker = clients::Cli::default();
     let ledger = LedgerEmulator::new().expect("test");
-    let container = docker.run(ledger);
-    let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
+    let container = SyncRunner::start(ledger).unwrap();
+    let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT).unwrap();
     let c = Ledger::new(port, lwk_common::Network::default_regtest());
 
     // Get device info for wallet setup

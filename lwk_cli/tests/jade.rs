@@ -1,4 +1,3 @@
-use lwk_containers::testcontainers::clients;
 use lwk_test_util::TestEnvBuilder;
 
 use crate::common::*;
@@ -8,8 +7,7 @@ fn test_jade_emulator() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let (t, _tmp, cli, _params, env) = setup_cli(env);
 
-    let docker = clients::Cli::default();
-    let test_jade = lwk_jade::TestJadeEmulator::new(&docker);
+    let test_jade = lwk_jade::TestJadeEmulator::new();
     let jade_addr = format!("127.0.0.1:{}", test_jade.emulator_port());
     let _guard = test_jade.release_connection();
 
@@ -72,8 +70,7 @@ fn test_elip151() {
     multisig_wallet(&cli, "multi", 2, signers, "elip151");
 
     // Load a jade
-    let docker = clients::Cli::default();
-    let test_jade = lwk_jade::TestJadeEmulator::new(&docker);
+    let test_jade = lwk_jade::TestJadeEmulator::new();
     let addr = format!("127.0.0.1:{}", test_jade.emulator_port());
     let _guard = test_jade.release_connection();
     let r = sh(&format!("{cli} signer jade-id --emulator {addr}"));

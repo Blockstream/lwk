@@ -4,7 +4,6 @@ use elements_miniscript::{
     bitcoin::bip32::DerivationPath, ConfidentialDescriptor, DescriptorPublicKey,
 };
 use lwk_common::{singlesig_desc, Signer, Singlesig};
-use lwk_containers::testcontainers::clients::Cli;
 use lwk_jade::{
     register_multisig::{GetRegisteredMultisigParams, JadeDescriptor, RegisterMultisigParams},
     TestJadeEmulator,
@@ -15,8 +14,8 @@ use lwk_wollet::WolletDescriptor;
 
 use crate::test_wollet::{generate_signer, multisig_desc, test_client_electrum, TestWollet};
 
-pub fn jade_setup<'a>(docker: &'a Cli, mnemonic: &'a str) -> TestJadeEmulator<'a> {
-    let mut test_jade_emul = TestJadeEmulator::new(docker);
+pub fn jade_setup(mnemonic: &str) -> TestJadeEmulator {
+    let mut test_jade_emul = TestJadeEmulator::new();
     test_jade_emul.set_debug_mnemonic(mnemonic);
     test_jade_emul
 }
@@ -72,8 +71,7 @@ fn roundtrip(
 
 fn emul_roundtrip_singlesig(variant: Singlesig) {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let docker = Cli::default();
-    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
+    let jade_init = jade_setup(TEST_MNEMONIC);
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let signers = &[&AnySigner::Jade(jade_init.jade, xpub_identifier)];
     roundtrip(&env, signers, Some(variant), None);
@@ -81,8 +79,7 @@ fn emul_roundtrip_singlesig(variant: Singlesig) {
 
 fn emul_roundtrip_multisig(threshold: usize) {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let docker = Cli::default();
-    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
+    let jade_init = jade_setup(TEST_MNEMONIC);
     let sw_signer = generate_signer();
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let signers = &[
@@ -270,8 +267,7 @@ fn emul_roundtrip_tr() {
 #[test]
 fn jade_slip77() {
     init_logging();
-    let docker = Cli::default();
-    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
+    let jade_init = jade_setup(TEST_MNEMONIC);
 
     let script_variant = lwk_common::Singlesig::Wpkh;
     let blinding_variant = lwk_common::DescriptorBlindingKey::Slip77;
@@ -284,8 +280,7 @@ fn jade_slip77() {
 fn emul_explicit() {
     init_logging();
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let docker = Cli::default();
-    let jade = jade_setup(&docker, TEST_MNEMONIC);
+    let jade = jade_setup(TEST_MNEMONIC);
     let id = jade.jade.identifier().unwrap();
     let jade_signer = AnySigner::Jade(jade.jade, id);
 
@@ -351,8 +346,7 @@ fn multi_multisig(env: &TestEnv, jade_signer: &AnySigner) {
 fn sign_vs_sign_psbt() {
     init_logging();
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let docker = Cli::default();
-    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
+    let jade_init = jade_setup(TEST_MNEMONIC);
     let id = jade_init.jade.identifier().unwrap();
     let jade_signer = AnySigner::Jade(jade_init.jade, id);
 
@@ -409,8 +403,7 @@ fn sign_vs_sign_psbt() {
 fn large_pset_sign_psbt() {
     init_logging();
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let docker = Cli::default();
-    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
+    let jade_init = jade_setup(TEST_MNEMONIC);
     let id = jade_init.jade.identifier().unwrap();
     let jade_signer = AnySigner::Jade(jade_init.jade, id);
 
@@ -481,8 +474,7 @@ fn large_pset_sign_psbt() {
 fn emul_multi_multisig() {
     init_logging();
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let docker = Cli::default();
-    let jade = jade_setup(&docker, TEST_MNEMONIC);
+    let jade = jade_setup(TEST_MNEMONIC);
     let id = jade.jade.identifier().unwrap();
     let jade_signer = AnySigner::Jade(jade.jade, id);
     multi_multisig(&env, &jade_signer);
@@ -497,8 +489,7 @@ fn emul_elip153_flow() {
         .with_electrum()
         .with_amp2()
         .build();
-    let docker = Cli::default();
-    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
+    let jade_init = jade_setup(TEST_MNEMONIC);
     let id = jade_init.jade.identifier().unwrap();
     let jade_signer = AnySigner::Jade(jade_init.jade, id);
 

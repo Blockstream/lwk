@@ -13,7 +13,7 @@ use elements_miniscript::{
 };
 use lwk_common::Signer;
 use lwk_containers::{
-    testcontainers::clients::{self},
+    testcontainers::runners::{AsyncRunner, SyncRunner},
     PinServer, PIN_SERVER_PORT,
 };
 use lwk_jade::{
@@ -32,8 +32,7 @@ use std::{str::FromStr, time::UNIX_EPOCH, vec};
 
 #[test]
 fn entropy() {
-    let docker = clients::Cli::default();
-    let jade = TestJadeEmulator::new(&docker);
+    let jade = TestJadeEmulator::new();
 
     let result = jade.jade.add_entropy([1, 2, 3, 4].to_vec()).unwrap();
     assert!(result);
@@ -41,8 +40,7 @@ fn entropy() {
 
 #[test]
 fn debug_set_mnemonic() {
-    let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let mut jade = TestJadeEmulator::new();
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let result = jade.jade.version_info().unwrap();
@@ -53,8 +51,7 @@ fn debug_set_mnemonic() {
 
 #[test]
 fn epoch() {
-    let docker = clients::Cli::default();
-    let jade = TestJadeEmulator::new(&docker);
+    let jade = TestJadeEmulator::new();
 
     let seconds = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -66,8 +63,7 @@ fn epoch() {
 
 #[test]
 fn ping() {
-    let docker = clients::Cli::default();
-    let jade = TestJadeEmulator::new(&docker);
+    let jade = TestJadeEmulator::new();
 
     let result = jade.jade.ping().unwrap();
     assert_eq!(result, 0);
@@ -75,9 +71,10 @@ fn ping() {
 
 #[test]
 fn version() {
-    let docker = clients::Cli::default();
-    let container = docker.run(lwk_containers::JadeEmulator);
-    let port = container.get_host_port_ipv4(lwk_containers::EMULATOR_PORT);
+    let container = SyncRunner::start(lwk_containers::JadeEmulator::new()).unwrap();
+    let port = container
+        .get_host_port_ipv4(lwk_containers::EMULATOR_PORT)
+        .unwrap();
     let network = lwk_common::Network::default_regtest();
     let addr = format!("127.0.0.1:{port}").parse().unwrap();
     let jade = lwk_jade::Jade::from_socket(addr, network).unwrap();
@@ -90,14 +87,13 @@ fn version() {
 
 #[test]
 fn update_pinserver() {
-    let docker = clients::Cli::default();
-    let jade = TestJadeEmulator::new(&docker);
+    let jade = TestJadeEmulator::new();
 
     let tempdir = tempfile::tempdir().unwrap();
     let pin_server = PinServer::new(&tempdir).unwrap();
     let pub_key: Vec<u8> = pin_server.pub_key().to_bytes();
-    let container = docker.run(pin_server);
-    let port = container.get_host_port_ipv4(PIN_SERVER_PORT);
+    let container = SyncRunner::start(pin_server).unwrap();
+    let port = container.get_host_port_ipv4(PIN_SERVER_PORT).unwrap();
     let url_a = format!("http://127.0.0.1:{port}");
 
     let params = UpdatePinserverParams {
@@ -114,8 +110,7 @@ fn update_pinserver() {
 
 #[test]
 fn jade_initialization_with_pin_server() {
-    let docker = clients::Cli::default();
-    let jade = TestJadeEmulator::new_with_pin(&docker);
+    let jade = TestJadeEmulator::new_with_pin();
 
     let result = jade.jade.version_info().unwrap();
     let mut expected = mock_version_info();
@@ -125,8 +120,7 @@ fn jade_initialization_with_pin_server() {
 
 #[test]
 fn jade_init_logout_unlock() {
-    let docker = clients::Cli::default();
-    let jade = TestJadeEmulator::new_with_pin(&docker);
+    let jade = TestJadeEmulator::new_with_pin();
 
     assert!(jade.jade.logout().unwrap());
     jade.jade.unlock().unwrap();
@@ -134,8 +128,7 @@ fn jade_init_logout_unlock() {
 
 #[test]
 fn jade_xpub() {
-    let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let mut jade = TestJadeEmulator::new();
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let xpub_master = jade.jade.get_master_xpub().unwrap();
@@ -157,8 +150,7 @@ fn jade_xpub() {
 
 #[test]
 fn jade_receive_address() {
-    let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let mut jade = TestJadeEmulator::new();
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let params = GetReceiveAddressParams {
@@ -176,8 +168,7 @@ fn jade_receive_address() {
 
 #[test]
 fn jade_register_multisig() {
-    let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let mut jade = TestJadeEmulator::new();
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let jade_master_xpub = jade.jade.get_master_xpub().unwrap();
@@ -224,8 +215,7 @@ fn jade_register_multisig() {
 #[test]
 #[ignore = "this test is a bit slow"]
 fn jade_max_multisigs() {
-    let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let mut jade = TestJadeEmulator::new();
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let xpub_params = GetXpubParams {
@@ -283,8 +273,7 @@ fn jade_max_multisigs() {
 
 #[test]
 fn jade_register_multisig_check_address() {
-    let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let mut jade = TestJadeEmulator::new();
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let multisig_name = "you_and_me".to_string();
@@ -349,8 +338,7 @@ fn jade_register_multisig_check_address() {
 
 #[test]
 fn jade_sign_message() {
-    let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let mut jade = TestJadeEmulator::new();
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let message = "Hello world!";
@@ -371,8 +359,7 @@ fn jade_sign_message() {
 
 #[test]
 fn jade_sign_liquid_tx() {
-    let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let mut jade = TestJadeEmulator::new();
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let pset_base64 = include_str!("../test_data/pset_to_be_signed.base64");
@@ -384,8 +371,7 @@ fn jade_sign_liquid_tx() {
 
 #[test]
 fn jade_sign_psbt() {
-    let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let mut jade = TestJadeEmulator::new();
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let pset_base64 = include_str!("../test_data/pset_to_be_signed.base64");
@@ -407,8 +393,7 @@ fn jade_sign_psbt() {
 
 #[test]
 fn jade_get_master_blinding_key() {
-    let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let mut jade = TestJadeEmulator::new();
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let params = GetMasterBlindingKeyParams {
@@ -423,10 +408,13 @@ fn jade_get_master_blinding_key() {
 async fn async_ping() {
     lwk_test_util::init_logging();
 
-    let docker = clients::Cli::default();
-
-    let container = docker.run(lwk_containers::JadeEmulator);
-    let port = container.get_host_port_ipv4(lwk_containers::EMULATOR_PORT);
+    let container = AsyncRunner::start(lwk_containers::JadeEmulator::new())
+        .await
+        .unwrap();
+    let port = container
+        .get_host_port_ipv4(lwk_containers::EMULATOR_PORT)
+        .await
+        .unwrap();
     let stream = tokio::net::TcpStream::connect(format!("127.0.0.1:{port}"))
         .await
         .unwrap();
@@ -443,10 +431,13 @@ async fn async_sign() {
 
     lwk_test_util::init_logging();
 
-    let docker = clients::Cli::default();
-
-    let container = docker.run(lwk_containers::JadeEmulator);
-    let port = container.get_host_port_ipv4(lwk_containers::EMULATOR_PORT);
+    let container = AsyncRunner::start(lwk_containers::JadeEmulator::new())
+        .await
+        .unwrap();
+    let port = container
+        .get_host_port_ipv4(lwk_containers::EMULATOR_PORT)
+        .await
+        .unwrap();
     let stream = tokio::net::TcpStream::connect(format!("127.0.0.1:{port}"))
         .await
         .unwrap();

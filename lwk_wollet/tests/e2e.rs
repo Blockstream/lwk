@@ -34,7 +34,6 @@ use elements::hex::{FromHex, ToHex};
 use elements::{Address, OutPoint, Transaction};
 use lwk_common::electrum_ssl::LIQUID_TESTNET_SOCKET;
 use lwk_common::Signer;
-use lwk_containers::testcontainers::clients::Cli;
 use lwk_signer::*;
 use lwk_test_util::*;
 use lwk_wollet::*;
@@ -43,8 +42,7 @@ use test_wollet::*;
 
 #[test]
 fn liquid_send_jade_signer() {
-    let docker = Cli::default();
-    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
+    let jade_init = jade_setup(TEST_MNEMONIC);
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let signers = [&AnySigner::Jade(jade_init.jade, xpub_identifier)];
     liquid_send(&signers);
@@ -59,8 +57,7 @@ fn liquid_send_software_signer() {
 
 #[test]
 fn liquid_issue_jade_signer() {
-    let docker = Cli::default();
-    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
+    let jade_init = jade_setup(TEST_MNEMONIC);
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let signers = [&AnySigner::Jade(jade_init.jade, xpub_identifier)];
     liquid_issue(&signers);
@@ -805,8 +802,7 @@ fn multisig_flow() {
     // We have 2 signers
     let signer1 = generate_signer();
 
-    let docker = Cli::default();
-    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
+    let jade_init = jade_setup(TEST_MNEMONIC);
 
     let signer2 = &jade_init.jade;
     let signer2_xpub = signer2.xpub().unwrap();
@@ -894,8 +890,7 @@ fn jade_sign_wollet_pset() {
         .finish()
         .unwrap();
 
-    let docker = Cli::default();
-    let jade_init = jade_setup(&docker, mnemonic);
+    let jade_init = jade_setup(mnemonic);
 
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let jade_signer = AnySigner::Jade(jade_init.jade, xpub_identifier);
@@ -916,8 +911,7 @@ fn jade_sign_wollet_pset() {
 fn jade_single_sig() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let mnemonic = TEST_MNEMONIC;
-    let docker = Cli::default();
-    let jade_init = jade_setup(&docker, mnemonic);
+    let jade_init = jade_setup(mnemonic);
     let signer = AnySigner::Jade(
         jade_init.jade,
         XKeyIdentifier::from_str("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),

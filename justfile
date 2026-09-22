@@ -160,8 +160,12 @@ mdbook:
 llms:
     cd docs && python3 generate_llms.py
 
+# Build all documentation and fail on broken local links
+docs-check:
+    bash docs/check.sh
+
 # Serve the mdbook documentation locally for development
-mdbook-serve: mdbook
+mdbook-serve: docs-check
     cd docs && mdbook serve
 
 # Generate a local Cobertura and HTML coverage report with nextest

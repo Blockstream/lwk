@@ -571,7 +571,7 @@ fn multiple_descriptors() {
     let mut pset_t2 = pset.clone();
     wallet_t.sign(&signer_t1, &mut pset_t1);
     wallet_t.sign(&signer_t2, &mut pset_t2);
-    let mut pset = wallet_t.wollet.combine(&vec![pset_t1, pset_t2]).unwrap();
+    let mut pset = wallet_t.wollet.combine(&[pset_t1, pset_t2]).unwrap();
     wallet_t.send(&mut pset);
     wallet_a.sync();
     assert_eq!(wallet_a.balance(asset), satoshi_a + satoshi_ar);
@@ -866,7 +866,7 @@ fn multisig_flow() {
         assert!(fingerprints.contains(&signer1.fingerprint()));
         assert!(fingerprints.contains(&signer2_fingerprint));
     }
-    let mut pset = wallet.wollet.combine(&vec![pset1, pset2]).unwrap();
+    let mut pset = wallet.wollet.combine(&[pset1, pset2]).unwrap();
 
     // Finalize and send the PSET
     wallet.send(&mut pset);
@@ -4706,7 +4706,7 @@ fn test_skip_signing_utxo() {
     assert_eq!(details.sig_details()[1].has_signature()[0].1 .0, fp);
 
     // Combine PSETs
-    let mut pset = w.wollet.combine(&vec![pset1, pset2]).unwrap();
+    let mut pset = w.wollet.combine(&[pset1, pset2]).unwrap();
 
     let details = w.wollet.get_details(&pset).unwrap();
     assert_eq!(details.sig_details()[0].has_signature()[0].1 .0, fp);

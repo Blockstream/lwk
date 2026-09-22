@@ -116,7 +116,7 @@ fn decode_config(encoded: &str) -> Option<PosConfig> {
     let mut base64 = encoded.replace('-', "+").replace('_', "/");
 
     // Add padding back if needed
-    while base64.len() % 4 != 0 {
+    while !base64.len().is_multiple_of(4) {
         base64.push('=');
     }
 

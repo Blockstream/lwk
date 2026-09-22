@@ -886,7 +886,7 @@ impl LockupResponse {
     ///
     /// # Arguments
     /// * `cooperative` - If true, attempts cooperative (key path) claim with Boltz's signature.
-    ///                   If false, uses script path claim (required when Boltz already claimed).
+    ///   If false, uses script path claim (required when Boltz already claimed).
     /// * `lockup_tx` - Optional pre-fetched lockup transaction. If None, will be fetched from chain.
     async fn build_and_broadcast_claim(
         &mut self,

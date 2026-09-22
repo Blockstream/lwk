@@ -170,7 +170,7 @@ impl PricesFetcher {
         let mut prices: Vec<f64> = rates.iter().map(|r| r.rate).collect();
         prices.sort_by(|a, b| a.total_cmp(b));
 
-        let median = if prices.len() % 2 == 0 {
+        let median = if prices.len().is_multiple_of(2) {
             let mid = prices.len() / 2;
             (prices[mid - 1] + prices[mid]) / 2.0
         } else {

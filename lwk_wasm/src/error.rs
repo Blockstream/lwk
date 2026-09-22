@@ -177,7 +177,7 @@ impl Error {
                 lwk_boltz::Error::InvalidBolt12InvoiceHrp { .. } => {
                     "Boltz::InvalidBolt12InvoiceHrp"
                 }
-                lwk_boltz::Error::MissingLiquidClient { .. } => "Boltz::MissingLiquidClient",
+                lwk_boltz::Error::MissingLiquidClient => "Boltz::MissingLiquidClient",
                 lwk_boltz::Error::Bolt12InvoiceVerificationFailed => {
                     "Boltz::Bolt12InvoiceVerificationFailed"
                 }

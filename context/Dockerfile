@@ -1,4 +1,4 @@
-FROM rust:1.85.0
+FROM rust:1.91.0
 
 RUN apt update -qq
 RUN apt upgrade --no-install-recommends -yqq

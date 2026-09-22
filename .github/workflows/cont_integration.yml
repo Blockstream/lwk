@@ -42,7 +42,7 @@ jobs:
       runs-on: macos-15
       steps:
         - uses: actions/checkout@v6
-        - uses: dtolnay/rust-toolchain@1.85.0
+        - uses: dtolnay/rust-toolchain@1.91.0
           with:
             targets: x86_64-apple-ios,aarch64-apple-ios,aarch64-apple-ios-sim,aarch64-apple-darwin
         - run: brew install just xcodegen

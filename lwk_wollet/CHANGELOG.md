@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Bump MSRV to 1.91
 * All registry-related code was moved to `lwk_registry`. Notes for migration:
   * Registry-related methods return `lwk_registry::Error` instead of an `lwk_wollet::Error`.
   * In order to use a blockchain client with the `fetch_with_tx` method in the `Registry`, the provided client should implement the `TxFetcher` trait or the `TxFetcherAsync` trait for asynchronous clients.

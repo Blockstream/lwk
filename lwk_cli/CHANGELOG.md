@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Bump MSRV to 1.91
+
 ## 0.19.0
 
 * Breaking: `server start` now writes a random RPC auth cookie to `<datadir>/<network>/.cookie`

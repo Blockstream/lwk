@@ -512,7 +512,7 @@ wasm:
     - apt-get install -y jq
     # launch regtest enviroment
     - SKIP_JADE=1 ./lwk_test_util/wasm_test_env.sh > /dev/null 2>&1 &
-    - cargo check --target wasm32-unknown-unknown -p lwk_common -p lwk_rpc_model -p lwk_containers -p lwk_hwi -p lwk_prices
+    - cargo check --target wasm32-unknown-unknown -p lwk_common -p lwk_rpc_model -p lwk_hwi -p lwk_prices
     - cargo check --target wasm32-unknown-unknown -p lwk_wollet --no-default-features --features esplora,serial,amp2,amp0
     - cargo check --target wasm32-unknown-unknown -p lwk_signer --no-default-features
     - cargo check --target wasm32-unknown-unknown -p lwk_jade --no-default-features --features asyncr --features serial

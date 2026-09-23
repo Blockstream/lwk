@@ -97,9 +97,11 @@ cargo -q clippy --all-targets -- -D warnings
 # Security audit (yanked dependencies are temporarily allowed until boltz-rust is updated)
 cargo audit
 
-# Generate documentation
-cargo -q doc --no-deps -p lwk_wollet --all-features
-RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo +nightly -q doc --all-features --no-deps
+# Generate documentation as CI does: one crate at a time because the workspace
+# cannot currently be documented with --all-features.
+RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo +nightly -q doc --no-deps -p lwk_wollet --all-features
+RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo +nightly -q doc --no-deps -p lwk_bindings --features foreign_bindings
+# See the doc job in .gitlab-ci.yml for the complete per-crate list.
 ```
 
 ### YAML Validation

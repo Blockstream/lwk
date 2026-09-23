@@ -7,18 +7,13 @@ use elements::pset::PartiallySignedTransaction;
 use elements::{AssetId, Txid};
 use elements::{Block, TxOutSecrets};
 use elements_miniscript::descriptor::checksum::desc_checksum;
-use std::{
-    io::{Read, Write},
-    net::TcpListener,
-    str::FromStr,
-    thread,
-    time::Duration,
-};
+use std::str::FromStr;
 
 mod amp2;
 mod auth;
 mod fee;
 mod generate;
+mod http;
 mod lightningd;
 mod panic_store;
 mod pegin;
@@ -31,6 +26,7 @@ pub use auth::{
 };
 pub use fee::{assert_fee_rate, compute_fee_rate, compute_fee_rate_without_discount_ct};
 pub use generate::{generate_mnemonic, generate_slip77, generate_view_key, generate_xprv};
+pub use http::serve_http_response;
 pub use panic_store::PanicStore;
 pub use pegin::{
     FED_PEG_DESC, FED_PEG_SCRIPT, FED_PEG_SCRIPT_ASM, PEGIN_TEST_ADDR, PEGIN_TEST_DESC,
@@ -48,34 +44,6 @@ pub const DEFAULT_SPECULOS_MNEMONIC: &str = "glory promote mansion idle axis fin
 
 /// Descriptor with 11 txs on testnet
 pub const TEST_DESCRIPTOR: &str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
-
-/// Start a tiny local HTTP server for tests and return its base URL.
-///
-/// The server responds with the same status, content type, and body for every
-/// request. If `keep_open` is true it keeps each accepted connection open after
-/// writing the body, which is useful for testing stream cancellation.
-pub fn serve_http_response(
-    status_line: &'static str,
-    content_type: &'static str,
-    body: &'static str,
-    keep_open: bool,
-) -> String {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = listener.local_addr().unwrap();
-    thread::spawn(move || loop {
-        let (mut stream, _) = listener.accept().unwrap();
-        let mut request = [0u8; 1024];
-        let _ = stream.read(&mut request);
-        let response = format!(
-            "HTTP/1.1 {status_line}\r\nContent-Type: {content_type}\r\nConnection: close\r\n\r\n{body}"
-        );
-        let _ = stream.write_all(response.as_bytes());
-        if keep_open {
-            thread::sleep(Duration::from_secs(30));
-        }
-    });
-    format!("http://{addr}")
-}
 
 pub fn liquid_block_1() -> Block {
     let raw = include_bytes!(

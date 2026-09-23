@@ -4,7 +4,7 @@ The [BIP85 specification](https://github.com/bitcoin/bips/blob/master/bip-0085.m
 
 ## Deriving a Mnemonic
 
-To derive a BIP85 mnemonic, you need a software signer initialized with a mnemonic (hardware wallet-based signers are not supported at the moment). The derived mnemonic is obtained with `Signer::derive_bip85_mnemonic()`, which takes an `index` (0-based) and a `word_count` (12 or 24).
+To derive a BIP85 mnemonic, you need a software signer initialized with a mnemonic (hardware wallet-based signers are not supported at the moment). The derived mnemonic is obtained with `SwSigner::derive_bip85_mnemonic()`, which takes an `index` (0-based) and a `word_count` (12 or 24).
 
 <custom-tabs category="lang">
 <div slot="title">Rust</div>
@@ -44,4 +44,3 @@ To derive a BIP85 mnemonic, you need a software signer initialized with a mnemon
 ----
 
 Next: [CLI](cli.md)
-

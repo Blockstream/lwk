@@ -1,6 +1,6 @@
 # Update the Wallet
-The fact that `Wollet` does have access to internet is a deliberate choice.
-This allows `Wollet` to work offline, where they can generate addresses.
+The fact that `Wollet` does not have access to the internet is a deliberate choice.
+This allows `Wollet` to work offline and generate addresses.
 
 The connection is handled by a specific component, a Blockchain **Client**.
 Blockchain clients connect to the specified server a fetch the wallet data from the blockchain.

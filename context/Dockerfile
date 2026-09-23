@@ -9,8 +9,12 @@ RUN apt upgrade --no-install-recommends -yqq
 # libtinfo5 libncurses5 for swift
 # chromium-driver for wasm tests
 RUN apt install -y libudev-dev libxml2-utils clang libtinfo6 libncurses6 chromium-driver
-RUN wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
-RUN apt update -qq && apt install -y dotnet-sdk-10.0
+
+ENV DOTNET_ROOT=/usr/share/dotnet
+ENV PATH="${PATH}:${DOTNET_ROOT}"
+
+RUN curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0 --install-dir /usr/share/dotnet \
+    && ln -s /usr/share/dotnet/dotnet /usr/local/bin/dotnet
 
 RUN rustup component add rustfmt
 RUN rustup component add clippy

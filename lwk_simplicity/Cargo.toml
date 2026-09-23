@@ -52,6 +52,6 @@ lwk_wollet = { version = "0.19.0", default-features = false, features = [
     "electrum",
 ] }
 
-testcontainers = { version = "0.27.0", features = ["blocking"] }
+testcontainers = { version = "0.27.0", features = ["blocking", "watchdog"] }
 testcontainers-modules = { version = "0.15.0", features = ["postgres"] }
 tempfile.workspace = true

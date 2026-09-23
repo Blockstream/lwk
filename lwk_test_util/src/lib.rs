@@ -5,11 +5,11 @@ use elements::encode::Decodable;
 use elements::hex::FromHex;
 use elements::{AssetId, Txid};
 use elements::{Block, TxOutSecrets};
-use elements_miniscript::descriptor::checksum::desc_checksum;
 use std::str::FromStr;
 
 mod amp2;
 mod auth;
+mod desc;
 mod fee;
 mod generate;
 mod http;
@@ -23,6 +23,10 @@ mod waterfalls;
 pub use auth::{
     AuthStack, AUTH_CLIENT_ID, AUTH_CLIENT_SECRET, AUTH_REALM, AUTH_SHORT_CLIENT_ID,
     AUTH_SHORT_CLIENT_SECRET, AUTH_USER_UUID,
+};
+pub use desc::{
+    add_checksum, wollet_descriptor_many_transactions, wollet_descriptor_string,
+    wollet_descriptor_string2, TEST_DESCRIPTOR,
 };
 pub use fee::{assert_fee_rate, compute_fee_rate, compute_fee_rate_without_discount_ct};
 pub use generate::{generate_mnemonic, generate_slip77, generate_view_key, generate_xprv};
@@ -46,9 +50,6 @@ pub const TEST_MNEMONIC_SLIP77: &str =
 
 pub const DEFAULT_SPECULOS_MNEMONIC: &str = "glory promote mansion idle axis finger extra february uncover one trip resource lawn turtle enact monster seven myth punch hobby comfort wild raise skin";
 
-/// Descriptor with 11 txs on testnet
-pub const TEST_DESCRIPTOR: &str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
-
 pub fn liquid_block_1() -> Block {
     let raw = include_bytes!(
         "../test_data/afafbbdfc52a45e51a3b634f391f952f6bdfd14ef74b34925954b4e20d0ad639.raw"
@@ -60,14 +61,6 @@ pub fn liquid_block_header_2_963_520() -> BlockHeader {
     let hex = include_str!("../test_data/block_header_2_963_520.hex");
     let bytes = Vec::<u8>::from_hex(hex).unwrap();
     BlockHeader::consensus_decode(&bytes[..]).unwrap()
-}
-
-pub fn add_checksum(desc: &str) -> String {
-    if desc.find('#').is_some() {
-        desc.into()
-    } else {
-        format!("{}#{}", desc, desc_checksum(desc).unwrap())
-    }
 }
 
 pub fn regtest_policy_asset() -> AssetId {
@@ -171,16 +164,4 @@ pub fn update_test_vector_encrypted_base64() -> String {
 
 pub fn update_test_vector_encrypted_bytes2() -> Vec<u8> {
     include_bytes!("../test_data/update_test_vector/000000000000").to_vec()
-}
-
-pub fn wollet_descriptor_string2() -> String {
-    include_str!("../test_data/update_test_vector/desc").to_string()
-}
-
-pub fn wollet_descriptor_string() -> String {
-    include_str!("../test_data/update_test_vector/desc2").to_string()
-}
-
-pub fn wollet_descriptor_many_transactions() -> &'static str {
-    "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs"
 }

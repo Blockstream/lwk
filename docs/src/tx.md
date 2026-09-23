@@ -23,7 +23,7 @@ LWK allows to construct complex transactions, here there are few examples
 * Set fee rate with `TxBuilder::fee_rate()`
 * [Manual coin selection](manual.md)
 * [External UTXOS](external.md)
-* [Explicit inputs and outputs](explicit.md)
+* Explicit inputs and outputs
 * [Send all LBTC](sendall.md)
 * [Issuance](issuance.md), [reissuance](reissuance.md), [burn](burn.md)
 

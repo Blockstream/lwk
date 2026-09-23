@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.19.1
+
 * Added `DescriptorPublicKey`
 * Added `Signer::ss_desc()`
 * Renamed `DerivationPath::from_account()` to `DerivationPath::ss_path()`

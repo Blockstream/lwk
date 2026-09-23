@@ -15,7 +15,7 @@ use std::{
 pub use config::Config;
 pub use error::Error;
 use error::{AsRpcError, InnerError, INTERNAL_ERROR, INVALID_PARAMS, METHOD_NOT_FOUND};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tiny_http::Response as HttpResponse;
 use tiny_http::Server;

@@ -8,6 +8,8 @@ from dataclasses import dataclass
 import re
 from pathlib import Path
 
+from link_utils import MARKDOWN_LINK_RE, repository_link, slugify
+
 
 DOCS_DIR = Path(__file__).resolve().parent
 REPO_DIR = DOCS_DIR.parent
@@ -21,7 +23,6 @@ SUMMARY_TITLE_RE = re.compile(r"\[([^\]]+)\]")
 SUMMARY_TARGET_RE = re.compile(r"\(([^)]*\.md)\)")
 INCLUDE_RE = re.compile(r"\{\{#include\s+([^}]+)\}\}")
 TAB_TITLE_RE = re.compile(r'<div slot="title">(.+)</div>')
-MARKDOWN_LINK_RE = re.compile(r"(!?)\[([^\]]*)\]\(([^)]+)\)")
 HEADING_RE = re.compile(r"^(#{1,6})(\s+.+)$")
 IGNORE_FENCE_RE = re.compile(r"^(```[A-Za-z0-9_#+-]+),ignore$", re.MULTILINE)
 
@@ -38,14 +39,6 @@ class RenderedPage:
     path: Path
     title: str
     lines: list[str]
-
-
-def slugify(text: str) -> str:
-    text = text.strip().lower()
-    text = re.sub(r"<[^>]+>", "", text)
-    text = re.sub(r"[^\w\s-]", "", text)
-    text = re.sub(r"[\s_]+", "-", text)
-    return text.strip("-")
 
 
 def summary_pages() -> list[PageEntry]:
@@ -174,16 +167,11 @@ def rewrite_links(text: str, current_page: Path, slug_by_file: dict[str, str]) -
         target_path, separator, target_anchor = target.partition("#")
         name = Path(target_path).name
         if name not in slug_by_file:
-            path = (current_page.parent / target_path).resolve()
-            if not path.exists() and target_path.startswith("../"):
-                path = (REPO_DIR / target_path.removeprefix("../")).resolve()
-            if not path.exists() and target_path.startswith("./"):
-                path = (REPO_DIR / target_path.removeprefix("./")).resolve()
-            if path.exists() and REPO_DIR in path.parents:
-                rel = path.relative_to(REPO_DIR).as_posix()
-                kind = "tree" if path.is_dir() else "blob"
-                anchor = f"#{target_anchor}" if separator else ""
-                return f"[{label}]({SOURCE_URL}/{kind}/master/{rel}{anchor})"
+            link = repository_link(
+                current_page, target, REPO_DIR, SRC_DIR, SOURCE_URL, "master"
+            )
+            if link is not None:
+                return f"[{label}]({link.url})"
             return match.group(0)
 
         slug = slug_by_file[name]

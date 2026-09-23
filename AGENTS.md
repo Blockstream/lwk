@@ -130,6 +130,12 @@ Add a `just` recipe when adding a complex flow.
 - Rust toolchain: **1.85.0** (specified in `rust-toolchain.toml`)
 - Edition: **2021**
 
+### Dependencies
+- Remove unused dependencies
+- Move dependencies used only in tests under `[dev-dependencies]`
+- Use workspace dependencies if already available there
+- For workspace dependencies, if there is a single field, prefer `crate.workspace = true` over `crate = { workspace = true}`; if there are multiple fields use `crate = { workspace = true, features = ["..."] }`
+
 ### Imports
 - Group imports: std lib → external crates → workspace crates → local modules
 - Use `use crate::` for local module imports

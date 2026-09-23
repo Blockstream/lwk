@@ -15,7 +15,7 @@ To delve into their differences and strength points see our [dedicated section](
 ## Create a Client
 In this guide we will use an `EsploraClient`.
 
-You can create a new client with `EsploraClient::new()`, specifying the URL of the service.
+You can create a new client with `EsploraClient::new()`, specifying the URL of the service and the Liquid network.
 
 ## Scan the Blockchain
 Given a `Wollet` you can call `EsploraClient::full_scan()`,

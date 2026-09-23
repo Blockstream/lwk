@@ -168,8 +168,8 @@ impl DeserializationState<'_> for ExtrasState {
             Ok(ParamKind::Known)
         } else if key.eq_ignore_ascii_case("sp") {
             if let Ok(s) = String::try_from(value) {
-                // self.sp = SilentPaymentAddress::try_from(s.as_str()).ok();
-                self.sp = Some(s); // TODO: we don't validate since the silentpayment crate is duplicating secp256k1 dep (using 0.28.1 instead of 0.29.0) and we don't want to pay the price since we are not fullysupporting silent payments yet
+                // TODO: validate silent payment addresses when LWK supports them fully.
+                self.sp = Some(s);
             }
             Ok(ParamKind::Known)
         } else if key.eq_ignore_ascii_case("ark") {

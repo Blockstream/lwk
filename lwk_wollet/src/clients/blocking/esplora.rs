@@ -87,9 +87,9 @@ impl EsploraClient {
 
     /// Return the descriptor string to use with Waterfalls descriptor endpoints.
     ///
-    /// This is a temporary API exposed to let callers use Waterfalls subscription
-    /// endpoints directly. It may be removed once subscription support is
-    /// implemented in LWK.
+    /// This compatibility primitive is used internally by
+    /// [`crate::clients::blocking::WaterfallsClient`]
+    /// for Waterfalls scans and subscriptions.
     #[deprecated(
         since = "0.18.2",
         note = "use WaterfallsClient::waterfalls_descriptor instead"

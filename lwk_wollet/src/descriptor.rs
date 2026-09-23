@@ -70,7 +70,7 @@ impl FromStr for Spk {
 }
 
 #[derive(Debug, Clone)]
-/// A wrapper that contains only the subset of CT descriptors handled by wollet
+/// A wallet definition containing a supported CT descriptor or a fixed list of script pubkeys.
 pub struct WolletDescriptor {
     inner: DescOrSpks,
     #[cfg(feature = "amp0")]

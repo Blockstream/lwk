@@ -92,7 +92,7 @@ cargo -q fmt
 cargo -q fmt --check
 
 # Run clippy
-cargo -q clippy --all-features --all-targets -- -D warnings
+cargo -q clippy --all-targets -- -D warnings
 
 # Security audit (yanked dependencies are temporarily allowed until boltz-rust is updated)
 cargo audit

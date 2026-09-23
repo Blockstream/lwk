@@ -14,6 +14,7 @@ mod fee;
 mod generate;
 mod http;
 mod lightningd;
+mod log;
 mod mnemonic;
 mod panic_store;
 mod pegin;
@@ -34,6 +35,7 @@ pub use desc::{
 pub use fee::{assert_fee_rate, compute_fee_rate, compute_fee_rate_without_discount_ct};
 pub use generate::{generate_mnemonic, generate_slip77, generate_view_key, generate_xprv};
 pub use http::serve_http_response;
+pub use log::init_logging;
 pub use mnemonic::{
     DEFAULT_SPECULOS_MNEMONIC, TEST_MNEMONIC, TEST_MNEMONIC_SLIP77, TEST_MNEMONIC_XPUB,
 };
@@ -56,10 +58,6 @@ pub use update::{
 
 pub fn regtest_policy_asset() -> AssetId {
     AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225").unwrap()
-}
-
-pub fn init_logging() {
-    let _ = env_logger::try_init();
 }
 
 fn asset_blinding_factor_test_vector() -> AssetBlindingFactor {

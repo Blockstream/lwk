@@ -103,11 +103,11 @@ echo "${OPENJDK_EXPECTED_SHA256}  ${OPENJDK_FILENAME}" | sha256sum -c -
 tar -xzf "${OPENJDK_FILENAME}" && rm "${OPENJDK_FILENAME}"
 
 # swift
-SWIFT_VERSION="5.5-RELEASE"
-SWIFT_EXPECTED_SHA256="1ebf6441938dafc9fba85419b0482f4b6d371e0d2d1851e80ae6769b11aab6a5"
+SWIFT_VERSION="6.4.0-RELEASE"
+SWIFT_EXPECTED_SHA256="b623947404e7ea9843cfc315ed8624e85410fae571eb353339780ed222243737"
 
-SWIFT_FILENAME="swift-${SWIFT_VERSION}-ubuntu18.04.tar.gz"
-curl -Ls "https://download.swift.org/swift-5.5-release/ubuntu1804/swift-${SWIFT_VERSION}/${SWIFT_FILENAME}" -o "${SWIFT_FILENAME}"
+SWIFT_FILENAME="swift-${SWIFT_VERSION}-debian13.tar.gz"
+curl -Ls "https://download.swift.org/swift-6.4.0-release/debian13/swift-${SWIFT_VERSION}/${SWIFT_FILENAME}" -o "${SWIFT_FILENAME}"
 echo "${SWIFT_EXPECTED_SHA256}  ${SWIFT_FILENAME}" | sha256sum -c -
 tar -xzf "${SWIFT_FILENAME}" && rm "${SWIFT_FILENAME}"
 

@@ -1,4 +1,4 @@
-FROM rust:1.91.0
+FROM rust:1.91.0-trixie
 
 RUN apt update -qq
 RUN apt upgrade --no-install-recommends -yqq
@@ -6,9 +6,26 @@ RUN apt upgrade --no-install-recommends -yqq
 # libxml2-utils for xmllint
 # libudev-dev for jade serial
 # clang for wasm
-# libtinfo5 libncurses5 for swift
 # chromium-driver for wasm tests
-RUN apt install -y libudev-dev libxml2-utils clang libtinfo6 libncurses6 chromium-driver
+# Other libraries are runtime and development dependencies of Swift.
+RUN apt install -y --no-install-recommends \
+    libudev-dev \
+    libxml2-utils \
+    clang \
+    chromium-driver \
+    binutils-gold \
+    libicu-dev \
+    libcurl4-openssl-dev \
+    libedit-dev \
+    libsqlite3-dev \
+    libncurses-dev \
+    libpython3-dev \
+    libxml2-dev \
+    pkg-config \
+    uuid-dev \
+    tzdata \
+    gcc \
+    libstdc++-14-dev
 
 ENV DOTNET_ROOT=/usr/share/dotnet
 ENV PATH="${PATH}:${DOTNET_ROOT}"

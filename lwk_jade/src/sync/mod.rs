@@ -14,6 +14,7 @@ use crate::register_multisig::{
     RegisteredMultisigDetails,
 };
 use crate::sign_liquid_tx::{SignLiquidTxParams, SignPsbtParams, TxInputParams};
+use crate::sign_pset_common::prepare_pset_sign_psbt;
 use crate::{
     anti_exfil, derivation_path_to_vec, json_to_cbor, try_parse_response, vec_to_derivation_path,
     Error, ParseStep, Result,
@@ -450,6 +451,15 @@ impl Jade {
         let signed_bytes = self.sign_psbt(params)?;
         let signed_pset: PartiallySignedTransaction = elements::encode::deserialize(&signed_bytes)
             .map_err(|e| Error::Generic(e.to_string()))?;
+
+        let prepared_pset = prepare_pset_sign_psbt(pset, &self.network);
+        lwk_common::verify_added_sigs(
+            &prepared_pset,
+            &signed_pset,
+            self.fingerprint()?,
+            &crate::SECP,
+        )?;
+
         Ok(signed_pset)
     }
 

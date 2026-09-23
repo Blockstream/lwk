@@ -190,6 +190,7 @@
             amp2Mock
             pkgs.grcov
             pkgs.go
+            pkgs.just
             pkgs.lsof
             pkgs.nixfmt
             pkgs.psmisc

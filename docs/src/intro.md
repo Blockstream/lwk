@@ -62,7 +62,7 @@ LWK allows to build more complex applications and products by leveraging its wid
 * [x] Send and receive Liquid Issued Assets (e.g. USDT)
 * [x] Send and receive AMP assets (e.g. BMN)
 * [x] Software signers
-* [x] Hardware wallets support (Jade)
+* [x] Hardware wallet support (Jade; experimental Ledger support)
 * [x] Watch-Only view with CT descriptors
 * [x] Single-sig
 * [x] Generic Multisig

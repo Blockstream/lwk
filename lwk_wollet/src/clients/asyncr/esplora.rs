@@ -1233,8 +1233,6 @@ struct EsploraTx {
     status: Status,
 }
 
-// TODO some of this fields may be Option in unconfirmed
-
 #[derive(Deserialize)]
 struct Status {
     block_height: Option<i32>,

@@ -34,7 +34,7 @@ They are huge, and their largest part are rangeproofs.
 Those are used when unblinding transactions,
 but later they're not used anymore (unless in extremely particular cases).
 
-You can remove them calling `Update::prune()` before applying and persisting the update.
+You can remove them by calling `Update::prune_witnesses()` before applying and persisting the update.
 
 ## Merge Updates
 Every time you get new transactions,

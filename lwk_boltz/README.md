@@ -10,9 +10,11 @@ The first time we need to initialize the git submodule
 git submodule update --init --recursive
 ```
 
-Then
+The following recipes are defined in this crate's `justfile`. From the
+repository root, enter the crate directory first:
 
 ```shell
+cd lwk_boltz
 just regtest-env-start
 ```
 

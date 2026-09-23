@@ -1,14 +1,15 @@
 use crate::error::Error;
-use once_cell::sync::Lazy;
 use regex_lite::Regex;
+use std::sync::LazyLock;
 
 // Domain name validation code extracted from https://github.com/rushmorem/publicsuffix/blob/master/src/lib.rs,
 // MIT, Copyright (c) 2016 Rushmore Mushambi
 
-static DOMAIN_LABEL1: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[[:alnum:]]+$").expect("static"));
+static DOMAIN_LABEL1: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[[:alnum:]]+$").expect("static"));
 
-static DOMAIN_LABEL2: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^[[:alnum:]]+[[:alnum:]-]*[[:alnum:]]+$").expect("static"));
+static DOMAIN_LABEL2: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[[:alnum:]]+[[:alnum:]-]*[[:alnum:]]+$").expect("static"));
 
 pub fn verify_domain_name(domain: &str) -> Result<(), Error> {
     if domain.starts_with('.')

@@ -13,7 +13,7 @@ With LWK this does not happens automatically,
 you can do a "full scan" and apply the returned update.
 However this requires network calls and it might be slow,
 if you want your balance to be updated immediately,
-you can call `Wollet::apply_tx()`.
+you can call `Wollet::apply_transaction()`.
 
 <custom-tabs category="lang">
 <div slot="title">Rust</div>

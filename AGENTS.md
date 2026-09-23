@@ -155,7 +155,9 @@ Add a `just` recipe when adding a complex flow.
 - Use `#[error(transparent)]` for wrapping other errors
 - Use `#[from]` for automatic conversion
 - Return `Result<T, Error>` from public functions
-- Deny `unwrap()` in non-test code: `#![cfg_attr(not(test), deny(clippy::unwrap_used))]`
+- Crates may deny `unwrap()` in non-test code with
+  `#![cfg_attr(not(test), deny(clippy::unwrap_used))]`; this lint is enabled
+  per crate rather than workspace-wide.
 
 ### Naming Conventions
 - Types: `PascalCase` (e.g., `WolletDescriptor`, `TxBuilder`)

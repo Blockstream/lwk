@@ -146,6 +146,7 @@ test_wollet:
     - .coverage_mixin
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    - apt-get -qq update && apt-get install -y libsodium23  # TODO: remove once docker image is re-built
     - docker pull $JADE_EMULATOR_IMAGE_NAME:$JADE_EMULATOR_IMAGE_VERSION
     - cargo build -p amp2_mock && export AMP2_MOCK_EXEC=$PWD/target/debug/amp2_mock
     - ls $PWD/target/debug

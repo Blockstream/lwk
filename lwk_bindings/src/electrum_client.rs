@@ -170,7 +170,6 @@ impl ElectrumClient {
 
 impl ElectrumClient {
     /// Create a new electrum client with the same connection parameters
-    #[allow(unused)] // TODO remove once lwk_boltz is integrated
     pub(crate) fn clone_client(&self) -> Result<lwk_wollet::ElectrumClient, LwkError> {
         Ok(self.builder.clone().build()?)
     }

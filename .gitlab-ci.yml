@@ -120,7 +120,7 @@ fmt_clippy:
 test_clean:
   stage: test
   needs: []
-  image: rust:1.75
+  image: rust:1.91
   script:
     - cargo build
 

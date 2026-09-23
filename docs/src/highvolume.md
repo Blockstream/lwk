@@ -50,7 +50,7 @@ all transactions will be downloaded again,
 and you will have a single compacted update.
 
 However for large wallets, this might not be ideal.
-For them we have `WolletBuilder::with_merge_thresold()`.
+For them we have `WolletBuilder::with_merge_threshold()`.
 It allows to specify a threshold after which all updates are compacted into one.
 
 ## Waterfalls

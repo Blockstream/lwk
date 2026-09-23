@@ -3,7 +3,6 @@ use elements_miniscript::elements::{self, BlockHeader};
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::Decodable;
 use elements::hex::FromHex;
-use elements::pset::PartiallySignedTransaction;
 use elements::{AssetId, Txid};
 use elements::{Block, TxOutSecrets};
 use elements_miniscript::descriptor::checksum::desc_checksum;
@@ -17,6 +16,7 @@ mod http;
 mod lightningd;
 mod panic_store;
 mod pegin;
+mod pset;
 mod registry;
 mod test_env;
 mod waterfalls;
@@ -30,6 +30,10 @@ pub use http::serve_http_response;
 pub use panic_store::PanicStore;
 pub use pegin::{
     FED_PEG_DESC, FED_PEG_SCRIPT, FED_PEG_SCRIPT_ASM, PEGIN_TEST_ADDR, PEGIN_TEST_DESC,
+};
+pub use pset::{
+    descriptor_pset_usdt_no_contracts, n_issuances, n_reissuances, pset_rt, pset_usdt_no_contracts,
+    pset_usdt_with_contract, psets_to_combine,
 };
 pub use test_env::{TestEnv, TestEnvBuilder};
 
@@ -66,36 +70,12 @@ pub fn add_checksum(desc: &str) -> String {
     }
 }
 
-/// Serialize and deserialize a PSET
-///
-/// This allows us to catch early (de)serialization issues,
-/// which can be hit in practice since PSETs are passed around as b64 strings.
-pub fn pset_rt(pset: &PartiallySignedTransaction) -> PartiallySignedTransaction {
-    PartiallySignedTransaction::from_str(&pset.to_string()).unwrap()
-}
-
 pub fn regtest_policy_asset() -> AssetId {
     AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225").unwrap()
 }
 
 pub fn init_logging() {
     let _ = env_logger::try_init();
-}
-
-pub fn n_issuances(details: &lwk_common::PsetDetails) -> usize {
-    details
-        .issuances()
-        .iter()
-        .filter(|e| e.is_issuance())
-        .count()
-}
-
-pub fn n_reissuances(details: &lwk_common::PsetDetails) -> usize {
-    details
-        .issuances()
-        .iter()
-        .filter(|e| e.is_reissuance())
-        .count()
 }
 
 fn asset_blinding_factor_test_vector() -> AssetBlindingFactor {
@@ -203,31 +183,4 @@ pub fn wollet_descriptor_string() -> String {
 
 pub fn wollet_descriptor_many_transactions() -> &'static str {
     "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs"
-}
-
-/// A 3 of 5 descriptor and a vector of partially signed transactions to combine 1 sig each
-pub fn psets_to_combine() -> (String, Vec<PartiallySignedTransaction>) {
-    let c = |s: &str| PartiallySignedTransaction::from_str(s).unwrap();
-    let ps = vec![
-        c(include_str!("../test_data/pset_combine/s1_pset.base64")),
-        c(include_str!("../test_data/pset_combine/s2_pset.base64")),
-        c(include_str!("../test_data/pset_combine/s3_pset.base64")),
-        c(include_str!("../test_data/pset_combine/s4_pset.base64")),
-        c(include_str!("../test_data/pset_combine/s5_pset.base64")),
-    ];
-    let d = include_str!("../test_data/pset_combine/desc");
-    (d.to_string(), ps)
-}
-
-pub fn descriptor_pset_usdt_no_contracts() -> &'static str {
-    include_str!("../test_data/pset_usdt/desc")
-}
-
-/// Pset created with descriptor [`descriptor_pset_usdt_no_contracts`] containing mainnet USDt but without contract info
-pub fn pset_usdt_no_contracts() -> &'static str {
-    include_str!("../test_data/pset_usdt/pset_usdt_no_contracts.base64")
-}
-
-pub fn pset_usdt_with_contract() -> &'static str {
-    include_str!("../test_data/pset_usdt/pset_usdt_with_contract.base64")
 }

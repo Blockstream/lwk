@@ -2435,57 +2435,36 @@ fn test_waterfalls_has_more_reused_address_balance() {
         env.elementsd_sendtoaddress(&address, receive_amount, None);
         env.elementsd_generate(1);
     }
+    std::thread::sleep(std::time::Duration::from_millis(200));
+    env.elementsd_generate(1);
 
-    // Wait until Waterfalls reports the reused address as truncated (`has_more`).
-    // Note: `has_more` appears as soon as Waterfalls has seen more than
-    // max_txs_seen (3) txs for the address, so the 5th tx can still be missing
-    // when this loop exits: Waterfalls indexes the mined txs asynchronously.
-    for i in 0..50 {
-        let response: serde_json::Value = reqwest::blocking::Client::new()
-            .get(format!("{}/v2/waterfalls", env.waterfalls_url()))
-            .query(&[
-                ("descriptor", waterfalls_descriptor.as_str()),
-                ("page", "0"),
-                ("to_index", "0"),
-                ("utxo_only", "false"),
-            ])
-            .send()
-            .unwrap()
-            .json()
-            .unwrap();
-        if response
-            .get("has_more")
-            .and_then(|has_more| has_more.as_array())
-            .is_some_and(|has_more| {
-                has_more
-                    .iter()
-                    .any(|addr| addr.as_str() == Some(unconfidential_address.as_str()))
-            })
-        {
-            break;
-        }
-        assert!(
-            i < 49,
-            "Waterfalls did not return has_more for reused address"
-        );
+    let opt = TxsOpt::default();
+    for i in 0.. {
         std::thread::sleep(std::time::Duration::from_millis(200));
-    }
-
-    // Sync until the wallet sees all the txs: the last mined tx can be indexed
-    // by Waterfalls after `has_more` first appeared.
-    let expected_balance = receive_amount * receive_count;
-    let mut found = false;
-    for _ in 0..50 {
         wallet.sync();
-        let txs = wallet.wollet.transactions().unwrap().len();
-        let policy_balance = wallet.balance(network.policy_asset());
-        if (txs, policy_balance) == (receive_count as usize, expected_balance) {
-            found = true;
+        let txs = wallet.wollet.txs(&opt).unwrap();
+        if txs.len() == receive_count && txs.iter().all(|tx| tx.height().is_some()) {
             break;
         }
-        std::thread::sleep(std::time::Duration::from_millis(200));
+        assert!(i < 30, "txs not confirmed");
     }
-    assert!(found);
+
+    // Check that waterfalls returns "has_more"
+    let response: serde_json::Value = reqwest::blocking::Client::new()
+        .get(format!("{}/v2/waterfalls", env.waterfalls_url()))
+        .query(&[
+            ("descriptor", waterfalls_descriptor.as_str()),
+            ("page", "0"),
+            ("to_index", "0"),
+            ("utxo_only", "false"),
+        ])
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    let addresses = response.get("has_more").unwrap().as_array().unwrap();
+    assert_eq!(addresses.len(), 1);
+    assert!(addresses[0].as_str() == Some(unconfidential_address.as_str()));
 }
 
 #[cfg(feature = "esplora")]

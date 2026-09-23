@@ -6,7 +6,7 @@ use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::Decodable;
 use elements::hex::{FromHex, ToHex};
 use elements::pset::PartiallySignedTransaction;
-use elements::{AssetId, TxOutWitness, Txid};
+use elements::{AssetId, Txid};
 use elements::{Block, TxOutSecrets};
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use rand::{thread_rng, Rng};
@@ -194,28 +194,6 @@ pub fn regtest_policy_asset() -> AssetId {
 
 pub fn init_logging() {
     let _ = env_logger::try_init();
-}
-
-#[allow(dead_code)]
-pub fn prune_proofs(pset: &PartiallySignedTransaction) -> PartiallySignedTransaction {
-    let mut pset = pset.clone();
-    for i in pset.inputs_mut() {
-        if let Some(utxo) = &mut i.witness_utxo {
-            utxo.witness = TxOutWitness::default();
-        }
-        if let Some(tx) = &mut i.non_witness_utxo {
-            tx.output
-                .iter_mut()
-                .for_each(|o| o.witness = Default::default());
-        }
-    }
-    for o in pset.outputs_mut() {
-        o.value_rangeproof = None;
-        o.asset_surjection_proof = None;
-        o.blind_value_proof = None;
-        o.blind_asset_proof = None;
-    }
-    pset
 }
 
 pub fn generate_mnemonic() -> String {

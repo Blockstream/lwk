@@ -206,7 +206,6 @@ Here's a complete example that issues an asset, signs it, and broadcasts it:
 
 ## Important Notes
 
-* **Asset amount limit**: The maximum asset amount is 21,000,000 BTC (2,100,000,000,000,000 satoshis)
 * **At least one amount required**: Either `asset_sats` or `token_sats` must be greater than 0
 * **Reissuance tokens**: If you want to be able to create more of the asset later, you must issue at least 1 reissuance token. The holder of the reissuance token can use it to [reissue](reissuance.md) more of the asset
 * **Contract commitment**: If a contract is provided, its metadata is committed in the asset ID. This means the asset ID will be the same if you use the same contract and transaction input

@@ -8,7 +8,7 @@ To reissue an asset, use `TxBuilder::reissue_asset()` before calling `finish()`.
 The `reissue_asset()` method takes the following arguments:
 
 1. **`asset_to_reissue`** (`AssetId`): The ID of the asset you want to reissue. This is obtained from the original issuance transaction.
-2. **`satoshi_to_reissue`** (`u64`): The number of new units (in satoshis) of the asset to create. Must be greater than 0 and cannot exceed 21,000,000 BTC (2,100,000,000,000,000 satoshis).
+2. **`satoshi_to_reissue`** (`u64`): The number of new units (in satoshis) of the asset to create. Must be greater than 0.
 3. **`asset_receiver`** (`Option<Address>`): Optional address that will receive the newly reissued asset. If `None`, the asset will be sent to an address from the wallet generating the reissuance transaction.
 4. **`issuance_tx`** (`Option<Transaction>`): Optional original issuance transaction. Required only if the wallet generating the reissuance didn't participate in the original issuance (i.e., the reissuance token was transferred to this wallet).
 

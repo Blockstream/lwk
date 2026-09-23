@@ -1,14 +1,14 @@
-use elements_miniscript::elements::{self, BlockHeader};
+use elements_miniscript::elements::{self};
 
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
-use elements::encode::Decodable;
 use elements::hex::FromHex;
+use elements::TxOutSecrets;
 use elements::{AssetId, Txid};
-use elements::{Block, TxOutSecrets};
 use std::str::FromStr;
 
 mod amp2;
 mod auth;
+mod block;
 mod desc;
 mod fee;
 mod generate;
@@ -26,6 +26,7 @@ pub use auth::{
     AuthStack, AUTH_CLIENT_ID, AUTH_CLIENT_SECRET, AUTH_REALM, AUTH_SHORT_CLIENT_ID,
     AUTH_SHORT_CLIENT_SECRET, AUTH_USER_UUID,
 };
+pub use block::{liquid_block_1, liquid_block_header_2_963_520};
 pub use desc::{
     add_checksum, wollet_descriptor_many_transactions, wollet_descriptor_string,
     wollet_descriptor_string2, TEST_DESCRIPTOR,
@@ -52,19 +53,6 @@ pub use update::{
     update_test_vector_many_transactions, update_test_vector_v1_bytes, update_test_vector_v4_bytes,
     update_v2_test_vector_after_many_transactions,
 };
-
-pub fn liquid_block_1() -> Block {
-    let raw = include_bytes!(
-        "../test_data/afafbbdfc52a45e51a3b634f391f952f6bdfd14ef74b34925954b4e20d0ad639.raw"
-    );
-    Block::consensus_decode(&raw[..]).unwrap()
-}
-
-pub fn liquid_block_header_2_963_520() -> BlockHeader {
-    let hex = include_str!("../test_data/block_header_2_963_520.hex");
-    let bytes = Vec::<u8>::from_hex(hex).unwrap();
-    BlockHeader::consensus_decode(&bytes[..]).unwrap()
-}
 
 pub fn regtest_policy_asset() -> AssetId {
     AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225").unwrap()

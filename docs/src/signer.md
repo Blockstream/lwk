@@ -57,7 +57,7 @@ Then you can create a software signer with `SwSigner::new_with_network()`.
 Once you have a signer you need to get some an extended public key (`xpub`),
 which can be used to create a wallet that requires signature from the signer.
 
-The xpub is obtained with `Signer::keyorigin_xpub()`, which also includes the keyorigin information: signer fingerprint and derivation path from master key to the returned xpub, e.g. `[ffffffff/84h/1h/0h]xpub...`.
+The xpub is obtained with `Signer::keyorigin_xpub(bip, is_mainnet)`, which also includes the keyorigin information: signer fingerprint and derivation path from master key to the returned xpub, e.g. `[ffffffff/84h/1h/0h]xpub...`.
 
 <custom-tabs category="lang">
 <div slot="title">Rust</div>

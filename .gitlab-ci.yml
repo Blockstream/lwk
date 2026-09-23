@@ -108,6 +108,22 @@ build_bindings:
       - target/release/liblwk.so
     expire_in: 1 day
 
+build_ci_image:
+  stage: build
+  needs: []
+  extends: .base # assume base has docker client
+  rules:
+    - when: manual
+  variables:
+    TMPDIR: ${CI_PROJECT_DIR} # otherwise issue with the docker
+  script:
+    - echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY"
+    - IMAGE="$CI_REGISTRY_IMAGE/lwk-builder"
+    - docker build -t "${IMAGE}:${CI_COMMIT_SHORT_SHA}" -t "${IMAGE}:latest" context
+    - docker push "${IMAGE}:${CI_COMMIT_SHORT_SHA}"
+    - docker push "${IMAGE}:latest"
+  allow_failure: true
+
 fmt_clippy:
   stage: fmt
   needs: []

@@ -85,6 +85,10 @@ stages:
     ELECTRS_IMAGE: harbor.blockstream.io/docker/boltz/electrs:latest
     NGINX_IMAGE: harbor.blockstream.io/docker/library/nginx:alpine
 
+.docker_gitlab_login:
+  before_script:
+    - echo "$CI_JOB_TOKEN" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+
 sast:
  stage: security
  needs: []
@@ -111,13 +115,14 @@ build_bindings:
 build_ci_image:
   stage: build
   needs: []
-  extends: .base # assume base has docker client
+  extends:
+    - .base # assume base has docker client
+    - .docker_gitlab_login
   rules:
     - when: manual
   variables:
     TMPDIR: ${CI_PROJECT_DIR} # otherwise issue with the docker
   script:
-    - echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY"
     - IMAGE="$CI_REGISTRY_IMAGE/lwk-builder"
     - docker build -t "${IMAGE}:${CI_COMMIT_SHORT_SHA}" -t "${IMAGE}:latest" context
     - docker push "${IMAGE}:${CI_COMMIT_SHORT_SHA}"
@@ -193,14 +198,12 @@ test_auth:
   extends:
     - .base
     - .coverage_mixin
+    - .docker_gitlab_login
   variables:
       TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
   script:
     - docker pull quay.io/keycloak/keycloak:26.5
     - docker pull blockstream/apisix:2aa6756a-20251211
-    # The closed-source RPC proxy image lives in the gitlab registry; the job token needs
-    # read access to explorer/electrum-rpc/electrs-electrum-proxy for this pull to work.
-    - echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin glregistry.blockstream.io
     - docker pull glregistry.blockstream.io/explorer/electrum-rpc/electrs-electrum-proxy/prod/rpcproxy:4371ab45-20260812132509
     # smokes: keycloak + apisix + rpc proxy + container->host round-trips, no regtest binaries
     - cargo test -p lwk_test_util auth_stack_smoke -- --ignored

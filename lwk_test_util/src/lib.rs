@@ -20,6 +20,7 @@ use std::{
 
 mod amp2;
 mod auth;
+mod fee;
 mod lightningd;
 mod panic_store;
 mod pegin;
@@ -30,13 +31,12 @@ pub use auth::{
     AuthStack, AUTH_CLIENT_ID, AUTH_CLIENT_SECRET, AUTH_REALM, AUTH_SHORT_CLIENT_ID,
     AUTH_SHORT_CLIENT_SECRET, AUTH_USER_UUID,
 };
+pub use fee::{assert_fee_rate, compute_fee_rate, compute_fee_rate_without_discount_ct};
 pub use panic_store::PanicStore;
 pub use pegin::{
     FED_PEG_DESC, FED_PEG_SCRIPT, FED_PEG_SCRIPT_ASM, PEGIN_TEST_ADDR, PEGIN_TEST_DESC,
 };
 pub use test_env::{TestEnv, TestEnvBuilder};
-
-const DEFAULT_FEE_RATE: f32 = 100.0;
 
 pub const TEST_MNEMONIC: &str =
     "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
@@ -97,25 +97,6 @@ pub fn add_checksum(desc: &str) -> String {
     } else {
         format!("{}#{}", desc, desc_checksum(desc).unwrap())
     }
-}
-
-pub fn compute_fee_rate_without_discount_ct(pset: &PartiallySignedTransaction) -> f32 {
-    let vsize = pset.extract_tx().unwrap().vsize();
-    let fee_satoshi = pset.outputs().last().unwrap().amount.unwrap();
-    1000.0 * (fee_satoshi as f32 / vsize as f32)
-}
-
-pub fn compute_fee_rate(pset: &PartiallySignedTransaction) -> f32 {
-    let vsize = pset.extract_tx().unwrap().discount_vsize();
-    let fee_satoshi = pset.outputs().last().unwrap().amount.unwrap();
-    1000.0 * (fee_satoshi as f32 / vsize as f32)
-}
-
-pub fn assert_fee_rate(fee_rate: f32, expected: Option<f32>) {
-    let expected = expected.unwrap_or(DEFAULT_FEE_RATE);
-    let toll = 0.45;
-    assert!(fee_rate > expected * (1.0 - toll));
-    assert!(fee_rate < expected * (1.0 + toll));
 }
 
 /// Serialize and deserialize a PSET

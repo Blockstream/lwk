@@ -1,6 +1,3 @@
-//! NOTE This module is temporary, as soon we make the other clients async this will be merged in
-//! the standard esplora client of which contain a lot of duplicated code.
-
 use crate::async_util::async_sleep;
 use crate::clients::oauth::{error_for_status, fetch_oauth_token};
 use crate::clients::{try_unblind, Capability, History, TokenProvider};

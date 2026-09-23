@@ -91,7 +91,7 @@ To see RPC data exchanged via the cli commands enable app log tracing eg:
 ```sh
 $ RUST_LOG=app=trace cargo run -- wallet balance --wallet ciao
 ...
-2023-11-28T09:36:18.696846Z TRACE app::client: ---> {"method":"balance","params":{"name":"ciao"},"id":2,"jsonrpc":"2.0"}
+2023-11-28T09:36:18.696846Z TRACE app::client: ---> {"method":"wallet_balance","params":{"name":"ciao"},"id":2,"jsonrpc":"2.0"}
 2023-11-28T09:36:18.697675Z TRACE app::client: <--- {"result":null,"error":{"code":-32008,"message":"Wallet 'ciao' does not exist","data":{"name":"ciao"}},"id":2,"jsonrpc":"2.0"}
 {
   "code": -32008,
@@ -112,7 +112,7 @@ is equivalent to:
 ```sh
 $ curl --header "Content-Type: application/json" -u "$(cat ~/.lwk/liquid-testnet/.cookie)" --request POST --data '{"method":"wallet_load","params":{"descriptor":"ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63", "name": "custody"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s
 
-$ curl --header "Content-Type: application/json" -u "$(cat ~/.lwk/liquid-testnet/.cookie)" --request POST --data '{"method":"balance","params":{"name":"custody"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s | jq .result
+$ curl --header "Content-Type: application/json" -u "$(cat ~/.lwk/liquid-testnet/.cookie)" --request POST --data '{"method":"wallet_balance","params":{"name":"custody"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s | jq .result
 ```
 
 Request an address:

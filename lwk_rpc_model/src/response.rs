@@ -536,7 +536,7 @@ pub struct JadeId {
     pub identifier: String,
 }
 
-/// The wallet type // TODO move to response
+/// The wallet type
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub enum WalletType {
     /// Unknowm type

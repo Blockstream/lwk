@@ -23,7 +23,7 @@ $ lwk_cli generate-completion bash | jq -r . | sudo tee /usr/share/bash-completi
 ```
 
 Other shells are available: bash, elvish, fish, powershell, zsh.
-The destination file path `/usr/share/bash-completion/completions/cli` may change according to your distro.
+The destination file path `/usr/share/bash-completion/completions/lwk_cli` may change according to your distro.
 
 ## Tests
 `lwk_cli` tests provide coverage for `lwk_app`, `lwk_rpc_model` and `lwk_tiny_jrpc` as well.

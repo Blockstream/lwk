@@ -14,7 +14,11 @@ Most of the rust types in this crate are wrappers on types in [`lwk_wollet`] and
 
 Build supported on Mac and Linux.
 
-Note the following commands requires some env var defined in `../context/env.sh`. If you use `direnv` and allowed the `.envrc` file they are automatically evaluated when entering the dir, otherwise launch manually via `. ./context/env.sh`
+The repository `.envrc` enters the Nix flake development shell; it does not
+source `context/env.sh`. The flake provides the development tools and service
+executable variables used by the bindings workflows. `context/env.sh` is a
+separate, legacy setup for locally downloaded binaries and must be sourced
+explicitly with `. ./context/env.sh` when that setup is used.
 
 For android build you need the NDK greater than r23 in `${PROJECT_DIR}/bin/android-ndk`, if you already have it elsewhere just symlink your path.
 

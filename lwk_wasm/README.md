@@ -55,10 +55,11 @@ $ cd lwk_wasm
 $ WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --firefox --headless
 ```
 
-run specific test (note the double `--`)
+Network tests are ignored by default. Run a specific ignored test with (note
+the double `--`):
 
 ```shell
-$ wasm-pack test --firefox --headless -- -- balance_test_testnet
+$ wasm-pack test --firefox --headless -- --ignored balance_test_testnet
 ```
 
 ### Build NPM Package for release

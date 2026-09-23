@@ -19,7 +19,7 @@ The asset ID is deterministically derived from the transaction input and contrac
 A contract defines metadata about your asset, such as its name, ticker, precision, and issuer information. While contracts are optional, they are highly recommended as they allow your asset to be registered in the Liquid Asset Registry and displayed with proper metadata in wallets.
 
 A contract contains:
-* **domain**: The domain of the asset issuer (e.g., "example.com")
+* **entity**: The issuer entity, containing its domain (e.g., `{"domain":"example.com"}`)
 * **issuer_pubkey**: The public key of the issuer (33 bytes, hex-encoded)
 * **name**: The name of the asset (1-255 ASCII characters)
 * **precision**: Decimal precision (0-8, where 8 is like Bitcoin)

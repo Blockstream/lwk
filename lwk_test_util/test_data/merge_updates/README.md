@@ -2,7 +2,7 @@
 
 This directory contains 3 consecutive `Update` structs for a regtest wallet with descriptor:
 
-ct(slip77(e12440f9ab46536bee060598e3b6064c0c1fa46049731d614b5c973ed054b363),elwpkh(tpubD6NzVbkrYhZ4Y2AL6uijCXAKHRNLMt7rxWnZt3bjPuYv8ibEQvGmEhRPDqbLUX7a7yCwEyEgEV37gu2CUa3a6CCpjLfrv3Xks9pGitNtd7z/*))
+ct(slip77(d48cc2f9c22d8afadf38f9656d6ebc2ad7773273f34cbf62e4b15f0e5fea46f2),elwpkh(tpubD6NzVbkrYhZ4X2UC8rSu2hqEuaZis6FakbAKRxjqMJLGWHyqLy4iKu41teNY4BuSkvgRhfG3Gi1LJnN4HzNkpuGxxRYYJYTVBow8xEs9MD2/*))
 
 ## Files
 

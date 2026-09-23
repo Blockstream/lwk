@@ -8,7 +8,7 @@ RUN apt upgrade --no-install-recommends -yqq
 # clang for wasm
 # libtinfo5 libncurses5 for swift
 # chromium-driver for wasm tests
-RUN apt install -y libudev-dev libxml2-utils clang libtinfo5 libncurses5 chromium-driver
+RUN apt install -y libudev-dev libxml2-utils clang libtinfo6 libncurses6 chromium-driver
 RUN wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 RUN apt update -qq && apt install -y dotnet-sdk-10.0
 

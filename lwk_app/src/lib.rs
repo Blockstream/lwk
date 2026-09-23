@@ -295,9 +295,6 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Err(e) => return Ok(Response::unimplemented(request.id, e.to_string())),
     };
 
-    // TODO to remove the clone:
-    // 1) refactor out AppState wallets/signers/assets conversion to Requests in as_requests
-    // 2) use that in the persist() calls
     let params = request.params.clone().unwrap_or_default();
 
     let response = match method {

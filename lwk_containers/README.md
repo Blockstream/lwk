@@ -22,5 +22,5 @@ docker ps
 Then:
 
 ```
-docker log $ID
+docker logs $ID
 ```

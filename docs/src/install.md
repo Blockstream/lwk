@@ -48,11 +48,34 @@ const lwk = require('lwk_node');
 
 ## iOS/Swift
 
+Build the Swift bindings and XCFramework from source on macOS:
+
+```shell,ignore
+just swift
+```
+
+The generated framework is written to `target/lwkFFI.xcframework`.
+
 ## Android/Kotlin
+
+Build the Android native libraries and generate Kotlin bindings from source:
+
+```shell,ignore
+just android
+just kotlin
+```
 
 ## React Native
 
+LWK does not currently publish first-party React Native bindings.
+
 ## Go
+
+Generate the Go bindings and native library from source:
+
+```shell,ignore
+just go-build-bindings
+```
 
 ## C#
 
@@ -63,3 +86,5 @@ dotnet add package LiquidWalletKit --version 0.8.2
 Please open an issue if you need a more recent version
 
 ## Flutter/Dart
+
+LWK does not currently publish first-party Flutter or Dart bindings.

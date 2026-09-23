@@ -87,12 +87,11 @@ is equivalent to:
 $ curl --header "Content-Type: application/json" -u "$(cat ~/.lwk/liquid-testnet/.cookie)" --request POST --data '{"method":"signer_generate","params":[],"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s
 ```
 
-To see RPC data exchanged via the cli commands enable app log tracing eg:
+To see the RPC methods used by CLI commands, enable `lwk_app` debug logging:
 ```sh
-$ RUST_LOG=app=trace cargo run -- wallet balance --wallet ciao
+$ RUST_LOG=lwk_app=debug cargo run -- wallet balance --wallet ciao
 ...
-2023-11-28T09:36:18.696846Z TRACE app::client: ---> {"method":"wallet_balance","params":{"name":"ciao"},"id":2,"jsonrpc":"2.0"}
-2023-11-28T09:36:18.697675Z TRACE app::client: <--- {"result":null,"error":{"code":-32008,"message":"Wallet 'ciao' does not exist","data":{"name":"ciao"}},"id":2,"jsonrpc":"2.0"}
+DEBUG lwk_app::client: method: wallet_balance
 {
   "code": -32008,
   "data": {

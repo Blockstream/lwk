@@ -1,7 +1,10 @@
 
 ## Bindings
 
-To generate bindings the projects use [Mozilla uniffi](https://mozilla.github.io/uniffi-rs/) giving support for: Kotlin, Swift, Python, Ruby and also third party support for Kotlin multiplatform, Go, C++, C# and Dart.
+Bindings are generated with [Mozilla UniFFI](https://mozilla.github.io/uniffi-rs/)
+for Kotlin, Swift and Python. This repository also builds and tests bindings
+from third-party generators for Kotlin Multiplatform, Go, C++ and C#. Ruby and
+Dart bindings are not generated or tested here.
 
 There is an architectural refactor already planned for the crates the bindings are created on, this initial version is for experimentation only,
 expect **breaking changes** in the API

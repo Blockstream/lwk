@@ -236,14 +236,14 @@ pub fn n_reissuances(details: &lwk_common::PsetDetails) -> usize {
         .count()
 }
 
-pub fn asset_blinding_factor_test_vector() -> AssetBlindingFactor {
+fn asset_blinding_factor_test_vector() -> AssetBlindingFactor {
     AssetBlindingFactor::from_hex(
         "0000000000000000000000000000000000000000000000000000000000000001",
     )
     .unwrap()
 }
 
-pub fn value_blinding_factor_test_vector() -> ValueBlindingFactor {
+fn value_blinding_factor_test_vector() -> ValueBlindingFactor {
     ValueBlindingFactor::from_hex(
         "0000000000000000000000000000000000000000000000000000000000000002",
     )

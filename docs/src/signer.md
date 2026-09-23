@@ -16,7 +16,7 @@ This guide will focus on software signers. For more details on the supported Jad
 
 ## Create Signer
 To create a signer you need a mnemonic.
-You can generate a new one with `bip39::Mnemonic::generate()`.
+You can generate a new one with `bip39::Mnemonic::generate(12)`.
 Then you can create a software signer with `SwSigner::new_with_network()`.
 
 <custom-tabs category="lang">

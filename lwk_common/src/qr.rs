@@ -5,8 +5,6 @@ use elements::{Address, AddressParams};
 
 // In case of blech32 addresses, the address is uppercased so that use less QR code space
 fn address_to_qr_text(address: &Address) -> String {
-    // TODO gdk use also `liquidtestnet` as schema, I don't think it's right but it may be already adopted.
-    // verify it and consider to add that or to remove this comment
     let address_string = match address.payload {
         elements::address::Payload::WitnessProgram { .. } => {
             address.to_string().to_ascii_uppercase()

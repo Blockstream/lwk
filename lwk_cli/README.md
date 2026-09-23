@@ -127,7 +127,7 @@ $ curl --header "Content-Type: application/json" -u "$(cat ~/.lwk/liquid-testnet
   "jsonrpc": "2.0",
   "id": 1,
   "error": {
-    "code": -32603,
+    "code": -32005,
     "message": "Serde JSON Error: missing field `descriptor`",
     "data": null
   }

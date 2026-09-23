@@ -10,15 +10,23 @@ LWK functionalities are split into different component crates that might be usef
   to get your PSETs signed.
 * [`lwk_jade`](../../lwk_jade): unlock Jade, get xpubs,
   register multisig wallets, sign PSETs and more.
+* [`lwk_ledger`](../../lwk_ledger): experimental Ledger hardware-wallet support.
 * [`lwk_bindings`](../../lwk_bindings): use LWK from other languages.
 * [`lwk_wasm`](../../lwk_wasm): use LWK from WebAssembly.
+* [`lwk_boltz`](../../lwk_boltz): integrate on-chain and Lightning swaps through Boltz.
+* [`lwk_payment_instructions`](../../lwk_payment_instructions): parse addresses,
+  invoices and other payment instructions.
+* [`lwk_registry`](../../lwk_registry): integrate with the Liquid Asset Registry.
+* [`lwk_prices`](../../lwk_prices): retrieve exchange rates between currencies.
+* [`lwk_simplicity`](../../lwk_simplicity): experimental Simplicity tooling.
+* [`lwk_anyswap`](../../lwk_anyswap): work-in-progress Anyswap integration.
 * and more:
   common or ancillary components ([`lwk_common`](../../lwk_common),
   [`lwk_rpc_model`](../../lwk_rpc_model), [`lwk_tiny_jrpc`](../../lwk_tiny_jrpc),
   [`lwk_app`](../../lwk_app)),
   future improvements ([`lwk_hwi`](../../lwk_hwi)),
   testing infrastructure ([`lwk_test_util`](../../lwk_test_util),
-  [`lwk_containers`](../../lwk_containers))
+  [`lwk_containers`](../../lwk_containers), [`amp2_mock`](../../amp2_mock))
 
 For instance, mobile app devs might be interested mainly in
 `lwk_bindings`, `lwk_wollet` and `lwk_signer`.

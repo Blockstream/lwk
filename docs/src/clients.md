@@ -20,7 +20,7 @@ For production, all three clients can connect to Blockstream Enterprise authenti
 | **Sync Speed** | 🏃 Average | 🐢 Slower | 🚀 Fastest |
 | **Roundtrips** | Many but batched | Many | Few |
 | **Async Support** | ❌ No | ✅ Yes | ✅ Yes |
-| **Authentication** | ❌ No | ✅ OAuth2 | ✅ OAuth2 |
+| **Authentication** | ✅ OAuth2 | ✅ OAuth2 | ✅ OAuth2 |
 | **Maturity** | ⭐⭐⭐ Mature | ⭐⭐⭐ Mature | ⭐⭐ New |
 
 ## Electrum
@@ -296,4 +296,3 @@ The snippets below show the client wiring; take the endpoint urls from the table
 ```
 </section>
 </custom-tabs>
-

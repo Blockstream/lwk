@@ -18,55 +18,10 @@ use std::{
     time::Duration,
 };
 
-/// A [`lwk_common::Store`] implementation that intentionally panics on reads.
-///
-/// This is useful in tests that need to assert a code path does not read from
-/// storage. Writes/removals are acknowledged but discarded, like
-/// [`lwk_common::FakeStore`].
-#[derive(Debug, Default, Clone)]
-pub struct PanicStore {
-    persisted: bool,
-    exceptions: Vec<String>,
-}
-
-impl PanicStore {
-    /// Create a new `PanicStore`.
-    pub fn new(persisted: bool, exceptions: Vec<String>) -> Self {
-        Self {
-            persisted,
-            exceptions,
-        }
-    }
-}
-
-impl lwk_common::Store for PanicStore {
-    type Error = std::convert::Infallible;
-
-    fn get<K: AsRef<[u8]>>(&self, key: K) -> Result<Option<Vec<u8>>, Self::Error> {
-        let key = String::from_utf8_lossy(key.as_ref()).to_string();
-        if self.exceptions.contains(&key) {
-            Ok(None)
-        } else {
-            panic!("PanicStore::get called for {key}")
-        }
-    }
-
-    fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, _key: K, _value: V) -> Result<(), Self::Error> {
-        Ok(())
-    }
-
-    fn remove<K: AsRef<[u8]>>(&self, _key: K) -> Result<(), Self::Error> {
-        Ok(())
-    }
-
-    fn is_persisted(&self) -> bool {
-        self.persisted
-    }
-}
-
 mod amp2;
 mod auth;
 mod lightningd;
+mod panic_store;
 mod registry;
 mod test_env;
 mod waterfalls;
@@ -74,6 +29,7 @@ pub use auth::{
     AuthStack, AUTH_CLIENT_ID, AUTH_CLIENT_SECRET, AUTH_REALM, AUTH_SHORT_CLIENT_ID,
     AUTH_SHORT_CLIENT_SECRET, AUTH_USER_UUID,
 };
+pub use panic_store::PanicStore;
 pub use test_env::{TestEnv, TestEnvBuilder};
 
 const DEFAULT_FEE_RATE: f32 = 100.0;

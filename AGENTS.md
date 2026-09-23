@@ -94,8 +94,8 @@ cargo -q fmt --check
 # Run clippy
 cargo -q clippy --all-features --all-targets -- -D warnings
 
-# Security audit
-cargo audit --deny yanked
+# Security audit (yanked dependencies are temporarily allowed until boltz-rust is updated)
+cargo audit
 
 # Generate documentation
 cargo -q doc --no-deps -p lwk_wollet --all-features

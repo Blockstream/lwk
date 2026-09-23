@@ -14,6 +14,7 @@ mod fee;
 mod generate;
 mod http;
 mod lightningd;
+mod mnemonic;
 mod panic_store;
 mod pegin;
 mod pset;
@@ -32,6 +33,9 @@ pub use desc::{
 pub use fee::{assert_fee_rate, compute_fee_rate, compute_fee_rate_without_discount_ct};
 pub use generate::{generate_mnemonic, generate_slip77, generate_view_key, generate_xprv};
 pub use http::serve_http_response;
+pub use mnemonic::{
+    DEFAULT_SPECULOS_MNEMONIC, TEST_MNEMONIC, TEST_MNEMONIC_SLIP77, TEST_MNEMONIC_XPUB,
+};
 pub use panic_store::PanicStore;
 pub use pegin::{
     FED_PEG_DESC, FED_PEG_SCRIPT, FED_PEG_SCRIPT_ASM, PEGIN_TEST_ADDR, PEGIN_TEST_DESC,
@@ -48,15 +52,6 @@ pub use update::{
     update_test_vector_many_transactions, update_test_vector_v1_bytes, update_test_vector_v4_bytes,
     update_v2_test_vector_after_many_transactions,
 };
-
-pub const TEST_MNEMONIC: &str =
-    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-pub const TEST_MNEMONIC_XPUB: &str =
-"tpubD6NzVbkrYhZ4XYa9MoLt4BiMZ4gkt2faZ4BcmKu2a9te4LDpQmvEz2L2yDERivHxFPnxXXhqDRkUNnQCpZggCyEZLBktV7VaSmwayqMJy1s";
-pub const TEST_MNEMONIC_SLIP77: &str =
-    "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
-
-pub const DEFAULT_SPECULOS_MNEMONIC: &str = "glory promote mansion idle axis finger extra february uncover one trip resource lawn turtle enact monster seven myth punch hobby comfort wild raise skin";
 
 pub fn liquid_block_1() -> Block {
     let raw = include_bytes!(

@@ -42,6 +42,20 @@ Help will show available commands:
 lwk_cli --help
 ```
 
+The top-level command groups and their subcommands are:
+
+| Group | Subcommands |
+|-------|-------------|
+| `server` | `start`, `scan`, `stop` |
+| `signer` | `generate`, `jade-id`, `load-software`, `load-jade`, `load-external`, `details`, `unload`, `list`, `sign`, `singlesig-desc`, `xpub`, `derive-bip85`, `register-multisig` |
+| `wallet` | `load`, `unload`, `list`, `address`, `balance`, `send`, `drain`, `issue`, `reissue`, `burn`, `multisig-desc`, `broadcast`, `details`, `combine`, `pset-details`, `utxos`, `txs`, `tx`, `tx-details`, `set-tx-memo`, `set-addr-memo`, `dump-unblinded` |
+| `liquidex` | `make`, `take`, `to-proposal` |
+| `asset` | `contract`, `details`, `list`, `insert`, `remove`, `from-registry`, `publish` |
+| `amp2` | `descriptor`, `register`, `cosign` |
+| `schema` | `request`, `response` |
+
+Run `lwk_cli <group> --help` for arguments and descriptions for a group.
+
 Start the rpc server (default in Liquid Testnet)
 and put it in background
 ```shell

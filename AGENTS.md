@@ -82,6 +82,13 @@ cargo -q test -p lwk_bindings --features foreign_bindings,test_env
 cargo -q test --no-run
 ```
 
+## Test Environment
+
+Integration and end-to-end tests use Docker-based services. The `context/`
+directory contains the CI environment setup and helper files; see
+`context/jade-emulator/Readme.md` for the Jade emulator image and startup
+instructions. Shared Rust container helpers live in `lwk_containers`.
+
 ## Lint Commands
 
 ```bash

@@ -25,79 +25,19 @@ use rand::thread_rng;
 
 impl TxBuilder {
     pub(super) fn finish_inner(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
-        if !self.allow_high_fee_rate && self.fee_rate.to_sat_kvb() > Self::MAX_FEE_RATE {
-            return Err(Error::FeeRateTooHigh(self.fee_rate.to_sat_kvb()));
-        }
-
-        if !self.pegin_inputs.is_empty() {
-            if self.inputs_order.is_some() {
-                return Err(Error::PeginUnsupportedBuilderMode("manual inputs order"));
-            }
-            if self.is_liquidex_make || !self.liquidex_proposals.is_empty() {
-                return Err(Error::PeginUnsupportedBuilderMode("LiquiDEX"));
-            }
-        }
+        self.validate_modes()?;
 
         if self.is_liquidex_make {
-            if self.inputs_order.is_some() {
-                return Err(Error::LiquidexUnsupportedWithInputsOrder);
-            }
-
             return self.finish_liquidex_make(wollet);
         } else if !self.liquidex_proposals.is_empty() {
-            if self.inputs_order.is_some() {
-                return Err(Error::LiquidexUnsupportedWithInputsOrder);
-            }
-
             return self.finish_liquidex_take(wollet);
         }
 
-        if let Some(selected_outpoints) = self.selected_utxos.as_ref() {
-            let mut outpoints_set = HashSet::new();
+        let utxos = wollet.utxos_map()?;
 
-            for &outpoint in selected_outpoints {
-                if !outpoints_set.insert(outpoint) {
-                    return Err(Error::DuplicatedOutpoint(
-                        outpoint,
-                        "manual coin selection".to_string(),
-                    ));
-                }
-            }
-        }
+        self.validate_manual_inputs(&utxos)?;
+        self.validate_issuances()?;
 
-        if let Some(inputs_order) = self.inputs_order.as_ref() {
-            let selected_outpoints = self
-                .selected_utxos
-                .as_ref()
-                .ok_or(Error::InputsOrderRequiresWalletUtxos)?;
-
-            let mut ordered = HashSet::new();
-            for &outpoint in inputs_order {
-                if !ordered.insert(outpoint) {
-                    return Err(Error::DuplicatedOutpoint(
-                        outpoint,
-                        "manual inputs order".to_string(),
-                    ));
-                }
-            }
-
-            let mut expected: HashSet<OutPoint> = selected_outpoints.iter().copied().collect();
-            expected.extend(self.external_utxos.iter().map(|utxo| utxo.outpoint));
-
-            if ordered != expected {
-                return Err(Error::InputsOrderUtxosMismatch);
-            }
-
-            // `inputs_order` forbids adding any input beyond them, so a pinned
-            // reissuance input must be one of them.
-            for request in &self.reissuances.requests {
-                if let Some(outpoint) = request.pinned_input {
-                    if !ordered.contains(&outpoint) {
-                        return Err(Error::ReissuanceOutpointNotInInputsOrder(outpoint));
-                    }
-                }
-            }
-        }
         // Init PSET
         let mut pset = PartiallySignedTransaction::new_v2();
 
@@ -107,8 +47,6 @@ impl TxBuilder {
         let mut last_unused_external = wollet.last_unused_external();
 
         let mut inp_weight = 0;
-
-        let utxos = wollet.utxos_map()?;
 
         let policy_asset = *self.network().policy_asset();
         let (addressees_lbtc, addressees_asset): (Vec<_>, Vec<_>) = self
@@ -120,7 +58,9 @@ impl TxBuilder {
         let mut selected_utxos = vec![];
         if let Some(ref coins) = self.selected_utxos {
             for coin in coins {
-                let utxo = utxos.get(coin).ok_or(Error::MissingWalletUtxo(*coin))?;
+                let utxo = utxos
+                    .get(coin)
+                    .expect("outpoint was validated in validate_manual_inputs()");
                 selected_utxos.push(utxo);
             }
         }
@@ -413,10 +353,6 @@ impl TxBuilder {
         match self.issuances {
             Issuances::None => {}
             Issuances::Sequential(requests) => {
-                if self.inputs_order.is_some() {
-                    return Err(Error::InputsOrderRequiresPinnedIssuance);
-                }
-
                 if requests.len() > pset.n_inputs() {
                     return Err(Error::IssuanceInputCountMismatch);
                 }
@@ -426,30 +362,12 @@ impl TxBuilder {
                 }
             }
             Issuances::Pinned(requests) => {
-                let Some(inputs_order) = self.inputs_order.as_ref() else {
-                    return Err(Error::IssuancePinRequiresInputsOrder);
-                };
-
-                if inputs_order.len() < requests.len() {
-                    return Err(Error::IssuanceInputCountMismatch);
-                }
-
-                let mut pinned_outpoints = HashSet::new();
-                for (_, outpoint) in &requests {
-                    if !pinned_outpoints.insert(*outpoint) {
-                        return Err(Error::DuplicatedOutpoint(
-                            *outpoint,
-                            "pinned issuances".to_string(),
-                        ));
-                    }
-                }
-
                 for (request, outpoint) in requests {
-                    let idx = inputs_idx_map
+                    let idx = *inputs_idx_map
                         .get(&outpoint)
-                        .ok_or(Error::IssuanceOutpointNotInInputsOrder(outpoint))?;
+                        .expect("outpoint was validated in validate_issuances()");
 
-                    set_issuance(*idx, request, &mut pset)?;
+                    set_issuance(idx, request, &mut pset)?;
                 }
             }
         }
@@ -687,5 +605,119 @@ impl TxBuilder {
         wollet.add_details(&mut built_tx.pset)?;
 
         Ok(built_tx)
+    }
+
+    fn validate_modes(&self) -> Result<(), Error> {
+        if !self.allow_high_fee_rate && self.fee_rate.to_sat_kvb() > Self::MAX_FEE_RATE {
+            return Err(Error::FeeRateTooHigh(self.fee_rate.to_sat_kvb()));
+        }
+
+        if !self.pegin_inputs.is_empty() {
+            if self.inputs_order.is_some() {
+                return Err(Error::PeginUnsupportedBuilderMode("manual inputs order"));
+            }
+            if self.is_liquidex_make || !self.liquidex_proposals.is_empty() {
+                return Err(Error::PeginUnsupportedBuilderMode("LiquiDEX"));
+            }
+        }
+
+        if self.inputs_order.is_some()
+            && (self.is_liquidex_make || !self.liquidex_proposals.is_empty())
+        {
+            return Err(Error::LiquidexUnsupportedWithInputsOrder);
+        }
+
+        Ok(())
+    }
+
+    fn validate_manual_inputs(&self, utxos: &HashMap<OutPoint, WalletTxOut>) -> Result<(), Error> {
+        if let Some(selected_outpoints) = self.selected_utxos.as_ref() {
+            let mut outpoints_set = HashSet::new();
+
+            for &outpoint in selected_outpoints {
+                if !utxos.contains_key(&outpoint) {
+                    return Err(Error::MissingWalletUtxo(outpoint));
+                }
+                if !outpoints_set.insert(outpoint) {
+                    return Err(Error::DuplicatedOutpoint(
+                        outpoint,
+                        "manual coin selection".to_string(),
+                    ));
+                }
+            }
+        }
+
+        if let Some(inputs_order) = self.inputs_order.as_ref() {
+            let selected_outpoints = self
+                .selected_utxos
+                .as_ref()
+                .ok_or(Error::InputsOrderRequiresWalletUtxos)?;
+
+            let mut ordered = HashSet::new();
+            for &outpoint in inputs_order {
+                if !ordered.insert(outpoint) {
+                    return Err(Error::DuplicatedOutpoint(
+                        outpoint,
+                        "manual inputs order".to_string(),
+                    ));
+                }
+            }
+
+            let mut expected: HashSet<OutPoint> = selected_outpoints.iter().copied().collect();
+            expected.extend(self.external_utxos.iter().map(|utxo| utxo.outpoint));
+
+            if ordered != expected {
+                return Err(Error::InputsOrderUtxosMismatch);
+            }
+
+            // `inputs_order` forbids adding any input beyond them, so a pinned
+            // reissuance input must be one of them.
+            for request in &self.reissuances.requests {
+                if let Some(outpoint) = request.pinned_input {
+                    if !ordered.contains(&outpoint) {
+                        return Err(Error::ReissuanceOutpointNotInInputsOrder(outpoint));
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn validate_issuances(&self) -> Result<(), Error> {
+        match &self.issuances {
+            Issuances::None => {}
+            Issuances::Sequential(_) => {
+                if self.inputs_order.is_some() {
+                    return Err(Error::InputsOrderRequiresPinnedIssuance);
+                }
+            }
+            Issuances::Pinned(requests) => {
+                let Some(inputs_order) = self.inputs_order.as_ref() else {
+                    return Err(Error::IssuancePinRequiresInputsOrder);
+                };
+
+                if inputs_order.len() < requests.len() {
+                    return Err(Error::IssuanceInputCountMismatch);
+                }
+
+                let ordered: HashSet<OutPoint> = inputs_order.iter().copied().collect();
+                let mut pinned_outpoints = HashSet::new();
+                for (_, outpoint) in requests {
+                    if !pinned_outpoints.insert(*outpoint) {
+                        return Err(Error::DuplicatedOutpoint(
+                            *outpoint,
+                            "pinned issuances".to_string(),
+                        ));
+                    }
+
+                    if !ordered.contains(outpoint) {
+                        return Err(Error::IssuanceOutpointNotInInputsOrder(*outpoint));
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 }

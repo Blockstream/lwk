@@ -1231,8 +1231,7 @@ impl Wollet {
         Ok(pset.extract_tx()?)
     }
 
-    /// A deterministic value derived from the descriptor, the config and the content of this wollet,
-    /// including what's in the wallet cache (transactions etc)
+    /// A deterministic value derived from the network, descriptor, and wallet cache content.
     ///
     /// In this case, we don't need cryptographic assurance guaranteed by the std default hasher (siphash)
     /// And we can use a much faster hasher, which is used also in the rust compiler.

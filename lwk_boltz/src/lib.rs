@@ -336,7 +336,7 @@ impl BoltzSession {
     /// Fetch all swaps ever done with the session mnemonic from the boltz api.
     ///
     /// This is useful as a swap list but can also be used to restore non-completed swaps that have not
-    /// being persisted or that have been lost. TODO: use fn xxx
+    /// being persisted or that have been lost.
     pub async fn swap_restore(&self) -> Result<Vec<SwapRestoreResponse>, Error> {
         let result = self.api.post_swap_restore(&self.xpub.to_string()).await?;
         Ok(result)

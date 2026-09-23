@@ -8,7 +8,7 @@ LIB_EXTENSION := if os() == "macos" { "dylib" } else { "so" }
 # build the bindings lib: liblwk.so (as specified in lwk_bindings/Cargo.toml)
 build-bindings-lib:
     # a debug build would be fine if used only to generate interfaces files but some jobs use it to package it, thus release is necessary.
-    cargo build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
+    cargo build --release -p lwk_bindings --features test_env {{SIMPLICITY_FEATURES}}
 
 # build the python interface "lwk.py"
 python-build-bindings: build-bindings-lib
@@ -23,7 +23,7 @@ python-test-bindings: python-build-bindings
 
 # build the bindings lib with simplicity feature
 build-bindings-lib-simplicity:
-    cargo build --release -p lwk_bindings --features simplicity
+    cargo build --release -p lwk_bindings --features simplicity,test_env
 
 # build the python bindings with simplicity enabled
 python-build-bindings-simplicity: build-bindings-lib-simplicity

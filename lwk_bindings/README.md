@@ -78,7 +78,7 @@ $ twine upload *.whl
 ### Test
 
 ```shell
-cargo test -p lwk_bindings --features foreign_bindings --test bindings -- py
+cargo test -p lwk_bindings --features foreign_bindings,test_env --test bindings -- py
 ```
 
 Live environment

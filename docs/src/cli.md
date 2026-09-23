@@ -60,7 +60,7 @@ lwk_cli signer load-software --signer sw --persist false --mnemonic "abandon aba
 
 Create a p2wpkh *wallet* named `ss` (install [`jq`](https://github.com/jqlang/jq) or extract the descriptor manually)
 ```shell
-DESC=$(lwk_cli signer singlesig-desc -signer sw --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
+DESC=$(lwk_cli signer singlesig-desc --signer sw --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
 lwk_cli wallet load --wallet ss -d $DESC
 ```
 

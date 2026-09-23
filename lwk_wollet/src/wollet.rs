@@ -573,6 +573,13 @@ impl Wollet {
     ///
     /// If Some return the address at the given index,
     /// otherwise the last unused address.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::IndexWithoutWildcard`] when an index is supplied for a
+    /// descriptor without a wildcard. Returns
+    /// [`Error::UnsupportedWithoutDescriptor`] when no index is supplied for a
+    /// wallet backed by a fixed list of script pubkeys.
     pub fn address(&self, index: Option<u32>) -> Result<AddressResult, Error> {
         self.inner_address(Chain::External, index)
     }

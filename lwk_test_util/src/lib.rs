@@ -1,15 +1,12 @@
 use elements_miniscript::elements::{self, BlockHeader};
 
-use elements::bitcoin::bip32::Xpriv;
-use elements::bitcoin::Network;
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::Decodable;
-use elements::hex::{FromHex, ToHex};
+use elements::hex::FromHex;
 use elements::pset::PartiallySignedTransaction;
 use elements::{AssetId, Txid};
 use elements::{Block, TxOutSecrets};
 use elements_miniscript::descriptor::checksum::desc_checksum;
-use rand::{thread_rng, Rng};
 use std::{
     io::{Read, Write},
     net::TcpListener,
@@ -21,6 +18,7 @@ use std::{
 mod amp2;
 mod auth;
 mod fee;
+mod generate;
 mod lightningd;
 mod panic_store;
 mod pegin;
@@ -32,6 +30,7 @@ pub use auth::{
     AUTH_SHORT_CLIENT_SECRET, AUTH_USER_UUID,
 };
 pub use fee::{assert_fee_rate, compute_fee_rate, compute_fee_rate_without_discount_ct};
+pub use generate::{generate_mnemonic, generate_slip77, generate_view_key, generate_xprv};
 pub use panic_store::PanicStore;
 pub use pegin::{
     FED_PEG_DESC, FED_PEG_SCRIPT, FED_PEG_SCRIPT_ASM, PEGIN_TEST_ADDR, PEGIN_TEST_DESC,
@@ -113,30 +112,6 @@ pub fn regtest_policy_asset() -> AssetId {
 
 pub fn init_logging() {
     let _ = env_logger::try_init();
-}
-
-pub fn generate_mnemonic() -> String {
-    let mut bytes = [0u8; 16];
-    thread_rng().fill(&mut bytes);
-    bip39::Mnemonic::from_entropy(&bytes).unwrap().to_string()
-}
-
-pub fn generate_slip77() -> String {
-    let mut bytes = [0u8; 32];
-    thread_rng().fill(&mut bytes);
-    bytes.to_hex()
-}
-
-pub fn generate_view_key() -> String {
-    let mut bytes = [0u8; 32];
-    thread_rng().fill(&mut bytes);
-    bytes.to_hex()
-}
-
-pub fn generate_xprv() -> Xpriv {
-    let mut seed = [0u8; 16];
-    thread_rng().fill(&mut seed);
-    Xpriv::new_master(Network::Regtest, &seed).unwrap()
 }
 
 pub fn n_issuances(details: &lwk_common::PsetDetails) -> usize {

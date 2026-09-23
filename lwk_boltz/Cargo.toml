@@ -42,6 +42,6 @@ wasm-bindgen-futures = "0.4.50"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 
 [dev-dependencies]
-reqwest = { version = "0.12", default-features = false, features = ["json"] }
+reqwest.workspace = true
 base64 = { workspace = true }
 lwk_signer = { version = "0.19.0" }

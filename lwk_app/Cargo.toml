@@ -19,7 +19,6 @@ jsonrpc = { version = "0.18.0" }
 base64 = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-secp256k1 = "0.29.1"
 thiserror = { workspace = true }
 log.workspace = true
 rand = "0.8.5"

@@ -3115,7 +3115,6 @@ dependencies = [
  "rand 0.8.5",
  "reqwest",
  "schemars 0.8.22",
- "secp256k1 0.29.1",
  "serde",
  "serde_json",
  "tempfile",
@@ -3161,7 +3160,6 @@ dependencies = [
  "lwk_common",
  "lwk_signer",
  "lwk_wollet",
- "rand 0.8.5",
  "reqwest",
  "rustls",
  "serde",
@@ -3184,7 +3182,6 @@ dependencies = [
  "env_logger",
  "log",
  "lwk_app",
- "lwk_containers",
  "lwk_jade",
  "lwk_rpc_model",
  "lwk_test_util",
@@ -3329,7 +3326,6 @@ dependencies = [
 name = "lwk_signer"
 version = "0.19.0"
 dependencies = [
- "base64 0.22.1",
  "bip39",
  "elements-miniscript",
  "lwk_common",
@@ -3374,7 +3370,6 @@ dependencies = [
  "env_logger",
  "log",
  "lwk_common",
- "lwk_containers",
  "rand 0.8.5",
  "reqwest",
  "serde_json",
@@ -3398,7 +3393,6 @@ dependencies = [
 name = "lwk_wasm"
 version = "0.19.0"
 dependencies = [
- "byteorder",
  "console_error_panic_hook",
  "lwk_boltz",
  "lwk_common",
@@ -3412,7 +3406,6 @@ dependencies = [
  "serde-wasm-bindgen",
  "serde_json",
  "thiserror 2.0.18",
- "tokio",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
@@ -3443,7 +3436,6 @@ dependencies = [
  "js-sys",
  "log",
  "lwk_common",
- "lwk_containers",
  "lwk_jade",
  "lwk_ledger",
  "lwk_prices",

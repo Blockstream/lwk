@@ -6,6 +6,8 @@ on:
 
 name: Build python wheels on mac and windows
 
+# lwk_bindings uses UniFFI 0.29.4, but PyPI did not publish uniffi-bindgen
+# 0.29.4. Use the compatible 0.29.5 generator when maturin builds the wheels.
 jobs:
 
 
@@ -38,7 +40,7 @@ jobs:
        with:
          python-version: "3.12"
      - run: python3 -m pip install maturin
-     - run: python3 -m pip install uniffi-bindgen==0.29.5  # must be the same version as the dep in lwk_bindings/Cargo.toml
+     - run: python3 -m pip install uniffi-bindgen==0.29.5
      - run: maturin build --release -m lwk_bindings/Cargo.toml -b uniffi
      - uses: actions/upload-artifact@v7
        with:
@@ -56,7 +58,7 @@ jobs:
        with:
          python-version: "3.12"
      - run: python3 -m pip install maturin
-     - run: python3 -m pip install uniffi-bindgen==0.29.5  # must be the same version as the dep in lwk_bindings/Cargo.toml
+     - run: python3 -m pip install uniffi-bindgen==0.29.5
      - run: maturin build --release -m lwk_bindings/Cargo.toml -b uniffi
      - uses: actions/upload-artifact@v7
        with:

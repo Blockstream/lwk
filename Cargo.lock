@@ -3329,7 +3329,6 @@ dependencies = [
 name = "lwk_signer"
 version = "0.19.0"
 dependencies = [
- "base64 0.22.1",
  "bip39",
  "elements-miniscript",
  "lwk_common",

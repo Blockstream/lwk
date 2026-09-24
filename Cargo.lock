@@ -3398,7 +3398,6 @@ dependencies = [
 name = "lwk_wasm"
 version = "0.19.0"
 dependencies = [
- "byteorder",
  "console_error_panic_hook",
  "lwk_boltz",
  "lwk_common",
@@ -3412,7 +3411,6 @@ dependencies = [
  "serde-wasm-bindgen",
  "serde_json",
  "thiserror 2.0.18",
- "tokio",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",

@@ -187,6 +187,8 @@ Format: `context: <description>`
 - Breaking changes: append `!` after context
 - Title: max 50 chars, imperative mood, no period
 - Body: blank line after title, explain "why", use bullet points
+- Do not add "Co-Authored-By: <LLM>" as this provides free advertising for the model.
+  The commit author is fully responsible for the commit changes, the LLM is not.
 
 ### Feature Flags
 - Default features should be minimal but functional

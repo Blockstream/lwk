@@ -3115,7 +3115,6 @@ dependencies = [
  "rand 0.8.5",
  "reqwest",
  "schemars 0.8.22",
- "secp256k1 0.29.1",
  "serde",
  "serde_json",
  "tempfile",

@@ -31,7 +31,6 @@ bip39 = { version = "2.0.0", features = ["rand"] }
 lightning = { version = "0.2.2", default-features = false }
 lnurl-rs = { version = "0.9.0", default-features = false }
 aes-gcm-siv = "0.11.0"
-rand = "0.8"
 bech32 = { version = "0.9.1", default-features = false } # can't find a way in newer versions to use decode_without_checksum
 web-time = "1.1.0"
 

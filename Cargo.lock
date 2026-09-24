@@ -3160,7 +3160,6 @@ dependencies = [
  "lwk_common",
  "lwk_signer",
  "lwk_wollet",
- "rand 0.8.5",
  "reqwest",
  "rustls",
  "serde",

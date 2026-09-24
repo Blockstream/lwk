@@ -65,9 +65,8 @@ impl PsetDetails {
     }
 
     /// Fingerprints for which the PSET has a signature.
-    ///
-    /// Returned as a vector because UniFFI does not support set types.
     pub fn fingerprints_has(&self) -> Vec<String> {
+        // UniFFI does not support set types, so expose the set as a vector.
         self.inner
             .fingerprints_has()
             .into_iter()
@@ -76,9 +75,8 @@ impl PsetDetails {
     }
 
     /// Fingerprints for which the PSET is missing a signature.
-    ///
-    /// Returned as a vector because UniFFI does not support set types.
     pub fn fingerprints_missing(&self) -> Vec<String> {
+        // UniFFI does not support set types, so expose the set as a vector.
         self.inner
             .fingerprints_missing()
             .into_iter()

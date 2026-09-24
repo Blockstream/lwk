@@ -26,7 +26,7 @@ use futures::lock::Mutex;
 use tokio::sync::Mutex;
 
 use futures::stream::{iter, StreamExt, TryStreamExt};
-use reqwest::{Response, StatusCode};
+use reqwest::{RequestBuilder, Response, StatusCode};
 use serde::Deserialize;
 use std::sync::atomic::AtomicUsize;
 use std::{
@@ -986,30 +986,7 @@ impl EsploraClient {
                 (true, Some(timeout)) => builder.timeout(timeout),
                 _ => builder,
             };
-            let builder = match &self.token_provider {
-                TokenProvider::None => builder,
-                TokenProvider::Static(token) => {
-                    builder.header("Authorization", format!("Bearer {token}"))
-                }
-                TokenProvider::Blockstream {
-                    url,
-                    client_id,
-                    client_secret,
-                } => {
-                    let mut cached_token = self.token.lock().await;
-                    match cached_token.as_mut() {
-                        Some(token) => builder.header("Authorization", format!("Bearer {token}")),
-                        None => {
-                            log::debug!("fetching authentication token");
-                            let token =
-                                fetch_oauth_token(&self.client, url, client_id, client_secret)
-                                    .await?;
-                            *cached_token = Some(token.clone());
-                            builder.header("Authorization", format!("Bearer {token}"))
-                        }
-                    }
-                }
-            };
+            let builder = self.authorize(builder).await?;
             let response = builder.send().await?;
 
             let level = if response.status() == 200 {
@@ -1079,30 +1056,7 @@ impl EsploraClient {
                 Some(timeout) => builder.timeout(timeout),
                 None => builder,
             };
-            let builder = match &self.token_provider {
-                TokenProvider::None => builder,
-                TokenProvider::Static(token) => {
-                    builder.header("Authorization", format!("Bearer {token}"))
-                }
-                TokenProvider::Blockstream {
-                    url,
-                    client_id,
-                    client_secret,
-                } => {
-                    let mut cached_token = self.token.lock().await;
-                    match cached_token.as_mut() {
-                        Some(token) => builder.header("Authorization", format!("Bearer {token}")),
-                        None => {
-                            log::debug!("fetching authentication token");
-                            let token =
-                                fetch_oauth_token(&self.client, url, client_id, client_secret)
-                                    .await?;
-                            *cached_token = Some(token.clone());
-                            builder.header("Authorization", format!("Bearer {token}"))
-                        }
-                    }
-                }
-            };
+            let builder = self.authorize(builder).await?;
             let response = builder.send().await?;
 
             let level = if response.status() == 200 {
@@ -1175,6 +1129,32 @@ impl EsploraClient {
         let has_any_tx = histories.into_iter().any(|history| !history.is_empty());
 
         Ok(has_any_tx)
+    }
+
+    async fn authorize(&self, builder: RequestBuilder) -> Result<RequestBuilder, Error> {
+        Ok(match &self.token_provider {
+            TokenProvider::None => builder,
+            TokenProvider::Static(token) => {
+                builder.header("Authorization", format!("Bearer {token}"))
+            }
+            TokenProvider::Blockstream {
+                url,
+                client_id,
+                client_secret,
+            } => {
+                let mut cached_token = self.token.lock().await;
+                match cached_token.as_mut() {
+                    Some(token) => builder.header("Authorization", format!("Bearer {token}")),
+                    None => {
+                        log::debug!("fetching authentication token");
+                        let token =
+                            fetch_oauth_token(&self.client, url, client_id, client_secret).await?;
+                        *cached_token = Some(token.clone());
+                        builder.header("Authorization", format!("Bearer {token}"))
+                    }
+                }
+            }
+        })
     }
 }
 

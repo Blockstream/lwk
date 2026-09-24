@@ -98,4 +98,35 @@ fn test_prune() {
         derive_blinding_key(w_prune_wit.descriptor().unwrap(), &address.script_pubkey()).unwrap();
     let utxos = w_prune_wit.unblind_utxos_with(blinding_key).unwrap();
     assert_eq!(utxos.len(), 0);
+
+    // A wallet restored from its descriptor after the transactions exist: at its
+    // first sync the cache has no scripts yet, but the update carries them.
+    // Update.prune() must still keep the rangeproofs of the wallet outputs.
+    let mut client = test_client_electrum(&env.electrum_url());
+    let tmp_dir = tempfile::TempDir::new().unwrap();
+    let wd: WolletDescriptor = desc.parse().unwrap();
+    let mut w_restore = WolletBuilder::new(network, wd)
+        .with_legacy_fs_store(&tmp_dir)
+        .unwrap()
+        .build()
+        .unwrap();
+
+    let mut update = client.full_scan(&w_restore).unwrap().unwrap();
+    update.prune(&w_restore);
+    w_restore.apply_update(update).unwrap();
+
+    let pset = w_restore
+        .tx_builder()
+        .add_lbtc_recipient(&address, 10_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+    // Update.prune() preserves the input rangeproofs of the outputs paying to
+    // scripts introduced by the update itself
+    assert!(pset.inputs().iter().all(|i| i.in_utxo_rangeproof.is_some()));
+    let _details = w_restore.get_details(&pset).unwrap();
+
+    let tx = w_restore.transaction(&txid).unwrap().unwrap().tx;
+    assert!(tx.input.iter().all(|i| i.witness.is_empty()));
+    assert!(tx.output.iter().any(|o| !o.witness.is_empty()));
 }

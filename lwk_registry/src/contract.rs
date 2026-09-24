@@ -9,14 +9,15 @@ use crate::error::Error;
 use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
 use elements::hashes::{sha256, Hash};
 use elements::{AssetId, ContractHash, OutPoint};
-use once_cell::sync::Lazy;
 use regex_lite::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::sync::LazyLock;
 
-static RE_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[[:ascii:]]{1,255}$").expect("static"));
-static RE_TICKER: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^[a-zA-Z0-9.\-]{3,24}$").expect("static"));
+static RE_NAME: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[[:ascii:]]{1,255}$").expect("static"));
+static RE_TICKER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9.\-]{3,24}$").expect("static"));
 
 /// The entity of an asset, contains the domain of the issuer.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

@@ -304,6 +304,7 @@ mod tests {
 
     wasm_bindgen_test_configure!(run_in_browser);
 
+    #[ignore = "requires network call"]
     #[wasm_bindgen_test]
     async fn test_amp0ext() {
         let mut amp0 = Amp0::new_mainnet("userleo456", "userleo456", "")

@@ -7,12 +7,14 @@ RUN apt upgrade --no-install-recommends -yqq
 # libudev-dev for jade serial
 # clang for wasm
 # chromium-driver for wasm tests
+# libsodium23 for CLN tests
 # Other libraries are runtime and development dependencies of Swift.
 RUN apt install -y --no-install-recommends \
     libudev-dev \
     libxml2-utils \
     clang \
     chromium-driver \
+    libsodium23 \
     binutils-gold \
     libicu-dev \
     libcurl4-openssl-dev \

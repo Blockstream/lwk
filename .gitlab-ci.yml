@@ -146,31 +146,12 @@ test_wollet:
     - .coverage_mixin
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    - apt-get -qq update && apt-get install -y libsodium23  # TODO: remove once docker image is re-built
     - docker pull $JADE_EMULATOR_IMAGE_NAME:$JADE_EMULATOR_IMAGE_VERSION
     - cargo build -p amp2_mock && export AMP2_MOCK_EXEC=$PWD/target/debug/amp2_mock
     - ls $PWD/target/debug
     - nproc
     - cargo test -p lwk_wollet -p lwk_signer -- --test-threads=2
-
-test_ln:
-  stage: test
-  needs: []
-  extends:
-    - .base
-    - .coverage_mixin
-  script:
-    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    # TODO: remove once CLN is in docker image
-    - apt-get -qq update && apt-get install -y libsodium23
-    - export LIGHTNINGD_VERSION=26.06.7
-    - export LIGHTNINGD_EXPECTED_SHA256="53ddf124fe7058b6a2fc059d104976cc54ba5be21dc55b295cd82d01cabeb39c"
-    - export LIGHTNINGD_FILENAME="clightning-v${LIGHTNINGD_VERSION}-Ubuntu-22.04-amd64.tar.xz"
-    - curl -Ls "https://github.com/ElementsProject/lightning/releases/download/v${LIGHTNINGD_VERSION}/${LIGHTNINGD_FILENAME}" -o "${LIGHTNINGD_FILENAME}"
-    - echo "${LIGHTNINGD_EXPECTED_SHA256}  ${LIGHTNINGD_FILENAME}" | sha256sum -c -
-    - mkdir -p "clightning-${LIGHTNINGD_VERSION}"
-    - tar -xJf "${LIGHTNINGD_FILENAME}" -C "clightning-${LIGHTNINGD_VERSION}" && rm "${LIGHTNINGD_FILENAME}"
-    - export LIGHTNINGD_EXEC="$PWD/clightning-${LIGHTNINGD_VERSION}/usr/bin/lightningd"
-    - cargo test -p lwk_wollet lightning -- --include-ignored
 
 test_jade:
   stage: test
@@ -358,8 +339,6 @@ coverage_report:
     - job: boltz_reverse
       artifacts: true
     - job: boltz_submarine
-      artifacts: true
-    - job: test_ln
       artifacts: true
     - job: anyswap
       artifacts: true

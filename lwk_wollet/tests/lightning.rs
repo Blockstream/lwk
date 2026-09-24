@@ -1,7 +1,6 @@
 use lwk_test_util::*;
 
 #[test]
-#[ignore = "require ci docker update"]
 fn lightningd_getinfo() {
     let env = TestEnvBuilder::from_env()
         .with_bitcoind()

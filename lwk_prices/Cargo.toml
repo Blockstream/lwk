@@ -14,15 +14,7 @@ thiserror.workspace = true
 
 futures = "0.3"
 
-reqwest = { version = "0.12", default-features = false, features = [
-    "charset",
-    "http2",
-    "macos-system-configuration",
-    "blocking",
-    "gzip",
-    "json",
-    "rustls-tls",
-] }
+reqwest.workspace = true
 web-time = "1.1.0"
 
 [dev-dependencies]

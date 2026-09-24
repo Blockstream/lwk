@@ -84,10 +84,14 @@ cargo -q test --no-run
 
 ## Test Environment
 
-Integration and end-to-end tests use Docker-based services. The `context/`
-directory contains the CI environment setup and helper files; see
-`context/jade-emulator/Readme.md` for the Jade emulator image and startup
-instructions. Shared Rust container helpers live in `lwk_containers`.
+Unit tests (`cargo test --lib`) are self-contained and require neither the
+project's Nix service environment nor Docker. Most integration and end-to-end
+tests start local service executables configured through environment variables;
+the Nix development shell provides these executables and variables. Tests using
+`lwk_containers`, testcontainers, or Docker Compose require Docker and pull
+missing images automatically. The `context/` directory contains CI and legacy
+environment setup. Its `jade-emulator/Readme.md` documents building and
+publishing the emulator image, not the normal test startup flow.
 
 ## Lint Commands
 

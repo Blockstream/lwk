@@ -88,3 +88,6 @@ Please open an issue if you need a more recent version
 ## Flutter/Dart
 
 LWK does not currently publish first-party Flutter or Dart bindings.
+Community-maintained bindings are available from
+[`lwk-dart`](https://github.com/SatoshiPortal/lwk-dart) and published as the
+[`lwk` package](https://pub.dev/packages/lwk).

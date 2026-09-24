@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* `LwkTestEnv` and `LwkTestStore` are now behind the `test_env` feature. By default `lwk_test_util` is no longer a dependency of `lwk_bindings`, so shipping libraries do not include the test environment. Enable `test_env` to build and use the test helpers.
+
 ## 0.19.1
 
 * Added `DescriptorPublicKey`

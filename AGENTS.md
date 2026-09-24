@@ -76,7 +76,7 @@ cargo -q test -p lwk_wollet
 cargo -q test -p lwk_wollet test_name_here
 
 # Run bindings tests
-cargo -q test -p lwk_bindings --features foreign_bindings
+cargo -q test -p lwk_bindings --features foreign_bindings,test_env
 
 # Build tests without running
 cargo -q test --no-run

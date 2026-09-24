@@ -429,7 +429,7 @@ doc:
     - cargo +nightly doc --no-deps -p lwk_tiny_jrpc --all-features
     - cargo +nightly doc --no-deps -p lwk_wasm --all-features
     - cargo +nightly doc --no-deps -p lwk_wollet --all-features
-    - cargo +nightly doc --no-deps -p lwk_bindings --features foreign_bindings
+    - cargo +nightly doc --no-deps -p lwk_bindings --features foreign_bindings,test_env
 
 examples:
   stage: test
@@ -449,7 +449,7 @@ bindings:
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo build -p amp2_mock && export AMP2_MOCK_EXEC=$PWD/target/debug/amp2_mock
-    - cargo test -p lwk_bindings --features foreign_bindings
+    - cargo test -p lwk_bindings --features foreign_bindings,test_env
 
 csharp:
   stage: test
@@ -570,7 +570,7 @@ amp0:
     - cargo test -p lwk_wollet amp0_setup -- --include-ignored
     - cargo test -p lwk_wollet amp0_daily_ops -- --include-ignored
     # bindings
-    - cargo test -p lwk_bindings --features foreign_bindings amp0
+    - cargo test -p lwk_bindings --features foreign_bindings,test_env amp0
     # wasm
     - cd lwk_wasm
     - RUSTFLAGS="--cfg=web_sys_unstable_apis" wasm-pack build --dev --target nodejs --out-dir pkg_node -- --features serial

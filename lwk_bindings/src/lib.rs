@@ -30,6 +30,7 @@ mod pset;
 mod pset_details;
 mod signer;
 mod store;
+#[cfg(feature = "test_env")]
 mod test_env;
 mod tx_builder;
 pub mod types;
@@ -103,6 +104,7 @@ pub use pset::{Pset, PsetInput, PsetOutput};
 pub use pset::{PsetBuilder, PsetInputBuilder, PsetOutputBuilder};
 pub use pset_details::{Issuance, OutputDetails, PsetDetails};
 pub use store::{ForeignStore, ForeignStoreLink};
+#[cfg(feature = "test_env")]
 pub use test_env::{LwkTestEnv, LwkTestStore};
 pub use tx_builder::{IssuanceRequest, ReissuanceRequest, TxBuilder};
 pub use update::Update;

@@ -64,9 +64,10 @@ impl PsetDetails {
             .collect()
     }
 
-    /// Set of fingerprints for which the PSET has a signature
+    /// Fingerprints for which the PSET has a signature.
+    ///
+    /// Returned as a vector because UniFFI does not support set types.
     pub fn fingerprints_has(&self) -> Vec<String> {
-        // TODO: return HashSet when upgrading to uniffi-rs 0.29 or later
         self.inner
             .fingerprints_has()
             .into_iter()
@@ -74,9 +75,10 @@ impl PsetDetails {
             .collect()
     }
 
-    /// Set of fingerprints for which the PSET is missing a signature
+    /// Fingerprints for which the PSET is missing a signature.
+    ///
+    /// Returned as a vector because UniFFI does not support set types.
     pub fn fingerprints_missing(&self) -> Vec<String> {
-        // TODO: return HashSet when upgrading to uniffi-rs 0.29 or later
         self.inner
             .fingerprints_missing()
             .into_iter()

@@ -107,7 +107,7 @@ cargo audit
 # Generate documentation as CI does: one crate at a time because the workspace
 # cannot currently be documented with --all-features.
 RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo +nightly -q doc --no-deps -p lwk_wollet --all-features
-RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo +nightly -q doc --no-deps -p lwk_bindings --features foreign_bindings
+RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo +nightly -q doc --no-deps -p lwk_bindings --features foreign_bindings,test_env
 # See the doc job in .gitlab-ci.yml for the complete per-crate list.
 ```
 

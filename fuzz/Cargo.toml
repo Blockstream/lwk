@@ -1,0 +1,26 @@
+[package]
+name = "lwk-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+lwk_wollet = { path = "../lwk_wollet", default-features = false }
+
+[patch.crates-io]
+lwk_common = { path = "../lwk_common" }
+lwk_registry = { path = "../lwk_registry" }
+
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "update_deserialize"
+path = "fuzz_targets/update_deserialize.rs"
+test = false
+doc = false
+bench = false

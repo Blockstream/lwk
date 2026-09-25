@@ -187,6 +187,7 @@
             pkgs.cargo-bloat
             pkgs.cargo-nextest
             pkgs.cargo-audit
+            pkgs.cargo-fuzz
             amp2Mock
             pkgs.grcov
             pkgs.go

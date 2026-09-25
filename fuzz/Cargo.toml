@@ -41,3 +41,10 @@ path = "fuzz_targets/payment_instruction.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "descriptor"
+path = "fuzz_targets/descriptor.rs"
+test = false
+doc = false
+bench = false

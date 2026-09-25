@@ -58,3 +58,20 @@ bounded run:
 ```sh
 cargo fuzz run payment_instruction --sanitizer none -- -max_total_time=60 -max_len=4096
 ```
+
+## Wallet descriptors
+
+Fuzz strict and relaxed wallet descriptor parsing, including confidential
+descriptors, Green-style two-line descriptors, and fixed script pubkey lists:
+
+```sh
+cargo fuzz run descriptor --sanitizer none
+```
+
+The target checks canonical parse/display round trips and exercises descriptor
+derivation at small indices. Inputs are limited to 4,096 bytes. For a bounded
+run:
+
+```sh
+cargo fuzz run descriptor --sanitizer none -- -max_total_time=60 -max_len=4096
+```

@@ -818,6 +818,16 @@ impl Decodable for EncodableTxOutSecrets {
 }
 
 const UPDATE_MAGIC_BYTES: [u8; 4] = [0x89, 0x61, 0xb8, 0xc8];
+// Preserve efficient decoding for ordinary updates without reserving memory for
+// items that have not been read yet.
+const MAX_PREALLOCATED_ITEMS: usize = 1024;
+
+fn bounded_capacity(len: u64) -> usize {
+    usize::try_from(len)
+        .unwrap_or(MAX_PREALLOCATED_ITEMS)
+        .min(MAX_PREALLOCATED_ITEMS)
+}
+
 impl Encodable for Update {
     fn consensus_encode<W: std::io::Write>(
         &self,
@@ -919,7 +929,7 @@ impl Decodable for Update {
 
         let txid_height_new = {
             let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
-            let mut vec = Vec::with_capacity(len as usize);
+            let mut vec = Vec::with_capacity(bounded_capacity(len));
             for _ in 0..len {
                 let txid = Txid::consensus_decode(&mut d)?;
                 let height = match u32::consensus_decode(&mut d)? {
@@ -933,7 +943,7 @@ impl Decodable for Update {
 
         let txid_height_delete = {
             let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
-            let mut vec = Vec::with_capacity(len as usize);
+            let mut vec = Vec::with_capacity(bounded_capacity(len));
             for _ in 0..len {
                 vec.push(Txid::consensus_decode(&mut d)?);
             }
@@ -942,7 +952,7 @@ impl Decodable for Update {
 
         let timestamps = {
             let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
-            let mut vec = Vec::with_capacity(len as usize);
+            let mut vec = Vec::with_capacity(bounded_capacity(len));
             for _ in 0..len {
                 let h = u32::consensus_decode(&mut d)?;
                 let t = u32::consensus_decode(&mut d)?;
@@ -953,7 +963,7 @@ impl Decodable for Update {
 
         let scripts_with_blinding_pubkey = {
             let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
-            let mut vec = Vec::with_capacity(len as usize);
+            let mut vec = Vec::with_capacity(bounded_capacity(len));
             for _ in 0..len {
                 let script = Script::consensus_decode(&mut d)?;
                 let chain = match u8::consensus_decode(&mut d)? {
@@ -981,7 +991,7 @@ impl Decodable for Update {
 
         let unspent = if version >= 3 {
             let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
-            let mut vec = Vec::with_capacity(len as usize);
+            let mut vec = Vec::with_capacity(bounded_capacity(len));
             for _ in 0..len {
                 let outpoint = OutPoint::consensus_decode(&mut d)?;
                 let script = if version >= 5 {
@@ -1171,6 +1181,55 @@ mod test {
 
         let back = Update::consensus_decode(&vec[..]).unwrap();
         assert_eq!(update, back);
+    }
+
+    #[test]
+    fn test_update_large_truncated_vector_lengths() {
+        let mut original_poc = vec![];
+        super::UPDATE_MAGIC_BYTES
+            .consensus_encode(&mut original_poc)
+            .unwrap();
+        0u8.consensus_encode(&mut original_poc).unwrap();
+        DownloadTxResult::default()
+            .consensus_encode(&mut original_poc)
+            .unwrap();
+
+        let mut prefix = vec![];
+        super::UPDATE_MAGIC_BYTES
+            .consensus_encode(&mut prefix)
+            .unwrap();
+        5u8.consensus_encode(&mut prefix).unwrap();
+        0u64.consensus_encode(&mut prefix).unwrap();
+        DownloadTxResult::default()
+            .consensus_encode(&mut prefix)
+            .unwrap();
+
+        let mut prefixes = vec![original_poc, prefix.clone()];
+        for _ in 0..3 {
+            elements::encode::VarInt(0)
+                .consensus_encode(&mut prefix)
+                .unwrap();
+            prefixes.push(prefix.clone());
+        }
+        elements::encode::VarInt(0)
+            .consensus_encode(&mut prefix)
+            .unwrap();
+        super::default_blockheader()
+            .consensus_encode(&mut prefix)
+            .unwrap();
+        prefixes.push(prefix);
+
+        let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();
+        for mut bytes in prefixes {
+            elements::encode::VarInt(1 << 40)
+                .consensus_encode(&mut bytes)
+                .unwrap();
+            assert!(Update::deserialize(&bytes).is_err());
+
+            let encrypted = lwk_common::encrypt_with_random_nonce(&mut desc.cipher(), &bytes)
+                .expect("encryption succeeds");
+            assert!(Update::deserialize_decrypted(&encrypted, &desc).is_err());
+        }
     }
 
     #[test]

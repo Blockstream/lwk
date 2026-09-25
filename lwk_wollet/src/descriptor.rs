@@ -211,6 +211,28 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
             }
         }
 
+        let has_hardened_public_derivation = desc.descriptor.for_each_key(|key| match key {
+            DescriptorPublicKey::Single(_) => false,
+            DescriptorPublicKey::XPub(key) => {
+                key.wildcard == Wildcard::Hardened
+                    || key
+                        .derivation_path
+                        .into_iter()
+                        .any(|child| child.is_hardened())
+            }
+            DescriptorPublicKey::MultiXPub(key) => {
+                key.wildcard == Wildcard::Hardened
+                    || key
+                        .derivation_paths
+                        .paths()
+                        .iter()
+                        .any(|path| path.into_iter().any(|child| child.is_hardened()))
+            }
+        });
+        if has_hardened_public_derivation {
+            return Err(Self::Error::UnsupportedDescriptorHardenedDerivation);
+        }
+
         if desc.descriptor.is_multipath() {
             let descriptors = desc.descriptor.clone().into_single_descriptors()?;
 
@@ -901,7 +923,7 @@ mod test {
 
     use crate::{
         descriptor::{remove_checksum_if_any, url_encode_descriptor},
-        Chain, FedPeg, Network, WolletDescriptor, EC,
+        Chain, Error, FedPeg, Network, WolletDescriptor, EC,
     };
 
     #[track_caller]
@@ -1103,6 +1125,22 @@ mod test {
         let second_non_canonical = second.replace("/1/*", "/2/*");
         let fail_more_lines = format!("{first}\n{second_non_canonical}");
         assert!(WolletDescriptor::from_str_relaxed(&fail_more_lines).is_err());
+    }
+
+    #[test]
+    fn reject_hardened_xpub_derivation() {
+        let blinding_key = "460830d85d4b299a9406c5899748354937c81b6fdb94f110f8729c9ba2994412";
+        let xpub = "tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu";
+
+        for descriptor in [
+            format!("ct(slip77({blinding_key}),elwpkh({xpub}/0h/*))"),
+            format!("ct(slip77({blinding_key}),elwpkh({xpub}/0/*h))"),
+        ] {
+            assert!(matches!(
+                WolletDescriptor::from_str(&descriptor),
+                Err(Error::UnsupportedDescriptorHardenedDerivation)
+            ));
+        }
     }
 
     #[test]

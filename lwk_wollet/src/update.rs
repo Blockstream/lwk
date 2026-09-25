@@ -805,12 +805,12 @@ impl Decodable for EncodableTxOutSecrets {
                 asset: Decodable::consensus_decode(&mut d)?,
                 asset_bf: {
                     let bytes: [u8; 32] = Decodable::consensus_decode(&mut d)?;
-                    AssetBlindingFactor::from_slice(&bytes[..]).expect("bytes length is 32")
+                    AssetBlindingFactor::from_slice(&bytes[..])?
                 },
                 value: Decodable::consensus_decode(&mut d)?,
                 value_bf: {
                     let bytes: [u8; 32] = Decodable::consensus_decode(&mut d)?;
-                    ValueBlindingFactor::from_slice(&bytes[..]).expect("bytes length is 32")
+                    ValueBlindingFactor::from_slice(&bytes[..])?
                 },
             },
         })
@@ -1096,6 +1096,16 @@ mod test {
 
         let back = EncodableTxOutSecrets::consensus_decode(&vec[..]).unwrap();
         assert_eq!(secret, back)
+    }
+
+    #[test]
+    fn test_tx_out_secrets_rejects_invalid_blinding_factors() {
+        let bytes = lwk_test_util::tx_out_secrets_test_vector_bytes();
+        for range in [32..64, 72..104] {
+            let mut invalid = bytes.clone();
+            invalid[range].fill(0xff);
+            assert!(EncodableTxOutSecrets::consensus_decode(&invalid[..]).is_err());
+        }
     }
 
     #[test]

@@ -1243,6 +1243,28 @@ mod test {
     }
 
     #[test]
+    fn test_update_vector_grows_beyond_preallocated_capacity() {
+        let timestamps = (0..=super::MAX_PREALLOCATED_ITEMS as u32)
+            .map(|height| (height, height))
+            .collect();
+        let update = Update {
+            version: 1,
+            wollet_status: 0,
+            new_txs: DownloadTxResult::default(),
+            txid_height_new: vec![],
+            txid_height_delete: vec![],
+            timestamps,
+            scripts_with_blinding_pubkey: vec![],
+            tip: super::default_blockheader(),
+            unspent: vec![],
+            last_unused: LastUnused::default(),
+        };
+
+        let decoded = Update::deserialize(&update.serialize().unwrap()).unwrap();
+        assert_eq!(decoded, update);
+    }
+
+    #[test]
     fn test_update_backward_comp() {
         // Update can be deserialize from v0 or v1 blob, but in the first case the wallet_status will be 0.
         let v0 = lwk_test_util::update_test_vector_bytes();

@@ -48,6 +48,7 @@ sync = []
 serial = ["serialport"]
 asyncr = ["tokio"]
 test_emulator = ["lwk_containers", "tempfile"]
+fuzzing = []
 
 [[test]]
 name = "e2e"

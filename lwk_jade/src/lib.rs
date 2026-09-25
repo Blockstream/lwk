@@ -92,6 +92,33 @@ enum ParseStep<T> {
     Skip { consumed: usize },
 }
 
+/// Fuzzing view of a Jade response parsing step.
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FuzzParseStep {
+    /// More bytes are needed to decode a complete CBOR value.
+    Incomplete,
+    /// The decoded value belongs to the expected request, or is malformed.
+    Mine,
+    /// The decoded value should be skipped before parsing the remaining bytes.
+    Skip {
+        /// Number of bytes consumed by the skipped CBOR value.
+        consumed: usize,
+    },
+}
+
+/// Parse one Jade response for fuzzing without exposing the internal response type.
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+pub fn fuzz_try_parse_response(reader: &[u8], expected_id: &str) -> FuzzParseStep {
+    match try_parse_response::<serde_cbor::Value>(reader, expected_id) {
+        ParseStep::Incomplete => FuzzParseStep::Incomplete,
+        ParseStep::Mine(_) => FuzzParseStep::Mine,
+        ParseStep::Skip { consumed } => FuzzParseStep::Skip { consumed },
+    }
+}
+
 /// Read the `id` of a message, if it has a usable one.
 fn message_id(value: &serde_cbor::Value) -> Option<&str> {
     let serde_cbor::Value::Map(map) = value else {
@@ -581,5 +608,17 @@ mod test {
             panic!("id 00 without an error is not an answer for us")
         };
         assert_eq!(consumed, odd.len());
+    }
+
+    #[cfg(feature = "fuzzing")]
+    #[test]
+    fn fuzz_parse_step_preserves_skipped_byte_count() {
+        let log = serde_cbor::to_vec(&serde_json::json!({"log": "boot"})).unwrap();
+        assert_eq!(
+            crate::fuzz_try_parse_response(&log, "1"),
+            crate::FuzzParseStep::Skip {
+                consumed: log.len()
+            }
+        );
     }
 }

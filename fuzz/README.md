@@ -26,3 +26,18 @@ To replay a saved crash artifact:
 ```sh
 cargo fuzz run update_deserialize --sanitizer none fuzz/artifacts/update_deserialize/<artifact>
 ```
+
+## Jade response framing
+
+Fuzz raw, fragmented, and concatenated CBOR responses from a Jade device:
+
+```sh
+cargo fuzz run jade_response --sanitizer none
+```
+
+The target limits inputs to Jade's 4,096-byte response buffer. A bounded run can
+also set libFuzzer's maximum generated input length explicitly:
+
+```sh
+cargo fuzz run jade_response --sanitizer none -- -max_total_time=60 -max_len=4096
+```

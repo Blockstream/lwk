@@ -404,6 +404,25 @@ audit:
     - cargo audit
     # - cargo audit --deny yanked # FIXME: restore once boltz-rust updates
 
+fuzz:
+  stage: test
+  needs: []
+  extends: .base
+  timeout: 15m
+  variables:
+    RUST_BACKTRACE: "1"
+  script:
+    - cargo install cargo-fuzz@0.13.1 --locked # FIXME: move to the builder image
+    - cargo fuzz run update_deserialize --sanitizer none -- -max_total_time=60 -max_len=4096 -timeout=10
+    - cargo fuzz run jade_response --sanitizer none -- -max_total_time=60 -max_len=4096 -timeout=10
+    - cargo fuzz run payment_instruction --sanitizer none -- -max_total_time=60 -max_len=4096 -timeout=10
+    - cargo fuzz run descriptor --sanitizer none -- -max_total_time=60 -max_len=4096 -timeout=10
+  artifacts:
+    when: on_failure
+    paths:
+      - fuzz/artifacts/
+    expire_in: 1 week
+
 doc:
   stage: test
   needs: []

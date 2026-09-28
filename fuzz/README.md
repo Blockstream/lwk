@@ -76,6 +76,14 @@ to 4,096 bytes. For a bounded run:
 cargo fuzz run descriptor --sanitizer none -- -max_total_time=60 -max_len=4096
 ```
 
+Descriptors are grammar-like, so random byte mutations rarely produce valid
+fragments. `fuzz/descriptor.dict` lists script types, keys and derivation
+steps for libFuzzer to splice in:
+
+```sh
+cargo fuzz run descriptor --sanitizer none -- -dict=fuzz/descriptor.dict
+```
+
 ## Seeding the corpus
 
 Each target starts from `fuzz/corpus/<target>/`, one raw input per file. To

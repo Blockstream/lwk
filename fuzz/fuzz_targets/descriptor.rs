@@ -9,6 +9,7 @@ const MAX_INPUT_BYTES: usize = 4096;
 const BLINDING_KEY: &str = "ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92";
 const XPUB: &str = "tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA";
 const DESCRIPTOR: &str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))";
+const MULTISIG_DESCRIPTOR: &str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwsh(multi(2,[759db348/87'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*,tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu/<0;1>/*)))";
 
 fn check_descriptor(descriptor: WolletDescriptor) {
     let canonical = descriptor.to_string();
@@ -65,13 +66,17 @@ fn mutate_template(template: &str, data: &[u8]) -> String {
         return template.to_string();
     }
 
-    let offset = usize::from(data[0]) % (template.len() + 1);
+    // Two offset bytes so templates longer than 255 bytes are fully reachable.
+    let offset = usize::from(u16::from_le_bytes([
+        data[0],
+        data.get(1).copied().unwrap_or_default(),
+    ])) % (template.len() + 1);
     let remove = data
-        .get(1)
+        .get(2)
         .map(|byte| usize::from(*byte) % 9)
         .unwrap_or_default()
         .min(template.len() - offset);
-    let mutation = String::from_utf8_lossy(&data[data.len().min(2)..data.len().min(66)]);
+    let mutation = String::from_utf8_lossy(&data[data.len().min(3)..data.len().min(67)]);
 
     let mut result = template.to_string();
     result.replace_range(offset..offset + remove, &mutation);
@@ -92,13 +97,15 @@ fn exercise(data: &[u8]) {
     parse_strict(&format!("{input}:{input}"));
     parse_relaxed(&format!("{input}\n{input}"));
 
-    parse_strict(&mutate_template(DESCRIPTOR, data));
+    for template in [DESCRIPTOR, MULTISIG_DESCRIPTOR] {
+        parse_strict(&mutate_template(template, data));
 
-    let external = DESCRIPTOR.replace("<0;1>", "0");
-    let internal = DESCRIPTOR.replace("<0;1>", "1");
-    let external = mutate_template(&external, data);
-    let internal = mutate_template(&internal, data);
-    parse_relaxed(&format!("{external}\n{internal}"));
+        let external = template.replace("<0;1>", "0");
+        let internal = template.replace("<0;1>", "1");
+        let external = mutate_template(&external, data);
+        let internal = mutate_template(&internal, data);
+        parse_relaxed(&format!("{external}\n{internal}"));
+    }
 }
 
 fuzz_target!(|data: &[u8]| {

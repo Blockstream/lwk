@@ -94,6 +94,6 @@ directory is ignored by git, so add seeds explicitly:
 ```sh
 printf '%s' '<input>' > seed
 h=$(sha1sum seed | cut -d' ' -f1)
-mv seed fuzz/corpus/descriptor/$h
-git add -f fuzz/corpus/descriptor/$h
+mv seed fuzz/corpus/<target>/$h
+git add -f fuzz/corpus/<target>/$h
 ```

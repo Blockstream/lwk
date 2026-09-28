@@ -23,17 +23,26 @@ fn check_descriptor(descriptor: WolletDescriptor) {
     let _ = descriptor.bitcoin_descriptor_without_key_origin();
     let _ = descriptor.encryption_key_bytes();
 
+    // Descriptors accepted by WolletDescriptor must derive at any index;
+    // fixed script pubkey lists legitimately fail past their length.
+    let has_descriptor = descriptor.descriptor().is_ok();
+
     for chain in [Chain::External, Chain::Internal] {
         for index in [0, 1] {
-            let _ = descriptor.script_pubkey(chain, index);
-            let _ = descriptor.definite_descriptor(chain, index);
-            match chain {
+            let script_pubkey = descriptor.script_pubkey(chain, index);
+            let definite = descriptor.definite_descriptor(chain, index);
+            let address = match chain {
                 Chain::External => {
-                    let _ = descriptor.address(index, Network::TestnetLiquid.address_params());
+                    descriptor.address(index, Network::TestnetLiquid.address_params())
                 }
                 Chain::Internal => {
-                    let _ = descriptor.change(index, Network::TestnetLiquid.address_params());
+                    descriptor.change(index, Network::TestnetLiquid.address_params())
                 }
+            };
+            if has_descriptor {
+                script_pubkey.expect("accepted descriptor derives a script pubkey");
+                definite.expect("accepted descriptor derives a definite descriptor");
+                address.expect("accepted descriptor derives an address");
             }
         }
     }

@@ -75,3 +75,17 @@ to 4,096 bytes. For a bounded run:
 ```sh
 cargo fuzz run descriptor --sanitizer none -- -max_total_time=60 -max_len=4096
 ```
+
+## Seeding the corpus
+
+Each target starts from `fuzz/corpus/<target>/`, one raw input per file. To
+steer a target towards inputs it is unlikely to build on its own, add
+handwritten seeds named by their SHA-1, as libFuzzer does. The corpus
+directory is ignored by git, so add seeds explicitly:
+
+```sh
+printf '%s' '<input>' > seed
+h=$(sha1sum seed | cut -d' ' -f1)
+mv seed fuzz/corpus/descriptor/$h
+git add -f fuzz/corpus/descriptor/$h
+```

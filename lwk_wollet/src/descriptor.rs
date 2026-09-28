@@ -211,7 +211,7 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
             }
         }
 
-        let has_hardened_public_derivation = desc.descriptor.for_each_key(|key| match key {
+        let has_hardened_public_derivation = desc.descriptor.for_any_key(|key| match key {
             DescriptorPublicKey::Single(_) => false,
             DescriptorPublicKey::XPub(key) => {
                 key.wildcard == Wildcard::Hardened
@@ -1131,10 +1131,15 @@ mod test {
     fn reject_hardened_xpub_derivation() {
         let blinding_key = "460830d85d4b299a9406c5899748354937c81b6fdb94f110f8729c9ba2994412";
         let xpub = "tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu";
+        let xpub2 = "tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA";
+        let single = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
 
         for descriptor in [
             format!("ct(slip77({blinding_key}),elwpkh({xpub}/0h/*))"),
             format!("ct(slip77({blinding_key}),elwpkh({xpub}/0/*h))"),
+            format!("ct(slip77({blinding_key}),elwsh(multi(2,{xpub}/0h/*,{xpub2}/0/*)))"),
+            format!("ct(slip77({blinding_key}),elwsh(multi(2,{xpub}/0/*,{xpub2}/0/*h)))"),
+            format!("ct(slip77({blinding_key}),elwsh(multi(1,{single},{xpub}/0h/*)))"),
         ] {
             assert!(matches!(
                 WolletDescriptor::from_str(&descriptor),

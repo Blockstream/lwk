@@ -1,0 +1,60 @@
+# libFuzzer dictionary for the payment_instruction target
+
+# Schemas
+"bitcoin:"
+"BITCOIN:"
+"liquidnetwork:"
+"liquidtestnet:"
+"lightning:"
+"lnurlp://"
+
+# URI query keys
+"?"
+"&"
+"="
+"amount="
+"label="
+"message="
+"assetid="
+"lightning="
+"lno="
+"pj="
+"pjos=0"
+"pjos=1"
+"sp="
+"ark="
+"req-"
+
+# Human-readable parts of checksummed encodings
+"bc1q"
+"bc1p"
+"tb1q"
+"lq1q"
+"tlq1q"
+"ex1q"
+"lnbc"
+"lntb"
+"lnbcrt"
+"lno1"
+"lnurl1"
+"LNURL1"
+"sp1q"
+"ark1"
+
+# Values
+"ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2"
+"1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+"0.00000001"
+"21000000"
+"%20"
+"https://"
+".well-known/lnurlp/"
+
+# Human-readable names and emails
+"\xe2\x82\xbf"
+"@"
+"example.com"
+"localhost"
+"127.0.0.1"
+":"
+"/"

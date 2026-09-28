@@ -59,6 +59,15 @@ bounded run:
 cargo fuzz run payment_instruction --sanitizer none -- -max_total_time=60 -max_len=4096
 ```
 
+Addresses, invoices and LNURLs are checksummed, so the fuzzer cannot build
+valid ones from scratch; handwritten corpus seeds provide them.
+`fuzz/payment_instruction.dict` lists schemas, URI query keys and encoding
+prefixes for libFuzzer to splice in:
+
+```sh
+cargo fuzz run payment_instruction --sanitizer none -- -dict=fuzz/payment_instruction.dict
+```
+
 ## Wallet descriptors
 
 Fuzz strict and relaxed wallet descriptor parsing, including confidential

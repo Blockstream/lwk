@@ -239,6 +239,7 @@ pub struct TxBuilder {
     network: Network,
     recipients: Vec<Recipient>,
     fee_rate: FeeRate,
+    allow_high_fee_rate: bool,
     ct_discount: bool,
     reissuances: Reissuances,
     issuances: Issuances,
@@ -258,12 +259,16 @@ pub struct TxBuilder {
 }
 
 impl TxBuilder {
+    /// Maximum fee rate in sats/kvb (1000 sat/vb), see [`TxBuilder::allow_high_fee_rate()`]
+    pub const MAX_FEE_RATE: f32 = 1_000_000.0;
+
     /// Creates a transaction builder for bindings code. From rust use [`WolletTxBuilder`]
     pub fn new(network: Network) -> Self {
         TxBuilder {
             network,
             recipients: vec![],
             fee_rate: FeeRate::default(),
+            allow_high_fee_rate: false,
             ct_discount: true,
             reissuances: Reissuances::default(),
             issuances: Issuances::None,
@@ -371,6 +376,12 @@ impl TxBuilder {
         if let Some(fee_rate) = fee_rate {
             self.fee_rate = fee_rate
         }
+        self
+    }
+
+    /// Allow a fee rate higher than [`TxBuilder::MAX_FEE_RATE`]
+    pub fn allow_high_fee_rate(mut self) -> Self {
+        self.allow_high_fee_rate = true;
         self
     }
 
@@ -1022,9 +1033,9 @@ impl TxBuilder {
         };
 
         let fee = calculate_fee(weight, self.fee_rate.to_sat_kvb());
-        if satoshi_in <= (satoshi_out + fee) {
+        if satoshi_in <= satoshi_out.saturating_add(fee) {
             return Err(Error::InsufficientFunds {
-                missing_sats: (satoshi_out + fee + 1) - satoshi_in, // +1 to ensure we have more than just equal
+                missing_sats: satoshi_out.saturating_add(fee).saturating_add(1) - satoshi_in, // +1 to ensure we have more than just equal
                 asset_id: wollet.policy_asset(),
             });
         }
@@ -1073,6 +1084,10 @@ impl TxBuilder {
     }
 
     fn finish_inner(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
+        if !self.allow_high_fee_rate && self.fee_rate.to_sat_kvb() > Self::MAX_FEE_RATE {
+            return Err(Error::FeeRateTooHigh(self.fee_rate.to_sat_kvb()));
+        }
+
         if !self.pegin_inputs.is_empty() {
             if self.inputs_order.is_some() {
                 return Err(Error::PeginUnsupportedBuilderMode("manual inputs order"));
@@ -1654,8 +1669,8 @@ impl TxBuilder {
             measure_weight(&pset, &inp_txout_sec, inp_weight, self.ct_discount)?,
             self.fee_rate.to_sat_kvb(),
         );
-        while satoshi_in <= (satoshi_out + fee) {
-            let missing_sats = (satoshi_out + fee + 1) - satoshi_in; // +1 to ensure we have more than just equal
+        while satoshi_in <= satoshi_out.saturating_add(fee) {
+            let missing_sats = satoshi_out.saturating_add(fee).saturating_add(1) - satoshi_in; // +1 to ensure we have more than just equal
             if lbtc_candidates.is_empty() {
                 return Err(Error::InsufficientFunds {
                     missing_sats,
@@ -2025,6 +2040,14 @@ impl<'a> WolletTxBuilder<'a> {
         }
     }
 
+    /// Wrapper of [`TxBuilder::allow_high_fee_rate()`]
+    pub fn allow_high_fee_rate(self) -> Self {
+        Self {
+            wollet: self.wollet,
+            inner: self.inner.allow_high_fee_rate(),
+        }
+    }
+
     /// Wrapper of [`TxBuilder::enable_ct_discount()`]
     pub fn enable_ct_discount(self) -> Self {
         Self {
@@ -2281,5 +2304,30 @@ mod tests {
 
         assert_eq!(update.last_unused.external, 7);
         assert_eq!(update.last_unused.internal, 11);
+    }
+
+    #[test]
+    fn test_high_fee_rate() {
+        let desc: crate::WolletDescriptor =
+            lwk_test_util::wollet_descriptor_string().parse().unwrap();
+        let wollet = WolletBuilder::new(Network::default_regtest(), desc)
+            .build()
+            .unwrap();
+        let address = wollet.address(None).unwrap().address().clone();
+        let builder = || {
+            let rate = FeeRate::from_sat_kvb(TxBuilder::MAX_FEE_RATE * 2.0).unwrap();
+            wollet
+                .tx_builder()
+                .add_lbtc_recipient(&address, 1000)
+                .unwrap()
+                .fee_rate(Some(rate))
+        };
+
+        let err = builder().finish().unwrap_err();
+        assert!(matches!(err, Error::FeeRateTooHigh(_)), "{err:?}");
+
+        // The empty wallet fails later
+        let err = builder().allow_high_fee_rate().finish().unwrap_err();
+        assert!(matches!(err, Error::InsufficientFunds { .. }), "{err:?}");
     }
 }

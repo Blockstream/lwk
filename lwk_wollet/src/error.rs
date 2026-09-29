@@ -152,6 +152,9 @@ pub enum Error {
         asset_id: crate::elements::AssetId,
     },
 
+    #[error("Fee rate {0} sats/kvb is higher than {max} sats/kvb, use allow_high_fee_rate() to allow it", max = crate::TxBuilder::MAX_FEE_RATE)]
+    FeeRateTooHigh(f32),
+
     #[error("Missing issuance")]
     MissingIssuance,
 

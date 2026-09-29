@@ -26,3 +26,52 @@ To replay a saved crash artifact:
 ```sh
 cargo fuzz run update_deserialize --sanitizer none fuzz/artifacts/update_deserialize/<artifact>
 ```
+
+## Jade response framing
+
+Fuzz raw, fragmented, and concatenated CBOR responses from a Jade device:
+
+```sh
+cargo fuzz run jade_response --sanitizer none
+```
+
+The target limits inputs to Jade's 4,096-byte response buffer. A bounded run can
+also set libFuzzer's maximum generated input length explicitly:
+
+```sh
+cargo fuzz run jade_response --sanitizer none -- -max_total_time=60 -max_len=4096
+```
+
+## Payment instructions
+
+Fuzz user-provided payment instructions, including addresses, BIP21/BIP321
+URIs, Lightning payments, LNURL, and BIP353 identifiers:
+
+```sh
+cargo fuzz run payment_instruction --sanitizer none
+```
+
+The target is entirely offline: it parses LNURL and BIP353 identifiers but does
+not resolve them over HTTP or DNS. It limits fuzzer inputs to 4,096 bytes. For a
+bounded run:
+
+```sh
+cargo fuzz run payment_instruction --sanitizer none -- -max_total_time=60 -max_len=4096
+```
+
+## Wallet descriptors
+
+Fuzz strict and relaxed wallet descriptor parsing, including confidential
+descriptors, Green-style two-line descriptors, and fixed script pubkey lists:
+
+```sh
+cargo fuzz run descriptor --sanitizer none
+```
+
+The target checks canonical parse/display round trips and exercises descriptor
+derivation at small indices. Inputs are limited to 4,096 bytes. For a bounded
+run:
+
+```sh
+cargo fuzz run descriptor --sanitizer none -- -max_total_time=60 -max_len=4096
+```

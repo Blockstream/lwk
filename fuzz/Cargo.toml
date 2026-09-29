@@ -9,7 +9,10 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
+lwk_jade = { path = "../lwk_jade", default-features = false, features = ["fuzzing"] }
+lwk_payment_instructions = { path = "../lwk_payment_instructions" }
 lwk_wollet = { path = "../lwk_wollet", default-features = false }
+serde_cbor = "0.11.2"
 
 [patch.crates-io]
 lwk_common = { path = "../lwk_common" }
@@ -21,6 +24,27 @@ members = ["."]
 [[bin]]
 name = "update_deserialize"
 path = "fuzz_targets/update_deserialize.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "jade_response"
+path = "fuzz_targets/jade_response.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "payment_instruction"
+path = "fuzz_targets/payment_instruction.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "descriptor"
+path = "fuzz_targets/descriptor.rs"
 test = false
 doc = false
 bench = false

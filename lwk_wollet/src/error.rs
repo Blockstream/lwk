@@ -179,6 +179,9 @@ pub enum Error {
     #[error("Descriptor without wildcard not supported")]
     UnsupportedDescriptorWithoutWildcard,
 
+    #[error("Hardened derivation from an extended public key is unsupported")]
+    UnsupportedDescriptorHardenedDerivation,
+
     #[error(
         "Multipath descriptor must have only the external/internal multipath (eg '.../<0;1>/*')"
     )]

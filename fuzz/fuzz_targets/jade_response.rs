@@ -46,7 +46,7 @@ fn log_message(data: &[u8]) -> Vec<u8> {
     serde_cbor::to_vec(&value).expect("log serialization succeeds")
 }
 
-fn unmatched_error(data: &[u8]) -> Vec<u8> {
+fn error_response(id: &str, data: &[u8]) -> Vec<u8> {
     let error = Value::Map(BTreeMap::from([
         (Value::Text("code".to_string()), Value::Integer(-32600)),
         (
@@ -56,7 +56,7 @@ fn unmatched_error(data: &[u8]) -> Vec<u8> {
         (Value::Text("data".to_string()), Value::Bytes(data.to_vec())),
     ]));
     let value = Value::Map(BTreeMap::from([
-        (Value::Text("id".to_string()), Value::Text("00".to_string())),
+        (Value::Text("id".to_string()), Value::Text(id.to_string())),
         (Value::Text("error".to_string()), error),
     ]));
     serde_cbor::to_vec(&value).expect("error serialization succeeds")
@@ -96,8 +96,12 @@ fuzz_target!(|data: &[u8]| {
     assert_eq!(parse_buffer(&log_then_expected), FuzzParseStep::Mine);
     exercise_prefixes(&log_then_expected);
 
+    let expected_error = error_response(EXPECTED_ID, structured_data);
+    assert_eq!(parse_buffer(&expected_error), FuzzParseStep::Mine);
+    exercise_prefixes(&expected_error);
+
     assert_eq!(
-        parse_buffer(&unmatched_error(structured_data)),
+        parse_buffer(&error_response("00", structured_data)),
         FuzzParseStep::Mine
     );
 

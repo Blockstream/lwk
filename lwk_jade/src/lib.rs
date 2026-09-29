@@ -588,6 +588,21 @@ mod test {
     }
 
     #[test]
+    fn try_parse_response_returns_a_matching_error_without_result() {
+        let crate::ParseStep::Mine(parsed) = crate::try_parse_response::<String>(&reject("1"), "1")
+        else {
+            panic!("an error matching the request must be returned")
+        };
+        let response = parsed.unwrap();
+        assert_eq!(response.id, "1");
+        assert!(response.result.is_none());
+        assert_eq!(
+            response.error.unwrap().to_string(),
+            "Error code: -32600 - message: Invalid RPC Request message"
+        );
+    }
+
+    #[test]
     fn try_parse_response_skips_an_error_for_another_request() {
         let other = reject("2");
 

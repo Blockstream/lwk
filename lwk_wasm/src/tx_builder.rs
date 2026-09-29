@@ -58,6 +58,12 @@ impl TxBuilder {
         Ok(self.inner.fee_rate(fee_rate).into())
     }
 
+    /// Allow a fee rate higher than 1000000 sats/kvb (1000 sat/vb)
+    #[wasm_bindgen(js_name = allowHighFeeRate)]
+    pub fn allow_high_fee_rate(self) -> TxBuilder {
+        self.inner.allow_high_fee_rate().into()
+    }
+
     /// Select all available L-BTC inputs
     #[wasm_bindgen(js_name = drainLbtcWallet)]
     pub fn drain_lbtc_wallet(self) -> TxBuilder {

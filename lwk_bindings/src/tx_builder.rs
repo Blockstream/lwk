@@ -75,6 +75,14 @@ impl TxBuilder {
         Ok(())
     }
 
+    /// Allow a fee rate higher than 1000000 sats/kvb (1000 sat/vb)
+    pub fn allow_high_fee_rate(&self) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        *lock = Some(inner.allow_high_fee_rate());
+        Ok(())
+    }
+
     /// Select all available L-BTC inputs
     pub fn drain_lbtc_wallet(&self) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;

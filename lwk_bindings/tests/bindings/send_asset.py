@@ -34,6 +34,8 @@ node_address = node.get_new_address()
 
 builder = network.tx_builder()
 builder.add_recipient( node_address,issue_asset-1, asset)
+builder.fee_rate(100.0) # sats/kvb
+builder.allow_high_fee_rate() # otherwise rates above 1000000 sats/kvb are rejected
 unsigned_pset = builder.finish(wollet)
 signed_pset = signer.sign(unsigned_pset)
 

@@ -173,6 +173,7 @@ pub use lwk_common::{
     Store,
 };
 
+pub use lwk_common::FeeRate;
 pub use lwk_common::Network;
 
 #[cfg(feature = "prices")]

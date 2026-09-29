@@ -71,6 +71,9 @@ pub enum Error {
     #[error(transparent)]
     QrError(#[from] lwk_common::QrError),
 
+    #[error("Invalid fee rate {0} sats/kvb, it must be finite and greater than 0")]
+    InvalidFeeRate(f32),
+
     #[error(transparent)]
     SqliteStore(#[from] lwk_common::SqliteStoreError),
 

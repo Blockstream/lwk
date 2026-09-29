@@ -62,6 +62,13 @@ impl TxBuilder {
     /// Fee rate in sats/kvb
     /// Multiply sats/vb value by 1000 i.e. 1.0 sat/byte = 1000.0 sat/kvb
     pub fn fee_rate(&self, rate: Option<f32>) -> Result<(), LwkError> {
+        let rate = rate
+            .map(|r| {
+                lwk_wollet::FeeRate::from_sat_kvb(r).ok_or_else(|| {
+                    format!("Invalid fee rate {r} sats/kvb, it must be finite and greater than 0")
+                })
+            })
+            .transpose()?;
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         *lock = Some(inner.fee_rate(rate));

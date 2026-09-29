@@ -22,8 +22,8 @@ use std::time::Duration;
 
 use lwk_common::{
     address_to_qr, address_to_text_qr, keyorigin_xpub_from_str, multisig_desc, singlesig_desc,
-    DynStore, EncryptedStore, InvalidBipVariant, InvalidBlindingKeyVariant, InvalidMultisigVariant,
-    InvalidSinglesigVariant, Signer, SqliteStore,
+    DynStore, EncryptedStore, FeeRate, InvalidBipVariant, InvalidBlindingKeyVariant,
+    InvalidMultisigVariant, InvalidSinglesigVariant, Signer, SqliteStore,
 };
 use lwk_jade::derivation_path_to_vec;
 use lwk_jade::get_receive_address::Variant;
@@ -586,7 +586,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let builder = wollet
                 .tx_builder()
                 .set_unvalidated_recipients(&recipients)?
-                .fee_rate(r.fee_rate);
+                .fee_rate(fee_rate(r.fee_rate)?);
             let built_tx = builder.build()?;
             if with_experimental_blinders {
                 let update = built_tx.update(wollet)?;
@@ -614,7 +614,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .tx_builder()
                 .drain_lbtc_wallet()
                 .drain_lbtc_to(&address)?
-                .fee_rate(r.fee_rate)
+                .fee_rate(fee_rate(r.fee_rate)?)
                 .build()?;
             if with_experimental_blinders {
                 let update = built_tx.update(wollet)?;
@@ -1169,7 +1169,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                         .map(|c| lwk_wollet::Contract::from_str(&c))
                         .transpose()?,
                 )?
-                .fee_rate(r.fee_rate)
+                .fee_rate(fee_rate(r.fee_rate)?)
                 .build()?;
             if with_experimental_blinders {
                 let update = built_tx.update(wollet)?;
@@ -1200,7 +1200,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     r.address_asset.map(|a| Address::from_str(&a)).transpose()?,
                     issuance_tx,
                 )?
-                .fee_rate(r.fee_rate)
+                .fee_rate(fee_rate(r.fee_rate)?)
                 .build()?;
             if with_experimental_blinders {
                 let update = built_tx.update(wollet)?;
@@ -1226,7 +1226,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut pset = wollet
                 .tx_builder()
                 .add_burn(r.satoshi_asset, asset_id)?
-                .fee_rate(r.fee_rate)
+                .fee_rate(fee_rate(r.fee_rate)?)
                 .finish()?;
 
             add_contracts(&mut pset, s.registry_asset_data());
@@ -1449,6 +1449,11 @@ fn scan(state: &Arc<Mutex<State>>) -> Result<(), Error> {
         // TODO: fail if waited too much
     }
     Ok(())
+}
+
+fn fee_rate(rate: Option<f32>) -> Result<Option<FeeRate>, Error> {
+    rate.map(|r| FeeRate::from_sat_kvb(r).ok_or(Error::InvalidFeeRate(r)))
+        .transpose()
 }
 
 fn unvalidated_addressee(a: request::UnvalidatedAddressee) -> lwk_wollet::UnvalidatedRecipient {

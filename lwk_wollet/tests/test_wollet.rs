@@ -15,8 +15,8 @@ use lwk_test_util::{
 use lwk_test_util::{generate_mnemonic, generate_slip77};
 use lwk_wollet::clients::blocking::BlockchainBackend;
 use lwk_wollet::{
-    AddressResult, Contract, ElectrumUrl, UnvalidatedRecipient, WalletTx, Wollet, WolletBuilder,
-    WolletDescriptor,
+    AddressResult, Contract, ElectrumUrl, FeeRate, UnvalidatedRecipient, WalletTx, Wollet,
+    WolletBuilder, WolletDescriptor,
 };
 use lwk_wollet::{Network, Update};
 use lwk_wollet::{Tip, TxsOpt};
@@ -274,7 +274,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
             .tx_builder()
             .add_lbtc_recipient(&recipient.0, recipient.1)
             .unwrap()
-            .fee_rate(fee_rate)
+            .fee_rate(fee_rate.map(|r| FeeRate::from_sat_kvb(r).unwrap()))
             .finish()
             .unwrap();
         pset = pset_rt(&pset);
@@ -337,7 +337,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
             .drain_lbtc_wallet()
             .drain_lbtc_to(&address)
             .unwrap()
-            .fee_rate(fee_rate)
+            .fee_rate(fee_rate.map(|r| FeeRate::from_sat_kvb(r).unwrap()))
             .finish()
             .unwrap();
 
@@ -370,7 +370,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
             .tx_builder()
             .add_recipient(address, satoshi, *asset)
             .unwrap()
-            .fee_rate(fee_rate)
+            .fee_rate(fee_rate.map(|r| FeeRate::from_sat_kvb(r).unwrap()))
             .finish()
             .unwrap();
 
@@ -426,7 +426,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
             .tx_builder()
             .set_unvalidated_recipients(&addressees)
             .unwrap()
-            .fee_rate(fee_rate)
+            .fee_rate(fee_rate.map(|r| FeeRate::from_sat_kvb(r).unwrap()))
             .finish()
             .unwrap();
 
@@ -470,7 +470,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
             .tx_builder()
             .issue_asset(satoshi_asset, None, satoshi_token, None, contract)
             .unwrap()
-            .fee_rate(fee_rate)
+            .fee_rate(fee_rate.map(|r| FeeRate::from_sat_kvb(r).unwrap()))
             .finish()
             .unwrap();
         pset = pset_rt(&pset);
@@ -541,7 +541,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
             .tx_builder()
             .reissue_asset(*asset, satoshi_asset, None, None)
             .unwrap()
-            .fee_rate(fee_rate)
+            .fee_rate(fee_rate.map(|r| FeeRate::from_sat_kvb(r).unwrap()))
             .finish()
             .unwrap();
         pset = pset_rt(&pset);
@@ -600,7 +600,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
             .tx_builder()
             .add_burn(satoshi_asset, *asset)
             .unwrap()
-            .fee_rate(fee_rate)
+            .fee_rate(fee_rate.map(|r| FeeRate::from_sat_kvb(r).unwrap()))
             .finish()
             .unwrap();
         pset = pset_rt(&pset);

@@ -66,6 +66,9 @@ pub enum Error {
     #[error(transparent)]
     Precision(#[from] lwk_common::precision::Error),
 
+    #[error("Invalid fee rate {0} sats/kvb, it must be finite and greater than 0")]
+    InvalidFeeRate(f32),
+
     #[error(transparent)]
     AddressParse(#[from] lwk_common::AddressParseError),
 
@@ -205,6 +208,7 @@ impl Error {
             Error::Qr(_) => "Qr",
             Error::Keyorigin(_) => "Keyorigin",
             Error::Precision(_) => "Precision",
+            Error::InvalidFeeRate(_) => "InvalidFeeRate",
             Error::AddressParse(_) => "AddressParse",
             Error::Prices(inner) => match inner {
                 lwk_wollet::prices::Error::UnrecognizedCurrency(_) => {

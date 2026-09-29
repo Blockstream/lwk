@@ -24,7 +24,7 @@ use elements::{
     Transaction, TxOut, TxOutSecrets,
 };
 use elements_miniscript::psbt::PsbtExt;
-use lwk_common::{calculate_fee, set_genesis_hash};
+use lwk_common::{calculate_fee, set_genesis_hash, FeeRate};
 use rand::thread_rng;
 
 /// Validates the outputs receiving `total` (re)issued satoshi, filling in the default single
@@ -238,7 +238,7 @@ fn measure_weight(
 pub struct TxBuilder {
     network: Network,
     recipients: Vec<Recipient>,
-    fee_rate: f32,
+    fee_rate: FeeRate,
     ct_discount: bool,
     reissuances: Reissuances,
     issuances: Issuances,
@@ -263,7 +263,7 @@ impl TxBuilder {
         TxBuilder {
             network,
             recipients: vec![],
-            fee_rate: 100.0,
+            fee_rate: FeeRate::default(),
             ct_discount: true,
             reissuances: Reissuances::default(),
             issuances: Issuances::None,
@@ -366,9 +366,8 @@ impl TxBuilder {
         Ok(self)
     }
 
-    /// Fee rate in sats/kvb
-    /// Multiply sats/vb value by 1000 i.e. 1.0 sat/byte = 1000.0 sat/kvb
-    pub fn fee_rate(mut self, fee_rate: Option<f32>) -> Self {
+    /// Fee rate, see [`FeeRate`]
+    pub fn fee_rate(mut self, fee_rate: Option<FeeRate>) -> Self {
         if let Some(fee_rate) = fee_rate {
             self.fee_rate = fee_rate
         }
@@ -1022,7 +1021,7 @@ impl TxBuilder {
             inp_weight + tx_weight
         };
 
-        let fee = calculate_fee(weight, self.fee_rate);
+        let fee = calculate_fee(weight, self.fee_rate.to_sat_kvb());
         if satoshi_in <= (satoshi_out + fee) {
             return Err(Error::InsufficientFunds {
                 missing_sats: (satoshi_out + fee + 1) - satoshi_in, // +1 to ensure we have more than just equal
@@ -1653,7 +1652,7 @@ impl TxBuilder {
         // inputs and measure again.
         let mut fee = calculate_fee(
             measure_weight(&pset, &inp_txout_sec, inp_weight, self.ct_discount)?,
-            self.fee_rate,
+            self.fee_rate.to_sat_kvb(),
         );
         while satoshi_in <= (satoshi_out + fee) {
             let missing_sats = (satoshi_out + fee + 1) - satoshi_in; // +1 to ensure we have more than just equal
@@ -1682,7 +1681,7 @@ impl TxBuilder {
 
             fee = calculate_fee(
                 measure_weight(&pset, &inp_txout_sec, inp_weight, self.ct_discount)?,
-                self.fee_rate,
+                self.fee_rate.to_sat_kvb(),
             );
         }
         let satoshi_change = satoshi_in - satoshi_out - fee;
@@ -2019,7 +2018,7 @@ impl<'a> WolletTxBuilder<'a> {
     }
 
     /// Wrapper of [`TxBuilder::fee_rate()`]
-    pub fn fee_rate(self, fee_rate: Option<f32>) -> Self {
+    pub fn fee_rate(self, fee_rate: Option<FeeRate>) -> Self {
         Self {
             wollet: self.wollet,
             inner: self.inner.fee_rate(fee_rate),

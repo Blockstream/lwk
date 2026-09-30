@@ -23,8 +23,11 @@ use elements::{Address, AssetId, BlockHash, Txid};
 use lwk_common::Network;
 use serde_json::Value;
 use std::str::FromStr;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tempfile::TempDir;
+
+/// Times a bitcoind or elementsd node is launched before giving up.
+const NODE_START_ATTEMPTS: u32 = 3;
 
 /// Configure and start the test environment
 pub struct TestEnvBuilder {
@@ -259,7 +262,7 @@ impl TestEnvBuilder {
         init_logging();
 
         let bitcoind = if self.with_bitcoind {
-            Some(BitcoinD::new(self.bitcoind_exec).unwrap())
+            Some(start_node(&self.bitcoind_exec, &bitcoind::Conf::default()))
         } else {
             None
         };
@@ -332,7 +335,7 @@ impl TestEnvBuilder {
         elements_conf.p2p = bitcoind::P2P::Yes;
         elements_conf.network = network;
 
-        let elementsd = BitcoinD::with_conf(&self.elementsd_exec, &elements_conf).unwrap();
+        let elementsd = start_node(&self.elementsd_exec, &elements_conf);
 
         TestEnv::elementsd_generate_(&elementsd.client, 1);
         TestEnv::rescanblockchain_(&elementsd.client);
@@ -1078,6 +1081,29 @@ impl TestEnv {
             std::thread::sleep(Duration::from_millis(500));
         }
     }
+}
+
+/// Launches a bitcoind or elementsd node, retrying when it fails to start.
+///
+/// Once the node answers, the bitcoind crate creates the default wallet and, if that call fails,
+/// loads it instead, returning only the second error. Under load `createwallet` can outlast the
+/// 15s timeout of the RPC client while the node still creates the wallet, and loading it then
+/// fails with "already loaded". Every attempt uses a new datadir and new ports.
+///
+/// The process of a failed attempt is not killed, since the crate does not return it.
+fn start_node(exe: &str, conf: &bitcoind::Conf) -> BitcoinD {
+    for attempt in 1..NODE_START_ATTEMPTS {
+        let start = Instant::now();
+        match BitcoinD::with_conf(exe, conf) {
+            Ok(node) => return node,
+            // Logged as error to be visible without RUST_LOG, so failures show up in CI logs
+            Err(e) => log::error!(
+                "{exe} failed to start after {:?} (attempt {attempt}/{NODE_START_ATTEMPTS}), retrying: {e:#}",
+                start.elapsed()
+            ),
+        }
+    }
+    BitcoinD::with_conf(exe, conf).unwrap()
 }
 
 fn sat2btc(sat: u64) -> String {

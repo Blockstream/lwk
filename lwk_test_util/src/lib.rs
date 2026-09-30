@@ -11,6 +11,7 @@ mod log;
 mod mnemonic;
 mod panic_store;
 mod pegin;
+mod port;
 mod pset;
 mod registry;
 mod test_env;
@@ -38,6 +39,7 @@ pub use panic_store::PanicStore;
 pub use pegin::{
     FED_PEG_DESC, FED_PEG_SCRIPT, FED_PEG_SCRIPT_ASM, PEGIN_TEST_ADDR, PEGIN_TEST_DESC,
 };
+pub use port::reserve_port;
 pub use pset::{
     descriptor_pset_usdt_no_contracts, n_issuances, n_reissuances, pset_rt, pset_usdt_no_contracts,
     pset_usdt_with_contract, psets_to_combine,

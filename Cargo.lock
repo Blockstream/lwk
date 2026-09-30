@@ -3373,6 +3373,7 @@ dependencies = [
  "rand 0.8.5",
  "reqwest",
  "serde_json",
+ "socket2",
  "tempfile",
 ]
 

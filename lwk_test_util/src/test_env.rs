@@ -3,6 +3,7 @@ use crate::auth::AuthStack;
 use crate::init_logging;
 use crate::lightningd::LightningD;
 use crate::registry::RegistryD;
+use crate::reserve_port;
 use crate::waterfalls::WaterfallsD;
 
 use clightningrpc::requests::AmountOrAll;
@@ -21,7 +22,6 @@ use elements::{Address, AssetId, BlockHash, Txid};
 
 use lwk_common::Network;
 use serde_json::Value;
-use std::net::TcpListener;
 use std::str::FromStr;
 use std::time::Duration;
 use tempfile::TempDir;
@@ -310,11 +310,7 @@ impl TestEnvBuilder {
         }
 
         let zmq_endpoint = if self.with_zmq {
-            let addr = TcpListener::bind("0.0.0.0:0")
-                .unwrap()
-                .local_addr()
-                .unwrap()
-                .to_string();
+            let addr = format!("0.0.0.0:{}", reserve_port());
             let endpoint = format!("tcp://{addr}");
 
             args.push(string_to_static_str(format!("-zmqpubrawtx={endpoint}")));
@@ -430,11 +426,7 @@ impl TestEnvBuilder {
                 .expect("with_lightningd() requires with_bitcoind()");
             TestEnv::bitcoind_generate_(&node.client, 1);
 
-            let addr = TcpListener::bind(("127.0.0.1", 0))
-                .unwrap()
-                .local_addr()
-                .unwrap()
-                .to_string();
+            let addr = format!("127.0.0.1:{}", reserve_port());
             let conf = crate::lightningd::Conf {
                 view_stdout,
                 args: vec![
@@ -458,11 +450,7 @@ impl TestEnvBuilder {
                 .as_ref()
                 .expect("with_anyswap() requires with_bitcoind()");
 
-            let port = TcpListener::bind(("0.0.0.0", 0))
-                .unwrap()
-                .local_addr()
-                .unwrap()
-                .port();
+            let port = reserve_port();
 
             let esplora_liquid = electrsd
                 .as_ref()
@@ -518,11 +506,7 @@ impl TestEnvBuilder {
             let config_path = config_dir.path().join("config.toml");
             std::fs::write(&config_path, config).unwrap();
 
-            let addr = TcpListener::bind(("127.0.0.1", 0))
-                .unwrap()
-                .local_addr()
-                .unwrap()
-                .to_string();
+            let addr = format!("127.0.0.1:{}", reserve_port());
             let conf = crate::lightningd::Conf {
                 view_stdout,
                 args: vec![

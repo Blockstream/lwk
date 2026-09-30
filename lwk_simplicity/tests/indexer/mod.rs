@@ -1,8 +1,7 @@
 use lwk_simplicity::lending::*;
-use lwk_test_util::TestEnv;
+use lwk_test_util::{reserve_port, TestEnv};
 use lwk_wollet::elements::AssetId;
 use lwk_wollet::hashes::sha256;
-use std::net::TcpListener;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
@@ -10,14 +9,6 @@ use testcontainers::core::Mount;
 use testcontainers::runners::AsyncRunner;
 use testcontainers::ImageExt;
 use testcontainers_modules::postgres::Postgres;
-
-fn random_port() -> u16 {
-    TcpListener::bind("127.0.0.1:0")
-        .expect("failed to bind to random port")
-        .local_addr()
-        .expect("failed to get local address")
-        .port()
-}
 
 pub async fn wait_offer(
     status: OfferStatus,
@@ -67,8 +58,8 @@ pub async fn launch_indexer(env: &TestEnv) -> (IndexerClient, IndexerContext) {
     )
     .expect("LENDING_INDEXER_EXEC path does not exist");
 
-    let api_port = random_port();
-    let scanner_port = random_port();
+    let api_port = reserve_port();
+    let scanner_port = reserve_port();
     let indexer = start_indexer(env, &binary, scanner_port, api_port).await;
     let indexer_client = IndexerClient::builder(indexer.api_url().to_string())
         .build()

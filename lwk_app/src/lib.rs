@@ -1541,18 +1541,16 @@ fn amp2userkey(signer: &AnySigner) -> Result<String, Error> {
 mod tests {
     use super::*;
     use crate::state::AppAsset;
+    use lwk_test_util::reserve_port;
     use lwk_wollet::elements::pset::{elip100::PSET_HWW_PREFIX, PartiallySignedTransaction};
     use lwk_wollet::elements::AssetId;
     use lwk_wollet::{Contract, RegistryAssetData};
     use std::collections::HashMap;
-    use std::net::TcpListener;
+    use std::net::{Ipv4Addr, SocketAddr};
     use std::str::FromStr;
 
     fn app_random_port() -> (App, Config) {
-        let addr = TcpListener::bind("127.0.0.1:0")
-            .unwrap()
-            .local_addr()
-            .unwrap();
+        let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, reserve_port()));
         // keep() so the datadir (and the cookie file the server writes in it) outlives this
         // function; a plain TempDir would delete it as soon as it drops here.
         let tempdir = tempfile::tempdir().unwrap().keep();

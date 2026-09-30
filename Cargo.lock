@@ -3110,6 +3110,7 @@ dependencies = [
  "lwk_jade",
  "lwk_rpc_model",
  "lwk_signer",
+ "lwk_test_util",
  "lwk_tiny_jrpc",
  "lwk_wollet",
  "rand 0.8.5",

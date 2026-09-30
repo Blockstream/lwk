@@ -8,7 +8,7 @@ use crate::common::*;
 fn test_state_regression() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let server_url = format!("--server-url {}", &env.electrum_url());
-    let addr = get_available_addr().unwrap();
+    let addr = get_available_addr();
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
     let cli = format!("cli --addr {addr} -n regtest --datadir {datadir}");

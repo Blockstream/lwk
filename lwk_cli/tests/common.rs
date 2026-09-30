@@ -1,4 +1,4 @@
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::net::{Ipv4Addr, SocketAddr};
 use std::str::FromStr;
 use std::thread::JoinHandle;
 
@@ -8,15 +8,11 @@ use serde_json::Value;
 use tempfile::TempDir;
 
 use lwk_cli::{inner_main, Cli};
-use lwk_test_util::TestEnv;
+use lwk_test_util::{reserve_port, TestEnv};
 
-/// Returns a non-used local port if available.
-///
-/// Note there is a race condition during the time the method check availability and the caller
-pub fn get_available_addr() -> anyhow::Result<SocketAddr> {
-    // using 0 as port let the system assign a port available
-    let t = std::net::TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0))?;
-    Ok(t.local_addr()?)
+/// Returns a local address with a port reserved for this test process.
+pub fn get_available_addr() -> SocketAddr {
+    SocketAddr::from((Ipv4Addr::LOCALHOST, reserve_port()))
 }
 
 pub fn get_balance(cli: &str, wallet: &str, asset: &str) -> u64 {
@@ -53,7 +49,7 @@ pub fn setup_cli(env: TestEnv) -> (JoinHandle<()>, TempDir, String, String, Test
     }
 
     let server_url = format!("--server-url {}", &env.electrum_url());
-    let addr = get_available_addr().unwrap();
+    let addr = get_available_addr();
 
     let cli = format!("cli --addr {addr} -n regtest --datadir {datadir}");
     let params = format!("{server_url} {registry_url}");

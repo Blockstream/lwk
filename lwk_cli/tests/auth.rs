@@ -5,7 +5,7 @@ use crate::common::*;
 #[test]
 fn test_auth_err() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let addr = get_available_addr().unwrap();
+    let addr = get_available_addr();
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
     let server_url = format!("--server-url {}", &env.electrum_url());
@@ -25,7 +25,7 @@ fn test_auth_success() {
         .with_electrum()
         .with_esplora()
         .build();
-    let addr = get_available_addr().unwrap();
+    let addr = get_available_addr();
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
     let cli = format!("cli --addr {addr} -n regtest --datadir {datadir}");
@@ -93,7 +93,7 @@ fn assert_auth_cli_e2e(env: &TestEnv, server_type: &str, extra_flags: &str) {
         "waterfalls" => env.waterfalls_url(),
         other => panic!("unknown server type {other}"),
     };
-    let addr = get_available_addr().unwrap();
+    let addr = get_available_addr();
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
     let cli = format!("cli --addr {addr} -n regtest --datadir {datadir}");

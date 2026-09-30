@@ -1,7 +1,8 @@
 use std::ffi::OsStr;
-use std::net::TcpListener;
 use std::process::{Child, Command};
 use std::time::Duration;
+
+use crate::reserve_port;
 
 pub struct Amp2D {
     process: Child,
@@ -14,11 +15,7 @@ impl Amp2D {
     }
 
     pub fn new<S: AsRef<OsStr>>(exe: S) -> Amp2D {
-        let addr = TcpListener::bind(("0.0.0.0", 0))
-            .unwrap()
-            .local_addr()
-            .unwrap()
-            .to_string();
+        let addr = format!("0.0.0.0:{}", reserve_port());
 
         let mut process = Command::new(&exe)
             .args([&addr])

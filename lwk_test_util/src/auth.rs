@@ -19,6 +19,8 @@ use std::time::Duration;
 use rand::{thread_rng, Rng};
 use tempfile::TempDir;
 
+use crate::reserve_port;
+
 /// The realm imported in Keycloak, matching production.
 pub const AUTH_REALM: &str = "blockstream-public";
 /// The OAuth2 `client_credentials` client id defined in the test realm.
@@ -416,16 +418,16 @@ impl AuthStack {
             Some(electrum_port) => {
                 // Publish the proxy and its metrics/health port on fixed host ports (not
                 // ephemeral `-p <container_port>`) so `docker restart` preserves both
-                // mappings, see `restart_electrum_gateway`. Picking free ports then binding
-                // them in a separate `docker run` races other allocations, so retry with
-                // fresh ports when docker reports one already taken (the failed run leaves a
+                // mappings, see `restart_electrum_gateway`. A reserved port can still be taken
+                // by a program not taking part in the reservation, so retry with fresh
+                // ports when docker reports one already taken (the failed run leaves a
                 // Created container to remove first).
                 let (rpc_proxy, host_port, metrics_port) = {
                     let mut attempt = 0;
                     loop {
                         attempt += 1;
-                        let host_port = free_port();
-                        let metrics_port = free_port();
+                        let host_port = reserve_port();
+                        let metrics_port = reserve_port();
                         let port_arg = format!("{host_port}:{RPC_PROXY_PORT}");
                         let metrics_arg = format!("{metrics_port}:{RPC_PROXY_METRICS_PORT}");
                         let result = DockerContainer::try_run(&[
@@ -620,7 +622,7 @@ impl AuthStack {
             .expect("auth stack has no electrum upstream, call 'with_electrum()'")
             .name;
         docker(&["restart", name]);
-        // The proxy and its metrics port are published on fixed host ports (see `free_port`),
+        // The proxy and its metrics port are published on fixed host ports (see `reserve_port`),
         // so both mappings survive the restart and the client reconnects to the same
         // endpoint. Wait on /readyz, which turns 200 only once the proxy has reloaded its
         // JWKS and can validate tokens again: the listener binds before that, so a valid
@@ -700,23 +702,6 @@ fn upstream_host(network: &str) -> String {
         "--format",
         "{{(index .IPAM.Config 0).Gateway}}",
     ])
-}
-
-/// Pick a currently-free TCP host port by binding to port 0 and releasing it.
-///
-/// Used to publish the Electrum RPC proxy on a fixed host port so `docker restart` preserves
-/// the mapping: ephemeral `-p <container_port>` publishing reassigns the host port on restart,
-/// which would strand the client (and `restart_electrum_gateway`) on the old port. There is a
-/// small window before the container binds it, which the serial auth tests accept (as the
-/// bitcoind/electrs test helpers do).
-///
-/// TODO(#427): other test helpers pick free ports the same way; share a single helper.
-fn free_port() -> u16 {
-    std::net::TcpListener::bind("0.0.0.0:0")
-        .expect("bind ephemeral port")
-        .local_addr()
-        .expect("local_addr")
-        .port()
 }
 
 /// Poll `url` until it returns `status`, panicking after `attempts` * 1s.

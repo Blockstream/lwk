@@ -1,7 +1,8 @@
 use std::ffi::OsStr;
-use std::net::TcpListener;
 use std::process::{Child, Command};
 use std::time::Duration;
+
+use crate::reserve_port;
 
 pub struct WaterfallsD {
     process: Child,
@@ -20,12 +21,7 @@ impl WaterfallsD {
         rpcpassword: &str,
         max_txs_seen: Option<usize>,
     ) -> WaterfallsD {
-        // 0 means the OS choose a free port
-        let addr = TcpListener::bind(("0.0.0.0", 0))
-            .unwrap()
-            .local_addr()
-            .unwrap()
-            .to_string();
+        let addr = format!("0.0.0.0:{}", reserve_port());
         let user_pass = format!("{rpcuser}:{rpcpassword}");
 
         let max_txs_seen = max_txs_seen.unwrap_or(100).to_string();

@@ -1208,6 +1208,28 @@ mod test {
     }
 
     #[test]
+    fn reject_multipath_len_mismatch() {
+        let blinding_key = "460830d85d4b299a9406c5899748354937c81b6fdb94f110f8729c9ba2994412";
+        let xpub = "tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu";
+        let xpub2 = "tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA";
+
+        // multipath keys must agree on the number of paths in both orders
+        for descriptor in [
+            format!("ct(slip77({blinding_key}),elwsh(multi(2,{xpub}/<0;1;2>/*,{xpub2}/<0;1>/*)))"),
+            format!("ct(elip151,elwsh(multi(2,{xpub}/<0;1;2>/*,{xpub2}/<0;1>/*)))"),
+            format!("ct(slip77({blinding_key}),elwsh(multi(2,{xpub}/<0;1>/*,{xpub2}/<0;1;2>/*)))"),
+            format!("ct(elip151,elwsh(multi(2,{xpub}/<0;1>/*,{xpub2}/<0;1;2>/*)))"),
+        ] {
+            assert!(matches!(
+                WolletDescriptor::from_str(&descriptor),
+                Err(Error::ElementsMiniscript(
+                    elements_miniscript::Error::MultipathDescLenMismatch
+                ))
+            ));
+        }
+    }
+
+    #[test]
     fn test_is_mainnet() {
         let tpub = "tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu";
         let xpub = "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8";

@@ -84,6 +84,30 @@ stages:
     ELEMENTS_IMAGE: harbor.blockstream.io/docker/boltz/elements:latest
     ELECTRS_IMAGE: harbor.blockstream.io/docker/boltz/electrs:latest
     NGINX_IMAGE: harbor.blockstream.io/docker/library/nginx:alpine
+  before_script:
+    - |
+      if [ -n "$DOCKERHUB_MIRROR" ]; then
+        export SCRIPTS_IMAGE="${DOCKERHUB_MIRROR}${SCRIPTS_IMAGE#harbor.blockstream.io/docker}"
+        export LND_IMAGE="${DOCKERHUB_MIRROR}${LND_IMAGE#harbor.blockstream.io/docker}"
+        export CLN_IMAGE="${DOCKERHUB_MIRROR}${CLN_IMAGE#harbor.blockstream.io/docker}"
+        export POSTGRES_IMAGE="${DOCKERHUB_MIRROR}${POSTGRES_IMAGE#harbor.blockstream.io/docker}"
+        export BOLTZ_BACKEND_IMAGE="${DOCKERHUB_MIRROR}${BOLTZ_BACKEND_IMAGE#harbor.blockstream.io/docker}"
+        export FOUNDRY_IMAGE="${DOCKERHUB_MIRROR}${FOUNDRY_IMAGE#harbor.blockstream.io/docker}"
+        export BITCOIN_CORE_IMAGE="${DOCKERHUB_MIRROR}${BITCOIN_CORE_IMAGE#harbor.blockstream.io/docker}"
+        export ELEMENTS_IMAGE="${DOCKERHUB_MIRROR}${ELEMENTS_IMAGE#harbor.blockstream.io/docker}"
+        export ELECTRS_IMAGE="${DOCKERHUB_MIRROR}${ELECTRS_IMAGE#harbor.blockstream.io/docker}"
+        export NGINX_IMAGE="${DOCKERHUB_MIRROR}${NGINX_IMAGE#harbor.blockstream.io/docker}"
+        echo "SCRIPTS_IMAGE=$SCRIPTS_IMAGE"
+        echo "LND_IMAGE=$LND_IMAGE"
+        echo "CLN_IMAGE=$CLN_IMAGE"
+        echo "POSTGRES_IMAGE=$POSTGRES_IMAGE"
+        echo "BOLTZ_BACKEND_IMAGE=$BOLTZ_BACKEND_IMAGE"
+        echo "FOUNDRY_IMAGE=$FOUNDRY_IMAGE"
+        echo "BITCOIN_CORE_IMAGE=$BITCOIN_CORE_IMAGE"
+        echo "ELEMENTS_IMAGE=$ELEMENTS_IMAGE"
+        echo "ELECTRS_IMAGE=$ELECTRS_IMAGE"
+        echo "NGINX_IMAGE=$NGINX_IMAGE"
+      fi
 
 .docker_gitlab_login:
   before_script:

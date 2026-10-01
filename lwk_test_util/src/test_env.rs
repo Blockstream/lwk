@@ -270,7 +270,8 @@ impl TestEnvBuilder {
             let mut bitcoind_conf = bitcoind::Conf::default();
             bitcoind_conf.args.push(KEYPOOL_ARG);
             // Don't wait for the wallet database to sync to disk, the node is thrown away anyway.
-            // Not passed to elementsd since its wallets use BDB, not SQLite.
+            // TODO: Pass this to elementsd with Elements 29.4.1, which creates SQLite
+            // descriptor wallets by default. The current Elements 23.x default wallet uses BDB.
             bitcoind_conf.args.push("-unsafesqlitesync");
             Some(start_node(&self.bitcoind_exec, &bitcoind_conf))
         } else {

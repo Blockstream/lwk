@@ -59,6 +59,15 @@ bounded run:
 cargo fuzz run payment_instruction --sanitizer none -- -max_total_time=60 -max_len=4096
 ```
 
+Addresses, invoices and LNURLs are checksummed, so the fuzzer cannot build
+valid ones from scratch; handwritten corpus seeds provide them.
+`fuzz/payment_instruction.dict` lists schemas, URI query keys and encoding
+prefixes for libFuzzer to splice in:
+
+```sh
+cargo fuzz run payment_instruction --sanitizer none -- -dict=fuzz/payment_instruction.dict
+```
+
 ## Wallet descriptors
 
 Fuzz strict and relaxed wallet descriptor parsing, including confidential
@@ -68,10 +77,32 @@ descriptors, Green-style two-line descriptors, and fixed script pubkey lists:
 cargo fuzz run descriptor --sanitizer none
 ```
 
-The target checks canonical parse/display round trips and exercises descriptor
-derivation at small indices. Inputs are limited to 4,096 bytes. For a bounded
-run:
+The target checks canonical parse/display round trips and that every accepted
+descriptor derives scripts and addresses at small indices. Inputs are limited
+to 4,096 bytes. For a bounded run:
 
 ```sh
 cargo fuzz run descriptor --sanitizer none -- -max_total_time=60 -max_len=4096
+```
+
+Descriptors are grammar-like, so random byte mutations rarely produce valid
+fragments. `fuzz/descriptor.dict` lists script types, keys and derivation
+steps for libFuzzer to splice in:
+
+```sh
+cargo fuzz run descriptor --sanitizer none -- -dict=fuzz/descriptor.dict
+```
+
+## Seeding the corpus
+
+Each target starts from `fuzz/corpus/<target>/`, one raw input per file. To
+steer a target towards inputs it is unlikely to build on its own, add
+handwritten seeds named by their SHA-1, as libFuzzer does. The corpus
+directory is ignored by git, so add seeds explicitly:
+
+```sh
+printf '%s' '<input>' > seed
+h=$(sha1sum seed | cut -d' ' -f1)
+mv seed fuzz/corpus/<target>/$h
+git add -f fuzz/corpus/<target>/$h
 ```

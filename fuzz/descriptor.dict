@@ -1,0 +1,48 @@
+# libFuzzer dictionary for the descriptor target
+
+# Confidential wrappers and blinding keys
+"ct("
+"slip77("
+"elip151"
+"ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92"
+
+# Script types
+"elwpkh("
+"elwsh("
+"elsh("
+"eltr("
+"wpkh("
+"wsh("
+"pk("
+"pkh("
+"multi("
+"sortedmulti("
+"multi_a("
+"sortedmulti_a("
+"and_v("
+"or_d("
+"v:"
+"older("
+"after("
+
+# Keys
+"tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA"
+"tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu"
+"0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+"[759db348/84'/1'/0']"
+
+# Derivation paths
+"/<0;1>/*"
+"/<0;1;2>/*"
+"/0/*"
+"/1/*"
+"/0h/*"
+"/0'/*"
+"/*h"
+"/*'"
+"h"
+"'"
+","
+")"
+"#"
+"\x0a"

@@ -12,8 +12,9 @@ use elements_miniscript::DefiniteDescriptorKey;
 use elements_miniscript::{
     confidential::Key,
     descriptor::{DescriptorSecretKey, Wildcard},
+    expression::{FromTree, Tree},
     slip77::MasterBlindingKey,
-    ConfidentialDescriptor, Descriptor, DescriptorPublicKey, ForEachKey,
+    ConfidentialDescriptor, Descriptor, DescriptorPublicKey, Extension, ForEachKey,
 };
 use lwk_common::{cipher_from_key_bytes, ss_path, Network, SSAccountType, Signer};
 use serde::{Deserialize, Serialize};
@@ -211,25 +212,7 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
             }
         }
 
-        let has_hardened_public_derivation = desc.descriptor.for_each_key(|key| match key {
-            DescriptorPublicKey::Single(_) => false,
-            DescriptorPublicKey::XPub(key) => {
-                key.wildcard == Wildcard::Hardened
-                    || key
-                        .derivation_path
-                        .into_iter()
-                        .any(|child| child.is_hardened())
-            }
-            DescriptorPublicKey::MultiXPub(key) => {
-                key.wildcard == Wildcard::Hardened
-                    || key
-                        .derivation_paths
-                        .paths()
-                        .iter()
-                        .any(|path| path.into_iter().any(|child| child.is_hardened()))
-            }
-        });
-        if has_hardened_public_derivation {
+        if has_hardened_public_derivation(&desc.descriptor) {
             return Err(Self::Error::UnsupportedDescriptorHardenedDerivation);
         }
 
@@ -290,7 +273,7 @@ impl FromStr for WolletDescriptor {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match ConfidentialDescriptor::<DescriptorPublicKey>::from_str(s) {
+        match parse_confidential(s) {
             Ok(desc) => desc.try_into(),
             Err(first_err) => {
                 // Try parsing as comma-separated "blinding_key_hex:spk_hex" pairs
@@ -301,7 +284,7 @@ impl FromStr for WolletDescriptor {
                         #[cfg(feature = "amp0")]
                         is_amp0: false,
                     }),
-                    _ => Err(first_err.into()),
+                    _ => Err(first_err),
                 }
             }
         }
@@ -848,6 +831,51 @@ impl WolletDescriptor {
     }
 }
 
+fn has_hardened_public_derivation<T: Extension>(
+    descriptor: &Descriptor<DescriptorPublicKey, T>,
+) -> bool {
+    descriptor.for_any_key(|key| match key {
+        DescriptorPublicKey::Single(_) => false,
+        DescriptorPublicKey::XPub(key) => {
+            key.wildcard == Wildcard::Hardened
+                || key
+                    .derivation_path
+                    .into_iter()
+                    .any(|child| child.is_hardened())
+        }
+        DescriptorPublicKey::MultiXPub(key) => {
+            key.wildcard == Wildcard::Hardened
+                || key
+                    .derivation_paths
+                    .paths()
+                    .iter()
+                    .any(|path| path.into_iter().any(|child| child.is_hardened()))
+        }
+    })
+}
+
+// Parsing `ct(elip151,...)` derives the descriptor to compute the blinding key,
+// which panics upstream on hardened public derivation: reject it beforehand.
+fn parse_confidential(s: &str) -> Result<ConfidentialDescriptor<DescriptorPublicKey>, Error> {
+    if let Some(inner) = elip151_inner_descriptor(s) {
+        if has_hardened_public_derivation(&inner) {
+            return Err(Error::UnsupportedDescriptorHardenedDerivation);
+        }
+    }
+    Ok(ConfidentialDescriptor::<DescriptorPublicKey>::from_str(s)?)
+}
+
+fn elip151_inner_descriptor(s: &str) -> Option<Descriptor<DescriptorPublicKey>> {
+    let s = remove_checksum_if_any(s);
+    let top = Tree::from_str(&s).ok()?;
+    match (top.name, top.args.as_slice()) {
+        ("ct", [key, descriptor]) if key.name == "elip151" && key.args.is_empty() => {
+            Descriptor::from_tree(descriptor).ok()
+        }
+        _ => None,
+    }
+}
+
 // try to parse as multiline descriptor as exported in green
 fn parse_multiline(desc: &str) -> Option<WolletDescriptor> {
     let lines: Vec<_> = desc.trim().split('\n').collect();
@@ -856,8 +884,8 @@ fn parse_multiline(desc: &str) -> Option<WolletDescriptor> {
     }
     let first_str = lines[0].trim();
     let second_str = lines[1].trim();
-    let first = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(first_str);
-    let second = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(second_str);
+    let first = parse_confidential(first_str);
+    let second = parse_confidential(second_str);
     if first.is_err() || second.is_err() {
         return None;
     }
@@ -1131,16 +1159,42 @@ mod test {
     fn reject_hardened_xpub_derivation() {
         let blinding_key = "460830d85d4b299a9406c5899748354937c81b6fdb94f110f8729c9ba2994412";
         let xpub = "tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu";
+        let xpub2 = "tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA";
+        let single = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
 
         for descriptor in [
             format!("ct(slip77({blinding_key}),elwpkh({xpub}/0h/*))"),
             format!("ct(slip77({blinding_key}),elwpkh({xpub}/0/*h))"),
+            format!("ct(slip77({blinding_key}),elwsh(multi(2,{xpub}/0h/*,{xpub2}/0/*)))"),
+            format!("ct(slip77({blinding_key}),elwsh(multi(2,{xpub}/0/*,{xpub2}/0/*h)))"),
+            format!("ct(slip77({blinding_key}),elwsh(multi(1,{single},{xpub}/0h/*)))"),
+            format!("ct(elip151,elwpkh({xpub}/0h/*))"),
+            format!("ct(elip151,elwpkh({xpub}/0/*h))"),
+            format!("ct(elip151,elwsh(multi(2,{xpub2}/<0';7>/*,{xpub}/<0;1>/*)))"),
         ] {
             assert!(matches!(
                 WolletDescriptor::from_str(&descriptor),
                 Err(Error::UnsupportedDescriptorHardenedDerivation)
             ));
         }
+
+        // Checksummed and two-line descriptors go through the same check
+        let descriptor = format!("ct(elip151,elwpkh({xpub}/0h/*))");
+        let checksum =
+            elements_miniscript::descriptor::checksum::desc_checksum(&descriptor).unwrap();
+        assert!(matches!(
+            WolletDescriptor::from_str(&format!("{descriptor}#{checksum}")),
+            Err(Error::UnsupportedDescriptorHardenedDerivation)
+        ));
+        let first = format!("ct(elip151,elwpkh({xpub}/0h/0/*))");
+        let second = format!("ct(elip151,elwpkh({xpub}/0h/1/*))");
+        assert!(WolletDescriptor::from_str_relaxed(&format!("{first}\n{second}")).is_err());
+
+        // A valid elip151 descriptor is still accepted
+        let descriptor = format!("ct(elip151,elwpkh({xpub}/<0;1>/*))");
+        assert!(WolletDescriptor::from_str(&descriptor)
+            .unwrap()
+            .is_elip151());
     }
 
     #[test]

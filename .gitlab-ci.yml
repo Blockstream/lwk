@@ -413,8 +413,8 @@ fuzz:
     - cargo install cargo-fuzz@0.13.1 --locked # FIXME: move to the builder image
     - cargo fuzz run update_deserialize --sanitizer none -- -max_total_time=60 -max_len=4096 -timeout=10
     - cargo fuzz run jade_response --sanitizer none -- -max_total_time=60 -max_len=4096 -timeout=10
-    - cargo fuzz run payment_instruction --sanitizer none -- -max_total_time=60 -max_len=4096 -timeout=10
-    - cargo fuzz run descriptor --sanitizer none -- -max_total_time=60 -max_len=4096 -timeout=10
+    - cargo fuzz run payment_instruction --sanitizer none -- -max_total_time=60 -max_len=4096 -timeout=10 -dict=fuzz/payment_instruction.dict
+    - cargo fuzz run descriptor --sanitizer none -- -max_total_time=60 -max_len=4096 -timeout=10 -dict=fuzz/descriptor.dict
   artifacts:
     when: on_failure
     paths:

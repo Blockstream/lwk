@@ -216,6 +216,10 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
             return Err(Self::Error::UnsupportedDescriptorHardenedDerivation);
         }
 
+        if desc.descriptor.multipath_length_mismatch() {
+            return Err(elements_miniscript::Error::MultipathDescLenMismatch.into());
+        }
+
         if desc.descriptor.is_multipath() {
             let descriptors = desc.descriptor.clone().into_single_descriptors()?;
 
@@ -855,11 +859,17 @@ fn has_hardened_public_derivation<T: Extension>(
 }
 
 // Parsing `ct(elip151,...)` derives the descriptor to compute the blinding key,
-// which panics upstream on hardened public derivation: reject it beforehand.
+// which panics upstream on hardened public derivation and on multipath keys with
+// a different number of paths: reject them beforehand.
+// TODO: Remove once `Key::from_elip151` returns the errors it already has instead
+// of unwrapping: https://github.com/ElementsProject/elements-miniscript/issues/107
 fn parse_confidential(s: &str) -> Result<ConfidentialDescriptor<DescriptorPublicKey>, Error> {
     if let Some(inner) = elip151_inner_descriptor(s) {
         if has_hardened_public_derivation(&inner) {
             return Err(Error::UnsupportedDescriptorHardenedDerivation);
+        }
+        if inner.multipath_length_mismatch() {
+            return Err(elements_miniscript::Error::MultipathDescLenMismatch.into());
         }
     }
     Ok(ConfidentialDescriptor::<DescriptorPublicKey>::from_str(s)?)

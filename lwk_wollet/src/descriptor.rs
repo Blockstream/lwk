@@ -216,6 +216,10 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
             return Err(Self::Error::UnsupportedDescriptorHardenedDerivation);
         }
 
+        if desc.descriptor.multipath_length_mismatch() {
+            return Err(elements_miniscript::Error::MultipathDescLenMismatch.into());
+        }
+
         if desc.descriptor.is_multipath() {
             let descriptors = desc.descriptor.clone().into_single_descriptors()?;
 
@@ -855,11 +859,17 @@ fn has_hardened_public_derivation<T: Extension>(
 }
 
 // Parsing `ct(elip151,...)` derives the descriptor to compute the blinding key,
-// which panics upstream on hardened public derivation: reject it beforehand.
+// which panics upstream on hardened public derivation and on multipath keys with
+// a different number of paths: reject them beforehand.
+// TODO: Remove once `Key::from_elip151` returns the errors it already has instead
+// of unwrapping: https://github.com/ElementsProject/elements-miniscript/issues/107
 fn parse_confidential(s: &str) -> Result<ConfidentialDescriptor<DescriptorPublicKey>, Error> {
     if let Some(inner) = elip151_inner_descriptor(s) {
         if has_hardened_public_derivation(&inner) {
             return Err(Error::UnsupportedDescriptorHardenedDerivation);
+        }
+        if inner.multipath_length_mismatch() {
+            return Err(elements_miniscript::Error::MultipathDescLenMismatch.into());
         }
     }
     Ok(ConfidentialDescriptor::<DescriptorPublicKey>::from_str(s)?)
@@ -1195,6 +1205,28 @@ mod test {
         assert!(WolletDescriptor::from_str(&descriptor)
             .unwrap()
             .is_elip151());
+    }
+
+    #[test]
+    fn reject_multipath_len_mismatch() {
+        let blinding_key = "460830d85d4b299a9406c5899748354937c81b6fdb94f110f8729c9ba2994412";
+        let xpub = "tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu";
+        let xpub2 = "tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA";
+
+        // multipath keys must agree on the number of paths in both orders
+        for descriptor in [
+            format!("ct(slip77({blinding_key}),elwsh(multi(2,{xpub}/<0;1;2>/*,{xpub2}/<0;1>/*)))"),
+            format!("ct(elip151,elwsh(multi(2,{xpub}/<0;1;2>/*,{xpub2}/<0;1>/*)))"),
+            format!("ct(slip77({blinding_key}),elwsh(multi(2,{xpub}/<0;1>/*,{xpub2}/<0;1;2>/*)))"),
+            format!("ct(elip151,elwsh(multi(2,{xpub}/<0;1>/*,{xpub2}/<0;1;2>/*)))"),
+        ] {
+            assert!(matches!(
+                WolletDescriptor::from_str(&descriptor),
+                Err(Error::ElementsMiniscript(
+                    elements_miniscript::Error::MultipathDescLenMismatch
+                ))
+            ));
+        }
     }
 
     #[test]

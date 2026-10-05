@@ -13,7 +13,7 @@ blocking = ["lwk_wollet/electrum"]
 
 [dependencies]
 async-trait = "0.1"
-boltz-client = { git = "https://github.com/SatoshiPortal/boltz-rust/", rev = "702ce85a58af528858dca4fb9a6fd91f4f5f7ec3", features = [
+boltz-client = { git = "https://github.com/RCasatta/boltz-rust", rev = "baa7e12f21e7cc0c8930926d45c4b88cb4926932", features = [
     "ws",
     "electrum",
 ] }

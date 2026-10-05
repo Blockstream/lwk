@@ -45,7 +45,7 @@ Amounts expressed in satoshi are always whole numbers without any decimal places
 <section>
 
 ```rust,ignore
-{{#include ../../lwk_wollet/tests/e2e.rs:contract}}
+{{#include ../../lwk_wollet/tests/issuance.rs:contract}}
 ```
 
 </section>
@@ -87,7 +87,7 @@ To issue an asset, use `TxBuilder::issue_asset()` before calling `finish()`. You
 <section>
 
 ```rust,ignore
-{{#include ../../lwk_wollet/tests/e2e.rs:issue_asset}}
+{{#include ../../lwk_wollet/tests/issuance.rs:issue_asset}}
 ```
 
 </section>
@@ -129,7 +129,7 @@ After creating the issuance PSET, you can extract the asset ID and reissuance to
 <section>
 
 ```rust,ignore
-{{#include ../../lwk_wollet/tests/e2e.rs:issuance_ids}}
+{{#include ../../lwk_wollet/tests/issuance.rs:issuance_ids}}
 ```
 
 </section>
@@ -171,7 +171,7 @@ Here's a complete example that issues an asset, signs it, and broadcasts it:
 <section>
 
 ```rust,ignore
-{{#include ../../lwk_wollet/tests/e2e.rs:test_issue_asset}}
+{{#include ../../lwk_wollet/tests/issuance.rs:test_issue_asset}}
 ```
 
 </section>

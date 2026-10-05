@@ -15,7 +15,7 @@ The `add_burn()` method takes the following arguments:
 <section>
 
 ```rust,ignore
-{{#include ../../lwk_wollet/tests/e2e.rs:burn_asset}}
+{{#include ../../lwk_wollet/tests/issuance.rs:burn_asset}}
 ```
 
 </section>

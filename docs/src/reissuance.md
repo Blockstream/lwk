@@ -17,7 +17,7 @@ The `reissue_asset()` method takes the following arguments:
 <section>
 
 ```rust,ignore
-{{#include ../../lwk_wollet/tests/e2e.rs:reissue_asset}}
+{{#include ../../lwk_wollet/tests/issuance.rs:reissue_asset}}
 ```
 
 </section>

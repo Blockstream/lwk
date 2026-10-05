@@ -768,7 +768,7 @@ impl PreparePayResponse {
                 Ok(!utxos.is_empty())
             }
             Chain::Liquid(_) => {
-                let address = elements::Address::from_str(self.lockup_address())?;
+                let address = boltz_client::elements::Address::from_str(self.lockup_address())?;
                 let utxo = self
                     .chain_client
                     .liquid_client()
@@ -802,9 +802,8 @@ impl PreparePayResponse {
             ));
         }
 
-        Ok(elements::Address::from_str(
-            &self.data.create_swap_response.address,
-        )?)
+        elements::Address::from_str(&self.data.create_swap_response.address)
+            .map_err(|e| Error::Generic(format!("invalid Liquid lockup address: {e}")))
     }
     pub fn uri_amount(&self) -> u64 {
         self.data.create_swap_response.expected_amount

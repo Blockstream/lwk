@@ -419,7 +419,7 @@ async fn is_lockup_unspent(
             Ok(!utxos.is_empty())
         }
         Chain::Liquid(_) => {
-            let address = elements::Address::from_str(lockup_address)?;
+            let address = boltz_client::elements::Address::from_str(lockup_address)?;
             let utxo = chain_client
                 .liquid_client()
                 .ok_or(Error::MissingLiquidClient)?

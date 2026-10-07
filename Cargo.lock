@@ -267,6 +267,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69f7f8c3906b62b754cd5326047894316021dcfe5a194c8ea52bdd94934a3457"
 
 [[package]]
+name = "ariadne"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31beedec3ce83ae6da3a79592b3d8d7afd146a5b15bb9bb940279aced60faa89"
+dependencies = [
+ "unicode-width",
+ "yansi",
+]
+
+[[package]]
 name = "arrayref"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1685,6 +1695,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "elements-miniscript"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c18e931c81e6e7e58d63b6fea1c57f5534717f0e6721741c4fce72a6c547e19"
+dependencies = [
+ "bitcoin",
+ "elements 0.27.0",
+ "miniscript",
+ "serde",
+]
+
+[[package]]
 name = "email_address"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2139,7 +2161,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "http",
- "indexmap 2.11.4",
+ "indexmap 2.14.2",
  "slab",
  "tokio",
  "tokio-util",
@@ -2194,6 +2216,12 @@ dependencies = [
  "equivalent",
  "foldhash",
 ]
+
+[[package]]
+name = "hashbrown"
+version = "0.17.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 
 [[package]]
 name = "hashlink"
@@ -2678,12 +2706,12 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.11.4"
+version = "2.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b0f83760fb341a774ed326568e19f5a863af4a952def8c39f9ab92fd95b88e5"
+checksum = "cc4e190f5d26ca7051642629da2c52fc03bde85a03197c99408dcd291734c855"
 dependencies = [
  "equivalent",
- "hashbrown 0.15.5",
+ "hashbrown 0.17.1",
  "serde",
  "serde_core",
 ]
@@ -2920,7 +2948,7 @@ dependencies = [
 [[package]]
 name = "lending-contracts"
 version = "0.1.0"
-source = "git+https://github.com/gerau/simplicity-lending.git?rev=a7e426e9a1a530e8d3738a9e47f1b3d8084e0654#a7e426e9a1a530e8d3738a9e47f1b3d8084e0654"
+source = "git+https://github.com/gerau/simplicity-lending.git?rev=0a894ced7443ac12447ce62561d0d715b9a21fb4#0a894ced7443ac12447ce62561d0d715b9a21fb4"
 dependencies = [
  "hex",
  "ring",
@@ -3153,7 +3181,7 @@ name = "lwk_bindings"
 version = "0.19.1"
 dependencies = [
  "elements 0.25.3",
- "elements-miniscript",
+ "elements-miniscript 0.4.0",
  "log",
  "lwk_bindings",
  "lwk_boltz",
@@ -3225,7 +3253,7 @@ dependencies = [
  "aes-gcm-siv",
  "base64 0.22.1",
  "elements 0.25.3",
- "elements-miniscript",
+ "elements-miniscript 0.4.0",
  "getrandom 0.2.16",
  "qr_code",
  "rand 0.8.5",
@@ -3256,7 +3284,7 @@ version = "0.19.0"
 dependencies = [
  "base64 0.22.1",
  "elements 0.25.3",
- "elements-miniscript",
+ "elements-miniscript 0.4.0",
  "getrandom 0.2.16",
  "hex",
  "log",
@@ -3281,7 +3309,7 @@ name = "lwk_ledger"
 version = "0.19.0"
 dependencies = [
  "byteorder",
- "elements-miniscript",
+ "elements-miniscript 0.4.0",
  "env_logger",
  "ledger-apdu",
  "ledger-transport-hid",
@@ -3354,7 +3382,7 @@ name = "lwk_signer"
 version = "0.19.0"
 dependencies = [
  "bip39",
- "elements-miniscript",
+ "elements-miniscript 0.4.0",
  "lwk_common",
  "lwk_jade",
  "lwk_ledger",
@@ -3393,7 +3421,7 @@ dependencies = [
  "bip39",
  "clightningrpc",
  "electrsd",
- "elements-miniscript",
+ "elements-miniscript 0.4.0",
  "env_logger",
  "log",
  "lwk_common",
@@ -3456,7 +3484,7 @@ dependencies = [
  "electrum-client 0.25.0",
  "elements 0.25.3",
  "elements 0.26.2",
- "elements-miniscript",
+ "elements-miniscript 0.4.0",
  "flate2",
  "futures",
  "fxhash",
@@ -4641,15 +4669,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "santiago"
-version = "1.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de36022292bc2086eb8f55bffa460fef3475e4459b478820711f4c421feb87ec"
-dependencies = [
- "regex",
-]
-
-[[package]]
 name = "schannel"
 version = "0.1.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4750,7 +4769,7 @@ version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9465315bc9d4566e1724f0fffcbcc446268cb522e60f9a27bcded6b19c108113"
 dependencies = [
- "bitcoin_hashes 0.13.0",
+ "bitcoin_hashes 0.14.101",
  "rand 0.8.5",
  "secp256k1-sys 0.10.1",
  "serde",
@@ -4875,9 +4894,9 @@ checksum = "0f7d95a54511e0c7be3f51e8867aa8cf35148d7b9445d44de2f943e2b206e749"
 
 [[package]]
 name = "semver"
-version = "1.0.27"
+version = "1.0.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d767eb0aabc880b29956c35734170f26ed551a859dbd361d140cdbeca61ab1e2"
+checksum = "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd"
 dependencies = [
  "serde",
  "serde_core",
@@ -5019,7 +5038,7 @@ dependencies = [
  "chrono",
  "hex",
  "indexmap 1.9.3",
- "indexmap 2.11.4",
+ "indexmap 2.14.2",
  "schemars 0.9.0",
  "schemars 1.2.2",
  "serde",
@@ -5148,38 +5167,38 @@ checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 
 [[package]]
 name = "simplicity-lang"
-version = "0.7.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70e57bd4d84853974a212eab24ed89da54f49fbccf5e33e93bcd29f0a6591cd5"
+checksum = "cff7b10251528d46d9cf60238267911984fedbb0948cccea98dd74fc6bf9f729"
 dependencies = [
  "bitcoin",
- "bitcoin_hashes 0.14.101",
+ "bitcoin_hashes 1.2.0",
  "byteorder",
- "elements 0.25.3",
+ "elements 0.27.0",
  "getrandom 0.2.16",
  "ghost-cell",
- "hex-conservative 0.2.2",
+ "hex-conservative 1.3.0",
  "miniscript",
- "santiago",
  "simplicity-sys",
 ]
 
 [[package]]
 name = "simplicity-sys"
-version = "0.6.2"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3401ee7331f183a5458c0f5a4b3d5d00bde0fd12e2e03728c537df34efae289"
+checksum = "955935733b2735665b4735d9b1361eade6be4c7aea6bca2640345e4c81756f58"
 dependencies = [
- "bitcoin_hashes 0.14.101",
+ "bitcoin_hashes 1.2.0",
  "cc",
 ]
 
 [[package]]
 name = "simplicityhl"
-version = "0.5.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25de8990174fe3e1a843df138cacc4265d05839ebd2550c18b9196f567d55e81"
+checksum = "9e110f12190a4df92970b50d701f7da979638a60c5bf8294d55e4a55aceebf3e"
 dependencies = [
+ "ariadne",
  "base64 0.21.7",
  "chumsky",
  "clap",
@@ -5187,6 +5206,7 @@ dependencies = [
  "getrandom 0.2.16",
  "itertools 0.13.0",
  "miniscript",
+ "semver",
  "serde",
  "serde_json",
  "simplicity-lang",
@@ -5218,26 +5238,27 @@ checksum = "b7c388c1b5e93756d0c740965c41e8822f866621d41acbdf6336a6a168f8840c"
 
 [[package]]
 name = "smplx-build"
-version = "0.0.5"
-source = "git+https://github.com/gerau/smplx.git?rev=da5a22da20293637473f67bd73a3645afda3a2a6#da5a22da20293637473f67bd73a3645afda3a2a6"
+version = "0.0.12"
+source = "git+https://github.com/BlockstreamResearch/smplx.git?rev=e1a686ce1064002bf4daec0e123160df988c2081#e1a686ce1064002bf4daec0e123160df988c2081"
 dependencies = [
- "glob",
  "globwalk",
  "pathdiff",
  "prettyplease",
  "proc-macro2",
  "quote",
  "serde",
+ "serde_json",
  "simplicityhl",
  "syn 2.0.118",
  "thiserror 2.0.18",
  "toml 0.9.12+spec-1.1.0",
+ "toml_edit 0.25.16+spec-1.1.0",
 ]
 
 [[package]]
 name = "smplx-macros"
-version = "0.0.5"
-source = "git+https://github.com/gerau/smplx.git?rev=da5a22da20293637473f67bd73a3645afda3a2a6#da5a22da20293637473f67bd73a3645afda3a2a6"
+version = "0.0.12"
+source = "git+https://github.com/BlockstreamResearch/smplx.git?rev=e1a686ce1064002bf4daec0e123160df988c2081#e1a686ce1064002bf4daec0e123160df988c2081"
 dependencies = [
  "smplx-build",
  "smplx-test",
@@ -5246,8 +5267,8 @@ dependencies = [
 
 [[package]]
 name = "smplx-regtest"
-version = "0.0.5"
-source = "git+https://github.com/gerau/smplx.git?rev=da5a22da20293637473f67bd73a3645afda3a2a6#da5a22da20293637473f67bd73a3645afda3a2a6"
+version = "0.0.12"
+source = "git+https://github.com/BlockstreamResearch/smplx.git?rev=e1a686ce1064002bf4daec0e123160df988c2081#e1a686ce1064002bf4daec0e123160df988c2081"
 dependencies = [
  "electrsd",
  "hex",
@@ -5261,14 +5282,13 @@ dependencies = [
 
 [[package]]
 name = "smplx-sdk"
-version = "0.0.5"
-source = "git+https://github.com/gerau/smplx.git?rev=da5a22da20293637473f67bd73a3645afda3a2a6#da5a22da20293637473f67bd73a3645afda3a2a6"
+version = "0.0.12"
+source = "git+https://github.com/BlockstreamResearch/smplx.git?rev=e1a686ce1064002bf4daec0e123160df988c2081#e1a686ce1064002bf4daec0e123160df988c2081"
 dependencies = [
  "bip39",
- "bitcoin_hashes 0.14.101",
+ "bitcoincore-rpc",
  "dyn-clone",
- "electrsd",
- "elements-miniscript",
+ "elements-miniscript 0.5.0",
  "hex",
  "minreq 3.0.0",
  "serde",
@@ -5280,8 +5300,8 @@ dependencies = [
 
 [[package]]
 name = "smplx-std"
-version = "0.0.5"
-source = "git+https://github.com/gerau/smplx.git?rev=da5a22da20293637473f67bd73a3645afda3a2a6#da5a22da20293637473f67bd73a3645afda3a2a6"
+version = "0.0.12"
+source = "git+https://github.com/BlockstreamResearch/smplx.git?rev=e1a686ce1064002bf4daec0e123160df988c2081#e1a686ce1064002bf4daec0e123160df988c2081"
 dependencies = [
  "either",
  "serde",
@@ -5293,8 +5313,8 @@ dependencies = [
 
 [[package]]
 name = "smplx-test"
-version = "0.0.5"
-source = "git+https://github.com/gerau/smplx.git?rev=da5a22da20293637473f67bd73a3645afda3a2a6#da5a22da20293637473f67bd73a3645afda3a2a6"
+version = "0.0.12"
+source = "git+https://github.com/BlockstreamResearch/smplx.git?rev=e1a686ce1064002bf4daec0e123160df988c2081#e1a686ce1064002bf4daec0e123160df988c2081"
 dependencies = [
  "electrsd",
  "proc-macro2",
@@ -5800,7 +5820,7 @@ dependencies = [
  "serde",
  "serde_spanned 0.6.9",
  "toml_datetime 0.6.11",
- "toml_edit",
+ "toml_edit 0.22.27",
 ]
 
 [[package]]
@@ -5809,7 +5829,7 @@ version = "0.9.12+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf92845e79fc2e2def6a5d828f0801e29a2f8acc037becc5ab08595c7d5e9863"
 dependencies = [
- "indexmap 2.11.4",
+ "indexmap 2.14.2",
  "serde_core",
  "serde_spanned 1.1.1",
  "toml_datetime 0.7.5+spec-1.1.0",
@@ -5837,12 +5857,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "toml_datetime"
+version = "1.1.2+spec-1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b86d767906c6c42421dcba507eb9d203e779497710a47782a224bb871653053"
+dependencies = [
+ "serde_core",
+]
+
+[[package]]
 name = "toml_edit"
 version = "0.22.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "41fe8c660ae4257887cf66394862d21dbca4a6ddd26f04a3560410406a2f819a"
 dependencies = [
- "indexmap 2.11.4",
+ "indexmap 2.14.2",
  "serde",
  "serde_spanned 0.6.9",
  "toml_datetime 0.6.11",
@@ -5850,19 +5879,32 @@ dependencies = [
 ]
 
 [[package]]
-name = "toml_parser"
-version = "1.1.2+spec-1.1.0"
+name = "toml_edit"
+version = "0.25.16+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2abe9b86193656635d2411dc43050282ca48aa31c2451210f4202550afb7526"
+checksum = "88f38f3af8bf71841c67a990f4e2b52143b2d0a1a994c72513ff4c14977fc722"
+dependencies = [
+ "indexmap 2.14.2",
+ "toml_datetime 1.1.2+spec-1.1.0",
+ "toml_parser",
+ "toml_writer",
+ "winnow 1.0.3",
+]
+
+[[package]]
+name = "toml_parser"
+version = "1.1.4+spec-1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bed810ee007d8e7f9cf20b4774e7198142fa27186e0f805871da7f3c39eaf333"
 dependencies = [
  "winnow 1.0.3",
 ]
 
 [[package]]
 name = "toml_writer"
-version = "1.1.1+spec-1.1.0"
+version = "1.1.3+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "756daf9b1013ebe47a8776667b466417e2d4c5679d441c26230efd9ef78692db"
+checksum = "06bdbd8cfc056b8d2e2e85f29b56a3bdbecb527cef81eb39e3e7b98af4652770"
 
 [[package]]
 name = "tonic"
@@ -5912,7 +5954,7 @@ checksum = "d039ad9159c98b70ecfd540b2573b97f7f52c3e8d9f8ad57a24b916a536975f9"
 dependencies = [
  "futures-core",
  "futures-util",
- "indexmap 2.11.4",
+ "indexmap 2.14.2",
  "pin-project-lite",
  "slab",
  "sync_wrapper",
@@ -6074,6 +6116,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6f5d3c3b1bf09027a88a6bc961fc00497d651009560b5463668dc81b0fa87a8"
 
 [[package]]
+name = "unicode-width"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dd6e30e90baa6f72411720665d41d89b9a3d039dc45b8faea1ddd07f617f6af"
+
+[[package]]
 name = "uniffi"
 version = "0.29.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6104,7 +6152,7 @@ dependencies = [
  "glob",
  "goblin",
  "heck",
- "indexmap 2.11.4",
+ "indexmap 2.14.2",
  "once_cell",
  "serde",
  "tempfile",
@@ -6147,7 +6195,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f4f224becf14885c10e6e400b95cc4d1985738140cb194ccc2044563f8a56b"
 dependencies = [
  "anyhow",
- "indexmap 2.11.4",
+ "indexmap 2.14.2",
  "proc-macro2",
  "quote",
  "syn 2.0.118",
@@ -6190,7 +6238,7 @@ checksum = "4b147e133ad7824e32426b90bc41fda584363563f2ba747f590eca1fd6fd14e6"
 dependencies = [
  "anyhow",
  "heck",
- "indexmap 2.11.4",
+ "indexmap 2.14.2",
  "tempfile",
  "uniffi_internal_macros",
 ]
@@ -6904,6 +6952,9 @@ name = "winnow"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0592e1c9d151f854e6fd382574c3a0855250e1d9b2f99d9281c6e6391af352f1"
+dependencies = [
+ "memchr",
+]
 
 [[package]]
 name = "wit-bindgen"
@@ -6938,6 +6989,12 @@ dependencies = [
  "libc",
  "rustix 1.1.3",
 ]
+
+[[package]]
+name = "yansi"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "yoke"

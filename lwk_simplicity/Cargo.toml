@@ -12,7 +12,7 @@ lwk_common = { version = "0.19.0" }
 lwk_signer = { version = "0.19.0", default-features = false }
 lwk_wollet = { version = "0.19.0", default-features = false }
 
-simplicityhl = { version = "0.5.0" }
+simplicityhl = { version = "0.8.0" }
 
 thiserror = { workspace = true }
 
@@ -24,8 +24,8 @@ uuid = { version = "1.20", default-features = false, features = [
     "v4",
 ] }
 
-lending-contracts = {git = "https://github.com/gerau/simplicity-lending.git",  rev = "a7e426e9a1a530e8d3738a9e47f1b3d8084e0654", optional = true}
-simplex = { package = "smplx-std", git = "https://github.com/gerau/smplx.git", rev = "da5a22da20293637473f67bd73a3645afda3a2a6", optional = true }
+lending-contracts = {git = "https://github.com/gerau/simplicity-lending.git",  rev = "0a894ced7443ac12447ce62561d0d715b9a21fb4", optional = true}
+simplex = { package = "smplx-std", git = "https://github.com/BlockstreamResearch/smplx.git", rev = "e1a686ce1064002bf4daec0e123160df988c2081", optional = true }
 
 rand = "0.8"
 reqwest = { workspace = true, optional = true }

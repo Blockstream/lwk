@@ -76,6 +76,10 @@
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
 
         electrs = electrs-flake.apps.${system}.blockstream-electrs-liquid;
+        # upstream test_electrum fails for the bitcoin build, skip the checks
+        electrs-bitcoin = electrs-flake.packages.${system}.bin.overrideAttrs (_: {
+          doCheck = false;
+        });
         registry = registry-flake.packages.${system};
         waterfalls = waterfalls-flake.packages.${system}.default;
 
@@ -203,7 +207,10 @@
 
           ELEMENTSD_EXEC = "${pkgs.elementsd}/bin/elementsd";
           BITCOIND_EXEC = "${pkgs.bitcoind}/bin/bitcoind";
+          BITCOINCLI_EXEC = "${pkgs.bitcoind}/bin/bitcoin-cli";
+          LIGHTNINGD_EXEC = "${pkgs.clightning}/bin/lightningd";
           ELECTRS_LIQUID_EXEC = electrs.program;
+          ELECTRS_BITCOIN_EXEC = "${electrs-bitcoin}/bin/electrs";
           WATERFALLS_EXEC = "${waterfalls}/bin/waterfalls";
           ASSET_REGISTRY_EXEC = "${registry.default}/bin/server";
           AMP2_MOCK_EXEC = "${amp2Mock}/bin/amp2_mock";

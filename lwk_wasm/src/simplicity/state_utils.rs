@@ -14,6 +14,7 @@ use lwk_wollet::hashes::{sha256, Hash};
 use lwk_wollet::{elements, EC};
 
 use lwk_simplicity::scripts::{simplicity_leaf_version, tap_data_hash};
+use lwk_simplicity::utils::{leaf_version_to25, sha256_to25};
 
 use lwk_simplicity::simplicityhl;
 use wasm_bindgen::prelude::*;
@@ -46,7 +47,7 @@ impl StateTaprootBuilder {
     /// Add a Simplicity leaf at `depth`.
     #[wasm_bindgen(js_name = addSimplicityLeaf)]
     pub fn add_simplicity_leaf(&self, depth: u8, cmr: &Cmr) -> Result<StateTaprootBuilder, Error> {
-        let (script, version) = script_version(cmr.inner());
+        let (script, version) = script_version(cmr.inner())?;
         let inner = self
             .inner
             .clone()
@@ -57,7 +58,7 @@ impl StateTaprootBuilder {
     /// Add a TapData hidden leaf at `depth`.
     #[wasm_bindgen(js_name = addDataLeaf)]
     pub fn add_data_leaf(&self, depth: u8, data: &[u8]) -> Result<StateTaprootBuilder, Error> {
-        let hash = tap_data_hash(data);
+        let hash = sha256_to25(&tap_data_hash(data));
         let inner = self.inner.clone().add_hidden(usize::from(depth), hash)?;
         Ok(StateTaprootBuilder { inner })
     }
@@ -115,9 +116,10 @@ impl StateTaprootSpendInfo {
     /// Get the control block for a script identified by CMR.
     #[wasm_bindgen(js_name = controlBlock)]
     pub fn control_block(&self, cmr: &Cmr) -> Result<ControlBlock, Error> {
+        let (script, version) = script_version(cmr.inner())?;
         let control_block = self
             .inner
-            .control_block(&script_version(cmr.inner()))
+            .control_block(&(script, version))
             .ok_or_else(|| Error::Generic("CMR is not part of this taproot spend info".into()))?;
         Ok(control_block.into())
     }
@@ -129,9 +131,11 @@ impl StateTaprootSpendInfo {
     }
 }
 
-fn script_version(cmr: simplicityhl::simplicity::Cmr) -> (elements::Script, taproot::LeafVersion) {
+fn script_version(
+    cmr: simplicityhl::simplicity::Cmr,
+) -> Result<(elements::Script, taproot::LeafVersion), Error> {
     let script = elements::Script::from(cmr.as_ref().to_vec());
-    (script, simplicity_leaf_version())
+    Ok((script, leaf_version_to25(simplicity_leaf_version())?))
 }
 
 #[cfg(all(test, target_arch = "wasm32"))]

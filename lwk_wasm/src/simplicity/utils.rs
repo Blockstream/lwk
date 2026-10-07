@@ -1,6 +1,8 @@
 use std::str::FromStr;
 
 use lwk_simplicity::scripts;
+use lwk_simplicity::simplicityhl::elements as elements27;
+use lwk_simplicity::utils::txout_to27;
 
 use lwk_wollet::elements;
 use lwk_wollet::elements::bitcoin::bip32::DerivationPath;
@@ -43,8 +45,11 @@ pub fn simplicity_control_block(
     ControlBlock::from_bytes(&serialized)
 }
 
-pub(crate) fn convert_utxos(utxos: &[TxOut]) -> Vec<elements::TxOut> {
-    utxos.iter().map(elements::TxOut::from).collect()
+pub(crate) fn convert_utxos(utxos: &[TxOut]) -> Result<Vec<elements27::TxOut>, Error> {
+    utxos
+        .iter()
+        .map(|utxo| txout_to27(&elements::TxOut::from(utxo)).map_err(Error::from))
+        .collect()
 }
 
 pub(crate) fn derive_keypair(signer: &Signer, derivation_path: &str) -> Result<Keypair, Error> {

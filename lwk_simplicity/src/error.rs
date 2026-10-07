@@ -47,6 +47,10 @@ pub enum ProgramError {
     #[error("Failed to compile Simplicity program: {0}")]
     Compilation(String),
 
+    /// Returned when a value cannot be reinterpreted between `elements` versions.
+    #[error("Elements version conversion error: {0}")]
+    Conversion(String),
+
     /// Returned when witness values cannot satisfy the program's requirements.
     #[error("Failed to satisfy witness: {0}")]
     WitnessSatisfaction(String),

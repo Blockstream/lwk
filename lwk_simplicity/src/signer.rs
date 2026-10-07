@@ -1,6 +1,7 @@
 use crate::error::ProgramError;
 use crate::runner::run_program;
 use crate::scripts::{control_block, create_p2tr_address};
+use crate::utils::{address_params_to27, To27};
 
 use std::sync::Arc;
 
@@ -109,7 +110,7 @@ pub fn get_and_verify_env(
 
     let target_utxo = &utxos[input_index];
     let script_pubkey =
-        create_p2tr_address(cmr, program_public_key, network.address_params()).script_pubkey();
+        create_p2tr_address(cmr, program_public_key, address_params_to27(network)).script_pubkey();
 
     if target_utxo.script_pubkey != script_pubkey {
         return Err(ProgramError::ScriptPubkeyMismatch {
@@ -132,6 +133,6 @@ pub fn get_and_verify_env(
         cmr,
         control_block(cmr, *program_public_key),
         None,
-        network.genesis_hash(),
+        network.genesis_hash().to27()?,
     ))
 }

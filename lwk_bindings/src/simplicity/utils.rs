@@ -7,6 +7,8 @@ use super::cmr::Cmr;
 use std::sync::Arc;
 
 use lwk_simplicity::scripts;
+use lwk_simplicity::simplicityhl::elements as elements27;
+use lwk_simplicity::utils::txout_to27;
 use lwk_wollet::{secp256k1::Keypair, EC};
 
 /// Get the x-only public key for a given derivation path from a signer.
@@ -31,10 +33,10 @@ pub fn simplicity_control_block(
     ControlBlock::from_bytes(&serialized)
 }
 
-pub(crate) fn convert_utxos(utxos: &[Arc<TxOut>]) -> Vec<elements::TxOut> {
+pub(crate) fn convert_utxos(utxos: &[Arc<TxOut>]) -> Result<Vec<elements27::TxOut>, LwkError> {
     utxos
         .iter()
-        .map(|u| elements::TxOut::from(u.as_ref()))
+        .map(|utxo| txout_to27(&elements::TxOut::from(utxo.as_ref())).map_err(LwkError::from))
         .collect()
 }
 

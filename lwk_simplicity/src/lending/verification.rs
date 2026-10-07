@@ -9,6 +9,7 @@ use lwk_wollet::elements::{AssetId, OutPoint, Script, Transaction, TxIn, TxOut};
 use simplex::provider::SimplicityNetwork;
 
 use super::LendingError;
+use crate::utils::{To25, To27};
 
 fn check_issuance(
     txin: &TxIn,
@@ -78,7 +79,7 @@ pub(crate) fn parse_and_verify_lending_offer(
 ) -> Result<LendingOffer, LendingError> {
     const FACTORY_NFT_AMOUNT: u64 = 1;
 
-    let policy_asset = network.policy_asset();
+    let policy_asset = network.policy_asset().to25()?;
 
     // LendingOffer::try_from_tx unwraps outputs 2, 3 and 5 as explicit values, so we checking
     for index in [2, 3, 5] {
@@ -90,20 +91,23 @@ pub(crate) fn parse_and_verify_lending_offer(
         parse_explicit(out).map_err(|msg| LendingError::InvalidLendingOffer(msg.to_string()))?;
     }
 
-    let offer = LendingOffer::try_from_tx(tx, protocol_fee_keeper_asset_id, network)?.offer;
+    let tx27 = tx.to27()?;
+    let protocol_fee_keeper_asset_id27 = protocol_fee_keeper_asset_id.to27()?;
+    let offer = LendingOffer::try_from_tx(&tx27, protocol_fee_keeper_asset_id27, network)?.offer;
     let params = offer.get_parameters();
     let script_auth = ScriptAuth::from_simplex_program(&offer);
     let factory = get_issuance_factory(&network);
-    let factory_script = factory.get_script_pubkey();
+    let factory_script = factory.get_script_pubkey().to25()?;
+    let script_auth_script = script_auth.get_script_pubkey().to25()?;
 
     let expected_metadata = offer.encode_metadata_op_return();
-    let offer_script = offer.get_script_pubkey();
+    let offer_script = offer.get_script_pubkey().to25()?;
 
-    let collateral_asset = params.collateral_asset_id;
+    let collateral_asset = params.collateral_asset_id.to25()?;
     let collateral_amount = params.offer_parameters.collateral_amount;
 
-    let borrower_nft_expected = params.borrower_nft_asset_id;
-    let lender_nft_expected = params.lender_nft_asset_id;
+    let borrower_nft_expected = params.borrower_nft_asset_id.to25()?;
+    let lender_nft_expected = params.lender_nft_asset_id.to25()?;
 
     (|| -> Result<(), &str> {
         // Inputs
@@ -203,7 +207,7 @@ pub(crate) fn parse_and_verify_lending_offer(
         // Output 3: lender NFT ScriptAuth
         // Could be claimed by the lender after offer acceptence
         let (out3_asset, out3_value, out3_script) = parse_explicit(out3)?;
-        if out3_script != script_auth.get_script_pubkey()
+        if out3_script != script_auth_script
             || out3_asset != lender_nft_expected
             || out3_asset != lender_nft
             || out3_value != 1
@@ -219,8 +223,11 @@ pub(crate) fn parse_and_verify_lending_offer(
         }
 
         // Recheck metadata
+        let out4_script27 = out4_script
+            .to27()
+            .map_err(|_| "failed to convert OP_RETURN script to elements 0.27")?;
         let actual_metadata =
-            op_return_payload(&out4_script).ok_or("missing OP_RETURN metadata")?;
+            op_return_payload(&out4_script27).ok_or("missing OP_RETURN metadata")?;
         if actual_metadata != expected_metadata.as_slice() {
             Err("OP_RETURN metadata mismatch")?
         }
@@ -242,7 +249,7 @@ pub(crate) fn parse_and_verify_lending_offer(
             let script = out.script_pubkey.clone();
             if script == factory_script
                 || script == offer_script
-                || script == script_auth.get_script_pubkey()
+                || script == script_auth_script
                 || script.is_op_return()
             {
                 Err("unexpected change output script")?;

@@ -16,6 +16,7 @@ use lwk_wollet::{elements, EC};
 
 use lwk_simplicity::scripts::{simplicity_leaf_version, tap_data_hash};
 use lwk_simplicity::simplicityhl;
+use lwk_simplicity::utils::{leaf_version_to25, sha256_to25};
 
 /// Taproot builder for Simplicity-related functionality.
 ///
@@ -40,7 +41,7 @@ impl StateTaprootBuilder {
 
     /// Add a Simplicity leaf at `depth`.
     pub fn add_simplicity_leaf(&self, depth: u8, cmr: &Cmr) -> Result<Arc<Self>, LwkError> {
-        let (script, version) = script_version(cmr.inner());
+        let (script, version) = script_version(cmr.inner())?;
         let inner = self
             .inner
             .clone()
@@ -50,7 +51,7 @@ impl StateTaprootBuilder {
 
     /// Add a TapData hidden leaf at `depth`.
     pub fn add_data_leaf(&self, depth: u8, data: &[u8]) -> Result<Arc<Self>, LwkError> {
-        let hash = tap_data_hash(data);
+        let hash = sha256_to25(&tap_data_hash(data));
         let inner = self.inner.clone().add_hidden(usize::from(depth), hash)?;
         Ok(Arc::new(Self { inner }))
     }
@@ -108,9 +109,10 @@ impl StateTaprootSpendInfo {
 
     /// Get the control block for a script identified by CMR.
     pub fn control_block(&self, cmr: &Cmr) -> Result<Arc<ControlBlock>, LwkError> {
+        let (script, version) = script_version(cmr.inner())?;
         let control_block = self
             .inner
-            .control_block(&script_version(cmr.inner()))
+            .control_block(&(script, version))
             .ok_or_else(|| LwkError::Generic {
                 msg: "CMR is not part of this taproot spend info".into(),
             })?;
@@ -123,9 +125,11 @@ impl StateTaprootSpendInfo {
     }
 }
 
-fn script_version(cmr: simplicityhl::simplicity::Cmr) -> (elements::Script, taproot::LeafVersion) {
+fn script_version(
+    cmr: simplicityhl::simplicity::Cmr,
+) -> Result<(elements::Script, taproot::LeafVersion), LwkError> {
     let script = elements::Script::from(cmr.as_ref().to_vec());
-    (script, simplicity_leaf_version())
+    Ok((script, leaf_version_to25(simplicity_leaf_version())?))
 }
 
 #[cfg(test)]

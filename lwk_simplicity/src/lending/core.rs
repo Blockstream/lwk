@@ -11,6 +11,7 @@ use lwk_wollet::{
 };
 
 use rand::thread_rng;
+use std::collections::HashMap;
 
 use simplex::transaction::{
     partial_input::IssuanceInput, FinalTransaction, PartialInput, PartialOutput, RequiredSignature,
@@ -28,6 +29,8 @@ use lending_contracts::utils::get_random_seed;
 use crate::lending::network::to_simplicity_network;
 use crate::lending::{client::AnyClient, indexer::response::FactoryDetailsResponse};
 use crate::lending::{error::LendingError, verification::parse_and_verify_lending_offer};
+
+use crate::utils::{txout_secrets_to25, txout_secrets_to27, txout_to27, To25, To27};
 
 pub struct LendingSession {
     network: Network,
@@ -82,7 +85,7 @@ impl LendingSession {
 
         let (user_script, _) = self.get_spk_bk(false)?;
         ft.add_output(PartialOutput::new(
-            user_script,
+            user_script.to27()?,
             FACTORY_AUTH_AMOUNT,
             issuance_details.asset_id,
         ));
@@ -98,7 +101,7 @@ impl LendingSession {
         let pset = self.blind_and_finalize(&mut ft)?;
 
         let factory_address = lwk_wollet::elements::Address::from_script(
-            &issuance_factory.get_script_pubkey(),
+            &issuance_factory.get_script_pubkey().to25()?,
             None,
             self.network.address_params(),
         )
@@ -107,7 +110,7 @@ impl LendingSession {
         Ok(BorrowerAccountCreationResult {
             pset,
             factory_address,
-            issued_asset_id: issuance_details.asset_id,
+            issued_asset_id: issuance_details.asset_id.to25()?,
         })
     }
 
@@ -154,8 +157,11 @@ impl LendingSession {
         let collateral_utxo =
             self.get_utxo(details.collateral_asset_id, details.collateral_amount, &[])?;
 
-        let fee_funding_utxo =
-            self.get_utxo(policy_asset, FEE_ESTIMATE, &[collateral_utxo.outpoint])?;
+        let fee_funding_utxo = self.get_utxo(
+            policy_asset,
+            FEE_ESTIMATE,
+            &[collateral_utxo.outpoint.to25()?],
+        )?;
 
         // Use shared entropy for both NFTs
         let nfts_entropy = get_random_seed();
@@ -166,8 +172,8 @@ impl LendingSession {
         // Input 0: auth UTXO
         ft.add_input(
             PartialInput::new(UTXO {
-                outpoint: factory.auth_utxo,
-                txout: auth_txout,
+                outpoint: factory.auth_utxo.to27()?,
+                txout: txout_to27(&auth_txout)?,
                 secrets: None,
             }),
             RequiredSignature::NativeEcdsa,
@@ -175,9 +181,9 @@ impl LendingSession {
 
         // Output 0: auth UTXO
         ft.add_output(PartialOutput::new(
-            auth_script.clone(),
+            auth_script.to27()?,
             NFT_AMOUNT,
-            factory.factory_asset_id,
+            factory.factory_asset_id.to27()?,
         ));
 
         // - Input 1: program UTXO with borrower NFT issuance
@@ -186,8 +192,8 @@ impl LendingSession {
         let borrower_nft_details = issuance_factory.attach_assets_issuance(
             &mut ft,
             UTXO {
-                outpoint: factory.program_utxo,
-                txout: program_txout,
+                outpoint: factory.program_utxo.to27()?,
+                txout: txout_to27(&program_txout)?,
                 secrets: None,
             },
             program_issuance,
@@ -196,7 +202,7 @@ impl LendingSession {
         // Output 2: borrower NFT to user (from the factory issuance)
         let (user_script, _) = self.get_spk_bk(false)?;
         ft.add_output(PartialOutput::new(
-            user_script.clone(),
+            user_script.to27()?,
             NFT_AMOUNT,
             borrower_nft_details.asset_id,
         ));
@@ -217,11 +223,11 @@ impl LendingSession {
 
         // Build the LendingOffer
         let lending_offer_params = LendingOfferParameters {
-            collateral_asset_id: details.collateral_asset_id,
-            principal_asset_id: details.principal_asset_id,
+            collateral_asset_id: details.collateral_asset_id.to27()?,
+            principal_asset_id: details.principal_asset_id.to27()?,
             borrower_nft_asset_id: borrower_nft_details.asset_id,
             lender_nft_asset_id: lender_nft_details.asset_id,
-            protocol_fee_keeper_asset_id: details.protocol_fee_keeper_asset_id,
+            protocol_fee_keeper_asset_id: details.protocol_fee_keeper_asset_id.to27()?,
             offer_parameters: OfferParameters {
                 collateral_amount: details.collateral_amount,
                 principal_amount: details.principal_amount,
@@ -242,9 +248,9 @@ impl LendingSession {
             let (change_script, change_pk) = self.get_spk_bk(true)?;
             ft.add_output(
                 PartialOutput::new(
-                    change_script.clone(),
+                    change_script.to27()?,
                     collateral_utxo.amount() - details.collateral_amount,
-                    details.collateral_asset_id,
+                    details.collateral_asset_id.to27()?,
                 )
                 .with_blinding_key(change_pk),
             );
@@ -309,24 +315,27 @@ impl LendingSession {
             .clone();
 
         let active_covenant_utxo = UTXO {
-            outpoint: details.active_covenant_outpoint,
-            txout: covenant_txout,
+            outpoint: details.active_covenant_outpoint.to27()?,
+            txout: txout_to27(&covenant_txout)?,
             secrets: None,
         };
 
         let borrower_nft_utxo =
-            self.get_explicit_utxo(offer_params.borrower_nft_asset_id, 1, &[])?;
+            self.get_explicit_utxo(offer_params.borrower_nft_asset_id.to25()?, 1, &[])?;
 
         let principal_utxo = self.get_utxo(
-            offer_params.principal_asset_id,
+            offer_params.principal_asset_id.to25()?,
             total_debt,
-            &[borrower_nft_utxo.outpoint],
+            &[borrower_nft_utxo.outpoint.to25()?],
         )?;
 
         let fee_funding_utxo = self.get_utxo(
             policy_asset,
             FEE_ESTIMATE,
-            &[borrower_nft_utxo.outpoint, principal_utxo.outpoint],
+            &[
+                borrower_nft_utxo.outpoint.to25()?,
+                principal_utxo.outpoint.to25()?,
+            ],
         )?;
 
         let mut ft = FinalTransaction::new();
@@ -350,7 +359,7 @@ impl LendingSession {
 
         let (user_script, _) = self.get_spk_bk(false)?;
         ft.add_output(PartialOutput::new(
-            user_script,
+            user_script.to27()?,
             offer_params.offer_parameters.collateral_amount,
             offer_params.collateral_asset_id,
         ));
@@ -359,7 +368,7 @@ impl LendingSession {
             let (change_script, change_pk) = self.get_spk_bk(true)?;
             ft.add_output(
                 PartialOutput::new(
-                    change_script.clone(),
+                    change_script.to27()?,
                     principal_utxo.amount() - total_debt,
                     offer_params.principal_asset_id,
                 )
@@ -421,8 +430,9 @@ impl LendingSession {
             outpoint: OutPoint {
                 txid: details.creation_txid,
                 vout: PENDING_COVENANT_VOUT as u32,
-            },
-            txout: covenant_txout,
+            }
+            .to27()?,
+            txout: txout_to27(&covenant_txout)?,
             secrets: None,
         };
 
@@ -438,16 +448,20 @@ impl LendingSession {
             outpoint: OutPoint {
                 txid: details.creation_txid,
                 vout: LENDER_NFT_VOUT as u32,
-            },
-            txout: lender_nft_txout,
+            }
+            .to27()?,
+            txout: txout_to27(&lender_nft_txout)?,
             secrets: None,
         };
 
         let borrower_nft_utxo =
-            self.get_explicit_utxo(offer_params.borrower_nft_asset_id, 1, &[])?;
+            self.get_explicit_utxo(offer_params.borrower_nft_asset_id.to25()?, 1, &[])?;
 
-        let fee_funding_utxo =
-            self.get_utxo(policy_asset, FEE_ESTIMATE, &[borrower_nft_utxo.outpoint])?;
+        let fee_funding_utxo = self.get_utxo(
+            policy_asset,
+            FEE_ESTIMATE,
+            &[borrower_nft_utxo.outpoint.to25()?],
+        )?;
 
         let mut ft = FinalTransaction::new();
 
@@ -466,7 +480,7 @@ impl LendingSession {
         let (user_script, user_pk) = self.get_spk_bk(false)?;
         ft.add_output(
             PartialOutput::new(
-                user_script,
+                user_script.to27()?,
                 offer_params.offer_parameters.collateral_amount,
                 offer_params.collateral_asset_id,
             )
@@ -524,8 +538,9 @@ impl LendingSession {
             outpoint: OutPoint {
                 txid: details.pending_offer_creation_txid,
                 vout: COVENANT_VOUT as u32,
-            },
-            txout: covenant_txout,
+            }
+            .to27()?,
+            txout: txout_to27(&covenant_txout)?,
             secrets: None,
         };
 
@@ -542,22 +557,26 @@ impl LendingSession {
             outpoint: OutPoint {
                 txid: details.pending_offer_creation_txid,
                 vout: LENDER_NFT_VOUT as u32,
-            },
-            txout: lender_nft_txout,
+            }
+            .to27()?,
+            txout: txout_to27(&lender_nft_txout)?,
             secrets: None,
         };
 
         // Find collateral UTXO via wollet
         let principal_utxo = self.get_utxo(
-            offer_params.principal_asset_id,
+            offer_params.principal_asset_id.to25()?,
             offer_params.offer_parameters.principal_amount,
             &[],
         )?;
 
         // Select a UTXO for a fee
         // TODO: don't select if collateral_asset_id == policy_asset
-        let fee_funding_utxo =
-            self.get_utxo(policy_asset, FEE_ESTIMATE, &[principal_utxo.outpoint])?;
+        let fee_funding_utxo = self.get_utxo(
+            policy_asset,
+            FEE_ESTIMATE,
+            &[principal_utxo.outpoint.to25()?],
+        )?;
 
         // Build transaction
         let mut ft = FinalTransaction::new();
@@ -583,7 +602,7 @@ impl LendingSession {
         // Output 2: Return lender NFT to lender
         let (user_script, _) = self.get_spk_bk(false)?;
         ft.add_output(PartialOutput::new(
-            user_script.clone(),
+            user_script.to27()?,
             1,
             offer_params.lender_nft_asset_id,
         ));
@@ -593,7 +612,7 @@ impl LendingSession {
             let (change_script, change_pk) = self.get_spk_bk(true)?;
             ft.add_output(
                 PartialOutput::new(
-                    change_script.clone(),
+                    change_script.to27()?,
                     principal_utxo.amount() - offer_params.offer_parameters.principal_amount,
                     offer_params.principal_asset_id,
                 )
@@ -661,8 +680,9 @@ impl LendingSession {
             outpoint: OutPoint {
                 txid: details.acceptance_txid,
                 vout: PRINCIPAL_ASSET_AUTH_VOUT,
-            },
-            txout: principal_auth_txout,
+            }
+            .to27()?,
+            txout: txout_to27(&principal_auth_txout)?,
             secrets: None,
         };
 
@@ -674,10 +694,13 @@ impl LendingSession {
         });
 
         let borrower_nft_utxo =
-            self.get_explicit_utxo(offer_params.borrower_nft_asset_id, 1, &[])?;
+            self.get_explicit_utxo(offer_params.borrower_nft_asset_id.to25()?, 1, &[])?;
 
-        let fee_funding_utxo =
-            self.get_utxo(policy_asset, FEE_ESTIMATE, &[borrower_nft_utxo.outpoint])?;
+        let fee_funding_utxo = self.get_utxo(
+            policy_asset,
+            FEE_ESTIMATE,
+            &[borrower_nft_utxo.outpoint.to25()?],
+        )?;
 
         let mut ft = FinalTransaction::new();
 
@@ -699,14 +722,14 @@ impl LendingSession {
 
         let (user_script, user_pk) = self.get_spk_bk(false)?;
         ft.add_output(PartialOutput::new(
-            user_script.clone(),
+            user_script.to27()?,
             1,
             offer_params.borrower_nft_asset_id,
         ));
 
         ft.add_output(
             PartialOutput::new(
-                user_script,
+                user_script.to27()?,
                 offer_params.offer_parameters.principal_amount,
                 offer_params.principal_asset_id,
             )
@@ -774,20 +797,25 @@ impl LendingSession {
             outpoint: OutPoint {
                 txid: details.repayment_txid,
                 vout: LENDER_VAULT_VOUT,
-            },
-            txout: vault_txout,
-            secrets: Some(TxOutSecrets {
-                asset: offer_params.principal_asset_id,
+            }
+            .to27()?,
+            txout: txout_to27(&vault_txout)?,
+            secrets: Some(txout_secrets_to27(&TxOutSecrets {
+                asset: offer_params.principal_asset_id.to25()?,
                 asset_bf: AssetBlindingFactor::zero(),
                 value: vault_amount,
                 value_bf: ValueBlindingFactor::zero(),
-            }),
+            })?),
         };
 
-        let lender_nft_utxo = self.get_explicit_utxo(offer_params.lender_nft_asset_id, 1, &[])?;
+        let lender_nft_utxo =
+            self.get_explicit_utxo(offer_params.lender_nft_asset_id.to25()?, 1, &[])?;
 
-        let fee_funding_utxo =
-            self.get_utxo(policy_asset, FEE_ESTIMATE, &[lender_nft_utxo.outpoint])?;
+        let fee_funding_utxo = self.get_utxo(
+            policy_asset,
+            FEE_ESTIMATE,
+            &[lender_nft_utxo.outpoint.to25()?],
+        )?;
 
         let mut ft = FinalTransaction::new();
 
@@ -804,7 +832,7 @@ impl LendingSession {
         );
 
         ft.add_output(PartialOutput::new(
-            Script::new_op_return(b"burn"),
+            Script::new_op_return(b"burn").to27()?,
             1,
             offer_params.lender_nft_asset_id,
         ));
@@ -816,8 +844,12 @@ impl LendingSession {
 
         let (user_script, user_pk) = self.get_spk_bk(false)?;
         ft.add_output(
-            PartialOutput::new(user_script, vault_amount, offer_params.principal_asset_id)
-                .with_blinding_key(user_pk),
+            PartialOutput::new(
+                user_script.to27()?,
+                vault_amount,
+                offer_params.principal_asset_id,
+            )
+            .with_blinding_key(user_pk),
         );
 
         let _ = self.add_fee(&mut ft)?;
@@ -887,15 +919,19 @@ impl LendingSession {
             .clone();
 
         let active_offer_utxo = UTXO {
-            outpoint: details.active_covenant_outpoint,
-            txout: covenant_txout,
+            outpoint: details.active_covenant_outpoint.to27()?,
+            txout: txout_to27(&covenant_txout)?,
             secrets: None,
         };
 
-        let lender_nft_utxo = self.get_explicit_utxo(offer_params.lender_nft_asset_id, 1, &[])?;
+        let lender_nft_utxo =
+            self.get_explicit_utxo(offer_params.lender_nft_asset_id.to25()?, 1, &[])?;
 
-        let fee_funding_utxo =
-            self.get_utxo(policy_asset, FEE_ESTIMATE, &[lender_nft_utxo.outpoint])?;
+        let fee_funding_utxo = self.get_utxo(
+            policy_asset,
+            FEE_ESTIMATE,
+            &[lender_nft_utxo.outpoint.to25()?],
+        )?;
 
         let mut ft = FinalTransaction::new();
 
@@ -914,7 +950,7 @@ impl LendingSession {
         let (user_script, user_pk) = self.get_spk_bk(false)?;
         ft.add_output(
             PartialOutput::new(
-                user_script,
+                user_script.to27()?,
                 offer_params.offer_parameters.collateral_amount,
                 offer_params.collateral_asset_id,
             )
@@ -956,7 +992,12 @@ impl LendingSession {
     ) -> Result<PartiallySignedTransaction, LendingError> {
         let mut rng = thread_rng();
 
-        let (mut pset, inp_txout_sec) = ft.extract_pst();
+        let (pset27, inp_txout_sec27) = ft.extract_pst();
+        let mut pset: PartiallySignedTransaction = pset27.to25()?;
+        let inp_txout_sec: HashMap<usize, TxOutSecrets> = inp_txout_sec27
+            .into_iter()
+            .map(|(index, secrets)| Ok((index, txout_secrets_to25(&secrets)?)))
+            .collect::<Result<_, LendingError>>()?;
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
 
         self.wollet.add_details(&mut pset)?;
@@ -976,7 +1017,7 @@ impl LendingSession {
         pset: &mut PartiallySignedTransaction,
     ) -> Result<(), LendingError> {
         let simplex_network = to_simplicity_network(self.network);
-
+        let mut pset27 = pset.to27()?;
         for (index, final_input) in ft.inputs().iter().enumerate() {
             let Some(program_input) = &final_input.program_input else {
                 continue;
@@ -986,11 +1027,13 @@ impl LendingSession {
 
             let pruned_witness = program_input
                 .program
-                .finalize(pset, &witness_values, index, &simplex_network)
+                .finalize(&pset27, &witness_values, index, &simplex_network)
                 .map_err(|e| LendingError::Generic(format!("program finalization error: {e}")))?;
 
-            pset.inputs_mut()[index].final_script_witness = Some(pruned_witness);
+            pset27.inputs_mut()[index].final_script_witness = Some(pruned_witness.into());
         }
+
+        *pset = pset27.to25()?;
 
         Ok(())
     }
@@ -1039,9 +1082,9 @@ impl LendingSession {
             )))?;
 
         Ok(UTXO {
-            outpoint: utxo.outpoint,
-            txout: txout.clone(),
-            secrets: Some(utxo.unblinded),
+            outpoint: utxo.outpoint.to27()?,
+            txout: txout_to27(txout)?,
+            secrets: Some(txout_secrets_to27(&utxo.unblinded)?),
         })
     }
 
@@ -1070,9 +1113,9 @@ impl LendingSession {
                 "No suitable explicit UTXO found for {asset_id} with amount {sats}"
             )))?;
         Ok(UTXO {
-            outpoint: utxo.outpoint,
-            txout: utxo.txout,
-            secrets: Some(utxo.unblinded),
+            outpoint: utxo.outpoint.to27()?,
+            txout: txout_to27(&utxo.txout)?,
+            secrets: Some(txout_secrets_to27(&utxo.unblinded)?),
         })
     }
 
@@ -1085,7 +1128,12 @@ impl LendingSession {
         let simplex_network = to_simplicity_network(self.network);
         let policy_asset = *self.network.policy_asset();
 
-        let (mut pset, inp_txout_sec) = ft.extract_pst();
+        let (pset27, inp_txout_sec27) = ft.extract_pst();
+        let mut pset: PartiallySignedTransaction = pset27.to25()?;
+        let inp_txout_sec: HashMap<usize, TxOutSecrets> = inp_txout_sec27
+            .into_iter()
+            .map(|(index, secrets)| Ok((index, txout_secrets_to25(&secrets)?)))
+            .collect::<Result<_, LendingError>>()?;
         let mut rng = thread_rng();
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)
             .or_else(|e| match e {
@@ -1112,12 +1160,16 @@ impl LendingSession {
 
         let change = available_delta - fee;
 
-        ft.add_output(PartialOutput::new(Script::default(), fee, policy_asset));
+        ft.add_output(PartialOutput::new(
+            Script::default().to27()?,
+            fee,
+            policy_asset.to27()?,
+        ));
         if change != 0 {
             let (change_script, change_pk) = self.get_spk_bk(true)?;
 
             ft.add_output(
-                PartialOutput::new(change_script, change, policy_asset)
+                PartialOutput::new(change_script.to27()?, change, policy_asset.to27()?)
                     .with_blinding_key(change_pk),
             );
         }

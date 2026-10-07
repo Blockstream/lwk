@@ -48,6 +48,6 @@ async fn anyswap_ping() {
     // Ping anyswap
     let client = HttpClient::new(&env.anyswap_url(), None);
     let info = client.get_info().await.unwrap();
-    assert_eq!(info.policy.protocol_version, "1.2.0-rc.2");
+    assert_eq!(info.policy.protocol_version, "1.2.0");
     assert_eq!(info.policy.network, SwapNetwork::Regtest);
 }

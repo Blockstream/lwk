@@ -507,14 +507,17 @@ impl TestEnvBuilder {
 
             let envs = vec![
                 (
-                    "ELEMENTS_RPC_USER".to_string(),
+                    "ANYSWAP_ELEMENTS__RPC_USER".to_string(),
                     elements_cookie.user.clone(),
                 ),
                 (
-                    "ELEMENTS_RPC_PASSWORD".to_string(),
+                    "ANYSWAP_ELEMENTS__RPC_PASSWORD".to_string(),
                     elements_cookie.password.clone(),
                 ),
-                ("ELEMENTS_WALLET_NAME".to_string(), "anyswap".to_string()),
+                (
+                    "ANYSWAP_ELEMENTS__WALLET_NAME".to_string(),
+                    "anyswap".to_string(),
+                ),
             ];
 
             let config_dir = TempDir::new().unwrap();

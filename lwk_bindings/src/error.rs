@@ -288,8 +288,19 @@ impl From<lwk_simplicity::error::ProgramError> for LwkError {
 }
 
 #[cfg(feature = "simplicity")]
-impl From<lwk_simplicity::simplicityhl::error::RichError> for LwkError {
-    fn from(value: lwk_simplicity::simplicityhl::error::RichError) -> Self {
+impl From<lwk_simplicity::simplicityhl::error::Diagnostic> for LwkError {
+    fn from(value: lwk_simplicity::simplicityhl::error::Diagnostic) -> Self {
+        LwkError::Generic {
+            msg: format!("{value}"),
+        }
+    }
+}
+
+#[cfg(feature = "simplicity")]
+impl From<lwk_simplicity::simplicityhl::simplicity::hex::DecodeFixedLengthBytesError> for LwkError {
+    fn from(
+        value: lwk_simplicity::simplicityhl::simplicity::hex::DecodeFixedLengthBytesError,
+    ) -> Self {
         LwkError::Generic {
             msg: format!("{value}"),
         }

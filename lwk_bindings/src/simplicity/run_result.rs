@@ -7,8 +7,7 @@ use lwk_simplicity::simplicityhl;
 /// The result of running a Simplicity program.
 #[derive(uniffi::Object)]
 pub struct SimplicityRunResult {
-    pub(crate) pruned:
-        Arc<simplicityhl::simplicity::RedeemNode<simplicityhl::simplicity::jet::Elements>>,
+    pub(crate) pruned: Arc<simplicityhl::simplicity::RedeemNode>,
     pub(crate) value: simplicityhl::simplicity::Value,
 }
 

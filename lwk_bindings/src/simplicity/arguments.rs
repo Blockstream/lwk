@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use lwk_simplicity::simplicityhl::parse::ParseFromStr;
-use lwk_simplicity::simplicityhl::str::WitnessName;
-use lwk_simplicity::simplicityhl::{Arguments, Value, WitnessValues};
+use lwk_simplicity::simplicityhl::{
+    parse::ParseFromStr, str::Identifier, Arguments, TemplateProgramWitness, Value,
+    WitnessNameToValueMap, WitnessValues,
+};
 
 macro_rules! impl_value_builder {
     ($type:ty) => {
@@ -39,7 +40,9 @@ impl_value_builder!(SimplicityArguments);
 
 impl SimplicityArguments {
     pub(crate) fn to_inner(&self) -> Result<Arguments, crate::LwkError> {
-        Ok(Arguments::from(try_into_witness_name_map(&self.inner)?))
+        Ok(Arguments::from_map(try_into_arguments_name_map(
+            &self.inner,
+        )?))
     }
 }
 
@@ -53,14 +56,34 @@ impl_value_builder!(SimplicityWitnessValues);
 
 impl SimplicityWitnessValues {
     pub(crate) fn to_inner(&self) -> Result<WitnessValues, crate::LwkError> {
-        Ok(WitnessValues::from(try_into_witness_name_map(&self.inner)?))
+        Ok(WitnessValues::from_map(try_into_witness_name_map(
+            &self.inner,
+        )?))
     }
 }
 
 fn try_into_witness_name_map(
     map: &HashMap<String, Value>,
-) -> Result<HashMap<WitnessName, Value>, crate::LwkError> {
+) -> Result<HashMap<TemplateProgramWitness, Value>, crate::LwkError> {
     map.iter()
-        .map(|(name, val)| Ok((WitnessName::parse_from_str(name)?, val.clone())))
+        .map(|(name, val)| {
+            Ok((
+                TemplateProgramWitness::witness_from_ident(&Identifier::parse_from_str(name)?),
+                val.clone(),
+            ))
+        })
+        .collect::<Result<_, crate::LwkError>>()
+}
+
+fn try_into_arguments_name_map(
+    map: &HashMap<String, Value>,
+) -> Result<HashMap<TemplateProgramWitness, Value>, crate::LwkError> {
+    map.iter()
+        .map(|(name, val)| {
+            Ok((
+                TemplateProgramWitness::parameter_from_ident(&Identifier::parse_from_str(name)?),
+                val.clone(),
+            ))
+        })
         .collect::<Result<_, crate::LwkError>>()
 }

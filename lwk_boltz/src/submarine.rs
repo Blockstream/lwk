@@ -625,6 +625,28 @@ impl PreparePayResponse {
                 log::warn!(
                     "[swap:{swap_id}] transaction.lockupFailed Boltz failed to lockup funding tx"
                 );
+                // Boltz rejects the lockup as soon as it sees it, which can be before our chain
+                // index does: wait for it, otherwise the refund finds no UTXO to spend.
+                if self.data.lockup_txid.is_none() {
+                    let lockup_txid = match update.transaction.as_ref() {
+                        Some(tx) => Some(tx.id.clone()),
+                        None => fetch_lockup_txid(self.api.as_ref(), self.swap_id()).await,
+                    };
+                    if let Some(txid) = lockup_txid {
+                        log::debug!(
+                            "[swap:{swap_id}] Waiting for {} index to see rejected lockup tx {txid}",
+                            self.data.from_chain
+                        );
+                        wait_for_chain_tx(
+                            &self.chain_client,
+                            self.data.from_chain,
+                            &txid,
+                            self.timeout_advance,
+                        )
+                        .await?;
+                        self.data.lockup_txid = Some(txid);
+                    }
+                }
                 let tx = self.make_refund_tx_with_retry(true).await?;
 
                 let txid = broadcast_tx_with_retry(&self.chain_client, &tx, &swap_id).await?;

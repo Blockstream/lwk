@@ -10,8 +10,8 @@ use lwk_wollet::secp256k1::SecretKey;
 use lwk_wollet::*;
 
 use lwk_simplicity::simplicityhl::{
-    num::U256, str::WitnessName, tracker::TrackerLogLevel, value::ValueConstructible, Arguments,
-    Value, WitnessValues,
+    num::U256, tracker::TrackerLogLevel, value::ValueConstructible, Arguments,
+    TemplateProgramWitness, Value, WitnessValues,
 };
 use lwk_simplicity::{
     scripts::create_p2tr_address,
@@ -26,6 +26,7 @@ use elements::hex::ToHex;
 
 mod common;
 use common::*;
+use simplicityhl::WitnessNameToValueMap;
 
 #[test]
 fn test_simplicity_p2pk() {
@@ -46,10 +47,10 @@ fn test_simplicity_p2pk() {
     // Compile program with PUBLIC_KEY argument
     let mut args = HashMap::new();
     args.insert(
-        WitnessName::from_str_unchecked("PUBLIC_KEY"),
+        TemplateProgramWitness::parameter_from_str("PUBLIC_KEY"),
         Value::u256(U256::from_byte_array(xonly.serialize())),
     );
-    let arguments = Arguments::from(args);
+    let arguments = Arguments::from_map(args);
     // In future we will remove support for debug symbols.
     let program = load_program_with_debug_symbols(source, arguments, true).unwrap();
 
@@ -93,7 +94,7 @@ fn test_simplicity_p2pk() {
         .unwrap()
         .finish()
         .unwrap();
-    let txouts = vec![pset.inputs()[0].witness_utxo.clone().unwrap()];
+    let txouts = [pset.inputs()[0].witness_utxo.clone().unwrap()];
     let tx = pset.extract_tx().unwrap();
     let fee = tx.output.last().unwrap().value.explicit().unwrap();
 
@@ -116,10 +117,10 @@ fn test_simplicity_p2pk() {
     // Add signature to the transaction
     let mut witness_map = HashMap::new();
     witness_map.insert(
-        WitnessName::from_str_unchecked("SIGNATURE"),
+        TemplateProgramWitness::witness_from_str("SIGNATURE"),
         Value::byte_array(signature.serialize()),
     );
-    let witness_values = WitnessValues::from(witness_map);
+    let witness_values = WitnessValues::from_map(witness_map);
 
     let log_level = TrackerLogLevel::None;
     let tx = finalize_transaction(
@@ -163,10 +164,10 @@ fn test_simplicity_mixed_p2pk() {
     let (xonly, _) = keypair.x_only_public_key();
     let mut args = HashMap::new();
     args.insert(
-        WitnessName::from_str_unchecked("PUBLIC_KEY"),
+        TemplateProgramWitness::parameter_from_str("PUBLIC_KEY"),
         Value::u256(U256::from_byte_array(xonly.serialize())),
     );
-    let arguments = Arguments::from(args);
+    let arguments = Arguments::from_map(args);
     let source = include_str!("../data/p2pk.simf");
     // In future we will remove support for debug symbols.
     let program = load_program_with_debug_symbols(source, arguments, true).unwrap();
@@ -249,10 +250,10 @@ fn test_simplicity_mixed_p2pk() {
 
     let mut witness_map = HashMap::new();
     witness_map.insert(
-        WitnessName::from_str_unchecked("SIGNATURE"),
+        TemplateProgramWitness::witness_from_str("SIGNATURE"),
         Value::byte_array(signature.serialize()),
     );
-    let witness_values = WitnessValues::from(witness_map);
+    let witness_values = WitnessValues::from_map(witness_map);
 
     let log_level = TrackerLogLevel::None;
     let tx = finalize_transaction(

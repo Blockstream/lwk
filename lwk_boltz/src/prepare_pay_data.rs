@@ -173,7 +173,7 @@ pub(crate) fn submarine_chain_from_str(
 #[cfg(test)]
 mod tests {
     use boltz_client::network::{Chain, LiquidChain};
-    use boltz_client::ToHex;
+    use lwk_wollet::elements::hex::ToHex;
 
     use super::*;
 

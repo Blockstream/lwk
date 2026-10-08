@@ -5,10 +5,12 @@ use async_trait::async_trait;
 use boltz_client::elements;
 use boltz_client::error::Error;
 use boltz_client::network::LiquidChain;
-use boltz_client::ToHex;
 use lwk_common::Network;
 use lwk_wollet::blocking::BlockchainBackend;
+use lwk_wollet::elements as lwk_elements;
 use tokio::task;
+
+use super::{boltz_block_hash, boltz_tx, boltz_utxo, lwk_tx, lwk_txid};
 
 #[derive(Clone)]
 pub struct ElectrumClient {
@@ -45,21 +47,22 @@ impl ElectrumClient {
 impl boltz_client::network::LiquidClient for ElectrumClient {
     async fn get_tx(&self, txid: elements::Txid) -> Result<elements::Transaction, Error> {
         let inner = Arc::clone(&self.inner);
-        let tx = task::spawn_blocking(move || inner.get_transactions(&[txid]))
+        let lwk_id = lwk_txid(txid)?;
+        let tx = task::spawn_blocking(move || inner.get_transactions(&[lwk_id]))
             .await
             .map_err(|e| Error::Protocol(e.to_string()))?
             .map_err(|e| Error::Protocol(e.to_string()))?
             .into_iter()
             .next()
             .ok_or_else(|| Error::Protocol(format!("transaction {txid} not found")))?;
-        Ok(tx)
+        boltz_tx(&tx)
     }
 
     async fn get_address_utxo(
         &self,
         address: &elements::Address,
     ) -> Result<Option<(elements::OutPoint, elements::TxOut)>, Error> {
-        let spk = address.script_pubkey();
+        let spk = lwk_elements::Script::from(address.script_pubkey().into_bytes());
         let inner = Arc::clone(&self.inner);
         let spk_clone = spk.clone();
         let history = task::spawn_blocking(move || inner.get_scripts_history(&[&spk_clone]))
@@ -90,14 +93,14 @@ impl boltz_client::network::LiquidClient for ElectrumClient {
         for tx in txs.iter() {
             for (vout, output) in tx.output.iter().enumerate() {
                 if output.script_pubkey == spk {
-                    let outpoint = elements::OutPoint {
+                    let outpoint = lwk_elements::OutPoint {
                         txid: tx.txid(),
                         vout: vout as u32,
                     };
 
                     // Check if this output is spent using the HashSet
                     if !spent_outpoints.contains(&outpoint) {
-                        return Ok(Some((outpoint, output.clone())));
+                        return Ok(Some(boltz_utxo(outpoint, output)?));
                     }
                 }
             }
@@ -117,13 +120,14 @@ impl boltz_client::network::LiquidClient for ElectrumClient {
         .map_err(|e| Error::Protocol(e.to_string()))??;
         headers
             .first()
-            .map(|header| header.block_hash())
+            .map(|header| boltz_block_hash(header.block_hash()))
+            .transpose()?
             .ok_or_else(|| Error::Protocol("missing genesis block header".to_owned()))
     }
 
     async fn broadcast_tx(&self, signed_tx: &elements::Transaction) -> Result<String, Error> {
         let inner = Arc::clone(&self.inner);
-        let tx = signed_tx.clone();
+        let tx = lwk_tx(signed_tx)?;
         let txid = task::spawn_blocking(move || {
             inner
                 .broadcast(&tx)
@@ -131,7 +135,7 @@ impl boltz_client::network::LiquidClient for ElectrumClient {
         })
         .await
         .map_err(|e| Error::Protocol(e.to_string()))??;
-        Ok(txid.to_hex())
+        Ok(txid.to_string())
     }
 
     fn network(&self) -> LiquidChain {
@@ -141,11 +145,9 @@ impl boltz_client::network::LiquidClient for ElectrumClient {
 
 #[cfg(test)]
 mod tests {
-    use boltz_client::{
-        network::{LiquidChain, LiquidClient},
-        ToHex,
-    };
-    use lwk_wollet::{elements, Network};
+    use boltz_client::elements;
+    use boltz_client::network::{LiquidChain, LiquidClient};
+    use lwk_wollet::Network;
 
     use crate::clients::ElectrumClient;
 
@@ -162,7 +164,7 @@ mod tests {
         assert_eq!(client.network(), LiquidChain::Liquid);
 
         assert_eq!(
-            client.get_genesis_hash().await.unwrap().to_hex(),
+            client.get_genesis_hash().await.unwrap().to_string(),
             "1466275836220db2944ca059a3a10ef6fd2ea684b0688d2c379296888a206003"
         );
 
@@ -172,12 +174,12 @@ mod tests {
         // this test can start failing if the address utxo become spent, find another address to test with
         let r = client.get_address_utxo(&address).await.unwrap().unwrap();
         assert_eq!(
-            r.0.txid.to_hex(),
+            r.0.txid.to_string(),
             "22b1240eb51714a95e3819bb2d05b1c170aa72a974c529443bf697ae3700ff1f"
         );
         assert_eq!(r.0.vout, 0);
         assert_eq!(
-            r.1.script_pubkey.to_hex(),
+            format!("{:x}", r.1.script_pubkey),
             "00149b2adc26532ca4e7141a2959390dc13f8a2b27e5"
         );
     }
@@ -187,7 +189,7 @@ mod tests {
     async fn test_electrum_client_regtest() {
         let client = ElectrumClient::new("localhost:19002", false, false, Network::Liquid).unwrap();
         assert_eq!(
-            client.get_genesis_hash().await.unwrap().to_hex(),
+            client.get_genesis_hash().await.unwrap().to_string(),
             "00902a6b70c2ca83b5d9c815d96a0e2f4202179316970d14ea1847dae5b1ca21"
         );
     }

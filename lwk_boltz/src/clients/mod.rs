@@ -20,7 +20,56 @@ use boltz_client::{
     network::{LiquidChain, LiquidClient},
 };
 use lwk_wollet::asyncr::async_sleep;
+use lwk_wollet::elements as lwk_elements;
 use web_time::Instant;
+
+// The Boltz fork uses Elements 0.27 while the rest of LWK still uses 0.25.
+// Keep the version boundary here until the workspace upgrade in #576.
+fn lwk_txid(txid: elements::Txid) -> Result<lwk_elements::Txid, Error> {
+    txid.to_string()
+        .parse()
+        .map_err(|e| Error::Protocol(format!("invalid transaction id: {e}")))
+}
+
+fn boltz_tx(tx: &lwk_elements::Transaction) -> Result<elements::Transaction, Error> {
+    elements::encode::deserialize(&lwk_elements::encode::serialize(tx))
+        .map_err(|e| Error::Protocol(format!("invalid Elements transaction: {e}")))
+}
+
+fn lwk_tx(tx: &elements::Transaction) -> Result<lwk_elements::Transaction, Error> {
+    lwk_elements::encode::deserialize(&elements::encode::serialize(tx))
+        .map_err(|e| Error::Protocol(format!("invalid Elements transaction: {e}")))
+}
+
+fn boltz_utxo(
+    outpoint: lwk_elements::OutPoint,
+    lwk_output: &lwk_elements::TxOut,
+) -> Result<(elements::OutPoint, elements::TxOut), Error> {
+    let txid = outpoint
+        .txid
+        .to_string()
+        .parse()
+        .map_err(|e| Error::Protocol(format!("invalid transaction id: {e}")))?;
+    let mut output: elements::TxOut =
+        elements::encode::deserialize(&lwk_elements::encode::serialize(lwk_output))
+            .map_err(|e| Error::Protocol(format!("invalid Elements output: {e}")))?;
+    output.witness =
+        elements::encode::deserialize(&lwk_elements::encode::serialize(&lwk_output.witness))
+            .map_err(|e| Error::Protocol(format!("invalid Elements output witness: {e}")))?;
+    Ok((
+        elements::OutPoint {
+            txid,
+            vout: outpoint.vout,
+        },
+        output,
+    ))
+}
+
+fn boltz_block_hash(hash: lwk_elements::BlockHash) -> Result<elements::BlockHash, Error> {
+    hash.to_string()
+        .parse()
+        .map_err(|e| Error::Protocol(format!("invalid block hash: {e}")))
+}
 
 pub(crate) async fn wait_for_tx<Tx, F, Fut, Txid>(
     txid: Txid,
@@ -119,8 +168,85 @@ mod tests {
 
     use boltz_client::bitcoin;
     use boltz_client::network::{BitcoinChain, BitcoinClient, LiquidChain};
+    use lwk_wollet::elements::hex::FromHex;
 
     use super::*;
+
+    #[test]
+    fn elements_version_boundary_preserves_transaction_and_output() {
+        let output = lwk_elements::TxOut {
+            asset: lwk_elements::confidential::Asset::Explicit(
+                "0000000000000000000000000000000000000000000000000000000000000000"
+                    .parse()
+                    .unwrap(),
+            ),
+            value: lwk_elements::confidential::Value::Explicit(42),
+            nonce: lwk_elements::confidential::Nonce::Null,
+            script_pubkey: lwk_elements::Script::from(vec![0x51]),
+            witness: lwk_elements::TxOutWitness::empty(),
+        };
+        let tx = lwk_elements::Transaction {
+            version: 2,
+            lock_time: lwk_elements::LockTime::ZERO,
+            input: Vec::new(),
+            output: vec![output.clone()],
+        };
+
+        let converted = boltz_tx(&tx).unwrap();
+        assert_eq!(lwk_tx(&converted).unwrap(), tx);
+
+        let outpoint = lwk_elements::OutPoint {
+            txid: tx.txid(),
+            vout: 0,
+        };
+        let (converted_outpoint, converted_output) = boltz_utxo(outpoint, &output).unwrap();
+        assert_eq!(
+            converted_outpoint.txid.to_string(),
+            outpoint.txid.to_string()
+        );
+        assert_eq!(converted_outpoint.vout, outpoint.vout);
+        assert_eq!(
+            elements::encode::serialize(&converted_output),
+            lwk_elements::encode::serialize(&output)
+        );
+        assert_eq!(
+            converted_output.witness.rangeproof_len(),
+            output.witness.rangeproof_len()
+        );
+    }
+
+    #[test]
+    fn elements_version_boundary_preserves_confidential_witness() {
+        let hex = include_str!("../../../lwk_wollet/tests/data/usdt-issuance-tx.hex").trim();
+        let bytes = Vec::<u8>::from_hex(hex).unwrap();
+        let tx: lwk_elements::Transaction = lwk_elements::encode::deserialize(&bytes).unwrap();
+        let converted = boltz_tx(&tx).unwrap();
+        assert_eq!(lwk_tx(&converted).unwrap(), tx);
+
+        let (index, output) = tx
+            .output
+            .iter()
+            .enumerate()
+            .find(|(_, output)| !output.witness.is_empty())
+            .unwrap();
+        let outpoint = lwk_elements::OutPoint {
+            txid: tx.txid(),
+            vout: index as u32,
+        };
+        let (_, converted_output) = boltz_utxo(outpoint, output).unwrap();
+        assert_eq!(
+            elements::encode::serialize(&converted_output.witness),
+            lwk_elements::encode::serialize(&output.witness)
+        );
+        assert_eq!(
+            converted_output.witness.rangeproof_len(),
+            output.witness.rangeproof_len()
+        );
+        assert_eq!(
+            converted_output.witness.surjectionproof_len(),
+            output.witness.surjectionproof_len()
+        );
+    }
 
     struct MockLiquidClient {
         attempts: AtomicUsize,

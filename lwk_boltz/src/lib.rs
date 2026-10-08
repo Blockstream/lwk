@@ -338,7 +338,11 @@ impl BoltzSession {
     /// This is useful as a swap list but can also be used to restore non-completed swaps that have not
     /// being persisted or that have been lost.
     pub async fn swap_restore(&self) -> Result<Vec<SwapRestoreResponse>, Error> {
-        let result = self.api.post_swap_restore(&self.xpub.to_string()).await?;
+        // `xpub` is the BIP32 root; let Boltz apply its default m/44/0/0/0 path.
+        let result = self
+            .api
+            .post_swap_restore(&self.xpub.to_string(), None, None)
+            .await?;
         Ok(result)
     }
 
@@ -792,7 +796,10 @@ pub(crate) fn mnemonic_identifier(mnemonic: &Mnemonic) -> Result<XKeyIdentifier,
 async fn fetch_next_index_to_use(xpub: &Xpub, client: &BoltzApiClientV2) -> Result<u32, Error> {
     log::info!("xpub for restore is: {xpub}");
 
-    let result = client.post_swap_restore_index(&xpub.to_string()).await?;
+    // Use the same default path as `swap_restore` when finding the next key.
+    let result = client
+        .post_swap_restore_index(&xpub.to_string(), None, None)
+        .await?;
 
     let next_index_to_use = (result.index + 1) as u32;
 
@@ -1100,6 +1107,14 @@ mod tests {
         let network_kind = NetworkKind::Main;
         let xpub = derive_xpub_from_mnemonic(&mnemonic, network_kind).unwrap();
         assert_eq!(xpub.to_string(), expected_xpub);
+
+        // Boltz's default restore path must reach the keys used for swaps.
+        let path = lwk_wollet::bitcoin::bip32::DerivationPath::from_str("m/44/0/0/0/0").unwrap();
+        let restored_key = xpub.derive_pub(&lwk_wollet::EC, &path).unwrap();
+        assert_eq!(
+            restored_key.public_key,
+            crate::derive_keypair(0, &mnemonic).unwrap().public_key()
+        );
     }
 
     #[test]

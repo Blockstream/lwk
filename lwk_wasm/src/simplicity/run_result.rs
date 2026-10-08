@@ -2,14 +2,14 @@ use super::cmr::Cmr;
 
 use std::sync::Arc;
 
-use lwk_simplicity::simplicityhl::simplicity::{jet, RedeemNode, Value};
+use lwk_simplicity::simplicityhl::simplicity::{RedeemNode, Value};
 
 use wasm_bindgen::prelude::*;
 
 /// The result of running a Simplicity program.
 #[wasm_bindgen]
 pub struct SimplicityRunResult {
-    pub(crate) pruned: Arc<RedeemNode<jet::Elements>>,
+    pub(crate) pruned: Arc<RedeemNode>,
     pub(crate) value: Value,
 }
 

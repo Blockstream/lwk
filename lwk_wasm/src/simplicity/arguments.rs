@@ -6,9 +6,10 @@ use super::typed_value::SimplicityTypedValue;
 
 use std::collections::HashMap;
 
-use lwk_simplicity::simplicityhl::parse::ParseFromStr;
-use lwk_simplicity::simplicityhl::str::WitnessName;
-use lwk_simplicity::simplicityhl::{Arguments, Value, WitnessValues};
+use lwk_simplicity::simplicityhl::{
+    parse::ParseFromStr, str::Identifier, Arguments, TemplateProgramWitness, Value,
+    WitnessNameToValueMap, WitnessValues,
+};
 
 use wasm_bindgen::prelude::*;
 
@@ -37,7 +38,9 @@ impl SimplicityArguments {
 
 impl SimplicityArguments {
     pub(crate) fn to_inner(&self) -> Result<Arguments, Error> {
-        Ok(Arguments::from(try_into_witness_name_map(&self.inner)?))
+        Ok(Arguments::from_map(try_into_arguments_name_map(
+            &self.inner,
+        )?))
     }
 }
 
@@ -70,14 +73,34 @@ impl SimplicityWitnessValues {
 
 impl SimplicityWitnessValues {
     pub(crate) fn to_inner(&self) -> Result<WitnessValues, Error> {
-        Ok(WitnessValues::from(try_into_witness_name_map(&self.inner)?))
+        Ok(WitnessValues::from_map(try_into_witness_name_map(
+            &self.inner,
+        )?))
     }
 }
 
 fn try_into_witness_name_map(
     map: &HashMap<String, Value>,
-) -> Result<HashMap<WitnessName, Value>, Error> {
+) -> Result<HashMap<TemplateProgramWitness, Value>, Error> {
     map.iter()
-        .map(|(name, val)| Ok((WitnessName::parse_from_str(name)?, val.clone())))
+        .map(|(name, val)| {
+            Ok((
+                TemplateProgramWitness::witness_from_ident(&Identifier::parse_from_str(name)?),
+                val.clone(),
+            ))
+        })
+        .collect::<Result<_, Error>>()
+}
+
+fn try_into_arguments_name_map(
+    map: &HashMap<String, Value>,
+) -> Result<HashMap<TemplateProgramWitness, Value>, Error> {
+    map.iter()
+        .map(|(name, val)| {
+            Ok((
+                TemplateProgramWitness::parameter_from_ident(&Identifier::parse_from_str(name)?),
+                val.clone(),
+            ))
+        })
         .collect::<Result<_, Error>>()
 }

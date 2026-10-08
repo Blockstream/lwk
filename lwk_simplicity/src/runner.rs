@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use simplicityhl::ast::ElementsJetHinter;
 use simplicityhl::simplicity::elements::Transaction;
 use simplicityhl::simplicity::jet::elements::ElementsEnv;
-use simplicityhl::simplicity::jet::Elements;
 use simplicityhl::simplicity::{BitMachine, RedeemNode, Value};
 use simplicityhl::tracker::{DefaultTracker, TrackerLogLevel};
 use simplicityhl::{CompiledProgram, WitnessValues};
@@ -19,13 +19,14 @@ pub fn run_program(
     witness_values: WitnessValues,
     env: &ElementsEnv<Arc<Transaction>>,
     log_level: TrackerLogLevel,
-) -> Result<(Arc<RedeemNode<Elements>>, Value), ProgramError> {
+) -> Result<(Arc<RedeemNode>, Value), ProgramError> {
     let satisfied = program
         .satisfy(witness_values)
         .map_err(ProgramError::WitnessSatisfaction)?;
 
-    let mut tracker = DefaultTracker::new(satisfied.debug_symbols()).with_log_level(log_level);
-
+    let mut tracker =
+        DefaultTracker::build(program.debug_symbols(), Box::new(ElementsJetHinter::new()))
+            .with_log_level(log_level);
     let pruned = satisfied
         .redeem()
         .prune_with_tracker(env, &mut tracker)

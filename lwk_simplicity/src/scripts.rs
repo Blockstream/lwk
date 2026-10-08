@@ -1,7 +1,8 @@
+use simplicityhl::ast::ElementsJetHinter;
 use simplicityhl::elements::{taproot, Address, AddressParams, Script};
 
 use simplicityhl::simplicity::bitcoin::{secp256k1, XOnlyPublicKey};
-use simplicityhl::simplicity::hashes::{sha256, Hash, HashEngine};
+use simplicityhl::simplicity::hashes::{sha256, HashEngine};
 use simplicityhl::{Arguments, CompiledProgram};
 
 use crate::error::ProgramError;
@@ -25,8 +26,13 @@ pub fn load_program_with_debug_symbols(
     arguments: Arguments,
     include_debug_symbols: bool,
 ) -> Result<CompiledProgram, ProgramError> {
-    let compiled = CompiledProgram::new(source, arguments, include_debug_symbols)
-        .map_err(ProgramError::Compilation)?;
+    let compiled = CompiledProgram::new(
+        source,
+        arguments,
+        include_debug_symbols,
+        Box::new(ElementsJetHinter::new()),
+    )
+    .map_err(ProgramError::Compilation)?;
 
     Ok(compiled)
 }

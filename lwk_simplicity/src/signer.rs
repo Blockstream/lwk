@@ -7,9 +7,9 @@ use std::sync::Arc;
 
 use lwk_common::Network;
 use simplicityhl::elements::secp256k1_zkp::Message;
+use simplicityhl::elements::{PeginWitness, RangeProof, Witness};
 use simplicityhl::simplicity::bitcoin::XOnlyPublicKey;
 use simplicityhl::simplicity::elements::{Transaction, TxInWitness, TxOut};
-use simplicityhl::simplicity::hashes::Hash as _;
 use simplicityhl::simplicity::jet::elements::{ElementsEnv, ElementsUtxo};
 use simplicityhl::tracker::TrackerLogLevel;
 use simplicityhl::{CompiledProgram, WitnessValues};
@@ -73,15 +73,15 @@ pub fn finalize_transaction(
         });
     }
     tx.input[input_index].witness = TxInWitness {
-        amount_rangeproof: None,
-        inflation_keys_rangeproof: None,
-        script_witness: vec![
+        amount_rangeproof: RangeProof::EMPTY,
+        inflation_keys_rangeproof: RangeProof::EMPTY,
+        script_witness: Witness::from_slice(&[
             simplicity_witness_bytes,
             simplicity_program_bytes,
             cmr.as_ref().to_vec(),
             control_block(cmr, *program_public_key).serialize(),
-        ],
-        pegin_witness: vec![],
+        ]),
+        pegin_witness: PeginWitness::EMPTY,
     };
 
     Ok(tx)

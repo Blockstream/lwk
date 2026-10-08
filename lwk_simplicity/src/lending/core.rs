@@ -1023,7 +1023,7 @@ impl LendingSession {
                 continue;
             };
 
-            let witness_values = program_input.witness.build_witness();
+            let witness_values = program_input.witness.clone();
 
             let pruned_witness = program_input
                 .program

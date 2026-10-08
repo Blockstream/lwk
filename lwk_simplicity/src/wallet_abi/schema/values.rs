@@ -5,9 +5,7 @@ use crate::error::WalletAbiError;
 use crate::wallet_abi::schema::KeyStoreMeta;
 
 use crate::simplicityhl::num::U256;
-use crate::simplicityhl::parse::ParseFromStr;
 use crate::simplicityhl::simplicity::jet::elements::ElementsEnv;
-use crate::simplicityhl::str::WitnessName;
 use crate::simplicityhl::value::{UIntValue, ValueConstructible};
 use crate::simplicityhl::{Arguments, Value, WitnessValues};
 
@@ -22,6 +20,10 @@ use crate::simplicityhl::elements::Transaction;
 use lwk_wollet::elements::pset::{Input, PartiallySignedTransaction};
 use lwk_wollet::elements::secp256k1_zkp::ZERO_TWEAK;
 use lwk_wollet::secp256k1::{Message, XOnlyPublicKey};
+
+use simplicityhl::parse::ParseFromStr;
+use simplicityhl::str::Identifier;
+use simplicityhl::{TemplateProgramWitness, WitnessNameToValueMap};
 
 /// Runtime-resolved Simplicity argument sources.
 ///
@@ -50,12 +52,12 @@ pub enum RuntimeSimfValue {
 pub struct SimfArguments {
     /// Caller-supplied static witness values.
     ///
-    /// Keys are `simplicityhl::str::WitnessName` values and must already be type-correct
+    /// Keys are [`TemplateProgramWitness`] values and must already be type-correct
     /// for the target Simplicity program.
     pub resolved: Arguments,
     /// Runtime-derived witness values keyed by witness name.
     ///
-    /// Keys are parsed using `WitnessName::parse_from_str` during resolution. Any key that
+    /// Keys are parsed using [`TemplateProgramWitness::parameter_from_ident`] during resolution. Any key that
     /// collides with `resolved` is rejected.
     pub runtime_arguments: HashMap<String, RuntimeSimfValue>,
 }
@@ -94,7 +96,7 @@ pub fn serialize_arguments(arguments: &SimfArguments) -> Result<Vec<u8>, WalletA
 /// Resolution flow:
 /// 1. Decode `SimfArguments`.
 /// 2. Insert static `resolved` entries.
-/// 3. Parse each runtime map key as `WitnessName`.
+/// 3. Parse each runtime map key as `TemplateProgramWitness`.
 /// 4. Reject any runtime/static witness-name collisions.
 /// 5. Resolve runtime entries from referenced PSET inputs (`input_index`).
 ///
@@ -112,7 +114,8 @@ pub fn resolve_arguments(
 ) -> Result<Arguments, WalletAbiError> {
     let simf_arguments: SimfArguments = serde_json::from_slice(bytes)?;
 
-    let mut final_arguments: HashMap<WitnessName, Value> = HashMap::<WitnessName, Value>::new();
+    let mut final_arguments: HashMap<TemplateProgramWitness, Value> =
+        HashMap::<TemplateProgramWitness, Value>::new();
 
     for (static_arg_name, static_arg_value) in simf_arguments.resolved.iter() {
         if final_arguments.contains_key(static_arg_name) {
@@ -124,10 +127,10 @@ pub fn resolve_arguments(
     }
 
     for (name, value) in simf_arguments.runtime_arguments {
-        let witness_name = parse_witness_name(&name, "runtime argument map")?;
-        if final_arguments.contains_key(&witness_name) {
+        let param_name = parse_parameter_name(&name, "runtime argument map")?;
+        if final_arguments.contains_key(&param_name) {
             return Err(WalletAbiError::InvalidRequest(format!(
-                "runtime Simplicity argument '{name}' collides with static resolved argument '{witness_name}'"
+                "runtime Simplicity argument '{name}' collides with static resolved argument '{param_name}'"
             )));
         }
 
@@ -138,7 +141,7 @@ pub fn resolve_arguments(
                 let (asset, _) = input.issuance_ids();
 
                 final_arguments.insert(
-                    witness_name,
+                    param_name,
                     Value::from(UIntValue::U256(U256::from_byte_array(asset.into_inner().0))),
                 );
             }
@@ -148,14 +151,14 @@ pub fn resolve_arguments(
                 let (_, token) = input.issuance_ids();
 
                 final_arguments.insert(
-                    witness_name,
+                    param_name,
                     Value::from(UIntValue::U256(U256::from_byte_array(token.into_inner().0))),
                 );
             }
         }
     }
 
-    Ok(Arguments::from(final_arguments))
+    Ok(Arguments::from_map(final_arguments))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -183,7 +186,7 @@ pub struct SimfWitness {
     /// Resolution flow in [`resolve_witness`]:
     /// 1. Decode `SimfWitness`.
     /// 2. Insert static `resolved` entries.
-    /// 3. Parse each runtime witness entry name as `WitnessName`.
+    /// 3. Parse each runtime witness entry name as `TemplateProgramWitness`.
     /// 4. Reject any runtime/static witness-name collisions.
     /// 5. Resolve each runtime directive in `runtime_arguments` in order.
     ///
@@ -209,7 +212,7 @@ pub fn serialize_witness(witness: &SimfWitness) -> Result<Vec<u8>, WalletAbiErro
 /// Resolution flow in [`resolve_witness`]:
 /// 1. Decode `SimfWitness`.
 /// 2. Insert static `resolved` entries.
-/// 3. Parse each runtime witness entry name as `WitnessName`.
+/// 3. Parse each runtime witness entry name as `TemplateProgramWitness` .
 /// 4. Reject any runtime/static witness-name collisions.
 /// 5. Resolve each runtime directive in `runtime_arguments` in order.
 ///
@@ -236,7 +239,8 @@ where
 {
     let simf_arguments: SimfWitness = serde_json::from_slice(bytes)?;
 
-    let mut final_witness: HashMap<WitnessName, Value> = HashMap::<WitnessName, Value>::new();
+    let mut final_witness: HashMap<TemplateProgramWitness, Value> =
+        HashMap::<TemplateProgramWitness, Value>::new();
 
     for static_arg in simf_arguments.resolved.iter() {
         final_witness.insert(static_arg.0.clone(), static_arg.1.clone());
@@ -273,15 +277,30 @@ where
         }
     }
 
-    Ok(WitnessValues::from(final_witness))
+    Ok(WitnessValues::from_map(final_witness))
 }
 
-fn parse_witness_name(name: &str, source: &str) -> Result<WitnessName, WalletAbiError> {
-    WitnessName::parse_from_str(name).map_err(|error| {
-        WalletAbiError::InvalidRequest(format!(
-            "invalid Simplicity witness name '{name}' in {source}: {error}"
-        ))
-    })
+fn parse_witness_name(name: &str, source: &str) -> Result<TemplateProgramWitness, WalletAbiError> {
+    Ok(TemplateProgramWitness::witness_from_ident(
+        &Identifier::parse_from_str(name).map_err(|error| {
+            WalletAbiError::InvalidRequest(format!(
+                "invalid Simplicity witness name '{name}' in {source}: {error}"
+            ))
+        })?,
+    ))
+}
+
+fn parse_parameter_name(
+    name: &str,
+    source: &str,
+) -> Result<TemplateProgramWitness, WalletAbiError> {
+    Ok(TemplateProgramWitness::parameter_from_ident(
+        &Identifier::parse_from_str(name).map_err(|error| {
+            WalletAbiError::InvalidRequest(format!(
+                "invalid Simplicity witness name '{name}' in {source}: {error}"
+            ))
+        })?,
+    ))
 }
 
 fn resolve_new_issuance_input<'a>(
@@ -317,4 +336,37 @@ fn resolve_new_issuance_input<'a>(
     }
 
     Ok(input)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn runtime_argument_collides_with_static_parameter() {
+        let ident = Identifier::parse_from_str("ASSET").unwrap();
+        let resolved = Arguments::from_map(HashMap::from([(
+            TemplateProgramWitness::parameter_from_ident(&ident),
+            Value::u256(U256::from_byte_array([0u8; 32])),
+        )]));
+
+        let mut simf_arguments = SimfArguments::new(resolved);
+        simf_arguments.append_runtime_simf_value(
+            "ASSET",
+            RuntimeSimfValue::NewIssuanceAsset { input_index: 0 },
+        );
+
+        let bytes = serialize_arguments(&simf_arguments).unwrap();
+        let pst = PartiallySignedTransaction::new_v2();
+
+        let error = resolve_arguments(&bytes, &pst).unwrap_err();
+
+        assert!(
+            matches!(
+                &error,
+                WalletAbiError::InvalidRequest(message) if message.contains("collides")
+            ),
+            "expected a runtime/static collision error, got: {error:?}"
+        );
+    }
 }

@@ -12,7 +12,6 @@
 //! processes) rather than testcontainers so that [`AuthStack`] — and thus
 //! [`crate::TestEnv`] — stays `Send + Sync`, which the bindings wrapper requires.
 
-use std::io::Write;
 use std::process::Command;
 use std::time::Duration;
 
@@ -194,6 +193,21 @@ fn generate_cert(dir: &std::path::Path, cn: &str) {
     }
 }
 
+/// Write a file mounted into a container, world-readable for the container's non-root user.
+///
+/// The mode is set explicitly instead of coming from the process umask, which other code in
+/// the same test process can restrict: the `lwk_app` server started by the CLI tests sets it
+/// to 077, and APISIX workers unable to read a 0600 config answer every request with 500.
+fn write_mounted_file(path: &std::path::Path, contents: &str) {
+    std::fs::write(path, contents).unwrap_or_else(|e| panic!("write {}: {e}", path.display()));
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o644))
+            .unwrap_or_else(|e| panic!("chmod {}: {e}", path.display()));
+    }
+}
+
 /// Run `docker` with `args`, panicking (with stderr) on failure, returning stdout.
 fn docker(args: &[&str]) -> String {
     let output = Command::new("docker")
@@ -357,8 +371,7 @@ impl AuthStack {
         // guard requires an https issuer at a non-local domain.
         let keycloak_dir = tempdir().expect("tempdir");
         let realm_path = keycloak_dir.path().join("realm.json");
-        let mut file = std::fs::File::create(&realm_path).expect("create realm");
-        file.write_all(REALM_JSON.as_bytes()).expect("write realm");
+        write_mounted_file(&realm_path, REALM_JSON);
         let keycloak = DockerContainer::run(&[
             "--name",
             &keycloak_name,
@@ -411,13 +424,9 @@ impl AuthStack {
                     .replace("__UPSTREAM__", &format!("{upstream_host}:{upstream_port}"));
                 let apisix_dir = tempdir().expect("tempdir");
                 let config_path = apisix_dir.path().join("config.yaml");
-                let mut file = std::fs::File::create(&config_path).expect("create config");
-                file.write_all(APISIX_CONFIG_YAML.as_bytes())
-                    .expect("write config");
+                write_mounted_file(&config_path, APISIX_CONFIG_YAML);
                 let standalone_path = apisix_dir.path().join("apisix.yaml");
-                let mut file = std::fs::File::create(&standalone_path).expect("create standalone");
-                file.write_all(standalone_yaml.as_bytes())
-                    .expect("write standalone");
+                write_mounted_file(&standalone_path, &standalone_yaml);
                 let apisix = DockerContainer::run(&[
                     "--name",
                     &apisix_name,

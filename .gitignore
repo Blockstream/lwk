@@ -26,3 +26,4 @@ lwk_bindings/examples/swaps/
 swaps/
 .codex
 anyswap_config.toml
+.githooks/

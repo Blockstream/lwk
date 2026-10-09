@@ -132,6 +132,8 @@ If you send funds to an address that was not returned by the server, the AMP0 se
 Which means that those funds are lost (!), since AMP0 accounts are 2of2.
 </div>
 
+Every time you call `Amp0::address()`, also call `Wollet::set_amp0_last_index()`, this reduces the chance of change addresses reuse.
+
 ### Monitor
 LWK allows to monitor Liquid wallets, including AMP0 accounts.
 

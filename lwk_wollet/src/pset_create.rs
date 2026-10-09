@@ -144,17 +144,15 @@ impl Wollet {
     ) -> Result<Recipient, Error> {
         #[cfg(feature = "amp0")]
         if self.descriptor.is_amp0() {
-            // For AMP0 we never want to use addresses that are not monitored by the server.
+            // For AMP0 we never want to use addresses that the server has not returned.
             // We never want to use:
             // * index 0
-            // * indexes greater than "last_index" returned by the server
+            // * indexes greater than "last_index" returned by the server, see
+            //   `Wollet::set_amp0_last_index()`
             //
-            // GDK at login uploads 20 addresses for AMP0 accounts, so as long as we're in
-            // the [1,20] range we're fine.
-            //
-            // This is quite conservative and might cause some address reuse, but it ensures
-            // that the tx builder does not use addresses that are not monitored by the server.
-            *last_unused = (*last_unused).clamp(1, 20);
+            // This might cause some address reuse, but it ensures that the tx builder does not
+            // use addresses that are not monitored by the server.
+            *last_unused = (*last_unused).clamp(1, self.amp0_last_index);
 
             let params = self.network().address_params();
             let address = self.descriptor.amp0_address(*last_unused, params)?;

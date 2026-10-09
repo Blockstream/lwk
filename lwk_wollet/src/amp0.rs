@@ -54,6 +54,34 @@ pub const AMP0_FINGERPRINT_TESTNET: &str = "98c379b9";
 /// The fingerprint of the AMP0 server key for the regtest network.
 pub const AMP0_FINGERPRINT_REGTEST: &str = "b5281696";
 
+mod private {
+    pub trait Sealed {}
+}
+
+/// An AMP0 context, either [`Amp0`] or [`blocking::Amp0`]
+///
+/// This trait is sealed. It is used by
+/// [`crate::Wollet::set_amp0_last_index()`] to learn which addresses the AMP0 server monitors.
+pub trait Amp0Context: private::Sealed {
+    /// Index of the last address returned by the AMP0 server
+    fn last_index(&self) -> u32;
+
+    /// The LWK watch-only wallet descriptor corresponding to the AMP0 (sub)account.
+    fn wollet_descriptor(&self) -> WolletDescriptor;
+}
+
+impl<S: Stream> private::Sealed for Amp0<S> {}
+
+impl<S: Stream> Amp0Context for Amp0<S> {
+    fn last_index(&self) -> u32 {
+        self.last_index
+    }
+
+    fn wollet_descriptor(&self) -> WolletDescriptor {
+        self.wollet_descriptor.clone()
+    }
+}
+
 struct Amp0Inner<S: Stream> {
     stream: S,
 }
@@ -140,6 +168,10 @@ struct LoginData {
 ///   that all addresses used are correctly monitored by the AMP0 server.
 /// * <b>Syncing: </b>
 ///   to sync the AMP0 [`crate::Wollet`], use [`Amp0::last_index()`] and [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`]. This ensures that all utxos are synced, even if there are gaps between higher than the GAP LIMIT.
+///
+/// * <b>Transactions: </b>
+///   call [`crate::Wollet::set_amp0_last_index()`] passing this context, before building a
+///   transaction. This reduces the chance of change address reuse.
 ///
 /// <i>
 /// Failing to do the above might lead to inconsistent states, where funds are not shown or they
@@ -1603,6 +1635,18 @@ pub mod blocking {
         inner: super::Amp0<super::WebSocketClient>,
     }
 
+    impl private::Sealed for Amp0 {}
+
+    impl Amp0Context for Amp0 {
+        fn last_index(&self) -> u32 {
+            self.inner.last_index
+        }
+
+        fn wollet_descriptor(&self) -> WolletDescriptor {
+            self.inner.wollet_descriptor()
+        }
+    }
+
     impl Amp0 {
         /// Index of the last returned address
         pub fn last_index(&self) -> u32 {
@@ -2201,6 +2245,7 @@ mod tests {
         }
 
         sync(&mut wollet, &mut client, &amp0);
+        wollet.set_amp0_last_index(&amp0).unwrap();
 
         // Check we have enough funds to send a transaction
         let balance = wollet.balance().unwrap();

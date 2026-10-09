@@ -133,6 +133,7 @@ fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get a new address
     let addr = amp0.address(None);
+    wollet.set_amp0_last_index(&amp0)?;
 
     // Update the wallet with (new) blockchain data
     let url = "https://blockstream.info/liquidtestnet/api";

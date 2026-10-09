@@ -53,6 +53,10 @@ pub struct Wollet {
     /// cached value
     max_weight_to_satisfy: usize,
     utxo_only: bool,
+
+    /// Highest address index returned by the AMP0 server, see [`Wollet::set_amp0_last_index()`]
+    #[cfg(feature = "amp0")]
+    pub(crate) amp0_last_index: u32,
 }
 
 /// A builder for constructing [`Wollet`] instances
@@ -245,6 +249,8 @@ impl WolletBuilder {
             updates_persister,
             max_weight_to_satisfy,
             utxo_only: self.utxo_only,
+            #[cfg(feature = "amp0")]
+            amp0_last_index: 1,
         };
 
         wollet.restore_updates()?;
@@ -462,6 +468,30 @@ impl Wollet {
     #[cfg(feature = "amp0")]
     pub fn is_amp0(&self) -> bool {
         self.descriptor.is_amp0()
+    }
+
+    /// Set the highest AMP0 address index the tx builder is allowed to use
+    ///
+    /// Call this with the AMP0 context after creating the `Wollet` and every time
+    /// [`crate::amp0::Amp0::address()`] returns a new address.
+    ///
+    /// The tx builder never uses AMP0 addresses with an index greater than this, since the
+    /// server has not returned them and would refuse to sign. This might cause address reuse.
+    /// Until this is called only the address with index 1 is used.
+    ///
+    /// Returns an error if `amp0` does not correspond to this wallet.
+    #[cfg(feature = "amp0")]
+    pub fn set_amp0_last_index(
+        &mut self,
+        amp0: &impl crate::amp0::Amp0Context,
+    ) -> Result<(), Error> {
+        if amp0.wollet_descriptor() != self.descriptor {
+            return Err(Error::Generic(
+                "The AMP0 context does not match the wollet".into(),
+            ));
+        }
+        self.amp0_last_index = amp0.last_index().max(1);
+        Ok(())
     }
 
     /// Whether the wallet is `utxo_only`

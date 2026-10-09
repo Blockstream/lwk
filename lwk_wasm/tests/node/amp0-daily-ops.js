@@ -40,6 +40,7 @@ async function runAmp0DailyOps() {
 
         // Create wollet
         const wollet = amp0.wollet();
+        wollet.setAmp0LastIndex(amp0);
 
         // Sync the wallet
         const url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";

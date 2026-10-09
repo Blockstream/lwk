@@ -234,6 +234,17 @@ impl Wollet {
     pub fn is_amp0(&self) -> bool {
         self.inner.is_amp0()
     }
+
+    /// Set the highest AMP0 address index the tx builder is allowed to use
+    ///
+    /// Call this with the AMP0 context after creating the `Wollet` and every time
+    /// `Amp0::address()` returns a new address.
+    #[cfg(all(feature = "serial", target_arch = "wasm32"))]
+    #[wasm_bindgen(js_name = setAmp0LastIndex)]
+    pub fn set_amp0_last_index(&mut self, amp0: &crate::amp0::Amp0) -> Result<(), Error> {
+        self.inner.set_amp0_last_index(amp0.as_ref())?;
+        Ok(())
+    }
 }
 
 /// Blockchain tip, the highest valid block in the blockchain

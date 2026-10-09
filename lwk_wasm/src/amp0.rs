@@ -29,6 +29,12 @@ pub struct Amp0 {
     network: Network,
 }
 
+impl AsRef<lwk_wollet::amp0::Amp0<WebSocketSerial>> for Amp0 {
+    fn as_ref(&self) -> &lwk_wollet::amp0::Amp0<WebSocketSerial> {
+        &self.inner
+    }
+}
+
 #[wasm_bindgen]
 impl Amp0 {
     /// Create a new AMP0 context for the specified network
@@ -361,6 +367,7 @@ mod tests {
             .unwrap()
             .unwrap();
         wollet.apply_update(&update).unwrap();
+        wollet.set_amp0_last_index(&amp0).unwrap();
 
         // Get balance
         let balance = wollet.balance().unwrap();

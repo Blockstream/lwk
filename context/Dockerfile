@@ -13,6 +13,7 @@ RUN apt install -y --no-install-recommends \
     libudev-dev \
     libxml2-utils \
     clang \
+    libclang-dev \
     chromium-driver \
     libsodium23 \
     binutils-gold \
@@ -51,6 +52,12 @@ RUN cargo install lwk_cli --locked
 
 COPY download_bins.sh /download_bins.sh
 RUN ./download_bins.sh
+
+# waterfalls is built from source because there are no release binaries for recent commits
+ARG WATERFALLS_REV=b2b31351f5915eec13441592a66080889bfe0c5c
+RUN GIT_COMMIT_HASH=${WATERFALLS_REV} cargo install waterfalls --git https://github.com/blockstream/waterfalls --rev ${WATERFALLS_REV} --locked --root /waterfalls \
+    && mv /waterfalls/bin/waterfalls /bin/waterfalls_$(echo ${WATERFALLS_REV} | cut -c1-7) \
+    && rm -rf /waterfalls
 
 # update the installation script with curl -fsSL https://get.docker.com -o get-docker.sh
 COPY get-docker.sh /get-docker.sh

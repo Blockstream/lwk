@@ -5,6 +5,13 @@ default:
 SIMPLICITY_FEATURES := if env_var_or_default("SIMPLICITY", "") != "" { "--features simplicity" } else { "" }
 LIB_EXTENSION := if os() == "macos" { "dylib" } else { "so" }
 
+# gobley 0.3.7 misreads u8/u16 return values on 32-bit ARM Android, which fails the UniFFI checksum
+# check once the app is AOT-compiled (https://github.com/gobley/gobley/issues/252). This revision
+# carries the fix proposed upstream in https://github.com/gobley/gobley/pull/297.
+GOBLEY_GIT := "https://github.com/angelix/gobley"
+GOBLEY_REV := "40cef27c59829ca97a71945928028f9ab4880305"
+GOBLEY_ROOT := "target/gobley"
+
 # build the bindings lib: liblwk.so (as specified in lwk_bindings/Cargo.toml)
 build-bindings-lib:
     # a debug build would be fine if used only to generate interfaces files but some jobs use it to package it, thus release is necessary.
@@ -74,8 +81,8 @@ android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64
 
 # Build the kotlin multiplatform interface and android, ios and jvm
 kotlin-multiplatform: ios ios-sim android jvm
-    which gobley-uniffi-bindgen || cargo install --bin gobley-uniffi-bindgen gobley-uniffi-bindgen@0.3.7
-    gobley-uniffi-bindgen --config ./lwk_bindings/uniffi.kotlin-multiplatform.toml --library target/aarch64-apple-ios/release/liblwk.a  --out-dir target/release/kotlin-multiplatform
+    cargo install --locked --git {{GOBLEY_GIT}} --rev {{GOBLEY_REV}} --root {{GOBLEY_ROOT}} --bin gobley-uniffi-bindgen gobley-uniffi-bindgen
+    {{GOBLEY_ROOT}}/bin/gobley-uniffi-bindgen --config ./lwk_bindings/uniffi.kotlin-multiplatform.toml --library target/aarch64-apple-ios/release/liblwk.a  --out-dir target/release/kotlin-multiplatform
     cp -a target/release/kotlin-multiplatform/* lwk_bindings/android_bindings/lib/src/
     mkdir -p ./lwk_bindings/android_bindings/lib/src/libs/ios-arm64/
     mkdir -p ./lwk_bindings/android_bindings/lib/src/libs/ios-simulator-arm64/

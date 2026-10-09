@@ -245,6 +245,44 @@ impl DockerContainer {
             .and_then(|p| p.parse().ok())
             .unwrap_or_else(|| panic!("cannot parse host port from '{out}'"))
     }
+
+    /// The container state and the head and tail of its logs, for failure messages.
+    fn diagnostics(&self) -> String {
+        let state = Command::new("docker")
+            .args([
+                "inspect",
+                "--format",
+                "status={{.State.Status}} exit_code={{.State.ExitCode}} oom_killed={{.State.OOMKilled}} restarts={{.RestartCount}} started_at={{.State.StartedAt}}",
+                &self.name,
+            ])
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            .unwrap_or_else(|e| format!("docker inspect failed: {e}"));
+        let logs = match Command::new("docker").args(["logs", &self.name]).output() {
+            // Startup errors are at the head of a log and the latest requests at its tail;
+            // APISIX writes its access log to stdout and its errors to stderr.
+            Ok(o) => format!(
+                "--- stdout ---\n{}--- stderr ---\n{}",
+                head_and_tail(&String::from_utf8_lossy(&o.stdout), 30),
+                head_and_tail(&String::from_utf8_lossy(&o.stderr), 30)
+            ),
+            Err(e) => format!("docker logs failed: {e}\n"),
+        };
+        format!("container {}: {state}\n{logs}", self.name)
+    }
+}
+
+/// The first and last `n` lines of `text`, all of it if it has at most `2 * n` lines.
+fn head_and_tail(text: &str, n: usize) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    if lines.len() <= 2 * n {
+        return lines.iter().map(|l| format!("{l}\n")).collect();
+    }
+    let skipped = lines.len() - 2 * n;
+    let mut out: String = lines[..n].iter().map(|l| format!("{l}\n")).collect();
+    out.push_str(&format!("[... {skipped} lines skipped ...]\n"));
+    out.extend(lines[lines.len() - n..].iter().map(|l| format!("{l}\n")));
+    out
 }
 
 impl Drop for DockerContainer {
@@ -352,7 +390,7 @@ impl AuthStack {
         let discovery_url = format!(
             "http://127.0.0.1:{keycloak_port}/realms/{AUTH_REALM}/.well-known/openid-configuration"
         );
-        poll_until(&discovery_url, 200, 120, "keycloak realm");
+        poll_until(&discovery_url, 200, 120, "keycloak realm", &keycloak);
 
         // APISIX: fronts the HTTP upstream when one is given (skipped for electrum-only
         // stacks). It reaches Keycloak by container name on the shared network, and the
@@ -404,7 +442,7 @@ impl AuthStack {
                 // Without a token the gateway must answer 401: proves both that APISIX is up
                 // and that the openid-connect plugin is active on the route.
                 let gateway_probe = format!("http://127.0.0.1:{apisix_port}/blocks/tip/height");
-                poll_until(&gateway_probe, 401, 60, "apisix gateway");
+                poll_until(&gateway_probe, 401, 60, "apisix gateway", &apisix);
 
                 (Some(apisix), Some(apisix_port), Some(apisix_dir))
             }
@@ -489,6 +527,7 @@ impl AuthStack {
                     200,
                     60,
                     "electrum rpc proxy",
+                    &rpc_proxy,
                 );
                 (Some(rpc_proxy), Some(host_port), Some(metrics_port))
             }
@@ -616,12 +655,11 @@ impl AuthStack {
     /// production restart or idle disconnect would), and wait until it accepts connections
     /// again; panics if the stack was started without an Electrum upstream.
     pub fn restart_electrum_gateway(&self) {
-        let name = &self
+        let rpc_proxy = self
             .rpc_proxy
             .as_ref()
-            .expect("auth stack has no electrum upstream, call 'with_electrum()'")
-            .name;
-        docker(&["restart", name]);
+            .expect("auth stack has no electrum upstream, call 'with_electrum()'");
+        docker(&["restart", &rpc_proxy.name]);
         // The proxy and its metrics port are published on fixed host ports (see `reserve_port`),
         // so both mappings survive the restart and the client reconnects to the same
         // endpoint. Wait on /readyz, which turns 200 only once the proxy has reloaded its
@@ -636,6 +674,7 @@ impl AuthStack {
             200,
             60,
             "restarted electrum rpc proxy",
+            rpc_proxy,
         );
     }
 
@@ -704,26 +743,51 @@ fn upstream_host(network: &str) -> String {
     ])
 }
 
-/// Poll `url` until it returns `status`, panicking after `attempts` * 1s.
-fn poll_until(url: &str, status: u16, attempts: u32, what: &str) {
+/// Poll `url` until it returns `status`, panicking after `attempts` tries 1s apart.
+///
+/// The panic reports the last response or request error and the state and logs of
+/// `container`, the one serving `url`, so a CI timeout shows why it was not ready.
+fn poll_until(url: &str, status: u16, attempts: u32, what: &str, container: &DockerContainer) {
     let client = reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(2))
         .build()
         .expect("client");
+    let start = std::time::Instant::now();
+    let mut last = String::from("no attempt made");
     for _ in 0..attempts {
-        if let Ok(r) = client.get(url).send() {
-            if r.status().as_u16() == status {
-                return;
+        match client.get(url).send() {
+            Ok(r) if r.status().as_u16() == status => return,
+            Ok(r) => {
+                let got = r.status();
+                let body: String = r.text().unwrap_or_default().chars().take(300).collect();
+                last = format!("status {got}, body: {body}");
             }
+            Err(e) => last = format!("request error: {e:#}"),
         }
         std::thread::sleep(Duration::from_secs(1));
     }
-    panic!("{what} not ready: '{url}' did not return {status} after {attempts}s");
+    panic!(
+        "{what} not ready: '{url}' did not return {status} after {attempts} attempts ({:?})\nlast: {last}\n{}",
+        start.elapsed(),
+        container.diagnostics()
+    );
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_head_and_tail() {
+        let text: String = (1..=7).map(|i| format!("{i}\n")).collect();
+        assert_eq!(head_and_tail("", 2), "");
+        assert_eq!(head_and_tail("a\nb", 2), "a\nb\n");
+        assert_eq!(head_and_tail(&text, 4), text);
+        assert_eq!(
+            head_and_tail(&text, 2),
+            "1\n2\n[... 3 lines skipped ...]\n6\n7\n"
+        );
+    }
     use std::io::{Read, Write};
 
     /// Self-contained smoke test of the auth stack (no elementsd/electrs needed): a valid

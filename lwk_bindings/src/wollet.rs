@@ -247,6 +247,16 @@ impl Wollet {
         Ok(self.inner.lock()?.is_amp0())
     }
 
+    /// Set the highest AMP0 address index the tx builder is allowed to use
+    ///
+    /// Call this with the AMP0 context after creating the `Wollet` and every time
+    /// `Amp0::address()` returns a new address.
+    pub fn set_amp0_last_index(&self, amp0: &crate::amp0::Amp0) -> Result<(), LwkError> {
+        let amp0 = amp0.inner()?;
+        self.inner.lock()?.set_amp0_last_index(&*amp0)?;
+        Ok(())
+    }
+
     /// Max weight to satisfy for inputs belonging to this wallet
     pub fn max_weight_to_satisfy(&self) -> Result<u32, LwkError> {
         Ok(self.inner.lock()?.max_weight_to_satisfy() as u32)

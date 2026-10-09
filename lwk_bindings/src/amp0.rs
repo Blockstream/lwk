@@ -12,6 +12,14 @@ pub struct Amp0 {
     inner: Mutex<lwk_wollet::amp0::blocking::Amp0>,
 }
 
+impl Amp0 {
+    pub(crate) fn inner(
+        &self,
+    ) -> Result<std::sync::MutexGuard<'_, lwk_wollet::amp0::blocking::Amp0>, LwkError> {
+        Ok(self.inner.lock()?)
+    }
+}
+
 #[uniffi::export]
 impl Amp0 {
     /// Construct an AMP0 context

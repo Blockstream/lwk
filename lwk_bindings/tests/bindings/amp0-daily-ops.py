@@ -35,6 +35,7 @@ wollet = Wollet(network, wollet_descriptor, None)
 
 # Get a new address
 addr = str(amp0.address(None).address());
+wollet.set_amp0_last_index(amp0)
 
 # Update the wallet with (new) blockchain data
 url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";

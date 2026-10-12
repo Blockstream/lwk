@@ -171,7 +171,7 @@ pub(crate) fn add_input_inner(
     // Note that we explicitly remove the txout rangeproof to avoid
     // relying on its presence.
     let rangeproof = std::mem::replace(&mut txout.witness.rangeproof, RangeProof::EMPTY);
-    if add_input_rangeproofs {
+    if add_input_rangeproofs && !rangeproof.is_empty() {
         // This field is used by _some_ stateless blinders or signers to
         // learn the blinding factors and unblinded values of this input.
         // We need this since the output witness, which includes the
@@ -1706,13 +1706,20 @@ impl TxBuilder {
             let mut rng = thread_rng();
 
             let blind_secrets = pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-            // erase all non witness utxo surjection and range proofs
-            // this appears to be necessary for pre-segwit inputs
+            // Remove the output witness (surjection and range proofs) from the utxos of the inputs.
+            // PSET (elements/doc/pset.mediawiki, PSBT_ELEMENTS_IN_UTXO_RANGEPROOF) does not
+            // serialize the witness data of the UTXOs, so the PSET must not hold it in memory
+            // either, otherwise it differs from its serialized form (e.g. from the PSET returned
+            // by a cosigner).
+            // For non witness utxos, this also appears to be necessary for pre-segwit inputs.
             for input in pset.inputs_mut() {
                 if let Some(ref mut tx) = &mut input.non_witness_utxo {
                     for output in &mut tx.output {
                         output.witness = Default::default();
                     }
+                }
+                if let Some(ref mut txout) = &mut input.witness_utxo {
+                    txout.witness = Default::default();
                 }
             }
             BuiltTx {

@@ -378,7 +378,8 @@ impl LiquidexProposal<Validated> {
             asset: Some(output.asset),
             asset_comm: txout.asset.commitment(),
             script_pubkey: txout.script_pubkey.clone(),
-            value_rangeproof: Some(txout.witness.rangeproof.clone()),
+            value_rangeproof: (!txout.witness.rangeproof.is_empty())
+                .then(|| txout.witness.rangeproof.clone()),
             ecdh_pubkey: txout.nonce.commitment().map(|p| p.into()),
             blinder_index: Some(0),
             blind_value_proof: output.blind_value_proof.clone(),

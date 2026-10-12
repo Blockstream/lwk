@@ -16,7 +16,6 @@ use lwk_simplicity::simplicityhl::{
 use lwk_simplicity::{
     scripts::create_p2tr_address,
     signer::{finalize_transaction, get_sighash_all},
-    utils::{address_params_to27, address_to25, txout_to27, To25, To27},
 };
 
 use lwk_test_util::*;
@@ -56,7 +55,7 @@ fn test_simplicity_p2pk() {
 
     // Create p2tr address
     let cmr = program.commit().cmr();
-    let address = create_p2tr_address(cmr, &xonly, address_params_to27(network));
+    let address = create_p2tr_address(cmr, &xonly, network.address_params());
     let spk = address.script_pubkey();
 
     // Create Wollet with the spk
@@ -70,10 +69,7 @@ fn test_simplicity_p2pk() {
 
     let wollet_address = wollet.address(Some(0)).unwrap();
     let conf_address = wollet_address.address();
-    assert_eq!(
-        &conf_address.to_unconfidential(),
-        &address_to25(&address).unwrap()
-    );
+    assert_eq!(&conf_address.to_unconfidential(), &address);
 
     // Fund the p2tr address
     let sats_fund = 100_000;
@@ -103,17 +99,8 @@ fn test_simplicity_p2pk() {
 
     // Compute message and sign
     let input_index = 0;
-    let tx27 = tx.to27().unwrap();
-    let txouts27: Vec<_> = txouts.iter().map(|u| txout_to27(u).unwrap()).collect();
-    let message = get_sighash_all(
-        &tx27,
-        &program,
-        &xonly,
-        &txouts27,
-        input_index,
-        common_network,
-    )
-    .unwrap();
+    let message =
+        get_sighash_all(&tx, &program, &xonly, &txouts, input_index, common_network).unwrap();
 
     let signature = EC.sign_schnorr(&message, &keypair);
 
@@ -127,17 +114,15 @@ fn test_simplicity_p2pk() {
 
     let log_level = TrackerLogLevel::None;
     let tx = finalize_transaction(
-        tx27,
+        tx,
         &program,
         &xonly,
-        &txouts27,
+        &txouts,
         input_index,
         witness_values,
         common_network,
         log_level,
     )
-    .unwrap()
-    .to25()
     .unwrap();
 
     // Broadcast the transaction
@@ -175,7 +160,7 @@ fn test_simplicity_mixed_p2pk() {
     // In future we will remove support for debug symbols.
     let program = load_program_with_debug_symbols(source, arguments, true).unwrap();
     let cmr = program.commit().cmr();
-    let address = create_p2tr_address(cmr, &xonly, address_params_to27(network));
+    let address = create_p2tr_address(cmr, &xonly, network.address_params());
     let spk = address.script_pubkey();
     let desc = format!(":{spk:x}");
     let wd = WolletDescriptor::from_str(&desc).unwrap();
@@ -237,17 +222,8 @@ fn test_simplicity_mixed_p2pk() {
         .collect();
 
     let input_idx_s = 0;
-    let tx27 = tx.to27().unwrap();
-    let utxos27: Vec<_> = utxos.iter().map(|u| txout_to27(u).unwrap()).collect();
-    let message = get_sighash_all(
-        &tx27,
-        &program,
-        &xonly,
-        &utxos27,
-        input_idx_s,
-        common_network,
-    )
-    .unwrap();
+    let message =
+        get_sighash_all(&tx, &program, &xonly, &utxos, input_idx_s, common_network).unwrap();
 
     let signature = EC.sign_schnorr(&message, &keypair);
 
@@ -260,17 +236,15 @@ fn test_simplicity_mixed_p2pk() {
 
     let log_level = TrackerLogLevel::None;
     let tx = finalize_transaction(
-        tx27,
+        tx,
         &program,
         &xonly,
-        &utxos27,
+        &utxos,
         input_idx_s,
         witness_values,
         common_network,
         log_level,
     )
-    .unwrap()
-    .to25()
     .unwrap();
 
     // Broadcast the tx and check balances/utxos

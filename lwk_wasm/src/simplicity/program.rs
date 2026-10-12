@@ -12,7 +12,6 @@ use lwk_simplicity::runner;
 use lwk_simplicity::scripts;
 use lwk_simplicity::signer;
 use lwk_simplicity::simplicityhl;
-use lwk_simplicity::utils::{address_params_to27, address_to25, To25, To27};
 
 use lwk_wollet::elements::hex::DisplayHex;
 use lwk_wollet::secp256k1::Keypair;
@@ -67,9 +66,9 @@ impl SimplicityProgram {
 
         let cmr = self.inner.commit().cmr();
         let address =
-            scripts::create_p2tr_address(cmr, &x_only_key, address_params_to27(inner_network));
+            scripts::create_p2tr_address(cmr, &x_only_key, inner_network.address_params());
 
-        Ok(address_to25(&address)?.into())
+        Ok(address.into())
     }
 
     /// Get the taproot control block for script-path spending.
@@ -97,11 +96,11 @@ impl SimplicityProgram {
         network: &Network,
     ) -> Result<String, Error> {
         let x_only_key = program_public_key.to_simplicityhl()?;
-        let tx = tx.as_ref().to27()?;
-        let utxos_inner = convert_utxos(&utxos)?;
+        let tx = tx.as_ref();
+        let utxos_inner = convert_utxos(&utxos);
 
         let message = signer::get_sighash_all(
-            &tx,
+            tx,
             &self.inner,
             &x_only_key,
             &utxos_inner,
@@ -131,11 +130,11 @@ impl SimplicityProgram {
         log_level: SimplicityLogLevel,
     ) -> Result<Transaction, Error> {
         let x_only_key = program_public_key.to_simplicityhl()?;
-        let tx = tx.as_ref().to27()?;
-        let utxos_inner = convert_utxos(&utxos)?;
+        let tx = tx.as_ref();
+        let utxos_inner = convert_utxos(&utxos);
 
         let finalized = signer::finalize_transaction(
-            tx,
+            tx.clone(),
             &self.inner,
             &x_only_key,
             &utxos_inner,
@@ -144,8 +143,6 @@ impl SimplicityProgram {
             network.into(),
             log_level.into(),
         )?;
-
-        let finalized: lwk_wollet::elements::Transaction = finalized.to25()?;
         Ok(finalized.into())
     }
 
@@ -163,11 +160,11 @@ impl SimplicityProgram {
     ) -> Result<String, Error> {
         let keypair_inner: Keypair = derive_keypair(signer, derivation_path)?.into();
         let x_only_pubkey = keypair_inner.x_only_public_key().0;
-        let tx = tx.as_ref().to27()?;
-        let utxos_inner = convert_utxos(&utxos)?;
+        let tx = tx.as_ref();
+        let utxos_inner = convert_utxos(&utxos);
 
         let sighash = signer::get_sighash_all(
-            &tx,
+            tx,
             &self.inner,
             &x_only_pubkey,
             &utxos_inner,
@@ -197,11 +194,11 @@ impl SimplicityProgram {
         log_level: SimplicityLogLevel,
     ) -> Result<SimplicityRunResult, Error> {
         let x_only_key = program_public_key.to_simplicityhl()?;
-        let tx = tx.as_ref().to27()?;
-        let utxos_inner = convert_utxos(&utxos)?;
+        let tx = tx.as_ref();
+        let utxos_inner = convert_utxos(&utxos);
 
         let env = signer::get_and_verify_env(
-            &tx,
+            tx,
             &self.inner,
             &x_only_key,
             &utxos_inner,

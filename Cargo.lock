@@ -3358,7 +3358,6 @@ dependencies = [
 name = "lwk_simplicity"
 version = "0.19.0"
 dependencies = [
- "elements",
  "lending-contracts",
  "lwk_common",
  "lwk_signer",

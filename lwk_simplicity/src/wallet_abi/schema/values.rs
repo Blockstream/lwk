@@ -14,11 +14,8 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
-// TODO: use lwk_wollet::elements after the `rust-elements` 0.27 upgrade
-use crate::simplicityhl::elements::Transaction;
-
 use lwk_wollet::elements::pset::{Input, PartiallySignedTransaction};
-use lwk_wollet::elements::AssetBlindingNonce;
+use lwk_wollet::elements::{AssetBlindingNonce, Transaction};
 use lwk_wollet::secp256k1::{Message, XOnlyPublicKey};
 
 use simplicityhl::parse::ParseFromStr;

@@ -15,7 +15,6 @@ use lwk_wollet::{elements, EC};
 
 use lwk_simplicity::scripts::{simplicity_leaf_version, tap_data_hash};
 use lwk_simplicity::simplicityhl;
-use lwk_simplicity::utils::leaf_version_to25;
 
 /// Taproot builder for Simplicity-related functionality.
 ///
@@ -128,7 +127,7 @@ fn script_version(
     cmr: simplicityhl::simplicity::Cmr,
 ) -> Result<(elements::Script, taproot::LeafVersion), LwkError> {
     let script = elements::Script::from(cmr.as_ref().to_vec());
-    Ok((script, leaf_version_to25(simplicity_leaf_version())?))
+    Ok((script, simplicity_leaf_version()))
 }
 
 #[cfg(test)]

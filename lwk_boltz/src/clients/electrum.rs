@@ -7,10 +7,7 @@ use boltz_client::error::Error;
 use boltz_client::network::LiquidChain;
 use lwk_common::Network;
 use lwk_wollet::blocking::BlockchainBackend;
-use lwk_wollet::elements as lwk_elements;
 use tokio::task;
-
-use super::{boltz_block_hash, boltz_tx, boltz_utxo, lwk_tx, lwk_txid};
 
 #[derive(Clone)]
 pub struct ElectrumClient {
@@ -47,22 +44,21 @@ impl ElectrumClient {
 impl boltz_client::network::LiquidClient for ElectrumClient {
     async fn get_tx(&self, txid: elements::Txid) -> Result<elements::Transaction, Error> {
         let inner = Arc::clone(&self.inner);
-        let lwk_id = lwk_txid(txid)?;
-        let tx = task::spawn_blocking(move || inner.get_transactions(&[lwk_id]))
+        let tx = task::spawn_blocking(move || inner.get_transactions(&[txid]))
             .await
             .map_err(|e| Error::Protocol(e.to_string()))?
             .map_err(|e| Error::Protocol(e.to_string()))?
             .into_iter()
             .next()
             .ok_or_else(|| Error::Protocol(format!("transaction {txid} not found")))?;
-        boltz_tx(&tx)
+        Ok(tx)
     }
 
     async fn get_address_utxo(
         &self,
         address: &elements::Address,
     ) -> Result<Option<(elements::OutPoint, elements::TxOut)>, Error> {
-        let spk = lwk_elements::Script::from(address.script_pubkey().into_bytes());
+        let spk = elements::Script::from(address.script_pubkey().into_bytes());
         let inner = Arc::clone(&self.inner);
         let spk_clone = spk.clone();
         let history = task::spawn_blocking(move || inner.get_scripts_history(&[&spk_clone]))
@@ -93,14 +89,14 @@ impl boltz_client::network::LiquidClient for ElectrumClient {
         for tx in txs.iter() {
             for (vout, output) in tx.output.iter().enumerate() {
                 if output.script_pubkey == spk {
-                    let outpoint = lwk_elements::OutPoint {
+                    let outpoint = elements::OutPoint {
                         txid: tx.txid(),
                         vout: vout as u32,
                     };
 
                     // Check if this output is spent using the HashSet
                     if !spent_outpoints.contains(&outpoint) {
-                        return Ok(Some(boltz_utxo(outpoint, output)?));
+                        return Ok(Some((outpoint, output.clone())));
                     }
                 }
             }
@@ -120,14 +116,13 @@ impl boltz_client::network::LiquidClient for ElectrumClient {
         .map_err(|e| Error::Protocol(e.to_string()))??;
         headers
             .first()
-            .map(|header| boltz_block_hash(header.block_hash()))
-            .transpose()?
+            .map(|header| header.block_hash())
             .ok_or_else(|| Error::Protocol("missing genesis block header".to_owned()))
     }
 
     async fn broadcast_tx(&self, signed_tx: &elements::Transaction) -> Result<String, Error> {
         let inner = Arc::clone(&self.inner);
-        let tx = lwk_tx(signed_tx)?;
+        let tx = signed_tx.clone();
         let txid = task::spawn_blocking(move || {
             inner
                 .broadcast(&tx)

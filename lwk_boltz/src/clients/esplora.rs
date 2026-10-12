@@ -6,9 +6,6 @@ use boltz_client::elements;
 use boltz_client::error::Error;
 use boltz_client::network::LiquidChain;
 use lwk_common::Network;
-use lwk_wollet::elements as lwk_elements;
-
-use super::{boltz_block_hash, boltz_tx, boltz_utxo, lwk_tx, lwk_txid};
 
 pub struct EsploraClient {
     inner: Arc<lwk_wollet::asyncr::EsploraClient>,
@@ -36,17 +33,16 @@ impl EsploraClient {
 impl boltz_client::network::LiquidClient for EsploraClient {
     async fn get_tx(&self, txid: elements::Txid) -> Result<elements::Transaction, Error> {
         self.inner
-            .get_transaction(lwk_txid(txid)?)
+            .get_transaction(txid)
             .await
             .map_err(|e| Error::Protocol(e.to_string()))
-            .and_then(|tx| boltz_tx(&tx))
     }
 
     async fn get_address_utxo(
         &self,
         address: &elements::Address,
     ) -> Result<Option<(elements::OutPoint, elements::TxOut)>, Error> {
-        let spk = lwk_elements::Script::from(address.script_pubkey().into_bytes());
+        let spk = elements::Script::from(address.script_pubkey().into_bytes());
         let history = self
             .inner
             .get_scripts_history(&[&spk])
@@ -76,14 +72,14 @@ impl boltz_client::network::LiquidClient for EsploraClient {
         for tx in txs.iter() {
             for (vout, output) in tx.output.iter().enumerate() {
                 if output.script_pubkey == spk {
-                    let outpoint = lwk_elements::OutPoint {
+                    let outpoint = elements::OutPoint {
                         txid: tx.txid(),
                         vout: vout as u32,
                     };
 
                     // Check if this output is spent using the HashSet
                     if !spent_outpoints.contains(&outpoint) {
-                        return Ok(Some(boltz_utxo(outpoint, output)?));
+                        return Ok(Some((outpoint, output.clone())));
                     }
                 }
             }
@@ -100,15 +96,14 @@ impl boltz_client::network::LiquidClient for EsploraClient {
             .map_err(|e| Error::Protocol(e.to_string()))?;
         headers
             .first()
-            .map(|header| boltz_block_hash(header.block_hash()))
-            .transpose()?
+            .map(|header| header.block_hash())
             .ok_or_else(|| Error::Protocol("missing genesis block header".to_owned()))
     }
 
     async fn broadcast_tx(&self, signed_tx: &elements::Transaction) -> Result<String, Error> {
         let txid = self
             .inner
-            .broadcast(&lwk_tx(signed_tx)?)
+            .broadcast(signed_tx)
             .await
             .map_err(|e| Error::Protocol(e.to_string()))?;
         Ok(txid.to_string())

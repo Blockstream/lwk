@@ -6,6 +6,7 @@ use crate::History;
 
 use electrum_client::ScriptStatus;
 use electrum_client::{AuthProvider, Client, ConfigBuilder, ElectrumApi, GetHistoryRes};
+use elements::bitcoin::hashes::Hash as _;
 use elements::encode::deserialize as elements_deserialize;
 use elements::encode::serialize as elements_serialize;
 use elements::Address;
@@ -278,13 +279,13 @@ impl BlockchainBackend for ElectrumClient {
 
         let tx_bytes = elements_serialize(tx);
         let txid = self.with_token_refresh(|client| client.transaction_broadcast_raw(&tx_bytes))?;
-        Ok(Txid::from_raw_hash(txid.to_raw_hash()))
+        Ok(Txid::from_byte_array(txid.to_byte_array()))
     }
 
     fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<Transaction>, Error> {
         let txids: Vec<bitcoin::Txid> = txids
             .iter()
-            .map(|t| bitcoin::Txid::from_raw_hash(t.to_raw_hash()))
+            .map(|t| bitcoin::Txid::from_byte_array(t.to_byte_array()))
             .collect();
 
         let raw_txs = self.with_token_refresh(|client| client.batch_transaction_get_raw(&txids))?;
@@ -292,7 +293,7 @@ impl BlockchainBackend for ElectrumClient {
         let mut result = vec![];
         for (requested, raw_tx) in txids.iter().zip(raw_txs) {
             let tx: Transaction = elements::encode::deserialize(&raw_tx)?;
-            if tx.txid() != Txid::from_raw_hash(requested.to_raw_hash()) {
+            if tx.txid() != Txid::from_byte_array(requested.to_byte_array()) {
                 return Err(Error::TxidMismatch);
             }
             result.push(tx);
@@ -330,7 +331,7 @@ impl BlockchainBackend for ElectrumClient {
 impl From<GetHistoryRes> for History {
     fn from(value: GetHistoryRes) -> Self {
         History {
-            txid: Txid::from_raw_hash(value.tx_hash.to_raw_hash()),
+            txid: Txid::from_byte_array(value.tx_hash.to_byte_array()),
             height: value.height,
             block_hash: None,
             block_timestamp: None,

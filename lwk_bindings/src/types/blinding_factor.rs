@@ -4,8 +4,6 @@ use std::fmt::Display;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use elements::pset::serialize::Serialize;
-
 /// A blinding factor for asset commitments.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 #[uniffi::export(Display)]
@@ -77,7 +75,7 @@ impl AssetBlindingFactor {
 
     /// Returns the bytes (32 bytes).
     pub fn to_bytes(self) -> Vec<u8> {
-        self.inner.into_inner().serialize()
+        self.inner.into_inner().as_ref().to_vec()
     }
 }
 
@@ -152,7 +150,7 @@ impl ValueBlindingFactor {
 
     /// Returns the bytes (32 bytes).
     pub fn to_bytes(self) -> Vec<u8> {
-        self.inner.into_inner().serialize()
+        self.inner.into_inner().as_ref().to_vec()
     }
 }
 

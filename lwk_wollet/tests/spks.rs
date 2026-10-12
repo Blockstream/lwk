@@ -1,5 +1,4 @@
 use crate::test_wollet::*;
-use elements::hex::ToHex;
 use lwk_common::Signer;
 use lwk_test_util::*;
 use lwk_wollet::*;
@@ -14,7 +13,7 @@ fn test_spks() {
     let wd = WolletDescriptor::from_str(&desc).unwrap();
     let spk = wd.script_pubkey(Chain::External, 0).unwrap();
     let bk = lwk_common::derive_blinding_key(wd.ct_descriptor().unwrap(), &spk).unwrap();
-    let desc = format!("{}:{}", bk.display_secret(), spk.to_hex());
+    let desc = format!("{}:{spk:x}", bk.display_secret());
     let _wd: WolletDescriptor = desc.parse().unwrap();
 
     let client = test_client_electrum(&env.electrum_url());
@@ -80,7 +79,7 @@ fn test_explicit_spks() {
     let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
     let wd = WolletDescriptor::from_str(&desc).unwrap();
     let spk = wd.script_pubkey(Chain::External, 0).unwrap();
-    let desc = format!(":{}", spk.to_hex());
+    let desc = format!(":{spk:x}");
     let wd = WolletDescriptor::from_str(&desc).unwrap();
 
     let client = test_client_electrum(&env.electrum_url());

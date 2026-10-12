@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use elements::bitcoin::bip32::{DerivationPath, KeySource, Xpub};
-use elements::hex::ToHex;
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use rand::{thread_rng, Rng};
 use thiserror::Error;
@@ -79,7 +78,10 @@ pub fn multisig_desc(
         DescriptorBlindingKey::Slip77Rand => {
             let mut bytes = [0u8; 32];
             thread_rng().fill(&mut bytes);
-            format!("slip77({})", bytes.to_hex())
+            format!(
+                "slip77({})",
+                elements::hex::DisplayHex::to_lower_hex_string(bytes.as_slice())
+            )
         }
         DescriptorBlindingKey::Elip151 => "elip151".to_string(),
     };

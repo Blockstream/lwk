@@ -24,8 +24,7 @@ use serde_json::Value;
 use lwk_common::Network;
 use lwk_signer::bip39::rand::{thread_rng, RngCore};
 
-use lwk_wollet::elements::hex::ToHex;
-use lwk_wollet::hashes::hex::FromHex;
+use lwk_wollet::elements::hex::DisplayHex;
 use lwk_wollet::hashes::{sha256, Hash, HashEngine};
 
 /// Errors from taproot pubkey generation and verification.
@@ -61,7 +60,7 @@ pub enum TaprootPubkeyGenError {
     AddressGeneration(#[from] ProgramError),
 
     #[error("hex error: {0}")]
-    Hex(#[from] lwk_wollet::hashes::hex::HexToBytesError),
+    Hex(#[from] lwk_wollet::elements::hex::DecodeVariableLengthBytesError),
 }
 
 /// Generate a valid ephemeral public key and its seed; repeats until valid.
@@ -219,13 +218,13 @@ impl TaprootPubkeyGen {
         }
 
         let identity = if let Some(xonly_hex) = parts[0].strip_prefix("ext-") {
-            let xonly_bytes = Vec::<u8>::from_hex(xonly_hex)?;
+            let xonly_bytes = lwk_wollet::elements::hex::decode_to_vec(xonly_hex)?;
             TaprootIdentity::ExternalXOnly(
                 XOnlyPublicKey::from_slice(&xonly_bytes)
                     .map_err(|e| TaprootPubkeyGenError::InvalidExternalKey(e.to_string()))?,
             )
         } else {
-            let seed = Vec::<u8>::from_hex(parts[0])?;
+            let seed = lwk_wollet::elements::hex::decode_to_vec(parts[0])?;
             if seed.len() != 32 {
                 return Err(TaprootPubkeyGenError::InvalidSeedLength { actual: seed.len() });
             }
@@ -243,9 +242,9 @@ impl TaprootPubkeyGen {
 impl Display for TaprootPubkeyGen {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let id = match &self.identity {
-            TaprootIdentity::Seed(seed) => seed.to_hex(),
+            TaprootIdentity::Seed(seed) => seed.to_lower_hex_string(),
             TaprootIdentity::ExternalXOnly(xonly) => {
-                format!("ext-{}", xonly.serialize().to_hex())
+                format!("ext-{}", xonly.serialize().to_lower_hex_string())
             }
         };
         write!(f, "{}:{}:{}", id, self.pubkey, self.address)

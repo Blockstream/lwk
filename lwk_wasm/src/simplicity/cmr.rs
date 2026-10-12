@@ -69,8 +69,6 @@ mod tests {
 
     use crate::simplicity::{SimplicityArguments, SimplicityProgram, SimplicityTypedValue};
 
-    use lwk_wollet::hashes::hex::FromHex;
-
     use wasm_bindgen_test::*;
 
     wasm_bindgen_test_configure!(run_in_browser);
@@ -84,7 +82,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     fn test_cmr_hex_validation_and_roundtrips() {
-        let expected_bytes = Vec::<u8>::from_hex(TEST_CMR).unwrap();
+        let expected_bytes = lwk_wollet::elements::hex::decode_to_vec(TEST_CMR).unwrap();
 
         let cmr = Cmr::from_string(TEST_CMR).unwrap();
         assert_eq!(cmr.to_string(), TEST_CMR);

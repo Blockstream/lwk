@@ -1,10 +1,6 @@
 //! Liquid script
 
-use elements::{
-    hashes::{hex::FromHex, sha256, Hash},
-    hex::ToHex,
-    pset::serialize::Deserialize,
-};
+use elements::{hashes::sha256, pset::serialize::Deserialize};
 
 use crate::LwkError;
 use std::{fmt::Display, sync::Arc};
@@ -36,7 +32,7 @@ impl From<&Script> for elements::Script {
 
 impl Display for Script {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.inner.to_hex())
+        write!(f, "{:x}", self.inner)
     }
 }
 
@@ -48,7 +44,7 @@ impl Script {
     /// Deprecated: use `from_string()` instead.
     #[uniffi::constructor]
     pub fn new(hex: &str) -> Result<Arc<Self>, LwkError> {
-        let bytes = Vec::<u8>::from_hex(hex)?;
+        let bytes = elements::hex::decode_to_vec(hex)?;
         let inner = elements::Script::deserialize(&bytes)?;
         Ok(Arc::new(Self { inner }))
     }
@@ -64,7 +60,7 @@ impl Script {
     /// To create the string representation of a script use `to_string()`.
     #[uniffi::constructor]
     pub fn from_string(s: &str) -> Result<Arc<Self>, LwkError> {
-        let bytes = Vec::<u8>::from_hex(s)?;
+        let bytes = elements::hex::decode_to_vec(s)?;
         let inner = elements::Script::deserialize(&bytes)?;
         Ok(Arc::new(Self { inner }))
     }
@@ -101,7 +97,7 @@ impl Script {
     ///
     /// Returns an equivalent value to the `jet::input_script_hash(index)`/`jet::output_script_hash(index)`.
     pub fn jet_sha256_hex(&self) -> String {
-        sha256::Hash::hash(self.inner.as_bytes()).to_hex()
+        format!("{:x}", sha256::Hash::hash(self.inner.as_bytes()))
     }
 
     // "asm" is a reserved keyword in some target languages, do not use it
@@ -128,7 +124,6 @@ pub fn is_provably_segwit(script_pubkey: &Script, redeem_script: &Option<Arc<Scr
 
 #[cfg(test)]
 mod tests {
-    use elements::hashes::hex::FromHex;
 
     use super::{is_provably_segwit, Script};
 
@@ -139,7 +134,7 @@ mod tests {
         let script = Script::from_string(script_str).unwrap();
         assert_eq!(script.to_string(), script_str);
 
-        let script_bytes = Vec::<u8>::from_hex(script_str).unwrap();
+        let script_bytes = elements::hex::decode_to_vec(script_str).unwrap();
         assert_eq!(script.to_bytes(), script_bytes);
 
         assert_eq!(

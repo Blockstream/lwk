@@ -35,7 +35,7 @@ use lwk_wollet::bitcoin::bip32::Fingerprint;
 use lwk_wollet::bitcoin::XKeyIdentifier;
 use lwk_wollet::clients::blocking::BlockchainBackend;
 use lwk_wollet::elements::encode::serialize;
-use lwk_wollet::elements::hex::{FromHex, ToHex};
+use lwk_wollet::elements::hex::DisplayHex;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use lwk_wollet::elements::{Address, AssetId, OutPoint, Txid};
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
@@ -994,7 +994,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             } else {
                 return Err(Error::WalletTxNotFound(r.txid, r.name));
             };
-            let tx = serialize(&tx).to_hex();
+            let tx = serialize(&tx).to_lower_hex_string();
             Response::result(request.id, serde_json::to_value(response::WalletTx { tx })?)
         }
         Method::WalletTxDetails => {
@@ -1241,7 +1241,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::AssetContract = serde_json::from_value(params)?;
             let c = lwk_wollet::Contract::builder()
                 .entity(lwk_wollet::Entity::Domain(r.domain))
-                .issuer_pubkey(Vec::<u8>::from_hex(&r.issuer_pubkey)?)
+                .issuer_pubkey(lwk_wollet::elements::hex::decode_to_vec(&r.issuer_pubkey)?)
                 .name(r.name)
                 .precision(r.precision)
                 .ticker(r.ticker)
@@ -1281,7 +1281,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::AssetInsert = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let asset_id = lwk_wollet::elements::AssetId::from_str(&r.asset_id)?;
-            let issuance_tx = Vec::<u8>::from_hex(&r.issuance_tx)?;
+            let issuance_tx = lwk_wollet::elements::hex::decode_to_vec(&r.issuance_tx)?;
             let issuance_tx = lwk_wollet::elements::encode::deserialize(&issuance_tx)?;
             let contract = serde_json::Value::from_str(&r.contract)?;
             let contract = lwk_wollet::Contract::from_value(&contract)?;
@@ -1487,7 +1487,7 @@ fn convert_utxo(u: &lwk_wollet::WalletTxOut) -> response::Utxo {
         txid: u.outpoint.txid.to_string(),
         vout: u.outpoint.vout,
         height: u.height,
-        script_pubkey: u.script_pubkey.to_hex(),
+        script_pubkey: format!("{:x}", u.script_pubkey),
         address: u.address.to_string(),
         asset: u.unblinded.asset.to_string(),
         value: u.unblinded.value,
@@ -1523,7 +1523,7 @@ fn convert_txoutdetails(txoutdetails: &lwk_wollet::TxOutDetails) -> response::Tx
     let unblinded = txoutdetails.unblinded();
     response::TxOutDetails {
         address: txoutdetails.address().map(|a| a.to_string()),
-        script_pubkey: txoutdetails.script_pubkey().map(|a| a.to_hex()),
+        script_pubkey: txoutdetails.script_pubkey().map(|a| format!("{a:x}")),
         asset_id: unblinded.map(|u| u.asset.to_string()),
         satoshi: unblinded.map(|u| u.value),
         abf: unblinded.map(|u| u.asset_bf.to_string()),

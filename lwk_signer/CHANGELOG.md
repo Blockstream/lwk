@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Update to `elements` 0.27.
 * `SwSigner` now stores its `lwk_common::Network`
 * Deprecate `SwSigner::new()`, add `SwSigner::new_with_network()`
 * Deprecate `SwSigner::random()`, add `SwSigner::random_with_network()`

@@ -15,10 +15,8 @@ use bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use bitcoind::BitcoinD;
 
 use elements::bitcoin;
-use elements_miniscript::elements;
-
-use elements::hex::FromHex;
 use elements::{Address, AssetId, BlockHash, Txid};
+use elements_miniscript::elements;
 
 use lwk_common::Network;
 use serde_json::Value;
@@ -1016,7 +1014,7 @@ impl TestEnv {
             .call::<Value>("getrawtransaction", &[txid.to_string().into()])
             .unwrap();
         let hex = r.as_str().unwrap();
-        let bytes = Vec::<u8>::from_hex(hex).unwrap();
+        let bytes = elements::hex::decode_to_vec(hex).unwrap();
         bitcoin::consensus::deserialize(&bytes[..]).unwrap()
     }
 

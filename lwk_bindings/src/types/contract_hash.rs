@@ -4,8 +4,6 @@ use std::fmt::Display;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use elements::hashes::Hash;
-
 /// The hash of an asset contract.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 #[uniffi::export(Display)]

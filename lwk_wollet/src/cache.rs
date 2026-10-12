@@ -1,6 +1,5 @@
 use crate::descriptor::{Chain, WolletDescriptor};
 use crate::elements::{BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
-use crate::hashes::Hash;
 use crate::{BlindingPublicKey, Error};
 use elements::bitcoin::bip32::ChildNumber;
 use lwk_common::{DynStore, MemoryStore};
@@ -78,7 +77,7 @@ impl Default for Cache {
             unspent: HashMap::new(),
             unblinded: HashMap::default(),
             cannot_unblind_txids: HashSet::default(),
-            tip: (0, BlockHash::all_zeros()),
+            tip: (0, BlockHash::from_byte_array([0; 32])),
             last_unused_internal: 0.into(),
             last_unused_external: 0.into(),
             timestamps: HashMap::default(),
@@ -602,9 +601,7 @@ mod tests {
         cache.hash(&mut hasher);
         assert_eq!(11565483422739161174, hasher.finish());
 
-        cache
-            .heights
-            .insert(<Txid as elements::hashes::Hash>::all_zeros(), None);
+        cache.heights.insert(Txid::from_byte_array([0; 32]), None);
         let mut hasher = DefaultHasher::new();
         cache.hash(&mut hasher);
         assert_eq!(12004253425667158821, hasher.finish());

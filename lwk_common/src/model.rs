@@ -3,8 +3,7 @@ use elements_miniscript::elements::bitcoin::{
     key::PublicKey,
 };
 use elements_miniscript::elements::pset::{Input, PartiallySignedTransaction};
-use elements_miniscript::elements::secp256k1_zkp::ZERO_TWEAK;
-use elements_miniscript::elements::{AssetId, AssetIssuance, OutPoint, Txid};
+use elements_miniscript::elements::{AssetBlindingNonce, AssetId, AssetIssuance, OutPoint, Txid};
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use std::collections::{BTreeSet, HashMap};
 
@@ -169,12 +168,12 @@ impl Issuance {
 
     /// Return true if this is effectively an issuance
     pub fn is_issuance(&self) -> bool {
-        !self.is_null() && self.inner.asset_blinding_nonce == ZERO_TWEAK
+        !self.is_null() && self.inner.asset_blinding_nonce == AssetBlindingNonce::NEW_ISSUANCE
     }
 
     /// Return true if this is effectively a reissuance
     pub fn is_reissuance(&self) -> bool {
-        !self.is_null() && self.inner.asset_blinding_nonce != ZERO_TWEAK
+        !self.is_null() && self.inner.asset_blinding_nonce != AssetBlindingNonce::NEW_ISSUANCE
     }
 
     /// Return true if the issuance or reissuance is confidential

@@ -24,7 +24,6 @@ use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::Mutex;
 
-use crate::hashes::Hash;
 use crate::wamp::common::{Arg, ClientRole, WampDict, WampId};
 use crate::wamp::message::Msg;
 use crate::EC;
@@ -35,7 +34,7 @@ use elements::bitcoin::network::NetworkKind;
 use elements::bitcoin::secp256k1::PublicKey;
 use elements::encode::{deserialize, serialize};
 use elements::hashes::sha256;
-use elements::hex::{FromHex, ToHex};
+use elements::hex::DisplayHex;
 use elements::pset::PartiallySignedTransaction;
 use elements::secp256k1_zkp::{Generator, PedersenCommitment, SecretKey};
 use elements::BlockHash;
@@ -44,7 +43,7 @@ use elements::{
     confidential::{AssetBlindingFactor, ValueBlindingFactor},
     Address, AssetId, TxOut, TxOutSecrets,
 };
-use elements::{script, Script, ScriptHash, WScriptHash};
+use elements::{script, Script};
 use elements_miniscript::psbt::PsbtExt;
 
 /// The fingerprint of the AMP0 server key for the mainnet network.
@@ -332,9 +331,9 @@ impl<S: Stream> Amp0<S> {
                 let (pointer, script) = self.amp0.get_new_address(self.amp_subaccount).await?;
                 let wsh = script::Builder::new()
                     .push_int(0)
-                    .push_slice(&WScriptHash::hash(script.as_bytes())[..])
+                    .push_slice(&script.wscript_hash().to_byte_array()[..])
                     .into_script();
-                let sh = ScriptHash::hash(wsh.as_bytes());
+                let sh = wsh.script_hash();
                 let spk = Script::new_p2sh(&sh);
 
                 // Get address from the LWK wollet
@@ -372,7 +371,7 @@ impl<S: Stream> Amp0<S> {
 
         // Dummy signature to use a placeholder
         let dummy_hex = "304402207f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f02207f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f01";
-        let dummy = Vec::<u8>::from_hex(dummy_hex)?;
+        let dummy = elements::hex::decode_to_vec(dummy_hex)?;
 
         for input in pset.inputs_mut() {
             // FIXME: ignore/handle non Green/AMP0 inputs
@@ -386,15 +385,15 @@ impl<S: Stream> Amp0<S> {
             let script = input
                 .witness_script
                 .as_ref()
-                .map(|s| s.to_hex())
+                .map(|s| format!("{s:x}"))
                 .unwrap_or_default();
             scripts.push(script);
         }
 
-        let _ = pset.finalize_mut(&EC, BlockHash::all_zeros());
+        let _ = pset.finalize_mut(&EC, BlockHash::from_byte_array([0; 32]));
 
         let tx = pset.extract_tx()?;
-        let tx_hex = serialize(&tx).to_hex();
+        let tx_hex = serialize(&tx).to_lower_hex_string();
 
         #[derive(serde::Serialize)]
         struct DelayedSignatureRequest {
@@ -432,7 +431,7 @@ impl<S: Stream> Amp0<S> {
         }
 
         let response_tx = j.tx.unwrap_or_default();
-        let response_tx: Transaction = deserialize(&Vec::<u8>::from_hex(&response_tx)?)?;
+        let response_tx: Transaction = deserialize(&elements::hex::decode_to_vec(&response_tx)?)?;
 
         let server_master = server_master_xpub(&self.network);
         let expected_server_fg = server_master.fingerprint();
@@ -483,13 +482,14 @@ fn verify_added_sigs_tx(
             .find_map(|(pk, (fg, _))| (*fg == expected_fingerprint).then_some(*pk))
             .ok_or(lwk_common::PsetValidationError::WrongFingerprint { idx })?;
 
+        let mut ret_witness = ret_in.witness.script_witness.to_vec();
         for (orig_item, ret_item) in orig_in
             .witness
             .script_witness
             .iter()
-            .zip(ret_in.witness.script_witness.iter_mut())
+            .zip(ret_witness.iter_mut())
         {
-            if orig_item != dummy_sig && orig_item != ret_item {
+            if orig_item != dummy_sig && orig_item != ret_item.as_slice() {
                 return Err(lwk_common::PsetValidationError::DataMismatch);
             }
 
@@ -497,14 +497,15 @@ fn verify_added_sigs_tx(
                 continue;
             }
 
-            if ret_item == orig_item {
+            if ret_item.as_slice() == orig_item {
                 return Err(lwk_common::PsetValidationError::InvalidSignature);
             }
 
-            pset_in.partial_sigs.insert(pubkey, ret_item.to_vec());
+            pset_in.partial_sigs.insert(pubkey, ret_item.clone());
 
-            *ret_item = orig_item.clone();
+            *ret_item = orig_item.to_vec();
         }
+        ret_in.witness.script_witness = ret_witness.into();
     }
 
     if *original != r {
@@ -889,8 +890,16 @@ impl<S: Stream> Amp0Inner<S> {
 
         let request = WampId::generate();
         let args = vec![
-            master_xpub.public_key.to_hex().into(),
-            master_xpub.chain_code.to_hex().into(),
+            master_xpub
+                .public_key
+                .serialize()
+                .to_lower_hex_string()
+                .into(),
+            master_xpub
+                .chain_code
+                .as_bytes()
+                .to_lower_hex_string()
+                .into(),
             USER_AGENT.into(),
             gait_path.into(),
         ];
@@ -1803,7 +1812,7 @@ impl Amp0Pset {
                 let txoutsecrets = unblind_with_shared_secret(&txout, shared_secret)?;
                 let asset_comm = Generator::new_blinded(
                     &EC,
-                    txoutsecrets.asset.into_inner().to_byte_array().into(),
+                    txoutsecrets.asset.to_byte_array().into(),
                     txoutsecrets.asset_bf.into_inner(),
                 );
                 let amount_comm = PedersenCommitment::new(
@@ -1867,7 +1876,11 @@ fn unblind_with_shared_secret(
     )?;
 
     let (asset, asset_bf) = opening.message.as_ref().split_at(32);
-    let asset = AssetId::from_slice(asset)?;
+    let asset = AssetId::from_byte_array(
+        asset
+            .try_into()
+            .map_err(|_| Error::Generic("Invalid asset id".into()))?,
+    );
     let asset_bf = AssetBlindingFactor::from_slice(&asset_bf[..32])?;
 
     let value = opening.value;
@@ -2376,8 +2389,14 @@ mod tests {
         let signer = SwSigner::new_with_network(mnemonic, Network::TestnetLiquid).unwrap();
         let signer_data = signer.amp0_signer_data().unwrap();
         let master_xpub = signer_data.master_xpub();
-        assert_eq!(master_public_key, master_xpub.public_key.to_hex());
-        assert_eq!(master_chain_code, master_xpub.chain_code.to_hex());
+        assert_eq!(
+            master_public_key,
+            master_xpub.public_key.serialize().to_lower_hex_string()
+        );
+        assert_eq!(
+            master_chain_code,
+            master_xpub.chain_code.as_bytes().to_lower_hex_string()
+        );
         let register_xpub = signer_data.register_xpub();
 
         assert_eq!(derive_gait_path(register_xpub), gait_path_hex);
@@ -2554,7 +2573,7 @@ mod tests {
         ecdsa_sig.push(EcdsaSighashType::All as u8);
         let ecdsa_sig_too_short = vec![EcdsaSighashType::All as u8];
         let dummy_hex = "304402207f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f02207f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f01";
-        let dummy = Vec::<u8>::from_hex(dummy_hex).unwrap();
+        let dummy = elements::hex::decode_to_vec(dummy_hex).unwrap();
 
         let mut pset = PartiallySignedTransaction::new_v2();
         let mut input = Input::default();
@@ -2592,7 +2611,7 @@ mod tests {
 
         // added tx sig from a key with the wrong fingerprint
         let mut returned = original.clone();
-        returned.input[0].witness.script_witness[0] = ecdsa_sig.clone();
+        returned.input[0].witness.script_witness = vec![ecdsa_sig.clone()].into();
         let err = verify_added_sigs_tx(&pset, &original, &returned, other_fp, &dummy).unwrap_err();
         assert!(matches!(
             err,
@@ -2601,7 +2620,7 @@ mod tests {
 
         // added tx sig that is cryptographically invalid
         let mut returned = original.clone();
-        returned.input[0].witness.script_witness[0] = ecdsa_sig.clone();
+        returned.input[0].witness.script_witness = vec![ecdsa_sig.clone()].into();
         let err = verify_added_sigs_tx(&pset, &original, &returned, fp, &dummy).unwrap_err();
         assert!(matches!(
             err,
@@ -2610,7 +2629,7 @@ mod tests {
 
         // added tx sig that is too short to contain a sighash byte
         let mut returned = original.clone();
-        returned.input[0].witness.script_witness[0] = ecdsa_sig_too_short.clone();
+        returned.input[0].witness.script_witness = vec![ecdsa_sig_too_short.clone()].into();
         let err = verify_added_sigs_tx(&pset, &original, &returned, fp, &dummy).unwrap_err();
         assert!(matches!(
             err,
@@ -2619,41 +2638,41 @@ mod tests {
 
         // non-signature fields are protected: output amount changed
         let mut returned = original.clone();
-        returned.input[0].witness.script_witness[0] = ecdsa_sig.clone();
+        returned.input[0].witness.script_witness = vec![ecdsa_sig.clone()].into();
         returned.output[0].value = elements::confidential::Value::Explicit(999_999);
         let err = verify_added_sigs_tx(&pset, &original, &returned, fp, &dummy).unwrap_err();
         assert!(matches!(err, lwk_common::PsetValidationError::DataMismatch));
 
         // non-signature fields are protected: input added
         let mut returned = original.clone();
-        returned.input[0].witness.script_witness[0] = ecdsa_sig.clone();
+        returned.input[0].witness.script_witness = vec![ecdsa_sig.clone()].into();
         returned.input.push(elements::TxIn::default());
         let err = verify_added_sigs_tx(&pset, &original, &returned, fp, &dummy).unwrap_err();
         assert!(matches!(err, lwk_common::PsetValidationError::DataMismatch));
 
         // non-signature fields are protected: output removed
         let mut returned = original.clone();
-        returned.input[0].witness.script_witness[0] = ecdsa_sig.clone();
+        returned.input[0].witness.script_witness = vec![ecdsa_sig.clone()].into();
         returned.output.pop();
         let err = verify_added_sigs_tx(&pset, &original, &returned, fp, &dummy).unwrap_err();
         assert!(matches!(err, lwk_common::PsetValidationError::DataMismatch));
 
         // witness stack size mismatch
         let mut returned = original.clone();
-        returned.input[0].witness.script_witness[0] = ecdsa_sig.clone();
+        returned.input[0].witness.script_witness = vec![ecdsa_sig.clone()].into();
         returned.input[0].witness.script_witness.push(vec![1, 2, 3]);
         let err = verify_added_sigs_tx(&pset, &original, &returned, fp, &dummy).unwrap_err();
         assert!(matches!(err, lwk_common::PsetValidationError::DataMismatch));
 
         // changed non-signature witness element
         let mut original_multi_witness = original.clone();
-        returned.input[0].witness.script_witness[0] = ecdsa_sig.clone();
+        returned.input[0].witness.script_witness = vec![ecdsa_sig.clone()].into();
         original_multi_witness.input[0]
             .witness
             .script_witness
             .push(vec![0x00]);
         let mut returned = original_multi_witness.clone();
-        returned.input[0].witness.script_witness[1] = vec![0x01];
+        returned.input[0].witness.script_witness = vec![dummy.clone(), vec![0x01]].into();
         let err = verify_added_sigs_tx(&pset, &original_multi_witness, &returned, fp, &dummy)
             .unwrap_err();
         assert!(matches!(

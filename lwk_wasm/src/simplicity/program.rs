@@ -14,7 +14,7 @@ use lwk_simplicity::signer;
 use lwk_simplicity::simplicityhl;
 use lwk_simplicity::utils::{address_params_to27, address_to25, To25, To27};
 
-use lwk_wollet::elements::hex::ToHex;
+use lwk_wollet::elements::hex::DisplayHex;
 use lwk_wollet::secp256k1::Keypair;
 use wasm_bindgen::prelude::*;
 
@@ -110,7 +110,7 @@ impl SimplicityProgram {
         )?;
 
         // TODO: create a wrapper for the Message type
-        Ok(message.as_ref().to_hex())
+        Ok(message.as_ref().to_lower_hex_string())
     }
 
     /// Finalize a transaction with a Simplicity witness for the specified input.
@@ -177,7 +177,7 @@ impl SimplicityProgram {
 
         let signature = keypair_inner.sign_schnorr(sighash);
 
-        Ok(signature.serialize().to_hex())
+        Ok(signature.serialize().to_lower_hex_string())
     }
 
     /// Satisfy and execute this program in a transaction environment.

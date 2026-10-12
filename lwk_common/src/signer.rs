@@ -236,7 +236,7 @@ mod tests {
 pub mod amp0 {
     use super::*;
     use crate::Network;
-    use elements::hex::ToHex;
+    use elements::hex::DisplayHex;
     use elements::Address;
     use serde::{Deserialize, Serialize};
     use serde_json;
@@ -346,7 +346,7 @@ pub mod amp0 {
             let path = DerivationPath::from_str("m/1195487518").expect("static");
             let sig = self.sign_message(&message, &path)?;
             let der_sig = sig.signature.to_standard().serialize_der();
-            Ok(der_sig.to_hex())
+            Ok(der_sig.to_lower_hex_string())
         }
 
         /// AMP0 account xpub

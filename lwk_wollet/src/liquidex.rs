@@ -5,10 +5,9 @@ use serde::{Deserialize, Serialize};
 use elements::{
     confidential::{Asset, AssetBlindingFactor, Value, ValueBlindingFactor},
     encode::serialize,
-    hashes::Hash,
-    hex::{FromHex, ToHex},
+    hex::DisplayHex,
     pset::PartiallySignedTransaction,
-    secp256k1_zkp, AssetId, BlindAssetProofs, BlindValueProofs, BlockHash, Transaction, Txid,
+    secp256k1_zkp, AssetId, BlockHash, RangeProof, SurjectionProof, Transaction, Txid,
 };
 use elements_miniscript::psbt;
 
@@ -68,7 +67,7 @@ pub struct LiquidexTxOutSecrets {
     asset: elements::AssetId,
     asset_blinder: AssetBlindingFactor,
     satoshi: u64,
-    blind_value_proof: Option<secp256k1_zkp::RangeProof>,
+    blind_value_proof: Option<RangeProof>,
 }
 
 impl LiquidexTxOutSecrets {
@@ -185,7 +184,7 @@ impl LiquidexProposal<Unvalidated> {
     pub fn from_pset(pset: &PartiallySignedTransaction) -> Result<Self, Error> {
         // We need to put the signature(s) in the proposal, so we need to finalize the pset
         let mut pset = pset.clone();
-        psbt::finalize(&mut pset, &EC, BlockHash::all_zeros())?;
+        psbt::finalize(&mut pset, &EC, BlockHash::from_byte_array([0; 32]))?;
 
         let tx = pset.extract_tx()?;
         let [input] = pset.inputs() else {
@@ -205,7 +204,7 @@ impl LiquidexProposal<Unvalidated> {
         let asset = input.asset.ok_or(LiquidexError::InputMissingAsset)?;
         let asset_blinder = input.get_abf().ok_or(LiquidexError::InputMissingAbf)??;
         let satoshi = input.amount.ok_or(LiquidexError::InputMissingAmount)?;
-        let blind_value_proof = input.blind_value_proof.as_ref().map(|p| p.as_ref().clone());
+        let blind_value_proof = input.blind_value_proof.clone();
         if blind_value_proof.is_none() {
             return Err(Error::LiquidexError(
                 LiquidexError::InputMissingBlindValueProof,
@@ -222,10 +221,7 @@ impl LiquidexProposal<Unvalidated> {
         let asset = output.asset.ok_or(LiquidexError::OutputMissingAsset)?;
         let asset_blinder = output.get_abf().ok_or(LiquidexError::OutputMissingAbf)??;
         let satoshi = output.amount.ok_or(LiquidexError::OutputMissingAmount)?;
-        let blind_value_proof = output
-            .blind_value_proof
-            .as_ref()
-            .map(|p| p.as_ref().clone());
+        let blind_value_proof = output.blind_value_proof.clone();
         if blind_value_proof.is_none() {
             return Err(Error::LiquidexError(
                 LiquidexError::OutputMissingBlindValueProof,
@@ -240,7 +236,7 @@ impl LiquidexProposal<Unvalidated> {
 
         Ok(Self {
             version: 1,
-            tx: serialize(&tx).to_hex(),
+            tx: serialize(&tx).to_lower_hex_string(),
             inputs: vec![input],
             outputs: vec![output],
             scalars: pset.global.scalars.clone(),
@@ -357,18 +353,14 @@ impl LiquidexProposal<Validated> {
 
         pset_input.amount = Some(input.satoshi);
         pset_input.asset = Some(input.asset);
-        pset_input.blind_value_proof = input
-            .blind_value_proof
-            .as_ref()
-            .map(|p| Box::new(p.clone()));
+        pset_input.blind_value_proof = input.blind_value_proof.clone();
         pset_input.set_abf(input.asset_blinder);
-        pset_input.blind_asset_proof =
-            Some(Box::new(secp256k1_zkp::SurjectionProof::blind_asset_proof(
-                &mut rng,
-                &EC,
-                input.asset,
-                input.asset_blinder,
-            )?));
+        pset_input.blind_asset_proof = Some(SurjectionProof::blind_asset_proof(
+            &mut rng,
+            &EC,
+            input.asset,
+            input.asset_blinder,
+        )?);
         // Set the witness utxo since rust-elements needs it to blind
         let asset = Asset::new_confidential(&EC, input.asset, input.asset_blinder);
         pset_input.witness_utxo = Some(elements::TxOut {
@@ -386,23 +378,19 @@ impl LiquidexProposal<Validated> {
             asset: Some(output.asset),
             asset_comm: txout.asset.commitment(),
             script_pubkey: txout.script_pubkey.clone(),
-            value_rangeproof: txout.witness.rangeproof.clone(),
+            value_rangeproof: Some(txout.witness.rangeproof.clone()),
             ecdh_pubkey: txout.nonce.commitment().map(|p| p.into()),
             blinder_index: Some(0),
-            blind_value_proof: output
-                .blind_value_proof
-                .as_ref()
-                .map(|p| Box::new(p.clone())),
+            blind_value_proof: output.blind_value_proof.clone(),
             ..Default::default()
         };
         pset_output.set_abf(output.asset_blinder);
-        pset_output.blind_asset_proof =
-            Some(Box::new(secp256k1_zkp::SurjectionProof::blind_asset_proof(
-                &mut rng,
-                &EC,
-                output.asset,
-                output.asset_blinder,
-            )?));
+        pset_output.blind_asset_proof = Some(SurjectionProof::blind_asset_proof(
+            &mut rng,
+            &EC,
+            output.asset,
+            output.asset_blinder,
+        )?);
         pset.add_output(pset_output);
 
         pset.global.scalars = self.scalars.clone();
@@ -433,14 +421,14 @@ impl LiquidexProposal<Validated> {
 
 impl<T> LiquidexProposal<T> {
     pub(crate) fn transaction(&self) -> Result<Transaction, Error> {
-        let bytes = Vec::<u8>::from_hex(&self.tx)?;
+        let bytes = elements::hex::decode_to_vec(&self.tx)?;
         Ok(elements::encode::deserialize(&bytes)?)
     }
 }
 
 pub(crate) fn blind_value_proof(
     txoutsecrets: &elements::TxOutSecrets,
-) -> Result<secp256k1_zkp::RangeProof, Error> {
+) -> Result<RangeProof, Error> {
     let asset_gen = Asset::new_confidential(&EC, txoutsecrets.asset, txoutsecrets.asset_bf)
         .commitment()
         .expect("confidential");
@@ -449,7 +437,7 @@ pub(crate) fn blind_value_proof(
             .commitment()
             .expect("confidential");
     let mut rng = rand::thread_rng();
-    let blind_value_proof = secp256k1_zkp::RangeProof::blind_value_proof(
+    let blind_value_proof = RangeProof::blind_value_proof(
         &mut rng,
         &EC,
         txoutsecrets.value,

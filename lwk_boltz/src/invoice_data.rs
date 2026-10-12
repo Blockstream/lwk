@@ -182,7 +182,7 @@ pub(crate) fn reverse_chain_from_str(
 mod tests {
     use crate::mnemonic_identifier;
     use boltz_client::network::{Chain, LiquidChain};
-    use lwk_wollet::elements::hex::ToHex;
+    use lwk_wollet::elements::hex::DisplayHex;
     use std::str::FromStr;
 
     use super::*;
@@ -220,7 +220,7 @@ mod tests {
             Chain::Liquid(LiquidChain::LiquidRegtest)
         );
         assert_eq!(
-            invoice_data.our_keys.secret_bytes().to_hex(),
+            invoice_data.our_keys.secret_bytes().to_lower_hex_string(),
             "70f75e954300859f9b32dfea93dfc5667e6cf71d1fad77602d6d6757fd347b01"
         );
         assert_eq!(

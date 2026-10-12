@@ -2,7 +2,7 @@
 //!
 //! A Peg-in is a way to convert bitcoin (BTC) on the mainchain to liquid bitcoin (L-BTC).
 
-use elements::hashes::Hash;
+use elements::bitcoin::hashes::Hash as _;
 use elements::{bitcoin, BlockHeader};
 use elements_miniscript::{BtcDescriptor, BtcMiniscript, BtcSegwitv0};
 
@@ -412,7 +412,7 @@ pub struct PeginInput {
     funding: PeginFunding,
     pegged_asset: elements::AssetId,
     parent_genesis_hash: bitcoin::BlockHash,
-    pegin_witness: Vec<Vec<u8>>,
+    pegin_witness: elements::PeginWitness,
 }
 
 impl From<PeginFunding> for PeginInput {
@@ -423,16 +423,17 @@ impl From<PeginFunding> for PeginInput {
         let transaction = bitcoin::consensus::serialize(funding.deposit().transaction());
         let txout_proof = bitcoin::consensus::serialize(funding.txout_proof());
         let pegin_data = elements::PeginData {
-            outpoint: funding.deposit().outpoint(),
             value: funding.deposit().amount().to_sat(),
-            asset: pegged_asset,
+            asset_id: pegged_asset,
             genesis_hash: parent_genesis_hash,
-            claim_script: funding.deposit().pegin_address().claim_script().as_bytes(),
-            tx: &transaction,
-            merkle_proof: &txout_proof,
+            claim_script: bitcoin::ScriptBuf::from_bytes(
+                funding.deposit().pegin_address().claim_script().to_bytes(),
+            ),
+            transaction,
+            merkle_proof: txout_proof,
             referenced_block: funding.referenced_block(),
         };
-        let pegin_witness = pegin_data.to_pegin_witness();
+        let pegin_witness = elements::PeginWitness::new(pegin_data);
 
         Self {
             funding,
@@ -459,8 +460,8 @@ impl PeginInput {
         self.parent_genesis_hash
     }
 
-    /// Return the canonical six-element pegin witness.
-    pub fn pegin_witness(&self) -> &[Vec<u8>] {
+    /// Return the pegin witness.
+    pub fn pegin_witness(&self) -> &elements::PeginWitness {
         &self.pegin_witness
     }
 
@@ -573,6 +574,23 @@ pub fn fetch_fed_peg<B: crate::clients::blocking::BlockchainBackend>(
 ) -> Result<FedPeg, Error> {
     let header = fetch_last_full_header(client, network, current_tip)?;
     FedPeg::from_block_header(network, &header)
+}
+
+/// Convert a pegin witness to its list of witness elements.
+///
+/// The list is empty if there is no pegin, otherwise it has six elements.
+pub fn pegin_witness_to_elements(witness: &elements::PeginWitness) -> Vec<Vec<u8>> {
+    let bytes = elements::encode::serialize(witness);
+    // The pegin witness is encoded as a list of byte vectors, so this cannot fail
+    elements::encode::deserialize(&bytes).expect("pegin witness is a list of byte vectors")
+}
+
+/// Convert a list of witness elements to a pegin witness.
+pub fn pegin_witness_from_elements(
+    elements: &[Vec<u8>],
+) -> Result<elements::PeginWitness, elements::encode::Error> {
+    let bytes = elements::encode::serialize(&elements.to_vec());
+    elements::encode::deserialize(&bytes)
 }
 
 #[cfg(test)]
@@ -796,11 +814,7 @@ mod test {
         let proof = test_txout_proof(txid);
         let funding = super::PeginFunding::new(deposit, proof.clone()).unwrap();
         let input = super::PeginInput::from(funding.clone());
-        let pegin_data = elements::PeginData::from_pegin_witness(
-            input.pegin_witness(),
-            funding.deposit().outpoint(),
-        )
-        .unwrap();
+        let pegin_data = input.pegin_witness().data().unwrap();
 
         assert_eq!(input.funding(), &funding);
         assert_eq!(input.pegged_asset(), *Network::TestnetLiquid.policy_asset());
@@ -808,12 +822,11 @@ mod test {
             input.parent_genesis_hash(),
             Network::TestnetLiquid.parent_genesis_hash()
         );
-        assert_eq!(pegin_data.outpoint, funding.deposit().outpoint());
         assert_eq!(pegin_data.value, funding.deposit().amount().to_sat());
-        assert_eq!(pegin_data.asset, input.pegged_asset());
+        assert_eq!(pegin_data.asset_id, input.pegged_asset());
         assert_eq!(pegin_data.genesis_hash, input.parent_genesis_hash());
         assert_eq!(
-            pegin_data.claim_script,
+            pegin_data.claim_script.as_bytes(),
             funding.deposit().pegin_address().claim_script().as_bytes()
         );
         assert_eq!(pegin_data.parse_tx().unwrap(), transaction);
@@ -874,7 +887,7 @@ mod test {
             Some(funding.deposit().amount().to_sat())
         );
         assert_eq!(
-            pset_input.pegin_witness.as_deref(),
+            pset_input.pegin_witness.as_ref(),
             Some(input.pegin_witness())
         );
         assert_eq!(pset_input.asset, Some(input.pegged_asset()));

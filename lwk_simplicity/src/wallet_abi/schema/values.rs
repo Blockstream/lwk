@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::simplicityhl::elements::Transaction;
 
 use lwk_wollet::elements::pset::{Input, PartiallySignedTransaction};
-use lwk_wollet::elements::secp256k1_zkp::ZERO_TWEAK;
+use lwk_wollet::elements::AssetBlindingNonce;
 use lwk_wollet::secp256k1::{Message, XOnlyPublicKey};
 
 use simplicityhl::parse::ParseFromStr;
@@ -142,7 +142,9 @@ pub fn resolve_arguments(
 
                 final_arguments.insert(
                     param_name,
-                    Value::from(UIntValue::U256(U256::from_byte_array(asset.into_inner().0))),
+                    Value::from(UIntValue::U256(U256::from_byte_array(
+                        asset.to_byte_array(),
+                    ))),
                 );
             }
             RuntimeSimfValue::NewIssuanceToken { input_index } => {
@@ -152,7 +154,9 @@ pub fn resolve_arguments(
 
                 final_arguments.insert(
                     param_name,
-                    Value::from(UIntValue::U256(U256::from_byte_array(token.into_inner().0))),
+                    Value::from(UIntValue::U256(U256::from_byte_array(
+                        token.to_byte_array(),
+                    ))),
                 );
             }
         }
@@ -328,7 +332,10 @@ fn resolve_new_issuance_input<'a>(
         )));
     }
 
-    let is_new_issuance = input.issuance_blinding_nonce.unwrap_or(ZERO_TWEAK) == ZERO_TWEAK;
+    let is_new_issuance = input
+        .issuance_blinding_nonce
+        .unwrap_or(AssetBlindingNonce::NEW_ISSUANCE)
+        == AssetBlindingNonce::NEW_ISSUANCE;
     if !is_new_issuance {
         return Err(WalletAbiError::InvalidRequest(format!(
             "runtime Simplicity argument '{name}' ({variant}) requires new issuance input_index {input_index}, but referenced input is reissuance"

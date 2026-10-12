@@ -123,13 +123,13 @@ impl AssetId {
     /// Creates an `AssetId` from a bytes.
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &[u8]) -> Result<AssetId, Error> {
-        Ok(elements::AssetId::from_slice(bytes)?.into())
+        Ok(elements::AssetId::from_byte_array(bytes.try_into()?).into())
     }
 
     /// Returns the `AssetId` bytes in little-endian byte order.
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Vec<u8> {
-        self.inner.into_inner().to_byte_array().to_vec()
+        self.inner.to_byte_array().to_vec()
     }
 
     /// Return the string representation of the asset identifier (64 hex characters).

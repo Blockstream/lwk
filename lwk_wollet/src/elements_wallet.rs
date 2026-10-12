@@ -1,6 +1,5 @@
 use crate::{Chain, Error, WolletDescriptor, EC};
 use elements::bitcoin::bip32::{DerivationPath, Xpriv, Xpub};
-use elements::hex::ToHex;
 use elements_miniscript::slip77::MasterBlindingKey;
 use std::path::Path;
 
@@ -49,7 +48,7 @@ impl WolletDescriptor {
                     let spk = wd.script_pubkey(ext_int, index)?;
                     let pbk = lwk_common::derive_blinding_key(wd.ct_descriptor()?, &spk)
                         .ok_or_else(|| Error::Generic("cannot derive blinding key".into()))?;
-                    v.push(format!("{}:{}", pbk.display_secret(), spk.to_hex()));
+                    v.push(format!("{}:{spk:x}", pbk.display_secret()));
                 }
             }
         }

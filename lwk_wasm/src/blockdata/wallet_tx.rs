@@ -89,7 +89,7 @@ impl WalletTx {
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use crate::WalletTx;
-    use lwk_wollet::elements::{self, hex::FromHex, pset::serialize::Deserialize};
+    use lwk_wollet::elements::{self, pset::serialize::Deserialize};
     use std::collections::{BTreeMap, HashMap};
     use wasm_bindgen_test::*;
 
@@ -117,7 +117,7 @@ mod tests {
 
         let tx_hex = include_str!("../../../lwk_jade/test_data/pset_to_be_signed_transaction.hex")
             .to_string();
-        let tx_bytes = Vec::<u8>::from_hex(&tx_hex).unwrap();
+        let tx_bytes = lwk_wollet::elements::hex::decode_to_vec(&tx_hex).unwrap();
         let tx: elements::Transaction = elements::Transaction::deserialize(&tx_bytes).unwrap();
 
         let a = elements::AssetId::default();

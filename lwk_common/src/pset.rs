@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 
 use elements::{
     bitcoin::{bip32::Fingerprint, PublicKey},
-    hashes::Hash,
     pset::{raw::ProprietaryKey, Input, PartiallySignedTransaction},
     schnorr::TapTweak,
     secp256k1_zkp::{ecdsa, Message, Secp256k1, XOnlyPublicKey},
@@ -361,8 +360,8 @@ mod tests {
         let other_schnorr_sig = SchnorrSig::from_slice(&[0x34u8; 64]).unwrap();
         let xonly = XOnlyPublicKey::from_slice(&[0x02u8; 32]).unwrap();
 
-        let leaf = TapLeafHash::from_slice(&[0x04u8; 32]).unwrap();
-        let other_leaf = TapLeafHash::from_slice(&[0x05u8; 32]).unwrap();
+        let leaf = TapLeafHash::from_byte_array([0x04u8; 32]);
+        let other_leaf = TapLeafHash::from_byte_array([0x05u8; 32]);
 
         let ecdsa_sig = vec![0x30, 0x45];
         let other_ecdsa_sig = vec![0x30, 0x46];

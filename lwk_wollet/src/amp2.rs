@@ -12,8 +12,8 @@
 
 use crate::{WolletDescriptor, EC};
 use elements::bitcoin::bip32::{ChildNumber, DerivationPath, Fingerprint, KeySource, Xpub};
-use elements::hashes::{sha256, Hash};
-use elements::hex::ToHex;
+use elements::hashes::sha256;
+use elements::hex::DisplayHex;
 use elements::pset::PartiallySignedTransaction;
 use lwk_common::{keyorigin_xpub_from_str, Signer};
 use serde::{Deserialize, Serialize};
@@ -100,7 +100,6 @@ struct CosignResponseInner {
 }
 
 /// Response from the AMP2 server when cosigning a PSET
-#[derive(Serialize, Deserialize)]
 pub struct CosignResponse {
     /// The cosigned PSET
     pub pset: PartiallySignedTransaction,
@@ -271,7 +270,7 @@ impl Amp2 {
         // Descriptor blinding key: hash the pubkey of the user key hardened-derived at
         // VIEW_PATH, so it's both deterministic and only computable by the user.
         let key_hash = sha256::Hash::hash(&view_xpub.public_key.serialize());
-        let key_hex = key_hash.to_byte_array().to_hex();
+        let key_hex = key_hash.to_byte_array().to_lower_hex_string();
 
         let user_xpub_str = format!("[{}/{}]{}", user_keysource.0, user_keysource.1, user_xpub);
         let server_xpub_str =

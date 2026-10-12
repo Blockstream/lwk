@@ -105,14 +105,12 @@ mod tests {
 
     use wasm_bindgen_test::*;
 
-    use lwk_wollet::hashes::hex::FromHex;
-
     wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
     fn test_public_key() {
         let hex = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let bytes = Vec::<u8>::from_hex(hex).unwrap();
+        let bytes = lwk_wollet::elements::hex::decode_to_vec(hex).unwrap();
 
         let from_hex = PublicKey::from_string(hex).unwrap();
         assert_eq!(from_hex.to_string(), hex);

@@ -2,8 +2,6 @@
 
 use std::{fmt::Display, str::FromStr, sync::Arc};
 
-use elements::hashes::Hash;
-
 use crate::LwkError;
 
 /// A transaction identifier.
@@ -61,7 +59,7 @@ impl Txid {
     /// Construct a Transaction object from its bytes.
     #[uniffi::constructor]
     pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
-        let inner: elements::Txid = elements::Txid::from_slice(bytes)?;
+        let inner = elements::Txid::from_byte_array(bytes.try_into()?);
         Ok(Arc::new(Self { inner }))
     }
 

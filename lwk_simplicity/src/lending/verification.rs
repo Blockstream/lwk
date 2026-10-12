@@ -40,8 +40,8 @@ fn check_issuance(
 
 fn parse_explicit(out: &TxOut) -> Result<(AssetId, u64, Script), &str> {
     if !out.nonce.is_null()
-        || out.witness.rangeproof.is_some()
-        || out.witness.surjection_proof.is_some()
+        || !out.witness.rangeproof.is_empty()
+        || !out.witness.surjection_proof.is_empty()
     {
         return Err("output is not explicit");
     }

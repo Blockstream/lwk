@@ -1,6 +1,6 @@
 use crate::Error;
-use lwk_wollet::elements::{self, hex::ToHex, pset::serialize::Deserialize};
-use lwk_wollet::hashes::{hex::FromHex, sha256, Hash};
+use lwk_wollet::elements::{self, hex::DisplayHex, pset::serialize::Deserialize};
+use lwk_wollet::hashes::{sha256, Hash};
 use wasm_bindgen::prelude::*;
 
 /// An Elements (Liquid) script
@@ -31,7 +31,7 @@ impl AsRef<elements::Script> for Script {
 
 impl std::fmt::Display for Script {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.inner.to_hex())
+        write!(f, "{:x}", self.inner)
     }
 }
 
@@ -40,7 +40,7 @@ impl Script {
     /// Creates a `Script` from its hex string representation.
     #[wasm_bindgen(constructor)]
     pub fn new(s: &str) -> Result<Script, Error> {
-        let bytes = Vec::<u8>::from_hex(s)?;
+        let bytes = lwk_wollet::elements::hex::decode_to_vec(s)?;
         let inner = elements::Script::deserialize(&bytes[..])?;
         Ok(inner.into())
     }
@@ -63,7 +63,7 @@ impl Script {
     pub fn jet_sha256_hex(&self) -> String {
         sha256::Hash::hash(self.inner.as_bytes())
             .to_byte_array()
-            .to_hex()
+            .to_lower_hex_string()
     }
 
     /// Return the string of the script showing op codes and their arguments.
@@ -113,7 +113,6 @@ impl Script {
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::Script;
-    use lwk_wollet::elements::hex::FromHex;
     use wasm_bindgen_test::*;
 
     wasm_bindgen_test_configure!(run_in_browser);
@@ -125,7 +124,7 @@ mod tests {
         let script = Script::new(script_str).unwrap();
         assert_eq!(script.to_string(), script_str);
 
-        let script_bytes = Vec::<u8>::from_hex(script_str).unwrap();
+        let script_bytes = lwk_wollet::elements::hex::decode_to_vec(script_str).unwrap();
         assert_eq!(script.bytes(), script_bytes);
 
         assert_eq!(

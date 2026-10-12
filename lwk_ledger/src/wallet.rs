@@ -300,7 +300,6 @@ impl core::fmt::Display for WalletPubKey {
 mod tests {
     use super::*;
     use core::str::FromStr;
-    use elements_miniscript::elements::bitcoin::hashes::hex::FromHex;
 
     const MASTER_KEY_EXAMPLE: &str = "[5c9e228d]tpubDEGquuorgFNb8bjh5kNZQMPtABJzoWwNm78FUmeoPkfRtoPF7JLrtoZeT3J3ybq1HmC3Rn1Q8wFQ8J5usanzups5rj7PJoQLNyvq8QbJruW/**";
     const KEY_EXAMPLE: &str = "[5c9e228d/48'/1'/0'/0']tpubDEGquuorgFNb8bjh5kNZQMPtABJzoWwNm78FUmeoPkfRtoPF7JLrtoZeT3J3ybq1HmC3Rn1Q8wFQ8J5usanzups5rj7PJoQLNyvq8QbJruW/**";
@@ -349,7 +348,7 @@ mod tests {
                WalletPubKey::from_str("[f5acc2fd/48'/1'/0'/2']tpubDFAqEGNyad35aBCKUAXbQGDjdVhNueno5ZZVEn3sQbW5ci457gLR7HyTmHBg93oourBssgUxuWz1jX5uhc1qaqFo9VsybY1J5FuedLfm4dK").unwrap(),
             ],
         );
-        assert_eq!(wallet.serialize().as_slice(), Vec::<u8>::from_hex("020c436f6c642073746f726167651fb56c3d5542fa09b3956834a9ff6a1df5c36a38e5b02c63c54b41a9a04403b82602516d2c50a89476ecffeec658057f0110674bbfafc18797dc480c7ed53802f3fb").unwrap());
+        assert_eq!(wallet.serialize().as_slice(), elements_miniscript::elements::hex::decode_to_vec("020c436f6c642073746f726167651fb56c3d5542fa09b3956834a9ff6a1df5c36a38e5b02c63c54b41a9a04403b82602516d2c50a89476ecffeec658057f0110674bbfafc18797dc480c7ed53802f3fb").unwrap());
     }
 
     #[test]

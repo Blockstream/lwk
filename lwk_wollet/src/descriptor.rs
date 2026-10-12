@@ -1,12 +1,12 @@
 use std::{fmt::Display, str::FromStr};
 
 use aes_gcm_siv::Aes256GcmSiv;
+use elements::bitcoin::hashes::{sha256t_hash_newtype, Hash};
 use elements::bitcoin::secp256k1::SecretKey;
 use elements::bitcoin::{
     bip32::{ChildNumber, Fingerprint, Xpub},
     WitnessVersion,
 };
-use elements::hashes::{sha256t_hash_newtype, Hash};
 use elements::{bitcoin, Address, AddressParams, Script};
 use elements_miniscript::DefiniteDescriptorKey;
 use elements_miniscript::{
@@ -62,7 +62,7 @@ impl FromStr for Spk {
         } else {
             Some(SecretKey::from_str(key_hex)?)
         };
-        let script_pubkey = Script::from_str(spk_hex)?;
+        let script_pubkey = Script::from_hex_no_prefix(spk_hex)?;
         Ok(Spk {
             blinding_key,
             script_pubkey,
@@ -1431,8 +1431,8 @@ mod test {
         );
 
         // script_pubkey returns the spk at the given index, ignoring chain
-        let expected_a = elements::Script::from_str(spk_a).unwrap();
-        let expected_b = elements::Script::from_str(spk_b).unwrap();
+        let expected_a = elements::Script::from_hex_no_prefix(spk_a).unwrap();
+        let expected_b = elements::Script::from_hex_no_prefix(spk_b).unwrap();
         assert_eq!(desc.script_pubkey(Chain::External, 0).unwrap(), expected_a);
         assert_eq!(desc.script_pubkey(Chain::Internal, 0).unwrap(), expected_a);
         assert_eq!(desc.script_pubkey(Chain::External, 1).unwrap(), expected_b);

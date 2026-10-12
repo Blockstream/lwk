@@ -2,7 +2,6 @@ use indexer::*;
 use lwk_common::Signer;
 use std::str::FromStr;
 
-use elements::hex::ToHex;
 use lwk_simplicity::lending::*;
 use lwk_test_util::*;
 use lwk_wollet::blocking::BlockchainBackend;
@@ -80,7 +79,7 @@ async fn test_borrow_flow() {
     borrower_session.sync().unwrap();
 
     // Check if indexer is showing our factory by script_pubkey
-    let spk = transaction.output[0].script_pubkey.to_hex();
+    let spk = format!("{:x}", transaction.output[0].script_pubkey);
     let factory = wait_factory(spk, &indexer_client).await;
 
     // Create borrow details
@@ -277,7 +276,7 @@ async fn test_cancel_offer() {
     env.elementsd_generate(1);
     borrower_session.sync().unwrap();
 
-    let spk = transaction.output[0].script_pubkey.to_hex();
+    let spk = format!("{:x}", transaction.output[0].script_pubkey);
     let factory = wait_factory(spk, &indexer_client).await;
 
     let borrow_details = OfferDetails {
@@ -390,7 +389,7 @@ async fn test_liquidate_offer() {
     env.elementsd_generate(1);
     borrower_session.sync().unwrap();
 
-    let spk = transaction.output[0].script_pubkey.to_hex();
+    let spk = format!("{:x}", transaction.output[0].script_pubkey);
     let factory = wait_factory(spk, &indexer_client).await;
 
     let borrow_details = OfferDetails {

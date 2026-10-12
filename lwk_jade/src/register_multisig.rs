@@ -1,6 +1,6 @@
 use elements::{
     bitcoin::bip32::{ChildNumber, Fingerprint, Xpub},
-    hex::ToHex,
+    hex::DisplayHex,
     Script,
 };
 use elements_miniscript::{
@@ -51,7 +51,10 @@ impl std::fmt::Debug for JadeDescriptor {
             .field("variant", &self.variant)
             .field("sorted", &self.sorted)
             .field("threshold", &self.threshold)
-            .field("master_blinding_key", &self.master_blinding_key.to_hex())
+            .field(
+                "master_blinding_key",
+                &self.master_blinding_key.to_lower_hex_string(),
+            )
             .field("signers", &self.signers)
             .finish()
     }
@@ -113,7 +116,7 @@ impl TryFrom<&JadeDescriptor> for ConfidentialDescriptor<DescriptorPublicKey> {
             return Err(Error::UnsupportedDescriptorType);
         }
         let sorted = if desc.sorted { "sorted" } else { "" };
-        let slip77 = desc.master_blinding_key.to_hex();
+        let slip77 = desc.master_blinding_key.to_lower_hex_string();
         let threshold = desc.threshold;
         let xpubs = desc
             .signers
@@ -222,7 +225,10 @@ impl std::fmt::Debug for RegisteredMultisig {
             .field("sorted", &self.sorted)
             .field("threshold", &self.threshold)
             .field("num_signers", &self.num_signers)
-            .field("master_blinding_key", &self.master_blinding_key.to_hex())
+            .field(
+                "master_blinding_key",
+                &self.master_blinding_key.to_lower_hex_string(),
+            )
             .finish()
     }
 }

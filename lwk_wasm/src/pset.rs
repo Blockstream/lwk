@@ -6,8 +6,6 @@ use crate::{ContractHash, LockTime, OutPoint, PublicKey, Tweak, TxOut, TxOutSecr
 use std::collections::HashMap;
 use std::fmt::Display;
 
-#[cfg(feature = "simplicity")]
-use lwk_wollet::elements::hashes::Hash;
 use lwk_wollet::elements::pset::{Input, Output, PartiallySignedTransaction};
 #[cfg(feature = "simplicity")]
 use lwk_wollet::elements::BlockHash;
@@ -111,7 +109,7 @@ impl Pset {
     /// Finalize and extract the PSET
     pub fn finalize(&self) -> Result<Transaction, Error> {
         let mut pset = self.inner.clone();
-        finalize(&mut pset, &EC, BlockHash::all_zeros())?;
+        finalize(&mut pset, &EC, BlockHash::from_byte_array([0; 32]))?;
         let tx: Transaction = pset.extract_tx()?.into();
         Ok(tx)
     }
@@ -282,7 +280,9 @@ impl PsetInputBuilder {
     #[wasm_bindgen(js_name = issuanceAssetEntropy)]
     pub fn issuance_asset_entropy(mut self, contract_hash: &ContractHash) -> PsetInputBuilder {
         let inner_hash: lwk_wollet::elements::ContractHash = contract_hash.into();
-        self.inner.issuance_asset_entropy = Some(inner_hash.to_byte_array());
+        self.inner.issuance_asset_entropy = Some(
+            lwk_wollet::elements::AssetEntropy::from_byte_array(inner_hash.to_byte_array()),
+        );
         self
     }
 
@@ -296,7 +296,10 @@ impl PsetInputBuilder {
     /// Set the issuance blinding nonce.
     #[wasm_bindgen(js_name = issuanceBlindingNonce)]
     pub fn issuance_blinding_nonce(mut self, nonce: &Tweak) -> PsetInputBuilder {
-        self.inner.issuance_blinding_nonce = Some(nonce.into());
+        let nonce: lwk_wollet::elements::secp256k1_zkp::Tweak = nonce.into();
+        self.inner.issuance_blinding_nonce = Some(
+            lwk_wollet::elements::AssetBlindingNonce::from_byte_array(*nonce.as_ref()),
+        );
         self
     }
 

@@ -10,11 +10,10 @@ use super::cmr::Cmr;
 
 use lwk_wollet::elements::taproot;
 use lwk_wollet::elements_miniscript::ToPublicKey;
-use lwk_wollet::hashes::{sha256, Hash};
 use lwk_wollet::{elements, EC};
 
 use lwk_simplicity::scripts::{simplicity_leaf_version, tap_data_hash};
-use lwk_simplicity::utils::{leaf_version_to25, sha256_to25};
+use lwk_simplicity::utils::leaf_version_to25;
 
 use lwk_simplicity::simplicityhl;
 use wasm_bindgen::prelude::*;
@@ -58,7 +57,7 @@ impl StateTaprootBuilder {
     /// Add a TapData hidden leaf at `depth`.
     #[wasm_bindgen(js_name = addDataLeaf)]
     pub fn add_data_leaf(&self, depth: u8, data: &[u8]) -> Result<StateTaprootBuilder, Error> {
-        let hash = sha256_to25(&tap_data_hash(data));
+        let hash = taproot::TapNodeHash::from_byte_array(tap_data_hash(data).to_byte_array());
         let inner = self.inner.clone().add_hidden(usize::from(depth), hash)?;
         Ok(StateTaprootBuilder { inner })
     }
@@ -66,7 +65,7 @@ impl StateTaprootBuilder {
     /// Add a precomputed hidden hash at `depth`.
     #[wasm_bindgen(js_name = addHiddenHash)]
     pub fn add_hidden_hash(&self, depth: u8, hash: &[u8]) -> Result<StateTaprootBuilder, Error> {
-        let hash = sha256::Hash::from_byte_array(hash.try_into()?);
+        let hash = taproot::TapNodeHash::from_byte_array(hash.try_into()?);
         let inner = self.inner.clone().add_hidden(usize::from(depth), hash)?;
         Ok(StateTaprootBuilder { inner })
     }

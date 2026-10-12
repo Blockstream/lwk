@@ -8,8 +8,7 @@ use lwk_wollet::EC;
 
 use elements::{
     bitcoin::secp256k1::{self, Message, Secp256k1},
-    hashes::hex::FromHex,
-    hex::ToHex,
+    hex::DisplayHex,
 };
 
 /// A secp256k1 keypair.
@@ -93,10 +92,10 @@ impl Keypair {
 
     /// Sign a 32-byte message hash using Schnorr signature.
     pub fn sign_schnorr(&self, msg: &str) -> Result<String, LwkError> {
-        let bytes = Vec::<u8>::from_hex(msg)?;
+        let bytes = elements::hex::decode_to_vec(msg)?;
         let message: Message = Message::from_digest_slice(&bytes)?;
         let sig = EC.sign_schnorr(&message, &self.inner);
-        Ok(sig.serialize().to_vec().to_hex())
+        Ok(sig.serialize().to_vec().to_lower_hex_string())
     }
 }
 
@@ -119,7 +118,7 @@ impl Keypair {
 
 #[cfg(test)]
 mod tests {
-    use elements::hex::ToHex;
+    use elements::hex::DisplayHex;
     use lwk_wollet::EC;
 
     use lwk_wollet::secp256k1::{schnorr, Message};
@@ -151,10 +150,10 @@ mod tests {
         let kp = Keypair::from_secret_bytes(&secret_key_bytes).unwrap();
         let mut msg_bytes = [0x33; 32];
         msg_bytes[31] = 0x44;
-        let msg = msg_bytes.to_hex();
+        let msg = msg_bytes.to_lower_hex_string();
 
         let sig = kp.sign_schnorr(&msg).unwrap();
-        let sig_bytes = <Vec<u8> as elements::hashes::hex::FromHex>::from_hex(&sig).unwrap();
+        let sig_bytes = elements::hex::decode_to_vec(&sig).unwrap();
         assert_eq!(sig_bytes.len(), 64);
 
         let sig = schnorr::Signature::from_slice(&sig_bytes).unwrap();

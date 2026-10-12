@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::test_wollet::*;
 use elements::encode::serialize;
-use elements::hex::ToHex;
+use elements::hex::DisplayHex;
 use elements::OutPoint;
 use lwk_common::{Network, Signer};
 use lwk_signer::{AnySigner, SwSigner};
@@ -261,7 +261,7 @@ fn test_multiple_issuances() {
         .collect();
     assert_eq!(utxos.len(), 2);
 
-    let dummy_asset = elements::AssetId::from_slice(&[1u8; 32]).unwrap();
+    let dummy_asset = elements::AssetId::from_byte_array([1u8; 32]);
     let dummy_outpoint = OutPoint::null();
 
     // Issuance and reissuance are mutually exclusive, in both orders
@@ -323,10 +323,10 @@ fn test_multiple_issuances() {
     w.tx_builder()
         .add_issuance(IssuanceRequest::new(10, 1).pin_input(dummy_outpoint))
         .unwrap()
-        .add_issuance(IssuanceRequest::new(10, 1).pin_input(OutPoint::new(
-            <elements::Txid as elements::hashes::Hash>::all_zeros(),
-            1,
-        )))
+        .add_issuance(
+            IssuanceRequest::new(10, 1)
+                .pin_input(OutPoint::new(elements::Txid::from_byte_array([0; 32]), 1)),
+        )
         .unwrap();
 
     // More issuances than transaction inputs
@@ -502,7 +502,7 @@ fn test_multiple_issuances() {
     }
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
-    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+    assert!(env.elementsd_testmempoolaccept(&tx.to_lower_hex_string()));
 }
 
 #[test]

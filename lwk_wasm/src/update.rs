@@ -80,7 +80,6 @@ impl Update {
 
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
-    use lwk_wollet::hashes::hex::FromHex;
     use wasm_bindgen_test::*;
 
     use crate::{Update, WolletDescriptor};
@@ -88,7 +87,10 @@ mod tests {
     wasm_bindgen_test_configure!(run_in_browser);
 
     pub fn update_test_vector_bytes() -> Vec<u8> {
-        Vec::<u8>::from_hex(include_str!("../test_data/update_test_vector.hex")).unwrap()
+        lwk_wollet::elements::hex::decode_to_vec(include_str!(
+            "../test_data/update_test_vector.hex"
+        ))
+        .unwrap()
     }
 
     #[wasm_bindgen_test]

@@ -157,7 +157,7 @@ impl WalletTx {
 #[cfg(test)]
 mod tests {
     use crate::WalletTx;
-    use elements::{hex::FromHex, pset::serialize::Deserialize, Address};
+    use elements::{pset::serialize::Deserialize, Address};
     use lwk_common::SignedBalance;
     use std::{collections::HashMap, str::FromStr};
 
@@ -184,7 +184,7 @@ mod tests {
 
         let tx_hex = include_str!("../../../lwk_jade/test_data/pset_to_be_signed_transaction.hex")
             .to_string();
-        let tx_bytes = Vec::<u8>::from_hex(&tx_hex).unwrap();
+        let tx_bytes = elements::hex::decode_to_vec(&tx_hex).unwrap();
         let tx: elements::Transaction = elements::Transaction::deserialize(&tx_bytes).unwrap();
 
         let el = lwk_wollet::WalletTx {

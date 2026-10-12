@@ -11,12 +11,11 @@ use std::sync::Arc;
 
 use lwk_wollet::elements::taproot;
 use lwk_wollet::elements_miniscript::ToPublicKey;
-use lwk_wollet::hashes::{sha256, Hash};
 use lwk_wollet::{elements, EC};
 
 use lwk_simplicity::scripts::{simplicity_leaf_version, tap_data_hash};
 use lwk_simplicity::simplicityhl;
-use lwk_simplicity::utils::{leaf_version_to25, sha256_to25};
+use lwk_simplicity::utils::leaf_version_to25;
 
 /// Taproot builder for Simplicity-related functionality.
 ///
@@ -51,7 +50,7 @@ impl StateTaprootBuilder {
 
     /// Add a TapData hidden leaf at `depth`.
     pub fn add_data_leaf(&self, depth: u8, data: &[u8]) -> Result<Arc<Self>, LwkError> {
-        let hash = sha256_to25(&tap_data_hash(data));
+        let hash = taproot::TapNodeHash::from_byte_array(tap_data_hash(data).to_byte_array());
         let inner = self.inner.clone().add_hidden(usize::from(depth), hash)?;
         Ok(Arc::new(Self { inner }))
     }
@@ -59,7 +58,7 @@ impl StateTaprootBuilder {
     /// Add a precomputed hidden hash at `depth`.
     pub fn add_hidden_hash(&self, depth: u8, hash: &[u8]) -> Result<Arc<Self>, LwkError> {
         let hash: [u8; 32] = hash.try_into()?;
-        let hash = sha256::Hash::from_byte_array(hash);
+        let hash = taproot::TapNodeHash::from_byte_array(hash);
         let inner = self.inner.clone().add_hidden(usize::from(depth), hash)?;
         Ok(Arc::new(Self { inner }))
     }

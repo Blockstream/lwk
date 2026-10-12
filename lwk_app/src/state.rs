@@ -14,7 +14,7 @@ use lwk_tiny_jrpc::Request;
 use lwk_wollet::bitcoin::bip32::{Fingerprint, Xpub};
 use lwk_wollet::bitcoin::XKeyIdentifier;
 use lwk_wollet::elements::encode::serialize;
-use lwk_wollet::elements::hex::ToHex;
+use lwk_wollet::elements::hex::DisplayHex;
 use lwk_wollet::elements::pset::elip100::AssetMetadata;
 use lwk_wollet::elements::{Address, AssetId, Transaction, Txid};
 use lwk_wollet::Contract;
@@ -193,7 +193,7 @@ impl AppAsset {
                 let params = request::AssetInsert {
                     asset_id: a.asset_id().to_string(),
                     contract: a.contract_str(),
-                    issuance_tx: serialize(a.issuance_tx()).to_hex(),
+                    issuance_tx: serialize(a.issuance_tx()).to_lower_hex_string(),
                 };
                 Some(Request {
                     jsonrpc: "2.0".into(),

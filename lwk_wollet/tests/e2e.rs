@@ -30,7 +30,7 @@ use electrum_client::ScriptStatus;
 use elements::bitcoin::bip32::Xpub;
 use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
 use elements::encode::{deserialize, serialize};
-use elements::hex::{FromHex, ToHex};
+use elements::hex::DisplayHex;
 use elements::{Address, OutPoint, Transaction};
 use lwk_common::electrum_ssl::LIQUID_TESTNET_SOCKET;
 use lwk_common::Signer;
@@ -783,7 +783,7 @@ fn create_pset_error() {
 
     // If you pass the issuance transaction it must contain the asset issuance
     let tx_hex = include_str!("../tests/data/usdt-issuance-tx.hex");
-    let tx: Transaction = deserialize(&Vec::<u8>::from_hex(tx_hex).unwrap()).unwrap();
+    let tx: Transaction = deserialize(&elements::hex::decode_to_vec(tx_hex).unwrap()).unwrap();
     let err = wallet2
         .tx_builder()
         .reissue_asset(asset, satoshi_a, None, Some(tx))
@@ -2703,7 +2703,7 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
     // ANCHOR_END: manual_coin_selection
-    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+    assert!(env.elementsd_testmempoolaccept(&tx.to_lower_hex_string()));
 
     let mut pset = w
         .tx_builder()
@@ -2717,7 +2717,7 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
     signer.sign(&mut pset).unwrap();
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
-    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+    assert!(env.elementsd_testmempoolaccept(&tx.to_lower_hex_string()));
 
     let non_wallet_outpoint = OutPoint::new(txid_test_vector(), 0);
     let err = w
@@ -2782,7 +2782,7 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
     signer.sign(&mut pset).unwrap();
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
-    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+    assert!(env.elementsd_testmempoolaccept(&tx.to_lower_hex_string()));
     // ANCHOR_END: manual_coin_selection_asset
 
     // Two assets and LBTC
@@ -2804,7 +2804,7 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
     signer.sign(&mut pset).unwrap();
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
-    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+    assert!(env.elementsd_testmempoolaccept(&tx.to_lower_hex_string()));
 
     // Two assets, LBTC and no recipient
     // If the recipient is not specified, funds are sent back to the wallet as change.
@@ -2822,7 +2822,7 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
     signer.sign(&mut pset).unwrap();
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
-    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+    assert!(env.elementsd_testmempoolaccept(&tx.to_lower_hex_string()));
 
     Ok(())
 }
@@ -2882,7 +2882,7 @@ fn test_inputs_order() {
     signer.sign(&mut pset).unwrap();
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
-    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+    assert!(env.elementsd_testmempoolaccept(&tx.to_lower_hex_string()));
 
     // Duplicated outpoint in inputs_order
     let err = w
@@ -2964,7 +2964,7 @@ fn test_inputs_order() {
     }
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
-    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+    assert!(env.elementsd_testmempoolaccept(&tx.to_lower_hex_string()));
 
     // Issuing a new asset together with a manual input order is rejected, unless pinned
     let err = w
@@ -3054,7 +3054,7 @@ fn test_inputs_order() {
     signer.sign(&mut pset).unwrap();
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
-    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+    assert!(env.elementsd_testmempoolaccept(&tx.to_lower_hex_string()));
 }
 
 #[ignore = "This test connects to liquid testnet"]
@@ -4275,7 +4275,7 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     let mut slip77_rand_key = [0u8; 32];
     use rand::{thread_rng, Rng};
     thread_rng().fill(&mut slip77_rand_key);
-    let slip77_rand_key = slip77_rand_key.to_hex();
+    let slip77_rand_key = slip77_rand_key.to_lower_hex_string();
     let desc_blinding_key = format!("slip77({slip77_rand_key})");
 
     // Carol uses the collected xpubs and the descriptor blinding key to create

@@ -3,8 +3,7 @@ use lwk_signer::AnySigner;
 use lwk_test_util::*;
 use lwk_wollet::elements::{
     pset::{Input, Output, PartiallySignedTransaction},
-    secp256k1_zkp::{RangeProof, SurjectionProof},
-    {BlindAssetProofs, BlindValueProofs},
+    {RangeProof, SurjectionProof},
 };
 use lwk_wollet::*;
 use std::collections::HashMap;
@@ -54,7 +53,7 @@ fn pset_raw(
 
         input.asset = Some(utxo.unblinded.asset);
         input.amount = Some(utxo.unblinded.value);
-        input.blind_asset_proof = Some(Box::new(
+        input.blind_asset_proof = Some(
             SurjectionProof::blind_asset_proof(
                 &mut rng,
                 &EC,
@@ -62,8 +61,8 @@ fn pset_raw(
                 utxo.unblinded.asset_bf,
             )
             .unwrap(),
-        ));
-        input.blind_value_proof = Some(Box::new(
+        );
+        input.blind_value_proof = Some(
             RangeProof::blind_value_proof(
                 &mut rng,
                 &EC,
@@ -73,7 +72,7 @@ fn pset_raw(
                 utxo.unblinded.value_bf,
             )
             .unwrap(),
-        ));
+        );
 
         // Skip adding rangeproof
         input.witness_utxo = Some(txout.clone());

@@ -1,8 +1,7 @@
 use crate::{Error, PublicKey, SecretKey, XOnlyPublicKey};
 
 use lwk_wollet::elements::bitcoin::secp256k1::{self, Message, Secp256k1};
-use lwk_wollet::elements::hex::ToHex;
-use lwk_wollet::hashes::hex::FromHex;
+use lwk_wollet::elements::hex::DisplayHex;
 use lwk_wollet::secp256k1::rand::thread_rng;
 use lwk_wollet::EC;
 
@@ -91,11 +90,11 @@ impl Keypair {
     /// Returns the signature as a hex string (128 hex chars = 64 bytes)
     #[wasm_bindgen(js_name = signSchnorr)]
     pub fn sign_schnorr(&self, msg_hex: &str) -> Result<String, Error> {
-        let msg_bytes = Vec::<u8>::from_hex(msg_hex)?;
+        let msg_bytes = lwk_wollet::elements::hex::decode_to_vec(msg_hex)?;
         let msg_array: [u8; 32] = msg_bytes.as_slice().try_into()?;
         let message = Message::from_digest(msg_array);
         let sig = EC.sign_schnorr(&message, &self.inner);
-        Ok(sig.serialize().to_hex())
+        Ok(sig.serialize().to_lower_hex_string())
     }
 }
 
@@ -139,8 +138,11 @@ mod tests {
         let sig_hex = kp.sign_schnorr(msg_hex).unwrap();
         assert_eq!(sig_hex.len(), 128);
 
-        let sig = schnorr::Signature::from_slice(&Vec::<u8>::from_hex(&sig_hex).unwrap()).unwrap();
-        let msg_bytes = Vec::<u8>::from_hex(msg_hex).unwrap();
+        let sig = schnorr::Signature::from_slice(
+            &lwk_wollet::elements::hex::decode_to_vec(&sig_hex).unwrap(),
+        )
+        .unwrap();
+        let msg_bytes = lwk_wollet::elements::hex::decode_to_vec(msg_hex).unwrap();
         let message = Message::from_digest(msg_bytes.try_into().unwrap());
         let (xonly_inner, _) = kp.inner.x_only_public_key();
         assert!(EC.verify_schnorr(&sig, &message, &xonly_inner).is_ok());

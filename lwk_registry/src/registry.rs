@@ -11,7 +11,7 @@ use crate::contract::{Contract, Entity};
 use crate::error::Error;
 use elements::{AssetId, OutPoint};
 
-use elements::hashes::sha256::Midstate;
+use elements::AssetEntropy;
 use elements::{AssetIssuance, LockTime, Script, Sequence, Transaction, TxInWitness, Txid};
 use futures::{stream, StreamExt};
 use lwk_common::Network;
@@ -403,7 +403,7 @@ impl RegistryData {
     }
 
     /// Get the entropy of the issuance transaction, used to compute the asset id and the reissuance token id.
-    pub fn entropy(&self) -> Result<Midstate, Error> {
+    pub fn entropy(&self) -> Result<AssetEntropy, Error> {
         Ok(AssetId::generate_asset_entropy(
             self.issuance_prevout(),
             self.contract.contract_hash()?,

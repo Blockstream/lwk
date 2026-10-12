@@ -3,7 +3,6 @@ use crate::Error;
 use std::str::FromStr;
 
 use lwk_wollet::elements::confidential;
-use lwk_wollet::elements::pset::serialize::Serialize;
 
 use wasm_bindgen::prelude::*;
 
@@ -68,7 +67,7 @@ impl AssetBlindingFactor {
     /// following Bitcoin display conventions).
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Vec<u8> {
-        self.inner.into_inner().serialize()
+        self.inner.into_inner().as_ref().to_vec()
     }
 
     /// Returns string representation of the ABF
@@ -139,7 +138,7 @@ impl ValueBlindingFactor {
     /// following Bitcoin display conventions).
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Vec<u8> {
-        self.inner.into_inner().serialize()
+        self.inner.into_inner().as_ref().to_vec()
     }
 
     /// Returns string representation of the VBF
@@ -155,7 +154,7 @@ mod tests {
 
     use wasm_bindgen_test::*;
 
-    use lwk_wollet::elements::hex::ToHex;
+    use lwk_wollet::elements::hex::DisplayHex;
 
     wasm_bindgen_test_configure!(run_in_browser);
 
@@ -172,7 +171,7 @@ mod tests {
         let hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
         let abf = AssetBlindingFactor::from_string(hex).unwrap();
         assert_eq!(abf.to_string_js(), hex);
-        assert_eq!(abf.to_bytes().to_hex(), reverse_hex(hex));
+        assert_eq!(abf.to_bytes().to_lower_hex_string(), reverse_hex(hex));
 
         let bytes = abf.to_bytes();
         let abf2 = AssetBlindingFactor::from_bytes(&bytes).unwrap();
@@ -190,7 +189,7 @@ mod tests {
         let hex = "0000460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
         let vbf = ValueBlindingFactor::from_string(hex).unwrap();
         assert_eq!(vbf.to_string_js(), hex);
-        assert_eq!(vbf.to_bytes().to_hex(), reverse_hex(hex));
+        assert_eq!(vbf.to_bytes().to_lower_hex_string(), reverse_hex(hex));
 
         let bytes = vbf.to_bytes();
         let vbf2 = ValueBlindingFactor::from_bytes(&bytes).unwrap();

@@ -137,7 +137,7 @@ impl TxOutSecrets {
     }
 
     fn asset_generator(&self) -> Generator {
-        let asset = self.inner.asset.into_inner().to_byte_array();
+        let asset = self.inner.asset.to_byte_array();
         let abf = self.inner.asset_bf.into_inner();
         let asset_tag = Tag::from(asset);
         Generator::new_blinded(&EC, asset_tag, abf)
@@ -152,11 +152,10 @@ mod tests {
     use std::str::FromStr;
 
     use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
-    use elements::hex::FromHex;
     use elements::AssetId;
 
     #[cfg(feature = "simplicity")]
-    use elements::hex::ToHex;
+    use elements::hex::DisplayHex;
 
     #[cfg(feature = "simplicity")]
     fn reverse_hex(hex: &str) -> String {
@@ -202,9 +201,9 @@ mod tests {
 
         let txoutsecrets_blinded: crate::TxOutSecrets = elements::TxOutSecrets::new(
             AssetId::from_str(asset_hex).unwrap(),
-            AssetBlindingFactor::from_hex(abf_hex).unwrap(),
+            abf_hex.parse().unwrap(),
             1000,
-            ValueBlindingFactor::from_hex(vbf_hex).unwrap(),
+            vbf_hex.parse().unwrap(),
         )
         .into();
         let vc_hex = "099be562150e1db49df61c175dad7927c41152f19578ce09660b5346ea9e31e576";
@@ -230,7 +229,7 @@ mod tests {
             txoutsecrets_blinded
                 .asset_blinding_factor()
                 .to_bytes()
-                .to_hex(),
+                .to_lower_hex_string(),
             reverse_hex(abf_hex),
         );
         #[cfg(feature = "simplicity")]
@@ -238,7 +237,7 @@ mod tests {
             txoutsecrets_blinded
                 .value_blinding_factor()
                 .to_bytes()
-                .to_hex(),
+                .to_lower_hex_string(),
             reverse_hex(vbf_hex),
         );
         assert_eq!(txoutsecrets_blinded.asset_commitment().to_string(), ac_hex);

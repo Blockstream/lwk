@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use elements::hex::ToHex;
+use elements::hex::DisplayHex;
 use lwk_common::Network;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
@@ -170,7 +170,10 @@ impl Debug for SignMessageParams {
         f.debug_struct("SignMessageParams")
             .field("message", &self.message)
             .field("path", &self.path)
-            .field("ae_host_commitment", &self.ae_host_commitment.to_hex())
+            .field(
+                "ae_host_commitment",
+                &self.ae_host_commitment.to_lower_hex_string(),
+            )
             .finish()
     }
 }
@@ -185,7 +188,10 @@ pub struct GetSignatureParams {
 impl Debug for GetSignatureParams {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GetSignatureParams")
-            .field("ae_host_entropy", &self.ae_host_entropy.to_hex())
+            .field(
+                "ae_host_entropy",
+                &self.ae_host_entropy.to_lower_hex_string(),
+            )
             .finish()
     }
 }
@@ -356,7 +362,7 @@ impl Debug for UpdatePinserverParams {
             .field("reset_certificate", &self.reset_certificate)
             .field("url_a", &self.url_a)
             .field("url_b", &self.url_b)
-            .field("pubkey", &self.pubkey.to_hex())
+            .field("pubkey", &self.pubkey.to_lower_hex_string())
             .field("certificate", &self.certificate)
             .finish()
     }

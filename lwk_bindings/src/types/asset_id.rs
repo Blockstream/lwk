@@ -1,4 +1,5 @@
-use elements::hex::ToHex;
+#[cfg(feature = "simplicity")]
+use elements::hex::DisplayHex;
 #[cfg(feature = "simplicity")]
 use std::sync::Arc;
 use std::{fmt::Display, str::FromStr};
@@ -41,7 +42,7 @@ uniffi::custom_type!(AssetId, String, {
         let inner = elements::AssetId::from_str(&val)?;
         Ok(AssetId { inner })
     },
-    lower: |obj| obj.inner.to_hex(),
+    lower: |obj| obj.inner.to_string(),
 });
 
 #[cfg(feature = "simplicity")]
@@ -50,7 +51,7 @@ impl AssetId {
     ///
     /// Note: this method returns the hex representation in reverse byte-order compared to `to_string`.
     pub fn inner_hex(&self) -> String {
-        self.inner.into_inner().to_byte_array().to_hex()
+        self.inner.to_byte_array().as_slice().to_lower_hex_string()
     }
 }
 

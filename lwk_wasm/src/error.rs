@@ -97,13 +97,16 @@ pub enum Error {
     TryFromSlice(#[from] std::array::TryFromSliceError),
 
     #[error(transparent)]
+    ElementsHexVariable(#[from] lwk_wollet::elements::hex::DecodeVariableLengthBytesError),
+
+    #[error(transparent)]
     HashesFromSlice(#[from] lwk_wollet::hashes::FromSliceError),
 
     #[error(transparent)]
     Taproot(#[from] lwk_wollet::elements::taproot::TaprootError),
 
     #[error("{0:?}")]
-    Unblind(#[from] lwk_wollet::elements::UnblindError),
+    Unblind(Box<lwk_wollet::elements::UnblindError>),
 
     #[error(transparent)]
     Registry(#[from] lwk_wollet::RegistryError),
@@ -123,11 +126,8 @@ pub enum Error {
     #[error("{0}")]
     SimplicityHlRich(String),
 
-    #[cfg(feature = "simplicity")]
     #[error("{0}")]
-    DecodeFixedLengthBytesError(
-        #[from] lwk_simplicity::simplicityhl::simplicity::hex::DecodeFixedLengthBytesError,
-    ),
+    DecodeFixedLengthBytesError(#[from] lwk_wollet::elements::hex::DecodeFixedLengthBytesError),
 
     #[error("{0:?}")]
     JsVal(JsValue),
@@ -237,10 +237,10 @@ impl Error {
             Error::SimplicityProgram(_) => "SimplicityProgram",
             #[cfg(feature = "simplicity")]
             Error::SimplicityHlRich(_) => "SimplicityRich",
-            #[cfg(feature = "simplicity")]
             Error::DecodeFixedLengthBytesError(_) => "DecodeFixedLengthBytesError",
             #[cfg(feature = "simplicity")]
             Error::TaprootBuilder(_) => "TaprootBuilderError",
+            Error::ElementsHexVariable(_) => "DecodeVariableLengthBytesError",
             Error::HashesFromSlice(_) => "HashesFromSliceError",
             Error::ParsePublicKey(_) => "ParsePublicKeyError",
             Error::Registry(_) => "Registry",
@@ -326,5 +326,11 @@ impl TryFrom<lwk_boltz::Error> for MagicRoutingHint {
 impl From<lwk_simplicity::simplicityhl::error::Diagnostic> for Error {
     fn from(value: lwk_simplicity::simplicityhl::error::Diagnostic) -> Self {
         Error::SimplicityHlRich(format!("{value}"))
+    }
+}
+
+impl From<lwk_wollet::elements::UnblindError> for Error {
+    fn from(value: lwk_wollet::elements::UnblindError) -> Self {
+        Error::Unblind(Box::new(value))
     }
 }

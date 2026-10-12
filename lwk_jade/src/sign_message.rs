@@ -64,11 +64,11 @@ pub(crate) fn parse(
 #[cfg(test)]
 mod tests {
     use elements::{
+        bitcoin::hashes::Hash as _,
         bitcoin::{
             base64::prelude::{Engine as _, BASE64_STANDARD},
             sign_message::{signed_msg_hash, MessageSignature},
         },
-        hashes::Hash,
         secp256k1_zkp::{Message, PublicKey, Secp256k1, SecretKey},
     };
 

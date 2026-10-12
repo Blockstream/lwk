@@ -3,7 +3,6 @@ use elements::{
         bip32::{DerivationPath, Fingerprint},
         PublicKey,
     },
-    hashes::Hash,
     pset::{Input, PartiallySignedTransaction},
     secp256k1_zkp::{Message, XOnlyPublicKey},
     EcdsaSighashType, SchnorrSig, SchnorrSighashType, TxInWitness, TxOutWitness,

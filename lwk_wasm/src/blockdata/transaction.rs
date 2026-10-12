@@ -4,13 +4,10 @@ use crate::{TxIn, TxInWitness, TxOut};
 
 use std::str::FromStr;
 
-use lwk_wollet::{
-    elements::{
-        self,
-        hex::ToHex,
-        pset::serialize::{Deserialize, Serialize},
-    },
-    hashes::hex::FromHex,
+use lwk_wollet::elements::{
+    self,
+    hex::DisplayHex,
+    pset::serialize::{Deserialize, Serialize},
 };
 
 use wasm_bindgen::prelude::*;
@@ -27,7 +24,7 @@ pub struct Transaction {
 
 impl std::fmt::Display for Transaction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.inner.serialize().to_hex())
+        write!(f, "{}", self.inner.serialize().to_lower_hex_string())
     }
 }
 
@@ -56,7 +53,7 @@ impl Transaction {
     /// Deprecated: use `fromString()` instead.
     #[wasm_bindgen(constructor)]
     pub fn new(tx_hex: &str) -> Result<Transaction, Error> {
-        let bytes = Vec::<u8>::from_hex(tx_hex)?;
+        let bytes = lwk_wollet::elements::hex::decode_to_vec(tx_hex)?;
         let tx: elements::Transaction = elements::Transaction::deserialize(&bytes)?;
         Ok(tx.into())
     }
@@ -64,7 +61,7 @@ impl Transaction {
     /// Creates a `Transaction` from hex-encoded consensus bytes.
     #[wasm_bindgen(js_name = fromString)]
     pub fn from_string(s: &str) -> Result<Transaction, Error> {
-        let bytes = Vec::<u8>::from_hex(s)?;
+        let bytes = lwk_wollet::elements::hex::decode_to_vec(s)?;
         Self::from_bytes(&bytes)
     }
 

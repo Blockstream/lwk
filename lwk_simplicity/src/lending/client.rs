@@ -6,7 +6,7 @@ use lwk_wollet::{
 
 pub enum AnyClient {
     Electrum(Box<ElectrumClient>),
-    Esplora(EsploraClient),
+    Esplora(Box<EsploraClient>),
 }
 
 impl AnyClient {

@@ -1,23 +1,20 @@
 use elements_miniscript::elements::{self};
 
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
-use elements::hex::FromHex;
 use elements::TxOutSecrets;
 use elements::Txid;
 use std::str::FromStr;
 
 fn asset_blinding_factor_test_vector() -> AssetBlindingFactor {
-    AssetBlindingFactor::from_hex(
-        "0000000000000000000000000000000000000000000000000000000000000001",
-    )
-    .unwrap()
+    "0000000000000000000000000000000000000000000000000000000000000001"
+        .parse()
+        .unwrap()
 }
 
 fn value_blinding_factor_test_vector() -> ValueBlindingFactor {
-    ValueBlindingFactor::from_hex(
-        "0000000000000000000000000000000000000000000000000000000000000002",
-    )
-    .unwrap()
+    "0000000000000000000000000000000000000000000000000000000000000002"
+        .parse()
+        .unwrap()
 }
 
 pub fn txid_test_vector() -> Txid {
@@ -34,5 +31,6 @@ pub fn tx_out_secrets_test_vector() -> TxOutSecrets {
 }
 
 pub fn tx_out_secrets_test_vector_bytes() -> Vec<u8> {
-    Vec::<u8>::from_hex(include_str!("../test_data/tx_out_secrets_test_vector.hex")).unwrap()
+    elements::hex::decode_to_vec(include_str!("../test_data/tx_out_secrets_test_vector.hex"))
+        .unwrap()
 }

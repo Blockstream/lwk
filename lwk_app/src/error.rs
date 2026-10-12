@@ -42,7 +42,10 @@ pub enum Error {
     Reqwest(#[from] reqwest::Error),
 
     #[error("Hex Error: {0}")]
-    Hex(lwk_wollet::elements::hex::Error),
+    HexFixed(lwk_wollet::elements::hex::DecodeFixedLengthBytesError),
+
+    #[error("Hex Error: {0}")]
+    Hex(lwk_wollet::elements::hex::DecodeVariableLengthBytesError),
 
     #[error("Elements Encode Error: {0}")]
     ElementsEncode(lwk_wollet::elements::encode::Error),
@@ -160,8 +163,13 @@ impl From<String> for Error {
         Error::Generic(message)
     }
 }
-impl From<lwk_wollet::elements::hex::Error> for Error {
-    fn from(value: lwk_wollet::elements::hex::Error) -> Self {
+impl From<lwk_wollet::elements::hex::DecodeFixedLengthBytesError> for Error {
+    fn from(value: lwk_wollet::elements::hex::DecodeFixedLengthBytesError) -> Self {
+        Error::HexFixed(value)
+    }
+}
+impl From<lwk_wollet::elements::hex::DecodeVariableLengthBytesError> for Error {
+    fn from(value: lwk_wollet::elements::hex::DecodeVariableLengthBytesError) -> Self {
         Error::Hex(value)
     }
 }

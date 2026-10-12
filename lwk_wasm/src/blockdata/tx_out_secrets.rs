@@ -131,7 +131,7 @@ impl TxOutSecrets {
 
 impl TxOutSecrets {
     fn asset_generator(&self) -> Generator {
-        let asset = self.inner.asset.into_inner().to_byte_array();
+        let asset = self.inner.asset.to_byte_array();
         let abf = self.inner.asset_bf.into_inner();
         let asset_tag = Tag::from(asset);
         Generator::new_blinded(&EC, asset_tag, abf)
@@ -144,7 +144,6 @@ mod tests {
 
     use lwk_wollet::elements;
     use lwk_wollet::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
-    use lwk_wollet::elements::hex::FromHex;
     use lwk_wollet::elements::AssetId;
 
     use wasm_bindgen_test::*;

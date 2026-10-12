@@ -1,5 +1,4 @@
 use crate::Error;
-use lwk_wollet::hashes::hex::FromHex;
 use wasm_bindgen::prelude::*;
 
 /// A contract defining metadata of an asset such the name and the ticker
@@ -42,7 +41,7 @@ impl Contract {
     ) -> Result<Contract, Error> {
         let inner = lwk_wollet::Contract::builder()
             .entity(lwk_wollet::Entity::Domain(domain.to_string()))
-            .issuer_pubkey(Vec::<u8>::from_hex(issuer_pubkey)?)
+            .issuer_pubkey(lwk_wollet::elements::hex::decode_to_vec(issuer_pubkey)?)
             .name(name.to_string())
             .precision(precision)
             .ticker(ticker.to_string())

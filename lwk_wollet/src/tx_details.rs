@@ -2,7 +2,7 @@ use crate::cache::Timestamp;
 use crate::descriptor::Chain;
 use crate::elements::bitcoin::bip32::{ChildNumber, DerivationPath};
 use crate::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
-use crate::elements::secp256k1_zkp::ZERO_TWEAK;
+use crate::elements::AssetBlindingNonce;
 use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::{Error, Wollet};
 use lwk_common::SignedBalance;
@@ -231,12 +231,12 @@ impl Wollet {
                 let burn_script = lwk_common::burn_script();
                 if tx.input.iter().any(|i| {
                     !i.asset_issuance.is_null()
-                        && i.asset_issuance.asset_blinding_nonce == ZERO_TWEAK
+                        && i.asset_issuance.asset_blinding_nonce == AssetBlindingNonce::NEW_ISSUANCE
                 }) {
                     "issuance".to_string()
                 } else if tx.input.iter().any(|i| {
                     !i.asset_issuance.is_null()
-                        && i.asset_issuance.asset_blinding_nonce != ZERO_TWEAK
+                        && i.asset_issuance.asset_blinding_nonce != AssetBlindingNonce::NEW_ISSUANCE
                 }) {
                     "reissuance".to_string()
                 } else if tx.output.iter().any(|o| o.script_pubkey == burn_script) {

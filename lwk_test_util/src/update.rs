@@ -1,15 +1,22 @@
-use elements_miniscript::elements::hex::FromHex;
-
 pub fn update_test_vector_bytes() -> Vec<u8> {
-    Vec::<u8>::from_hex(include_str!("../test_data/update_test_vector.hex")).unwrap()
+    elements_miniscript::elements::hex::decode_to_vec(include_str!(
+        "../test_data/update_test_vector.hex"
+    ))
+    .unwrap()
 }
 
 pub fn update_test_vector_v1_bytes() -> Vec<u8> {
-    Vec::<u8>::from_hex(include_str!("../test_data/update_test_vector_v1.hex")).unwrap()
+    elements_miniscript::elements::hex::decode_to_vec(include_str!(
+        "../test_data/update_test_vector_v1.hex"
+    ))
+    .unwrap()
 }
 
 pub fn update_test_vector_v4_bytes() -> Vec<u8> {
-    Vec::<u8>::from_hex(include_str!("../test_data/update_test_vector_v4.hex").trim()).unwrap()
+    elements_miniscript::elements::hex::decode_to_vec(
+        include_str!("../test_data/update_test_vector_v4.hex").trim(),
+    )
+    .unwrap()
 }
 
 pub fn update_test_vector_2_bytes() -> Vec<u8> {
@@ -50,7 +57,7 @@ pub fn update_merge_test_descriptor() -> String {
 }
 
 pub fn update_test_vector_encrypted_bytes() -> Vec<u8> {
-    Vec::<u8>::from_hex(include_str!(
+    elements_miniscript::elements::hex::decode_to_vec(include_str!(
         "../test_data/update_test_vector_encrypted.hex"
     ))
     .unwrap()

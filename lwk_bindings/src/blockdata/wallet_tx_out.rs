@@ -59,7 +59,7 @@ mod tests {
 
     use std::str::FromStr;
 
-    use elements::{hex::ToHex, Address};
+    use elements::Address;
 
     use super::WalletTxOut;
 
@@ -93,7 +93,7 @@ mod tests {
 
         assert_eq!(
             wallet_tx_out.script_pubkey().to_string(),
-            el.script_pubkey.to_hex()
+            format!("{:x}", el.script_pubkey)
         );
 
         assert_eq!(wallet_tx_out.height(), el.height);

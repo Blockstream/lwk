@@ -4,7 +4,6 @@ use std::{
 };
 
 use crate::{
-    hashes::Hash,
     issuance::{IssuanceOutput, IssuanceRequest, Issuances, ReissuanceRequest, Reissuances},
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
@@ -17,11 +16,9 @@ use crate::{
 };
 use elements::{
     confidential::{AssetBlindingFactor, Nonce, Value, ValueBlindingFactor},
-    issuance::ContractHash,
     pset::{Output, PartiallySignedTransaction, PsbtSighashType},
-    secp256k1_zkp::{self, RangeProof, SurjectionProof, ZERO_TWEAK},
-    Address, AssetId, BlindAssetProofs, BlindValueProofs, EcdsaSighashType, OutPoint, Script,
-    Transaction, TxOut, TxOutSecrets,
+    secp256k1_zkp, Address, AssetBlindingNonce, AssetId, EcdsaSighashType, OutPoint, RangeProof,
+    Script, SurjectionProof, Transaction, TxOut, TxOutSecrets,
 };
 use elements_miniscript::psbt::PsbtExt;
 use lwk_common::{calculate_fee, set_genesis_hash, FeeRate};
@@ -71,11 +68,12 @@ pub fn extract_issuances(tx: &Transaction) -> Vec<IssuanceDetails> {
     let mut r = vec![];
     for (vin, txin) in tx.input.iter().enumerate() {
         if txin.has_issuance() {
-            let contract_hash = ContractHash::from_byte_array(txin.asset_issuance.asset_entropy);
+            let contract_hash = txin.asset_issuance.asset_entropy.into_contract_hash();
             let entropy = AssetId::generate_asset_entropy(txin.previous_output, contract_hash)
                 .to_byte_array();
             let (asset, token) = txin.issuance_ids();
-            let is_reissuance = txin.asset_issuance.asset_blinding_nonce != ZERO_TWEAK;
+            let is_reissuance =
+                txin.asset_issuance.asset_blinding_nonce != AssetBlindingNonce::NEW_ISSUANCE;
             // FIXME: attempt to unblind if blinded
             let asset_amount = match txin.asset_issuance.amount {
                 Value::Explicit(a) => Some(a),
@@ -152,33 +150,33 @@ pub(crate) fn add_input_inner(
         // the asset and value/amount commitment of the output that is being
         // spent.
         let mut rng = rand::thread_rng();
-        input.blind_asset_proof = Some(Box::new(SurjectionProof::blind_asset_proof(
+        input.blind_asset_proof = Some(SurjectionProof::blind_asset_proof(
             &mut rng,
             &EC,
             unblinded.asset,
             unblinded.asset_bf,
-        )?));
-        input.blind_value_proof = Some(Box::new(RangeProof::blind_value_proof(
+        )?);
+        input.blind_value_proof = Some(RangeProof::blind_value_proof(
             &mut rng,
             &EC,
             unblinded.value,
             value_comm,
             asset_gen,
             unblinded.value_bf,
-        )?));
+        )?);
     } else if !allow_explicit_input {
         return Err(Error::NotConfidentialInput);
     }
 
     // Note that we explicitly remove the txout rangeproof to avoid
     // relying on its presence.
-    let rangeproof = txout.witness.rangeproof.take();
+    let rangeproof = std::mem::replace(&mut txout.witness.rangeproof, RangeProof::EMPTY);
     if add_input_rangeproofs {
         // This field is used by _some_ stateless blinders or signers to
         // learn the blinding factors and unblinded values of this input.
         // We need this since the output witness, which includes the
         // rangeproof, is not serialized.
-        input.in_utxo_rangeproof = rangeproof;
+        input.in_utxo_rangeproof = Some(rangeproof);
     }
     input.witness_utxo = Some(txout.clone());
 
@@ -186,13 +184,11 @@ pub(crate) fn add_input_inner(
         // For pre-segwit add non_witness_utxo
         // Remove the rangeproof to match the witness utxo,
         // to pass the checks done by elements-miniscript
-        let _ = tx
-            .output
+        tx.output
             .get_mut(outpoint.vout as usize)
             .expect("got txout above")
             .witness
-            .rangeproof
-            .take();
+            .rangeproof = RangeProof::EMPTY;
         input.non_witness_utxo = Some(tx);
     }
 
@@ -728,7 +724,7 @@ impl TxBuilder {
         // Set blind value proof
         let input_scalar_offset = liquidex::scalar_offset(txoutsecrets);
         let blind_value_proof = liquidex::blind_value_proof(txoutsecrets)?;
-        input.blind_value_proof = Some(Box::new(blind_value_proof));
+        input.blind_value_proof = Some(blind_value_proof);
 
         // Set sighash
         input.sighash_type = Some(PsbtSighashType::from_u32(
@@ -751,7 +747,7 @@ impl TxBuilder {
         let (nonce, shared_secret) = Nonce::new_confidential(&mut rng, &EC, &receiver_blinding_pk);
         let ecdh_pubkey =
             elements::bitcoin::PublicKey::new(nonce.commitment().expect("confidential"));
-        let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner().to_byte_array());
+        let asset_tag = secp256k1_zkp::Tag::from(asset.to_byte_array());
         let asset_generator =
             secp256k1_zkp::Generator::new_blinded(&EC, asset_tag, abf.into_inner());
         let value_commitment =
@@ -765,7 +761,7 @@ impl TxBuilder {
         fn make_rangeproof_message(asset: AssetId, bf: secp256k1_zkp::Tweak) -> [u8; 64] {
             let mut message = [0u8; 64];
 
-            message[..32].copy_from_slice(&asset.into_inner().to_byte_array());
+            message[..32].copy_from_slice(&asset.to_byte_array());
             message[32..].copy_from_slice(bf.as_ref());
 
             message
@@ -773,7 +769,7 @@ impl TxBuilder {
 
         let message = make_rangeproof_message(asset, abf.into_inner());
 
-        let rangeproof = secp256k1_zkp::RangeProof::new(
+        let rangeproof = RangeProof::new(
             &EC,
             min_value,
             value_commitment,
@@ -791,7 +787,7 @@ impl TxBuilder {
         output.asset_comm = Some(asset_generator);
         output.amount_comm = Some(value_commitment);
         output.ecdh_pubkey = Some(ecdh_pubkey);
-        output.value_rangeproof = Some(Box::new(rangeproof));
+        output.value_rangeproof = Some(rangeproof);
         // We need to set an asset surjection proof, otherwise rust-elements does not serialize the PSET
         // https://github.com/ElementsProject/rust-elements/blob/master/src/pset/map/output.rs#L581
         let bytes = [
@@ -800,9 +796,8 @@ impl TxBuilder {
             164, 175, 175, 158, 239, 225, 188, 83, 222, 42, 159, 10, 155, 216, 114, 78, 89, 163,
             124, 134, 74, 83, 104, 116, 254, 137, 218, 19,
         ];
-        let fake_surjectionproof =
-            secp256k1_zkp::SurjectionProof::from_slice(&bytes).expect("hardcoded");
-        output.asset_surjection_proof = Some(Box::new(fake_surjectionproof));
+        let fake_surjectionproof = SurjectionProof::from_slice(&bytes).expect("hardcoded");
+        output.asset_surjection_proof = Some(fake_surjectionproof);
         output.set_abf(abf);
         let txoutsecrets = elements::TxOutSecrets {
             asset,
@@ -812,14 +807,13 @@ impl TxBuilder {
         };
         let output_scalar_offset = liquidex::scalar_offset(&txoutsecrets);
         let blind_value_proof = liquidex::blind_value_proof(&txoutsecrets)?;
-        output.blind_value_proof = Some(Box::new(blind_value_proof));
+        output.blind_value_proof = Some(blind_value_proof);
         // Add blind asset proof
         // Note: this is technically redundant since one could use the asset and abf,
         // but we add it to make things easier for verifiers,
         // so they don't have to handle the liquidex special case.
-        let blind_asset_proof =
-            secp256k1_zkp::SurjectionProof::blind_asset_proof(&mut rng, &EC, asset, abf)?;
-        output.blind_asset_proof = Some(Box::new(blind_asset_proof));
+        let blind_asset_proof = SurjectionProof::blind_asset_proof(&mut rng, &EC, asset, abf)?;
+        output.blind_asset_proof = Some(blind_asset_proof);
 
         // Add scalar
         // Compute the scalar offset to be added to the last vbf by the Taker to balance the transaction:
@@ -998,18 +992,15 @@ impl TxBuilder {
         for (vout, output) in pset.outputs_mut().iter_mut().enumerate() {
             // For the maker output, create the surjection proof
             if vout == 0 {
-                let asset_tag =
-                    secp256k1_zkp::Tag::from(maker_output_asset.into_inner().to_byte_array());
-
-                let surjectionproof = secp256k1_zkp::SurjectionProof::new(
+                let surjectionproof = SurjectionProof::new(
                     &EC,
                     &mut rng,
-                    asset_tag,
-                    maker_output_abf.into_inner(),
+                    maker_output_asset,
+                    maker_output_abf,
                     &input_domain,
                 )?;
 
-                output.asset_surjection_proof = Some(Box::new(surjectionproof));
+                output.asset_surjection_proof = Some(surjectionproof);
                 output.blinder_index = None;
             }
             // Set all blinder index to 1 except for the maker output (1st) and the fee
@@ -1714,44 +1705,18 @@ impl TxBuilder {
         let mut built_tx = if needs_blinding(&pset)? {
             let mut rng = thread_rng();
 
-            // TODO: use the next line once we can use elements26 only
-            // let blind_secrets = pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-            use elements26::confidential::{
-                AssetBlindingFactor as Abf26, ValueBlindingFactor as Vbf26,
-            };
-            use elements26::pset::PartiallySignedTransaction as Pset26;
-            use std::str::FromStr;
-            let mut pset26 = Pset26::from_str(&pset.to_string()).map_err(e26conv_err)?;
-            let inp_txout_sec: HashMap<usize, elements26::TxOutSecrets> = inp_txout_sec
-                .iter()
-                .map(|(i, s)| {
-                    let asset = elements26::AssetId::from_slice(s.asset.into_inner().as_ref())
-                        .map_err(e26conv_err)?;
-                    let abf =
-                        Abf26::from_slice(s.asset_bf.into_inner().as_ref()).map_err(e26conv_err)?;
-                    let vbf =
-                        Vbf26::from_slice(s.value_bf.into_inner().as_ref()).map_err(e26conv_err)?;
-                    let value = s.value;
-                    let s = elements26::TxOutSecrets::new(asset, abf, value, vbf);
-                    Ok((*i, s))
-                })
-                .collect::<Result<_, Error>>()?;
-            let blind_secrets = pset26
-                .blind_last(&mut rng, &EC, &inp_txout_sec)
-                .map_err(|e| Error::Generic(format!("elements26 blind error: {e}")))?;
+            let blind_secrets = pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
             // erase all non witness utxo surjection and range proofs
             // this appears to be necessary for pre-segwit inputs
-            for input in pset26.inputs_mut() {
+            for input in pset.inputs_mut() {
                 if let Some(ref mut tx) = &mut input.non_witness_utxo {
                     for output in &mut tx.output {
                         output.witness = Default::default();
                     }
                 }
             }
-            let pset25 = elements::pset::PartiallySignedTransaction::from_str(&pset26.to_string())
-                .map_err(e26conv_err)?;
             BuiltTx {
-                pset: pset25,
+                pset,
                 blind_secrets,
             }
         } else {
@@ -1787,11 +1752,6 @@ fn needs_blinding(pset: &PartiallySignedTransaction) -> Result<bool, Error> {
     Ok(false)
 }
 
-/// Error while converting data between the elements 0.25 and 0.26 types
-fn e26conv_err<E: std::fmt::Display>(e: E) -> Error {
-    Error::Generic(format!("unexpected elements 25-26 conversion err: {e}"))
-}
-
 /// Transaction with metadata
 ///
 /// **Experimental**: this API might change without notice.
@@ -1801,10 +1761,10 @@ pub struct BuiltTx {
     pset: PartiallySignedTransaction,
     // type is what PartiallySignedTransaction.blind_last() returns
     blind_secrets: BTreeMap<
-        elements26::CtLocation,
+        elements::CtLocation,
         (
-            elements26::confidential::AssetBlindingFactor,
-            elements26::confidential::ValueBlindingFactor,
+            elements::confidential::AssetBlindingFactor,
+            elements::confidential::ValueBlindingFactor,
             elements::secp256k1_zkp::SecretKey,
         ),
     >,
@@ -1821,9 +1781,9 @@ impl BuiltTx {
         let mut m = HashMap::new();
         for (ct_location, (_abf, _vbf, eph_sk)) in self.blind_secrets.iter() {
             // these are outputs not inputs...
-            if let elements26::CtLocation {
+            if let elements::CtLocation {
                 input_index,
-                ty: elements26::CtLocationType::Input,
+                ty: elements::CtLocationType::Input,
             } = ct_location
             {
                 m.insert(input_index, eph_sk);
@@ -1864,15 +1824,12 @@ impl BuiltTx {
         let mut unblinded = vec![];
         for (ct_location, (abf, vbf, _eph_sk)) in self.blind_secrets.iter() {
             // these are outputs not inputs...
-            if let elements26::CtLocation {
+            if let elements::CtLocation {
                 input_index: vout,
-                ty: elements26::CtLocationType::Input,
+                ty: elements::CtLocationType::Input,
             } = ct_location
             {
-                let abf = AssetBlindingFactor::from_slice(abf.into_inner().as_ref())
-                    .map_err(e26conv_err)?;
-                let vbf = ValueBlindingFactor::from_slice(vbf.into_inner().as_ref())
-                    .map_err(e26conv_err)?;
+                let (abf, vbf) = (*abf, *vbf);
                 let outpoint = OutPoint::new(txid, *vout as u32);
                 let output = self
                     .pset
@@ -2252,7 +2209,7 @@ mod tests {
     #[test]
     fn test_serialize_proprietary_key() {
         use elements::encode::Encodable;
-        use elements::hex::ToHex;
+        use elements::hex::DisplayHex;
         let key = elements::pset::raw::ProprietaryKey::from_pset_pair(0x02, vec![]);
         let mut buf = vec![];
         key.consensus_encode(&mut buf).unwrap();
@@ -2264,7 +2221,7 @@ mod tests {
         let mut buf = vec![];
         pair.consensus_encode(&mut buf).unwrap();
         assert_eq!(
-            buf.to_hex(),
+            buf.to_lower_hex_string(),
             "07fc047073657402200360208a889692372c8d68b084a62efdf60ea1a359a04c94b20d223658276614",
         );
     }

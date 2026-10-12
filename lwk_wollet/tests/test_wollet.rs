@@ -1,9 +1,7 @@
 use std::{str::FromStr, thread, time::Duration};
 
 use elements::bitcoin::bip32::DerivationPath;
-use elements::{
-    hashes::Hash, pset::PartiallySignedTransaction, Address, AssetId, ContractHash, OutPoint, Txid,
-};
+use elements::{pset::PartiallySignedTransaction, Address, AssetId, ContractHash, OutPoint, Txid};
 use elements_miniscript::DescriptorPublicKey;
 use elements_miniscript::ForEachKey;
 use lwk_common::Signer;
@@ -465,7 +463,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         let contract_hash = contract
             .as_ref()
             .map(|c| c.contract_hash().unwrap())
-            .unwrap_or_else(|| ContractHash::from_slice(&[0u8; 32]).expect("static"));
+            .unwrap_or_else(|| ContractHash::from_byte_array([0u8; 32]));
         let mut pset = self
             .tx_builder()
             .issue_asset(satoshi_asset, None, satoshi_token, None, contract)

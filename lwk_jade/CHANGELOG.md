@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Update to `elements` 0.27.
 * `test_emulator` is not a default feature anymore.
 
 ## 0.19.0

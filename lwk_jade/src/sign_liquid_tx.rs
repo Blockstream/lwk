@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use elements::hex::ToHex;
+use elements::hex::DisplayHex;
 use lwk_common::Network;
 use serde::{ser::SerializeStruct, Deserialize, Serialize};
 
@@ -96,13 +96,25 @@ pub struct Commitment {
 impl std::fmt::Debug for Commitment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Commitment")
-            .field("asset_generator", &self.asset_generator.to_hex())
-            .field("asset_id", &self.asset_id.to_hex())
-            .field("blinding_key", &self.blinding_key.to_hex())
+            .field(
+                "asset_generator",
+                &self.asset_generator.to_lower_hex_string(),
+            )
+            .field("asset_id", &self.asset_id.to_lower_hex_string())
+            .field("blinding_key", &self.blinding_key.to_lower_hex_string())
             .field("value", &self.value)
-            .field("value_commitment", &self.value_commitment.to_hex())
-            .field("value_blind_proof", &self.value_blind_proof.to_hex())
-            .field("asset_blind_proof", &self.asset_blind_proof.to_hex())
+            .field(
+                "value_commitment",
+                &self.value_commitment.to_lower_hex_string(),
+            )
+            .field(
+                "value_blind_proof",
+                &self.value_blind_proof.to_lower_hex_string(),
+            )
+            .field(
+                "asset_blind_proof",
+                &self.asset_blind_proof.to_lower_hex_string(),
+            )
             .finish()
     }
 }
@@ -232,13 +244,22 @@ impl Debug for TxInputParams {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TxInputParams")
             .field("is_witness", &self.is_witness)
-            .field("script_code", &self.script_code.to_hex())
-            .field("value_commitment", &self.value_commitment.to_hex())
+            .field("script_code", &self.script_code.to_lower_hex_string())
+            .field(
+                "value_commitment",
+                &self.value_commitment.to_lower_hex_string(),
+            )
             .field("path", &self.path)
             .field("sighash", &self.sighash)
-            .field("ae_host_commitment", &self.ae_host_commitment.to_hex())
-            .field("scriptpubkey", &self.scriptpubkey.to_hex())
-            .field("asset_generator", &self.asset_generator.to_hex())
+            .field(
+                "ae_host_commitment",
+                &self.ae_host_commitment.to_lower_hex_string(),
+            )
+            .field("scriptpubkey", &self.scriptpubkey.to_lower_hex_string())
+            .field(
+                "asset_generator",
+                &self.asset_generator.to_lower_hex_string(),
+            )
             .finish()
     }
 }

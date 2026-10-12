@@ -1138,7 +1138,7 @@ impl LendingSession {
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)
             .or_else(|e| match e {
                 // We ignoring this error because we can have simplicity-only outputs
-                PsetBlindError::AtleastOneOutputBlind => Ok(()),
+                PsetBlindError::AtleastOneOutputBlind => Ok(Default::default()),
                 other => Err(other),
             })
             .map_err(lwk_wollet::Error::from)?;
@@ -1265,7 +1265,7 @@ impl LendingSessionBuilder {
     }
 
     pub fn set_esplora_client(mut self, client: EsploraClient) -> Self {
-        self.client = Some(AnyClient::Esplora(client));
+        self.client = Some(AnyClient::Esplora(Box::new(client)));
         self
     }
 

@@ -1,8 +1,7 @@
 use crate::Error;
 
 use lwk_wollet::elements;
-use lwk_wollet::elements::hex::ToHex;
-use lwk_wollet::hashes::hex::FromHex;
+use lwk_wollet::elements::hex::DisplayHex;
 
 use wasm_bindgen::prelude::*;
 
@@ -57,11 +56,11 @@ impl TxInWitness {
     pub fn from_script_witness(script_witness: Vec<String>) -> Result<TxInWitness, Error> {
         let witness: Vec<Vec<u8>> = script_witness
             .iter()
-            .map(|s| Vec::<u8>::from_hex(s))
+            .map(|s| lwk_wollet::elements::hex::decode_to_vec(s))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(Self {
             inner: elements::TxInWitness {
-                script_witness: witness,
+                script_witness: witness.into(),
                 ..Default::default()
             },
         })
@@ -75,7 +74,7 @@ impl TxInWitness {
         self.inner
             .script_witness
             .iter()
-            .map(|elem| elem.to_hex())
+            .map(|elem| elem.to_lower_hex_string())
             .collect()
     }
 
@@ -84,10 +83,9 @@ impl TxInWitness {
     /// Returns an array of hex strings.
     #[wasm_bindgen(getter = peginWitness)]
     pub fn pegin_witness(&self) -> Vec<String> {
-        self.inner
-            .pegin_witness
+        lwk_wollet::pegin::pegin_witness_to_elements(&self.inner.pegin_witness)
             .iter()
-            .map(|elem| elem.to_hex())
+            .map(|elem| elem.to_lower_hex_string())
             .collect()
     }
 
@@ -121,8 +119,9 @@ impl TxInWitnessBuilder {
     pub fn script_witness(mut self, witness: Vec<String>) -> Result<TxInWitnessBuilder, Error> {
         self.inner.script_witness = witness
             .iter()
-            .map(|s| Vec::<u8>::from_hex(s))
-            .collect::<Result<Vec<_>, _>>()?;
+            .map(|s| lwk_wollet::elements::hex::decode_to_vec(s))
+            .collect::<Result<Vec<_>, _>>()?
+            .into();
         Ok(self)
     }
 
@@ -131,26 +130,25 @@ impl TxInWitnessBuilder {
     /// Takes an array of hex strings representing the peg-in witness stack.
     #[wasm_bindgen(js_name = peginWitness)]
     pub fn pegin_witness(mut self, witness: Vec<String>) -> Result<TxInWitnessBuilder, Error> {
-        self.inner.pegin_witness = witness
+        let elems = witness
             .iter()
-            .map(|s| Vec::<u8>::from_hex(s))
+            .map(|s| lwk_wollet::elements::hex::decode_to_vec(s))
             .collect::<Result<Vec<_>, _>>()?;
+        self.inner.pegin_witness = lwk_wollet::pegin::pegin_witness_from_elements(&elems)?;
         Ok(self)
     }
 
     /// Set the amount rangeproof from serialized bytes.
     #[wasm_bindgen(js_name = amountRangeproof)]
     pub fn amount_rangeproof(mut self, proof: &[u8]) -> Result<TxInWitnessBuilder, Error> {
-        let rangeproof = elements::secp256k1_zkp::RangeProof::from_slice(proof)?;
-        self.inner.amount_rangeproof = Some(Box::new(rangeproof));
+        self.inner.amount_rangeproof = elements::RangeProof::from_slice(proof)?;
         Ok(self)
     }
 
     /// Set the inflation keys rangeproof from serialized bytes.
     #[wasm_bindgen(js_name = inflationKeysRangeproof)]
     pub fn inflation_keys_rangeproof(mut self, proof: &[u8]) -> Result<TxInWitnessBuilder, Error> {
-        let rangeproof = elements::secp256k1_zkp::RangeProof::from_slice(proof)?;
-        self.inner.inflation_keys_rangeproof = Some(Box::new(rangeproof));
+        self.inner.inflation_keys_rangeproof = elements::RangeProof::from_slice(proof)?;
         Ok(self)
     }
 

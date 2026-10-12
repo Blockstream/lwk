@@ -4,7 +4,6 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 use lwk_wollet::elements;
-use lwk_wollet::elements::hashes::Hash;
 
 use wasm_bindgen::prelude::*;
 

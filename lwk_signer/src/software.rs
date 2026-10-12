@@ -3,7 +3,7 @@ use elements_miniscript::{
     bitcoin::{
         self,
         bip32::DerivationPath,
-        hashes::{sha512, HashEngine, Hmac, HmacEngine},
+        hashes::{sha512, Hash, HashEngine, Hmac, HmacEngine},
         secp256k1::Message,
         sign_message::{MessageSignature, MessageSignatureError},
         PrivateKey,
@@ -13,7 +13,6 @@ use elements_miniscript::{
             bip32::{self, Fingerprint, Xpriv, Xpub},
             Network,
         },
-        hashes::Hash,
         pset::{Input, PartiallySignedTransaction},
         schnorr::TapTweak,
         secp256k1_zkp::{All, Secp256k1},
@@ -630,7 +629,7 @@ pub fn sign_with_seckey(
 
 #[cfg(test)]
 mod tests {
-    use elements_miniscript::elements::hex::ToHex;
+    use elements_miniscript::elements::hex::DisplayHex;
 
     use super::*;
 
@@ -654,9 +653,9 @@ mod tests {
         );
 
         let slip77 = signer.slip77_master_blinding_key().unwrap();
-        assert_eq!(slip77.as_bytes().to_hex(), format!("{slip77}"));
+        assert_eq!(slip77.as_bytes().to_lower_hex_string(), format!("{slip77}"));
         assert_eq!(
-            slip77.as_bytes().to_hex(),
+            slip77.as_bytes().to_lower_hex_string(),
             lwk_test_util::TEST_MNEMONIC_SLIP77
         );
 

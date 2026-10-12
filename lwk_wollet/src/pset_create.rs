@@ -2,9 +2,11 @@ use crate::bitcoin::PublicKey as BitcoinPublicKey;
 use crate::elements::confidential::AssetBlindingFactor;
 use crate::elements::issuance::ContractHash;
 use crate::elements::pset::{Output, PartiallySignedTransaction};
-use crate::elements::{Address, AssetId, OutPoint, Transaction, TxOut, TxOutSecrets, Txid};
+use crate::elements::{
+    Address, AssetBlindingNonce, AssetEntropy, AssetId, OutPoint, Transaction, TxOut, TxOutSecrets,
+    Txid,
+};
 use crate::error::Error;
-use crate::hashes::Hash;
 use crate::model::{Recipient, WalletTxOut};
 use crate::tx_builder::add_input_inner;
 use crate::wollet::Wollet;
@@ -96,9 +98,10 @@ impl Wollet {
         }
         let contract_hash = match contract.as_ref() {
             Some(contract) => contract.contract_hash()?,
-            None => ContractHash::from_slice(&[0u8; 32]).expect("static"),
+            None => ContractHash::from_byte_array([0u8; 32]),
         };
-        input.issuance_asset_entropy = Some(contract_hash.to_byte_array());
+        input.issuance_asset_entropy =
+            Some(AssetEntropy::from_byte_array(contract_hash.to_byte_array()));
         input.blinded_issuance = Some(0x00);
 
         let (asset, token) = input.issuance_ids();
@@ -128,9 +131,9 @@ impl Wollet {
             .get_mut(idx)
             .ok_or_else(|| Error::MissingVin)?;
         input.issuance_value_amount = Some(satoshi_asset);
-        let nonce = token_asset_bf.into_inner();
+        let nonce = AssetBlindingNonce::from_blinding_factor(*token_asset_bf);
         input.issuance_blinding_nonce = Some(nonce);
-        input.issuance_asset_entropy = Some(*entropy);
+        input.issuance_asset_entropy = Some(AssetEntropy::from_byte_array(*entropy));
         input.blinded_issuance = Some(0x00);
         Ok(())
     }

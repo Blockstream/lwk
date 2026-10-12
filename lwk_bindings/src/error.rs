@@ -114,16 +114,24 @@ impl From<elements::bitcoin::key::FromWifError> for LwkError {
     }
 }
 
-impl From<elements::hashes::hex::HexToBytesError> for LwkError {
-    fn from(value: elements::hashes::hex::HexToBytesError) -> Self {
+impl From<elements::hex::DecodeVariableLengthBytesError> for LwkError {
+    fn from(value: elements::hex::DecodeVariableLengthBytesError) -> Self {
         LwkError::Generic {
             msg: format!("{value:?}"),
         }
     }
 }
 
-impl From<elements::hashes::hex::HexToArrayError> for LwkError {
-    fn from(value: elements::hashes::hex::HexToArrayError) -> Self {
+impl From<elements::bitcoin::hex::HexToArrayError> for LwkError {
+    fn from(value: elements::bitcoin::hex::HexToArrayError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
+impl From<elements::hex::DecodeFixedLengthBytesError> for LwkError {
+    fn from(value: elements::hex::DecodeFixedLengthBytesError) -> Self {
         LwkError::Generic {
             msg: format!("{value:?}"),
         }
@@ -296,17 +304,6 @@ impl From<lwk_simplicity::simplicityhl::error::Diagnostic> for LwkError {
     }
 }
 
-#[cfg(feature = "simplicity")]
-impl From<lwk_simplicity::simplicityhl::simplicity::hex::DecodeFixedLengthBytesError> for LwkError {
-    fn from(
-        value: lwk_simplicity::simplicityhl::simplicity::hex::DecodeFixedLengthBytesError,
-    ) -> Self {
-        LwkError::Generic {
-            msg: format!("{value}"),
-        }
-    }
-}
-
 impl From<elements::UnblindError> for LwkError {
     fn from(value: elements::UnblindError) -> Self {
         LwkError::Generic {
@@ -366,14 +363,6 @@ impl From<TryFromSliceError> for LwkError {
 
 impl From<elements::bitcoin::address::ParseError> for LwkError {
     fn from(value: elements::bitcoin::address::ParseError) -> Self {
-        LwkError::Generic {
-            msg: format!("{value:?}"),
-        }
-    }
-}
-
-impl From<elements::hashes::FromSliceError> for LwkError {
-    fn from(value: elements::hashes::FromSliceError) -> Self {
         LwkError::Generic {
             msg: format!("{value:?}"),
         }

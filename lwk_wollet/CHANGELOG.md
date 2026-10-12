@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* Breaking: update to `elements` 0.27 and `elements-miniscript` 0.5. Types re-exported from `elements` changed, for example the hex helpers (`ToHex`, `FromHex`), `AssetId` and `Txid` constructors, the issuance entropy (now `AssetEntropy`) and the pegin witness.
+* Breaking: `PeginInput::pegin_witness()` returns `&elements::PeginWitness` instead of `&[Vec<u8>]`. Use `pegin::pegin_witness_to_elements()` and `pegin::pegin_witness_from_elements()` to convert from and to `Vec<Vec<u8>>`.
+* Breaking: `WalletTx`, `ExternalUtxo` and the AMP2 `CosignResponse` no longer implement `Serialize` and `Deserialize`, because `elements` no longer implements serde for `Transaction`, `TxOut` and `PartiallySignedTransaction`.
+* Breaking: `Error::Hashes` was removed, `Error::ElementsHexFixed` was added, `Error::ElementsHex` wraps the new `elements::hex::DecodeVariableLengthBytesError`, and `Error::Unblind` holds a `Box<UnblindError>`.
 * Bump MSRV to 1.91
 * All registry-related code was moved to `lwk_registry`. Notes for migration:
   * Registry-related methods return `lwk_registry::Error` instead of an `lwk_wollet::Error`.

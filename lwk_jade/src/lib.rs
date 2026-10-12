@@ -30,8 +30,6 @@ pub use consts::{BAUD_RATE, TIMEOUT};
 use elements::{
     bitcoin::bip32::{ChildNumber, DerivationPath, Fingerprint},
     encode::serialize,
-    hashes::Hash,
-    hex::ToHex,
     opcodes::{
         all::{OP_CHECKMULTISIG, OP_PUSHNUM_1, OP_PUSHNUM_16},
         All,
@@ -356,7 +354,7 @@ fn create_jade_sign_req(
                     asset_id: asset_id.to_string(),
                     contract,
                     issuance_prevout: Prevout {
-                        txid: meta.issuance_prevout().txid.to_hex(),
+                        txid: meta.issuance_prevout().txid.to_string(),
                         vout: meta.issuance_prevout().vout,
                     },
                 };
@@ -457,7 +455,6 @@ fn is_multisig(script: &Script) -> bool {
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
 
     use elements::{
         bitcoin::bip32::Fingerprint,
@@ -484,12 +481,12 @@ mod test {
 
     #[test]
     fn test_is_multisig() {
-        let multisig = Script::from_str("522102ebc62c20f1e09e169a88745f60f6dac878c92db5c7ed78c6703d2d0426a01f942102c2d59d677122bc292048833003fd5cb19d27d32896b1d0feec654c291f7ede9e52ae").unwrap();
+        let multisig = Script::from_hex_no_prefix("522102ebc62c20f1e09e169a88745f60f6dac878c92db5c7ed78c6703d2d0426a01f942102c2d59d677122bc292048833003fd5cb19d27d32896b1d0feec654c291f7ede9e52ae").unwrap();
         assert_eq!(multisig.asm(), "OP_PUSHNUM_2 OP_PUSHBYTES_33 02ebc62c20f1e09e169a88745f60f6dac878c92db5c7ed78c6703d2d0426a01f94 OP_PUSHBYTES_33 02c2d59d677122bc292048833003fd5cb19d27d32896b1d0feec654c291f7ede9e OP_PUSHNUM_2 OP_CHECKMULTISIG");
         assert!(is_multisig(&multisig));
 
         let not_multisig =
-            Script::from_str("001414fe45f2c2a2b7c00d0940d694a3b6af6c9bf165").unwrap();
+            Script::from_hex_no_prefix("001414fe45f2c2a2b7c00d0940d694a3b6af6c9bf165").unwrap();
         assert_eq!(
             not_multisig.asm(),
             "OP_0 OP_PUSHBYTES_20 14fe45f2c2a2b7c00d0940d694a3b6af6c9bf165"
@@ -501,7 +498,7 @@ mod test {
     fn create_jade_sign_req_skips_explicit_output_commitment() {
         let mut pset = PartiallySignedTransaction::new_v2();
         pset.add_output(Output::new_explicit(
-            Script::from_str("001414fe45f2c2a2b7c00d0940d694a3b6af6c9bf165").unwrap(),
+            Script::from_hex_no_prefix("001414fe45f2c2a2b7c00d0940d694a3b6af6c9bf165").unwrap(),
             1_000,
             *Network::default_regtest().policy_asset(),
             None,

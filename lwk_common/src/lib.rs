@@ -90,7 +90,7 @@ use elements_miniscript::elements::{
     pset::PartiallySignedTransaction,
     script::Builder,
     secp256k1_zkp::{All, Generator, PedersenCommitment, Secp256k1},
-    AssetId, BlindAssetProofs, BlindValueProofs, OutPoint, Script, TxOutSecrets,
+    AssetId, OutPoint, Script, TxOutSecrets,
 };
 use elements_miniscript::{
     ConfidentialDescriptor, DescriptorPublicKey as MiniscriptDescriptorPublicKey,
@@ -143,7 +143,7 @@ fn commitments(
 ) -> (Generator, PedersenCommitment) {
     let asset_comm = Generator::new_blinded(
         secp,
-        txout_secrets.asset.into_inner().to_byte_array().into(),
+        txout_secrets.asset.to_byte_array().into(),
         txout_secrets.asset_bf.into_inner(),
     );
     let amount_comm = PedersenCommitment::new(
@@ -234,10 +234,9 @@ pub fn pset_balance(
                         // since the output witness, which includes the rangeproof,
                         // is not serialized.
                         let mut txout_with_rangeproof = txout.clone();
-                        txout_with_rangeproof
-                            .witness
-                            .rangeproof
-                            .clone_from(&input.in_utxo_rangeproof);
+                        if let Some(rangeproof) = &input.in_utxo_rangeproof {
+                            txout_with_rangeproof.witness.rangeproof = rangeproof.clone();
+                        }
                         let txout_secrets = txout_with_rangeproof
                             .unblind(&secp, private_blinding_key)
                             .map_err(|_| Error::InputMineNotUnblindable { idx })?;

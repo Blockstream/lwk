@@ -68,11 +68,11 @@ pub enum Error {
     #[error(transparent)]
     BitcoinEncode(#[from] crate::bitcoin::consensus::encode::Error),
 
-    #[error("Hex Error: {0}")]
-    ElementsHex(crate::elements::hex::Error),
-
     #[error(transparent)]
-    Hashes(#[from] crate::elements::hashes::FromSliceError),
+    ElementsHexFixed(#[from] crate::elements::hex::DecodeFixedLengthBytesError),
+
+    #[error("Hex Error: {0}")]
+    ElementsHex(crate::elements::hex::DecodeVariableLengthBytesError),
 
     #[error(transparent)]
     ElementsPset(#[from] crate::elements::pset::Error),
@@ -102,7 +102,7 @@ pub enum Error {
     DescConversion(#[from] elements_miniscript::descriptor::ConversionError),
 
     #[error(transparent)]
-    Unblind(#[from] crate::elements::UnblindError),
+    Unblind(Box<crate::elements::UnblindError>),
 
     #[error(transparent)]
     AddressError(#[from] crate::elements::AddressError),
@@ -430,8 +430,14 @@ impl From<lwk_common::EncryptError> for Error {
     }
 }
 
-impl From<elements::hex::Error> for Error {
-    fn from(err: elements::hex::Error) -> Self {
+impl From<crate::elements::UnblindError> for Error {
+    fn from(err: crate::elements::UnblindError) -> Self {
+        Self::Unblind(Box::new(err))
+    }
+}
+
+impl From<elements::hex::DecodeVariableLengthBytesError> for Error {
+    fn from(err: elements::hex::DecodeVariableLengthBytesError) -> Self {
         Self::ElementsHex(err)
     }
 }

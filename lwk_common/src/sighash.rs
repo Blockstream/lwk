@@ -1,7 +1,6 @@
 //! Shared PSET sighash computation.
 
 use elements::{
-    hashes::Hash,
     pset::{Input, PartiallySignedTransaction},
     sighash::{Prevouts, SighashCache},
     taproot::{TapLeafHash, TapSighashHash},
@@ -10,9 +9,6 @@ use elements::{
 use elements_miniscript::psbt::{PsbtExt, PsbtSighashMsg};
 
 use crate::input::{is_taproot_input, spent_txout};
-
-/// Elements Core masks this flag from the in-memory outpoint of a pegin input.
-const PEGIN_FLAG: u32 = 1 << 30;
 
 #[allow(missing_docs)]
 #[derive(thiserror::Error, Debug)]
@@ -62,14 +58,7 @@ impl<'a> SighashCtx<'a> {
         pset: &'a PartiallySignedTransaction,
         genesis_hash: Option<BlockHash>,
     ) -> Result<Self, SighashError> {
-        let mut tx = pset.extract_tx().map_err(|_| SighashError::TxExtraction)?;
-        for input in &mut tx.input {
-            if input.is_pegin() {
-                // TODO: Remove once https://github.com/ElementsProject/rust-elements/issues/292
-                // is fixed. Elements Core masks this flag from the in-memory outpoint.
-                input.previous_output.vout &= !PEGIN_FLAG;
-            }
-        }
+        let tx = pset.extract_tx().map_err(|_| SighashError::TxExtraction)?;
 
         Ok(Self {
             pset,
@@ -89,7 +78,12 @@ impl<'a> SighashCtx<'a> {
         }
         spent_txout(input).ok_or(SighashError::MissingSpentOutput(idx))?;
 
-        let msg = pset.sighash_msg(idx, &mut self.cache, None, BlockHash::all_zeros())?;
+        let msg = pset.sighash_msg(
+            idx,
+            &mut self.cache,
+            None,
+            BlockHash::from_byte_array([0; 32]),
+        )?;
         match msg {
             PsbtSighashMsg::EcdsaSighash(sighash) => Ok(sighash),
             PsbtSighashMsg::TapSighash(_) => Err(SighashError::UnexpectedTaproot(idx)),
@@ -178,7 +172,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn ecdsa_msg_masks_the_pegin_outpoint_flag() {
+    fn ecdsa_msg_ignores_the_pegin_outpoint_flag() {
         let witness_script = Builder::new()
             .push_opcode(opcodes::all::OP_PUSHNUM_1)
             .into_script();
@@ -189,7 +183,11 @@ mod tests {
             ..Default::default()
         };
 
-        let mut input = Input::from_prevout(OutPoint::new(Txid::all_zeros(), 7 | PEGIN_FLAG));
+        const PEGIN_FLAG: u32 = 1 << 30;
+        let mut input = Input::from_prevout(OutPoint::new(
+            Txid::from_byte_array([0; 32]),
+            7 | PEGIN_FLAG,
+        ));
         input.witness_script = Some(witness_script.clone());
         input.witness_utxo = Some(txout);
 
@@ -198,24 +196,17 @@ mod tests {
 
         let tx = pset.extract_tx().unwrap();
         assert!(tx.input[0].is_pegin());
-        let mut masked = tx.clone();
-        masked.input[0].previous_output.vout &= !PEGIN_FLAG;
+        // The pegin flag is not part of the outpoint in the extracted transaction
+        assert_eq!(tx.input[0].previous_output.vout, 7);
 
-        let unmasked_msg = SighashCache::new(&tx).segwitv0_sighash(
+        let expected = SighashCache::new(&tx).segwitv0_sighash(
             0,
             &witness_script,
             value,
             EcdsaSighashType::All,
         );
-        let masked_msg = SighashCache::new(&masked).segwitv0_sighash(
-            0,
-            &witness_script,
-            value,
-            EcdsaSighashType::All,
-        );
-        assert_ne!(unmasked_msg, masked_msg);
 
         let msg = SighashCtx::new(&pset, None).unwrap().ecdsa_msg(0).unwrap();
-        assert_eq!(msg, masked_msg);
+        assert_eq!(msg, expected);
     }
 }

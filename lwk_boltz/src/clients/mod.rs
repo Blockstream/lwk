@@ -168,7 +168,6 @@ mod tests {
 
     use boltz_client::bitcoin;
     use boltz_client::network::{BitcoinChain, BitcoinClient, LiquidChain};
-    use lwk_wollet::elements::hex::FromHex;
 
     use super::*;
 
@@ -218,7 +217,7 @@ mod tests {
     #[test]
     fn elements_version_boundary_preserves_confidential_witness() {
         let hex = include_str!("../../../lwk_wollet/tests/data/usdt-issuance-tx.hex").trim();
-        let bytes = Vec::<u8>::from_hex(hex).unwrap();
+        let bytes = lwk_wollet::elements::hex::decode_to_vec(hex).unwrap();
         let tx: lwk_elements::Transaction = lwk_elements::encode::deserialize(&bytes).unwrap();
         let converted = boltz_tx(&tx).unwrap();
         assert_eq!(lwk_tx(&converted).unwrap(), tx);

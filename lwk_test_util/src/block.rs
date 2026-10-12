@@ -1,4 +1,4 @@
-use elements_miniscript::elements::{encode::Decodable, hex::FromHex, Block, BlockHeader};
+use elements_miniscript::elements::{encode::Decodable, Block, BlockHeader};
 
 pub fn liquid_block_1() -> Block {
     let raw = include_bytes!(
@@ -9,6 +9,6 @@ pub fn liquid_block_1() -> Block {
 
 pub fn liquid_block_header_2_963_520() -> BlockHeader {
     let hex = include_str!("../test_data/block_header_2_963_520.hex");
-    let bytes = Vec::<u8>::from_hex(hex).unwrap();
+    let bytes = elements_miniscript::elements::hex::decode_to_vec(hex).unwrap();
     BlockHeader::consensus_decode(&bytes[..]).unwrap()
 }

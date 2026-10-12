@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use elements::pset::{Output, PartiallySignedTransaction};
 use elements::secp256k1_zkp::{All, Secp256k1};
-use elements::{AssetId, BlindAssetProofs, BlindValueProofs, Script};
+use elements::{AssetId, Script};
 
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint};
 use elements::bitcoin::PublicKey as BitcoinPublicKey;

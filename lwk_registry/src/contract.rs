@@ -7,7 +7,7 @@ use std::str::FromStr;
 use crate::domain::verify_domain_name;
 use crate::error::Error;
 use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
-use elements::hashes::{sha256, Hash};
+use elements::hashes::sha256;
 use elements::{AssetId, ContractHash, OutPoint};
 use regex_lite::Regex;
 use serde::{Deserialize, Serialize};
@@ -236,7 +236,7 @@ impl ContractBuilder {
 ///
 /// Fails if they do not commit to the contract.
 pub fn asset_ids(txin: &elements::TxIn, contract: &Contract) -> Result<(AssetId, AssetId), Error> {
-    let ch_from_txin = ContractHash::from_byte_array(txin.asset_issuance.asset_entropy);
+    let ch_from_txin = txin.asset_issuance.asset_entropy.into_contract_hash();
     if contract.contract_hash()? != ch_from_txin {
         return Err(Error::ContractDoesNotCommitToAssetId);
     }
@@ -268,13 +268,12 @@ pub fn contract_json_hash(contract: &Value) -> Result<ContractHash, Error> {
     // but use a single SHA256 instead of the double hash assumed by
     // ContractHash::hash()
     let hash = sha256::Hash::hash(contract_str.as_bytes());
-    Ok(ContractHash::from_raw_hash(hash))
+    Ok(ContractHash::from_byte_array(hash.to_byte_array()))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use elements::hex::FromHex;
     use std::str::FromStr;
 
     #[test]
@@ -330,7 +329,7 @@ mod tests {
         // https://blockstream.info/liquid/api/tx/abb4080d91849e933ee2ed65da6b436f7c385cf363fb4aa08399f1e27c58ff3d/hex
         let tx_hex = include_str!("../../lwk_wollet/tests/data/usdt-issuance-tx.hex");
         let tx: elements::Transaction =
-            elements::encode::deserialize(&Vec::<u8>::from_hex(tx_hex).unwrap()).unwrap();
+            elements::encode::deserialize(&elements::hex::decode_to_vec(tx_hex).unwrap()).unwrap();
 
         let asset_usdt = "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2";
         let token_usdt = "59fe4d2127ba9f16bd6850a3e6271a166e7ed2e1669f6c107d655791c94ee98f";

@@ -162,7 +162,8 @@ impl PsetInputBuilder {
     pub fn issuance_asset_entropy(&self, issuance_asset_entropy: &[u8]) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
-        inner.issuance_asset_entropy = Some(issuance_asset_entropy.try_into()?);
+        let entropy: [u8; 32] = issuance_asset_entropy.try_into()?;
+        inner.issuance_asset_entropy = Some(elements::AssetEntropy::from_byte_array(entropy));
         Ok(())
     }
 
@@ -178,7 +179,10 @@ impl PsetInputBuilder {
     pub fn issuance_blinding_nonce(&self, nonce: &Tweak) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
-        inner.issuance_blinding_nonce = Some(nonce.into());
+        let nonce: elements::secp256k1_zkp::Tweak = nonce.into();
+        inner.issuance_blinding_nonce = Some(elements::AssetBlindingNonce::from_byte_array(
+            *nonce.as_ref(),
+        ));
         Ok(())
     }
 

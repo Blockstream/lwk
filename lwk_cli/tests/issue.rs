@@ -1,5 +1,5 @@
 use elements::encode::serialize;
-use elements::hex::ToHex;
+use elements::hex::DisplayHex;
 use elements::pset::PartiallySignedTransaction;
 
 use lwk_test_util::TestEnvBuilder;
@@ -249,7 +249,7 @@ fn test_registry_publish() {
 
     sh(&format!("{cli} server scan"));
 
-    let tx = serialize(&pset_signed.extract_tx().unwrap()).to_hex();
+    let tx = serialize(&pset_signed.extract_tx().unwrap()).to_lower_hex_string();
     sh(&format!(
         "{cli} asset insert --asset {asset} --contract '{contract}' --issuance-tx {tx}"
     ));

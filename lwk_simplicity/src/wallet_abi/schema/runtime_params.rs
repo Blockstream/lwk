@@ -13,6 +13,22 @@ use lwk_wollet::elements::{AssetId, OutPoint, Script, Sequence};
 
 use serde::{Deserialize, Serialize};
 
+/// Serde support for `Option<LockTime>`, which has no serde impls in `elements`.
+///
+/// The lock time is serialized as its consensus `u32` value.
+mod lock_time_serde {
+    use lwk_wollet::elements::LockTime;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<S: Serializer>(v: &Option<LockTime>, s: S) -> Result<S::Ok, S::Error> {
+        v.map(|lt| lt.to_consensus_u32()).serialize(s)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Option<LockTime>, D::Error> {
+        Ok(Option::<u32>::deserialize(d)?.map(LockTime::from_consensus))
+    }
+}
+
 /// Top-level transaction-construction payload carried in `TxCreateRequest.params`.
 ///
 /// This type is the request contract boundary between callers and runtime. It defines
@@ -80,7 +96,11 @@ pub struct RuntimeParams {
     /// UX note:
     /// callers should coordinate this with intended sequence values to avoid a false sense of
     /// timelock enforcement.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "lock_time_serde"
+    )]
     pub lock_time: Option<LockTime>,
 }
 

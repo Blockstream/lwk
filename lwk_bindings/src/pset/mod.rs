@@ -22,7 +22,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use elements::pset::PartiallySignedTransaction;
-use elements::{hashes::Hash, BlockHash};
+use elements::BlockHash;
 
 use lwk_wollet::elements_miniscript::psbt::finalize;
 #[cfg(feature = "simplicity")]
@@ -66,7 +66,7 @@ impl Pset {
     /// Finalize and extract the PSET
     pub fn finalize(&self) -> Result<Arc<Transaction>, LwkError> {
         let mut pset = self.inner.clone();
-        finalize(&mut pset, &EC, BlockHash::all_zeros())?;
+        finalize(&mut pset, &EC, BlockHash::from_byte_array([0; 32]))?;
         let tx: Transaction = pset.extract_tx()?.into();
         Ok(Arc::new(tx))
     }

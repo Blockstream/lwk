@@ -66,7 +66,6 @@ impl ControlBlock {
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::*;
-    use lwk_wollet::hashes::hex::FromHex;
     use wasm_bindgen_test::*;
 
     wasm_bindgen_test_configure!(run_in_browser);
@@ -74,7 +73,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn test_control_block() {
         let cb_hex = "c079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let bytes = Vec::<u8>::from_hex(cb_hex).unwrap();
+        let bytes = lwk_wollet::elements::hex::decode_to_vec(cb_hex).unwrap();
         let cb = ControlBlock::from_bytes(&bytes).unwrap();
 
         assert_eq!(cb.to_bytes(), bytes);

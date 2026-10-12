@@ -173,7 +173,7 @@ pub(crate) fn submarine_chain_from_str(
 #[cfg(test)]
 mod tests {
     use boltz_client::network::{Chain, LiquidChain};
-    use lwk_wollet::elements::hex::ToHex;
+    use lwk_wollet::elements::hex::DisplayHex;
 
     use super::*;
 
@@ -200,7 +200,10 @@ mod tests {
             Chain::Liquid(LiquidChain::LiquidRegtest)
         );
         assert_eq!(
-            prepare_pay_data.our_keys.secret_bytes().to_hex(),
+            prepare_pay_data
+                .our_keys
+                .secret_bytes()
+                .to_lower_hex_string(),
             "70f75e954300859f9b32dfea93dfc5667e6cf71d1fad77602d6d6757fd347b01"
         );
     }

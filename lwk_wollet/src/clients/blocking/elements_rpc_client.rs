@@ -3,9 +3,7 @@ use crate::{clients::try_unblind, Chain, Error, Network, WalletTxOut, WolletDesc
 use std::collections::HashMap;
 
 use bitcoincore_rpc::{Auth, Client, RpcApi};
-use elements::{
-    encode::deserialize, hex::FromHex, Address, OutPoint, Script, Transaction, TxOut, Txid,
-};
+use elements::{encode::deserialize, Address, OutPoint, Script, Transaction, TxOut, Txid};
 
 /// A client to issue RPCs to a Elements node
 pub struct ElementsRpcClient {
@@ -62,7 +60,7 @@ impl ElementsRpcClient {
         let hex = r
             .as_str()
             .ok_or_else(|| Error::ElementsRpcUnexpectedReturn(method.into()))?;
-        let bytes = Vec::<u8>::from_hex(hex)
+        let bytes = elements::hex::decode_to_vec(hex)
             .map_err(|_| Error::ElementsRpcUnexpectedReturn(method.into()))?;
         let tx: Transaction = deserialize(&bytes[..])
             .map_err(|_| Error::ElementsRpcUnexpectedReturn(method.into()))?;

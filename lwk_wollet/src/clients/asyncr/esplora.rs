@@ -15,8 +15,7 @@ use age::x25519::Recipient;
 use base64::Engine;
 use elements::{bitcoin::bip32::ChildNumber, Address, OutPoint};
 use elements::{
-    encode::Decodable, hashes::hex::FromHex, hex::ToHex, pset::serialize::Serialize, BlockHash,
-    Script, Txid,
+    encode::Decodable, hex::DisplayHex, pset::serialize::Serialize, BlockHash, Script, Txid,
 };
 use elements_miniscript::DescriptorPublicKey;
 
@@ -112,7 +111,7 @@ impl EsploraClient {
     async fn header(&mut self, last_block_hash: BlockHash) -> Result<elements::BlockHeader, Error> {
         let header_url = format!("{}/block/{}/header", self.base_url, last_block_hash);
         let response = self.get_with_retry(&header_url).await?;
-        let header_bytes = Vec::<u8>::from_hex(&response.text().await?)?;
+        let header_bytes = elements::hex::decode_to_vec(&response.text().await?)?;
 
         let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
         Ok(header)
@@ -125,7 +124,7 @@ impl EsploraClient {
     ) -> Result<elements::Txid, crate::Error> {
         // TODO: check that the transaction contains some signatures
 
-        let tx_hex = tx.serialize().to_hex();
+        let tx_hex = tx.serialize().to_lower_hex_string();
         let response = self.post_with_retry(&self.broadcast_url, &tx_hex).await?;
         let text = response.text().await?;
         let txid = elements::Txid::from_str(&text).map_err(|e| {
@@ -183,7 +182,7 @@ impl EsploraClient {
 
                 let block_header = format!("{}/block/{}/header", self.base_url, block_hash);
                 let response = self.get_with_retry(&block_header).await?;
-                let header_bytes = Vec::<u8>::from_hex(&response.text().await?)?;
+                let header_bytes = elements::hex::decode_to_vec(&response.text().await?)?;
 
                 let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
 
@@ -1485,7 +1484,8 @@ mod tests {
         assert_eq!(txs_batch[0].txid(), txid);
 
         let existing_script =
-            elements::Script::from_str("001414fe45f2c2a2b7c00d0940d694a3b6af6c9bf165").unwrap();
+            elements::Script::from_hex_no_prefix("001414fe45f2c2a2b7c00d0940d694a3b6af6c9bf165")
+                .unwrap();
 
         let histories = client
             .get_scripts_history(&[&existing_script])

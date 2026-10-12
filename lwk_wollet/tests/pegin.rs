@@ -1,6 +1,6 @@
 use crate::test_wollet::*;
 use clients::blocking::BlockchainBackend;
-use elements::hex::{FromHex, ToHex};
+use elements::hex::DisplayHex;
 use elements::OutPoint;
 use lwk_common::electrum_ssl::{LIQUID_SOCKET, LIQUID_TESTNET_SOCKET};
 use lwk_common::Signer;
@@ -42,7 +42,7 @@ fn claim_pegin() {
 
     env.bitcoind_generate(101);
     let proof_hex = env.bitcoind_gettxoutproof(txid);
-    let proof = Vec::<u8>::from_hex(&proof_hex).unwrap();
+    let proof = elements::hex::decode_to_vec(&proof_hex).unwrap();
     env.elementsd_generate(2);
 
     let funding = PeginFunding::from_raw(
@@ -141,7 +141,7 @@ fn claim_pegin() {
         elements::confidential::Value::Explicit(_)
     ));
     let expected_balance = pegin_amount - transaction.fee_in(*network.policy_asset());
-    let transaction_hex = elements::encode::serialize(&transaction).to_hex();
+    let transaction_hex = elements::encode::serialize(&transaction).to_lower_hex_string();
     assert!(env.elementsd_testmempoolaccept(&transaction_hex));
     let liquid_txid = env.elementsd_sendrawtransaction(&transaction_hex);
     assert_eq!(liquid_txid, transaction.txid().to_string());

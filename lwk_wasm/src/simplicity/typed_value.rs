@@ -4,8 +4,6 @@ use crate::Error;
 
 use super::simplicity_type::SimplicityType;
 
-use lwk_wollet::hashes::hex::FromHex;
-
 use lwk_simplicity::simplicityhl::num::U256;
 use lwk_simplicity::simplicityhl::value::ValueConstructible;
 use lwk_simplicity::simplicityhl::Value;
@@ -57,7 +55,9 @@ impl SimplicityTypedValue {
     #[wasm_bindgen(js_name = fromU128Hex)]
     pub fn from_u128_hex(hex: &str) -> Result<SimplicityTypedValue, Error> {
         Ok(Self {
-            inner: Value::u128(u128::from_be_bytes(<[u8; 16]>::from_hex(hex)?)),
+            inner: Value::u128(u128::from_be_bytes(
+                lwk_wollet::elements::hex::decode_to_array::<16>(hex)?,
+            )),
         })
     }
 
@@ -65,7 +65,9 @@ impl SimplicityTypedValue {
     #[wasm_bindgen(js_name = fromU256Hex)]
     pub fn from_u256_hex(hex: &str) -> Result<SimplicityTypedValue, Error> {
         Ok(Self {
-            inner: Value::u256(U256::from_byte_array(<[u8; 32]>::from_hex(hex)?)),
+            inner: Value::u256(U256::from_byte_array(
+                lwk_wollet::elements::hex::decode_to_array::<32>(hex)?,
+            )),
         })
     }
 
@@ -120,7 +122,7 @@ impl SimplicityTypedValue {
     #[wasm_bindgen(js_name = fromByteArrayHex)]
     pub fn from_byte_array_hex(hex: &str) -> Result<SimplicityTypedValue, Error> {
         Ok(Self {
-            inner: Value::byte_array(Vec::<u8>::from_hex(hex)?),
+            inner: Value::byte_array(lwk_wollet::elements::hex::decode_to_vec(hex)?),
         })
     }
 

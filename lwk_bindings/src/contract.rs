@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use elements::hashes::hex::FromHex;
-
 use crate::{types::AssetId, LwkError, TxIn};
 
 /// Wrapper over [`lwk_wollet::Contract`]
@@ -57,7 +55,7 @@ impl Contract {
         let inner = lwk_wollet::Contract::builder()
             .entity(lwk_wollet::Entity::Domain(domain))
             .issuer_pubkey(
-                Vec::<u8>::from_hex(issuer_pubkey)
+                elements::hex::decode_to_vec(issuer_pubkey)
                     .map_err(|e| format!("invalid issuer pubkey: {e}"))?,
             )
             .name(name)

@@ -287,7 +287,6 @@ pub fn big_number() -> Result<JsValue, Error> {
 mod tests {
 
     use crate::{Network, Wollet, WolletDescriptor};
-    use lwk_wollet::elements::hex::FromHex;
     use std::collections::HashMap;
     use wasm_bindgen_test::*;
 
@@ -333,7 +332,7 @@ mod tests {
             let mut client = network.default_esplora_client();
             client.full_scan(&wollet).await.unwrap().unwrap()
         } else {
-            let bytes = Vec::<u8>::from_hex(include_str!(
+            let bytes = lwk_wollet::elements::hex::decode_to_vec(include_str!(
                 "../test_data/update_test_balance_and_transactions.hex"
             ))
             .unwrap();

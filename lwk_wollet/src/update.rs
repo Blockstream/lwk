@@ -9,7 +9,6 @@ use crate::EC;
 use crate::{BlindingPublicKey, Wollet, WolletDescriptor};
 use base64::prelude::*;
 use elements::bitcoin::bip32::ChildNumber;
-use elements::bitcoin::hashes::Hash;
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::{Decodable, Encodable};
 use elements::hash_types::TxMerkleNode;
@@ -43,7 +42,7 @@ impl DownloadTxResult {
             for output in tx.output.iter_mut() {
                 if is_wallet_script(&output.script_pubkey) {
                     // we are keeping the rangeproof because it's needed for pset details
-                    output.witness.surjection_proof = None;
+                    output.witness.surjection_proof = elements::SurjectionProof::EMPTY;
                 } else {
                     output.witness = TxOutWitness::empty();
                 }
@@ -387,8 +386,8 @@ impl Update {
 pub(crate) fn default_blockheader() -> BlockHeader {
     BlockHeader {
         version: 0,
-        prev_blockhash: BlockHash::all_zeros(),
-        merkle_root: TxMerkleNode::all_zeros(),
+        prev_blockhash: BlockHash::from_byte_array([0; 32]),
+        merkle_root: TxMerkleNode::from_byte_array([0; 32]),
         time: 0,
         height: 0,
         ext: BlockExtData::default(),
@@ -1089,7 +1088,7 @@ mod test {
         assert!(update.only_tip());
         update
             .txid_height_delete
-            .push(<elements::Txid as elements::hashes::Hash>::all_zeros());
+            .push(elements::Txid::from_byte_array([0; 32]));
         assert!(!update.only_tip());
     }
 
@@ -1516,8 +1515,8 @@ mod test {
             for (output, pruned_output) in tx.output.iter().zip(pruned_tx.output.iter()) {
                 if new_scripts.contains(&output.script_pubkey) {
                     assert_eq!(pruned_output.witness.rangeproof, output.witness.rangeproof);
-                    assert!(pruned_output.witness.surjection_proof.is_none());
-                    if output.witness.rangeproof.is_some() {
+                    assert!(pruned_output.witness.surjection_proof.is_empty());
+                    if !output.witness.rangeproof.is_empty() {
                         kept_rangeproofs += 1;
                     }
                 } else {

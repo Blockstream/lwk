@@ -44,7 +44,7 @@ mod test {
         assert!(!is_provably_segwit(&p2pkh, &None));
 
         let s = "522102ebc62c20f1e09e169a88745f60f6dac878c92db5c7ed78c6703d2d0426a01f942102c2d59d677122bc292048833003fd5cb19d27d32896b1d0feec654c291f7ede9e52ae";
-        let multi = Script::from_str(s).unwrap();
+        let multi = Script::from_hex_no_prefix(s).unwrap();
         let wsh = multi.wscript_hash();
         let p2sh_multi = multi.to_p2sh();
         assert!(!is_provably_segwit(&p2sh_multi, &Some(multi)));

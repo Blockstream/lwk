@@ -59,8 +59,6 @@ impl Cmr {
 mod tests {
     use super::*;
 
-    use lwk_wollet::hashes::hex::FromHex;
-
     use crate::simplicity::{SimplicityArguments, SimplicityProgram, SimplicityTypedValue};
 
     const TEST_CMR: &str = "1b8b0834914675a1566132c81c2708fc614fab5cc38f17bf51643cc6c05d2d6f";
@@ -71,7 +69,7 @@ mod tests {
     #[test]
     fn test_cmr_hex_validation_and_roundtrip() {
         let expected_hex = TEST_CMR;
-        let expected_bytes = Vec::<u8>::from_hex(TEST_CMR).unwrap();
+        let expected_bytes = lwk_wollet::elements::hex::decode_to_vec(TEST_CMR).unwrap();
 
         let cmr = Cmr::from_string(expected_hex).unwrap();
         assert_eq!(cmr.to_string(), expected_hex);
@@ -88,7 +86,10 @@ mod tests {
 
         let args = SimplicityArguments::new().add_value(
             "PUBLIC_KEY",
-            &SimplicityTypedValue::u256(&Vec::<u8>::from_hex(TEST_PUBLIC_KEY).unwrap()).unwrap(),
+            &SimplicityTypedValue::u256(
+                &lwk_wollet::elements::hex::decode_to_vec(TEST_PUBLIC_KEY).unwrap(),
+            )
+            .unwrap(),
         );
         let program = SimplicityProgram::load(P2PK_SOURCE, &args).unwrap();
         let cmr = program.cmr();

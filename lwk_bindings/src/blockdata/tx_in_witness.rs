@@ -42,7 +42,7 @@ impl TxInWitness {
     pub fn from_script_witness(script_witness: &[Vec<u8>]) -> Arc<Self> {
         Arc::new(Self {
             inner: elements::TxInWitness {
-                script_witness: script_witness.to_vec(),
+                script_witness: script_witness.to_vec().into(),
                 ..Default::default()
             },
         })
@@ -50,12 +50,12 @@ impl TxInWitness {
 
     /// Get the script witness elements.
     pub fn script_witness(&self) -> Vec<Vec<u8>> {
-        self.inner.script_witness.clone()
+        self.inner.script_witness.to_vec()
     }
 
     /// Get the peg-in witness elements.
     pub fn pegin_witness(&self) -> Vec<Vec<u8>> {
-        self.inner.pegin_witness.clone()
+        lwk_wollet::pegin::pegin_witness_to_elements(&self.inner.pegin_witness)
     }
 
     /// Check if the witness is empty.
@@ -84,7 +84,7 @@ impl TxInWitnessBuilder {
     pub fn script_witness(&self, witness: &[Vec<u8>]) -> Result<(), LwkError> {
         let mut guard = self.inner.lock()?;
         let inner = guard.as_mut().ok_or(LwkError::ObjectConsumed)?;
-        inner.script_witness = witness.to_vec();
+        inner.script_witness = witness.to_vec().into();
         Ok(())
     }
 
@@ -92,7 +92,7 @@ impl TxInWitnessBuilder {
     pub fn pegin_witness(&self, witness: &[Vec<u8>]) -> Result<(), LwkError> {
         let mut guard = self.inner.lock()?;
         let inner = guard.as_mut().ok_or(LwkError::ObjectConsumed)?;
-        inner.pegin_witness = witness.to_vec();
+        inner.pegin_witness = lwk_wollet::pegin::pegin_witness_from_elements(witness)?;
         Ok(())
     }
 
@@ -100,8 +100,7 @@ impl TxInWitnessBuilder {
     pub fn amount_rangeproof(&self, proof: &[u8]) -> Result<(), LwkError> {
         let mut guard = self.inner.lock()?;
         let inner = guard.as_mut().ok_or(LwkError::ObjectConsumed)?;
-        let rangeproof = elements::secp256k1_zkp::RangeProof::from_slice(proof)?;
-        inner.amount_rangeproof = Some(Box::new(rangeproof));
+        inner.amount_rangeproof = elements::RangeProof::from_slice(proof)?;
         Ok(())
     }
 
@@ -109,8 +108,7 @@ impl TxInWitnessBuilder {
     pub fn inflation_keys_rangeproof(&self, proof: &[u8]) -> Result<(), LwkError> {
         let mut guard = self.inner.lock()?;
         let inner = guard.as_mut().ok_or(LwkError::ObjectConsumed)?;
-        let rangeproof = elements::secp256k1_zkp::RangeProof::from_slice(proof)?;
-        inner.inflation_keys_rangeproof = Some(Box::new(rangeproof));
+        inner.inflation_keys_rangeproof = elements::RangeProof::from_slice(proof)?;
         Ok(())
     }
 

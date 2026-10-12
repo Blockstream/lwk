@@ -1,6 +1,6 @@
 use crate::error::Error;
 use elements::bitcoin::secp256k1::PublicKey;
-use elements::hex::{FromHex, ToHex};
+use elements::hex::DisplayHex;
 use serde::Deserialize;
 
 /// Deserializes a hex string to a `Vec<u8>`.
@@ -10,7 +10,7 @@ where
 {
     use serde::de::Error;
     String::deserialize(deserializer).and_then(|string| {
-        Vec::<u8>::from_hex(&string).map_err(|err| Error::custom(err.to_string()))
+        elements::hex::decode_to_vec(&string).map_err(|err| Error::custom(err.to_string()))
     })
 }
 
@@ -20,7 +20,7 @@ where
     T: AsRef<[u8]>,
     S: serde::Serializer,
 {
-    serializer.serialize_str(&buffer.as_ref().to_hex())
+    serializer.serialize_str(&buffer.as_ref().to_lower_hex_string())
 }
 
 pub fn verify_pubkey(pubkey: &[u8]) -> Result<(), Error> {

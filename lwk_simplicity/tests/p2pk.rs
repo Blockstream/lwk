@@ -22,7 +22,7 @@ use lwk_simplicity::{
 use lwk_test_util::*;
 
 use elements::bitcoin::secp256k1::Keypair;
-use elements::hex::ToHex;
+use elements::hex::DisplayHex;
 
 mod common;
 use common::*;
@@ -61,7 +61,10 @@ fn test_simplicity_p2pk() {
 
     // Create Wollet with the spk
     let blinder_sk = SecretKey::new(&mut thread_rng());
-    let desc_str = format!("{}:{}", blinder_sk.secret_bytes().to_hex(), spk.to_hex());
+    let desc_str = format!(
+        "{}:{spk:x}",
+        blinder_sk.secret_bytes().to_lower_hex_string()
+    );
     let wd = WolletDescriptor::from_str(&desc_str).unwrap();
     let mut wollet = WolletBuilder::new(network, wd).build().unwrap();
 
@@ -174,7 +177,7 @@ fn test_simplicity_mixed_p2pk() {
     let cmr = program.commit().cmr();
     let address = create_p2tr_address(cmr, &xonly, address_params_to27(network));
     let spk = address.script_pubkey();
-    let desc = format!(":{}", spk.to_hex());
+    let desc = format!(":{spk:x}");
     let wd = WolletDescriptor::from_str(&desc).unwrap();
     let mut w_s = WolletBuilder::new(network, wd).build().unwrap();
 

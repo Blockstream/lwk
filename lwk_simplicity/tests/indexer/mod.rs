@@ -1,7 +1,6 @@
 use lwk_simplicity::lending::*;
 use lwk_test_util::{reserve_port, TestEnv};
 use lwk_wollet::elements::AssetId;
-use lwk_wollet::hashes::sha256;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
@@ -68,7 +67,7 @@ pub async fn launch_indexer(env: &TestEnv) -> (IndexerClient, IndexerContext) {
 }
 
 /// Test protocol fee keeper asset id
-pub const PROTOCOL_FEE_KEEPER_ASSET_ID: AssetId = AssetId::from_inner(sha256::Midstate([1; 32]));
+pub const PROTOCOL_FEE_KEEPER_ASSET_ID: AssetId = AssetId::from_byte_array([1; 32]);
 
 pub struct IndexerContext {
     _pg_container: testcontainers::ContainerAsync<Postgres>,

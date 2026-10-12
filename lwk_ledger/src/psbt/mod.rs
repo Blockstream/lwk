@@ -8,12 +8,12 @@ mod input;
 mod output;
 
 use elements_miniscript::elements::{
+    bitcoin::hashes::Hash as _,
     bitcoin::key::FromSliceError as KeyError,
     bitcoin::secp256k1::{self, XOnlyPublicKey},
     bitcoin::taproot::{self, TapLeafHash},
     bitcoin::{self, ecdsa, PublicKey},
     encode::{deserialize, serialize},
-    hashes::Hash,
     pset::raw,
 };
 // get_pairs functions are not exposed

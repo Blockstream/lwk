@@ -4,7 +4,7 @@ use crate::clients::{try_unblind, LastUnused};
 use crate::descriptor::Chain;
 use crate::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use crate::elements::pset::PartiallySignedTransaction;
-use crate::elements::secp256k1_zkp::ZERO_TWEAK;
+use crate::elements::AssetBlindingNonce;
 use crate::elements::{AssetId, BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::hashes::{sha256t_hash_newtype, Hash};
@@ -1218,7 +1218,7 @@ impl Wollet {
         }
 
         // ELIP-101 key written by TxBuilder: https://github.com/ElementsProject/ELIPs/blob/main/elip-0101.mediawiki
-        let genesis_hash = get_genesis_hash(pset).unwrap_or(BlockHash::all_zeros());
+        let genesis_hash = get_genesis_hash(pset).unwrap_or(BlockHash::from_byte_array([0; 32]));
 
         // genesis_hash is only used for BIP341 (taproot) sighash computation
         let result = pset.finalize_mut(&EC, genesis_hash);
@@ -1228,12 +1228,14 @@ impl Wollet {
             for i in pset.inputs_mut() {
                 // TODO: also for pre-segwit inputs
                 if let Some(witness) = &mut i.final_script_witness {
-                    for e in witness.iter_mut() {
+                    let mut elems = witness.to_vec();
+                    for e in elems.iter_mut() {
                         let len = original_sig.len();
                         if e.len() == len && e[0..(len - 1)] == original_sig[0..(len - 1)] {
                             *e = original_sig.clone();
                         }
                     }
+                    *witness = elems.into();
                 }
             }
         }
@@ -1274,7 +1276,7 @@ impl Wollet {
 
     /// Returns true if this wollet has never received an updated applyed to it
     pub fn never_scanned(&self) -> bool {
-        self.cache.tip == (0, BlockHash::all_zeros())
+        self.cache.tip == (0, BlockHash::from_byte_array([0; 32]))
     }
 }
 
@@ -1357,17 +1359,15 @@ fn tx_type(
     fee: u64,
 ) -> String {
     let burn_script = burn_script();
-    if tx
-        .input
-        .iter()
-        .any(|i| !i.asset_issuance.is_null() && i.asset_issuance.asset_blinding_nonce == ZERO_TWEAK)
-    {
+    if tx.input.iter().any(|i| {
+        !i.asset_issuance.is_null()
+            && i.asset_issuance.asset_blinding_nonce == AssetBlindingNonce::NEW_ISSUANCE
+    }) {
         "issuance".to_string()
-    } else if tx
-        .input
-        .iter()
-        .any(|i| !i.asset_issuance.is_null() && i.asset_issuance.asset_blinding_nonce != ZERO_TWEAK)
-    {
+    } else if tx.input.iter().any(|i| {
+        !i.asset_issuance.is_null()
+            && i.asset_issuance.asset_blinding_nonce != AssetBlindingNonce::NEW_ISSUANCE
+    }) {
         "reissuance".to_string()
     } else if tx.output.iter().any(|o| o.script_pubkey == burn_script) {
         "burn".to_string()

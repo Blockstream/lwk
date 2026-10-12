@@ -38,7 +38,7 @@ pub struct WalletTxOut {
 }
 
 /// A UTXO owned by another wallet
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExternalUtxo {
     /// The outpoint of the UTXO
     pub outpoint: elements::OutPoint,
@@ -61,7 +61,7 @@ pub struct ExternalUtxo {
 /// Value returned by [`crate::Wollet::transactions()`] containing details about a transaction
 /// from the perspective of the wallet, for example the net-balance of the transaction for the
 /// wallet.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WalletTx {
     /// The transaction.
     pub tx: Transaction,
@@ -339,16 +339,6 @@ mod tests {
         let hex = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
         let asset = AssetId::from_str(hex).unwrap();
         assert_eq!(asset.to_string(), hex);
-    }
-
-    #[test]
-    fn test_wollet_tx() {
-        let json_str = include_str!("../tests/data/wallet_tx.json");
-        let wallet_tx: WalletTx = serde_json::from_str(json_str).unwrap();
-        assert_eq!(
-            wallet_tx.unblinded_url("https://blockstream.info/liquidtestnet/"),
-            "https://blockstream.info/liquidtestnet/tx/c6e3187f028942973ad27224ca79baa8382e90ad686e927fc29896e8a2edf3f3#blinded=5000,38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5,ab9a42053c7a6ae0d55b774f3d462b1adfaa630e5d0f9b3c0f16640d55b8f6ab,6c5c2b44a0777e463d25eecb70adee84b316c2597b8a28108ffeea38c7acf45d"
-        );
     }
 
     #[test]

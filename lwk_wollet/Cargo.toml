@@ -32,8 +32,6 @@ bip39 = "2.0.0"
 elements-miniscript.workspace = true
 thiserror = { workspace = true }
 elements.workspace = true
-# TODO: remove once we have elements-miniscript compatible with elements 0.26
-elements26 = { package = "elements", version = "0.26.2", features = ["base64"] }
 base64.workspace = true
 bitcoincore-rpc = { version = "0.19.0", optional = true }
 futures = "0.3"

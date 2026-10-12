@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
-use lwk_wollet::elements::hex::ToHex;
+use lwk_wollet::elements::hex::DisplayHex;
 
 use crate::error::Error;
 
@@ -11,7 +11,7 @@ const COOKIE_USER: &str = "__cookie__";
 /// `Authorization` header value (`Basic <base64>`) clients must send to authenticate.
 pub(crate) fn generate(path: &Path) -> Result<String, Error> {
     let secret: [u8; 32] = rand::random();
-    let user_pass = format!("{COOKIE_USER}:{}", secret.to_hex());
+    let user_pass = format!("{COOKIE_USER}:{}", secret.to_lower_hex_string());
 
     // Matching Bitcoin Core's GenerateAuthCookie.
     // UNIX permissions come from the process umask, set once in App::run()

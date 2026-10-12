@@ -1,7 +1,5 @@
 use crate::{AssetId, EsploraClient, TxBuilder};
 
-use lwk_wollet::elements::hex::ToHex;
-
 use wasm_bindgen::prelude::*;
 
 /// The network of the elements blockchain such as mainnet, testnet or regtest.
@@ -113,7 +111,7 @@ impl Network {
     /// Return the genesis block hash for this network as hex string.
     #[wasm_bindgen(js_name = genesisBlockHash)]
     pub fn genesis_block_hash(&self) -> String {
-        self.inner.genesis_hash().to_hex()
+        format!("{:x}", self.inner.genesis_hash())
     }
 
     /// Return the transaction builder for this network

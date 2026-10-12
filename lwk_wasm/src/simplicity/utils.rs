@@ -6,7 +6,7 @@ use lwk_simplicity::utils::txout_to27;
 
 use lwk_wollet::elements;
 use lwk_wollet::elements::bitcoin::bip32::DerivationPath;
-use lwk_wollet::elements::hex::ToHex;
+use lwk_wollet::elements::hex::DisplayHex;
 
 use wasm_bindgen::prelude::*;
 
@@ -19,7 +19,7 @@ use super::cmr::Cmr;
 /// finalized (simplicity related)
 #[wasm_bindgen(js_name = bytesToHex)]
 pub fn bytes_to_hex(bytes: &[u8]) -> String {
-    bytes.to_hex()
+    bytes.to_lower_hex_string()
 }
 
 /// Get the x-only public key for a given derivation path from a signer.

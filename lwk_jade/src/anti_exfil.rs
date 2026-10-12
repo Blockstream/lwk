@@ -7,15 +7,15 @@
 //! <https://github.com/BlockstreamResearch/rust-secp256k1-zkp/issues/100>
 
 use elements::{
+    bitcoin::hashes::Hash,
     bitcoin::sign_message::{signed_msg_hash, MessageSignature},
-    hashes::Hash,
     secp256k1_zkp::{ecdsa::Signature, Message, PublicKey, Scalar},
 };
 use rand::RngCore;
 
 use crate::{sign_message, SECP};
 
-elements::hashes::sha256t_hash_newtype! {
+elements::bitcoin::hashes::sha256t_hash_newtype! {
     struct S2cDataTag = hash_str("s2c/ecdsa/data");
     struct S2cDataHash(_);
 

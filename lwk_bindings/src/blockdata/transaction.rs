@@ -1,10 +1,10 @@
 //! Liquid transaction
 
 use elements::{
-    hex::ToHex,
+    hex::DisplayHex,
     pset::serialize::{Deserialize, Serialize},
 };
-use lwk_wollet::{hashes::hex::FromHex, WalletTx, EC};
+use lwk_wollet::{WalletTx, EC};
 
 use crate::{types::AssetId, LwkError, TxIn, TxOut, Txid};
 use std::{fmt::Display, sync::Arc};
@@ -42,7 +42,7 @@ impl From<&Transaction> for elements::Transaction {
 
 impl Display for Transaction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_bytes().to_hex())
+        write!(f, "{}", self.to_bytes().to_lower_hex_string())
     }
 }
 
@@ -60,7 +60,7 @@ impl Transaction {
     /// Deprecated: use `from_string()` instead.
     #[uniffi::constructor]
     pub fn new(hex: &str) -> Result<Arc<Self>, LwkError> {
-        let bytes = Vec::<u8>::from_hex(hex)?;
+        let bytes = elements::hex::decode_to_vec(hex)?;
         let inner: elements::Transaction = elements::Transaction::deserialize(&bytes)?;
         Ok(Arc::new(Self { inner }))
     }
@@ -76,7 +76,7 @@ impl Transaction {
     /// To create the string representation of a transaction use `to_string()`.
     #[uniffi::constructor]
     pub fn from_string(s: &str) -> Result<Arc<Self>, LwkError> {
-        let bytes = Vec::<u8>::from_hex(s)?;
+        let bytes = elements::hex::decode_to_vec(s)?;
         let inner: elements::Transaction = elements::Transaction::deserialize(&bytes)?;
         Ok(Arc::new(Self { inner }))
     }
@@ -205,7 +205,7 @@ mod tests {
         let tx_expected_hex =
             include_str!("../../../lwk_jade/test_data/pset_to_be_signed_transaction.hex")
                 .to_string();
-        let tx_expected_bytes = Vec::from_hex(&tx_expected_hex).unwrap();
+        let tx_expected_bytes = elements::hex::decode_to_vec(&tx_expected_hex).unwrap();
         let tx_str = Transaction::from_string(&tx_expected_hex).unwrap();
         let tx_bytes = Transaction::from_bytes(&tx_expected_bytes).unwrap();
 

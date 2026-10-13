@@ -304,7 +304,7 @@ where
         Ok(response) => response,
         Err(Error::Stop) => return Err(Error::Stop),
         Err(Error::Inner(err)) => {
-            log::error!("Error processing request: {err}");
+            log::error!("Error processing request: {err:?}");
             Response::from_error(id, err)
         }
         Err(Error::Implementation(err)) => Response::from_error(id, err),

@@ -807,7 +807,10 @@ impl PreparePayResponse {
         loop {
             match self.advance().await? {
                 ControlFlow::Continue(update) => {
-                    log::info!("[swap:{swap_id}] Received update. status:{}", update.status);
+                    log::info!(
+                        "[swap:{swap_id}] Received update. status:{:?}",
+                        update.status
+                    );
                 }
                 ControlFlow::Break(e) => {
                     break Ok(e);

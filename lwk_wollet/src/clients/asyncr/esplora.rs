@@ -1006,7 +1006,7 @@ impl EsploraClient {
             if response.status() == 429 || response.status() == 503 {
                 let secs = 1 << num_attempts;
 
-                log::debug!("{url} waiting {secs}");
+                log::debug!("{url:?} waiting {secs}");
 
                 async_sleep(secs * 1000).await?;
             } else if response.status() == 401 {
@@ -1032,7 +1032,7 @@ impl EsploraClient {
             last_status = response.status();
         }
 
-        log::warn!("{url} tried {num_attempts} times, failing");
+        log::warn!("{url:?} tried {num_attempts} times, failing");
         // Surface the authenticated-backend denial as a common variant. 401 (token invalid or
         // expired and not refreshable) and 429 (rate limited) reach here only after the retry
         // loop is exhausted; anything else keeps the generic "too many retries" message.
@@ -1076,7 +1076,7 @@ impl EsploraClient {
             if response.status() == 429 || response.status() == 503 {
                 let secs = 1 << num_attempts;
 
-                log::debug!("{url} waiting {secs}");
+                log::debug!("{url:?} waiting {secs}");
 
                 async_sleep(secs * 1000).await?;
             } else if response.status() == 401 {
@@ -1096,7 +1096,7 @@ impl EsploraClient {
             last_status = response.status();
         }
 
-        log::warn!("{url} tried {num_attempts} times, failing");
+        log::warn!("{url:?} tried {num_attempts} times, failing");
         // Surface the authenticated-backend denial as a common variant. 401 (token invalid or
         // expired and not refreshable) and 429 (rate limited) reach here only after the retry
         // loop is exhausted; anything else keeps the generic "too many retries" message.

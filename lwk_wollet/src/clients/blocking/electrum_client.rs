@@ -451,7 +451,7 @@ fn token_provider_auth(token_provider: &TokenProvider) -> Result<ElectrumAuth, E
                         match fetch_oauth_token_blocking(&url, &client_id, &client_secret) {
                             Ok(token) => *guard = Some(token),
                             Err(e) => {
-                                log::warn!("failed to fetch the authentication token: e='{e}'")
+                                log::warn!("failed to fetch the authentication token: e='{e:?}'")
                             }
                         }
                     }

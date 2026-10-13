@@ -973,7 +973,7 @@ impl LockupResponse {
         loop {
             match self.advance().await? {
                 ControlFlow::Continue(update) => {
-                    log::info!("[swap:{swap_id}] Received update: {}", update.status);
+                    log::info!("[swap:{swap_id}] Received update: {:?}", update.status);
                 }
                 ControlFlow::Break(success) => {
                     return Ok(success);

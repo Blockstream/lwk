@@ -418,7 +418,7 @@ impl BoltzSession {
         let response = self.api.get_bolt12_invoice(request).await?;
         let invoice = parse_bolt12_invoice(&response.invoice)?;
 
-        log::error!("offer: {}\ninvoice: {}", offer, response.invoice);
+        log::error!("offer: {:?}\ninvoice: {:?}", offer, response.invoice);
 
         // Verify that the invoice matches the offer
         if !verify_invoice_from_offer(&invoice, offer) {

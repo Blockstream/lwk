@@ -268,7 +268,7 @@ impl Jade {
                     let url = result.url(false).ok_or(Error::NoUsableUrl)?;
                     let str = serde_json::to_string(result.data())?;
                     let value: serde_json::Value = serde_json::from_str(&str)?;
-                    log::debug!("POSTING to {url} data: {value}",);
+                    log::debug!("POSTING to {url:?} data: {value}",);
                     let resp = client.post(url).json(&value).send()?;
                     let status_code = resp.status().as_u16();
                     if status_code != 200 {

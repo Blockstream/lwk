@@ -73,6 +73,7 @@ fn add_external_input(
     inp_weight: &mut usize,
     utxo: &ExternalUtxo,
     add_input_rangeproofs: bool,
+    skip_blinding: bool,
 ) -> Result<usize, Error> {
     add_input_inner(
         pset,
@@ -85,6 +86,9 @@ fn add_external_input(
         utxo.max_weight_to_satisfy,
         true, // external inputs can be explicit
         add_input_rangeproofs,
+        // Without blinding, external secrets may carry only asset and value (no blinding
+        // factors), so blind proofs built from them would be invalid.
+        !skip_blinding,
     )
 }
 
@@ -100,6 +104,7 @@ pub(crate) fn add_input_inner(
     max_weight_to_satisfy: usize,
     allow_explicit_input: bool,
     add_input_rangeproofs: bool,
+    add_blind_proofs: bool,
 ) -> Result<usize, Error> {
     if pset.inputs().len() >= SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
         return Err(Error::TooManyInputs(pset.inputs().len()));
@@ -112,25 +117,28 @@ pub(crate) fn add_input_inner(
     if let (Some(value_comm), Some(asset_gen)) =
         (txout.value.commitment(), txout.asset.commitment())
     {
-        // Add the blind proofs
-        // These are used to prove that the asset and amount field commit to
-        // the asset and value/amount commitment of the output that is being
-        // spent.
-        let mut rng = rand::thread_rng();
-        input.blind_asset_proof = Some(Box::new(SurjectionProof::blind_asset_proof(
-            &mut rng,
-            &EC,
-            unblinded.asset,
-            unblinded.asset_bf,
-        )?));
-        input.blind_value_proof = Some(Box::new(RangeProof::blind_value_proof(
-            &mut rng,
-            &EC,
-            unblinded.value,
-            value_comm,
-            asset_gen,
-            unblinded.value_bf,
-        )?));
+        // Skipped for a confidential input whose blinding factors the caller doesn't know.
+        if add_blind_proofs {
+            // Add the blind proofs
+            // These are used to prove that the asset and amount field commit to
+            // the asset and value/amount commitment of the output that is being
+            // spent.
+            let mut rng = rand::thread_rng();
+            input.blind_asset_proof = Some(Box::new(SurjectionProof::blind_asset_proof(
+                &mut rng,
+                &EC,
+                unblinded.asset,
+                unblinded.asset_bf,
+            )?));
+            input.blind_value_proof = Some(Box::new(RangeProof::blind_value_proof(
+                &mut rng,
+                &EC,
+                unblinded.value,
+                value_comm,
+                asset_gen,
+                unblinded.value_bf,
+            )?));
+        }
     } else if !allow_explicit_input {
         return Err(Error::NotConfidentialInput);
     }
@@ -202,6 +210,29 @@ fn apply_issuance_request_item(
     Ok(())
 }
 
+/// Turns confidential inputs whose secrets carry no blinding factors into explicit ones.
+///
+/// Used only for the trial blinding that measures the fee when [`TxBuilder::skip_blinding()`]
+/// is set: the caller may know an input's asset and value but not its blinding factors, which
+/// a surjection proof against the real commitments would need.
+fn explicit_unknown_inputs(
+    pset: &mut PartiallySignedTransaction,
+    inp_txout_sec: &HashMap<usize, TxOutSecrets>,
+) {
+    for (idx, input) in pset.inputs_mut().iter_mut().enumerate() {
+        let (Some(secrets), Some(txout)) = (inp_txout_sec.get(&idx), input.witness_utxo.as_mut())
+        else {
+            continue;
+        };
+        let unknown_factors = secrets.asset_bf == AssetBlindingFactor::zero()
+            && secrets.value_bf == ValueBlindingFactor::zero();
+        if unknown_factors && (txout.asset.is_confidential() || txout.value.is_confidential()) {
+            txout.asset = elements::confidential::Asset::Explicit(secrets.asset);
+            txout.value = Value::Explicit(secrets.value);
+        }
+    }
+}
+
 /// A transaction builder
 ///
 /// See [`WolletTxBuilder`] for usage from rust.
@@ -231,6 +262,9 @@ pub struct TxBuilder {
 
     fallback_locktime: Option<LockTime>,
 
+    skip_blinding: bool,
+    change_address: Option<Address>,
+
     // LiquiDEX fields
     is_liquidex_make: bool,
     liquidex_proposals: Vec<LiquidexProposal<Validated>>,
@@ -253,6 +287,8 @@ impl TxBuilder {
             input_order: None,
             add_input_rangeproofs: true,
             fallback_locktime: None,
+            skip_blinding: false,
+            change_address: None,
             is_liquidex_make: false,
             liquidex_proposals: vec![],
         }
@@ -432,6 +468,30 @@ impl TxBuilder {
 
     pub fn set_fallback_locktime(mut self, locktime: LockTime) -> Self {
         self.fallback_locktime = Some(locktime);
+        self
+    }
+
+    /// Return the PSET without blinding it
+    ///
+    /// Coin selection, change and fee work as usual, but outputs keep explicit amounts and
+    /// assets plus their blinding pubkey, so a different party can blind them later.
+    /// The fee is computed on a trial blinding, so it matches the weight of the final
+    /// blinded transaction.
+    ///
+    /// Useful when wallet coins are passed as external UTXOs whose blinding factors are
+    /// unknown to the caller (e.g. a browser wallet that only discloses asset and amount):
+    /// [`TxOutSecrets`] with zero blinding factors are enough, and no blind proofs are added
+    /// for those inputs.
+    pub fn skip_blinding(mut self) -> Self {
+        self.skip_blinding = true;
+        self
+    }
+
+    /// Send every change output to `address` instead of a wallet change address
+    ///
+    /// L-BTC change still goes to [`TxBuilder::drain_lbtc_to()`] if set.
+    pub fn set_change_address(mut self, address: Address) -> Self {
+        self.change_address = Some(address);
         self
     }
 
@@ -1065,6 +1125,13 @@ impl TxBuilder {
 
         let mut inp_weight = 0;
 
+        let change_address = self.change_address.clone();
+        let change_addressee =
+            |satoshi: u64, asset: AssetId, last_unused: &mut u32| match &change_address {
+                Some(address) => Ok(Recipient::from_address(satoshi, address, asset)),
+                None => wollet.addressee_change(satoshi, asset, last_unused),
+            };
+
         let utxos = wollet.utxos_map()?;
 
         let policy_asset = *self.network().policy_asset();
@@ -1115,6 +1182,7 @@ impl TxBuilder {
                         &mut inp_weight,
                         utxo,
                         self.add_input_rangeproofs,
+                        self.skip_blinding,
                     )?;
                     input_indexes_by_outpoint.insert(*outpoint, idx);
                     *manual_satoshi_in_by_asset
@@ -1174,6 +1242,7 @@ impl TxBuilder {
                         &mut inp_weight,
                         utxo,
                         self.add_input_rangeproofs,
+                        self.skip_blinding,
                     )?;
                     input_indexes_by_outpoint.insert(utxo.outpoint, idx);
                     satoshi_in += utxo.unblinded.value;
@@ -1221,8 +1290,7 @@ impl TxBuilder {
             // Add change
             if satoshi_in > satoshi_out {
                 let satoshi_change = satoshi_in - satoshi_out;
-                let addressee =
-                    wollet.addressee_change(satoshi_change, asset, &mut last_unused_internal)?;
+                let addressee = change_addressee(satoshi_change, asset, &mut last_unused_internal)?;
                 wollet.add_output(&mut pset, &addressee)?;
             }
 
@@ -1265,6 +1333,7 @@ impl TxBuilder {
                     &mut inp_weight,
                     utxo,
                     self.add_input_rangeproofs,
+                    self.skip_blinding,
                 )?;
                 input_indexes_by_outpoint.insert(utxo.outpoint, idx);
                 satoshi_in += utxo.unblinded.value;
@@ -1356,11 +1425,8 @@ impl TxBuilder {
 
                             // and an outpout receiving the token
                             let satoshi_token = utxo_token.unblinded.value;
-                            let addressee = wollet.addressee_change(
-                                satoshi_token,
-                                token,
-                                &mut last_unused_internal,
-                            )?;
+                            let addressee =
+                                change_addressee(satoshi_token, token, &mut last_unused_internal)?;
                             wollet.add_output(&mut pset, &addressee)?;
 
                             (idx, utxo_token.unblinded.asset_bf)
@@ -1406,7 +1472,7 @@ impl TxBuilder {
         let addressee = if let Some(address) = self.drain_to {
             Recipient::from_address(satoshi_change, &address, wollet.policy_asset())
         } else {
-            wollet.addressee_change(
+            change_addressee(
                 satoshi_change,
                 wollet.policy_asset(),
                 &mut last_unused_internal,
@@ -1420,6 +1486,9 @@ impl TxBuilder {
         let weight = {
             let mut rng = thread_rng();
             let mut temp_pset = pset.clone();
+            if self.skip_blinding {
+                explicit_unknown_inputs(&mut temp_pset, &inp_txout_sec);
+            }
             temp_pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
             let tx_weight = {
                 let tx = temp_pset.extract_tx()?;
@@ -1451,48 +1520,57 @@ impl TxBuilder {
 
         // TODO inputs/outputs(except fee) randomization, not trivial because of blinder_index on inputs
 
-        // Blind the transaction
-        let mut rng = thread_rng();
+        let mut built_tx = if self.skip_blinding {
+            // Outputs keep explicit values and their blinding pubkey, blinded later by
+            // whoever knows the inputs' blinding factors.
+            BuiltTx {
+                pset,
+                blind_secrets: BTreeMap::new(),
+            }
+        } else {
+            // Blind the transaction
+            let mut rng = thread_rng();
 
-        // TODO: use the next line once we can use elements26 only
-        // let blind_secrets = pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-        use elements26::confidential::{
-            AssetBlindingFactor as Abf26, ValueBlindingFactor as Vbf26,
-        };
-        use elements26::pset::PartiallySignedTransaction as Pset26;
-        use std::str::FromStr;
-        let mut pset26 = Pset26::from_str(&pset.to_string()).expect("from elements25");
-        let inp_txout_sec: HashMap<usize, elements26::TxOutSecrets> = inp_txout_sec
-            .iter()
-            .map(|(i, s)| {
-                let asset = elements26::AssetId::from_slice(s.asset.into_inner().as_ref())
-                    .expect("from elements25");
-                let abf =
-                    Abf26::from_slice(s.asset_bf.into_inner().as_ref()).expect("from elements25");
-                let vbf =
-                    Vbf26::from_slice(s.value_bf.into_inner().as_ref()).expect("from elements25");
-                let value = s.value;
-                let s = elements26::TxOutSecrets::new(asset, abf, value, vbf);
-                (*i, s)
-            })
-            .collect();
-        let blind_secrets = pset26
-            .blind_last(&mut rng, &EC, &inp_txout_sec)
-            .map_err(|e| Error::Generic(format!("elements26 blind error: {e}")))?;
-        // erase all non witness utxo surjection and range proofs
-        // this appears to be necessary for pre-segwit inputs
-        for input in pset26.inputs_mut() {
-            if let Some(ref mut tx) = &mut input.non_witness_utxo {
-                for output in &mut tx.output {
-                    output.witness = Default::default();
+            // TODO: use the next line once we can use elements26 only
+            // let blind_secrets = pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
+            use elements26::confidential::{
+                AssetBlindingFactor as Abf26, ValueBlindingFactor as Vbf26,
+            };
+            use elements26::pset::PartiallySignedTransaction as Pset26;
+            use std::str::FromStr;
+            let mut pset26 = Pset26::from_str(&pset.to_string()).expect("from elements25");
+            let inp_txout_sec: HashMap<usize, elements26::TxOutSecrets> = inp_txout_sec
+                .iter()
+                .map(|(i, s)| {
+                    let asset = elements26::AssetId::from_slice(s.asset.into_inner().as_ref())
+                        .expect("from elements25");
+                    let abf = Abf26::from_slice(s.asset_bf.into_inner().as_ref())
+                        .expect("from elements25");
+                    let vbf = Vbf26::from_slice(s.value_bf.into_inner().as_ref())
+                        .expect("from elements25");
+                    let value = s.value;
+                    let s = elements26::TxOutSecrets::new(asset, abf, value, vbf);
+                    (*i, s)
+                })
+                .collect();
+            let blind_secrets = pset26
+                .blind_last(&mut rng, &EC, &inp_txout_sec)
+                .map_err(|e| Error::Generic(format!("elements26 blind error: {e}")))?;
+            // erase all non witness utxo surjection and range proofs
+            // this appears to be necessary for pre-segwit inputs
+            for input in pset26.inputs_mut() {
+                if let Some(ref mut tx) = &mut input.non_witness_utxo {
+                    for output in &mut tx.output {
+                        output.witness = Default::default();
+                    }
                 }
             }
-        }
-        let pset25 = elements::pset::PartiallySignedTransaction::from_str(&pset26.to_string())
-            .expect("from elements25");
-        let mut built_tx = BuiltTx {
-            pset: pset25,
-            blind_secrets,
+            let pset25 = elements::pset::PartiallySignedTransaction::from_str(&pset26.to_string())
+                .expect("from elements25");
+            BuiltTx {
+                pset: pset25,
+                blind_secrets,
+            }
         };
 
         // Add details to the pset from our descriptor, like bip32derivation and keyorigin
@@ -1838,6 +1916,22 @@ impl<'a> WolletTxBuilder<'a> {
         Self {
             wollet: self.wollet,
             inner: self.inner.drain_lbtc_to(address),
+        }
+    }
+
+    /// Wrapper of [`TxBuilder::skip_blinding()`]
+    pub fn skip_blinding(self) -> Self {
+        Self {
+            wollet: self.wollet,
+            inner: self.inner.skip_blinding(),
+        }
+    }
+
+    /// Wrapper of [`TxBuilder::set_change_address()`]
+    pub fn set_change_address(self, address: Address) -> Self {
+        Self {
+            wollet: self.wollet,
+            inner: self.inner.set_change_address(address),
         }
     }
 

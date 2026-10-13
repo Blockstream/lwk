@@ -375,6 +375,20 @@ impl TxBuilder {
         Ok(self.inner.liquidex_take(proposals)?.into())
     }
 
+    /// Return the PSET without blinding it: outputs keep explicit amounts and their blinding
+    /// pubkey, so another party (e.g. the wallet that knows the inputs' blinding factors)
+    /// can blind them later. External UTXOs may then use secrets without blinding factors.
+    #[wasm_bindgen(js_name = skipBlinding)]
+    pub fn skip_blinding(self) -> TxBuilder {
+        self.inner.skip_blinding().into()
+    }
+
+    /// Send every change output to `address` instead of a wallet change address
+    #[wasm_bindgen(js_name = setChangeAddress)]
+    pub fn set_change_address(self, address: &Address) -> TxBuilder {
+        self.inner.set_change_address(address.into()).into()
+    }
+
     /// Add input rangeproofs
     #[wasm_bindgen(js_name = addInputRangeproofs)]
     pub fn add_input_rangeproofs(self, add_rangeproofs: bool) -> TxBuilder {

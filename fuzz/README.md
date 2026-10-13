@@ -4,6 +4,14 @@ Run commands from the repository root. The Nix development shell provides
 `cargo-fuzz`. In other environments, install it first, for example with
 `cargo install cargo-fuzz`.
 
+The fuzz crate does not track its own `Cargo.lock`. Before the first run,
+copy the lock file of the main workspace so the fuzz targets use the same
+dependency versions:
+
+```sh
+cp Cargo.lock fuzz/Cargo.lock
+```
+
 Because the repository pins stable Rust, disable sanitizers:
 
 ```sh

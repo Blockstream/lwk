@@ -27,3 +27,4 @@ swaps/
 .codex
 anyswap_config.toml
 .githooks/
+fuzz/Cargo.lock

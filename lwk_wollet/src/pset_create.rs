@@ -151,6 +151,7 @@ impl Wollet {
             self.max_weight_to_satisfy(),
             false, // wallet inputs cannot be explicit
             add_input_rangeproofs,
+            true, // the wallet knows its own blinding factors
         )
     }
 

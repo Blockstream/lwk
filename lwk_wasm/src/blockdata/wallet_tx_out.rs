@@ -102,7 +102,7 @@ impl OptionWalletTxOut {
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::WalletTxOut;
-    use lwk_wollet::elements::{self, hex::DisplayHex};
+    use lwk_wollet::elements;
     use wasm_bindgen_test::*;
 
     #[wasm_bindgen_test]
@@ -135,7 +135,7 @@ mod tests {
 
         assert_eq!(
             wallet_tx_out.script_pubkey().to_string(),
-            el.script_pubkey.to_lower_hex_string()
+            format!("{:x}", el.script_pubkey)
         );
 
         assert_eq!(wallet_tx_out.height(), el.height);

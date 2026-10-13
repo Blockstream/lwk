@@ -220,11 +220,12 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn test_tx_id() {
-        let expected = "HexToArray(InvalidLength(InvalidLengthError { expected: 64, invalid: 2 }))";
+        let expected = "DecodeFixedLengthBytesError(InvalidLength(InvalidLengthError { expected: 64, invalid: 2 }))";
         let hex = "xx";
         assert_eq!(expected, format!("{:?}", Txid::new(hex).unwrap_err()));
 
-        let expected = "HexToArray(InvalidChar(InvalidCharError { invalid: 120 }))";
+        let expected =
+            "DecodeFixedLengthBytesError(InvalidChar(InvalidCharError { invalid: 120, pos: 0 }))";
         let hex = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
         assert_eq!(expected, format!("{:?}", Txid::new(hex).unwrap_err()));
 
@@ -234,7 +235,8 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn test_transaction() {
-        let expected = "HexToBytes(InvalidChar(InvalidCharError { invalid: 120 }))";
+        let expected =
+            "ElementsHexVariable(InvalidChar(InvalidCharError { invalid: 120, pos: 0 }))";
         let hex = "xx";
         assert_eq!(
             expected,

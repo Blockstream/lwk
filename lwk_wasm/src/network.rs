@@ -152,7 +152,7 @@ mod tests {
         assert_eq!(
             Network::regtest_default().to_string(),
             format!(
-                "CustomElements(ElementsParams {{ policy_asset: 5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225, genesis_hash: 00902a6b70c2ca83b5d9c815d96a0e2f4202179316970d14ea1847dae5b1ca21, parent_genesis_hash: {parent_genesis_hash} }})"
+                "CustomElements(ElementsParams {{ policy_asset: 5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225, genesis_hash: elements::hash_types::BlockHash(00902a6b70c2ca83b5d9c815d96a0e2f4202179316970d14ea1847dae5b1ca21), parent_genesis_hash: {parent_genesis_hash} }})"
             )
         );
     }

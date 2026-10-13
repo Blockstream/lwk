@@ -233,6 +233,18 @@ fn explicit_unknown_inputs(
     }
 }
 
+/// Add the genesis block hash as defined in ELIP-101
+/// https://github.com/ElementsProject/ELIPs/blob/main/elip-0101.mediawiki
+fn set_genesis_hash(pset: &mut PartiallySignedTransaction, network: &Network) {
+    // TODO: upstream to rust elements
+    // TODO: tested with Jade 1.0.37 but does not work. Safe to merge because subtype is unique.
+    const PSBT_ELEMENTS_GLOBAL_GENESIS_HASH: u8 = 0x02;
+    pset.global.proprietary.insert(
+        ProprietaryKey::from_pset_pair(PSBT_ELEMENTS_GLOBAL_GENESIS_HASH, vec![]),
+        network.genesis_hash().to_byte_array().to_vec(),
+    );
+}
+
 /// A transaction builder
 ///
 /// See [`WolletTxBuilder`] for usage from rust.
@@ -1110,15 +1122,7 @@ impl TxBuilder {
             pset.global.tx_data.fallback_locktime = Some(locktime);
         }
 
-        let genesis_block_hash = self.network().genesis_hash().to_byte_array().to_vec();
-        // Add genesis block hash as defined in ELIP-101 https://github.com/ElementsProject/ELIPs/blob/main/elip-0101.mediawiki
-        // TODO: upstream to rust elements
-        // TODO: tested with Jade 1.0.37 but does not work. Safe to merge because subtype is unique.
-        const PSBT_ELEMENTS_GLOBAL_GENESIS_HASH: u8 = 0x02;
-        pset.global.proprietary.insert(
-            ProprietaryKey::from_pset_pair(PSBT_ELEMENTS_GLOBAL_GENESIS_HASH, vec![]),
-            genesis_block_hash,
-        );
+        set_genesis_hash(&mut pset, &self.network());
         let mut inp_txout_sec = HashMap::new();
         let mut last_unused_internal = wollet.last_unused_internal();
         let mut last_unused_external = wollet.last_unused_external();
@@ -1595,7 +1599,9 @@ impl Wollet {
     ///   output, and any other explicit output, must not).
     ///
     /// The input side is rebuilt from wallet state (so the blinding proofs and secrets are
-    /// produced by the wallet rather than trusted from the caller), the outputs are preserved
+    /// produced by the wallet rather than trusted from the caller), keeping each input's
+    /// sequence, locktime requirements and issuance, as well as the fallback locktime; the
+    /// outputs are preserved
     /// as given, the outputs are blinded so the commitments balance, and the descriptor
     /// signing metadata is filled in. The returned PSET is ready to be signed and finalized.
     ///
@@ -1609,6 +1615,7 @@ impl Wollet {
 
         let mut out_pset = PartiallySignedTransaction::new_v2();
         set_genesis_hash(&mut out_pset, &self.network());
+        out_pset.global.tx_data.fallback_locktime = pset.global.tx_data.fallback_locktime;
 
         let mut inp_txout_sec: HashMap<usize, TxOutSecrets> = HashMap::new();
         let mut inp_weight = 0usize;
@@ -1626,9 +1633,24 @@ impl Wollet {
                 true,
             )?;
             // Preserve a caller-requested sighash, if any.
+            let rebuilt = &mut out_pset.inputs_mut()[idx];
             if input.sighash_type.is_some() {
-                out_pset.inputs_mut()[idx].sighash_type = input.sighash_type;
+                rebuilt.sighash_type = input.sighash_type;
             }
+            // The wallet only vouches for the coin; what the caller asked of the input
+            // (relative timelocks, RBF, an asset issuance) must survive the rebuild.
+            rebuilt.sequence = input.sequence;
+            rebuilt.required_time_locktime = input.required_time_locktime;
+            rebuilt.required_height_locktime = input.required_height_locktime;
+            rebuilt.issuance_value_amount = input.issuance_value_amount;
+            rebuilt.issuance_value_comm = input.issuance_value_comm;
+            rebuilt.issuance_value_rangeproof = input.issuance_value_rangeproof.clone();
+            rebuilt.issuance_keys_rangeproof = input.issuance_keys_rangeproof.clone();
+            rebuilt.issuance_inflation_keys = input.issuance_inflation_keys;
+            rebuilt.issuance_inflation_keys_comm = input.issuance_inflation_keys_comm;
+            rebuilt.issuance_blinding_nonce = input.issuance_blinding_nonce;
+            rebuilt.issuance_asset_entropy = input.issuance_asset_entropy;
+            rebuilt.blinded_issuance = input.blinded_issuance;
         }
 
         for output in pset.outputs() {
@@ -2205,6 +2227,91 @@ mod tests {
         assert!(
             blinded.outputs()[1].script_pubkey.is_empty(),
             "explicit fee output"
+        );
+    }
+
+    #[test]
+    fn test_blind_keeps_input_issuance_sequence_and_locktime() {
+        use crate::bitcoin::PublicKey as BitcoinPublicKey;
+        use crate::{Update, WolletDescriptor};
+        use elements::hashes::Hash;
+
+        let descriptor: WolletDescriptor = lwk_test_util::wollet_descriptor_many_transactions()
+            .parse()
+            .unwrap();
+        let update =
+            Update::deserialize(&lwk_test_util::update_test_vector_many_transactions()).unwrap();
+        let mut wollet = WolletBuilder::new(Network::TestnetLiquid, descriptor)
+            .build()
+            .unwrap();
+        wollet.apply_update(update).unwrap();
+
+        let policy = wollet.policy_asset();
+        let utxos = wollet.utxos().unwrap();
+        let coin = utxos
+            .iter()
+            .find(|u| u.unblinded.asset == policy)
+            .expect("a policy-asset utxo");
+        let fee = 500u64;
+        let send = coin.unblinded.value - fee;
+        let address = wollet.address(Some(0)).unwrap().address().clone();
+        let blinding_pubkey = address.blinding_pubkey.expect("confidential address");
+
+        // Issue 2 units of a new asset from the wallet input, with RBF and a height locktime.
+        let entropy = [0u8; 32];
+        let issued = AssetId::from_entropy(AssetId::generate_asset_entropy(
+            coin.outpoint,
+            elements::ContractHash::from_byte_array(entropy),
+        ));
+        let sequence = elements::Sequence::ENABLE_RBF_NO_LOCKTIME;
+        let locktime = LockTime::from_height(1_000).unwrap();
+
+        let mut pset = PartiallySignedTransaction::new_v2();
+        pset.global.tx_data.fallback_locktime = Some(locktime);
+        let mut input = elements::pset::Input::from_prevout(coin.outpoint);
+        input.sequence = Some(sequence);
+        input.issuance_value_amount = Some(2);
+        input.issuance_asset_entropy = Some(entropy);
+        input.blinded_issuance = Some(0x00);
+        pset.add_input(input);
+        pset.add_output(Output {
+            script_pubkey: address.script_pubkey(),
+            amount: Some(2),
+            asset: Some(issued),
+            ..Default::default()
+        });
+        pset.add_output(Output {
+            script_pubkey: address.script_pubkey(),
+            amount: Some(send),
+            asset: Some(policy),
+            blinding_key: Some(BitcoinPublicKey::new(blinding_pubkey)),
+            blinder_index: Some(0),
+            ..Default::default()
+        });
+        pset.add_output(Output {
+            amount: Some(fee),
+            asset: Some(policy),
+            ..Default::default()
+        });
+
+        let blinded = wollet.blind(&pset).expect("blind succeeds");
+
+        let input = &blinded.inputs()[0];
+        assert_eq!(input.sequence, Some(sequence));
+        assert_eq!(input.issuance_value_amount, Some(2));
+        assert_eq!(input.issuance_asset_entropy, Some(entropy));
+        assert_eq!(blinded.global.tx_data.fallback_locktime, Some(locktime));
+
+        let tx = blinded.extract_tx().unwrap();
+        assert!(
+            tx.input[0].has_issuance(),
+            "issuance survives into the transaction"
+        );
+        assert_eq!(tx.input[0].sequence, sequence);
+        assert_eq!(tx.lock_time, locktime);
+        assert!(
+            blinded.outputs()[1].amount_comm.is_some(),
+            "change output blinded"
         );
     }
 

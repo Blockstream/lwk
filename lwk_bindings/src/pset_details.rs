@@ -83,8 +83,23 @@ impl From<lwk_common::PsetBalance> for PsetBalance {
 
 #[uniffi::export]
 impl PsetBalance {
+    /// Warning: if there are multiple assets paying fees this function can return an incorrect value.
+    ///
+    /// Deprecated: use `fees_in(asset_id)` or `fees()` instead.
     pub fn fee(&self) -> u64 {
-        self.inner.fee
+        *self.inner.fees.values().next().unwrap_or(&0)
+    }
+
+    pub fn fees(&self) -> HashMap<AssetId, u64> {
+        self.inner
+            .fees
+            .iter()
+            .map(|(k, v)| ((*k).into(), *v))
+            .collect()
+    }
+
+    pub fn fees_in(&self, asset: &AssetId) -> u64 {
+        self.inner.fees_in(&(*asset).into())
     }
 
     pub fn balances(&self) -> HashMap<AssetId, i64> {

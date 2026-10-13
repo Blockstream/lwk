@@ -27,6 +27,11 @@ impl PsetBalance {
     pub fn fees_in(&self, asset: &AssetId) -> u64 {
         *self.fees.get(asset).unwrap_or(&0)
     }
+
+    /// Total fee across assets; Liquid fees are paid in a single asset (L-BTC).
+    pub fn fee(&self) -> u64 {
+        self.fees.values().sum()
+    }
 }
 
 /// The recipient (an output not belonging to the wallet) in a PSET

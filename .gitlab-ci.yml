@@ -39,8 +39,11 @@ stages:
     max: 2
     when:
       - runner_system_failure
+      - runner_external_dependency_failure # e.g. timeout pulling the job image
       - unknown_failure
       - stuck_or_timeout_failure
+    # Docker daemon died mid-job, see context/ci_docker_guard.sh
+    exit_codes: [75]
   services:
     - docker:27-dind
 
@@ -192,7 +195,7 @@ test_wollet:
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - apt-get -qq update && apt-get install -y libsodium23  # TODO: remove once docker image is re-built
-    - docker pull $JADE_EMULATOR_IMAGE_NAME:$JADE_EMULATOR_IMAGE_VERSION
+    - ./context/ci_docker_guard.sh --attempts 3 docker pull $JADE_EMULATOR_IMAGE_NAME:$JADE_EMULATOR_IMAGE_VERSION
     - cargo build -p amp2_mock && export AMP2_MOCK_EXEC=$PWD/target/debug/amp2_mock
     - cargo test -p lwk_wollet -p lwk_signer -- --test-threads=2
 
@@ -205,9 +208,9 @@ test_jade:
   variables:
       TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
   script:
-    - docker pull tulipan81/blind_pin_server:v0.0.7
+    - ./context/ci_docker_guard.sh --attempts 3 docker pull tulipan81/blind_pin_server:v0.0.7
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - docker pull $JADE_EMULATOR_IMAGE_NAME:$JADE_EMULATOR_IMAGE_VERSION
+    - ./context/ci_docker_guard.sh --attempts 3 docker pull $JADE_EMULATOR_IMAGE_NAME:$JADE_EMULATOR_IMAGE_VERSION
     - cargo test -p lwk_jade --features asyncr,test_emulator
 
 # Authenticated Explorer API tests: Keycloak + APISIX (openid-connect) fronting the TestEnv
@@ -224,9 +227,9 @@ test_auth:
   variables:
       TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
   script:
-    - docker pull quay.io/keycloak/keycloak:26.5
-    - docker pull blockstream/apisix:2aa6756a-20251211
-    - docker pull glregistry.blockstream.io/explorer/electrum-rpc/electrs-electrum-proxy/prod/rpcproxy:4371ab45-20260812132509
+    - ./context/ci_docker_guard.sh --attempts 3 docker pull quay.io/keycloak/keycloak:26.5
+    - ./context/ci_docker_guard.sh --attempts 3 docker pull blockstream/apisix:2aa6756a-20251211
+    - ./context/ci_docker_guard.sh --attempts 3 docker pull glregistry.blockstream.io/explorer/electrum-rpc/electrs-electrum-proxy/prod/rpcproxy:4371ab45-20260812132509
     # smokes: keycloak + apisix + rpc proxy + container->host round-trips, no regtest binaries
     - cargo test -p lwk_test_util auth_stack_smoke -- --ignored
     # full e2e: authenticated esplora/waterfalls/electrum calls served by the regtest servers
@@ -631,7 +634,7 @@ boltz_chain:
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
-    - just regtest-env-start
+    - ../context/ci_docker_guard.sh just regtest-env-start
     - just test-chain
 
 boltz_reverse:
@@ -644,7 +647,7 @@ boltz_reverse:
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
-    - just regtest-env-start
+    - ../context/ci_docker_guard.sh just regtest-env-start
     - just test-reverse
 
 boltz_submarine:
@@ -657,7 +660,7 @@ boltz_submarine:
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
-    - just regtest-env-start
+    - ../context/ci_docker_guard.sh just regtest-env-start
     - just test-submarine
 
 .add_targets:

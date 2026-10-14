@@ -2211,6 +2211,7 @@ fn wait_blockchain_tx_update<C: BlockchainBackend>(client: &mut C, wollet: &Woll
 }
 
 #[cfg(feature = "esplora")]
+#[track_caller]
 fn assert_waterfalls_subscription_event(
     subscription: &clients::blocking::WaterfallsSubscription,
     kind: clients::WaterfallsSubscriptionEventKind,
@@ -2322,7 +2323,22 @@ fn test_waterfalls_subscribe() -> Result<(), Box<dyn std::error::Error>> {
     let sender_funding_sats = 100_000;
     let sender_funding_address = sender_wollet.address(Some(0))?;
     env.elementsd_sendtoaddress(sender_funding_address.address(), sender_funding_sats, None);
+    // Wait for each event before the next action: the server sends one event per change, so
+    // mining before the mempool event arrives could deliver it or not depending on timing.
+    assert_waterfalls_subscription_event(
+        &sender_subscription,
+        clients::WaterfallsSubscriptionEventKind::Mempool,
+    )?;
+
     env.elementsd_generate(1);
+    assert_waterfalls_subscription_event(
+        &receiver_subscription,
+        clients::WaterfallsSubscriptionEventKind::Tip,
+    )?;
+    assert_waterfalls_subscription_event(
+        &sender_subscription,
+        clients::WaterfallsSubscriptionEventKind::Block,
+    )?;
 
     let update = wait_blockchain_tx_update(&mut client, &sender_wollet);
     sender_wollet.apply_update(update)?;
@@ -2333,15 +2349,6 @@ fn test_waterfalls_subscribe() -> Result<(), Box<dyn std::error::Error>> {
             .get(network.policy_asset())
             .unwrap()
     );
-
-    assert_waterfalls_subscription_event(
-        &receiver_subscription,
-        clients::WaterfallsSubscriptionEventKind::Tip,
-    )?;
-    assert_waterfalls_subscription_event(
-        &sender_subscription,
-        clients::WaterfallsSubscriptionEventKind::Block,
-    )?;
 
     let sats = 1_000;
     let receiver_address = receiver_wollet.address(Some(0))?;

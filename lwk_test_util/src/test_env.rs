@@ -402,12 +402,14 @@ impl TestEnvBuilder {
         let waterfallsd = if self.with_waterfalls {
             let rpc = elementsd.rpc_url();
             let cookie_values = elementsd.params.get_cookie_values().unwrap().unwrap();
+            let node_tip_hash: String = elementsd.client.call("getbestblockhash", &[]).unwrap();
             let waterfallsd = WaterfallsD::new(
                 &self.waterfalls_exec,
                 &rpc,
                 &cookie_values.user,
                 &cookie_values.password,
                 self.waterfalls_max_txs_seen,
+                &node_tip_hash,
             );
             Some(waterfallsd)
         } else {

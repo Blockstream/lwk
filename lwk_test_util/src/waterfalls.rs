@@ -14,12 +14,15 @@ impl WaterfallsD {
         &self.waterfalls_url
     }
 
+    /// Start waterfalls and wait until it has indexed the node tip `node_tip_hash`, so that
+    /// tests don't observe the initial block download (e.g. subscriptions receiving tip events).
     pub fn new<S: AsRef<OsStr>>(
         exe: S,
         elements_url: &str,
         rpcuser: &str,
         rpcpassword: &str,
         max_txs_seen: Option<usize>,
+        node_tip_hash: &str,
     ) -> WaterfallsD {
         let addr = format!("0.0.0.0:{}", reserve_port());
         let user_pass = format!("{rpcuser}:{rpcpassword}");
@@ -55,15 +58,16 @@ impl WaterfallsD {
             Ok(None) => {} // Process is still running, proceed
         }
 
-        // Wait for waterfalls to start. Polling runs on a dedicated thread so `new` is
-        // callable from async (tokio) tests too: `reqwest::blocking` panics when its
+        // Wait for waterfalls to index the node tip. Polling runs on a dedicated thread so
+        // `new` is callable from async (tokio) tests too: `reqwest::blocking` panics when its
         // internal runtime is dropped inside an async context.
         let url = format!("{waterfalls_url}/blocks/tip/hash");
-        let started = std::thread::spawn(move || {
-            for _ in 0..50 {
+        let node_tip_hash = node_tip_hash.to_string();
+        let synced = std::thread::spawn(move || {
+            for _ in 0..100 {
                 std::thread::sleep(Duration::from_millis(100));
                 if let Ok(r) = reqwest::blocking::get(&url) {
-                    if r.status().as_u16() == 200 {
+                    if r.status().as_u16() == 200 && r.text().ok() == Some(node_tip_hash.clone()) {
                         return true;
                     }
                 }
@@ -72,7 +76,7 @@ impl WaterfallsD {
         })
         .join()
         .expect("waterfalls poll thread panicked");
-        assert!(started, "waterfalls hasn't started after 5s");
+        assert!(synced, "waterfalls hasn't indexed the node tip after 10s");
 
         WaterfallsD {
             process,

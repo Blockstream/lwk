@@ -1,7 +1,33 @@
 #!/usr/bin/env bash
+#
+# Usage:
+#   wasm_test_env.sh                      start the services, until Ctrl+C
+#   wasm_test_env.sh wait-ready [SECS]    wait for the services started by another
+#                                         invocation to be ready (default 300 seconds)
 
 # Exit on error
 set -e
+
+# READY_FILE is created once all services are ready to be used
+READY_FILE=/tmp/lwk_wasm_test_env.ready
+PID_FILE=/tmp/lwk_wasm_test_env.pid
+
+if [ "$1" = "wait-ready" ]; then
+    timeout="${2:-300}"
+    for _ in $(seq 1 "$timeout"); do
+        if [ -f "$READY_FILE" ]; then
+            exit 0
+        fi
+        # The PID file may not be written yet if the env was just started
+        if [ -f "$PID_FILE" ] && ! kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+            echo "wasm test environment exited before being ready"
+            exit 1
+        fi
+        sleep 1
+    done
+    echo "Timeout waiting for wasm test environment after ${timeout}s"
+    exit 1
+fi
 
 # Default addresses and executables if not specified in environment
 LISTEN_ADDR="${LISTEN_ADDR:-127.0.0.1:3000}"
@@ -24,14 +50,40 @@ if [ -z "$ELEMENTS_CLI_EXEC" ]; then
     fi
 fi
 WATERFALLS_EXEC="${WATERFALLS_EXEC:-waterfalls}"
-REGISTRY_EXEC="${REGISTRY_EXEC:-server}"
+ASSET_REGISTRY_EXEC="${ASSET_REGISTRY_EXEC:-server}"
 ELECTRS_LIQUID_EXEC="${ELECTRS_LIQUID_EXEC:-electrs}"
 WEBSOCAT_EXEC="${WEBSOCAT_EXEC:-websocat}"
 AMP2_MOCK_EXEC="${AMP2_MOCK_EXEC:-amp2_mock}"
 
+rm -f "$READY_FILE"
+echo $$ > "$PID_FILE"
+
 # Create temporary root directory
 ROOT_DIR=$(mktemp -d)
 echo "Using temporary directory: $ROOT_DIR"
+
+# Wait until a command succeeds, fail after the given number of seconds
+wait_for() {
+    local what="$1"
+    local timeout="$2"
+    shift 2
+    for _ in $(seq 1 "$timeout"); do
+        if "$@" >/dev/null 2>&1; then
+            echo "$what is ready"
+            return 0
+        fi
+        sleep 1
+    done
+    echo "Timeout waiting for $what after ${timeout}s"
+    return 1
+}
+
+# Check that something is listening on host:port
+port_open() {
+    local host="${1%:*}"
+    local port="${1##*:}"
+    (exec 3<>"/dev/tcp/$host/$port") 2>/dev/null
+}
 
 # Create necessary directories
 ELEMENTS_DIR="$ROOT_DIR/elements_data"
@@ -64,6 +116,29 @@ if [ "$SKIP_JADE" != "1" ]; then
     WEBSOCAT_PID=$!
 fi
 
+# Handle cleanup on script termination
+cleanup() {
+    echo "Stopping services..."
+    rm -f "$READY_FILE" "$PID_FILE"
+    kill $AMP2_MOCK_PID || true
+    kill $WATERFALLS_PID || true
+    kill $GENERATE_PID || true
+    if [ "$SKIP_REGISTRY" != "1" ]; then
+        kill $ASSET_REGISTRY_PID || true
+    fi
+    kill $ELECTRS_PID || true
+    $ELEMENTS_CLI_CMD stop || true
+    if [ "$SKIP_JADE" != "1" ]; then
+        kill $WEBSOCAT_PID || true
+        if [ ! -z "$JADE_CONTAINER_ID" ]; then
+            echo "Stopping Jade emulator container..."
+            docker stop $JADE_CONTAINER_ID || true
+        fi
+    fi
+    echo "Removing temporary directory..."
+    rm -rf "$ROOT_DIR"
+}
+
 # Start elementsd
 $ELEMENTSD_EXEC \
     -fallbackfee=0.0001 \
@@ -83,8 +158,10 @@ $ELEMENTSD_EXEC \
     -acceptunlimitedissuances=1 \
     -daemon
 
-echo "Waiting for elementsd to start..."
-sleep 1
+# Stop services if anything below fails
+trap cleanup EXIT
+
+wait_for "elementsd" 60 $ELEMENTS_CLI_CMD getblockchaininfo
 
 $ELEMENTS_CLI_CMD createwallet test_wallet
 $ELEMENTS_CLI_CMD rescanblockchain
@@ -139,16 +216,18 @@ $WATERFALLS_EXEC \
 
 WATERFALLS_PID=$!
 
-# Start asset registry in the background
-# Note: using electrs HTTP endpoint for the esplora URL because it has the /asset endpoint
-echo "Starting asset registry..."
-SKIP_VERIFY_DOMAIN_LINK=1 $REGISTRY_EXEC \
-    --addr "$ASSET_REGISTRY_ADDR" \
-    --add-cors \
-    --db-path "$ASSET_REGISTRY_DB" \
-    --esplora-url "http://$ELECTRS_HTTP_ADDR" &
+if [ "$SKIP_REGISTRY" != "1" ]; then
+    # Start asset registry in the background
+    # Note: using electrs HTTP endpoint for the esplora URL because it has the /asset endpoint
+    echo "Starting asset registry..."
+    SKIP_VERIFY_DOMAIN_LINK=1 $ASSET_REGISTRY_EXEC \
+        --addr "$ASSET_REGISTRY_ADDR" \
+        --add-cors \
+        --db-path "$ASSET_REGISTRY_DB" \
+        --esplora-url "http://$ELECTRS_HTTP_ADDR" &
 
-ASSET_REGISTRY_PID=$!
+    ASSET_REGISTRY_PID=$!
+fi
 
 # Start AMP2 mock in the background
 echo "Starting AMP2 mock..."
@@ -163,7 +242,7 @@ echo "  elementsd: $ELEMENTSD_EXEC"
 echo "  elements-cli: $ELEMENTS_CLI_EXEC"
 echo "  electrs: $ELECTRS_LIQUID_EXEC"
 echo "  waterfalls: $WATERFALLS_EXEC"
-echo "  registry: $REGISTRY_EXEC"
+echo "  registry: $ASSET_REGISTRY_EXEC"
 echo "  amp2_mock: $AMP2_MOCK_EXEC"
 echo "  websocat: $WEBSOCAT_EXEC"
 echo
@@ -176,6 +255,19 @@ echo "AMP2 mock address: http://$AMP2_MOCK_ADDR"
 echo "Jade WebSocket Bridge: ws://localhost:$JADE_WEBSOCKET_PORT"
 echo "Policy asset: $POLICY_ASSET"
 
+wait_for "waterfalls" 60 port_open "$LISTEN_ADDR"
+wait_for "electrs" 120 port_open "$ELECTRS_HTTP_ADDR"
+if [ "$SKIP_REGISTRY" != "1" ]; then
+    wait_for "asset registry" 60 port_open "$ASSET_REGISTRY_ADDR"
+fi
+wait_for "AMP2 mock" 60 port_open "$AMP2_MOCK_ADDR"
+if [ "$SKIP_JADE" != "1" ]; then
+    wait_for "Jade WebSocket bridge" 60 port_open "127.0.0.1:$JADE_WEBSOCKET_PORT"
+fi
+
+touch "$READY_FILE"
+echo "All services are ready ($READY_FILE created)"
+
 echo "Press Ctrl+C to stop all services"
 
 # Need to set these env vars for tests
@@ -183,27 +275,5 @@ export ELECTRS_LIQUID_EXEC
 export ELEMENTSD_EXEC
 export AMP2_MOCK_EXEC
 
-# Handle cleanup on script termination
-cleanup() {
-    echo "Stopping services..."
-    kill $AMP2_MOCK_PID || true
-    kill $WATERFALLS_PID || true
-    kill $GENERATE_PID || true
-    kill $ASSET_REGISTRY_PID || true
-    kill $ELECTRS_PID || true
-    $ELEMENTS_CLI_CMD stop || true
-    if [ "$SKIP_JADE" != "1" ]; then
-        kill $WEBSOCAT_PID || true
-        if [ ! -z "$JADE_CONTAINER_ID" ]; then
-            echo "Stopping Jade emulator container..."
-            docker stop $JADE_CONTAINER_ID || true
-        fi
-    fi
-    echo "Removing temporary directory..."
-    rm -rf "$ROOT_DIR"
-}
-
-trap cleanup EXIT
-
 # Wait for Ctrl+C
-wait $WATERFALLS_PID
+wait $WATERFALLS_PID || { code=$?; echo "waterfalls exited with code $code"; exit $code; }

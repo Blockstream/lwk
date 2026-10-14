@@ -554,13 +554,16 @@ wasm:
     - apt-get -qq update
     - apt-get install -y jq
     # launch regtest enviroment
-    - SKIP_JADE=1 ./lwk_test_util/wasm_test_env.sh > /dev/null 2>&1 &
+    # the registry is not used by the tests (and the CI binary doesn't support --add-cors)
+    - SKIP_JADE=1 SKIP_REGISTRY=1 ./lwk_test_util/wasm_test_env.sh > wasm_test_env.log 2>&1 &
     - cargo check --target wasm32-unknown-unknown -p lwk_common -p lwk_rpc_model -p lwk_hwi -p lwk_prices
     - cargo check --target wasm32-unknown-unknown -p lwk_wollet --no-default-features --features esplora,serial,amp2,amp0
     - cargo check --target wasm32-unknown-unknown -p lwk_signer --no-default-features
     - cargo check --target wasm32-unknown-unknown -p lwk_jade --no-default-features --features asyncr --features serial
     - cargo check --target wasm32-unknown-unknown -p lwk_ledger --no-default-features
     - cargo check --target wasm32-unknown-unknown -p lwk_boltz --no-default-features
+    # wait for the regtest environment, the log is in the job artifacts
+    - ./lwk_test_util/wasm_test_env.sh wait-ready || { tail -50 wasm_test_env.log; exit 1; }
     - (cd lwk_wasm && CHROMEDRIVER_ARGS="--allowed-ips=127.0.0.1" WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --chrome --headless --features serial)
     # testing nodejs package
     - cd lwk_wasm
@@ -569,6 +572,11 @@ wasm:
     - cd tests/node
     - npm install
     - npm run test
+  artifacts:
+    when: on_failure
+    paths:
+      - wasm_test_env.log
+    expire_in: 1 week
 
 build_wasm:
   stage: build

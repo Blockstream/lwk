@@ -695,8 +695,11 @@ impl<S: Stream> Amp0Inner<S> {
             .await
             .map_err(|e| Error::Generic(format!("Failed to do call: {e}")))?;
 
-        // Wait for response
-        let mut response_buf = vec![0u8; 10000];
+        // Wait for response.
+        // AMP0 messages are expected to be below 1MB, so this fixed size is
+        // intentional. A bigger message is an error (see `WebSocketError::MessageTooLarge`),
+        // it is never truncated.
+        let mut response_buf = vec![0u8; 1_000_000];
 
         #[cfg(not(target_arch = "wasm32"))]
         let response_bytes = tokio::time::timeout(
@@ -1569,6 +1572,18 @@ pub enum WebSocketError {
     ConnectionClosed,
     #[error("Invalid message type")]
     InvalidMessageType,
+    #[error("Message of {len} bytes does not fit in the {limit} bytes buffer")]
+    MessageTooLarge { len: usize, limit: usize },
+}
+
+/// Copy a whole message into `buf`, failing instead of truncating it
+#[cfg(not(target_arch = "wasm32"))]
+fn copy_whole_message(data: &[u8], buf: &mut [u8]) -> Result<usize, (usize, usize)> {
+    if data.len() > buf.len() {
+        return Err((data.len(), buf.len()));
+    }
+    buf[..data.len()].copy_from_slice(data);
+    Ok(data.len())
 }
 
 /// Implement the Stream trait for WebSocketClient
@@ -1585,15 +1600,12 @@ impl Stream for WebSocketClient {
         loop {
             match read_stream.next().await {
                 Some(Ok(Message::Binary(data))) => {
-                    let len = std::cmp::min(buf.len(), data.len());
-                    buf[..len].copy_from_slice(&data[..len]);
-                    return Ok(len);
+                    return copy_whole_message(&data, buf)
+                        .map_err(|(len, limit)| WebSocketError::MessageTooLarge { len, limit });
                 }
                 Some(Ok(Message::Text(text))) => {
-                    let data = text.as_bytes();
-                    let len = std::cmp::min(buf.len(), data.len());
-                    buf[..len].copy_from_slice(&data[..len]);
-                    return Ok(len);
+                    return copy_whole_message(text.as_bytes(), buf)
+                        .map_err(|(len, limit)| WebSocketError::MessageTooLarge { len, limit });
                 }
                 Some(Ok(Message::Close(_))) => {
                     return Err(WebSocketError::ConnectionClosed);
@@ -1950,6 +1962,15 @@ fn encrypt_blob_key(username: &str, password: &str, enc_key: &[u8]) -> Result<St
 
 #[cfg(test)]
 mod tests {
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn test_copy_whole_message() {
+        use super::copy_whole_message;
+        let mut buf = [0u8; 4];
+        assert_eq!(copy_whole_message(b"abcd", &mut buf).unwrap(), 4);
+        assert_eq!(copy_whole_message(b"abcde", &mut buf), Err((5, 4)));
+    }
+
     use super::*;
 
     /// Test WebSocket connection to Blockstream's Green Liquid mainnet endpoint

@@ -11,6 +11,7 @@ use crate::{
     get_receive_address::GetReceiveAddressParams,
     register_multisig::{GetRegisteredMultisigParams, RegisterMultisigParams},
     sign_liquid_tx::{SignLiquidTxParams, SignPsbtParams, TxInputParams},
+    Error,
 };
 
 #[derive(Debug, Serialize)]
@@ -237,6 +238,52 @@ pub struct Response<T> {
     pub seqnum: Option<u64>,
     #[serde(default)]
     pub seqlen: Option<u64>,
+}
+
+/// Reasonable, but unreachable upper-bound for `seqlen` value in a split reply.
+const MAX_FRAGMENTS: u64 = 512;
+
+/// Validate one fragment of a split reply.
+pub(crate) fn check_fragment(
+    seqnum: Option<u64>,
+    seqlen: Option<u64>,
+    expected_seqnum: u64,
+    first_seqlen: &mut Option<u64>,
+) -> crate::Result<Option<(u64, u64)>> {
+    let (seqnum, seqlen) = match (seqnum, seqlen) {
+        (Some(seqnum), Some(seqlen)) => (seqnum, seqlen),
+
+        // this case cannot happen in the latest `sign_psbt` version, but could happen in Jade with version 0.*
+        (None, None) if first_seqlen.is_none() => return Ok(None),
+        _ => {
+            return Err(Error::UnexpectedFragment {
+                seqnum,
+                seqlen,
+                expected_seqnum,
+                first_seqlen: *first_seqlen,
+            })
+        }
+    };
+
+    let seqlen_total = *first_seqlen.get_or_insert(seqlen);
+
+    if seqlen != seqlen_total
+        || seqnum != expected_seqnum
+        || !(1..MAX_FRAGMENTS).contains(&seqlen_total)
+    {
+        return Err(Error::UnexpectedFragment {
+            seqnum: Some(seqnum),
+            seqlen: Some(seqlen),
+            expected_seqnum,
+            first_seqlen: Some(seqlen_total),
+        });
+    }
+
+    if seqnum == seqlen_total {
+        Ok(None)
+    } else {
+        Ok(Some((seqnum + 1, seqlen_total)))
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]

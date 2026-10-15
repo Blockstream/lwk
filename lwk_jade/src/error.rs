@@ -141,6 +141,14 @@ pub enum Error {
     #[error(transparent)]
     HttpReqwest(#[from] reqwest::Error),
 
+    #[error("Unexpected fragment in split reply: seqnum {seqnum:?}, seqlen {seqlen:?} (expected seqnum {expected_seqnum}, total {first_seqlen:?})")]
+    UnexpectedFragment {
+        seqnum: Option<u64>,
+        seqlen: Option<u64>,
+        expected_seqnum: u64,
+        first_seqlen: Option<u64>,
+    },
+
     #[error("{0}")]
     Generic(String),
 }

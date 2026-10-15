@@ -81,6 +81,9 @@ pub enum Error {
     )]
     SignatureValidationFailed,
 
+    #[error("Jade rejected the request to sign the transaction")]
+    SignTxRejected,
+
     #[error("Missing asset id in output {0}")]
     MissingAssetIdInOutput(usize),
 

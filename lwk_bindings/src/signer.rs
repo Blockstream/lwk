@@ -104,7 +104,12 @@ impl Signer {
     /// be clear the signed PSET is the returned one, but it's not possible with uniffi bindings
     pub fn sign(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
         let mut pset = pset.inner();
-        lwk_common::Signer::sign(&self.inner, &mut pset)?;
+        let added = lwk_common::Signer::sign(&self.inner, &mut pset)?;
+        if added == 0 {
+            return Err(LwkError::Generic {
+                msg: "No signature added".into(),
+            });
+        }
         Ok(Arc::new(pset.into()))
     }
 

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* `Signer.sign()` now returns an error if no signatures have been added.
 * Update to `elements` 0.27. `LwkError` conversions from the previous hex error types were replaced by the new ones.
 * Kotlin Multiplatform: fixed `UniFFI API checksum mismatch` on 32-bit ARM Android once the app is AOT-compiled, by generating the bindings with a gobley build that reads `u8`/`u16` return values correctly ([gobley#252](https://github.com/gobley/gobley/issues/252))
 * `LwkTestEnv` and `LwkTestStore` are now behind the `test_env` feature. By default `lwk_test_util` is no longer a dependency of `lwk_bindings`, so shipping libraries do not include the test environment. Enable `test_env` to build and use the test helpers.

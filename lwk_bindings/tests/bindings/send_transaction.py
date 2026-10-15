@@ -49,6 +49,21 @@ builder.add_lbtc_recipient(node_address, sent_satoshi)
 unsigned_pset = builder.finish(wollet)
 signed_pset = signer.sign(unsigned_pset)
 
+try:
+    signer.sign(signed_pset)
+except LwkError as e:
+    assert "No signature added" in str(e), str(e)
+else:
+    assert False, "Should have thrown error"
+
+try:
+    another_signer = Signer.random(network)
+    another_signer.sign(signed_pset)
+except LwkError as e:
+    assert "No signature added" in str(e), str(e)
+else:
+    assert False, "Should have thrown error"
+
 # It's possible to finalize a PSET from the PSET itself, or using the wollet
 tx_ = signed_pset.finalize()
 finalized_pset = wollet.finalize(signed_pset)

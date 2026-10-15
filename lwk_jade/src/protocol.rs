@@ -422,7 +422,7 @@ pub struct GetMasterBlindingKeyParams {
 
 #[cfg(test)]
 mod test {
-    use crate::protocol::{select_url, DebugSetMnemonicParams};
+    use crate::protocol::{check_fragment, select_url, DebugSetMnemonicParams, MAX_FRAGMENTS};
 
     #[test]
     fn debug_set_mnemonic_redacts_secrets() {
@@ -466,5 +466,42 @@ mod test {
 
         let urls = [https.to_owned(), onion.to_owned()];
         assert_eq!(select_url(&urls, true), Some(onion));
+    }
+
+    #[test]
+    fn check_fragment_validation() {
+        let mut total = None;
+        assert_eq!(
+            check_fragment(Some(1), Some(3), 1, &mut total).unwrap(),
+            Some((2, 3))
+        );
+        assert_eq!(
+            check_fragment(Some(2), Some(3), 2, &mut total).unwrap(),
+            Some((3, 3))
+        );
+        assert_eq!(
+            check_fragment(Some(3), Some(3), 3, &mut total).unwrap(),
+            None
+        );
+
+        assert_eq!(check_fragment(None, None, 1, &mut None).unwrap(), None);
+
+        assert!(check_fragment(Some(2), Some(3), 1, &mut None).is_err());
+        assert!(check_fragment(Some(1), Some(0), 1, &mut None).is_err());
+        assert!(check_fragment(Some(1), Some(MAX_FRAGMENTS), 1, &mut None).is_err());
+        assert!(check_fragment(Some(1), None, 1, &mut None).is_err());
+        assert!(check_fragment(None, Some(1), 1, &mut None).is_err());
+
+        let mut total = None;
+        check_fragment(Some(1), Some(3), 1, &mut total).unwrap();
+        assert!(check_fragment(Some(3), Some(3), 2, &mut total).is_err());
+
+        let mut total = None;
+        check_fragment(Some(1), Some(3), 1, &mut total).unwrap();
+        assert!(check_fragment(Some(2), Some(4), 2, &mut total).is_err());
+
+        let mut total = None;
+        check_fragment(Some(1), Some(3), 1, &mut total).unwrap();
+        assert!(check_fragment(None, None, 2, &mut total).is_err());
     }
 }

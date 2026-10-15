@@ -256,7 +256,13 @@ impl LiquidexProposal<Unvalidated> {
         Ok(self.validated())
     }
 
-    /// Validate the proposal output but not the input wich require fetching the previous transaction
+    /// Validate the proposal in an insecure way
+    ///
+    /// Warning: using this method can lead to loss of funds.
+    /// This method performs partial validation, which could be leveraged by potential attackers.
+    /// Use it only if you properly understand the risks.
+    ///
+    /// In general, prefer using [`crate::LiquidexProposal::validate()`].
     pub fn insecure_validate(self) -> Result<LiquidexProposal<Validated>, Error> {
         self.get_output()?;
         Ok(self.validated())

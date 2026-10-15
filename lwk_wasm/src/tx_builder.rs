@@ -118,12 +118,8 @@ impl TxBuilder {
 
     /// Burn satoshi units of the given asset
     #[wasm_bindgen(js_name = addBurn)]
-    pub fn add_burn(self, satoshi: u64, asset: &AssetId) -> TxBuilder {
-        let unvalidated_recipient = UnvalidatedRecipient::burn(asset.to_string(), satoshi);
-        self.inner
-            .add_unvalidated_recipient(&unvalidated_recipient)
-            .expect("recipient can't be invalid")
-            .into()
+    pub fn add_burn(self, satoshi: u64, asset: &AssetId) -> Result<TxBuilder, Error> {
+        Ok(self.inner.add_burn(satoshi, asset.into())?.into())
     }
 
     /// Add an `OP_RETURN` output carrying arbitrary `data`, with zero value.
@@ -511,7 +507,7 @@ mod tests {
         builder = builder.fee_rate(Some(200.0)).unwrap();
         assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [], fee_rate: FeeRate(200.0), allow_high_fee_rate: false, ct_discount: true, reissuances: Reissuances { requests: [] }, issuances: None, drain_lbtc: false, drain_to: None, external_utxos: [], pegin_inputs: [], selected_utxos: None, inputs_order: None, add_input_rangeproofs: true, is_liquidex_make: false, liquidex_proposals: [] }");
 
-        builder = builder.add_burn(1000, &policy);
+        builder = builder.add_burn(1000, &policy).unwrap();
         assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [Recipient { satoshi: 1000, script_pubkey: Script(OP_RETURN), blinding_pubkey: None, asset: 6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d }], fee_rate: FeeRate(200.0), allow_high_fee_rate: false, ct_discount: true, reissuances: Reissuances { requests: [] }, issuances: None, drain_lbtc: false, drain_to: None, external_utxos: [], pegin_inputs: [], selected_utxos: None, inputs_order: None, add_input_rangeproofs: true, is_liquidex_make: false, liquidex_proposals: [] }");
 
         let o = OutPoint::new(

@@ -5,9 +5,10 @@ use std::{collections::HashMap, io::ErrorKind};
 
 use crate::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant};
 use crate::protocol::{
-    AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams, FullRequest, GenericMethod,
-    GetExtendedDataParams, GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams,
-    IsAuthResult, Request, Response, SignMessageParams, UpdatePinserverParams, VersionInfoResult,
+    check_fragment, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
+    FullRequest, GenericMethod, GetExtendedDataParams, GetMasterBlindingKeyParams,
+    GetSignatureParams, GetXpubParams, IsAuthResult, Request, Response, SignMessageParams,
+    UpdatePinserverParams, VersionInfoResult,
 };
 use crate::register_multisig::{
     GetRegisteredMultisigParams, RegisterMultisigParams, RegisteredMultisig,
@@ -405,6 +406,9 @@ impl Jade {
         let mut result = vec![];
         let mut newid = msgid.clone();
 
+        let mut expected_seqnum = 1;
+        let mut seqlen_total = None;
+
         loop {
             // `read_loop` only returns the answer to `newid`, so no id check is needed here
             let resp = read_loop::<ByteBuf>(&mut conn, &newid)?;
@@ -415,20 +419,22 @@ impl Jade {
             if let Some(chunk) = resp.result {
                 result.extend_from_slice(&chunk);
             }
-            let seqnum = resp.seqnum.unwrap_or(1);
-            let seqlen = resp.seqlen.unwrap_or(1);
 
-            if seqnum >= seqlen {
+            let Some((next_seqnum, seqlen)) =
+                check_fragment(resp.seqnum, resp.seqlen, expected_seqnum, &mut seqlen_total)?
+            else {
                 break;
-            }
+            };
 
             let ext_request = FullRequest::new(Request::GetExtendedData(GetExtendedDataParams {
                 origid: msgid.clone(),
                 orig: "sign_psbt".to_string(),
-                seqnum: seqnum + 1,
+                seqnum: next_seqnum,
                 seqlen,
             }));
+
             newid = ext_request.id.clone();
+            expected_seqnum = next_seqnum;
 
             let buf = ext_request.serialize()?;
             conn.write_all(&buf)?;

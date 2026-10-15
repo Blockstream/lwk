@@ -378,6 +378,10 @@ pub enum Error {
     #[error("Invalid login challenge received from the server")]
     Amp0InvalidChallenge,
 
+    #[cfg(feature = "amp0")]
+    #[error("The blob received from the server does not match the expected hmac")]
+    Amp0BlobHmacMismatch,
+
     #[error("Unsupported (wollet does not have CT descriptor)")]
     UnsupportedWithoutDescriptor,
 

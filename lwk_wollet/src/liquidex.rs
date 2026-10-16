@@ -258,6 +258,7 @@ impl LiquidexProposal<Unvalidated> {
 
     /// Validate the proposal output but not the input wich require fetching the previous transaction
     pub fn insecure_validate(self) -> Result<LiquidexProposal<Validated>, Error> {
+        self.get_input(None)?;
         self.get_output()?;
         Ok(self.validated())
     }

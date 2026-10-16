@@ -3,7 +3,7 @@ use std::str::FromStr;
 use lwk_wollet::{Unvalidated, Validated};
 use wasm_bindgen::prelude::*;
 
-use crate::{AssetId, Pset, Transaction};
+use crate::{AssetId, Pset, Transaction, Txid};
 
 /// LiquiDEX swap proposal
 ///
@@ -83,9 +83,17 @@ impl UnvalidatedLiquidexProposal {
         Ok(ValidatedLiquidexProposal { inner })
     }
 
+    /// Validate the proposal
+    #[wasm_bindgen(js_name = validate)]
     pub fn validate(self, tx: Transaction) -> Result<ValidatedLiquidexProposal, crate::Error> {
         let inner = self.inner.validate(tx.into())?;
         Ok(ValidatedLiquidexProposal { inner })
+    }
+
+    /// Return the transaction id of the previous transaction needed for validation
+    #[wasm_bindgen(js_name = neededTx)]
+    pub fn needed_tx(&self) -> Result<Txid, crate::Error> {
+        Ok(self.inner.needed_tx()?.into())
     }
 
     #[wasm_bindgen(js_name = toString)]

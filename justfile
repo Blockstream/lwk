@@ -173,7 +173,7 @@ docs-check:
 
 # Serve the mdbook documentation locally for development
 mdbook-serve: docs-check
-    cd docs && mdbook serve
+    cd docs && mdbook serve --port 3001
 
 # Generate a local Cobertura and HTML coverage report with nextest
 coverage-local:

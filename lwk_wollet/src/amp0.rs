@@ -253,6 +253,11 @@ impl<S: Stream> Amp0<S> {
 
         // get blob
         let blob64 = amp0.get_blob().await?;
+        // TODO: check the blob hmac against `login_data.client_blob_hmac`.
+        // The hmac key is derived from the client secret xpub, which the watch-only
+        // flow does not have, so the blob cannot be authenticated here.
+        // TODO: check against a locally cached blob hmac
+        log::warn!("AMP0 watch-only: blob hmac cannot be verified, reduced assurance");
         // decrypt blob
         let wo_blob_key_hex = login_data
             .wo_blob_key
@@ -597,8 +602,14 @@ impl<S: Stream> Amp0Connected<S> {
         } else {
             // Get the blob
             let blob64 = self.amp0.get_blob().await?;
+            let hmac = compute_hmac(&hmac_key, &blob64)?;
+            // The server could replay a stale blob, or claim there is no blob
+            // (zero hmac) to make us reset it: check the blob matches the login data.
+            // TODO: also check against a locally cached blob hmac
+            if hmac != login_data.client_blob_hmac {
+                return Err(Error::Amp0BlobHmacMismatch);
+            }
             let blob = Blob::from_base64(&blob64, &enc_key)?;
-            let hmac = compute_hmac(&hmac_key, &blob64)?; // can be extracted from login data
             (blob, hmac)
         };
         // TODO: upload ca if needed

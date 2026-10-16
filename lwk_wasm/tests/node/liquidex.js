@@ -32,24 +32,28 @@ async function runLiquidexTest() {
         await waitForTx(taker, client, issueTxid);
         assert.strictEqual(taker.balance().entries().get(asset.toString()), issuedAssetUnits);
 
+        // ANCHOR: liquidex_make
         // (maker) Create a liquidex proposal (asking for the issued asset in exchange for the policy asset)
         const utxo = maker.utxos()[0].outpoint();
         let builder = new lwk.TxBuilder(network);
         builder = builder.liquidexMake(utxo, maker.address(null).address(), issuedAssetUnits, asset);
         const pset = builder.finish(maker);
-        assert.strictEqual(pset.inputs()[0].sighash(), 131);
-        assert(maker.psetDetails(pset).hasNonDefaultSighash());
+        assert.strictEqual(pset.inputs()[0].sighash(), 131); // ANCHOR: ignore
+        assert(maker.psetDetails(pset).hasNonDefaultSighash()); // ANCHOR: ignore
         const signedPset = makerSigner.sign(pset);
 
         // (maker) Create the proposal and convert it to string to pass it to the taker
         const proposal = lwk.UnvalidatedLiquidexProposal.fromPset(signedPset);
         const proposalStr = proposal.toString();
+        // ANCHOR_END: liquidex_make
 
+        // ANCHOR: liquidex_validate
         // (taker) Parse the proposal from string and validate it
         const proposalFromStr = lwk.UnvalidatedLiquidexProposal.new(proposalStr);
         const neededTxid = proposalFromStr.neededTx();
         const previousTx = await client.getTx(neededTxid);
         const validated = proposalFromStr.validate(previousTx);
+        // ANCHOR_END: liquidex_validate
 
         // (taker) Verify proposal details
         assert.strictEqual(validated.input().amount(), utxoSize);
@@ -57,15 +61,17 @@ async function runLiquidexTest() {
         assert.strictEqual(validated.input().asset().toString(), policyAsset.toString());
         assert.strictEqual(validated.output().asset().toString(), asset.toString());
 
+        // ANCHOR: liquidex_take
         // (taker) Accept the proposal
         let builder2 = new lwk.TxBuilder(network).liquidexTake([validated]);
         const pset2 = builder2.finish(taker);
-        assert.strictEqual(pset2.inputs()[1].sighash(), 1);
+        assert.strictEqual(pset2.inputs()[1].sighash(), 1); // ANCHOR: ignore
         const signedPset2 = takerSigner.sign(pset2);
 
         // (taker) Finalize and broadcast the transaction
         const finalized = taker.finalize(signedPset2);
         const txid = await client.broadcastTx(finalized.extractTx());
+        // ANCHOR_END: liquidex_take
         await waitForTx(maker, client, txid);
         await waitForTx(taker, client, txid);
 

@@ -25,7 +25,9 @@ impl Jade {
 
         let mut sigs_added_or_overwritten = 0;
         let sign_response = self.sign_liquid_tx(params)?;
-        assert!(sign_response);
+        if !sign_response {
+            return Err(Error::SignTxRejected);
+        }
 
         let mut signable_inputs: Vec<(Option<SignInfo>, Vec<u8>)> =
             Vec::with_capacity(prepared.len());

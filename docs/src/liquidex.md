@@ -53,6 +53,15 @@ The maker creates a swap proposal by building a transaction with `liquidex_make(
 
 </section>
 
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/liquidex.js:liquidex_make:ignore}}
+```
+
+</section>
+
 <div slot="title">Go</div>
 <section>
 
@@ -82,6 +91,15 @@ Before accepting a proposal, the taker must validate it by fetching the previous
 
 ```python
 {{#include ../../lwk_bindings/tests/bindings/liquidex.py:liquidex_validate}}
+```
+
+</section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/liquidex.js:liquidex_validate:ignore}}
 ```
 
 </section>
@@ -116,6 +134,15 @@ Once validated, the taker can accept the proposal by using `liquidex_take()` to 
 
 ```python
 {{#include ../../lwk_bindings/tests/bindings/liquidex.py:liquidex_take}}
+```
+
+</section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/liquidex.js:liquidex_take:ignore}}
 ```
 
 </section>

@@ -85,6 +85,12 @@ struct Amp0Inner<S: Stream> {
     stream: S,
 }
 
+/// Max number of confidential addresses to upload, whatever the backend requires.
+const MAX_REQUIRED_CA: u32 = 100;
+
+/// Max number of subaccounts allowed by Green backend
+const MAX_SUBACCOUNT: u32 = 16384;
+
 const BLOB_SALT: [u8; 8] = [0x62, 0x6c, 0x6f, 0x62, 0x73, 0x61, 0x6c, 0x74]; // 'blobsalt'
 const WATCH_ONLY_SALT: [u8; 8] = [0x5f, 0x77, 0x6f, 0x5f, 0x73, 0x61, 0x6c, 0x74]; // '_wo_salt'
 const WO_SEED_U: [u8; 8] = [0x01, 0x77, 0x6f, 0x5f, 0x75, 0x73, 0x65, 0x72]; // [1]'wo_user'
@@ -107,6 +113,10 @@ fn to_value<T: serde::Serialize>(value: &T) -> Result<rmpv::Value, Error> {
     let value = rmp_serde::encode::to_vec_named(value)?;
     Ok(rmp_serde::decode::from_slice(&value)?)
 }
+
+// Note: for AMP0/Green, some backend-provided values are trusted.
+// AMP0/Green is required to cosign all transactions, so for some
+// values, e.g. pointer, it is reasonable to trust them.
 
 /// Green subaccount data returned at login
 #[derive(Debug, Deserialize, Serialize)]
@@ -267,7 +277,8 @@ impl<S: Stream> Amp0<S> {
             last_index,
         };
 
-        amp0.upload_ca(subaccount.required_ca).await?;
+        amp0.upload_ca(subaccount.required_ca.min(MAX_REQUIRED_CA))
+            .await?;
 
         Ok(amp0)
     }
@@ -637,7 +648,11 @@ impl<S: Stream> Amp0LoggedIn<S> {
             .map(|s| s.pointer)
             .max()
             .unwrap_or(0);
-        Ok(max_account + 1)
+        if max_account >= MAX_SUBACCOUNT {
+            Err(Error::Generic("Too many subaccounts".into()))
+        } else {
+            Ok(max_account + 1)
+        }
     }
 
     /// Create a new AMP0 account

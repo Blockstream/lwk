@@ -170,6 +170,13 @@ impl WaterfallsClient {
         Ok(txid.into())
     }
 
+    /// Get a transaction given its txid.
+    #[wasm_bindgen(js_name = getTx)]
+    pub async fn get_tx(&self, txid: &Txid) -> Result<Transaction, Error> {
+        let tx = self.inner.get_transaction(txid.into()).await?;
+        Ok(tx.into())
+    }
+
     /// Broadcast a PSET by extracting the transaction from the PSET and broadcasting it.
     pub async fn broadcast(&mut self, pset: &Pset) -> Result<Txid, Error> {
         let tx = pset.extract_tx()?;
@@ -383,6 +390,13 @@ impl EsploraClient {
     pub async fn broadcast_tx(&mut self, tx: &Transaction) -> Result<Txid, Error> {
         let txid = self.inner.broadcast(tx.as_ref()).await?;
         Ok(txid.into())
+    }
+
+    /// Get a transaction given its txid.
+    #[wasm_bindgen(js_name = getTx)]
+    pub async fn get_tx(&self, txid: &Txid) -> Result<Transaction, Error> {
+        let tx = self.inner.get_transaction(txid.into()).await?;
+        Ok(tx.into())
     }
 
     /// Broadcast a PSET by extracting the transaction from the PSET and broadcasting it.

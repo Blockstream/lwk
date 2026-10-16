@@ -659,7 +659,7 @@ impl<S: Stream> Amp0LoggedIn<S> {
             .map(|s| s.pointer)
             .max()
             .unwrap_or(0);
-        if max_account >= MAX_SUBACCOUNT {
+        if max_account >= MAX_SUBACCOUNT - 1 {
             Err(Error::Generic("Too many subaccounts".into()))
         } else {
             Ok(max_account + 1)

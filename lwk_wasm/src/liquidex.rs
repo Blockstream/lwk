@@ -70,6 +70,13 @@ impl UnvalidatedLiquidexProposal {
         Ok(Self { inner: proposal })
     }
 
+    /// Validate the proposal in an insecure way
+    ///
+    /// Warning: using this method can lead to loss of funds.
+    /// This method performs partial validation, which could be leveraged by potential attackers.
+    /// Use it only if you properly understand the risks.
+    ///
+    /// In general, prefer using `validate()`.
     #[wasm_bindgen(js_name = insecureValidate)]
     pub fn insecure_validate(self) -> Result<ValidatedLiquidexProposal, crate::Error> {
         let inner = self.inner.insecure_validate()?;

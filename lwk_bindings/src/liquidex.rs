@@ -76,7 +76,13 @@ impl UnvalidatedLiquidexProposal {
         Ok(Arc::new(Self { inner: proposal }))
     }
 
-    /// Validate the proposal output but not the input wich require fetching the previous transaction
+    /// Validate the proposal in an insecure way
+    ///
+    /// Warning: using this method can lead to loss of funds.
+    /// This method performs partial validation, which could be leveraged by potential attackers.
+    /// Use it only if you properly understand the risks.
+    ///
+    /// In general, prefer using `validate()`.
     pub fn insecure_validate(&self) -> Result<Arc<ValidatedLiquidexProposal>, LwkError> {
         Ok(Arc::new(ValidatedLiquidexProposal {
             inner: self.inner.clone().insecure_validate()?,

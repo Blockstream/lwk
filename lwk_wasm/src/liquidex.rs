@@ -76,6 +76,8 @@ impl UnvalidatedLiquidexProposal {
         Ok(ValidatedLiquidexProposal { inner })
     }
 
+    /// Validate the proposal
+    #[wasm_bindgen(js_name = validate)]
     pub fn validate(self, tx: Transaction) -> Result<ValidatedLiquidexProposal, crate::Error> {
         let inner = self.inner.validate(tx.into())?;
         Ok(ValidatedLiquidexProposal { inner })

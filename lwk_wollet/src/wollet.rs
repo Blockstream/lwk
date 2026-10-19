@@ -1245,11 +1245,11 @@ impl Wollet {
                 // In some case "finalize" finalizes all inputs but return some error
                 let seems_finalized = |i: &elements::pset::Input| -> bool {
                     i.partial_sigs.is_empty()
-                        && (!i
+                        && (i
                             .final_script_witness
                             .as_ref()
-                            .is_some_and(|v| v.is_empty())
-                            || !i.final_script_sig.as_ref().is_some_and(|v| v.is_empty()))
+                            .is_some_and(|v| !v.is_empty())
+                            || i.final_script_sig.as_ref().is_some_and(|v| !v.is_empty()))
                 };
                 if !pset.inputs().iter().all(seems_finalized) {
                     // Failed to finalize all inputs

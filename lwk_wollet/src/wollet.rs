@@ -1197,7 +1197,9 @@ impl Wollet {
         Ok(res)
     }
 
-    /// Finalize a PSET, extracting a broadcastable transaction
+    /// Finalize a PSET and extract the transaction
+    ///
+    /// Note: it is not guaranteed that the extracted transaction can be broadcast.
     pub fn finalize(&self, pset: &mut PartiallySignedTransaction) -> Result<Transaction, Error> {
         // elements-miniscript does not finalize PSET inputs if they have signature with different
         // sighashes. To workaround this, if necessary we replace the sighash in the signatures

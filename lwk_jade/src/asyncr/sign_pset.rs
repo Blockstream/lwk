@@ -2,7 +2,7 @@ use elements::pset::PartiallySignedTransaction;
 
 use crate::{
     create_jade_sign_req,
-    protocol::GetSignatureParams,
+    protocol::{GetSignatureParams, Request},
     sign_pset_common::{apply_sig, prepare_inputs, validate_signature, SignInfo},
     Error,
 };
@@ -24,7 +24,13 @@ impl<S: Stream<Error = Error>> Jade<S> {
         let prepared = prepare_inputs(pset, my_fingerprint, network)?;
 
         let mut sigs_added_or_overwritten = 0;
-        let sign_response = self.sign_liquid_tx(params).await?;
+
+        // Keep one lock for the whole signing session so no other request can interleave
+        // between `sign_liquid_tx`, `tx_input` and `get_signature`.
+        let stream = self.stream.lock().await;
+        let sign_response: bool = self
+            .send_with_stream(Request::SignLiquidTx(params), &*stream)
+            .await?;
         if !sign_response {
             return Err(Error::SignTxRejected);
         }
@@ -33,7 +39,10 @@ impl<S: Stream<Error = Error>> Jade<S> {
             Vec::with_capacity(prepared.len());
 
         for (sign_info, params) in prepared {
-            let signer_commitment = self.tx_input(params).await?.to_vec();
+            let signer_commitment: serde_bytes::ByteBuf = self
+                .send_with_stream(Request::TxInput(params), &*stream)
+                .await?;
+            let signer_commitment = signer_commitment.to_vec();
             signable_inputs.push((sign_info, signer_commitment));
         }
 
@@ -48,7 +57,10 @@ impl<S: Stream<Error = Error>> Jade<S> {
                 None => vec![],
             };
             let params = GetSignatureParams { ae_host_entropy };
-            let sig: Vec<u8> = self.get_signature_for_tx(params).await?.to_vec();
+            let sig: serde_bytes::ByteBuf = self
+                .send_with_stream(Request::GetSignature(params), &*stream)
+                .await?;
+            let sig = sig.to_vec();
             validate_signature(&sign_info, &signer_commitment, &sig)?;
             signatures.push((sign_info, sig));
         }

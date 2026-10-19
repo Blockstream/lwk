@@ -2,7 +2,7 @@ use elements::pset::PartiallySignedTransaction;
 
 use crate::{
     create_jade_sign_req,
-    protocol::GetSignatureParams,
+    protocol::{GetSignatureParams, Request},
     sign_pset_common::{apply_sig, prepare_inputs, validate_signature, SignInfo},
     Error,
 };
@@ -24,7 +24,11 @@ impl Jade {
         let prepared = prepare_inputs(pset, my_fingerprint, network)?;
 
         let mut sigs_added_or_overwritten = 0;
-        let sign_response = self.sign_liquid_tx(params)?;
+
+        // Keep one lock for the whole signing session so no other request can interleave
+        // between `sign_liquid_tx`, `tx_input` and `get_signature`.
+        let mut conn = self.conn.lock()?;
+        let sign_response: bool = self.send_with_conn(Request::SignLiquidTx(params), &mut conn)?;
         if !sign_response {
             return Err(Error::SignTxRejected);
         }
@@ -33,7 +37,9 @@ impl Jade {
             Vec::with_capacity(prepared.len());
 
         for (sign_info, params) in prepared {
-            let signer_commitment = self.tx_input(params)?.to_vec();
+            let signer_commitment: serde_bytes::ByteBuf =
+                self.send_with_conn(Request::TxInput(params), &mut conn)?;
+            let signer_commitment = signer_commitment.to_vec();
             signable_inputs.push((sign_info, signer_commitment));
         }
 
@@ -48,7 +54,9 @@ impl Jade {
                 None => vec![],
             };
             let params = GetSignatureParams { ae_host_entropy };
-            let sig: Vec<u8> = self.get_signature_for_tx(params)?.to_vec();
+            let sig: serde_bytes::ByteBuf =
+                self.send_with_conn(Request::GetSignature(params), &mut conn)?;
+            let sig = sig.to_vec();
             validate_signature(&sign_info, &signer_commitment, &sig)?;
             signatures.push((sign_info, sig));
         }

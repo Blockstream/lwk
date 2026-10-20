@@ -11,6 +11,7 @@ use crate::{
     get_receive_address::GetReceiveAddressParams,
     register_multisig::{GetRegisteredMultisigParams, RegisterMultisigParams},
     sign_liquid_tx::{SignLiquidTxParams, SignPsbtParams, TxInputParams},
+    Error,
 };
 
 #[derive(Debug, Serialize)]
@@ -239,6 +240,52 @@ pub struct Response<T> {
     pub seqlen: Option<u64>,
 }
 
+/// Reasonable, but unreachable upper-bound for `seqlen` value in a split reply.
+const MAX_FRAGMENTS: u64 = 512;
+
+/// Validate one fragment of a split reply.
+pub(crate) fn check_fragment(
+    seqnum: Option<u64>,
+    seqlen: Option<u64>,
+    expected_seqnum: u64,
+    first_seqlen: &mut Option<u64>,
+) -> crate::Result<Option<(u64, u64)>> {
+    let (seqnum, seqlen) = match (seqnum, seqlen) {
+        (Some(seqnum), Some(seqlen)) => (seqnum, seqlen),
+
+        // this case cannot happen in the latest `sign_psbt` version, but could happen in Jade with version 0.*
+        (None, None) if first_seqlen.is_none() => return Ok(None),
+        _ => {
+            return Err(Error::UnexpectedFragment {
+                seqnum,
+                seqlen,
+                expected_seqnum,
+                first_seqlen: *first_seqlen,
+            })
+        }
+    };
+
+    let seqlen_total = *first_seqlen.get_or_insert(seqlen);
+
+    if seqlen != seqlen_total
+        || seqnum != expected_seqnum
+        || !(1..MAX_FRAGMENTS).contains(&seqlen_total)
+    {
+        return Err(Error::UnexpectedFragment {
+            seqnum: Some(seqnum),
+            seqlen: Some(seqlen),
+            expected_seqnum,
+            first_seqlen: Some(seqlen_total),
+        });
+    }
+
+    if seqnum == seqlen_total {
+        Ok(None)
+    } else {
+        Ok(Some((seqnum + 1, seqlen_total)))
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct VersionInfoResult {
@@ -375,7 +422,7 @@ pub struct GetMasterBlindingKeyParams {
 
 #[cfg(test)]
 mod test {
-    use crate::protocol::{select_url, DebugSetMnemonicParams};
+    use crate::protocol::{check_fragment, select_url, DebugSetMnemonicParams, MAX_FRAGMENTS};
 
     #[test]
     fn debug_set_mnemonic_redacts_secrets() {
@@ -419,5 +466,42 @@ mod test {
 
         let urls = [https.to_owned(), onion.to_owned()];
         assert_eq!(select_url(&urls, true), Some(onion));
+    }
+
+    #[test]
+    fn check_fragment_validation() {
+        let mut total = None;
+        assert_eq!(
+            check_fragment(Some(1), Some(3), 1, &mut total).unwrap(),
+            Some((2, 3))
+        );
+        assert_eq!(
+            check_fragment(Some(2), Some(3), 2, &mut total).unwrap(),
+            Some((3, 3))
+        );
+        assert_eq!(
+            check_fragment(Some(3), Some(3), 3, &mut total).unwrap(),
+            None
+        );
+
+        assert_eq!(check_fragment(None, None, 1, &mut None).unwrap(), None);
+
+        assert!(check_fragment(Some(2), Some(3), 1, &mut None).is_err());
+        assert!(check_fragment(Some(1), Some(0), 1, &mut None).is_err());
+        assert!(check_fragment(Some(1), Some(MAX_FRAGMENTS), 1, &mut None).is_err());
+        assert!(check_fragment(Some(1), None, 1, &mut None).is_err());
+        assert!(check_fragment(None, Some(1), 1, &mut None).is_err());
+
+        let mut total = None;
+        check_fragment(Some(1), Some(3), 1, &mut total).unwrap();
+        assert!(check_fragment(Some(3), Some(3), 2, &mut total).is_err());
+
+        let mut total = None;
+        check_fragment(Some(1), Some(3), 1, &mut total).unwrap();
+        assert!(check_fragment(Some(2), Some(4), 2, &mut total).is_err());
+
+        let mut total = None;
+        check_fragment(Some(1), Some(3), 1, &mut total).unwrap();
+        assert!(check_fragment(None, None, 2, &mut total).is_err());
     }
 }

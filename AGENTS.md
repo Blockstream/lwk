@@ -186,7 +186,7 @@ Format: `context: <description>`
 - For crates, do not include `lwk_` for example `lwk_wollet:` use just `wollet:`
 - Breaking changes: append `!` after context
 - Title: max 50 chars, imperative mood, no period
-- Body: blank line after title, explain "why", use bullet points
+- Body: blank line after title, explain "why", use bullet points; wrap text at 72 characters.
 - Do not add "Co-Authored-By: <LLM>" as this provides free advertising for the model.
   The commit author is fully responsible for the commit changes, the LLM is not.
 

@@ -3920,6 +3920,15 @@ fn test_finalize_diff_sighashes() {
         .finish()
         .unwrap();
 
+    // Unsigned pset cannot be finalized
+    let err = wallet.wollet.finalize(&mut pset).unwrap_err();
+    use elements_miniscript::psbt::{self, InputError};
+    let expected = Error::CannotFinalize(vec![psbt::Error::InputError(
+        InputError::MiniscriptError(elements_miniscript::Error::CouldNotSatisfy),
+        0,
+    )]);
+    assert_eq!(err.to_string(), expected.to_string());
+
     // Note: a PSET/PSBT input have a unique sighash type, even in the case it requires multiple
     // signatures, which might be done with different sighashes.
     // So for this test we need to edit the PSET before signing it with a different sighash.

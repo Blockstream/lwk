@@ -1197,7 +1197,9 @@ impl Wollet {
         Ok(res)
     }
 
-    /// Finalize a PSET, extracting a broadcastable transaction
+    /// Finalize a PSET and extract the transaction
+    ///
+    /// Note: it is not guaranteed that the extracted transaction can be broadcast.
     pub fn finalize(&self, pset: &mut PartiallySignedTransaction) -> Result<Transaction, Error> {
         // elements-miniscript does not finalize PSET inputs if they have signature with different
         // sighashes. To workaround this, if necessary we replace the sighash in the signatures
@@ -1245,16 +1247,15 @@ impl Wollet {
                 // In some case "finalize" finalizes all inputs but return some error
                 let seems_finalized = |i: &elements::pset::Input| -> bool {
                     i.partial_sigs.is_empty()
-                        && (!i
+                        && (i
                             .final_script_witness
                             .as_ref()
-                            .is_some_and(|v| v.is_empty())
-                            || !i.final_script_sig.as_ref().is_some_and(|v| v.is_empty()))
+                            .is_some_and(|v| !v.is_empty())
+                            || i.final_script_sig.as_ref().is_some_and(|v| !v.is_empty()))
                 };
                 if !pset.inputs().iter().all(seems_finalized) {
                     // Failed to finalize all inputs
-                    // TODO: do not use Generic
-                    return Err(Error::Generic(format!("{errors:?}")));
+                    return Err(Error::CannotFinalize(errors));
                 }
             }
             // If some inputs have been finalized ignore the other errors

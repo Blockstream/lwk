@@ -98,6 +98,9 @@ pub enum Error {
     #[error(transparent)]
     ElementsMiniscriptPset(#[from] elements_miniscript::psbt::Error),
 
+    #[error("Cannot finalize inputs: {0:?}")]
+    CannotFinalize(Vec<elements_miniscript::psbt::Error>),
+
     #[error(transparent)]
     DescConversion(#[from] elements_miniscript::descriptor::ConversionError),
 

@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use crate::{Bip, DerivationPath, Error, Mnemonic, Network, Pset, WolletDescriptor, Xpub};
-use lwk_common::Signer as SignerTrait;
+use lwk_common::{ss_path, SSAccountType, Signer as SignerTrait, Stream};
+use lwk_jade::{asyncr, derivation_path_to_vec, protocol::GetXpubParams};
 use lwk_wollet::{
     bitcoin::bip32, bitcoin::sign_message::MessageSignature,
     elements::pset::PartiallySignedTransaction, elements_miniscript::slip77,
@@ -102,13 +103,52 @@ impl Signer {
 
 #[allow(dead_code)]
 #[derive(Debug)]
-// Used internally to emulate a sync signer for some methods
-pub(crate) struct FakeSigner {
-    pub(crate) paths: HashMap<bip32::DerivationPath, bip32::Xpub>,
-    pub(crate) slip77: slip77::MasterBlindingKey,
+// Used internally to emulate a sync signer for some methods, it is a snapshot of the values
+// cached in the async Jade
+pub(crate) struct CachedSigner {
+    paths: HashMap<bip32::DerivationPath, bip32::Xpub>,
+    slip77: slip77::MasterBlindingKey,
+    network: lwk_common::Network,
 }
 
-impl lwk_common::Signer for FakeSigner {
+#[allow(dead_code)]
+impl CachedSigner {
+    /// Build the signer using the values cached in `jade`, asking the device only for the
+    /// values not cached yet.
+    ///
+    /// The Jade must be already unlocked.
+    pub(crate) async fn new<S: Stream<Error = lwk_jade::Error>>(
+        jade: &asyncr::Jade<S>,
+    ) -> Result<Self, Error> {
+        let network = jade.network();
+        let mut paths = HashMap::new();
+
+        let coin_type = if network.is_mainnet() { 1776 } else { 1 };
+        let bip32_paths = vec![
+            ss_path(&network, SSAccountType::Wpkh, 0)?,
+            ss_path(&network, SSAccountType::ShWpkh, 0)?,
+            // Multisig (BIP87) needs its own handling
+            format!("m/87h/{coin_type}h/0h").parse()?,
+            bip32::DerivationPath::master(),
+        ];
+        for derivation_path in bip32_paths {
+            let path = derivation_path_to_vec(&derivation_path);
+            let xpub = jade
+                .get_cached_xpub(GetXpubParams { network, path })
+                .await?;
+            paths.insert(derivation_path, xpub);
+        }
+        let slip77 = jade.slip77_master_blinding_key().await?;
+
+        Ok(CachedSigner {
+            paths,
+            slip77,
+            network,
+        })
+    }
+}
+
+impl lwk_common::Signer for CachedSigner {
     type Error = String;
 
     fn sign(&self, _pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
@@ -127,7 +167,7 @@ impl lwk_common::Signer for FakeSigner {
     }
 
     fn network(&self) -> Result<lwk_common::Network, Self::Error> {
-        Ok(lwk_common::Network::default_regtest())
+        Ok(self.network)
     }
 
     fn sign_message(

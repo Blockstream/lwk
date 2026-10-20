@@ -202,7 +202,20 @@ Format: `context: <description>`
 - Use `lwk_test_util` for shared test utilities
 - E2E tests require Docker environment (Jade emulator, etc.)
 - Possible panics, unchecked index array access, unwraps, are allowed in testing code.
+- Default: write fewer tests. Every test must justify its maintenance cost.
+- Write a test only when it:
+  - covers a bug just fixed (regression test), or
+  - covers non-trivial pure logic (parsing, encoding, math, state machines), or
+  - pins a public API contract or wire/serialization format.
 - Do not suggest safety improvements (e.g., bounds checks, error handling) for these in tests unless they cause compile/run failures.
+- Do not test private functions, internal structure, or call order. Test through the public API only.
+- Do not mock or stub internal modules. Mock only true external boundaries, and only when really necessary.
+- Do not assert on implementation details (exact log messages, intermediate state, struct layout, number of calls).
+- Do not write tests that restate the code (getters/setters, constructors, trivial delegation, derive-generated behavior).
+- Do not duplicate coverage that integration/e2e tests already provide.
+- Do not write several near-identical tests; use one table-driven/parametrized test.
+- Before adding a test, ask: would this fail if behavior broke, or only if the code was refactored? If the latter, don't write it.
+- Scope: when changing code, don't add tests for untouched code. Keep new tests to a few per change, and say in the summary why each exists. If unsure whether a test is worth it, skip it and ask
 
 ## Additional Resources
 - CI Configuration: `.gitlab-ci.yml` (GitLab) and `.github/workflows/` (GitHub)

@@ -52,6 +52,9 @@ pub struct Jade {
     /// Cached xpubs
     cached_xpubs: Mutex<HashMap<DerivationPath, Xpub>>,
 
+    /// Cached slip77 master blinding key
+    cached_master_blinding_key: Mutex<Option<MasterBlindingKey>>,
+
     /// Cached multisigs details
     multisigs_details: Mutex<Option<Vec<RegisteredMultisigDetails>>>,
 }
@@ -99,6 +102,7 @@ impl Jade {
             conn: Mutex::new(conn),
             network,
             cached_xpubs: Mutex::new(HashMap::new()),
+            cached_master_blinding_key: Mutex::new(None),
             multisigs_details: Mutex::new(None),
         }
     }
@@ -526,6 +530,10 @@ impl Signer for &Jade {
     fn slip77_master_blinding_key(
         &self,
     ) -> std::result::Result<slip77::MasterBlindingKey, Self::Error> {
+        let mut guard = self.cached_master_blinding_key.lock()?;
+        if let Some(key) = guard.as_ref() {
+            return Ok(*key);
+        }
         let params = GetMasterBlindingKeyParams {
             only_if_silent: false,
         };
@@ -534,7 +542,9 @@ impl Signer for &Jade {
             .to_vec()
             .try_into()
             .map_err(|_| Self::Error::Slip77MasterBlindingKeyInvalidSize)?;
-        Ok(slip77::MasterBlindingKey::from(array))
+        let key = slip77::MasterBlindingKey::from(array);
+        *guard = Some(key);
+        Ok(key)
     }
 
     fn sign_message(

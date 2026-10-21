@@ -209,6 +209,7 @@ Format: `context: <description>`
   - pins a public API contract or wire/serialization format.
 - Do not suggest safety improvements (e.g., bounds checks, error handling) for these in tests unless they cause compile/run failures.
 - Do not test private functions, internal structure, or call order. Test through the public API only.
+- Scratch tests: tests written to drive development (TDD, debugging, exploring behavior) are temporary scaffolding. Before finishing, delete them, or keep only those that meet the criteria above (regression, non-trivial pure logic, public contract). Never leave a test in the diff just because it was useful while coding.
 - Do not mock or stub internal modules. Mock only true external boundaries, and only when really necessary.
 - Do not assert on implementation details (exact log messages, intermediate state, struct layout, number of calls).
 - Do not write tests that restate the code (getters/setters, constructors, trivial delegation, derive-generated behavior).

@@ -289,6 +289,9 @@ pub enum Error {
     #[error("Cannot parse server recipient key")]
     CannotParseRecipientKey,
 
+    #[error("Waterfalls returned page {returned}, requested page {requested}")]
+    WaterfallsUnexpectedPage { requested: u32, returned: u16 },
+
     #[cfg(any(feature = "electrum", feature = "amp2"))]
     #[error(transparent)]
     Url(#[from] UrlError),

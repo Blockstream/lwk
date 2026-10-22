@@ -328,7 +328,7 @@ impl EsploraClient {
     async fn get_address_history_waterfalls_from_page(
         &self,
         address: &str,
-        start_page: u16,
+        start_page: u32,
     ) -> Result<Vec<History>, Error> {
         let mut result = vec![];
         let mut page = start_page;
@@ -347,6 +347,7 @@ impl EsploraClient {
             }
 
             let waterfalls_result: WaterfallsResult = serde_json::from_str(&body)?;
+            waterfalls_result.check_page(page)?;
             let has_more = waterfalls_result
                 .has_more
                 .as_ref()
@@ -362,7 +363,7 @@ impl EsploraClient {
                 return Ok(result);
             }
 
-            page = waterfalls_result.page + 1;
+            page += 1;
         }
 
         Err(Error::Generic("too many pages requests".into()))
@@ -663,7 +664,7 @@ impl EsploraClient {
         }
         let base_desc = descriptor.bitcoin_descriptor_without_key_origin()?;
 
-        let mut page = 0;
+        let mut page: u32 = 0;
         let mut data = Data::default();
         let mut scripts_by_address = HashMap::new();
         let mut has_more = HashSet::new();
@@ -712,6 +713,7 @@ impl EsploraClient {
             }
 
             let waterfalls_result: WaterfallsResult = serde_json::from_str(&body)?;
+            waterfalls_result.check_page(page)?;
             if let Some(addresses) = &waterfalls_result.has_more {
                 has_more.extend(addresses.iter().cloned());
             }
@@ -733,9 +735,8 @@ impl EsploraClient {
                     data.last_unused[chain] = max + 1;
                 }
                 for (i, script_history) in chain_history.iter().enumerate() {
-                    let child = ChildNumber::from(
-                        waterfalls_result.page as u32 * WATERFALLS_MAX_ADDRESSES as u32 + i as u32,
-                    );
+                    let child =
+                        ChildNumber::from(page * WATERFALLS_MAX_ADDRESSES as u32 + i as u32);
                     let (script, blinding_pubkey, cached) = cache.get_or_derive(chain, child)?;
                     if !cached {
                         data.scripts
@@ -760,7 +761,6 @@ impl EsploraClient {
                 }
             }
             data.tip = waterfalls_result.tip;
-            page = waterfalls_result.page + 1;
 
             let total = waterfalls_result
                 .txs_seen
@@ -772,6 +772,7 @@ impl EsploraClient {
             if total < WATERFALLS_MAX_ADDRESSES {
                 break;
             }
+            page += 1;
         }
 
         if self.utxo_only && !has_more.is_empty() {
@@ -1225,6 +1226,22 @@ struct WaterfallsResult {
     pub page: u16,
     pub tip: Option<BlockHash>,
     pub has_more: Option<Vec<String>>,
+}
+
+impl WaterfallsResult {
+    /// Error if the server returned a different page than the requested one.
+    ///
+    /// Derivation indexes are computed from the requested page, the returned page is only
+    /// checked to detect servers ignoring the page parameter.
+    fn check_page(&self, requested: u32) -> Result<(), Error> {
+        if u32::from(self.page) != requested {
+            return Err(Error::WaterfallsUnexpectedPage {
+                requested,
+                returned: self.page,
+            });
+        }
+        Ok(())
+    }
 }
 
 /// Response from the last_used_index endpoint

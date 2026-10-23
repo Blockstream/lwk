@@ -58,9 +58,7 @@ impl TxBuilder {
         let mut selected_utxos = vec![];
         if let Some(ref coins) = self.selected_utxos {
             for coin in coins {
-                let utxo = utxos
-                    .get(coin)
-                    .expect("outpoint was validated in validate_manual_inputs()");
+                let utxo = utxos.get(coin).ok_or(Error::MissingWalletUtxo(*coin))?;
                 selected_utxos.push(utxo);
             }
         }
@@ -185,7 +183,7 @@ impl TxBuilder {
                         &mut inp_weight,
                         external_by_outpoint
                             .get(outpoint)
-                            .expect("set equality checked at the top"),
+                            .ok_or(Error::InputsOrderUtxosMismatch)?,
                         self.add_input_rangeproofs,
                     )?;
                 }
@@ -365,7 +363,7 @@ impl TxBuilder {
                 for (request, outpoint) in requests {
                     let idx = *inputs_idx_map
                         .get(&outpoint)
-                        .expect("outpoint was validated in validate_issuances()");
+                        .ok_or(Error::IssuanceOutpointNotInInputsOrder(outpoint))?;
 
                     set_issuance(idx, request, &mut pset)?;
                 }

@@ -867,7 +867,7 @@ dependencies = [
  "bip85_extended",
  "bitcoin",
  "boltz-client-macros",
- "electrum-client 0.25.1",
+ "electrum-client 0.25.2",
  "elements",
  "env_logger",
  "futures-util",
@@ -1625,9 +1625,9 @@ dependencies = [
 
 [[package]]
 name = "electrum-client"
-version = "0.25.1"
+version = "0.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "436db7172bcd34f958265b9d545d247fb28c0d1be73de3042169baabd86d6f64"
+checksum = "19701e9c0ce6e3337eb31bd307b854e762c6ffa2ccd19167ebd3588ec53e4447"
 dependencies = [
  "bitcoin",
  "byteorder",
@@ -1636,7 +1636,7 @@ dependencies = [
  "rustls",
  "serde",
  "serde_json",
- "webpki-roots 0.25.4",
+ "webpki-roots 1.0.10",
  "winapi",
 ]
 
@@ -3444,7 +3444,7 @@ dependencies = [
  "bitcoincore-rpc",
  "cbc",
  "criterion",
- "electrum-client 0.25.1",
+ "electrum-client 0.25.2",
  "elements",
  "elements-miniscript",
  "flate2",
@@ -4741,7 +4741,7 @@ version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9465315bc9d4566e1724f0fffcbcc446268cb522e60f9a27bcded6b19c108113"
 dependencies = [
- "bitcoin_hashes 0.14.101",
+ "bitcoin_hashes 0.13.0",
  "rand 0.8.5",
  "secp256k1-sys 0.10.1",
  "serde",
@@ -6508,12 +6508,6 @@ dependencies = [
  "js-sys",
  "wasm-bindgen",
 ]
-
-[[package]]
-name = "webpki-roots"
-version = "0.25.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f20c57d8d7db6d3b86154206ae5d8fba62dd39573114de97c2cb0578251f8e1"
 
 [[package]]
 name = "webpki-roots"

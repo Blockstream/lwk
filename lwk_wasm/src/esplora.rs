@@ -70,6 +70,18 @@ pub struct WaterfallsSubscription {
     on_error: Option<Closure<dyn FnMut(web_sys::Event)>>,
 }
 
+/// A builder for constructing [`EsploraClient`] instances.
+#[wasm_bindgen]
+pub struct EsploraClientBuilder {
+    inner: asyncr::EsploraClientBuilder,
+}
+
+impl From<asyncr::EsploraClientBuilder> for EsploraClientBuilder {
+    fn from(value: asyncr::EsploraClientBuilder) -> Self {
+        Self { inner: value }
+    }
+}
+
 /// A builder for constructing [`WaterfallsClient`] instances.
 #[wasm_bindgen]
 pub struct WaterfallsClientBuilder {
@@ -99,6 +111,49 @@ impl EsploraClient {
 }
 
 #[wasm_bindgen]
+impl EsploraClientBuilder {
+    /// Create a builder for an Esplora client.
+    #[wasm_bindgen(constructor)]
+    pub fn new(network: &Network, url: &str) -> Self {
+        asyncr::EsploraClientBuilder::new(url, network.into()).into()
+    }
+
+    /// Set the concurrency level for requests, default is 1.
+    ///
+    /// Concurrency can't be 0; if 0 is passed, 1 will be used.
+    pub fn concurrency(self, concurrency: usize) -> Self {
+        self.inner.concurrency(concurrency).into()
+    }
+
+    /// Set the maximum duration in seconds of a scan, default is 10 minutes.
+    #[wasm_bindgen(js_name = scanTimeout)]
+    pub fn scan_timeout(self, seconds: u32) -> Self {
+        self.inner
+            .scan_timeout(std::time::Duration::from_secs(seconds.into()))
+            .into()
+    }
+
+    /// Set the maximum size in bytes of a single response, default is 64 MiB.
+    #[wasm_bindgen(js_name = maxResponseSize)]
+    pub fn max_response_size(self, bytes: u32) -> Self {
+        self.inner.max_response_size(bytes as usize).into()
+    }
+
+    /// Build the Esplora client from this builder.
+    pub fn build(self) -> Result<EsploraClient, Error> {
+        let inner = self
+            .inner
+            .clone()
+            .build()
+            .map_err(|e| Error::Generic(e.to_string()))?;
+        Ok(EsploraClient {
+            inner,
+            builder: self.inner,
+        })
+    }
+}
+
+#[wasm_bindgen]
 impl WaterfallsClientBuilder {
     /// Create a builder for a Waterfalls client.
     #[wasm_bindgen(constructor)]
@@ -119,6 +174,20 @@ impl WaterfallsClientBuilder {
     #[wasm_bindgen(js_name = utxoOnly)]
     pub fn utxo_only(self, utxo_only: bool) -> Self {
         self.inner.utxo_only(utxo_only).into()
+    }
+
+    /// Set the maximum duration in seconds of a scan, default is 10 minutes.
+    #[wasm_bindgen(js_name = scanTimeout)]
+    pub fn scan_timeout(self, seconds: u32) -> Self {
+        self.inner
+            .scan_timeout(std::time::Duration::from_secs(seconds.into()))
+            .into()
+    }
+
+    /// Set the maximum size in bytes of a single response, default is 64 MiB.
+    #[wasm_bindgen(js_name = maxResponseSize)]
+    pub fn max_response_size(self, bytes: u32) -> Self {
+        self.inner.max_response_size(bytes as usize).into()
     }
 
     /// Build the Waterfalls client from this builder.

@@ -108,7 +108,7 @@ pub(crate) use error::Error;
 pub use error::MagicRoutingHint;
 #[cfg(all(feature = "browser", target_arch = "wasm32"))]
 pub use esplora::WaterfallsSubscription;
-pub use esplora::{EsploraClient, WaterfallsClient, WaterfallsClientBuilder};
+pub use esplora::{EsploraClient, EsploraClientBuilder, WaterfallsClient, WaterfallsClientBuilder};
 pub use fees::Fees;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use jade::{Jade, Singlesig};

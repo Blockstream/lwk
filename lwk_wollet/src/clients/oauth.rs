@@ -2,7 +2,11 @@
 //! and, behind the `electrum_oidc` feature, the Electrum client).
 
 use crate::Error;
+use futures::StreamExt;
 use reqwest::Response;
+
+/// Maximum number of characters of an error body kept in [`Error::EsploraHttpError`]
+const ERROR_BODY_MAX_CHARS: usize = 500;
 
 /// Builds an [`Error`] describing an unsuccessful HTTP response, including the
 /// status code and (a bounded prefix of) the response body so failures like an
@@ -16,13 +20,30 @@ pub(crate) async fn error_for_status(url: &str, response: Response) -> Error {
     if status == 402 {
         return Error::InsufficientCredits;
     }
-    let body = response.text().await.unwrap_or_default();
-    let snippet: String = body.trim().chars().take(500).collect();
+    let body = read_error_body(response).await;
+    let snippet: String = body.trim().chars().take(ERROR_BODY_MAX_CHARS).collect();
     Error::EsploraHttpError {
         url: url.to_string(),
         status,
         body: (!snippet.is_empty()).then_some(snippet),
     }
+}
+
+/// Read the start of an error body, enough to fill the snippet even with 4-byte characters.
+///
+/// The rest of the body is never downloaded, so a server can't make us read a huge error body.
+async fn read_error_body(response: Response) -> String {
+    let limit = ERROR_BODY_MAX_CHARS * 4;
+    let mut body = Vec::new();
+    let mut stream = response.bytes_stream();
+    while body.len() < limit {
+        match stream.next().await {
+            Some(Ok(chunk)) => body.extend_from_slice(&chunk),
+            _ => break,
+        }
+    }
+    body.truncate(limit);
+    String::from_utf8_lossy(&body).into_owned()
 }
 
 /// Fetches an OAuth2 access token using client credentials flow

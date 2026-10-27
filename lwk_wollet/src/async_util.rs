@@ -40,6 +40,13 @@ pub async fn async_sleep(millis: u64) -> Result<(), Error> {
     Ok(())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+/// Sleep asynchronously for the given number of milliseconds on non-WASM targets.
+pub async fn async_sleep(millis: u64) -> Result<(), Error> {
+    tokio::time::sleep(tokio::time::Duration::from_millis(millis)).await;
+    Ok(())
+}
+
 /// The function named `name` on the global object, if any.
 #[cfg(target_arch = "wasm32")]
 fn global_function(global: &js_sys::Object, name: &str) -> Option<js_sys::Function> {
@@ -63,13 +70,6 @@ impl Drop for ClearTimeoutOnDrop {
             let _ = clear_timeout.call1(&self.global, &self.id);
         }
     }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-/// Sleep asynchronously for the given number of milliseconds on non-WASM targets.
-pub async fn async_sleep(millis: u64) -> Result<(), Error> {
-    tokio::time::sleep(tokio::time::Duration::from_millis(millis)).await;
-    Ok(())
 }
 
 /// Run `future`, failing with the error built by `on_timeout` if it does not complete within

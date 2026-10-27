@@ -4,14 +4,14 @@ use crate::Error;
 /// Sleep asynchronously for the given number of milliseconds on WASM targets.
 ///
 /// Uses the global `setTimeout`, so it works in browser windows, Web Workers and Node.js.
+/// If the returned future is dropped before the timer fires, the timer is cleared: a pending
+/// timer would otherwise keep a Node.js process alive until it fires.
 #[cfg(target_arch = "wasm32")]
 pub async fn async_sleep(millis: u64) -> Result<(), Error> {
+    let global = js_sys::global();
+    let mut timer = None;
     let mut cb = |resolve: js_sys::Function, reject: js_sys::Function| {
-        let global = js_sys::global();
-        let result = js_sys::Reflect::get(&global, &js_sys::JsString::from("setTimeout"))
-            .ok()
-            .filter(|set_timeout| set_timeout.is_function())
-            .map(js_sys::Function::from)
+        let result = global_function(&global, "setTimeout")
             .ok_or(Error::AsyncSleepMissingWindow)
             .and_then(|set_timeout| {
                 let millis = js_sys::Number::from(millis.min(i32::MAX as u64) as f64);
@@ -20,15 +20,49 @@ pub async fn async_sleep(millis: u64) -> Result<(), Error> {
                     .map_err(|err| Error::AsyncSleepFailed(format!("{err:?}")))
             });
 
-        if let Err(err) = result {
-            let _ = reject.call1(&js_sys::Object::new().into(), &err.to_string().into());
+        match result {
+            Ok(id) => {
+                timer = Some(ClearTimeoutOnDrop {
+                    global: global.clone(),
+                    id,
+                })
+            }
+            Err(err) => {
+                let _ = reject.call1(&js_sys::Object::new().into(), &err.to_string().into());
+            }
         }
     };
     let p = js_sys::Promise::new(&mut cb);
+    let _timer = timer;
     wasm_bindgen_futures::JsFuture::from(p)
         .await
         .map_err(|err| Error::AsyncSleepFailed(format!("{err:?}")))?;
     Ok(())
+}
+
+/// The function named `name` on the global object, if any.
+#[cfg(target_arch = "wasm32")]
+fn global_function(global: &js_sys::Object, name: &str) -> Option<js_sys::Function> {
+    js_sys::Reflect::get(global, &js_sys::JsString::from(name))
+        .ok()
+        .filter(|value| value.is_function())
+        .map(js_sys::Function::from)
+}
+
+/// Clears a `setTimeout` timer when dropped, a no-op if it has already fired.
+#[cfg(target_arch = "wasm32")]
+struct ClearTimeoutOnDrop {
+    global: js_sys::Object,
+    id: js_sys::wasm_bindgen::JsValue,
+}
+
+#[cfg(target_arch = "wasm32")]
+impl Drop for ClearTimeoutOnDrop {
+    fn drop(&mut self) {
+        if let Some(clear_timeout) = global_function(&self.global, "clearTimeout") {
+            let _ = clear_timeout.call1(&self.global, &self.id);
+        }
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]

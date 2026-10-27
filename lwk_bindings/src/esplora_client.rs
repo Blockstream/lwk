@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use lwk_wollet::{
     asyncr,
@@ -166,6 +167,12 @@ pub struct EsploraClientBuilder {
     /// Token provider for authenticated Esplora and Waterfalls backends
     #[uniffi(default = None)]
     token_provider: Option<TokenProvider>,
+    /// Maximum duration in seconds of a scan, default is 10 minutes
+    #[uniffi(default = None)]
+    scan_timeout: Option<u32>,
+    /// Maximum size in bytes of a single response, default is 64 MiB
+    #[uniffi(default = None)]
+    max_response_size: Option<u64>,
 }
 
 /// A builder for the `WaterfallsClient`
@@ -185,6 +192,12 @@ pub struct WaterfallsClientBuilder {
     /// Token provider for authenticated Waterfalls backends
     #[uniffi(default = None)]
     token_provider: Option<TokenProvider>,
+    /// Maximum duration in seconds of a scan, default is 10 minutes
+    #[uniffi(default = None)]
+    scan_timeout: Option<u32>,
+    /// Maximum size in bytes of a single response, default is 64 MiB
+    #[uniffi(default = None)]
+    max_response_size: Option<u64>,
 }
 
 impl From<EsploraClientBuilder> for lwk_wollet::clients::EsploraClientBuilder {
@@ -212,6 +225,13 @@ impl From<EsploraClientBuilder> for lwk_wollet::clients::EsploraClientBuilder {
         if let Some(token_provider) = builder.token_provider {
             result = result.token_provider(token_provider.into());
         }
+        if let Some(scan_timeout) = builder.scan_timeout {
+            result = result.scan_timeout(Duration::from_secs(scan_timeout.into()));
+        }
+        if let Some(max_response_size) = builder.max_response_size {
+            result =
+                result.max_response_size(usize::try_from(max_response_size).unwrap_or(usize::MAX));
+        }
         result
     }
 }
@@ -236,6 +256,13 @@ impl From<WaterfallsClientBuilder> for lwk_wollet::clients::WaterfallsClientBuil
         }
         if let Some(token_provider) = builder.token_provider {
             result = result.token_provider(token_provider.into());
+        }
+        if let Some(scan_timeout) = builder.scan_timeout {
+            result = result.scan_timeout(Duration::from_secs(scan_timeout.into()));
+        }
+        if let Some(max_response_size) = builder.max_response_size {
+            result =
+                result.max_response_size(usize::try_from(max_response_size).unwrap_or(usize::MAX));
         }
         result
     }
@@ -511,6 +538,8 @@ mod tests {
                 client_id: "id".to_string(),
                 client_secret: "secret".to_string(),
             }),
+            scan_timeout: None,
+            max_response_size: None,
         };
         assert!(EsploraClient::from_builder(builder).is_ok());
 
@@ -528,6 +557,8 @@ mod tests {
             token_provider: Some(TokenProvider::Static {
                 token: "tok".to_string(),
             }),
+            scan_timeout: None,
+            max_response_size: None,
         };
         assert!(EsploraClient::from_builder(builder).is_ok());
     }
@@ -544,6 +575,8 @@ mod tests {
             token_provider: Some(TokenProvider::Static {
                 token: "tok".to_string(),
             }),
+            scan_timeout: None,
+            max_response_size: None,
         };
         assert!(WaterfallsClient::from_builder(builder).is_ok());
     }

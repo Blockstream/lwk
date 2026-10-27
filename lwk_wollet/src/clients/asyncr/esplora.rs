@@ -681,6 +681,7 @@ impl EsploraClient {
     }
 
     /// The maximum duration of a full scan.
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn scan_timeout(&self) -> Duration {
         self.scan_timeout
     }

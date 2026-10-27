@@ -3476,7 +3476,6 @@ dependencies = [
  "tokio-tungstenite",
  "url",
  "wasm-bindgen-futures",
- "web-sys",
  "zmq",
 ]
 

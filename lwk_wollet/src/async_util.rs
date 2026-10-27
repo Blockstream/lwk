@@ -2,17 +2,21 @@
 use crate::Error;
 
 /// Sleep asynchronously for the given number of milliseconds on WASM targets.
+///
+/// Uses the global `setTimeout`, so it works in browser windows, Web Workers and Node.js.
 #[cfg(target_arch = "wasm32")]
 pub async fn async_sleep(millis: u64) -> Result<(), Error> {
     let mut cb = |resolve: js_sys::Function, reject: js_sys::Function| {
-        let result = web_sys::window()
+        let global = js_sys::global();
+        let result = js_sys::Reflect::get(&global, &js_sys::JsString::from("setTimeout"))
+            .ok()
+            .filter(|set_timeout| set_timeout.is_function())
+            .map(js_sys::Function::from)
             .ok_or(Error::AsyncSleepMissingWindow)
-            .and_then(|window| {
-                window
-                    .set_timeout_with_callback_and_timeout_and_arguments_0(
-                        &resolve,
-                        millis.min(i32::MAX as u64) as i32,
-                    )
+            .and_then(|set_timeout| {
+                let millis = js_sys::Number::from(millis.min(i32::MAX as u64) as f64);
+                set_timeout
+                    .call2(&global, &resolve, &millis)
                     .map_err(|err| Error::AsyncSleepFailed(format!("{err:?}")))
             });
 

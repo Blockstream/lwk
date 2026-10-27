@@ -408,7 +408,7 @@ pub enum Error {
     )]
     UtxoOnlyIncompatible,
 
-    #[error("Cannot access browser window for async sleep")]
+    #[error("Cannot access setTimeout for async sleep")]
     AsyncSleepMissingWindow,
 
     #[error("Async sleep failed: {0}")]

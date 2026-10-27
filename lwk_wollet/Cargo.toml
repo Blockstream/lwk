@@ -78,7 +78,6 @@ tokio = { version = "1.36.0", default-features = false, features = [
 ] }
 # wasm
 wasm-bindgen-futures = { version = "0.4.41" }
-web-sys = { version = "0.3.68", features = ["Window"] }
 js-sys = { version = "0.3.68" }
 
 [dev-dependencies]

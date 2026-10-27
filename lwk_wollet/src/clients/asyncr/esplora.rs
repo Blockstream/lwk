@@ -680,6 +680,11 @@ impl EsploraClient {
         self.get_or_encrypt_descriptor(&base_desc).await
     }
 
+    /// The maximum duration of a full scan.
+    pub(crate) fn scan_timeout(&self) -> Duration {
+        self.scan_timeout
+    }
+
     /// Fetch the history of the descriptor, including the follow-up pages of addresses with
     /// many transactions.
     pub(crate) async fn get_history_waterfalls<S: WolletState>(

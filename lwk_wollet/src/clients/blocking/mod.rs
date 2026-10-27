@@ -182,98 +182,7 @@ pub trait BlockchainBackend {
         state: &S,
         index: u32,
     ) -> Result<Option<Update>, Error> {
-        if state.utxo_only() != self.utxo_only() {
-            return Err(Error::UtxoOnlyIncompatible);
-        }
-        let descriptor = state.descriptor();
-
-        let Data {
-            txid_height,
-            scripts,
-            last_unused,
-            height_blockhash,
-            height_timestamp: _height_timestamp,
-            tip: _,
-            unspent,
-        } = if self.capabilities().contains(&Capability::Waterfalls) {
-            match self.get_history_waterfalls(&descriptor, state, index) {
-                Ok(d) => d,
-                Err(Error::UsingWaterfallsWithElip151) => {
-                    self.get_history(&descriptor, state, index, state.last_unused())?
-                }
-                Err(e) => return Err(e),
-            }
-        } else {
-            self.get_history(&descriptor, state, index, state.last_unused())?
-        };
-
-        let tip = self.tip()?;
-
-        let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
-        let new_txs = self.download_txs(&history_txs_id, &scripts, state, &descriptor)?;
-
-        let history_txs_heights_plus_tip: HashSet<Height> = txid_height
-            .values()
-            .filter_map(|e| *e)
-            .chain(std::iter::once(tip.height))
-            .collect();
-        let timestamps =
-            self.download_headers(&history_txs_heights_plus_tip, &height_blockhash, state)?;
-
-        let cache_last_unused_external = state.last_unused()[Chain::External];
-        let cache_last_unused_internal = state.last_unused()[Chain::Internal];
-
-        let last_unused_changed = cache_last_unused_external != last_unused.external
-            || cache_last_unused_internal != last_unused.internal;
-
-        let changed = !new_txs.txs.is_empty()
-            || last_unused_changed
-            || !scripts.is_empty()
-            || !timestamps.is_empty()
-            || state.tip() != (tip.height, tip.block_hash());
-
-        if changed {
-            log::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !timestamps.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timestamps.is_empty() );
-
-            let txid_height_new: Vec<_> = txid_height
-                .iter()
-                .filter(|(k, v)| match state.heights().get(*k) {
-                    Some(e) => e != *v,
-                    None => true,
-                })
-                .map(|(k, v)| (*k, *v))
-                .collect();
-            let txid_height_delete: Vec<_> = state
-                .heights()
-                .keys()
-                .filter(|k| !txid_height.contains_key(*k))
-                .cloned()
-                .collect();
-            let wollet_status = state.wollet_status();
-
-            let scripts_with_blinding_pubkey: Vec<(_, _, _, _)> = scripts
-                .iter()
-                .map(|(script, (chain, child, blinding_pubkey))| {
-                    (*chain, *child, script.clone(), *blinding_pubkey)
-                })
-                .collect();
-
-            let update = Update {
-                version: 4,
-                wollet_status,
-                new_txs,
-                txid_height_new,
-                txid_height_delete,
-                timestamps,
-                scripts_with_blinding_pubkey,
-                tip,
-                unspent,
-                last_unused,
-            };
-            Ok(Some(update))
-        } else {
-            Ok(None)
-        }
+        full_scan_to_index_default(self, state, index)
     }
 
     /// Download and unblind the transactions
@@ -373,5 +282,106 @@ pub trait BlockchainBackend {
         let has_any_tx = histories.into_iter().any(|history| !history.is_empty());
 
         Ok(has_any_tx)
+    }
+}
+
+/// The default implementation of [`BlockchainBackend::full_scan_to_index()`], shared with clients
+/// that override it to wrap the scan, e.g. to bound it in time.
+pub(crate) fn full_scan_to_index_default<B: BlockchainBackend + ?Sized, S: WolletState>(
+    backend: &mut B,
+    state: &S,
+    index: u32,
+) -> Result<Option<Update>, Error> {
+    if state.utxo_only() != backend.utxo_only() {
+        return Err(Error::UtxoOnlyIncompatible);
+    }
+    let descriptor = state.descriptor();
+
+    let Data {
+        txid_height,
+        scripts,
+        last_unused,
+        height_blockhash,
+        height_timestamp: _height_timestamp,
+        tip: _,
+        unspent,
+    } = if backend.capabilities().contains(&Capability::Waterfalls) {
+        match backend.get_history_waterfalls(&descriptor, state, index) {
+            Ok(d) => d,
+            Err(Error::UsingWaterfallsWithElip151) => {
+                backend.get_history(&descriptor, state, index, state.last_unused())?
+            }
+            Err(e) => return Err(e),
+        }
+    } else {
+        backend.get_history(&descriptor, state, index, state.last_unused())?
+    };
+
+    let tip = backend.tip()?;
+
+    let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
+    let new_txs = backend.download_txs(&history_txs_id, &scripts, state, &descriptor)?;
+
+    let history_txs_heights_plus_tip: HashSet<Height> = txid_height
+        .values()
+        .filter_map(|e| *e)
+        .chain(std::iter::once(tip.height))
+        .collect();
+    let timestamps =
+        backend.download_headers(&history_txs_heights_plus_tip, &height_blockhash, state)?;
+
+    let cache_last_unused_external = state.last_unused()[Chain::External];
+    let cache_last_unused_internal = state.last_unused()[Chain::Internal];
+
+    let last_unused_changed = cache_last_unused_external != last_unused.external
+        || cache_last_unused_internal != last_unused.internal;
+
+    let changed = !new_txs.txs.is_empty()
+        || last_unused_changed
+        || !scripts.is_empty()
+        || !timestamps.is_empty()
+        || state.tip() != (tip.height, tip.block_hash());
+
+    if changed {
+        log::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !timestamps.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timestamps.is_empty() );
+
+        let txid_height_new: Vec<_> = txid_height
+            .iter()
+            .filter(|(k, v)| match state.heights().get(*k) {
+                Some(e) => e != *v,
+                None => true,
+            })
+            .map(|(k, v)| (*k, *v))
+            .collect();
+        let txid_height_delete: Vec<_> = state
+            .heights()
+            .keys()
+            .filter(|k| !txid_height.contains_key(*k))
+            .cloned()
+            .collect();
+        let wollet_status = state.wollet_status();
+
+        let scripts_with_blinding_pubkey: Vec<(_, _, _, _)> = scripts
+            .iter()
+            .map(|(script, (chain, child, blinding_pubkey))| {
+                (*chain, *child, script.clone(), *blinding_pubkey)
+            })
+            .collect();
+
+        let update = Update {
+            version: 4,
+            wollet_status,
+            new_txs,
+            txid_height_new,
+            txid_height_delete,
+            timestamps,
+            scripts_with_blinding_pubkey,
+            tip,
+            unspent,
+            last_unused,
+        };
+        Ok(Some(update))
+    } else {
+        Ok(None)
     }
 }

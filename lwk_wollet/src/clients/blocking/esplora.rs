@@ -1,22 +1,29 @@
 use age::x25519::Recipient;
 use elements::{BlockHash, Script, Txid};
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    future::Future,
+    time::{Duration, Instant},
+};
 use tokio::runtime::Runtime;
 
 use crate::{
+    async_util::with_timeout,
     cache::Height,
     clients::{asyncr, Capability, Data, EsploraClientBuilder, History},
+    update::Update,
     wollet::WolletState,
     Error, Network, WolletDescriptor,
 };
 
-use super::BlockchainBackend;
+use super::{full_scan_to_index_default, BlockchainBackend};
 
 impl EsploraClientBuilder {
     /// Build a blocking Esplora client
     pub fn build_blocking(self) -> Result<EsploraClient, Error> {
         Ok(EsploraClient {
             rt: Runtime::new()?,
+            scan_deadline: None,
             client: EsploraClientBuilder::build(self)?,
         })
     }
@@ -29,6 +36,41 @@ impl EsploraClientBuilder {
 pub struct EsploraClient {
     rt: Runtime,
     client: asyncr::EsploraClient,
+
+    /// Deadline of the running full scan, if bounded
+    scan_deadline: Option<ScanDeadline>,
+}
+
+/// Deadline of a full scan, see [`asyncr::EsploraClient::scan_timeout()`]
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ScanDeadline {
+    at: Instant,
+    timeout: Duration,
+}
+
+impl ScanDeadline {
+    /// Start a deadline of `timeout` from now, `None` if it is too far to be represented.
+    pub(super) fn start(timeout: Duration) -> Option<Self> {
+        let at = Instant::now().checked_add(timeout)?;
+        Some(Self { at, timeout })
+    }
+}
+
+/// Run `future` on `rt`, bounded by the remaining time of `deadline` if any.
+pub(super) fn block_on_scan<T>(
+    rt: &Runtime,
+    deadline: Option<ScanDeadline>,
+    future: impl Future<Output = Result<T, Error>>,
+) -> Result<T, Error> {
+    match deadline {
+        Some(deadline) => {
+            let remaining = deadline.at.saturating_duration_since(Instant::now());
+            rt.block_on(with_timeout(remaining, future, || {
+                Error::ScanTimeout(deadline.timeout)
+            }))
+        }
+        None => rt.block_on(future),
+    }
 }
 
 impl EsploraClient {
@@ -36,6 +78,7 @@ impl EsploraClient {
     pub fn new(url: &str, network: Network) -> Result<Self, Error> {
         Ok(Self {
             rt: Runtime::new()?,
+            scan_deadline: None,
             client: asyncr::EsploraClient::new(network, url),
         })
     }
@@ -50,6 +93,7 @@ impl EsploraClient {
     pub fn new_waterfalls(url: &str, network: Network) -> Result<Self, Error> {
         Ok(Self {
             rt: Runtime::new()?,
+            scan_deadline: None,
             #[allow(deprecated)]
             client: EsploraClientBuilder::new(url, network)
                 .waterfalls(true)
@@ -106,7 +150,7 @@ impl EsploraClient {
 
 impl BlockchainBackend for EsploraClient {
     fn tip(&mut self) -> Result<elements::BlockHeader, crate::Error> {
-        self.rt.block_on(self.client.tip())
+        block_on_scan(&self.rt, self.scan_deadline, self.client.tip())
     }
 
     fn broadcast(&self, tx: &elements::Transaction) -> Result<elements::Txid, crate::Error> {
@@ -114,7 +158,11 @@ impl BlockchainBackend for EsploraClient {
     }
 
     fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<elements::Transaction>, Error> {
-        self.rt.block_on(self.client.get_transactions(txids))
+        block_on_scan(
+            &self.rt,
+            self.scan_deadline,
+            self.client.get_transactions(txids),
+        )
     }
 
     fn get_headers(
@@ -122,15 +170,22 @@ impl BlockchainBackend for EsploraClient {
         heights: &[Height],
         height_blockhash: &HashMap<Height, BlockHash>,
     ) -> Result<Vec<elements::BlockHeader>, Error> {
-        self.rt
-            .block_on(self.client.get_headers(heights, height_blockhash))
+        block_on_scan(
+            &self.rt,
+            self.scan_deadline,
+            self.client.get_headers(heights, height_blockhash),
+        )
     }
 
     // examples:
     // https://blockstream.info/liquidtestnet/api/address/tex1qntw9m0j2e93n84x975t47ddhgkzx3x8lhfv2nj/txs
     // https://blockstream.info/liquidtestnet/api/scripthash/b50a2a798d876db54acfa0d8dfdc49154ea8defed37b225ec4c9ec7415358ba3/txs
     fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error> {
-        self.rt.block_on(self.client.get_scripts_history(scripts))
+        block_on_scan(
+            &self.rt,
+            self.scan_deadline,
+            self.client.get_scripts_history(scripts),
+        )
     }
 
     fn capabilities(&self) -> HashSet<Capability> {
@@ -143,7 +198,9 @@ impl BlockchainBackend for EsploraClient {
         state: &S,
         to_index: u32,
     ) -> Result<Data, Error> {
-        self.rt.block_on(
+        block_on_scan(
+            &self.rt,
+            self.scan_deadline,
             self.client
                 .get_history_waterfalls(descriptor, state, to_index),
         )
@@ -152,14 +209,28 @@ impl BlockchainBackend for EsploraClient {
     fn utxo_only(&self) -> bool {
         self.client.utxo_only
     }
+
+    fn full_scan_to_index<S: WolletState>(
+        &mut self,
+        state: &S,
+        index: u32,
+    ) -> Result<Option<Update>, Error> {
+        self.scan_deadline = ScanDeadline::start(self.client.scan_timeout());
+        let result = full_scan_to_index_default(self, state, index);
+        self.scan_deadline = None;
+        result
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, time::Duration};
 
     use super::EsploraClient;
-    use crate::{clients::blocking::BlockchainBackend, Network};
+    use crate::{
+        clients::{blocking::BlockchainBackend, EsploraClientBuilder},
+        Error, Network, WolletBuilder,
+    };
     use elements::{encode::Decodable, BlockHash};
 
     fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
@@ -221,5 +292,51 @@ mod tests {
             assert_eq!(txs_multi[0].txid(), txid);
             assert_eq!(txs_multi[1].txid(), txid2);
         }
+    }
+
+    #[test]
+    fn esplora_full_scan_is_bounded() {
+        let wollet = WolletBuilder::new(
+            Network::Liquid,
+            lwk_test_util::TEST_DESCRIPTOR.parse().unwrap(),
+        )
+        .build()
+        .unwrap();
+
+        // The connection is kept open, so the body never completes
+        let keep_connection_open = true;
+        let base_url = lwk_test_util::serve_http_response(
+            "200 OK",
+            "application/json",
+            "[]",
+            keep_connection_open,
+        );
+        // Shorter than the per-request timeout, so only the scan deadline can fire
+        let scan_timeout = Duration::from_millis(100);
+        let builder =
+            EsploraClientBuilder::new(&base_url, Network::Liquid).scan_timeout(scan_timeout);
+
+        let mut client = builder.clone().build_blocking().unwrap();
+        let err = client.full_scan(&wollet).unwrap_err();
+        assert!(matches!(err, Error::ScanTimeout(t) if t == scan_timeout));
+
+        let mut client = builder.build().unwrap();
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let err = rt.block_on(client.full_scan(&wollet)).unwrap_err();
+        assert!(matches!(err, Error::ScanTimeout(t) if t == scan_timeout));
+
+        let keep_connection_open = false;
+        let base_url = lwk_test_util::serve_http_response(
+            "200 OK",
+            "application/json",
+            "[]",
+            keep_connection_open,
+        );
+        let mut client = EsploraClientBuilder::new(&base_url, Network::Liquid)
+            .max_response_size(1)
+            .build_blocking()
+            .unwrap();
+        let err = client.full_scan(&wollet).unwrap_err();
+        assert!(matches!(err, Error::ResponseTooLarge { limit: 1 }));
     }
 }

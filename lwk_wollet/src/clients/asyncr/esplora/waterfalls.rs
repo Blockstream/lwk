@@ -192,6 +192,11 @@ impl WaterfallsClient {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn scan_timeout(&self) -> std::time::Duration {
+        self.inner.scan_timeout()
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) async fn get_history_waterfalls<S: WolletState>(
         &mut self,
         descriptor: &WolletDescriptor,

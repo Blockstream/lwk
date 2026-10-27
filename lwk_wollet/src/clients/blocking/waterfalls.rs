@@ -16,17 +16,20 @@ use crate::{
         asyncr, Capability, Data, History, WaterfallsClientBuilder, WaterfallsSubscriptionEvent,
         WaterfallsSubscriptionUpdate,
     },
+    update::Update,
     wollet::WolletState,
     Error, Network, WolletDescriptor,
 };
 
-use super::BlockchainBackend;
+use super::esplora::{block_on_scan, ScanDeadline};
+use super::{full_scan_to_index_default, BlockchainBackend};
 
 impl WaterfallsClientBuilder {
     /// Build a blocking Waterfalls client.
     pub fn build_blocking(self) -> Result<WaterfallsClient, Error> {
         Ok(WaterfallsClient {
             rt: Runtime::new()?,
+            scan_deadline: None,
             client: WaterfallsClientBuilder::build(self)?,
         })
     }
@@ -41,6 +44,9 @@ impl WaterfallsClientBuilder {
 pub struct WaterfallsClient {
     rt: Runtime,
     client: asyncr::WaterfallsClient,
+
+    /// Deadline of the running full scan, if bounded
+    scan_deadline: Option<ScanDeadline>,
 }
 
 /// A blocking Waterfalls descriptor subscription stream.
@@ -224,6 +230,7 @@ impl WaterfallsClient {
     pub fn new(url: &str, network: Network) -> Result<Self, Error> {
         Ok(Self {
             rt: Runtime::new()?,
+            scan_deadline: None,
             client: asyncr::WaterfallsClient::new(network, url),
         })
     }
@@ -289,7 +296,7 @@ impl WaterfallsClient {
 
 impl BlockchainBackend for WaterfallsClient {
     fn tip(&mut self) -> Result<elements::BlockHeader, crate::Error> {
-        self.rt.block_on(self.client.tip())
+        block_on_scan(&self.rt, self.scan_deadline, self.client.tip())
     }
 
     fn broadcast(&self, tx: &elements::Transaction) -> Result<elements::Txid, crate::Error> {
@@ -297,7 +304,11 @@ impl BlockchainBackend for WaterfallsClient {
     }
 
     fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<elements::Transaction>, Error> {
-        self.rt.block_on(self.client.get_transactions(txids))
+        block_on_scan(
+            &self.rt,
+            self.scan_deadline,
+            self.client.get_transactions(txids),
+        )
     }
 
     fn get_headers(
@@ -305,12 +316,19 @@ impl BlockchainBackend for WaterfallsClient {
         heights: &[Height],
         height_blockhash: &HashMap<Height, BlockHash>,
     ) -> Result<Vec<elements::BlockHeader>, Error> {
-        self.rt
-            .block_on(self.client.get_headers(heights, height_blockhash))
+        block_on_scan(
+            &self.rt,
+            self.scan_deadline,
+            self.client.get_headers(heights, height_blockhash),
+        )
     }
 
     fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error> {
-        self.rt.block_on(self.client.get_scripts_history(scripts))
+        block_on_scan(
+            &self.rt,
+            self.scan_deadline,
+            self.client.get_scripts_history(scripts),
+        )
     }
 
     fn capabilities(&self) -> HashSet<Capability> {
@@ -323,7 +341,9 @@ impl BlockchainBackend for WaterfallsClient {
         state: &S,
         to_index: u32,
     ) -> Result<Data, Error> {
-        self.rt.block_on(
+        block_on_scan(
+            &self.rt,
+            self.scan_deadline,
             self.client
                 .get_history_waterfalls(descriptor, state, to_index),
         )
@@ -331,6 +351,17 @@ impl BlockchainBackend for WaterfallsClient {
 
     fn utxo_only(&self) -> bool {
         self.client.utxo_only()
+    }
+
+    fn full_scan_to_index<S: WolletState>(
+        &mut self,
+        state: &S,
+        index: u32,
+    ) -> Result<Option<Update>, Error> {
+        self.scan_deadline = ScanDeadline::start(self.client.scan_timeout());
+        let result = full_scan_to_index_default(self, state, index);
+        self.scan_deadline = None;
+        result
     }
 }
 
@@ -344,14 +375,15 @@ mod tests {
             Arc,
         },
         thread,
+        time::Duration,
     };
 
     use crate::{
         clients::{
-            blocking::WaterfallsClient, WaterfallsSubscriptionEventKind,
-            WaterfallsSubscriptionUpdate,
+            blocking::{BlockchainBackend, WaterfallsClient},
+            WaterfallsClientBuilder, WaterfallsSubscriptionEventKind, WaterfallsSubscriptionUpdate,
         },
-        Network, WolletDescriptor,
+        Error, Network, WolletBuilder, WolletDescriptor,
     };
 
     fn descriptor() -> WolletDescriptor {
@@ -438,5 +470,52 @@ mod tests {
             Some(WaterfallsSubscriptionUpdate::Reconnected)
         );
         assert_eq!(accepted.load(Ordering::Relaxed), 3);
+    }
+
+    /// Answer Waterfalls history requests with an empty history, never answer other requests.
+    fn serve_empty_history_then_hang() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        thread::spawn(move || loop {
+            let (mut stream, _) = listener.accept().unwrap();
+            thread::spawn(move || {
+                let mut request = [0u8; 1024];
+                let len = stream.read(&mut request).unwrap_or(0);
+                if request[..len].starts_with(b"GET /v2/waterfalls") {
+                    let body = "{\"txs_seen\":{},\"page\":0,\"tip\":null}";
+                    let _ = write!(
+                        stream,
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    );
+                } else {
+                    thread::sleep(Duration::from_secs(30));
+                }
+            });
+        });
+        format!("http://{addr}")
+    }
+
+    #[test]
+    fn full_scan_timeout_covers_requests_after_history() {
+        let base_url = serve_empty_history_then_hang();
+        // Shorter than the per-request timeout, so only the scan deadline can fire
+        let scan_timeout = Duration::from_millis(100);
+        let wollet = WolletBuilder::new(Network::Liquid, descriptor())
+            .build()
+            .unwrap();
+        let builder =
+            WaterfallsClientBuilder::new(&base_url, Network::Liquid).scan_timeout(scan_timeout);
+
+        let mut client = builder.clone().build_blocking().unwrap();
+        client.avoid_encryption();
+        let err = client.full_scan(&wollet).unwrap_err();
+        assert!(matches!(err, Error::ScanTimeout(t) if t == scan_timeout));
+
+        let mut client = builder.build().unwrap();
+        client.avoid_encryption();
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let err = rt.block_on(client.full_scan(&wollet)).unwrap_err();
+        assert!(matches!(err, Error::ScanTimeout(t) if t == scan_timeout));
     }
 }

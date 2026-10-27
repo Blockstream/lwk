@@ -70,7 +70,6 @@ wollet = Wollet(network, desc, datadir=None)
 slow_url = serve(SlowHandler)
 small_url = serve(SmallHandler)
 
-# ANCHOR: scan_limits
 builder = EsploraClientBuilder(
     base_url=slow_url,
     network=network,
@@ -78,7 +77,6 @@ builder = EsploraClientBuilder(
     max_response_size=1024 * 1024,  # bytes
 )
 client = EsploraClient.from_builder(builder)
-# ANCHOR_END: scan_limits
 
 # The server never completes a response: the scan stops after `scan_timeout`,
 # well before the per-request timeout (5 seconds) would.

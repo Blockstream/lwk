@@ -347,7 +347,7 @@ mod tests {
             asyncr::WaterfallsClientBuilder, WaterfallsSubscriptionEventKind,
             WaterfallsSubscriptionUpdate,
         },
-        Error, Network, WolletDescriptor,
+        Error, Network, WolletBuilder, WolletDescriptor,
     };
 
     fn descriptor() -> WolletDescriptor {
@@ -476,6 +476,28 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[tokio::test]
+    async fn full_scan_fails_when_response_exceeds_max_size() {
+        let keep_connection_open = false;
+        let base_url = lwk_test_util::serve_http_response(
+            "200 OK",
+            "application/json",
+            "{\"txs_seen\":{},\"tip\":null}",
+            keep_connection_open,
+        );
+        let mut client = WaterfallsClientBuilder::new(&base_url, Network::Liquid)
+            .max_response_size(10)
+            .build()
+            .unwrap();
+        client.avoid_encryption();
+        let wollet = WolletBuilder::new(Network::Liquid, descriptor())
+            .build()
+            .unwrap();
+
+        let err = client.full_scan(&wollet).await.unwrap_err();
+        assert!(matches!(err, Error::ResponseTooLarge { limit: 10 }));
     }
 
     #[tokio::test]

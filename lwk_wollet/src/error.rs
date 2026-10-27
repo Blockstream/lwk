@@ -280,6 +280,9 @@ pub enum Error {
     #[error("Blockchain backend have not implemented waterfalls method")]
     WaterfallsUnimplemented,
 
+    #[error("Response exceeds the maximum size of {limit} bytes")]
+    ResponseTooLarge { limit: usize },
+
     #[error("Cannot use waterfalls scan with elip151 because it would reveal the blinding key to the server")]
     UsingWaterfallsWithElip151,
 

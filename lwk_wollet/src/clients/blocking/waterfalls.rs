@@ -45,7 +45,9 @@ pub struct WaterfallsClient {
     rt: Runtime,
     client: asyncr::WaterfallsClient,
 
-    /// Deadline of the running full scan, if bounded
+    /// Deadline of the running full scan, `None` when no full scan is running.
+    ///
+    /// A deadline and not a timeout, so the whole scan is bounded, see [`ScanDeadline`].
     scan_deadline: Option<ScanDeadline>,
 }
 

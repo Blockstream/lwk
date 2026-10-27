@@ -37,11 +37,22 @@ pub struct EsploraClient {
     rt: Runtime,
     client: asyncr::EsploraClient,
 
-    /// Deadline of the running full scan, if bounded
+    /// Deadline of the running full scan, `None` when no full scan is running.
+    ///
+    /// A deadline and not a timeout, so the whole scan is bounded, see [`ScanDeadline`].
     scan_deadline: Option<ScanDeadline>,
 }
 
-/// Deadline of a full scan, see [`asyncr::EsploraClient::scan_timeout()`]
+/// The instant by which a blocking full scan must complete.
+///
+/// A blocking full scan is not a single future: the trait's default `full_scan_to_index` makes
+/// several separate `block_on` calls (history, tip, transactions, headers), each with its own
+/// network requests. Bounding every call with the scan timeout would let a scan last several
+/// times the timeout: 10 minutes for the history, then 10 more for the transactions, and so on.
+///
+/// Instead the deadline is fixed when the scan starts, and every call is bounded by the time
+/// left until it, so the whole scan completes within the scan timeout.
+/// See [`asyncr::EsploraClient::scan_timeout()`].
 #[derive(Debug, Clone, Copy)]
 pub(super) struct ScanDeadline {
     at: Instant,

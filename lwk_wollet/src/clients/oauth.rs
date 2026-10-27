@@ -1,8 +1,8 @@
 //! OAuth2 token fetching shared by the authenticated clients (Esplora/Waterfalls REST
 //! and, behind the `electrum_oidc` feature, the Electrum client).
 
+use crate::clients::http::read_body_up_to;
 use crate::Error;
-use futures::StreamExt;
 use reqwest::Response;
 
 /// Maximum number of characters of an error body kept in [`Error::EsploraHttpError`]
@@ -33,17 +33,10 @@ pub(crate) async fn error_for_status(url: &str, response: Response) -> Error {
 ///
 /// The rest of the body is never downloaded, so a server can't make us read a huge error body.
 async fn read_error_body(response: Response) -> String {
-    let limit = ERROR_BODY_MAX_CHARS * 4;
-    let mut body = Vec::new();
-    let mut stream = response.bytes_stream();
-    while body.len() < limit {
-        match stream.next().await {
-            Some(Ok(chunk)) => body.extend_from_slice(&chunk),
-            _ => break,
-        }
+    match read_body_up_to(response, ERROR_BODY_MAX_CHARS * 4).await {
+        Ok((body, _)) => String::from_utf8_lossy(&body).into_owned(),
+        Err(_) => String::new(),
     }
-    body.truncate(limit);
-    String::from_utf8_lossy(&body).into_owned()
 }
 
 /// Fetches an OAuth2 access token using client credentials flow

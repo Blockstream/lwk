@@ -35,6 +35,9 @@ pub use waterfalls::{
 };
 
 #[cfg(any(feature = "esplora", feature = "electrum_oidc"))]
+pub(crate) mod http;
+
+#[cfg(any(feature = "esplora", feature = "electrum_oidc"))]
 pub(crate) mod oauth;
 
 #[cfg(feature = "registry")]

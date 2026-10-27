@@ -1,4 +1,5 @@
 use crate::async_util::{async_sleep, with_timeout};
+use crate::clients::http::read_body_up_to;
 use crate::clients::oauth::{error_for_status, fetch_oauth_token};
 use crate::clients::{try_unblind, Capability, History, TokenProvider};
 use crate::clients::{EsploraClientBuilder, LastUnused};
@@ -1085,16 +1086,10 @@ impl EsploraClient {
     /// The size is counted as the body streams in, `Content-Length` is not trusted.
     async fn read_body(&self, response: Response) -> Result<Vec<u8>, Error> {
         let limit = self.max_response_size;
-        let mut body = Vec::new();
-        let mut stream = response.bytes_stream();
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk?;
-            if body.len() + chunk.len() > limit {
-                return Err(Error::ResponseTooLarge { limit });
-            }
-            body.extend_from_slice(&chunk);
+        match read_body_up_to(response, limit).await? {
+            (_, true) => Err(Error::ResponseTooLarge { limit }),
+            (body, false) => Ok(body),
         }
-        Ok(body)
     }
 
     /// Like [`Self::read_body`], for UTF-8 text responses.

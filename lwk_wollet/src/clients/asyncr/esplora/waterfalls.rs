@@ -501,6 +501,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn full_scan_fails_when_scan_timeout_expires() {
+        // The connection is kept open, so the body never completes
+        let keep_connection_open = true;
+        let base_url = lwk_test_util::serve_http_response(
+            "200 OK",
+            "application/json",
+            "{\"txs_seen\":{},\"tip\":null}",
+            keep_connection_open,
+        );
+        let scan_timeout = Duration::from_millis(100);
+        let mut client = WaterfallsClientBuilder::new(&base_url, Network::Liquid)
+            .scan_timeout(scan_timeout)
+            .build()
+            .unwrap();
+        client.avoid_encryption();
+        let wollet = WolletBuilder::new(Network::Liquid, descriptor())
+            .build()
+            .unwrap();
+
+        let err = client.full_scan(&wollet).await.unwrap_err();
+        assert!(matches!(err, Error::ScanTimeout(t) if t == scan_timeout));
+    }
+
+    #[tokio::test]
     async fn subscribe_returns_error_for_422() {
         let base_url = lwk_test_util::serve_http_response(
             "422 Unprocessable Entity",

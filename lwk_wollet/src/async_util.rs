@@ -9,7 +9,10 @@ pub async fn async_sleep(millis: u64) -> Result<(), Error> {
             .ok_or(Error::AsyncSleepMissingWindow)
             .and_then(|window| {
                 window
-                    .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, millis as i32)
+                    .set_timeout_with_callback_and_timeout_and_arguments_0(
+                        &resolve,
+                        millis.min(i32::MAX as u64) as i32,
+                    )
                     .map_err(|err| Error::AsyncSleepFailed(format!("{err:?}")))
             });
 
@@ -29,4 +32,44 @@ pub async fn async_sleep(millis: u64) -> Result<(), Error> {
 pub async fn async_sleep(millis: u64) -> Result<(), Error> {
     tokio::time::sleep(tokio::time::Duration::from_millis(millis)).await;
     Ok(())
+}
+
+/// Run `future`, failing with the error built by `on_timeout` if it does not complete within
+/// `timeout`.
+#[cfg(feature = "esplora")]
+pub(crate) async fn with_timeout<T>(
+    timeout: std::time::Duration,
+    future: impl std::future::Future<Output = Result<T, Error>>,
+    on_timeout: impl FnOnce() -> Error,
+) -> Result<T, Error> {
+    let millis = u64::try_from(timeout.as_millis()).unwrap_or(u64::MAX);
+    tokio::select! {
+        result = future => result,
+        sleep_result = async_sleep(millis) => {
+            sleep_result?;
+            Err(on_timeout())
+        }
+    }
+}
+
+#[cfg(all(test, feature = "esplora", not(target_arch = "wasm32")))]
+mod tests {
+    use std::time::Duration;
+
+    use super::with_timeout;
+    use crate::Error;
+
+    #[tokio::test]
+    async fn with_timeout_fails_only_when_future_does_not_complete() {
+        let timeout = Duration::from_millis(10);
+
+        let result: Result<(), Error> = with_timeout(timeout, std::future::pending(), || {
+            Error::ScanTimeout(timeout)
+        })
+        .await;
+        assert!(matches!(result, Err(Error::ScanTimeout(t)) if t == timeout));
+
+        let result = with_timeout(timeout, async { Ok(42) }, || Error::ScanTimeout(timeout)).await;
+        assert_eq!(result.unwrap(), 42);
+    }
 }

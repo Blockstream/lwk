@@ -283,6 +283,9 @@ pub enum Error {
     #[error("Response exceeds the maximum size of {limit} bytes")]
     ResponseTooLarge { limit: usize },
 
+    #[error("Scan did not complete within {0:?}")]
+    ScanTimeout(std::time::Duration),
+
     #[error("Cannot use waterfalls scan with elip151 because it would reveal the blinding key to the server")]
     UsingWaterfallsWithElip151,
 

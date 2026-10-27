@@ -46,6 +46,9 @@ const DEFAULT_TIMEOUT: u8 = 5;
 #[cfg(feature = "esplora")]
 const DEFAULT_MAX_RESPONSE_SIZE: usize = 64 * 1024 * 1024;
 
+#[cfg(feature = "esplora")]
+const DEFAULT_SCAN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10 * 60);
+
 /// A builder for the [`crate::clients::asyncr::EsploraClient`] or [`crate::clients::blocking::EsploraClient`]
 #[cfg(feature = "esplora")]
 #[derive(Debug, Clone)]
@@ -59,6 +62,7 @@ pub struct EsploraClientBuilder {
     concurrency: Option<usize>,
     token_provider: TokenProvider,
     max_response_size: usize,
+    scan_timeout: std::time::Duration,
 }
 
 /// A builder for the [`crate::clients::asyncr::WaterfallsClient`] or [`crate::clients::blocking::WaterfallsClient`]
@@ -119,6 +123,7 @@ impl EsploraClientBuilder {
             concurrency: None,
             token_provider: TokenProvider::None,
             max_response_size: DEFAULT_MAX_RESPONSE_SIZE,
+            scan_timeout: DEFAULT_SCAN_TIMEOUT,
         }
     }
 
@@ -192,6 +197,17 @@ impl EsploraClientBuilder {
         self.max_response_size = max_response_size;
         self
     }
+
+    /// Set the maximum duration of a scan, default is 10 minutes.
+    ///
+    /// Unlike [`Self::timeout`], which applies to each request, this bounds the whole scan,
+    /// including retries, backoff and downloading transactions and headers.
+    /// A scan exceeding it fails with [`crate::Error::ScanTimeout`].
+    /// Increase it for wallets with a very large history.
+    pub fn scan_timeout(mut self, scan_timeout: std::time::Duration) -> Self {
+        self.scan_timeout = scan_timeout;
+        self
+    }
 }
 
 #[cfg(feature = "esplora")]
@@ -252,6 +268,15 @@ impl WaterfallsClientBuilder {
     /// See [`EsploraClientBuilder::max_response_size`].
     pub fn max_response_size(mut self, max_response_size: usize) -> Self {
         self.inner.max_response_size = max_response_size;
+        self
+    }
+
+    /// Set the maximum duration of a scan, default is 10 minutes.
+    ///
+    /// It also bounds the follow-up pages of addresses with many transactions.
+    /// See [`EsploraClientBuilder::scan_timeout`].
+    pub fn scan_timeout(mut self, scan_timeout: std::time::Duration) -> Self {
+        self.inner.scan_timeout = scan_timeout;
         self
     }
 }

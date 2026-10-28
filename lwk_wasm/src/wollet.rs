@@ -54,6 +54,18 @@ impl Wollet {
         Ok(address_result.into())
     }
 
+    /// Get a wallet change address
+    ///
+    /// If a specific descriptor is given for change addresses  it's used to derive this address
+    /// Otherwise this is the same as `address()`
+    ///
+    /// If Some return the address at the given index,
+    /// otherwise the last unused address.
+    pub fn change(&self, index: Option<u32>) -> Result<AddressResult, Error> {
+        let address_result = self.inner.change(index)?;
+        Ok(address_result.into())
+    }
+
     /// Return the [ELIP152](https://github.com/ElementsProject/ELIPs/blob/main/elip-0152.mediawiki) deterministic wallet identifier.
     pub fn dwid(&self) -> Result<String, Error> {
         Ok(self

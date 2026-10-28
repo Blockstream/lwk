@@ -44,6 +44,7 @@ mod tests {
         let wollet_address_result = lwk_wollet::AddressResult::new(
             elements::Address::from_str(address_str).unwrap(),
             index,
+            None,
         );
 
         let address_result: AddressResult = wollet_address_result.into();

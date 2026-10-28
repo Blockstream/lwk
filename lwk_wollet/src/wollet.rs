@@ -593,10 +593,10 @@ impl Wollet {
             (Chain::External, None) => self.last_unused_external(),
         };
 
-        let address = self
-            .descriptor
-            .inner_address(index, self.network.address_params(), chain)?;
-        Ok(AddressResult::new(address, index))
+        let (address, derivation_path) =
+            self.descriptor
+                .inner_address(index, self.network.address_params(), chain)?;
+        Ok(AddressResult::new(address, index, derivation_path))
     }
 
     /// Get a wallet address

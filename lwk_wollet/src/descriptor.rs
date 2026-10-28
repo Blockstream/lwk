@@ -4,7 +4,7 @@ use aes_gcm_siv::Aes256GcmSiv;
 use elements::bitcoin::hashes::{sha256t_hash_newtype, Hash};
 use elements::bitcoin::secp256k1::SecretKey;
 use elements::bitcoin::{
-    bip32::{ChildNumber, Fingerprint, Xpub},
+    bip32::{ChildNumber, DerivationPath, Fingerprint, Xpub},
     WitnessVersion,
 };
 use elements::{bitcoin, Address, AddressParams, Script};
@@ -553,7 +553,8 @@ impl WolletDescriptor {
 
     /// Derive a change address from this descriptor at the given `index`.
     pub fn change(&self, index: u32, params: &'static AddressParams) -> Result<Address, Error> {
-        self.inner_address(index, params, Chain::Internal)
+        let (address, _) = self.inner_address(index, params, Chain::Internal)?;
+        Ok(address)
     }
 
     /// Get the encryption key bytes derived from the descriptor.
@@ -574,7 +575,8 @@ impl WolletDescriptor {
 
     /// Derive an address from this descriptor at the given `index`.
     pub fn address(&self, index: u32, params: &'static AddressParams) -> Result<Address, Error> {
-        self.inner_address(index, params, Chain::External)
+        let (address, _) = self.inner_address(index, params, Chain::External)?;
+        Ok(address)
     }
 
     fn at_derivation_index(
@@ -587,12 +589,13 @@ impl WolletDescriptor {
         }
     }
 
+    /// Derive the address at `index` and its full derivation path, if known
     pub(crate) fn inner_address(
         &self,
         index: u32,
         params: &'static AddressParams,
         ext_int: Chain,
-    ) -> Result<Address, Error> {
+    ) -> Result<(Address, Option<DerivationPath>), Error> {
         #[cfg(feature = "amp0")]
         if self.is_amp0 {
             return Err(Error::Amp0AddressError);
@@ -601,13 +604,15 @@ impl WolletDescriptor {
             DescOrSpks::Spks(spks) => {
                 let spk = spks.get(index as usize).ok_or(Error::IndexOutOfRange)?;
                 let blinding_pk = spk.blinding_key.as_ref().map(|k| k.public_key(&EC));
-                Address::from_script(&spk.script_pubkey, blinding_pk, params)
-                    .ok_or(Error::UnsupportedWithoutDescriptor)
+                let address = Address::from_script(&spk.script_pubkey, blinding_pk, params)
+                    .ok_or(Error::UnsupportedWithoutDescriptor)?;
+                Ok((address, None))
             }
-            _ => Ok(self
-                .inner_descriptor_if_available(ext_int)?
-                .at_derivation_index(index)?
-                .address(&EC, params)?),
+            _ => {
+                let desc = self.ct_definite_descriptor(ext_int, index)?;
+                let path = shared_derivation_path(&desc.descriptor);
+                Ok((desc.address(&EC, params)?, path))
+            }
         }
     }
 
@@ -856,6 +861,38 @@ fn has_hardened_public_derivation<T: Extension>(
                     .any(|path| path.into_iter().any(|child| child.is_hardened()))
         }
     })
+}
+
+/// Full derivation path from the master key, if all keys have an origin and share it
+// TODO: if keys with different paths are needed, expose
+// `AddressResult::derivation_paths(&self) -> Vec<Option<DerivationPath>>`.
+fn shared_derivation_path(desc: &Descriptor<DefiniteDescriptorKey>) -> Option<DerivationPath> {
+    let mut path: Option<DerivationPath> = None;
+    let shared = desc.for_each_key(|k| {
+        let has_origin = match k.as_descriptor_public_key() {
+            DescriptorPublicKey::XPub(x) => x.origin.is_some(),
+            DescriptorPublicKey::Single(s) => s.origin.is_some(),
+            DescriptorPublicKey::MultiXPub(_) => false,
+        };
+        if !has_origin {
+            return false;
+        }
+        let Some(key_path) = k.full_derivation_path() else {
+            return false;
+        };
+        match &path {
+            None => {
+                path = Some(key_path);
+                true
+            }
+            Some(shared_path) => shared_path == &key_path,
+        }
+    });
+    if shared {
+        path
+    } else {
+        None
+    }
 }
 
 // Parsing `ct(elip151,...)` derives the descriptor to compute the blinding key,

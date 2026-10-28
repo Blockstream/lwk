@@ -96,6 +96,12 @@ impl Transaction {
         self.inner.fee_in((*policy_asset).into())
     }
 
+    /// Returns the "discount virtual size" of this transaction.
+    #[wasm_bindgen(js_name = discountVsize)]
+    pub fn discount_vsize(&self) -> usize {
+        self.inner.discount_vsize()
+    }
+
     /// Return the hex representation of the transaction. More precisely, they are the consensus encoded bytes of the transaction converted in hex.
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {

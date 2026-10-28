@@ -252,7 +252,17 @@ impl PsetInputBuilder {
     /// Set the witness UTXO.
     #[wasm_bindgen(js_name = witnessUtxo)]
     pub fn witness_utxo(mut self, utxo: &TxOut) -> PsetInputBuilder {
-        self.inner.witness_utxo = Some(utxo.into());
+        let mut utxo: lwk_wollet::elements::TxOut = utxo.into();
+        let rangeproof = std::mem::replace(
+            &mut utxo.witness.rangeproof,
+            lwk_wollet::elements::RangeProof::EMPTY,
+        );
+        self.inner.in_utxo_rangeproof = if rangeproof.is_empty() {
+            None
+        } else {
+            Some(rangeproof)
+        };
+        self.inner.witness_utxo = Some(utxo);
         self
     }
 

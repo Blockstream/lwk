@@ -202,6 +202,18 @@ impl WaterfallsClientBuilder {
         self.inner.max_response_size(bytes as usize).into()
     }
 
+    /// Set a timeout in seconds for requests. The timeout should be a `u8`.
+    ///
+    /// **Experimental**: This API may change without notice.
+    pub fn timeout(self, timeout: u32) -> Result<Self, Error> {
+        Ok(self.inner.timeout(parse_timeout(timeout)?).into())
+    }
+
+    /// Add a HTTP header to set on each request.
+    pub fn header(self, key: &str, val: &str) -> Self {
+        self.inner.header(key.to_string(), val.to_string()).into()
+    }
+
     /// Build the Waterfalls client from this builder.
     pub fn build(self) -> Result<WaterfallsClient, Error> {
         Ok(WaterfallsClient {

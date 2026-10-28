@@ -64,13 +64,9 @@ impl Wollet {
 
     /// Get the full derivation path for an address
     ///
-    /// Note: will be removed once we add the full path to lwk_wollet::AddressResult
-    ///
-    /// Deprecated: use `addressFullPathStr()` instead.
+    /// Deprecated: use `address(index).derivationPath()` instead.
     #[wasm_bindgen(js_name = addressFullPath)]
     pub fn address_full_path(&self, index: u32) -> Result<Vec<u32>, Error> {
-        // TODO we should add the full path to lwk_wollet::AddressResult
-
         let definite_desc = self
             .inner
             .wollet_descriptor()
@@ -89,11 +85,9 @@ impl Wollet {
 
     /// Get the full derivation path for an address, e.g. `"84'/1'/0'/0/3"`
     ///
-    /// Note: will be removed once we add the full path to lwk_wollet::AddressResult
+    /// Deprecated: use `address(index).derivationPath()` instead.
     #[wasm_bindgen(js_name = addressFullPathStr)]
     pub fn address_full_path_str(&self, index: u32) -> Result<String, Error> {
-        // TODO we should add the full path to lwk_wollet::AddressResult
-
         let definite_desc = self
             .inner
             .wollet_descriptor()

@@ -2,6 +2,9 @@ use crate::{Error, Network, Script};
 use lwk_wollet::elements::{self, AddressParams};
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "simplicity")]
+use crate::PublicKey;
+
 /// An Elements (Liquid) address
 #[wasm_bindgen]
 #[derive(Debug)]
@@ -112,6 +115,13 @@ impl Address {
     #[wasm_bindgen(js_name = QRCodeText)]
     pub fn qr_code_text(&self) -> Result<String, Error> {
         Ok(lwk_common::address_to_text_qr(&self.inner)?)
+    }
+
+    /// Returns a blinding pubkey of the address
+    #[cfg(feature = "simplicity")]
+    #[wasm_bindgen(js_name = blindingPubkey)]
+    pub fn blinding_pubkey(&self) -> Option<PublicKey> {
+        self.inner.blinding_pubkey.map(|key| key.into())
     }
 }
 

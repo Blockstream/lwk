@@ -12,6 +12,8 @@ async function runListTransactionsTest() {
 
         const waterfallsUrl = WATERFALLS_URL;
         const client = new lwk.WaterfallsClientBuilder(network, waterfallsUrl)
+            .timeout(10)
+            .header("X-Custom-Header", "value")
             .concurrency(4)
             .build();
 

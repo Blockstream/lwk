@@ -130,7 +130,15 @@ impl PsetInputBuilder {
     pub fn witness_utxo(&self, utxo: &TxOut) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.as_mut().ok_or(LwkError::ObjectConsumed)?;
-        inner.witness_utxo = Some(utxo.into());
+        let mut utxo: elements::TxOut = utxo.into();
+        let rangeproof =
+            std::mem::replace(&mut utxo.witness.rangeproof, elements::RangeProof::EMPTY);
+        inner.in_utxo_rangeproof = if rangeproof.is_empty() {
+            None
+        } else {
+            Some(rangeproof)
+        };
+        inner.witness_utxo = Some(utxo);
         Ok(())
     }
 

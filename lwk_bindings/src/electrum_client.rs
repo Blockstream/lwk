@@ -21,7 +21,7 @@ pub struct ElectrumClient {
 /// RPC proxies) and other options.
 #[derive(uniffi::Record)]
 pub struct ElectrumClientBuilder {
-    /// The Electrum server url, e.g. `ssl://blockstream.info:995` or `tcp://host:50001`
+    /// The Electrum server url, e.g. `ssl://elements-mainnet.blockstream.info:50002` or `tcp://host:50001`
     url: String,
     /// Request/connection timeout in seconds
     #[uniffi(default = None)]

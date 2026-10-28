@@ -77,7 +77,7 @@ func main() {
 
 	// ANCHOR: electrum_client
 	// Create electrum client with custom URL
-	electrumClient, err := lwk.NewElectrumClient("blockstream.info:995", true, true)
+	electrumClient, err := lwk.NewElectrumClient("elements-mainnet.blockstream.info:50002", true, true)
 	if err != nil {
 		log.Fatal(err)
 	}

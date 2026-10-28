@@ -4148,7 +4148,7 @@ fn blocking_clients() -> Result<(), Box<dyn std::error::Error>> {
     // ANCHOR: electrum_client
     use lwk_wollet::{ElectrumClient, ElectrumUrl};
 
-    let electrum_url = ElectrumUrl::new("blockstream.info:995", true, true)?;
+    let electrum_url = ElectrumUrl::new("elements-mainnet.blockstream.info:50002", true, true)?;
     let mut client = ElectrumClient::new(&electrum_url)?;
     // ANCHOR_END: electrum_client
     let tip = client.tip().unwrap();

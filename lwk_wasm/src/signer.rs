@@ -34,13 +34,10 @@ impl Signer {
         Ok(pset.into())
     }
 
-    /// Sign a message with the master key, return the signature as a base64 string
+    /// Sign a message with the key at `path`, return the signature as a base64 string
     #[wasm_bindgen(js_name = signMessage)]
-    pub fn sign_message(&self, message: &str) -> Result<String, Error> {
-        // TODO: make path parameter
-        let signature = self
-            .inner
-            .sign_message(message, &bip32::DerivationPath::master())?;
+    pub fn sign_message(&self, message: &str, path: &DerivationPath) -> Result<String, Error> {
+        let signature = self.inner.sign_message(message, &path.into())?;
         Ok(signature.to_string())
     }
 

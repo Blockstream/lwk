@@ -139,6 +139,18 @@ impl EsploraClientBuilder {
         self.inner.max_response_size(bytes as usize).into()
     }
 
+    /// Set a timeout in seconds for requests. The timeout should be a `u8`.
+    ///
+    /// **Experimental**: This API may change without notice.
+    pub fn timeout(self, timeout: u32) -> Result<Self, Error> {
+        Ok(self.inner.timeout(parse_timeout(timeout)?).into())
+    }
+
+    /// Add a HTTP header to set on each request.
+    pub fn header(self, key: &str, val: &str) -> Self {
+        self.inner.header(key.to_string(), val.to_string()).into()
+    }
+
     /// Build the Esplora client from this builder.
     pub fn build(self) -> Result<EsploraClient, Error> {
         let inner = self
@@ -188,6 +200,18 @@ impl WaterfallsClientBuilder {
     #[wasm_bindgen(js_name = maxResponseSize)]
     pub fn max_response_size(self, bytes: u32) -> Self {
         self.inner.max_response_size(bytes as usize).into()
+    }
+
+    /// Set a timeout in seconds for requests. The timeout should be a `u8`.
+    ///
+    /// **Experimental**: This API may change without notice.
+    pub fn timeout(self, timeout: u32) -> Result<Self, Error> {
+        Ok(self.inner.timeout(parse_timeout(timeout)?).into())
+    }
+
+    /// Add a HTTP header to set on each request.
+    pub fn header(self, key: &str, val: &str) -> Self {
+        self.inner.header(key.to_string(), val.to_string()).into()
     }
 
     /// Build the Waterfalls client from this builder.
@@ -526,6 +550,11 @@ impl EsploraClient {
         let result = self.inner.last_used_index(descriptor.as_ref()).await?;
         Ok(result.into())
     }
+}
+
+/// Parse timeout from `u32` to prevent silent overflow.
+fn parse_timeout(timeout: u32) -> Result<u8, Error> {
+    <u8>::try_from(timeout).map_err(|_| Error::Generic("failed to parse timeout".to_string()))
 }
 
 #[cfg(all(test, target_arch = "wasm32"))]

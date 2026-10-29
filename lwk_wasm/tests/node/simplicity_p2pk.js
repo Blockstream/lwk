@@ -44,6 +44,7 @@ async function runSimplicityP2pkTest() {
     // Test creating P2TR address for p2pk program
     const address = program.createP2trAddress(lwk.XOnlyPublicKey.fromString(TEST_PUBLIC_KEY), network);
     assertEqual(address.toString(), TEST_ADDRESS, "Address mismatch");
+    assertEqual(address.blindingPubkey(), undefined, "Simplicity p2pk address should not have a blinding pubkey");
 
     // Test building witness values with signature (64 bytes)
     let witness = new lwk.SimplicityWitnessValues();

@@ -5,6 +5,7 @@
 * Update to `elements` 0.27.
 * Replaced `Amp2::elip153FromStr()` with `Amp2::elip153FromExternalSigner()`
 * Renamed `Signer::keyoriginXpubFromPath()` to `Signer::deriveXpub()`
+* Changed `Signer::signMessage()` to take the `DerivationPath` of the signing key
 
 ## 0.19.0
 

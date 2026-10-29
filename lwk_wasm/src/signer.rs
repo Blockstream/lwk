@@ -34,13 +34,10 @@ impl Signer {
         Ok(pset.into())
     }
 
-    /// Sign a message with the master key, return the signature as a base64 string
+    /// Sign a message with the key at `path`, return the signature as a base64 string
     #[wasm_bindgen(js_name = signMessage)]
-    pub fn sign_message(&self, message: &str) -> Result<String, Error> {
-        // TODO: make path parameter
-        let signature = self
-            .inner
-            .sign_message(message, &bip32::DerivationPath::master())?;
+    pub fn sign_message(&self, message: &str, path: &DerivationPath) -> Result<String, Error> {
+        let signature = self.inner.sign_message(message, &path.into())?;
         Ok(signature.to_string())
     }
 
@@ -181,7 +178,7 @@ impl lwk_common::Signer for CachedSigner {
 
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
-    use crate::{Bip, Mnemonic, Pset, Signer};
+    use crate::{Bip, DerivationPath, Mnemonic, Pset, Signer};
     use lwk_wollet::elements;
     use std::str::FromStr;
     use wasm_bindgen_test::*;
@@ -227,7 +224,8 @@ mod tests {
 
         assert_eq!(signer.mnemonic(), mnemonic);
 
-        assert_eq!(signer.sign_message("Hello, world!").unwrap(), "Hwlg40qLYZXEj9AoA3oZpfJMJPxaXzBL0+siHAJRhTIvSFiwSdtCsqxqB7TxgWfhqIr/YnGE4nagWzPchFJElTo=");
+        let master = DerivationPath::new("m").unwrap();
+        assert_eq!(signer.sign_message("Hello, world!", &master).unwrap(), "Hwlg40qLYZXEj9AoA3oZpfJMJPxaXzBL0+siHAJRhTIvSFiwSdtCsqxqB7TxgWfhqIr/YnGE4nagWzPchFJElTo=");
 
         // Test BIP85 derivation
         assert_eq!(

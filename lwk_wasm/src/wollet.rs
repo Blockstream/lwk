@@ -245,6 +245,12 @@ impl Wollet {
         self.inner.set_amp0_last_index(amp0.as_ref())?;
         Ok(())
     }
+
+    /// Max weight to satisfy for inputs belonging to this wallet
+    #[wasm_bindgen(js_name = maxWeightToSatisfy)]
+    pub fn max_weight_to_satisfy(&self) -> usize {
+        self.inner().max_weight_to_satisfy()
+    }
 }
 
 /// Blockchain tip, the highest valid block in the blockchain

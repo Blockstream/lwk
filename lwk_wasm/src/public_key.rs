@@ -21,6 +21,14 @@ impl From<lwk_wollet::elements::bitcoin::PublicKey> for PublicKey {
     }
 }
 
+impl From<lwk_wollet::elements::secp256k1_zkp::PublicKey> for PublicKey {
+    fn from(inner: lwk_wollet::elements::secp256k1_zkp::PublicKey) -> Self {
+        PublicKey {
+            inner: lwk_wollet::elements::bitcoin::PublicKey::new(inner),
+        }
+    }
+}
+
 impl From<PublicKey> for lwk_wollet::elements::bitcoin::PublicKey {
     fn from(value: PublicKey) -> Self {
         value.inner

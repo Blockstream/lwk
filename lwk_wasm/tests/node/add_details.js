@@ -15,6 +15,9 @@ function runAddDetailsTest() {
     const wollet = new lwk.Wollet(network, descriptor);
     const pset = new lwk.Pset(psetBase64);
 
+    assert.strictEqual(wollet.maxWeightToSatisfy(), 219, "maxWeightToSatisfy should match the descriptor");
+    assert.strictEqual(pset.extractTx().discountVsize(), 244, "discountVsize should match the fixed PSET");
+
     const before = pset.toString();
     pset.addDetails(wollet);
     const after = pset.toString();

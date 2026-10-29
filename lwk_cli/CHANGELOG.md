@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.20.0
+
 * Bump MSRV to 1.91
 
 ## 0.19.0

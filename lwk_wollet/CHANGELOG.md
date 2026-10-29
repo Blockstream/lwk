@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.20.0
+
 * Breaking: update to `elements` 0.27 and `elements-miniscript` 0.5. Types re-exported from `elements` changed, for example the hex helpers (`ToHex`, `FromHex`), `AssetId` and `Txid` constructors, the issuance entropy (now `AssetEntropy`) and the pegin witness.
 * Breaking: `PeginInput::pegin_witness()` returns `&elements::PeginWitness` instead of `&[Vec<u8>]`. Use `pegin::pegin_witness_to_elements()` and `pegin::pegin_witness_from_elements()` to convert from and to `Vec<Vec<u8>>`.
 * Breaking: `WalletTx`, `ExternalUtxo` and the AMP2 `CosignResponse` no longer implement `Serialize` and `Deserialize`, because `elements` no longer implements serde for `Transaction`, `TxOut` and `PartiallySignedTransaction`.

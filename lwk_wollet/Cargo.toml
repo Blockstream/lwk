@@ -1,6 +1,6 @@
 [package]
 name = "lwk_wollet"
-version = "0.19.0"
+version = "0.20.0"
 edition = "2021"
 autotests = false
 description = "Liquid Wallet Kit - Watch-only wallet based on CT Descriptors"
@@ -12,10 +12,10 @@ documentation = "https://docs.rs/lwk_wollet"
 crate-type = ["lib"]
 
 [dependencies]
-lwk_common = { version = "0.19.0" }
-lwk_registry = { version = "0.19.0"}
-lwk_prices = { version = "0.19.0", optional = true }
-lwk_signer = { version = "0.19.0", features = [
+lwk_common = { version = "0.20.0" }
+lwk_registry = { version = "0.20.0"}
+lwk_prices = { version = "0.20.0", optional = true }
+lwk_signer = { version = "0.20.0", features = [
     "jade",
     "ledger",
 ], optional = true }
@@ -81,11 +81,11 @@ wasm-bindgen-futures = { version = "0.4.41" }
 js-sys = { version = "0.3.68" }
 
 [dev-dependencies]
-lwk_jade = { version = "0.19.0", features = ["test_emulator"] }
-lwk_ledger = { version = "0.19.0", features = ["test_emulator"] }
-lwk_signer = { version = "0.19.0", features = ["jade", "ledger"] }
-lwk_test_util = { version = "0.19.0" }
-lwk_common = { version = "0.19.0", features = ["sqlite"]}
+lwk_jade = { version = "0.20.0", features = ["test_emulator"] }
+lwk_ledger = { version = "0.20.0", features = ["test_emulator"] }
+lwk_signer = { version = "0.20.0", features = ["jade", "ledger"] }
+lwk_test_util = { version = "0.20.0" }
+lwk_common = { version = "0.20.0", features = ["sqlite"]}
 
 tempfile.workspace = true
 zmq = "0.10.0"

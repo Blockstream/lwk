@@ -1,6 +1,6 @@
 [package]
 name = "lwk_registry"
-version = "0.19.0"
+version = "0.20.0"
 edition = "2021"
 description = "Liquid Wallet Kit - asset registry integration"
 license = "MIT OR BSD-2-Clause"
@@ -11,7 +11,7 @@ test = false
 
 [dependencies]
 
-lwk_common = { version = "0.19.0"}
+lwk_common = { version = "0.20.0"}
 
 elements.workspace = true
 serde.workspace = true
@@ -43,7 +43,7 @@ tokio = { version = "1.36.0", default-features = false, features = [
 
 
 [dev-dependencies]
-lwk_test_util = { version = "0.19.0" }
+lwk_test_util = { version = "0.20.0" }
 
 [features]
 client = ["dep:reqwest", "dep:futures"]

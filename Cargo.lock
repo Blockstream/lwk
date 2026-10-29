@@ -130,7 +130,7 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
 name = "amp2_mock"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "lwk_common",
  "lwk_signer",
@@ -3105,7 +3105,7 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "lwk_anyswap"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "anyswap-sdk",
  "clightningrpc",
@@ -3115,7 +3115,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_app"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "base64 0.22.1",
  "enum-iterator",
@@ -3141,7 +3141,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_bindings"
-version = "0.19.1"
+version = "0.20.0"
 dependencies = [
  "elements",
  "elements-miniscript",
@@ -3163,7 +3163,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_boltz"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "aes-gcm-siv",
  "async-trait",
@@ -3190,7 +3190,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_cli"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -3211,7 +3211,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_common"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.22.1",
@@ -3229,7 +3229,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_containers"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "elements",
  "rand 0.8.5",
@@ -3243,7 +3243,7 @@ version = "0.10.0"
 
 [[package]]
 name = "lwk_jade"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "base64 0.22.1",
  "elements",
@@ -3269,7 +3269,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_ledger"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "byteorder",
  "elements-miniscript",
@@ -3284,7 +3284,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_payment_instructions"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "bip21",
  "bitcoin-payment-instructions",
@@ -3303,7 +3303,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_prices"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "futures",
  "reqwest",
@@ -3316,7 +3316,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_registry"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "elements",
  "futures",
@@ -3333,7 +3333,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_rpc_model"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "schemars 0.8.22",
  "serde",
@@ -3342,7 +3342,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_signer"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "bip39",
  "elements-miniscript",
@@ -3356,7 +3356,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_simplicity"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "lending-contracts",
  "lwk_common",
@@ -3379,7 +3379,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_test_util"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "bip39",
  "clightningrpc",
@@ -3397,7 +3397,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_tiny_jrpc"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "jsonrpc",
  "log",
@@ -3410,7 +3410,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wasm"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "console_error_panic_hook",
  "lwk_boltz",
@@ -3433,7 +3433,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wollet"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -4741,7 +4741,7 @@ version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9465315bc9d4566e1724f0fffcbcc446268cb522e60f9a27bcded6b19c108113"
 dependencies = [
- "bitcoin_hashes 0.13.0",
+ "bitcoin_hashes 0.14.101",
  "rand 0.8.5",
  "secp256k1-sys 0.10.1",
  "serde",

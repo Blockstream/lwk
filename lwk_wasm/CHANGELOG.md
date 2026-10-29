@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.20.0
+
 * Update to `elements` 0.27.
 * Replaced `Amp2::elip153FromStr()` with `Amp2::elip153FromExternalSigner()`
 * Renamed `Signer::keyoriginXpubFromPath()` to `Signer::deriveXpub()`

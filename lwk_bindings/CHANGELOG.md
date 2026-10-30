@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Expose `WaterfallsClient.subscribe_reconnecting()` with server events and connection status updates in foreign bindings.
 * `Signer.sign()` now returns an error if no signatures have been added.
 * Update to `elements` 0.27. `LwkError` conversions from the previous hex error types were replaced by the new ones.
 * Kotlin Multiplatform: fixed `UniFFI API checksum mismatch` on 32-bit ARM Android once the app is AOT-compiled, by generating the bindings with a gobley build that reads `u8`/`u16` return values correctly ([gobley#252](https://github.com/gobley/gobley/issues/252))

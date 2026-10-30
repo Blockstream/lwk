@@ -37,6 +37,29 @@ pub struct WaterfallsSubscription {
     inner: blocking::WaterfallsSubscription,
 }
 
+/// A Waterfalls descriptor subscription that reopens after disconnects.
+#[derive(uniffi::Object)]
+pub struct WaterfallsReconnectingSubscription {
+    inner: blocking::WaterfallsReconnectingSubscription,
+}
+
+/// A server event or a local connection status update.
+#[derive(uniffi::Enum)]
+pub enum WaterfallsSubscriptionUpdate {
+    /// A Waterfalls server update event.
+    Event {
+        /// The Waterfalls server update.
+        event: WaterfallsSubscriptionEvent,
+    },
+    /// The stream closed or failed. An error is present when it failed.
+    Disconnected {
+        /// The cause of the disconnect, if any.
+        error: Option<String>,
+    },
+    /// The stream reopened. Scan the wallet because events may have been missed.
+    Reconnected,
+}
+
 /// An update received from a Waterfalls descriptor subscription stream.
 #[derive(uniffi::Record, Clone, Debug, PartialEq, Eq)]
 pub struct WaterfallsSubscriptionEvent {
@@ -71,6 +94,20 @@ impl From<lwk_wollet::clients::WaterfallsSubscriptionEvent> for WaterfallsSubscr
             }
             .to_string(),
             tip: event.tip.map(Into::into),
+        }
+    }
+}
+
+impl From<lwk_wollet::clients::WaterfallsSubscriptionUpdate> for WaterfallsSubscriptionUpdate {
+    fn from(update: lwk_wollet::clients::WaterfallsSubscriptionUpdate) -> Self {
+        match update {
+            lwk_wollet::clients::WaterfallsSubscriptionUpdate::Event(event) => Self::Event {
+                event: event.into(),
+            },
+            lwk_wollet::clients::WaterfallsSubscriptionUpdate::Disconnected { error } => {
+                Self::Disconnected { error }
+            }
+            lwk_wollet::clients::WaterfallsSubscriptionUpdate::Reconnected => Self::Reconnected,
         }
     }
 }
@@ -443,6 +480,25 @@ impl WaterfallsClient {
             inner: subscription,
         }))
     }
+
+    /// Subscribe to Waterfalls descriptor updates and reopen after disconnects.
+    ///
+    /// The stream reports server events and `Disconnected`/`Reconnected` status
+    /// updates. Scan the wallet after `Reconnected` because events may have been
+    /// missed. Reconnect failures are returned by `next_update()`; the worker
+    /// retries after one second.
+    pub fn subscribe_reconnecting(
+        &self,
+        descriptor: &WolletDescriptor,
+    ) -> Result<Arc<WaterfallsReconnectingSubscription>, LwkError> {
+        let subscription = self
+            .inner
+            .lock()?
+            .subscribe_reconnecting(descriptor.as_ref())?;
+        Ok(Arc::new(WaterfallsReconnectingSubscription {
+            inner: subscription,
+        }))
+    }
 }
 
 #[uniffi::export]
@@ -454,6 +510,25 @@ impl WaterfallsSubscription {
         self.inner
             .next_update()
             .map(|event| event.map(Into::into))
+            .map_err(Into::into)
+    }
+
+    /// Stop the subscription stream and release its worker thread.
+    pub fn close_subscription(&self) {
+        self.inner.close();
+    }
+}
+
+#[uniffi::export]
+impl WaterfallsReconnectingSubscription {
+    /// Return the next server event or connection status update.
+    ///
+    /// Returns `None` after `close_subscription()` is called. Reconnect failures
+    /// are returned as errors; the subscription continues retrying in the background.
+    pub fn next_update(&self) -> Result<Option<WaterfallsSubscriptionUpdate>, LwkError> {
+        self.inner
+            .next_update()
+            .map(|update| update.map(Into::into))
             .map_err(Into::into)
     }
 

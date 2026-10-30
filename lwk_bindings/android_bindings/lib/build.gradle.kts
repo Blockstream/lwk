@@ -102,7 +102,7 @@ kotlin {
 
 }
 
-val libraryVersion: String by project
+val libraryVersion = project.property("libraryVersion") as String
 
 mavenPublishing {
     coordinates(groupId = "com.blockstream", artifactId = "lwk", version = libraryVersion)

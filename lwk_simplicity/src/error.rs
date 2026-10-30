@@ -74,6 +74,20 @@ pub enum ProgramError {
         actual_hash: String,
     },
 
+    #[error("UTXO script pubkey is not P2TR: {actual_hash}")]
+    ScriptPubkeyNotP2tr { actual_hash: String },
+
+    #[error("Invalid Taproot output key in UTXO script pubkey: {0}")]
+    InvalidTaprootOutputKey(String),
+
+    #[error(
+        "Control block leaf version {actual:#x} does not match Simplicity leaf version {expected:#x}"
+    )]
+    ControlBlockLeafVersionMismatch { expected: u8, actual: u8 },
+
+    #[error("Control block does not commit to CMR {cmr} for script pubkey {script_pubkey}")]
+    ControlBlockMismatch { cmr: String, script_pubkey: String },
+
     #[error("Input index exceeds u32 maximum: {0}")]
     InputIndexOverflow(#[from] std::num::TryFromIntError),
 }

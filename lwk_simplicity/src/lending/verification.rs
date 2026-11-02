@@ -273,3 +273,140 @@ pub(crate) fn parse_and_verify_lending_offer(
 
     Ok(offer)
 }
+
+pub(crate) fn parse_and_verify_offer_acceptance(
+    acceptance_tx: &Transaction,
+    creation_tx: &Transaction,
+    protocol_fee_keeper_asset_id: AssetId,
+    network: SimplicityNetwork,
+    auth_tx: &Transaction,
+    factory_tx: &Transaction,
+) -> Result<LendingOffer, LendingError> {
+    const NFT_AMOUNT: u64 = 1;
+    let policy_asset = network.policy_asset();
+
+    let offer = parse_and_verify_lending_offer(
+        creation_tx,
+        protocol_fee_keeper_asset_id,
+        network,
+        auth_tx,
+        factory_tx,
+    )?;
+
+    let params = *offer.get_parameters();
+    let collateral_asset = params.collateral_asset_id;
+    let collateral_amount = params.offer_parameters.collateral_amount;
+    let principal_asset = params.principal_asset_id;
+    let principal_amount = params.offer_parameters.principal_amount;
+    let lender_nft = params.lender_nft_asset_id;
+
+    let total_debt = params.offer_parameters.get_total_amount_to_repay();
+    let active_offer = LendingOffer::new_active(params, total_debt);
+
+    let active_offer_script = active_offer.get_script_pubkey();
+    let pending_offer_script = offer.get_script_pubkey();
+    let script_auth = ScriptAuth::from_simplex_program(&offer);
+    let script_auth_script = script_auth.get_script_pubkey();
+    let principal_auth_script = params.get_principal_output_asset_auth().get_script_pubkey();
+
+    (|| -> Result<(), &str> {
+        // Inputs
+        let Some([ref in0, ref in1]) = acceptance_tx.input.get(..2) else {
+            Err("too few inputs")?
+        };
+
+        // principal, fee funding
+        if acceptance_tx.input.len() > 4 {
+            Err("too many inputs")?;
+        }
+
+        // Input 0: pending offer covenant
+        // The collateral is locked in the pending offer, spending it transitions the
+        // offer to active
+        check_issuance(in0, None, None)?;
+        let prev_out0 = get_prevout(creation_tx, in0.previous_output)?;
+        let (in0_asset, in0_value, in0_script) = parse_explicit(prev_out0)?;
+        if in0_asset != collateral_asset
+            || in0_value != collateral_amount
+            || in0_script != pending_offer_script
+        {
+            Err("pending offer input invalid")?
+        }
+
+        // Input 1: lender NFT ScriptAuth
+        // Unlocks the lender NFT, authorizing the spend of the pending offer
+        check_issuance(in1, None, None)?;
+        let prev_out1 = get_prevout(creation_tx, in1.previous_output)?;
+        let (in1_asset, in1_value, in1_script) = parse_explicit(prev_out1)?;
+        if in1_asset != lender_nft || in1_value != NFT_AMOUNT || in1_script != script_auth_script {
+            Err("lender NFT input invalid")?
+        }
+
+        // Remaining inputs should not be issuances
+        for input in acceptance_tx.input.iter().skip(2) {
+            check_issuance(input, None, None)?;
+        }
+
+        // Outputs
+        let Some([ref out0, ref out1, ref out2]) = acceptance_tx.output.get(..3) else {
+            Err("too few outputs")?
+        };
+
+        // Principal change, fee, policy asset change
+        if acceptance_tx.output.len() > 6 {
+            Err("too many outputs")?;
+        }
+
+        // Output 0: active offer covenant
+        // Same collateral as the pending offer, now locked with the active covenant
+        let (out0_asset, out0_value, out0_script) = parse_explicit(out0)?;
+        if out0_asset != collateral_asset
+            || out0_value != collateral_amount
+            || out0_script != active_offer_script
+        {
+            Err("active covenant output mismatch")?
+        }
+
+        // Output 1: principal asset auth
+        // Could be claimed by the borrower with NFT
+        let (out1_asset, out1_value, out1_script) = parse_explicit(out1)?;
+        if out1_asset != principal_asset
+            || out1_value != principal_amount
+            || out1_script != principal_auth_script
+        {
+            Err("principal asset auth output mismatch")?
+        }
+
+        // Output 2: lender NFT
+        // Returned to the lender's wallet, kept to claim the repayment later
+        let (out2_asset, out2_value, out2_script) = parse_explicit(out2)?;
+        if out2_asset != lender_nft
+            || out2_value != NFT_AMOUNT
+            || out2_script == active_offer_script
+            || out2_script == pending_offer_script
+            || out2_script == principal_auth_script
+            || out2_script == script_auth_script
+            || out2_script.is_op_return()
+        {
+            Err("lender NFT output invalid")?
+        }
+
+        // Change and fee outputs could only hold principal or policy asset and must not
+        // replicate any of the protocol outputs.
+        check_change_outputs(
+            acceptance_tx.output.iter().skip(3),
+            &[
+                &active_offer_script,
+                &pending_offer_script,
+                &principal_auth_script,
+                &script_auth_script,
+            ],
+            &[principal_asset, policy_asset],
+        )?;
+
+        Ok(())
+    })()
+    .map_err(|msg| LendingError::InvalidOfferAcceptance(msg.to_string()))?;
+
+    Ok(active_offer)
+}

@@ -69,6 +69,28 @@ fn get_prevout(tx: &Transaction, outpoint: OutPoint) -> Result<&TxOut, &str> {
         .ok_or("input not found")
 }
 
+/// Verify change and fee outputs: they must not replicate any protocol script and, when
+/// explicit, must only hold one of the allowed assets. Blinded outputs are skipped.
+fn check_change_outputs<'a>(
+    outputs: impl Iterator<Item = &'a TxOut>,
+    forbidden_scripts: &[&Script],
+    allowed_assets: &[AssetId],
+) -> Result<(), &'static str> {
+    for out in outputs {
+        let script = &out.script_pubkey;
+        if forbidden_scripts.contains(&script) || script.is_op_return() {
+            return Err("unexpected change output script");
+        }
+        let Ok((asset, _, _)) = parse_explicit(out) else {
+            continue;
+        };
+        if !allowed_assets.contains(&asset) {
+            return Err("unexpected change output asset");
+        }
+    }
+    Ok(())
+}
+
 pub(crate) fn parse_and_verify_lending_offer(
     tx: &Transaction,
     protocol_fee_keeper_asset_id: AssetId,
@@ -239,22 +261,11 @@ pub(crate) fn parse_and_verify_lending_offer(
 
         // Change and fee outputs could only hold collateral or policy asset and must not
         // replicate any of the protocol outputs.
-        for out in tx.output.iter().skip(6) {
-            let script = out.script_pubkey.clone();
-            if script == factory_script
-                || script == offer_script
-                || script == script_auth_script
-                || script.is_op_return()
-            {
-                Err("unexpected change output script")?;
-            }
-            let Ok((asset, _, _)) = parse_explicit(out) else {
-                continue;
-            };
-            if asset != collateral_asset && asset != policy_asset {
-                Err("unexpected change output asset")?;
-            }
-        }
+        check_change_outputs(
+            tx.output.iter().skip(6),
+            &[&factory_script, &offer_script, &script_auth_script],
+            &[collateral_asset, policy_asset],
+        )?;
 
         Ok(())
     })()

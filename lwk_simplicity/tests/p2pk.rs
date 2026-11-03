@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use lwk_common::Signer;
 
-use lwk_simplicity::scripts::load_program_with_debug_symbols;
+use lwk_simplicity::scripts::{control_block, load_program_with_debug_symbols};
 use lwk_wollet::blocking::BlockchainBackend;
 use lwk_wollet::secp256k1::rand::thread_rng;
 use lwk_wollet::secp256k1::SecretKey;
@@ -99,8 +99,16 @@ fn test_simplicity_p2pk() {
 
     // Compute message and sign
     let input_index = 0;
-    let message =
-        get_sighash_all(&tx, &program, &xonly, &txouts, input_index, common_network).unwrap();
+    let control_block = control_block(program.commit().cmr(), xonly);
+    let message = get_sighash_all(
+        &tx,
+        &program,
+        &control_block,
+        &txouts,
+        input_index,
+        common_network,
+    )
+    .unwrap();
 
     let signature = EC.sign_schnorr(&message, &keypair);
 
@@ -116,7 +124,7 @@ fn test_simplicity_p2pk() {
     let tx = finalize_transaction(
         tx,
         &program,
-        &xonly,
+        &control_block,
         &txouts,
         input_index,
         witness_values,
@@ -222,8 +230,16 @@ fn test_simplicity_mixed_p2pk() {
         .collect();
 
     let input_idx_s = 0;
-    let message =
-        get_sighash_all(&tx, &program, &xonly, &utxos, input_idx_s, common_network).unwrap();
+    let control_block = control_block(program.commit().cmr(), xonly);
+    let message = get_sighash_all(
+        &tx,
+        &program,
+        &control_block,
+        &utxos,
+        input_idx_s,
+        common_network,
+    )
+    .unwrap();
 
     let signature = EC.sign_schnorr(&message, &keypair);
 
@@ -238,7 +254,7 @@ fn test_simplicity_mixed_p2pk() {
     let tx = finalize_transaction(
         tx,
         &program,
-        &xonly,
+        &control_block,
         &utxos,
         input_idx_s,
         witness_values,

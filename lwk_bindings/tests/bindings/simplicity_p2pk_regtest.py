@@ -66,10 +66,11 @@ pset = builder.finish(wollet)
 # 9. Extract unsigned transaction and create signature
 unsigned_tx = pset.extract_tx()
 all_utxos = [funding_output]
+control_block = program.control_block(xonly_pubkey)
 
 signature = program.create_p2pk_signature(
     signer, derivation_path, unsigned_tx,
-    all_utxos, 0, network
+    control_block, all_utxos, 0, network
 )
 
 # 10. Finalize transaction with Simplicity witness
@@ -77,7 +78,7 @@ witness = SimplicityWitnessValues()
 witness = witness.add_value("SIGNATURE", SimplicityTypedValue.byte_array(signature))
 
 finalized_tx = program.finalize_transaction(
-    unsigned_tx, xonly_pubkey, all_utxos, 0,
+    unsigned_tx, control_block, all_utxos, 0,
     witness, network, SimplicityLogLevel.NONE
 )
 
@@ -89,7 +90,7 @@ assert len(finalized_script_witness) == 4, "Simplicity witness should have 4 ele
 
 # Run the program to get the pruned program and witness bytes
 run_result = program.run(
-    unsigned_tx, xonly_pubkey, all_utxos, 0,
+    unsigned_tx, control_block, all_utxos, 0,
     witness, network, SimplicityLogLevel.NONE
 )
 
@@ -99,7 +100,6 @@ simplicity_witness_bytes = run_result.witness_bytes()
 simplicity_program_bytes = run_result.program_bytes()
 cmr = run_result.cmr()
 
-control_block = simplicity_control_block(cmr, xonly_pubkey)
 control_block_hex = control_block.to_bytes().hex()
 
 # Verify it matches what program.control_block() returns

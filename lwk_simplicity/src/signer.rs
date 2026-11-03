@@ -20,7 +20,8 @@ use simplicityhl::{CompiledProgram, WitnessValues};
 ///
 /// # Errors
 ///
-/// Returns error if environment verification fails.
+/// Returns error if the control block does not commit to the UTXO script pubkey or if
+/// environment verification fails.
 pub fn get_sighash_all(
     tx: &Transaction,
     program: &CompiledProgram,
@@ -39,7 +40,9 @@ pub fn get_sighash_all(
 /// Finalize transaction with a Simplicity witness for the specified input.
 ///
 /// # Errors
-/// Returns error if environment verification or program execution fails.
+///
+/// Returns error if the control block does not commit to the UTXO script pubkey or if
+/// environment verification or program execution fails.
 #[allow(clippy::too_many_arguments)]
 pub fn finalize_transaction(
     mut tx: Transaction,
@@ -75,8 +78,12 @@ pub fn finalize_transaction(
 
 /// Build and verify an Elements environment for program execution.
 ///
+/// The control block must commit to the program's CMR and to the script pubkey of
+/// the UTXO at `input_index`.
+///
 /// # Errors
-/// Returns error if UTXO index is invalid or script pubkey doesn't match.
+/// Returns error if the control block does not commit to the UTXO script pubkey,
+/// the input or UTXO index is invalid, or the script pubkey doesn't match.
 pub fn get_and_verify_env(
     tx: &Transaction,
     program: &CompiledProgram,

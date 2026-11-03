@@ -67,13 +67,6 @@ pub enum ProgramError {
         utxo_count: usize,
     },
 
-    /// Returned when the UTXO's script does not match the expected program address.
-    #[error("Script pubkey mismatch: expected hash {expected_hash}, got {actual_hash}")]
-    ScriptPubkeyMismatch {
-        expected_hash: String,
-        actual_hash: String,
-    },
-
     #[error("Input index {input_index} out of bounds (have {input_count} inputs)")]
     InputIndexOutOfBounds {
         input_index: usize,

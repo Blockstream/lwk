@@ -74,6 +74,12 @@ pub enum ProgramError {
         actual_hash: String,
     },
 
+    #[error("Input index {input_index} out of bounds (have {input_count} inputs)")]
+    InputIndexOutOfBounds {
+        input_index: usize,
+        input_count: usize,
+    },
+
     #[error("UTXO script pubkey is not P2TR: {actual_hash}")]
     ScriptPubkeyNotP2tr { actual_hash: String },
 

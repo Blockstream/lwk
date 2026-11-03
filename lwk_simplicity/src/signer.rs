@@ -58,12 +58,6 @@ pub fn finalize_transaction(
     let (simplicity_program_bytes, simplicity_witness_bytes) = pruned.to_vec_with_witness();
     let cmr = pruned.cmr();
 
-    if input_index > tx.input.len() {
-        return Err(ProgramError::UtxoIndexOutOfBounds {
-            input_index,
-            utxo_count: tx.input.len(),
-        });
-    }
     tx.input[input_index].witness = TxInWitness {
         amount_rangeproof: RangeProof::EMPTY,
         inflation_keys_rangeproof: RangeProof::EMPTY,
@@ -92,6 +86,13 @@ pub fn get_and_verify_env(
     input_index: usize,
 ) -> Result<ElementsEnv<Arc<Transaction>>, ProgramError> {
     let cmr = program.commit().cmr();
+
+    if tx.input.len() <= input_index {
+        return Err(ProgramError::InputIndexOutOfBounds {
+            input_index,
+            input_count: tx.input.len(),
+        });
+    }
 
     if utxos.len() <= input_index {
         return Err(ProgramError::UtxoIndexOutOfBounds {

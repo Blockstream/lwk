@@ -83,22 +83,24 @@ impl SimplicityProgram {
     }
 
     /// Get the sighash_all message for signing a Simplicity program input.
+    ///
+    /// The control block must commit to this program's CMR and to the script pubkey
+    /// of the UTXO being spent.
     pub fn get_sighash_all(
         &self,
         tx: &Transaction,
-        program_public_key: &XOnlyPublicKey,
+        control_block: &ControlBlock,
         utxos: &[Arc<TxOut>],
         input_index: u32,
         network: &Network,
     ) -> Result<Vec<u8>, LwkError> {
-        let x_only_key = program_public_key.to_simplicityhl()?;
         let tx = tx.as_ref();
         let utxos_inner = convert_utxos(utxos);
 
         let message = signer::get_sighash_all(
             tx,
             &self.inner,
-            &x_only_key,
+            control_block.as_ref(),
             &utxos_inner,
             input_index as usize,
             network.into(),
@@ -108,25 +110,27 @@ impl SimplicityProgram {
     }
 
     /// Finalize a transaction with a Simplicity witness for the specified input.
+    ///
+    /// The control block must commit to this program's CMR and to the script pubkey
+    /// of the UTXO being spent.
     #[allow(clippy::too_many_arguments)]
     pub fn finalize_transaction(
         &self,
         tx: &Transaction,
-        program_public_key: &XOnlyPublicKey,
+        control_block: &ControlBlock,
         utxos: &[Arc<TxOut>],
         input_index: u32,
         witness_values: &SimplicityWitnessValues,
         network: &Network,
         log_level: SimplicityLogLevel,
     ) -> Result<Arc<Transaction>, LwkError> {
-        let x_only_key = program_public_key.to_simplicityhl()?;
         let tx = tx.as_ref();
         let utxos_inner = convert_utxos(utxos);
 
         let finalized = signer::finalize_transaction(
             tx.clone(),
             &self.inner,
-            &x_only_key,
+            control_block.as_ref(),
             &utxos_inner,
             input_index as usize,
             witness_values.to_inner()?,
@@ -138,25 +142,28 @@ impl SimplicityProgram {
     }
 
     /// Create a Schnorr signature for a P2PK Simplicity program input.
+    ///
+    /// The control block must commit to this program's CMR and to the script pubkey
+    /// of the UTXO being spent.
     #[allow(clippy::too_many_arguments)]
     pub fn create_p2pk_signature(
         &self,
         signer: &crate::Signer,
         derivation_path: &DerivationPath,
         tx: &Transaction,
+        control_block: &ControlBlock,
         utxos: &[Arc<TxOut>],
         input_index: u32,
         network: &Network,
     ) -> Result<Vec<u8>, LwkError> {
         let keypair = derive_keypair(signer, derivation_path)?;
-        let x_only_pubkey = keypair.x_only_public_key().0;
         let tx = tx.as_ref();
         let utxos_inner = convert_utxos(utxos);
 
         let sighash = signer::get_sighash_all(
             tx,
             &self.inner,
-            &x_only_pubkey,
+            control_block.as_ref(),
             &utxos_inner,
             input_index as usize,
             network.into(),
@@ -168,25 +175,27 @@ impl SimplicityProgram {
     }
 
     /// Satisfy and execute this program in a transaction environment.
+    ///
+    /// The control block must commit to this program's CMR and to the script pubkey
+    /// of the UTXO being spent.
     #[allow(clippy::too_many_arguments)]
     pub fn run(
         &self,
         tx: &Transaction,
-        program_public_key: &XOnlyPublicKey,
+        control_block: &ControlBlock,
         utxos: &[Arc<TxOut>],
         input_index: u32,
         witness_values: &SimplicityWitnessValues,
         network: &Network,
         log_level: SimplicityLogLevel,
     ) -> Result<Arc<SimplicityRunResult>, LwkError> {
-        let x_only_key = program_public_key.to_simplicityhl()?;
         let tx = tx.as_ref();
         let utxos_inner = convert_utxos(utxos);
 
         let env = signer::get_and_verify_env(
             tx,
             &self.inner,
-            &x_only_key,
+            control_block.as_ref(),
             &utxos_inner,
             network.into(),
             input_index as usize,

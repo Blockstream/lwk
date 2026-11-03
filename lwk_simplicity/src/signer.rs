@@ -1,13 +1,13 @@
 use crate::error::ProgramError;
 use crate::runner::run_program;
-use crate::scripts::{control_block, create_p2tr_address};
+use crate::scripts::verify_control_block;
 
 use std::sync::Arc;
 
 use lwk_common::Network;
 use simplicityhl::elements::secp256k1_zkp::Message;
+use simplicityhl::elements::taproot::ControlBlock;
 use simplicityhl::elements::{PeginWitness, RangeProof, Witness};
-use simplicityhl::simplicity::bitcoin::XOnlyPublicKey;
 use simplicityhl::simplicity::elements::{Transaction, TxInWitness, TxOut};
 use simplicityhl::simplicity::jet::elements::{ElementsEnv, ElementsUtxo};
 use simplicityhl::tracker::TrackerLogLevel;
@@ -24,12 +24,12 @@ use simplicityhl::{CompiledProgram, WitnessValues};
 pub fn get_sighash_all(
     tx: &Transaction,
     program: &CompiledProgram,
-    program_public_key: &XOnlyPublicKey,
+    control_block: &ControlBlock,
     utxos: &[TxOut],
     input_index: usize,
     network: Network,
 ) -> Result<Message, ProgramError> {
-    let env = get_and_verify_env(tx, program, program_public_key, utxos, network, input_index)?;
+    let env = get_and_verify_env(tx, program, control_block, utxos, network, input_index)?;
 
     let sighash_all = Message::from_digest(env.c_tx_env().sighash_all().to_byte_array());
 
@@ -44,21 +44,14 @@ pub fn get_sighash_all(
 pub fn finalize_transaction(
     mut tx: Transaction,
     program: &CompiledProgram,
-    program_public_key: &XOnlyPublicKey,
+    control_block: &ControlBlock,
     utxos: &[TxOut],
     input_index: usize,
     witness_values: WitnessValues,
     network: Network,
     log_level: TrackerLogLevel,
 ) -> Result<Transaction, ProgramError> {
-    let env = get_and_verify_env(
-        &tx,
-        program,
-        program_public_key,
-        utxos,
-        network,
-        input_index,
-    )?;
+    let env = get_and_verify_env(&tx, program, control_block, utxos, network, input_index)?;
 
     let pruned = run_program(program, witness_values, &env, log_level)?.0;
 
@@ -78,7 +71,7 @@ pub fn finalize_transaction(
             simplicity_witness_bytes,
             simplicity_program_bytes,
             cmr.as_ref().to_vec(),
-            control_block(cmr, *program_public_key).serialize(),
+            control_block.serialize(),
         ]),
         pegin_witness: PeginWitness::EMPTY,
     };
@@ -93,7 +86,7 @@ pub fn finalize_transaction(
 pub fn get_and_verify_env(
     tx: &Transaction,
     program: &CompiledProgram,
-    program_public_key: &XOnlyPublicKey,
+    control_block: &ControlBlock,
     utxos: &[TxOut],
     network: Network,
     input_index: usize,
@@ -108,15 +101,7 @@ pub fn get_and_verify_env(
     }
 
     let target_utxo = &utxos[input_index];
-    let script_pubkey =
-        create_p2tr_address(cmr, program_public_key, network.address_params()).script_pubkey();
-
-    if target_utxo.script_pubkey != script_pubkey {
-        return Err(ProgramError::ScriptPubkeyMismatch {
-            expected_hash: script_pubkey.script_hash().to_string(),
-            actual_hash: target_utxo.script_pubkey.script_hash().to_string(),
-        });
-    }
+    verify_control_block(cmr, control_block, &target_utxo.script_pubkey)?;
 
     Ok(ElementsEnv::new(
         Arc::new(tx.clone()),
@@ -130,7 +115,7 @@ pub fn get_and_verify_env(
             .collect(),
         u32::try_from(input_index)?,
         cmr,
-        control_block(cmr, *program_public_key),
+        control_block.clone(),
         None,
         network.genesis_hash(),
     ))

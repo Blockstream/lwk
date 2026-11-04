@@ -44,6 +44,9 @@ pub fn setup_cli(env: TestEnv) -> (JoinHandle<()>, TempDir, String, String, Test
     let datadir = tmp.path().display().to_string();
 
     let mut registry_url = env.registry_url();
+    if registry_url.is_empty() {
+        registry_url = env.registry_v2_url();
+    }
     if !registry_url.is_empty() {
         registry_url = format!("--registry-url {registry_url}");
     }

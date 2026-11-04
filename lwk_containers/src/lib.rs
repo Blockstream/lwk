@@ -4,12 +4,15 @@
 //!
 //! * [`PinServer`] [Pin Server](https://github.com/Blockstream/blind_pin_server)
 //! * [`JadeEmulator`] [Jade emulator](https://github.com/Blockstream/Jade/)
+//! * [`AssetRegistry`] [Liquid Asset Registry v2](https://github.com/Blockstream/asset_registry_v2)
 //!
 
+mod asset_registry;
 mod jade;
 mod ledger;
 mod pin_server;
 
+pub use asset_registry::AssetRegistry;
 pub use jade::{JadeEmulator, EMULATOR_PORT};
 pub use ledger::{LedgerEmulator, LEDGER_EMULATOR_PORT};
 pub use pin_server::{PinServer, PIN_SERVER_PORT};

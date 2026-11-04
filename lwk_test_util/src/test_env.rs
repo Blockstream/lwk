@@ -24,6 +24,8 @@ use std::str::FromStr;
 use std::time::{Duration, Instant};
 use tempfile::TempDir;
 
+use lwk_containers::AssetRegistry;
+
 /// Times a bitcoind or elementsd node is launched before giving up.
 const NODE_START_ATTEMPTS: u32 = 3;
 
@@ -54,6 +56,7 @@ pub struct TestEnvBuilder {
     with_waterfalls: bool,
     waterfalls_max_txs_seen: Option<usize>,
     with_registry: bool,
+    with_registry_v2: bool,
     with_amp2: bool,
     with_zmq: bool,
     with_auth: bool,
@@ -109,6 +112,7 @@ impl TestEnvBuilder {
             with_waterfalls: false,
             waterfalls_max_txs_seen: None,
             with_registry: false,
+            with_registry_v2: false,
             with_amp2: false,
             with_zmq: false,
             with_auth: false,
@@ -178,6 +182,14 @@ impl TestEnvBuilder {
         self
     }
 
+    /// Start the docker for Asset Registry v2
+    ///
+    /// Requires docker daemon and `with_esplora()`
+    pub fn with_registry_v2(mut self) -> Self {
+        self.with_registry_v2 = true;
+        self
+    }
+
     /// Start an AMP2 mock server
     pub fn with_amp2(mut self) -> Self {
         self.with_amp2 = true;
@@ -234,6 +246,9 @@ impl TestEnvBuilder {
             if !self.with_esplora {
                 panic!("asset registry requires esplora, call 'with_esplora()'");
             }
+        }
+        if self.with_registry_v2 && !self.with_esplora {
+            panic!("asset registry v2 requires esplora, call 'with_esplora()'");
         }
         if self.amp2_exec.is_empty() && self.with_amp2 {
             panic!("AMP2_MOCK_EXEC must be set");
@@ -422,6 +437,13 @@ impl TestEnvBuilder {
                 &self.registry_exec,
                 &format!("http://{esplora_url}"),
             ))
+        } else {
+            None
+        };
+
+        let registry_v2d = if self.with_registry_v2 {
+            let esplora_url = electrsd.as_ref().unwrap().esplora_url.as_ref().unwrap();
+            Some(AssetRegistry::new(&format!("http://{esplora_url}")))
         } else {
             None
         };
@@ -620,6 +642,7 @@ impl TestEnvBuilder {
             _bitcoin_electrsd: bitcoin_electrsd,
             _waterfallsd: waterfallsd,
             registryd,
+            registry_v2d,
             amp2d,
             lightningd,
             lightningd_anyswap,
@@ -645,6 +668,7 @@ pub struct TestEnv {
     /// Kept for its `Drop`, which stops the waterfalls server process.
     _waterfallsd: Option<WaterfallsD>,
     registryd: Option<RegistryD>,
+    registry_v2d: Option<AssetRegistry>,
     amp2d: Option<Amp2D>,
     lightningd: Option<LightningD>,
     lightningd_anyswap: Option<LightningD>,
@@ -690,6 +714,13 @@ impl TestEnv {
 
     pub fn registry_url(&self) -> String {
         self.registryd
+            .as_ref()
+            .map(|r| r.url().to_string())
+            .unwrap_or_default()
+    }
+
+    pub fn registry_v2_url(&self) -> String {
+        self.registry_v2d
             .as_ref()
             .map(|r| r.url().to_string())
             .unwrap_or_default()

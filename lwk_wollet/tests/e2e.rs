@@ -1,3 +1,4 @@
+#[cfg(feature = "amp0")]
 mod amp0;
 #[cfg(feature = "amp2")]
 mod amp2;

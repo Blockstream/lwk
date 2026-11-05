@@ -797,6 +797,86 @@ mod tests {
     }
 
     #[test]
+    fn from_seed_matches_mnemonic() {
+        let network = lwk_common::Network::TestnetLiquid;
+        let from_mnemonic =
+            SwSigner::new_with_network(lwk_test_util::TEST_MNEMONIC, network).unwrap();
+        let seed = from_mnemonic.seed().unwrap();
+        let from_seed = SwSigner::from_seed_with_network(&seed, network).unwrap();
+
+        assert_eq!(from_seed.seed(), Some(seed));
+        assert!(from_seed.mnemonic().is_none());
+        assert_eq!(from_seed.xpub(), from_mnemonic.xpub());
+        let path: DerivationPath = "m/84'/1'/0'".parse().unwrap();
+        assert_eq!(
+            from_seed.derive_xpub(&path).unwrap(),
+            from_mnemonic.derive_xpub(&path).unwrap()
+        );
+        assert_eq!(
+            from_seed.slip77_master_blinding_key().unwrap(),
+            from_mnemonic.slip77_master_blinding_key().unwrap()
+        );
+        assert_eq!(
+            from_seed.wpkh_slip77_descriptor().unwrap(),
+            from_mnemonic.wpkh_slip77_descriptor().unwrap()
+        );
+        assert_eq!(
+            from_seed.derive_bip85_mnemonic(0, 12).unwrap(),
+            from_mnemonic.derive_bip85_mnemonic(0, 12).unwrap()
+        );
+
+        let b64 = include_str!("../../lwk_jade/test_data/pset_to_be_signed.base64");
+        let mut pset_seed: PartiallySignedTransaction = b64.parse().unwrap();
+        let mut pset_mnemonic: PartiallySignedTransaction = b64.parse().unwrap();
+        assert_eq!(from_seed.sign(&mut pset_seed).unwrap(), 1);
+        assert_eq!(from_mnemonic.sign(&mut pset_mnemonic).unwrap(), 1);
+        assert_eq!(pset_seed, pset_mnemonic);
+    }
+
+    #[test]
+    fn from_seed_bip39_vectors() {
+        use elements_miniscript::bitcoin::hex::FromHex;
+
+        // English with passphrase "TREZOR": first vector of
+        // https://github.com/trezor/python-mnemonic/blob/master/vectors.json
+        let english_seed = Mnemonic::parse(lwk_test_util::TEST_MNEMONIC)
+            .unwrap()
+            .to_seed("TREZOR");
+        // Japanese: first vector of
+        // https://github.com/bip32JP/bip32JP.github.io/blob/master/test_JP_BIP39.json
+        // ("あいこくしん" x11 + "あおぞら", passphrase "㍍ガバヴァぱばぐゞちぢ十人十色")
+        let japanese_seed = Vec::<u8>::from_hex("a262d6fb6122ecf45be09c50492b31f92e9beb7d9a845987a02cefda57a15f9c467a17872029a9e92299b5cbdf306e3a0ee620245cbd508959b6cb7ca637bd55").unwrap();
+
+        let vectors = [
+            (
+                &english_seed[..],
+                "c55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04",
+                "xprv9s21ZrQH143K3h3fDYiay8mocZ3afhfULfb5GX8kCBdno77K4HiA15Tg23wpbeF1pLfs1c5SPmYHrEpTuuRhxMwvKDwqdKiGJS9XFKzUsAF",
+            ),
+            (
+                &japanese_seed[..],
+                "a262d6fb6122ecf45be09c50492b31f92e9beb7d9a845987a02cefda57a15f9c467a17872029a9e92299b5cbdf306e3a0ee620245cbd508959b6cb7ca637bd55",
+                "xprv9s21ZrQH143K258jAiWPAM6JYT9hLA91MV3AZUKfxmLZJCjCHeSjBvMbDy8C1mJ2FL5ytExyS97FAe6pQ6SD5Jt9SwHaLorA8i5Eojokfo1",
+            ),
+        ];
+        for (seed, seed_hex, xprv) in vectors {
+            assert_eq!(seed.to_lower_hex_string(), seed_hex);
+            let signer =
+                SwSigner::from_seed_with_network(seed, lwk_common::Network::Liquid).unwrap();
+            assert_eq!(signer.seed().unwrap().to_lower_hex_string(), seed_hex);
+            let master = signer.derive_xprv(&DerivationPath::master()).unwrap();
+            assert_eq!(master.to_string(), xprv);
+        }
+
+        for len in [0, 16, 32, 63, 65] {
+            assert!(matches!(
+                SwSigner::from_seed_with_network(&vec![0u8; len], lwk_common::Network::Liquid),
+                Err(NewError::InvalidSeedLength(l)) if l == len
+            ));
+        }
+    }
+
+    #[test]
     fn signer_ecdsa_opt() {
         // Sign with the default option (low R) and then with the "no grind" option
         let mut signer = SwSigner::new_with_network(

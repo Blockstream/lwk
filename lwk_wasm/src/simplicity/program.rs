@@ -83,6 +83,9 @@ impl SimplicityProgram {
 
     /// Get the sighash_all message for signing a Simplicity program input.
     ///
+    /// The control block must commit to this program's CMR and to the script pubkey
+    /// of the UTXO being spent.
+    ///
     /// NOTE: The utxos object is destroyed during the execution of the function, so the argument that was
     /// passed in the JS code cannot be reused.
     // TODO: address the limitation
@@ -90,19 +93,18 @@ impl SimplicityProgram {
     pub fn get_sighash_all(
         &self,
         tx: &Transaction,
-        program_public_key: &XOnlyPublicKey,
+        control_block: &ControlBlock,
         utxos: Vec<TxOut>,
         input_index: u32,
         network: &Network,
     ) -> Result<String, Error> {
-        let x_only_key = program_public_key.to_simplicityhl()?;
         let tx = tx.as_ref();
         let utxos_inner = convert_utxos(&utxos);
 
         let message = signer::get_sighash_all(
             tx,
             &self.inner,
-            &x_only_key,
+            control_block.as_ref(),
             &utxos_inner,
             input_index as usize,
             network.into(),
@@ -114,6 +116,9 @@ impl SimplicityProgram {
 
     /// Finalize a transaction with a Simplicity witness for the specified input.
     ///
+    /// The control block must commit to this program's CMR and to the script pubkey
+    /// of the UTXO being spent.
+    ///
     /// NOTE: The utxos object is destroyed during the execution of the function, so the argument that was
     /// passed in the JS code cannot be reused.
     // TODO: address the limitation
@@ -122,21 +127,20 @@ impl SimplicityProgram {
     pub fn finalize_transaction(
         &self,
         tx: &Transaction,
-        program_public_key: &XOnlyPublicKey,
+        control_block: &ControlBlock,
         utxos: Vec<TxOut>,
         input_index: u32,
         witness_values: &SimplicityWitnessValues,
         network: &Network,
         log_level: SimplicityLogLevel,
     ) -> Result<Transaction, Error> {
-        let x_only_key = program_public_key.to_simplicityhl()?;
         let tx = tx.as_ref();
         let utxos_inner = convert_utxos(&utxos);
 
         let finalized = signer::finalize_transaction(
             tx.clone(),
             &self.inner,
-            &x_only_key,
+            control_block.as_ref(),
             &utxos_inner,
             input_index as usize,
             witness_values.to_inner()?,
@@ -147,6 +151,9 @@ impl SimplicityProgram {
     }
 
     /// Create a Schnorr signature for a P2PK Simplicity program input.
+    ///
+    /// The control block must commit to this program's CMR and to the script pubkey
+    /// of the UTXO being spent.
     #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen(js_name = createP2pkSignature)]
     pub fn create_p2pk_signature(
@@ -154,19 +161,19 @@ impl SimplicityProgram {
         signer: &Signer,
         derivation_path: &str,
         tx: &Transaction,
+        control_block: &ControlBlock,
         utxos: Vec<TxOut>,
         input_index: u32,
         network: &Network,
     ) -> Result<String, Error> {
         let keypair_inner: Keypair = derive_keypair(signer, derivation_path)?.into();
-        let x_only_pubkey = keypair_inner.x_only_public_key().0;
         let tx = tx.as_ref();
         let utxos_inner = convert_utxos(&utxos);
 
         let sighash = signer::get_sighash_all(
             tx,
             &self.inner,
-            &x_only_pubkey,
+            control_block.as_ref(),
             &utxos_inner,
             input_index as usize,
             network.into(),
@@ -179,6 +186,9 @@ impl SimplicityProgram {
 
     /// Satisfy and execute this program in a transaction environment.
     ///
+    /// The control block must commit to this program's CMR and to the script pubkey
+    /// of the UTXO being spent.
+    ///
     /// NOTE: The utxos object is destroyed during the execution of the function, so the argument that was
     /// passed in the JS code cannot be reused.
     // TODO: address the limitation
@@ -186,21 +196,20 @@ impl SimplicityProgram {
     pub fn run(
         &self,
         tx: &Transaction,
-        program_public_key: &XOnlyPublicKey,
+        control_block: &ControlBlock,
         utxos: Vec<TxOut>,
         input_index: u32,
         witness_values: &SimplicityWitnessValues,
         network: &Network,
         log_level: SimplicityLogLevel,
     ) -> Result<SimplicityRunResult, Error> {
-        let x_only_key = program_public_key.to_simplicityhl()?;
         let tx = tx.as_ref();
         let utxos_inner = convert_utxos(&utxos);
 
         let env = signer::get_and_verify_env(
             tx,
             &self.inner,
-            &x_only_key,
+            control_block.as_ref(),
             &utxos_inner,
             network.into(),
             input_index as usize,

@@ -1,13 +1,13 @@
 use crate::error::ProgramError;
 use crate::runner::run_program;
-use crate::scripts::{control_block, create_p2tr_address};
+use crate::scripts::verify_control_block;
 
 use std::sync::Arc;
 
 use lwk_common::Network;
 use simplicityhl::elements::secp256k1_zkp::Message;
+use simplicityhl::elements::taproot::ControlBlock;
 use simplicityhl::elements::{PeginWitness, RangeProof, Witness};
-use simplicityhl::simplicity::bitcoin::XOnlyPublicKey;
 use simplicityhl::simplicity::elements::{Transaction, TxInWitness, TxOut};
 use simplicityhl::simplicity::jet::elements::{ElementsEnv, ElementsUtxo};
 use simplicityhl::tracker::TrackerLogLevel;
@@ -20,16 +20,17 @@ use simplicityhl::{CompiledProgram, WitnessValues};
 ///
 /// # Errors
 ///
-/// Returns error if environment verification fails.
+/// Returns error if the control block does not commit to the UTXO script pubkey or if
+/// environment verification fails.
 pub fn get_sighash_all(
     tx: &Transaction,
     program: &CompiledProgram,
-    program_public_key: &XOnlyPublicKey,
+    control_block: &ControlBlock,
     utxos: &[TxOut],
     input_index: usize,
     network: Network,
 ) -> Result<Message, ProgramError> {
-    let env = get_and_verify_env(tx, program, program_public_key, utxos, network, input_index)?;
+    let env = get_and_verify_env(tx, program, control_block, utxos, network, input_index)?;
 
     let sighash_all = Message::from_digest(env.c_tx_env().sighash_all().to_byte_array());
 
@@ -39,38 +40,27 @@ pub fn get_sighash_all(
 /// Finalize transaction with a Simplicity witness for the specified input.
 ///
 /// # Errors
-/// Returns error if environment verification or program execution fails.
+///
+/// Returns error if the control block does not commit to the UTXO script pubkey or if
+/// environment verification or program execution fails.
 #[allow(clippy::too_many_arguments)]
 pub fn finalize_transaction(
     mut tx: Transaction,
     program: &CompiledProgram,
-    program_public_key: &XOnlyPublicKey,
+    control_block: &ControlBlock,
     utxos: &[TxOut],
     input_index: usize,
     witness_values: WitnessValues,
     network: Network,
     log_level: TrackerLogLevel,
 ) -> Result<Transaction, ProgramError> {
-    let env = get_and_verify_env(
-        &tx,
-        program,
-        program_public_key,
-        utxos,
-        network,
-        input_index,
-    )?;
+    let env = get_and_verify_env(&tx, program, control_block, utxos, network, input_index)?;
 
     let pruned = run_program(program, witness_values, &env, log_level)?.0;
 
     let (simplicity_program_bytes, simplicity_witness_bytes) = pruned.to_vec_with_witness();
     let cmr = pruned.cmr();
 
-    if input_index > tx.input.len() {
-        return Err(ProgramError::UtxoIndexOutOfBounds {
-            input_index,
-            utxo_count: tx.input.len(),
-        });
-    }
     tx.input[input_index].witness = TxInWitness {
         amount_rangeproof: RangeProof::EMPTY,
         inflation_keys_rangeproof: RangeProof::EMPTY,
@@ -78,7 +68,7 @@ pub fn finalize_transaction(
             simplicity_witness_bytes,
             simplicity_program_bytes,
             cmr.as_ref().to_vec(),
-            control_block(cmr, *program_public_key).serialize(),
+            control_block.serialize(),
         ]),
         pegin_witness: PeginWitness::EMPTY,
     };
@@ -88,17 +78,28 @@ pub fn finalize_transaction(
 
 /// Build and verify an Elements environment for program execution.
 ///
+/// The control block must commit to the program's CMR and to the script pubkey of
+/// the UTXO at `input_index`.
+///
 /// # Errors
-/// Returns error if UTXO index is invalid or script pubkey doesn't match.
+/// Returns error if the control block does not commit to the UTXO script pubkey,
+/// the input or UTXO index is invalid, or the script pubkey doesn't match.
 pub fn get_and_verify_env(
     tx: &Transaction,
     program: &CompiledProgram,
-    program_public_key: &XOnlyPublicKey,
+    control_block: &ControlBlock,
     utxos: &[TxOut],
     network: Network,
     input_index: usize,
 ) -> Result<ElementsEnv<Arc<Transaction>>, ProgramError> {
     let cmr = program.commit().cmr();
+
+    if tx.input.len() <= input_index {
+        return Err(ProgramError::InputIndexOutOfBounds {
+            input_index,
+            input_count: tx.input.len(),
+        });
+    }
 
     if utxos.len() <= input_index {
         return Err(ProgramError::UtxoIndexOutOfBounds {
@@ -108,15 +109,7 @@ pub fn get_and_verify_env(
     }
 
     let target_utxo = &utxos[input_index];
-    let script_pubkey =
-        create_p2tr_address(cmr, program_public_key, network.address_params()).script_pubkey();
-
-    if target_utxo.script_pubkey != script_pubkey {
-        return Err(ProgramError::ScriptPubkeyMismatch {
-            expected_hash: script_pubkey.script_hash().to_string(),
-            actual_hash: target_utxo.script_pubkey.script_hash().to_string(),
-        });
-    }
+    verify_control_block(cmr, control_block, &target_utxo.script_pubkey)?;
 
     Ok(ElementsEnv::new(
         Arc::new(tx.clone()),
@@ -130,7 +123,7 @@ pub fn get_and_verify_env(
             .collect(),
         u32::try_from(input_index)?,
         cmr,
-        control_block(cmr, *program_public_key),
+        control_block.clone(),
         None,
         network.genesis_hash(),
     ))

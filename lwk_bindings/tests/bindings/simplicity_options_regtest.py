@@ -72,6 +72,7 @@ p2pk_args = p2pk_args.add_value("PUBLIC_KEY", SimplicityTypedValue.u256(xonly_pu
 # weight enough that this program doesn't require padding
 p2pk_program = SimplicityProgram.load_with_debug_symbols(P2PK_SOURCE, p2pk_args, True)
 p2pk_address = p2pk_program.create_p2tr_address(xonly_pubkey, network)
+p2pk_control_block = p2pk_program.control_block(xonly_pubkey)
 p2pk_script = p2pk_address.script_pubkey()
 p2pk_script_hex = str(p2pk_script)
 
@@ -151,6 +152,7 @@ options_args = build_options_arguments(options_params)
 # Use debug symbols to increase witness weight and thus provide sufficient execution budget
 # for two options-program inputs in the same transaction.
 options_program = SimplicityProgram.load_with_debug_symbols(OPTIONS_SOURCE, options_args, True)
+options_control_block = options_program.control_block(xonly_pubkey)
 
 contract_address = options_program.create_p2tr_address(xonly_pubkey, network)
 contract_script = contract_address.script_pubkey()
@@ -213,23 +215,23 @@ creation_utxos = [output1, output2]
 
 sig0 = p2pk_program.create_p2pk_signature(
     signer, derivation_path, creation_tx,
-    creation_utxos, 0, network
+    p2pk_control_block, creation_utxos, 0, network
 )
 witness0 = SimplicityWitnessValues()
 witness0 = witness0.add_value("SIGNATURE", SimplicityTypedValue.byte_array(sig0))
 creation_tx = p2pk_program.finalize_transaction(
-    creation_tx, xonly_pubkey, creation_utxos, 0,
+    creation_tx, p2pk_control_block, creation_utxos, 0,
     witness0, network, SimplicityLogLevel.NONE
 )
 
 sig1 = p2pk_program.create_p2pk_signature(
     signer, derivation_path, creation_tx,
-    creation_utxos, 1, network
+    p2pk_control_block, creation_utxos, 1, network
 )
 witness1 = SimplicityWitnessValues()
 witness1 = witness1.add_value("SIGNATURE", SimplicityTypedValue.byte_array(sig1))
 creation_tx = p2pk_program.finalize_transaction(
-    creation_tx, xonly_pubkey, creation_utxos, 1,
+    creation_tx, p2pk_control_block, creation_utxos, 1,
     witness1, network, SimplicityLogLevel.NONE
 )
 
@@ -412,23 +414,23 @@ funding_witness = SimplicityWitnessValues()
 funding_witness = funding_witness.add_value("PATH", path_value)
 
 funding_tx = options_program.finalize_transaction(
-    funding_tx, xonly_pubkey, funding_utxos, 0,
+    funding_tx, options_control_block, funding_utxos, 0,
     funding_witness, network, SimplicityLogLevel.NONE
 )
 
 funding_tx = options_program.finalize_transaction(
-    funding_tx, xonly_pubkey, funding_utxos, 1,
+    funding_tx, options_control_block, funding_utxos, 1,
     funding_witness, network, SimplicityLogLevel.NONE
 )
 
 sig2 = p2pk_program.create_p2pk_signature(
     signer, derivation_path, funding_tx,
-    funding_utxos, 2, network
+    p2pk_control_block, funding_utxos, 2, network
 )
 witness2 = SimplicityWitnessValues()
 witness2 = witness2.add_value("SIGNATURE", SimplicityTypedValue.byte_array(sig2))
 funding_tx = p2pk_program.finalize_transaction(
-    funding_tx, xonly_pubkey, funding_utxos, 2,
+    funding_tx, p2pk_control_block, funding_utxos, 2,
     witness2, network, SimplicityLogLevel.NONE
 )
 

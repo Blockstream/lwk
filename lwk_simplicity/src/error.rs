@@ -67,12 +67,25 @@ pub enum ProgramError {
         utxo_count: usize,
     },
 
-    /// Returned when the UTXO's script does not match the expected program address.
-    #[error("Script pubkey mismatch: expected hash {expected_hash}, got {actual_hash}")]
-    ScriptPubkeyMismatch {
-        expected_hash: String,
-        actual_hash: String,
+    #[error("Input index {input_index} out of bounds (have {input_count} inputs)")]
+    InputIndexOutOfBounds {
+        input_index: usize,
+        input_count: usize,
     },
+
+    #[error("UTXO script pubkey is not P2TR: {actual_hash}")]
+    ScriptPubkeyNotP2tr { actual_hash: String },
+
+    #[error("Invalid Taproot output key in UTXO script pubkey: {0}")]
+    InvalidTaprootOutputKey(String),
+
+    #[error(
+        "Control block leaf version {actual:#x} does not match Simplicity leaf version {expected:#x}"
+    )]
+    ControlBlockLeafVersionMismatch { expected: u8, actual: u8 },
+
+    #[error("Control block does not commit to CMR {cmr} for script pubkey {script_pubkey}")]
+    ControlBlockMismatch { cmr: String, script_pubkey: String },
 
     #[error("Input index exceeds u32 maximum: {0}")]
     InputIndexOverflow(#[from] std::num::TryFromIntError),

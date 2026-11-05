@@ -3235,6 +3235,8 @@ dependencies = [
  "rand 0.8.5",
  "tempfile",
  "testcontainers",
+ "testcontainers-modules",
+ "url",
 ]
 
 [[package]]
@@ -3388,6 +3390,7 @@ dependencies = [
  "env_logger",
  "log",
  "lwk_common",
+ "lwk_containers",
  "rand 0.8.5",
  "reqwest",
  "serde_json",

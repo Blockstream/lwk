@@ -136,9 +136,11 @@ registry = ["reqwest", "lwk_registry/client"]
 [[test]]
 name = "e2e"
 path = "tests/e2e.rs"
+required-features = ["electrum", "esplora"]
 
 [[example]]
 name = "list_transactions"
+required-features = ["electrum"]
 
 [package.metadata.docs.rs]
 all-features = true

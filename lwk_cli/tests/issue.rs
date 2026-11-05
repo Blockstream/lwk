@@ -2,7 +2,7 @@ use elements::encode::serialize;
 use elements::hex::DisplayHex;
 use elements::pset::PartiallySignedTransaction;
 
-use lwk_test_util::TestEnvBuilder;
+use lwk_test_util::{TestEnv, TestEnvBuilder};
 
 use crate::common::*;
 
@@ -210,13 +210,7 @@ fn test_issue() {
     t.join().unwrap();
 }
 
-#[test]
-fn test_registry_publish() {
-    let env = TestEnvBuilder::from_env()
-        .with_electrum()
-        .with_esplora()
-        .with_registry()
-        .build();
+fn test_registry_publish_inner(env: TestEnv) {
     let (t, _tmp, cli, _params, env) = setup_cli(env);
 
     sw_signer(&cli, "s1");
@@ -273,4 +267,26 @@ fn test_registry_publish() {
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
+}
+
+#[test]
+fn test_registry_publish() {
+    let env = TestEnvBuilder::from_env()
+        .with_electrum()
+        .with_esplora()
+        .with_registry()
+        .build();
+
+    test_registry_publish_inner(env);
+}
+
+#[test]
+fn test_registry_publish_v2() {
+    let env = TestEnvBuilder::from_env()
+        .with_electrum()
+        .with_esplora()
+        .with_registry_v2()
+        .build();
+
+    test_registry_publish_inner(env);
 }

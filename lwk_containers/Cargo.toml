@@ -14,3 +14,5 @@ elements.workspace = true
 rand = "0.8.5"
 tempfile.workspace = true
 testcontainers = { version = "0.27.0", features = ["blocking", "watchdog"] }
+testcontainers-modules = { version = "0.15.0", features = ["postgres"] }
+url = "2.5.2"

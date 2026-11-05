@@ -18,3 +18,6 @@ export CLASSPATH="$CLASSPATH:$PWD/bin/jna-5.13.0.jar"
 export PATH="$PATH:$PWD/bin/kotlinc/bin:$PWD/bin/openlogic-openjdk-11.0.21+9-linux-x64/bin:$PWD/bin/swift-6.4.0-RELEASE-debian13/usr/bin"
 export WASM_BINDGEN_TEST_TIMEOUT=60
 export AMP2_MOCK_EXEC="$PWD/target/debug/amp2_mock"
+export ASSET_REGISTRY_IMAGE_NAME="ghcr.io/blockstream/asset_registry_v2"
+# TODO: change to stable tagged version when available
+export ASSET_REGISTRY_IMAGE_VERSION="latest"

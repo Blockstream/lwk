@@ -56,9 +56,11 @@ assert utxo.value() == TEST_UTXO_VALUE
 
 # Test full transaction finalization with real test vectors
 tx = Transaction.from_string(TEST_UNSIGNED_TX)
+xonly_pubkey = XOnlyPublicKey.from_string(TEST_X_ONLY_PUBLIC_KEY)
+control_block = program.control_block(xonly_pubkey)
 
 finalized_tx = program.finalize_transaction(
-    tx, XOnlyPublicKey.from_string(TEST_X_ONLY_PUBLIC_KEY), [utxo], 0,
+    tx, control_block, [utxo], 0,
     witness, network, SimplicityLogLevel.NONE
 )
 

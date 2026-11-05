@@ -2668,8 +2668,9 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
     env.elementsd_generate(1);
 
     assert_eq!(w.balance(&policy_asset), 600_000);
+    let wollet = &w.wollet;
     // ANCHOR: get_utxos
-    let utxos = w.wollet.utxos()?;
+    let utxos = wollet.utxos()?;
     // ANCHOR_END: get_utxos
     assert_eq!(utxos.len(), 2);
     assert_eq!(
@@ -2698,7 +2699,7 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
 
     // ANCHOR: manual_coin_selection
     let sent_satoshi = 200_000;
-    let mut pset = w
+    let mut pset = wollet
         .tx_builder()
         .add_recipient(&node_address, sent_satoshi, policy_asset)?
         .set_wallet_utxos(vec![utxos[0].outpoint])
@@ -2708,7 +2709,7 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
     signer.sign(&mut pset)?;
 
     // Broadcast the transaction
-    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let tx = wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
     // ANCHOR_END: manual_coin_selection
     assert!(env.elementsd_testmempoolaccept(&tx.to_lower_hex_string()));
@@ -2776,9 +2777,10 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_err();
     assert!(matches!(err, Error::InsufficientFunds { .. }));
 
+    let wollet = &w.wollet;
     // ANCHOR: manual_coin_selection_asset
     // One asset and LBTC
-    let mut pset = w
+    let mut pset = wollet
         .tx_builder()
         .set_wallet_utxos(vec![asset_utxo.outpoint, lbtc_utxo.outpoint])
         .add_recipient(&node_address, 1, asset)
@@ -2788,7 +2790,7 @@ fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(pset.inputs().len(), 2);
     assert_eq!(pset.outputs().len(), 4); // asset recipient, asset change, lbtc change, fees
     signer.sign(&mut pset).unwrap();
-    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let tx = wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
     assert!(env.elementsd_testmempoolaccept(&tx.to_lower_hex_string()));
     // ANCHOR_END: manual_coin_selection_asset
@@ -3202,25 +3204,30 @@ fn test_update_transaction() {
 }
 
 fn liquidex<C: BlockchainBackend>(
-    wallet_maker: &mut TestWollet<C>,
+    wollet_maker_: &mut TestWollet<C>,
     signer_maker: &SwSigner,
-    wallet_taker: &mut TestWollet<C>,
+    wollet_taker_: &mut TestWollet<C>,
     signer_taker: &SwSigner,
     utxo_send: OutPoint,
     sats_recv: u64,
     asset_recv: elements::AssetId,
 ) {
+    // these are meant to use public types vars inside ANCHORs
+    let wollet_maker = &wollet_maker_.wollet;
+    let wollet_taker = &wollet_taker_.wollet;
+    let client_taker = &wollet_taker_.client;
+
     // ANCHOR: liquidex_make
     // LiquiDEX make
-    let addr = wallet_maker.address_result(None).address().clone();
-    let mut pset = wallet_maker
+    let addr = wollet_maker.address(None).unwrap().address().clone();
+    let mut pset = wollet_maker
         .tx_builder()
         .liquidex_make(utxo_send, &addr, sats_recv, asset_recv)
         .unwrap()
         .finish()
         .unwrap();
 
-    let details = wallet_maker.wollet.get_details(&pset).unwrap();
+    let details = wollet_maker.get_details(&pset).unwrap();
     assert_eq!(details.fees().len(), 0); // ANCHOR: ignore
     let asset_send = pset.inputs()[0].asset.unwrap(); // ANCHOR: ignore
     let sats_send = pset.inputs()[0].amount.unwrap(); // ANCHOR: ignore
@@ -3230,14 +3237,15 @@ fn liquidex<C: BlockchainBackend>(
     assert_eq!(from_details_recv, sats_recv as i64); // ANCHOR: ignore
 
     let options = SignOptions::allow_sighash_single_anyonecanpay();
-    wallet_maker.sign_with_options(signer_maker, &mut pset, &options);
+    pset = pset_rt(&pset); // ANCHOR: ignore
+    signer_maker.sign_with_options(&mut pset, &options).unwrap();
     let proposal = LiquidexProposal::from_pset(&pset).unwrap();
     // ANCHOR_END: liquidex_make
 
     // ANCHOR: liquidex_validate
     let txid = proposal.needed_tx().unwrap();
     assert_eq!(txid, utxo_send.txid); // ANCHOR: ignore
-    let tx = wallet_maker.wollet.transaction(&txid).unwrap().unwrap().tx;
+    let tx = wollet_maker.transaction(&txid).unwrap().unwrap().tx;
     let proposal = proposal.validate(tx).unwrap();
     // ANCHOR_END: liquidex_validate
 
@@ -3257,7 +3265,7 @@ fn liquidex<C: BlockchainBackend>(
 
     // ANCHOR: liquidex_take
     // LiquiDEX take
-    let mut pset = wallet_taker
+    let mut pset = wollet_taker
         .tx_builder()
         .liquidex_take(vec![proposal])
         .unwrap()
@@ -3265,16 +3273,16 @@ fn liquidex<C: BlockchainBackend>(
         .unwrap();
     // ANCHOR_END: liquidex_take
 
-    let details = wallet_taker.wollet.get_details(&pset).unwrap();
+    let details = wollet_taker.get_details(&pset).unwrap();
     let recipient = details.recipients().first().unwrap();
     assert_eq!(recipient.value(), Some(sats_recv));
     assert_eq!(recipient.asset(), Some(asset_recv));
-    let fee = details.fees_in(&wallet_taker.policy_asset()) as i64;
+    let fee = details.fees_in(&wollet_taker.policy_asset()) as i64;
     assert!(fee > 0);
     // "send" and "recv" are from the maker perspective
     let mut from_details_send = *details.balances().get(&asset_send).unwrap();
     let mut from_details_recv = *details.balances().get(&asset_recv).unwrap();
-    let policy_asset = wallet_taker.policy_asset();
+    let policy_asset = wollet_taker.policy_asset();
     if asset_send == policy_asset {
         from_details_send += fee;
     }
@@ -3285,10 +3293,14 @@ fn liquidex<C: BlockchainBackend>(
     assert_eq!(from_details_recv, -(sats_recv as i64));
 
     // ANCHOR: liquidex_take_2
-    wallet_taker.sign(signer_taker, &mut pset);
-    let _txid = wallet_taker.send(&mut pset);
+    pset = pset_rt(&pset); // ANCHOR: ignore
+    signer_taker.sign(&mut pset).unwrap();
+    pset = pset_rt(&pset); // ANCHOR: ignore
+    let tx = wollet_taker.finalize(&mut pset).unwrap();
+    let txid = client_taker.broadcast(&tx).unwrap();
     // ANCHOR_END: liquidex_take_2
-    wait_tx_update(wallet_maker);
+    wait_for_tx(&mut wollet_taker_.wollet, &mut wollet_taker_.client, &txid);
+    wait_tx_update(wollet_maker_);
 }
 
 #[test]

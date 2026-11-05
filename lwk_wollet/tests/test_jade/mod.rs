@@ -480,6 +480,7 @@ fn emul_multi_multisig() {
     multi_multisig(&env, &jade_signer);
 }
 
+#[cfg(feature = "amp2")]
 #[test]
 fn emul_elip153_flow() {
     // Same e2e flow as `test_elip153_flow` in lwk_wollet/tests/amp2.rs, but signing with a

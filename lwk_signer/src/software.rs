@@ -80,6 +80,10 @@ pub enum NewError {
     /// Invalid network
     #[error("Invalid Network")]
     InvalidNetwork,
+
+    /// Invalid seed length, a BIP39 seed is 64 bytes
+    #[error("Invalid seed length: {0} bytes, expected 64")]
+    InvalidSeedLength(usize),
 }
 
 /// Options for ECDSA signing
@@ -161,6 +165,7 @@ pub struct SwSigner {
     xprv: Xpriv,
     secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
     mnemonic: Option<Mnemonic>,
+    seed: Option<[u8; 64]>,
     ecdsa_sign_opt: EcdsaSignOpt,
     network: lwk_common::Network,
 }
@@ -175,6 +180,9 @@ impl Drop for SwSigner {
     fn drop(&mut self) {
         // Attempt to erase secrets
         // * mnemonic zeroizes itself on drop (bip39 "zeroize" feature)
+        if let Some(seed) = self.seed.as_mut() {
+            seed.zeroize();
+        }
         AsMut::<[u8]>::as_mut(&mut self.xprv.chain_code).zeroize();
         // * best effort for private key
         self.xprv.private_key.non_secure_erase();
@@ -189,10 +197,29 @@ impl SwSigner {
         mnemonic: &str,
         network: lwk_common::Network,
     ) -> Result<Self, NewError> {
-        let secp = Secp256k1::new();
         let mnemonic: Mnemonic = mnemonic.parse()?;
         let seed = mnemonic.to_seed("");
+        let mut signer = Self::from_seed_array(seed, network)?;
+        signer.mnemonic = Some(mnemonic);
+        Ok(signer)
+    }
 
+    /// Creates a new software signer from the given BIP39 seed and network.
+    ///
+    /// The seed is the 64-byte output of the BIP39 mnemonic-to-seed function, so callers can use
+    /// mnemonics in any BIP39 language and with a passphrase. The seed is kept, so [`Self::seed()`]
+    /// and the SLIP77 master blinding key are available, while [`Self::mnemonic()`] returns `None`.
+    pub fn from_seed_with_network(
+        seed: &[u8],
+        network: lwk_common::Network,
+    ) -> Result<Self, NewError> {
+        let seed: [u8; 64] = seed
+            .try_into()
+            .map_err(|_| NewError::InvalidSeedLength(seed.len()))?;
+        Self::from_seed_array(seed, network)
+    }
+
+    fn from_seed_array(seed: [u8; 64], network: lwk_common::Network) -> Result<Self, NewError> {
         let btc_network = if network.is_mainnet() {
             bitcoin::Network::Bitcoin
         } else {
@@ -203,8 +230,9 @@ impl SwSigner {
 
         Ok(Self {
             xprv,
-            secp,
-            mnemonic: Some(mnemonic),
+            secp: Secp256k1::new(),
+            mnemonic: None,
+            seed: Some(seed),
             ecdsa_sign_opt: EcdsaSignOpt::default(),
             network,
         })
@@ -264,6 +292,7 @@ impl SwSigner {
             xprv,
             secp: Secp256k1::new(),
             mnemonic: None,
+            seed: None,
             ecdsa_sign_opt: EcdsaSignOpt::default(),
             network,
         })
@@ -298,9 +327,9 @@ impl SwSigner {
         Xpub::from_priv(&self.secp, &self.xprv)
     }
 
-    /// Return the seed of the signer if it has been initialized with the mnemonic (can't provide the seed if initialized with xprv)
+    /// Return the seed of the signer if it has been initialized with the mnemonic or the seed (can't provide the seed if initialized with xprv)
     pub fn seed(&self) -> Option<[u8; 64]> {
-        self.mnemonic.as_ref().map(|m| m.to_seed(""))
+        self.seed
     }
 
     /// Return the mnemonic of the signer if it has been initialized with the mnemonic (can't provide the mnemonic if initialized with xprv)
@@ -321,7 +350,7 @@ impl SwSigner {
     /// Derive a BIP85 mnemonic from the signer's mnemonic.
     ///
     /// This method uses BIP85 to deterministically derive a new mnemonic from the signer's
-    /// master mnemonic. The derived mnemonic can be used for creating separate wallets
+    /// master mnemonic or seed. The derived mnemonic can be used for creating separate wallets
     /// while maintaining deterministic derivation from the original seed.
     ///
     /// # Arguments
@@ -330,7 +359,7 @@ impl SwSigner {
     ///
     /// # Returns
     /// * `Ok(Mnemonic)` - The derived BIP85 mnemonic
-    /// * `Err(SignError::Bip85MnemonicNotAvailable)` - If the signer was not initialized with a mnemonic
+    /// * `Err(SignError::Bip85MnemonicNotAvailable)` - If the signer was not initialized with a mnemonic or a seed
     /// * `Err(SignError::Bip85Derivation)` - If BIP85 derivation fails
     ///
     /// # Example
@@ -349,12 +378,6 @@ impl SwSigner {
         index: u32,
         word_count: u32,
     ) -> Result<Mnemonic, SignError> {
-        // Check if we have a mnemonic available
-        let _mnemonic = self
-            .mnemonic
-            .as_ref()
-            .ok_or_else(|| SignError::Bip85MnemonicNotAvailable)?;
-
         // Convert the elements Xpriv to a standard bitcoin Xpriv for BIP85
         let seed = self
             .seed()
@@ -771,6 +794,86 @@ mod tests {
         assert_eq!(signer.xpub(), xpub);
         assert!(signer.mnemonic().is_none());
         assert!(signer.seed().is_none());
+    }
+
+    #[test]
+    fn from_seed_matches_mnemonic() {
+        let network = lwk_common::Network::TestnetLiquid;
+        let from_mnemonic =
+            SwSigner::new_with_network(lwk_test_util::TEST_MNEMONIC, network).unwrap();
+        let seed = from_mnemonic.seed().unwrap();
+        let from_seed = SwSigner::from_seed_with_network(&seed, network).unwrap();
+
+        assert_eq!(from_seed.seed(), Some(seed));
+        assert!(from_seed.mnemonic().is_none());
+        assert_eq!(from_seed.xpub(), from_mnemonic.xpub());
+        let path: DerivationPath = "m/84'/1'/0'".parse().unwrap();
+        assert_eq!(
+            from_seed.derive_xpub(&path).unwrap(),
+            from_mnemonic.derive_xpub(&path).unwrap()
+        );
+        assert_eq!(
+            from_seed.slip77_master_blinding_key().unwrap(),
+            from_mnemonic.slip77_master_blinding_key().unwrap()
+        );
+        assert_eq!(
+            from_seed.wpkh_slip77_descriptor().unwrap(),
+            from_mnemonic.wpkh_slip77_descriptor().unwrap()
+        );
+        assert_eq!(
+            from_seed.derive_bip85_mnemonic(0, 12).unwrap(),
+            from_mnemonic.derive_bip85_mnemonic(0, 12).unwrap()
+        );
+
+        let b64 = include_str!("../../lwk_jade/test_data/pset_to_be_signed.base64");
+        let mut pset_seed: PartiallySignedTransaction = b64.parse().unwrap();
+        let mut pset_mnemonic: PartiallySignedTransaction = b64.parse().unwrap();
+        assert_eq!(from_seed.sign(&mut pset_seed).unwrap(), 1);
+        assert_eq!(from_mnemonic.sign(&mut pset_mnemonic).unwrap(), 1);
+        assert_eq!(pset_seed, pset_mnemonic);
+    }
+
+    #[test]
+    fn from_seed_bip39_vectors() {
+        use elements_miniscript::bitcoin::hex::FromHex;
+
+        // English with passphrase "TREZOR": first vector of
+        // https://github.com/trezor/python-mnemonic/blob/master/vectors.json
+        let english_seed = Mnemonic::parse(lwk_test_util::TEST_MNEMONIC)
+            .unwrap()
+            .to_seed("TREZOR");
+        // Japanese: first vector of
+        // https://github.com/bip32JP/bip32JP.github.io/blob/master/test_JP_BIP39.json
+        // ("あいこくしん" x11 + "あおぞら", passphrase "㍍ガバヴァぱばぐゞちぢ十人十色")
+        let japanese_seed = Vec::<u8>::from_hex("a262d6fb6122ecf45be09c50492b31f92e9beb7d9a845987a02cefda57a15f9c467a17872029a9e92299b5cbdf306e3a0ee620245cbd508959b6cb7ca637bd55").unwrap();
+
+        let vectors = [
+            (
+                &english_seed[..],
+                "c55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04",
+                "xprv9s21ZrQH143K3h3fDYiay8mocZ3afhfULfb5GX8kCBdno77K4HiA15Tg23wpbeF1pLfs1c5SPmYHrEpTuuRhxMwvKDwqdKiGJS9XFKzUsAF",
+            ),
+            (
+                &japanese_seed[..],
+                "a262d6fb6122ecf45be09c50492b31f92e9beb7d9a845987a02cefda57a15f9c467a17872029a9e92299b5cbdf306e3a0ee620245cbd508959b6cb7ca637bd55",
+                "xprv9s21ZrQH143K258jAiWPAM6JYT9hLA91MV3AZUKfxmLZJCjCHeSjBvMbDy8C1mJ2FL5ytExyS97FAe6pQ6SD5Jt9SwHaLorA8i5Eojokfo1",
+            ),
+        ];
+        for (seed, seed_hex, xprv) in vectors {
+            assert_eq!(seed.to_lower_hex_string(), seed_hex);
+            let signer =
+                SwSigner::from_seed_with_network(seed, lwk_common::Network::Liquid).unwrap();
+            assert_eq!(signer.seed().unwrap().to_lower_hex_string(), seed_hex);
+            let master = signer.derive_xprv(&DerivationPath::master()).unwrap();
+            assert_eq!(master.to_string(), xprv);
+        }
+
+        for len in [0, 16, 32, 63, 65] {
+            assert!(matches!(
+                SwSigner::from_seed_with_network(&vec![0u8; len], lwk_common::Network::Liquid),
+                Err(NewError::InvalidSeedLength(l)) if l == len
+            ));
+        }
     }
 
     #[test]

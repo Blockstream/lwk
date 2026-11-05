@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Breaking: If a PSET has a non-default sighash, `Signer::sign()` and `SecretKey::sign()` now return an error. To sign with non-default sighashes, pass `SignOptions::allowSighashSingleAnyonecanpay()` or `SignOptions::dangerousAllowAnySighash()` to `Signer::signWithOptions()`
+
 ## 0.20.0
 
 * Update to `elements` 0.27.

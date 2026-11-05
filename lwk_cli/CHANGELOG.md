@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+* Breaking: `signer sign` now refuses inputs with a non-default sighash type,
+  error "refusing to sign input #N: unexpected <SIGHASH>, possibly malicious PSET".
+  Pass `--allow-sighash-single-anyonecanpay` to sign LiquiDEX proposals from `liquidex make`,
+  or `--dangerous-allow-any-sighash` to sign any sighash the PSET declares.
+* Breaking: the `signer_sign` RPC request has two new required fields,
+  `allow_sighash_single_anyonecanpay` and `dangerous_allow_any_sighash`;
+  `lwk_app::Client::signer_sign()` takes them as arguments.
+
 ## 0.20.0
 
 * Bump MSRV to 1.91

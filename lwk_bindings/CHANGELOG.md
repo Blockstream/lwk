@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Breaking: If a PSET has a non-default sighash, `Signer.sign()` and `SecretKey.sign()` now return an error. To sign with non-default sighashes, pass `SignOptions.allow_sighash_single_anyonecanpay()` or `SignOptions.dangerous_allow_any_sighash()` to `Signer.sign_with_options()`
+
 ## 0.20.0
 
 * Expose `WaterfallsClient.subscribe_reconnecting()` with server events and connection status updates in foreign bindings.

@@ -195,6 +195,7 @@ test_wollet:
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - apt-get -qq update && apt-get install -y libsodium23  # TODO: remove once docker image is re-built
+    - ./context/ci_docker_guard.sh --attempts 3 docker pull $ASSET_REGISTRY_IMAGE_NAME:$ASSET_REGISTRY_IMAGE_VERSION
     - ./context/ci_docker_guard.sh --attempts 3 docker pull $JADE_EMULATOR_IMAGE_NAME:$JADE_EMULATOR_IMAGE_VERSION
     - cargo build -p amp2_mock && export AMP2_MOCK_EXEC=$PWD/target/debug/amp2_mock
     - cargo test -p lwk_wollet -p lwk_signer -- --test-threads=2
@@ -323,7 +324,7 @@ test_cli:
     - .coverage_mixin
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - nproc
+    - ./context/ci_docker_guard.sh --attempts 3 docker pull $ASSET_REGISTRY_IMAGE_NAME:$ASSET_REGISTRY_IMAGE_VERSION
     - cargo test -p lwk_cli -- --test-threads=2
 
 test_simplicity:

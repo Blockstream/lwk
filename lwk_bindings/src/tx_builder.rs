@@ -7,8 +7,48 @@ use lwk_wollet::UnvalidatedRecipient;
 
 use crate::{
     types::AssetId, Address, Contract, ExternalUtxo, LwkError, Network, OutPoint, Pset,
-    Transaction, ValidatedLiquidexProposal, Wollet,
+    Transaction, TxOutSecrets, ValidatedLiquidexProposal, Wollet,
 };
+
+/// A PSET and the data that cannot be in the PSET
+///
+/// **Experimental**: this API might change without notice.
+#[derive(uniffi::Object)]
+pub struct BuiltTx {
+    pset: elements::pset::PartiallySignedTransaction,
+    output_secrets: Vec<Option<elements::TxOutSecrets>>,
+}
+
+impl TryFrom<lwk_wollet::BuiltTx> for BuiltTx {
+    type Error = LwkError;
+
+    fn try_from(value: lwk_wollet::BuiltTx) -> Result<Self, Self::Error> {
+        Ok(Self {
+            output_secrets: value.output_secrets()?,
+            pset: value.pset().clone(),
+        })
+    }
+}
+
+#[uniffi::export]
+impl BuiltTx {
+    /// The PSET
+    pub fn pset(&self) -> Arc<Pset> {
+        Arc::new(self.pset.clone().into())
+    }
+
+    /// The secrets (asset, value and their blinding factors) of the outputs blinded by the wallet
+    ///
+    /// The returned list has one element per PSET output, in the same order. An element is `None`
+    /// if the output was not blinded by the wallet, for example the fee output or an explicit
+    /// output.
+    pub fn output_secrets(&self) -> Vec<Option<Arc<TxOutSecrets>>> {
+        self.output_secrets
+            .iter()
+            .map(|s| s.map(|s| Arc::new(s.into())))
+            .collect()
+    }
+}
 
 /// Wrapper over [`lwk_wollet::TxBuilder`]
 #[derive(uniffi::Object, Debug)]
@@ -49,6 +89,17 @@ impl TxBuilder {
         let wollet = wollet.inner_wollet()?;
         let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
         Ok(inner.finish(&wollet)?.into())
+    }
+
+    /// Build the transaction, returning the PSET together with the secrets of the outputs blinded
+    /// by the wallet.
+    ///
+    /// **Experimental**: this API might change without notice.
+    pub fn build(&self, wollet: &Wollet) -> Result<Arc<BuiltTx>, LwkError> {
+        let mut lock = self.inner.lock()?;
+        let wollet = wollet.inner_wollet()?;
+        let inner = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        Ok(Arc::new(inner.build(&wollet)?.try_into()?))
     }
 
     /// Build the transaction

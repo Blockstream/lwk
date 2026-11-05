@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Added `TxBuilder::build()` and `BuiltTx`, to get the secrets (`TxOutSecrets`) of the outputs blinded by the wallet via `BuiltTx::output_secrets()`.
+
 ## 0.20.0
 
 * Expose `WaterfallsClient.subscribe_reconnecting()` with server events and connection status updates in foreign bindings.

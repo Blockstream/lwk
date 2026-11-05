@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Added `TxBuilder::build()` and `BuiltTx`, to get the secrets (`TxOutSecrets`) of the outputs blinded by the wallet via `BuiltTx::outputSecrets()`.
+
 ## 0.20.0
 
 * Update to `elements` 0.27.

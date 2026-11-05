@@ -5,7 +5,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::{
     liquidex::ValidatedLiquidexProposal, Address, AssetId, Contract, Error, ExternalUtxo, Network,
-    OutPoint, Pset, Transaction, Wollet,
+    OutPoint, Pset, Transaction, TxOutSecrets, Wollet,
 };
 
 /// A transaction builder
@@ -13,6 +13,48 @@ use crate::{
 #[derive(Debug)]
 pub struct TxBuilder {
     inner: lwk_wollet::TxBuilder,
+}
+
+/// A PSET and the data that cannot be in the PSET
+///
+/// **Experimental**: this API might change without notice.
+#[wasm_bindgen]
+pub struct BuiltTx {
+    pset: lwk_wollet::elements::pset::PartiallySignedTransaction,
+    output_secrets: Vec<Option<elements::TxOutSecrets>>,
+}
+
+impl TryFrom<lwk_wollet::BuiltTx> for BuiltTx {
+    type Error = Error;
+
+    fn try_from(value: lwk_wollet::BuiltTx) -> Result<Self, Self::Error> {
+        Ok(Self {
+            output_secrets: value.output_secrets()?,
+            pset: value.pset().clone(),
+        })
+    }
+}
+
+#[wasm_bindgen]
+impl BuiltTx {
+    /// The PSET
+    pub fn pset(&self) -> Pset {
+        self.pset.clone().into()
+    }
+
+    /// The secrets (asset, value and their blinding factors) of the output at index `vout`,
+    /// if the output was blinded by the wallet.
+    ///
+    /// Returns `undefined` for outputs that were not blinded by the wallet, for example the fee
+    /// output, explicit outputs, or if `vout` is out of range.
+    #[wasm_bindgen(js_name = outputSecrets)]
+    pub fn output_secrets(&self, vout: u32) -> Option<TxOutSecrets> {
+        self.output_secrets
+            .get(vout as usize)
+            .copied()
+            .flatten()
+            .map(Into::into)
+    }
 }
 
 impl From<lwk_wollet::TxBuilder> for TxBuilder {
@@ -40,6 +82,14 @@ impl TxBuilder {
     /// Build the transaction
     pub fn finish(self, wollet: &Wollet) -> Result<Pset, Error> {
         Ok(self.inner.finish(wollet.as_ref())?.into())
+    }
+
+    /// Build the transaction, returning the PSET together with the secrets of the outputs blinded
+    /// by the wallet.
+    ///
+    /// **Experimental**: this API might change without notice.
+    pub fn build(self, wollet: &Wollet) -> Result<BuiltTx, Error> {
+        self.inner.build(wollet.as_ref())?.try_into()
     }
 
     /// Build the transaction for AMP0

@@ -822,6 +822,50 @@ mod tests {
     }
 
     #[test]
+    fn test_builttx_output_secrets() {
+        use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+        use elements::pset::Output;
+        use elements::secp256k1_zkp::SecretKey;
+
+        let asset = *Network::Liquid.policy_asset();
+        let (abf, vbf) = (
+            AssetBlindingFactor::from_slice(&[1; 32]).unwrap(),
+            ValueBlindingFactor::from_slice(&[2; 32]).unwrap(),
+        );
+        let eph_sk = SecretKey::from_slice(&[3; 32]).unwrap();
+
+        let mut pset = PartiallySignedTransaction::new_v2();
+        pset.add_output(Output::new_explicit(
+            elements::Script::new(),
+            1000,
+            asset,
+            None,
+        ));
+        pset.add_output(Output::new_explicit(
+            elements::Script::new(),
+            50,
+            asset,
+            None,
+        ));
+        let location = elements::CtLocation {
+            input_index: 0,
+            ty: elements::CtLocationType::Input,
+        };
+        let built = BuiltTx {
+            pset,
+            blind_secrets: BTreeMap::from([(location, (abf, vbf, eph_sk))]),
+        };
+
+        let secrets = built.output_secrets().unwrap();
+        assert_eq!(secrets.len(), 2);
+        assert_eq!(
+            secrets[0],
+            Some(elements::TxOutSecrets::new(asset, abf, 1000, vbf))
+        );
+        assert_eq!(secrets[1], None);
+    }
+
+    #[test]
     fn test_high_fee_rate() {
         let desc: crate::WolletDescriptor =
             lwk_test_util::wollet_descriptor_string().parse().unwrap();

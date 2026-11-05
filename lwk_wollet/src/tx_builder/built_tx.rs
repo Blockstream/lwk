@@ -74,10 +74,13 @@ impl BuiltTx {
         crate::amp0::Amp0Pset::new(pset, blinding_nonces)
     }
 
-    fn unblinded(&self) -> Result<Vec<(OutPoint, TxOutSecrets)>, Error> {
-        // consider getting txid from global.unsigned_tx if extract_tx errors
-        let txid = self.pset.extract_tx()?.txid();
-        let mut unblinded = vec![];
+    /// Secrets of the outputs blinded by the wallet
+    ///
+    /// The returned vector has one element per PSET output, in the same order.
+    /// An element is `None` if the output was not blinded by this builder, for example the fee
+    /// output, an explicit output or an output of an unblinded transaction.
+    pub fn output_secrets(&self) -> Result<Vec<Option<TxOutSecrets>>, Error> {
+        let mut secrets = vec![None; self.pset.n_outputs()];
         for (ct_location, (abf, vbf, _eph_sk)) in self.blind_secrets.iter() {
             // these are outputs not inputs...
             if let elements::CtLocation {
@@ -85,8 +88,6 @@ impl BuiltTx {
                 ty: elements::CtLocationType::Input,
             } = ct_location
             {
-                let (abf, vbf) = (*abf, *vbf);
-                let outpoint = OutPoint::new(txid, *vout as u32);
                 let output = self
                     .pset
                     .outputs()
@@ -98,10 +99,23 @@ impl BuiltTx {
                 let value = output
                     .amount
                     .ok_or_else(|| Error::Generic("Missing amount".into()))?;
-                let txoutsecrets = TxOutSecrets::new(asset, abf, value, vbf);
-                unblinded.push((outpoint, txoutsecrets));
+                secrets[*vout] = Some(TxOutSecrets::new(asset, *abf, value, *vbf));
             }
         }
+        Ok(secrets)
+    }
+
+    fn unblinded(&self) -> Result<Vec<(OutPoint, TxOutSecrets)>, Error> {
+        // consider getting txid from global.unsigned_tx if extract_tx errors
+        let txid = self.pset.extract_tx()?.txid();
+        let unblinded = self
+            .output_secrets()?
+            .into_iter()
+            .enumerate()
+            .filter_map(|(vout, secrets)| {
+                secrets.map(|secrets| (OutPoint::new(txid, vout as u32), secrets))
+            })
+            .collect();
         Ok(unblinded)
     }
 

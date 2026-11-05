@@ -107,7 +107,7 @@ pub use pset_details::{Issuance, OutputDetails, PsetDetails};
 pub use store::{ForeignStore, ForeignStoreLink};
 #[cfg(feature = "test_env")]
 pub use test_env::{LwkTestEnv, LwkTestStore};
-pub use tx_builder::{IssuanceRequest, ReissuanceRequest, TxBuilder};
+pub use tx_builder::{BuiltTx, IssuanceRequest, ReissuanceRequest, TxBuilder};
 pub use update::Update;
 
 uniffi::setup_scaffolding!();

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Added `BuiltTx::output_secrets()`, returning the secrets (asset, value and blinding factors) of the outputs blinded by the wallet, one element per PSET output.
+
 ## 0.20.0
 
 * Breaking: update to `elements` 0.27 and `elements-miniscript` 0.5. Types re-exported from `elements` changed, for example the hex helpers (`ToHex`, `FromHex`), `AssetId` and `Txid` constructors, the issuance entropy (now `AssetEntropy`) and the pegin witness.

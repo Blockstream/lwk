@@ -8,6 +8,28 @@ For this reason we don't necessarily follow Rust guidelines.
 The object model is uniform: FFI objects are declared with `#[derive(uniffi::Object)]`, returned as `Arc<Self>`, and fallible operations return `Result<_, LwkError>`.
 For constructors, returning `Arc<Self>` is not necessary, return `Self` instead.
 
+## Conditional UniFFI exports
+
+Do not put `#[cfg(...)]` inside a `#[uniffi::export]` block, it causes compilation errors.
+
+Do not:
+```rust
+#[uniffi::export]
+impl MyType {
+    #[cfg(feature = "feat")]
+    pub fn my_fn(&self) { }
+}
+```
+
+Instead do:
+```rust
+#[cfg(feature = "feat")]
+#[uniffi::export]
+impl MyType {
+    pub fn my_fn(&self) { }
+}
+```
+
 ## Docs
 Documentation of this crate should not use link to rust types such as [`elements::Transaction`] because they are not usable in end-user languages.
 Many types are wrappers of types in LWK crates, in this cases we mostly duplicate the original documentation with context adjustment.

@@ -2,8 +2,7 @@
 
 ## Unreleased
 
-* Add `SwSigner::from_seed_with_network()` to create a signer from a 64-byte BIP39 seed, so mnemonics in any BIP39 language and with a passphrase are supported; `seed()`, the SLIP77 master blinding key and BIP85 are available, `mnemonic()` returns `None`
-* Add `NewError::InvalidSeedLength`
+* Add `SwSigner::from_seed_with_network()` to create a signer from a BIP39 seed, so BIP39 passphrases and mnemonics in every BIP39 wordlist are supported; `seed()`, the SLIP77 master blinding key and BIP85 are available, `mnemonic()` returns `None`
 * Breaking: If a PSET has a non-default sighash, `SwSigner::sign()` and `sign_with_seckey()` now return an error. To sign with non-default sighashes, pass `SignOptions::allow_sighash_single_anyonecanpay()` or `SignOptions::dangerous_allow_any_sighash()` to `SwSigner::sign_with_options()` or `sign_with_seckey_with_options()`
 
 ## 0.20.0

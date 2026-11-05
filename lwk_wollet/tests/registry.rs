@@ -6,14 +6,7 @@ use lwk_wollet::clients::blocking::EsploraClient;
 use lwk_wollet::registry::{blocking::Registry, RegistryPost};
 use lwk_wollet::{Contract, Entity};
 
-#[test]
-fn test_registry() {
-    let env = TestEnvBuilder::from_env()
-        .with_electrum()
-        .with_esplora()
-        .with_registry()
-        .build();
-
+fn test_registry_inner(env: TestEnv, registry_url: &str) {
     // Create wallet
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -49,7 +42,7 @@ fn test_registry() {
     env.elementsd_generate(2);
 
     // Publish on asset registry
-    let registry = Registry::new(&env.registry_url()).unwrap();
+    let registry = Registry::new(registry_url).unwrap();
     let payload = RegistryPost::new(contract.clone(), asset_id);
     std::thread::sleep(std::time::Duration::from_secs(1));
     registry.post(&payload).unwrap();
@@ -57,4 +50,28 @@ fn test_registry() {
     // Fetch from asset registry
     let data = registry.fetch(asset_id).unwrap();
     assert_eq!(data.contract, contract);
+}
+
+#[test]
+fn test_registry() {
+    let env = TestEnvBuilder::from_env()
+        .with_electrum()
+        .with_esplora()
+        .with_registry()
+        .build();
+    let registry_url = env.registry_url();
+
+    test_registry_inner(env, &registry_url);
+}
+
+#[test]
+fn test_registry_v2() {
+    let env = TestEnvBuilder::from_env()
+        .with_electrum()
+        .with_esplora()
+        .with_registry_v2()
+        .build();
+    let registry_url = env.registry_v2_url();
+
+    test_registry_inner(env, &registry_url);
 }

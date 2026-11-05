@@ -80,6 +80,10 @@ pub enum NewError {
     /// Invalid network
     #[error("Invalid Network")]
     InvalidNetwork,
+
+    /// Invalid seed length, a BIP39 seed is 64 bytes
+    #[error("Invalid seed length: {0} bytes, expected 64")]
+    InvalidSeedLength(usize),
 }
 
 /// Options for ECDSA signing
@@ -161,6 +165,7 @@ pub struct SwSigner {
     xprv: Xpriv,
     secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
     mnemonic: Option<Mnemonic>,
+    seed: Option<[u8; 64]>,
     ecdsa_sign_opt: EcdsaSignOpt,
     network: lwk_common::Network,
 }
@@ -175,6 +180,9 @@ impl Drop for SwSigner {
     fn drop(&mut self) {
         // Attempt to erase secrets
         // * mnemonic zeroizes itself on drop (bip39 "zeroize" feature)
+        if let Some(seed) = self.seed.as_mut() {
+            seed.zeroize();
+        }
         AsMut::<[u8]>::as_mut(&mut self.xprv.chain_code).zeroize();
         // * best effort for private key
         self.xprv.private_key.non_secure_erase();
@@ -189,10 +197,29 @@ impl SwSigner {
         mnemonic: &str,
         network: lwk_common::Network,
     ) -> Result<Self, NewError> {
-        let secp = Secp256k1::new();
         let mnemonic: Mnemonic = mnemonic.parse()?;
         let seed = mnemonic.to_seed("");
+        let mut signer = Self::from_seed_array(seed, network)?;
+        signer.mnemonic = Some(mnemonic);
+        Ok(signer)
+    }
 
+    /// Creates a new software signer from the given BIP39 seed and network.
+    ///
+    /// The seed is the 64-byte output of the BIP39 mnemonic-to-seed function, so callers can use
+    /// mnemonics in any BIP39 language and with a passphrase. The seed is kept, so [`Self::seed()`]
+    /// and the SLIP77 master blinding key are available, while [`Self::mnemonic()`] returns `None`.
+    pub fn from_seed_with_network(
+        seed: &[u8],
+        network: lwk_common::Network,
+    ) -> Result<Self, NewError> {
+        let seed: [u8; 64] = seed
+            .try_into()
+            .map_err(|_| NewError::InvalidSeedLength(seed.len()))?;
+        Self::from_seed_array(seed, network)
+    }
+
+    fn from_seed_array(seed: [u8; 64], network: lwk_common::Network) -> Result<Self, NewError> {
         let btc_network = if network.is_mainnet() {
             bitcoin::Network::Bitcoin
         } else {
@@ -203,8 +230,9 @@ impl SwSigner {
 
         Ok(Self {
             xprv,
-            secp,
-            mnemonic: Some(mnemonic),
+            secp: Secp256k1::new(),
+            mnemonic: None,
+            seed: Some(seed),
             ecdsa_sign_opt: EcdsaSignOpt::default(),
             network,
         })
@@ -264,6 +292,7 @@ impl SwSigner {
             xprv,
             secp: Secp256k1::new(),
             mnemonic: None,
+            seed: None,
             ecdsa_sign_opt: EcdsaSignOpt::default(),
             network,
         })
@@ -298,9 +327,9 @@ impl SwSigner {
         Xpub::from_priv(&self.secp, &self.xprv)
     }
 
-    /// Return the seed of the signer if it has been initialized with the mnemonic (can't provide the seed if initialized with xprv)
+    /// Return the seed of the signer if it has been initialized with the mnemonic or the seed (can't provide the seed if initialized with xprv)
     pub fn seed(&self) -> Option<[u8; 64]> {
-        self.mnemonic.as_ref().map(|m| m.to_seed(""))
+        self.seed
     }
 
     /// Return the mnemonic of the signer if it has been initialized with the mnemonic (can't provide the mnemonic if initialized with xprv)
@@ -321,7 +350,7 @@ impl SwSigner {
     /// Derive a BIP85 mnemonic from the signer's mnemonic.
     ///
     /// This method uses BIP85 to deterministically derive a new mnemonic from the signer's
-    /// master mnemonic. The derived mnemonic can be used for creating separate wallets
+    /// master mnemonic or seed. The derived mnemonic can be used for creating separate wallets
     /// while maintaining deterministic derivation from the original seed.
     ///
     /// # Arguments
@@ -330,7 +359,7 @@ impl SwSigner {
     ///
     /// # Returns
     /// * `Ok(Mnemonic)` - The derived BIP85 mnemonic
-    /// * `Err(SignError::Bip85MnemonicNotAvailable)` - If the signer was not initialized with a mnemonic
+    /// * `Err(SignError::Bip85MnemonicNotAvailable)` - If the signer was not initialized with a mnemonic or a seed
     /// * `Err(SignError::Bip85Derivation)` - If BIP85 derivation fails
     ///
     /// # Example
@@ -349,12 +378,6 @@ impl SwSigner {
         index: u32,
         word_count: u32,
     ) -> Result<Mnemonic, SignError> {
-        // Check if we have a mnemonic available
-        let _mnemonic = self
-            .mnemonic
-            .as_ref()
-            .ok_or_else(|| SignError::Bip85MnemonicNotAvailable)?;
-
         // Convert the elements Xpriv to a standard bitcoin Xpriv for BIP85
         let seed = self
             .seed()

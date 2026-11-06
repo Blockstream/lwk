@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Breaking: update the re-exported `age` crate to 0.12. Its `fl!` localization macro dependency emitted arguments in random order, making builds non-deterministic. See the [age 0.12 changelog](https://github.com/str4d/rage/blob/main/age/CHANGELOG.md) for API changes.
+
 ## 0.20.0
 
 * Breaking: update to `elements` 0.27 and `elements-miniscript` 0.5. Types re-exported from `elements` changed, for example the hex helpers (`ToHex`, `FromHex`), `AssetId` and `Txid` constructors, the issuance entropy (now `AssetEntropy`) and the pegin witness.

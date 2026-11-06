@@ -94,7 +94,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 } => {
                     let (tx, rx) = std::sync::mpsc::channel();
                     let _ = ctrlc::try_set_handler(move || {
-                        tx.send(()).expect("Could not send signal on channel.")
+                        // The receiver is gone only if the server is already shutting down
+                        let _ = tx.send(());
                     });
 
                     let mut config = match args.network {
@@ -190,7 +191,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 mnemonic,
                 persist,
             } => {
-                let persist = persist.expect("required");
+                let persist = persist.ok_or_else(|| anyhow!("--persist is required"))?;
                 to_json(client.signer_load_software(signer, mnemonic, persist))?
             }
             SignerCommand::LoadJade {

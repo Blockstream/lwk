@@ -44,3 +44,15 @@ rustls = { version = "0.23", default-features = false, features = ["ring", "std"
 reqwest.workspace = true
 base64 = { workspace = true }
 lwk_signer = { version = "0.20.0" }
+
+[[test]]
+name = "chain_swaps"
+required-features = ["blocking"]
+
+[[test]]
+name = "reverse"
+required-features = ["blocking"]
+
+[[test]]
+name = "submarine"
+required-features = ["blocking"]

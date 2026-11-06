@@ -352,6 +352,7 @@ mod tests {
         assert_eq!(got, exp);
     }
 
+    #[cfg(feature = "blocking")]
     #[test]
     #[ignore = "requires internet connection"]
     fn test_boltz_store_fs() {

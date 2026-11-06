@@ -2234,21 +2234,21 @@ mod tests {
         assert!(err.to_string().contains("Invalid address index for AMP0"));
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "electrum"))]
     #[test]
     #[ignore] // Requires network connectivity
     fn test_amp0_sign_testnet() {
         amp0_sign(false)
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "electrum"))]
     #[test]
     #[ignore] // Requires local Green backend
     fn test_amp0_sign_regtest() {
         amp0_sign(true)
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "electrum"))]
     fn amp0_sign(regtest: bool) {
         use super::*;
         use crate::clients::blocking::BlockchainBackend;

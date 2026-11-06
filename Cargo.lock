@@ -3203,6 +3203,7 @@ dependencies = [
  "lwk_jade",
  "lwk_rpc_model",
  "lwk_test_util",
+ "serde",
  "serde_json",
  "shellwords",
  "tempfile",

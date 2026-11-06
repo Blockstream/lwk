@@ -172,106 +172,69 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             Value::Null
         }
         CliCommand::Signer(a) => match a.command {
-            SignerCommand::Generate => {
-                let j = client.signer_generate()?;
-                serde_json::to_value(j)?
-            }
-            SignerCommand::JadeId { emulator } => {
-                let j = client.signer_jade_id(emulator)?;
-                serde_json::to_value(j)?
-            }
+            SignerCommand::Generate => to_json(client.signer_generate())?,
+            SignerCommand::JadeId { emulator } => to_json(client.signer_jade_id(emulator))?,
             SignerCommand::Sign {
                 signer,
                 pset,
                 allow_sighash_single_anyonecanpay,
                 dangerous_allow_any_sighash,
-            } => {
-                let r = client.signer_sign(
-                    signer,
-                    pset,
-                    allow_sighash_single_anyonecanpay,
-                    dangerous_allow_any_sighash,
-                )?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.signer_sign(
+                signer,
+                pset,
+                allow_sighash_single_anyonecanpay,
+                dangerous_allow_any_sighash,
+            ))?,
             SignerCommand::LoadSoftware {
                 signer,
                 mnemonic,
                 persist,
             } => {
                 let persist = persist.expect("required");
-                let j = client.signer_load_software(signer, mnemonic, persist)?;
-                serde_json::to_value(j)?
+                to_json(client.signer_load_software(signer, mnemonic, persist))?
             }
             SignerCommand::LoadJade {
                 signer,
                 id,
                 emulator,
-            } => {
-                let j = client.signer_load_jade(signer, id, emulator)?;
-                serde_json::to_value(j)?
-            }
+            } => to_json(client.signer_load_jade(signer, id, emulator))?,
             SignerCommand::LoadExternal {
                 signer,
                 fingerprint,
-            } => {
-                let j = client.signer_load_external(signer, fingerprint)?;
-                serde_json::to_value(j)?
-            }
-            SignerCommand::List => serde_json::to_value(client.signer_list()?)?,
-            SignerCommand::Details { signer } => {
-                let r = client.signer_details(signer)?;
-                serde_json::to_value(r)?
-            }
-            SignerCommand::Unload { signer } => {
-                let r = client.signer_unload(signer)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.signer_load_external(signer, fingerprint))?,
+            SignerCommand::List => to_json(client.signer_list())?,
+            SignerCommand::Details { signer } => to_json(client.signer_details(signer))?,
+            SignerCommand::Unload { signer } => to_json(client.signer_unload(signer))?,
             SignerCommand::SinglesigDesc {
                 signer,
                 descriptor_blinding_key,
                 kind,
-            } => {
-                let r = client.signer_singlesig_descriptor(
-                    signer,
-                    descriptor_blinding_key.to_string(),
-                    kind.to_string(),
-                )?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.signer_singlesig_descriptor(
+                signer,
+                descriptor_blinding_key.to_string(),
+                kind.to_string(),
+            ))?,
             SignerCommand::Xpub { signer, kind } => {
-                let r = client.signer_xpub(signer, kind.to_string())?;
-                serde_json::to_value(r)?
+                to_json(client.signer_xpub(signer, kind.to_string()))?
             }
             SignerCommand::DeriveBip85 {
                 signer,
                 index,
                 word_count,
-            } => {
-                let r = client.signer_derive_bip85(signer, index, word_count)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.signer_derive_bip85(signer, index, word_count))?,
             SignerCommand::RegisterMultisig { signer, wallet } => {
-                let r = client.signer_register_multisig(signer, wallet)?;
-                serde_json::to_value(r)?
+                to_json(client.signer_register_multisig(signer, wallet))?
             }
         },
         CliCommand::Wallet(a) => match a.command {
             WalletCommand::Load { descriptor, wallet } => {
-                let r = client.wallet_load(descriptor, wallet)?;
-                serde_json::to_value(r)?
+                to_json(client.wallet_load(descriptor, wallet))?
             }
-            WalletCommand::Unload { wallet } => {
-                let r = client.wallet_unload(wallet)?;
-                serde_json::to_value(r)?
-            }
+            WalletCommand::Unload { wallet } => to_json(client.wallet_unload(wallet))?,
             WalletCommand::Balance {
                 wallet,
                 with_tickers,
-            } => {
-                let r = client.wallet_balance(wallet, with_tickers)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.wallet_balance(wallet, with_tickers))?,
             WalletCommand::Send {
                 wallet,
                 recipient,
@@ -285,28 +248,21 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     );
                 }
 
-                let r = client.wallet_send_many(wallet, addressees, fee_rate)?;
-                serde_json::to_value(r)?
+                to_json(client.wallet_send_many(wallet, addressees, fee_rate))?
             }
             WalletCommand::Drain {
                 wallet,
                 address,
                 fee_rate,
-            } => {
-                let r = client.wallet_drain(wallet, address, fee_rate)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.wallet_drain(wallet, address, fee_rate))?,
             WalletCommand::Address {
                 index,
                 wallet,
                 signer,
                 with_text_qr,
                 with_uri_qr,
-            } => {
-                let r = client.wallet_address(wallet, index, signer, with_text_qr, with_uri_qr)?;
-                serde_json::to_value(r)?
-            }
-            WalletCommand::List => serde_json::to_value(client.wallet_list()?)?,
+            } => to_json(client.wallet_address(wallet, index, signer, with_text_qr, with_uri_qr))?,
+            WalletCommand::List => to_json(client.wallet_list())?,
             WalletCommand::Issue {
                 wallet,
                 satoshi_asset,
@@ -315,114 +271,82 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 address_token,
                 contract,
                 fee_rate,
-            } => {
-                let r = client.wallet_issue(
-                    wallet,
-                    satoshi_asset,
-                    address_asset,
-                    satoshi_token,
-                    address_token,
-                    contract,
-                    fee_rate,
-                )?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.wallet_issue(
+                wallet,
+                satoshi_asset,
+                address_asset,
+                satoshi_token,
+                address_token,
+                contract,
+                fee_rate,
+            ))?,
             WalletCommand::Reissue {
                 wallet,
                 asset,
                 satoshi_asset,
                 address_asset,
                 fee_rate,
-            } => {
-                let r =
-                    client.wallet_reissue(wallet, asset, satoshi_asset, address_asset, fee_rate)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.wallet_reissue(
+                wallet,
+                asset,
+                satoshi_asset,
+                address_asset,
+                fee_rate,
+            ))?,
             WalletCommand::Burn {
                 wallet,
                 asset,
                 satoshi_asset,
                 fee_rate,
-            } => {
-                let r = client.wallet_burn(wallet, asset, satoshi_asset, fee_rate)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.wallet_burn(wallet, asset, satoshi_asset, fee_rate))?,
             WalletCommand::MultisigDesc {
                 descriptor_blinding_key,
                 kind,
                 threshold,
                 keyorigin_xpub,
-            } => {
-                let r = client.wallet_multisig_descriptor(
-                    descriptor_blinding_key.to_string(),
-                    kind.to_string(),
-                    threshold,
-                    keyorigin_xpub,
-                )?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.wallet_multisig_descriptor(
+                descriptor_blinding_key.to_string(),
+                kind.to_string(),
+                threshold,
+                keyorigin_xpub,
+            ))?,
             WalletCommand::Broadcast {
                 dry_run,
                 pset,
                 wallet,
-            } => {
-                let r = client.wallet_broadcast(wallet, dry_run, pset)?;
-                serde_json::to_value(r)?
-            }
-            WalletCommand::Details { wallet } => {
-                let r = client.wallet_details(wallet)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.wallet_broadcast(wallet, dry_run, pset))?,
+            WalletCommand::Details { wallet } => to_json(client.wallet_details(wallet))?,
             WalletCommand::Combine { wallet, pset } => {
-                let r = client.wallet_combine(wallet, pset)?;
-                serde_json::to_value(r)?
+                to_json(client.wallet_combine(wallet, pset))?
             }
             WalletCommand::PsetDetails {
                 wallet,
                 pset,
                 with_tickers,
-            } => {
-                let r = client.wallet_pset_details(wallet, pset, with_tickers)?;
-                serde_json::to_value(r)?
-            }
-            WalletCommand::Utxos { wallet } => {
-                let r = client.wallet_utxos(wallet)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.wallet_pset_details(wallet, pset, with_tickers))?,
+            WalletCommand::Utxos { wallet } => to_json(client.wallet_utxos(wallet))?,
             WalletCommand::Txs {
                 wallet,
                 with_tickers,
-            } => {
-                let r = client.wallet_txs(wallet, with_tickers)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.wallet_txs(wallet, with_tickers))?,
             WalletCommand::Tx {
                 wallet,
                 txid,
                 fetch,
-            } => {
-                let r = client.wallet_tx(wallet, txid, fetch)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.wallet_tx(wallet, txid, fetch))?,
             WalletCommand::TxDetails { wallet, txid } => {
-                let r = client.wallet_tx_details(wallet, txid)?;
-                serde_json::to_value(r)?
+                to_json(client.wallet_tx_details(wallet, txid))?
             }
             WalletCommand::SetTxMemo { wallet, txid, memo } => {
-                let r = client.wallet_set_tx_memo(wallet, txid, memo)?;
-                serde_json::to_value(r)?
+                to_json(client.wallet_set_tx_memo(wallet, txid, memo))?
             }
             WalletCommand::SetAddrMemo {
                 wallet,
                 address,
                 memo,
-            } => {
-                let r = client.wallet_set_addr_memo(wallet, address, memo)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.wallet_set_addr_memo(wallet, address, memo))?,
             WalletCommand::DumpUnblinded { wallet, txid } => {
-                let r = client.wallet_dump_unblinded(wallet, txid)?;
-                serde_json::to_value(r)?
+                to_json(client.wallet_dump_unblinded(wallet, txid))?
             }
         },
         CliCommand::Liquidex(a) => match a.command {
@@ -432,18 +356,11 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 vout,
                 asset,
                 satoshi,
-            } => {
-                let r = client.liquidex_make(wallet, txid, vout, asset, satoshi)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.liquidex_make(wallet, txid, vout, asset, satoshi))?,
             LiquidexCommand::Take { wallet, proposal } => {
-                let r = client.liquidex_take(wallet, proposal)?;
-                serde_json::to_value(r)?
+                to_json(client.liquidex_take(wallet, proposal))?
             }
-            LiquidexCommand::ToProposal { pset } => {
-                let r = client.liquidex_to_proposal(pset)?;
-                serde_json::to_value(r)?
-            }
+            LiquidexCommand::ToProposal { pset } => to_json(client.liquidex_to_proposal(pset))?,
         },
         CliCommand::Asset(a) => match a.command {
             AssetCommand::Contract {
@@ -453,62 +370,35 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 precision,
                 ticker,
                 version,
-            } => {
-                let r = client.asset_contract(
-                    domain,
-                    issuer_pubkey,
-                    name,
-                    precision,
-                    ticker,
-                    version,
-                )?;
-                serde_json::to_value(r)?
-            }
-            AssetCommand::Details { asset } => {
-                let r = client.asset_details(asset)?;
-                serde_json::to_value(r)?
-            }
-            AssetCommand::List => serde_json::to_value(client.asset_list()?)?,
+            } => to_json(client.asset_contract(
+                domain,
+                issuer_pubkey,
+                name,
+                precision,
+                ticker,
+                version,
+            ))?,
+            AssetCommand::Details { asset } => to_json(client.asset_details(asset))?,
+            AssetCommand::List => to_json(client.asset_list())?,
             AssetCommand::Insert {
                 asset,
                 issuance_tx,
                 contract,
-            } => {
-                let r = client.asset_insert(asset, issuance_tx, contract)?;
-                serde_json::to_value(r)?
-            }
-            AssetCommand::Remove { asset } => {
-                let r = client.asset_remove(asset)?;
-                serde_json::to_value(r)?
-            }
-            AssetCommand::FromRegistry { asset } => {
-                let r = client.asset_from_registry(asset)?;
-                serde_json::to_value(r)?
-            }
-            AssetCommand::Publish { asset } => {
-                let r = client.asset_publish(asset)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.asset_insert(asset, issuance_tx, contract))?,
+            AssetCommand::Remove { asset } => to_json(client.asset_remove(asset))?,
+            AssetCommand::FromRegistry { asset } => to_json(client.asset_from_registry(asset))?,
+            AssetCommand::Publish { asset } => to_json(client.asset_publish(asset))?,
         },
         CliCommand::Amp2(a) => match a.command {
             Amp2Command::Descriptor {
                 signer,
                 descriptor_blinding_key,
-            } => {
-                let r = client.amp2_descriptor(signer, descriptor_blinding_key)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.amp2_descriptor(signer, descriptor_blinding_key))?,
             Amp2Command::Register {
                 signer,
                 descriptor_blinding_key,
-            } => {
-                let r = client.amp2_register(signer, descriptor_blinding_key)?;
-                serde_json::to_value(r)?
-            }
-            Amp2Command::Cosign { pset } => {
-                let r = client.amp2_cosign(pset)?;
-                serde_json::to_value(r)?
-            }
+            } => to_json(client.amp2_register(signer, descriptor_blinding_key))?,
+            Amp2Command::Cosign { pset } => to_json(client.amp2_cosign(pset))?,
         },
         CliCommand::Schema(a) => schema::schema(a, client)?,
         CliCommand::GenerateCompletion { shell } => {
@@ -524,4 +414,9 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             Value::Null
         }
     })
+}
+
+/// Convert a successful result into a JSON [`Value`], propagating errors.
+fn to_json<T: serde::Serialize, E: Into<anyhow::Error>>(r: Result<T, E>) -> anyhow::Result<Value> {
+    Ok(serde_json::to_value(r.map_err(Into::into)?)?)
 }

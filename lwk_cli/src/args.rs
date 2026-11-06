@@ -89,7 +89,7 @@ impl CliCommand {
         !matches!(
             self,
             CliCommand::Server(crate::args::ServerArgs {
-                command: ServerCommand::Start { .. },
+                command: ServerCommand::Start(..),
             }) | CliCommand::GenerateCompletion { .. }
         )
     }
@@ -99,7 +99,7 @@ impl CliCommand {
         !matches!(
             self,
             CliCommand::Server(crate::args::ServerArgs {
-                command: ServerCommand::Start { .. },
+                command: ServerCommand::Start(..),
             }) | CliCommand::GenerateCompletion { .. }
                 | CliCommand::Generate { .. }
         )
@@ -1065,47 +1065,51 @@ impl AuthConfig {
     }
 }
 
+/// Arguments of `server start`
+#[derive(Debug, clap::Args)]
+pub struct ServerStartArgs {
+    /// Server URL, if not specified a reasonable default is used according to the network
+    #[arg(short, long)]
+    pub server_url: Option<String>,
+
+    /// Server type
+    #[arg(long, default_value = "electrum")]
+    pub server_type: ServerType,
+
+    #[arg(long)]
+    /// Needed only in regtest because public network have their official defaults
+    pub registry_url: Option<String>,
+
+    /// Timeout for RPC and HWW requests (seconds)
+    #[arg(long)]
+    pub timeout: Option<u64>,
+
+    /// Interval between blockchain scans (seconds)
+    #[arg(long)]
+    pub scanning_interval: Option<u64>,
+
+    /// AMP2 server URL, if not specified a reasonable default is used according to the network
+    #[arg(long, env)]
+    pub amp2_url: Option<String>,
+
+    /// AMP2 key origin xpub, if not specified a reasonable default is used according to the network
+    #[arg(long, env)]
+    pub amp2_keyorigin_xpub: Option<String>,
+
+    /// Persist blinders for sent outputs (experimental)
+    #[arg(long)]
+    pub with_experimental_blinders: bool,
+
+    /// Authentication parameters
+    #[command(flatten)]
+    pub auth: AuthConfig,
+}
+
 #[derive(Debug, Subcommand)]
 #[allow(clippy::large_enum_variant)]
 pub enum ServerCommand {
     /// Start the server
-    Start {
-        /// Server URL, if not specified a reasonable default is used according to the network
-        #[arg(short, long)]
-        server_url: Option<String>,
-
-        /// Server type
-        #[arg(long, default_value = "electrum")]
-        server_type: ServerType,
-
-        #[arg(long)]
-        /// Needed only in regtest because public network have their official defaults
-        registry_url: Option<String>,
-
-        /// Timeout for RPC and HWW requests (seconds)
-        #[arg(long)]
-        timeout: Option<u64>,
-
-        /// Interval between blockchain scans (seconds)
-        #[arg(long)]
-        scanning_interval: Option<u64>,
-
-        /// AMP2 server URL, if not specified a reasonable default is used according to the network
-        #[arg(long, env)]
-        amp2_url: Option<String>,
-
-        /// AMP2 key origin xpub, if not specified a reasonable default is used according to the network
-        #[arg(long, env)]
-        amp2_keyorigin_xpub: Option<String>,
-
-        /// Persist blinders for sent outputs (experimental)
-        #[arg(long)]
-        with_experimental_blinders: bool,
-
-        /// Authentication parameters
-        #[command(flatten)]
-        auth: AuthConfig,
-    },
+    Start(ServerStartArgs),
 
     /// Wait until an entire blockchain scan has been completed
     Scan,

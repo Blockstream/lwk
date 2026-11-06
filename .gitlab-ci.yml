@@ -32,7 +32,7 @@ stages:
   - deploy
 
 .base:
-  image: ${CI_REGISTRY_IMAGE}/lwk-builder@sha256:b637e69783ffd0dee9c6513c2d90627c11ffefcec21bbf20a3ba8d919067fa2c
+  image: ${CI_REGISTRY_IMAGE}/lwk-builder@sha256:c60b075e5fa803e1014c28509b202fbe7c304fac8ba7f8a28c5ace52ddb8839c
   tags:
     - cloud
   retry:

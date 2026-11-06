@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+* Breaking: Upgrade UniFFI 0.29.4 -> 0.31.2. Bindings and native library must come from the same release, since UniFFI 0.31 changed method checksums. Built-in trait exports (`Display`, `Hash`, `Eq`) are now generated deterministically, which is required for reproducible builds.
+  * C#: generated with uniffi-bindgen-cs 0.11.1. Record properties are now PascalCase (e.g. `FirstName` instead of `first_name`), object handles are `ulong` instead of `IntPtr`.
+  * Go: generated with uniffi-bindgen-go 0.7.1.
+  * C++: generated with uniffi-bindgen-cpp 0.10.0.
+  * Python wheels: generated with uniffi-bindgen 0.31.0.
+  * Kotlin Multiplatform: generated with a gobley build ported to UniFFI 0.31.2 ([gobley#289](https://github.com/gobley/gobley/pull/289)).
 * Breaking: If a PSET has a non-default sighash, `Signer.sign()` and `SecretKey.sign()` now return an error. To sign with non-default sighashes, pass `SignOptions.allow_sighash_single_anyonecanpay()` or `SignOptions.dangerous_allow_any_sighash()` to `Signer.sign_with_options()`
 
 ## 0.20.0

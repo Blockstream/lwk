@@ -5,17 +5,18 @@ default:
 SIMPLICITY_FEATURES := if env_var_or_default("SIMPLICITY", "") != "" { "--features simplicity" } else { "" }
 LIB_EXTENSION := if os() == "macos" { "dylib" } else { "so" }
 
-# gobley 0.3.7 misreads u8/u16 return values on 32-bit ARM Android, which fails the UniFFI checksum
-# check once the app is AOT-compiled (https://github.com/gobley/gobley/issues/252). This revision
-# carries the fix proposed upstream in https://github.com/gobley/gobley/pull/297.
+# No gobley release supports UniFFI 0.31 yet. This revision is the UniFFI 0.31.2 port proposed
+# upstream in https://github.com/gobley/gobley/pull/289, plus the fix for u8/u16 return values
+# misread on 32-bit ARM Android (https://github.com/gobley/gobley/issues/252), which otherwise
+# fails the UniFFI checksum check once the app is AOT-compiled.
 GOBLEY_GIT := "https://github.com/angelix/gobley"
-GOBLEY_REV := "40cef27c59829ca97a71945928028f9ab4880305"
+GOBLEY_REV := "26632c5948d0f42865c03d94df9e07729cea6cfa"
 GOBLEY_ROOT := "target/gobley"
 
 # Third-party UniFFI generators must match the UniFFI version used by lwk_bindings.
 # Recipes reinstall them when the installed version differs, so a stale binary on PATH is not reused.
-UNIFFI_BINDGEN_GO_TAG := "v0.5.0+v0.29.5"
-UNIFFI_BINDGEN_CS_TAG := "v0.10.0+v0.29.4"
+UNIFFI_BINDGEN_GO_TAG := "v0.7.1+v0.31.0"
+UNIFFI_BINDGEN_CS_TAG := "v0.11.1+v0.31.0"
 
 # build the bindings lib: liblwk.so (as specified in lwk_bindings/Cargo.toml)
 build-bindings-lib:

@@ -2,8 +2,7 @@
 
 use aes::cipher::BlockEncryptMut;
 use aes::cipher::{block_padding::Pkcs7, BlockDecryptMut, KeyIvInit};
-#[allow(deprecated)]
-use aes_gcm::{aead::Aead, Aes256Gcm, Key, Nonce};
+use aes_gcm::{aead::Aead, Aes256Gcm};
 use base64::prelude::*;
 use elements::bitcoin::bip32::{DerivationPath, Xpub};
 use flate2::read::ZlibDecoder;
@@ -1136,18 +1135,12 @@ fn decrypt_blob_key(
     Ok(enc_key)
 }
 
-#[allow(deprecated)]
 fn blob_cipher(enc_key: &[u8]) -> Result<Aes256Gcm, Error> {
-    if enc_key.len() != 32 {
-        return Err(Error::Generic("Invalid encryption key length".into()));
-    }
-    // panicks on length mismatch
     use aes_gcm::KeyInit;
-    let key = Key::<Aes256Gcm>::from_slice(enc_key);
-    Ok(Aes256Gcm::new(key))
+    Aes256Gcm::new_from_slice(enc_key)
+        .map_err(|_| Error::Generic("Invalid encryption key length".into()))
 }
 
-#[allow(deprecated)]
 fn decrypt_blob(enc_key: &[u8], blob64: &str) -> Result<Vec<u8>, Error> {
     let wo_blob = BASE64_STANDARD
         .decode(blob64)
@@ -1158,8 +1151,7 @@ fn decrypt_blob(enc_key: &[u8], blob64: &str) -> Result<Vec<u8>, Error> {
     let nonce: [u8; 12] = wo_blob[..12]
         .try_into()
         .map_err(|_| Error::Generic("Invalid nonce".to_string()))?;
-    let nonce = Nonce::from_slice(&nonce);
-    let plaintext = cipher.decrypt(nonce, &wo_blob[12..])?;
+    let plaintext = cipher.decrypt((&nonce).into(), &wo_blob[12..])?;
     // plaintext should start with [1, 0, 0, 0] but it's not worth checking it here
     // as it might break after if someone sets the blob without this prefix
     Ok(plaintext)

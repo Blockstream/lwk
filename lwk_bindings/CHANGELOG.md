@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Kotlin Multiplatform: the Android libraries are built in release mode. They were unoptimized debug builds with debug assertions, and the `arm64-v8a` `liblwk.so` shrinks from 44.1 MB to 24.7 MB
 * Breaking: If a PSET has a non-default sighash, `Signer.sign()` and `SecretKey.sign()` now return an error. To sign with non-default sighashes, pass `SignOptions.allow_sighash_single_anyonecanpay()` or `SignOptions.dangerous_allow_any_sighash()` to `Signer.sign_with_options()`
 
 ## 0.20.0

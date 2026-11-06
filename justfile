@@ -61,19 +61,19 @@ kotlin: build-bindings-lib
 
 # Cross build the lib for aarch64-linux-android
 aarch64-linux-android:
-	cargo ndk -t aarch64-linux-android -o target/release/android/jniLibs build -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t aarch64-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
 
 # Cross build the lib for armv7-linux-androideabi
 armv7-linux-androideabi:
-	cargo ndk -t armv7-linux-androideabi -o target/release/android/jniLibs build -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t armv7-linux-androideabi -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
 
 # Cross build the lib for i686-linux-android
 i686-linux-android:
-	cargo ndk -t i686-linux-android -o target/release/android/jniLibs build -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t i686-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
 
 # Cross build the lib for x86_64-linux-android
 x86_64-linux-android:
-	cargo ndk -t x86_64-linux-android -o target/release/android/jniLibs build -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t x86_64-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
 
 # After cross building all the lib for android put them in final dir
 android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android

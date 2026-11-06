@@ -187,6 +187,10 @@ Format: `context: <description>`
 - Breaking changes: append `!` after context
 - Title: max 50 chars, imperative mood, no period
 - Body: blank line after title, explain "why", use bullet points; wrap text at 72 characters.
+- Do not reference internal issues or merge requests (e.g. `#123`, `!456`):
+  commits are mirrored to the public GitHub repository, where these numbers
+  are not visible or point to unrelated GitHub issues. Explain the context in
+  the message itself; links to public resources (e.g. upstream issues) are fine.
 - Do not add "Co-Authored-By: <LLM>" as this provides free advertising for the model.
   The commit author is fully responsible for the commit changes, the LLM is not.
 

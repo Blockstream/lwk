@@ -52,7 +52,7 @@ First, create a virtual env, skip the step if you already created it.
 cd lwk/lwk_bindings
 virtualenv venv
 source venv/bin/activate
-pip install maturin maturin[patchelf] uniffi-bindgen==0.29.5
+pip install maturin maturin[patchelf] uniffi-bindgen==0.31.0
 ```
 
 Then build the wheel
@@ -125,7 +125,7 @@ just kotlin-multiplatform
 Install uniffi-bindgen-cpp:
 
 ```shell
-uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --rev f02896c3e9fdce2f374656a32c46ae14c0051a26
+cargo install --locked uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --tag v0.10.0+v0.31.0
 ```
 
 Build the bindings and generate the shared C++ sources:

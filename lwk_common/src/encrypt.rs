@@ -1,7 +1,5 @@
 //! Shared encryption helpers.
 
-#[allow(deprecated)]
-use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::AeadMutInPlace;
 use aes_gcm_siv::{Aes256GcmSiv, KeyInit};
 use elements::bitcoin::hashes::{sha256t_hash_newtype, Hash};
@@ -40,24 +38,19 @@ impl std::fmt::Display for EncryptError {
 impl std::error::Error for EncryptError {}
 
 /// Create a cipher from 32 key bytes.
-#[allow(deprecated)]
 pub fn cipher_from_key_bytes(key_bytes: [u8; 32]) -> Aes256GcmSiv {
-    let key = GenericArray::from_slice(&key_bytes);
-    Aes256GcmSiv::new(key)
+    Aes256GcmSiv::new((&key_bytes).into())
 }
 
 /// Encrypt a payload using the provided nonce, returning `nonce || ciphertext`.
-#[allow(deprecated)]
 fn encrypt_with_nonce(
     cipher: &mut Aes256GcmSiv,
     plaintext: &[u8],
     nonce_bytes: [u8; NONCE_LEN],
 ) -> Result<Vec<u8>, EncryptError> {
-    let nonce = GenericArray::from_slice(&nonce_bytes);
-
     let mut buffer = plaintext.to_vec();
     cipher
-        .encrypt_in_place(nonce, b"", &mut buffer)
+        .encrypt_in_place((&nonce_bytes).into(), b"", &mut buffer)
         .map_err(|err| EncryptError::Aead(err.to_string()))?;
 
     let mut result = Vec::with_capacity(nonce_bytes.len() + buffer.len());
@@ -69,9 +62,6 @@ fn encrypt_with_nonce(
 /// Encrypt a payload with a random nonce.
 ///
 /// The nonce is prepended to the ciphertext for later decryption.
-///
-/// NOTE: `allow(deprecated)` cannot be removed until aes-gcm-siv 0.12 is released
-#[allow(deprecated)]
 pub fn encrypt_with_random_nonce(
     cipher: &mut Aes256GcmSiv,
     plaintext: &[u8],
@@ -82,7 +72,6 @@ pub fn encrypt_with_random_nonce(
 }
 
 /// Decrypt a payload that was encrypted with [`encrypt_with_random_nonce`] or [`encrypt_with_deterministic_nonce`].
-#[allow(deprecated)]
 pub fn decrypt_with_nonce_prefix(
     cipher: &mut Aes256GcmSiv,
     ciphertext: &[u8],
@@ -94,11 +83,10 @@ pub fn decrypt_with_nonce_prefix(
     let nonce_bytes: [u8; NONCE_LEN] = ciphertext[..NONCE_LEN]
         .try_into()
         .expect("nonce slice length validated");
-    let nonce = GenericArray::from_slice(&nonce_bytes);
 
     let mut buffer = ciphertext[NONCE_LEN..].to_vec();
     cipher
-        .decrypt_in_place(nonce, b"", &mut buffer)
+        .decrypt_in_place((&nonce_bytes).into(), b"", &mut buffer)
         .map_err(|err| EncryptError::Aead(err.to_string()))?;
 
     Ok(buffer)
@@ -111,7 +99,6 @@ pub fn decrypt_with_nonce_prefix(
 /// NOTE: for normal usage we could have avoided to prefix the nonce to the ciphertext, equality is
 /// guaranteed anyway but we keep the prefix to allow decryption in case we need to do db
 /// migrations or reconstruction.
-#[allow(deprecated)]
 pub fn encrypt_with_deterministic_nonce(
     cipher: &mut Aes256GcmSiv,
     plaintext: &[u8],

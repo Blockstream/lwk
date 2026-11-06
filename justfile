@@ -12,6 +12,11 @@ GOBLEY_GIT := "https://github.com/angelix/gobley"
 GOBLEY_REV := "40cef27c59829ca97a71945928028f9ab4880305"
 GOBLEY_ROOT := "target/gobley"
 
+# Third-party UniFFI generators must match the UniFFI version used by lwk_bindings.
+# Recipes reinstall them when the installed version differs, so a stale binary on PATH is not reused.
+UNIFFI_BINDGEN_GO_TAG := "v0.5.0+v0.29.5"
+UNIFFI_BINDGEN_CS_TAG := "v0.10.0+v0.29.4"
+
 # build the bindings lib: liblwk.so (as specified in lwk_bindings/Cargo.toml)
 build-bindings-lib:
     # a debug build would be fine if used only to generate interfaces files but some jobs use it to package it, thus release is necessary.
@@ -132,7 +137,7 @@ swift: ios ios-sim
 
 # build the Go interface "lwk/lwk.go"
 go-build-bindings: build-bindings-lib
-    which uniffi-bindgen-go || cargo install uniffi-bindgen-go --git https://github.com/NordSecurity/uniffi-bindgen-go --tag v0.5.0+v0.29.5
+    cargo install --list | grep -qF "uniffi-bindgen-go {{UNIFFI_BINDGEN_GO_TAG}} " || cargo install --locked --force uniffi-bindgen-go --git https://github.com/NordSecurity/uniffi-bindgen-go --tag {{UNIFFI_BINDGEN_GO_TAG}}
     mkdir -p lwk_bindings/go/lwk
     cp target/release/liblwk.{{LIB_EXTENSION}} lwk_bindings/go/lwk
     uniffi-bindgen-go --library lwk_bindings/go/lwk/liblwk.{{LIB_EXTENSION}} --out-dir lwk_bindings/go
@@ -146,7 +151,7 @@ go-test-bindings: go-build-bindings
     done
 
 csharp-windows: build-bindings-lib
-    which uniffi-bindgen-cs || cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.10.0+v0.29.4
+    cargo install --list | grep -qF "uniffi-bindgen-cs {{UNIFFI_BINDGEN_CS_TAG}} " || cargo install --locked --force uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag {{UNIFFI_BINDGEN_CS_TAG}}
     uniffi-bindgen-cs --library target/release/lwk.dll --out-dir target/release/csharp
     python scripts/patch_csharp_finalize.py target/release/csharp/lwk.cs
     cp target/release/lwk.dll target/release/csharp

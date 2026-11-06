@@ -57,14 +57,6 @@ impl Bip321 {
         self.inner.message()
     }
 
-    /// Returns the lightning BOLT11 invoice as a string if present
-    #[cfg(feature = "lightning")]
-    pub fn lightning(&self) -> Option<Arc<crate::Bolt11Invoice>> {
-        self.inner
-            .lightning()
-            .and_then(|inv| crate::Bolt11Invoice::new(&inv.to_string()).ok())
-    }
-
     /// Returns the BOLT12 offer as a string if present
     pub fn offer(&self) -> Option<String> {
         self.inner.offer().map(|o| o.to_string())
@@ -88,5 +80,16 @@ impl Bip321 {
     /// Returns the ark address if present
     pub fn ark(&self) -> Option<String> {
         self.inner.ark()
+    }
+}
+
+#[cfg(feature = "lightning")]
+#[uniffi::export]
+impl Bip321 {
+    /// Returns the lightning BOLT11 invoice as a string if present
+    pub fn lightning(&self) -> Option<Arc<crate::Bolt11Invoice>> {
+        self.inner
+            .lightning()
+            .and_then(|inv| crate::Bolt11Invoice::new(&inv.to_string()).ok())
     }
 }

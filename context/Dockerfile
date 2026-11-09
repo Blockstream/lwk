@@ -44,6 +44,7 @@ RUN rustup install nightly # for docs building
 
 RUN cargo install cargo-audit@0.22.0 --locked
 RUN cargo install cargo-nextest@0.9.100 --locked
+RUN cargo install cargo-hack@0.6.46 --locked
 RUN cargo install grcov@0.10.5 --locked
 RUN cargo install just@1.53.0 --locked
 

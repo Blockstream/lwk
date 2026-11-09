@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Blocking full-history scans now return `None` for identical rescans, including when no transaction is at the tip. Transaction-height changes and deletions still produce updates. UTXO-only scans conservatively continue returning updates.
+
 ## 0.20.0
 
 * Breaking: update to `elements` 0.27 and `elements-miniscript` 0.5. Types re-exported from `elements` changed, for example the hex helpers (`ToHex`, `FromHex`), `AssetId` and `Txid` constructors, the issuance entropy (now `AssetEntropy`) and the pegin witness.

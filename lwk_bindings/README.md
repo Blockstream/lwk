@@ -176,6 +176,22 @@ Run Go tests:
 just go-test-bindings
 ```
 
+## Reproducible build
+
+Release builds of `liblwk.so` and `liblwk.a` (`cargo build --locked --release -p lwk_bindings`
+from the repository root, so that `.cargo/config.toml` applies) are deterministic.
+CI checks it on every pipeline by building twice from scratch, in two separate jobs, and
+comparing the artifact hashes. To run the same steps locally (Linux only):
+
+```shell
+just build-reproducible target/reproducible-check/1
+just build-reproducible target/reproducible-check/2
+just compare-reproducible target/reproducible-check/1 target/reproducible-check/2
+```
+
+Both builds use the same checkout path, `CARGO_HOME` and toolchain, so the check does not
+cover builds made in a different directory or environment.
+
 ## Guidelines
 
 If you're changing the interface, adding a new object, method or function, follow our [guidelines](AGENTS.md).

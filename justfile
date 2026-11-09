@@ -23,6 +23,27 @@ build-bindings-lib:
     # a debug build would be fine if used only to generate interfaces files but some jobs use it to package it, thus release is necessary.
     cargo build --release -p lwk_bindings --features test_env {{SIMPLICITY_FEATURES}}
 
+# build liblwk in release from scratch in `target_dir` (deleted first), write the hashes of the artifacts to `out`
+build-reproducible out target_dir="target/reproducible":
+    rm -rf {{target_dir}}
+    cargo build --locked --release -p lwk_bindings --target-dir {{target_dir}}
+    mkdir -p {{out}}
+    cd {{target_dir}}/release && sha256sum liblwk.so liblwk.a | tee {{absolute_path(out)}}/sha256sums.txt
+
+# compare the artifact hashes of two `build-reproducible` outputs
+compare-reproducible a b:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for f in {{a}}/sha256sums.txt {{b}}/sha256sums.txt; do
+        test -f "$f" || { echo "missing $f" >&2; exit 2; }
+    done
+    if diff {{a}}/sha256sums.txt {{b}}/sha256sums.txt; then
+        echo "build is reproducible"
+    else
+        echo "build is NOT reproducible"
+        exit 1
+    fi
+
 # build the python interface "lwk.py"
 python-build-bindings: build-bindings-lib
     # note production wheels are built with maturin, but this can be useful during development

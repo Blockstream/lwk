@@ -1,0 +1,6 @@
+[env]
+# Reproducible builds: rust-embed (used by age) embeds the timestamps of the files it
+# includes, unless SOURCE_DATE_EPOCH is set. Freshly extracted crate sources have new
+# timestamps on every machine. Same value as the Nix dev shell; an already set
+# environment variable takes precedence.
+SOURCE_DATE_EPOCH = "315532800"

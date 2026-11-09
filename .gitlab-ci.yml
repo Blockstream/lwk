@@ -128,16 +128,30 @@ secret_detection:
   stage: security
   needs: []
 
+# Build liblwk twice in separate jobs, so each build gets its own compiler processes
+# (randomly seeded HashMaps) and usually its own runner; reproducible_check compares them.
+# Jobs needing the library get the same liblwk.so from both, identical when reproducible.
 build_bindings:
   stage: build
   needs: []
   extends: .base
+  services: [] # no docker needed
+  parallel: 2
   script:
-    - cargo build --release -p lwk_bindings
+    - just build-reproducible reproducible/$CI_NODE_INDEX target
   artifacts:
     paths:
       - target/release/liblwk.so
+      - reproducible/
     expire_in: 1 day
+
+reproducible_check:
+  stage: test
+  needs: [build_bindings]
+  extends: .base
+  services: []
+  script:
+    - just compare-reproducible reproducible/1 reproducible/2
 
 build_ci_image:
   stage: build

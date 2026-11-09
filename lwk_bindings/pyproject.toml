@@ -15,3 +15,8 @@ build-backend = "maturin"
 
 [tool.maturin]
 bindings = "uniffi"
+
+# The Rust SBOM embeds a build timestamp and a random serial number, which makes the
+# wheel non-reproducible.
+[tool.maturin.sbom]
+rust = false

@@ -38,13 +38,13 @@ fn test_registry_inner(env: TestEnv, registry_url: &str) {
     let sigs_added = signer.sign(&mut pset).unwrap();
     assert_eq!(sigs_added, 1);
 
-    w.send(&mut pset);
+    let txid = w.send(&mut pset);
     env.elementsd_generate(2);
+    wait_for_tx_confirmation(&mut w.wollet, &mut w.client, &txid);
 
     // Publish on asset registry
     let registry = Registry::new(registry_url).unwrap();
     let payload = RegistryPost::new(contract.clone(), asset_id);
-    std::thread::sleep(std::time::Duration::from_secs(1));
     registry.post(&payload).unwrap();
 
     // Fetch from asset registry

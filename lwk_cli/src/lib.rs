@@ -44,8 +44,6 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
         Err(_) => log::debug!("logging already initialized"),
     }
 
-    log::info!("CLI initialized with args: {args:?}");
-
     // TODO: improve network types conversion or comparison
     let (network, default_port) = match args.network {
         Network::Mainnet => ("liquid", 32110),

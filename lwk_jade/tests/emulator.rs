@@ -12,10 +12,9 @@ use elements_miniscript::{
     confidential::Key, ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey,
 };
 use lwk_common::Signer;
-use lwk_containers::{
-    testcontainers::runners::{AsyncRunner, SyncRunner},
-    PinServer, PIN_SERVER_PORT,
-};
+#[cfg(feature = "asyncr")]
+use lwk_containers::testcontainers::runners::AsyncRunner;
+use lwk_containers::{testcontainers::runners::SyncRunner, PinServer, PIN_SERVER_PORT};
 use lwk_jade::{
     get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
     protocol::{

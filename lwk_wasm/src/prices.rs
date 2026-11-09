@@ -125,6 +125,7 @@ mod tests {
     wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
+    #[ignore = "require network calls"]
     async fn test_prices_fetcher() {
         let fetcher = PricesFetcher::new().unwrap();
         let usd = CurrencyCode::new("USD").unwrap();
@@ -138,6 +139,7 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
+    #[ignore = "require network calls"]
     async fn test_prices_fetcher_builder() {
         let fetcher = PricesFetcher::new().unwrap();
         let eur = CurrencyCode::new("EUR").unwrap();

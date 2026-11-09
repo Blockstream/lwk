@@ -52,7 +52,7 @@ First, create a virtual env, skip the step if you already created it.
 cd lwk/lwk_bindings
 virtualenv venv
 source venv/bin/activate
-pip install maturin maturin[patchelf] uniffi-bindgen==0.29.5
+pip install maturin maturin[patchelf] uniffi-bindgen==0.31.0
 ```
 
 Then build the wheel
@@ -125,7 +125,7 @@ just kotlin-multiplatform
 Install uniffi-bindgen-cpp:
 
 ```shell
-uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --rev f02896c3e9fdce2f374656a32c46ae14c0051a26
+cargo install --locked uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --tag v0.10.0+v0.31.0
 ```
 
 Build the bindings and generate the shared C++ sources:
@@ -175,6 +175,22 @@ Run Go tests:
 ```shell
 just go-test-bindings
 ```
+
+## Reproducible build
+
+Release builds of `liblwk.so` and `liblwk.a` (`cargo build --locked --release -p lwk_bindings`
+from the repository root, so that `.cargo/config.toml` applies) are deterministic.
+CI checks it on every pipeline by building twice from scratch, in two separate jobs, and
+comparing the artifact hashes. To run the same steps locally (Linux only):
+
+```shell
+just build-reproducible target/reproducible-check/1
+just build-reproducible target/reproducible-check/2
+just compare-reproducible target/reproducible-check/1 target/reproducible-check/2
+```
+
+Both builds use the same checkout path, `CARGO_HOME` and toolchain, so the check does not
+cover builds made in a different directory or environment.
 
 ## Guidelines
 

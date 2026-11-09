@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Breaking: update the re-exported `age` crate to 0.12. Its `fl!` localization macro dependency emitted arguments in random order, making builds non-deterministic. See the [age 0.12 changelog](https://github.com/str4d/rage/blob/main/age/CHANGELOG.md) for API changes.
 * Blocking full-history scans now return `None` for identical rescans, including when no transaction is at the tip. Transaction-height changes and deletions still produce updates. UTXO-only scans conservatively continue returning updates.
 
 ## 0.20.0

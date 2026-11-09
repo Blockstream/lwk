@@ -23,11 +23,11 @@ log = { workspace = true, optional = true }
 elements.workspace = true
 elements-miniscript.workspace = true
 thiserror = { workspace = true }
-uniffi = { version = "=0.29.4", features = ["bindgen-tests"] }
+uniffi = { version = "=0.31.2", features = ["bindgen-tests"] }
 serde_json.workspace = true
 
 [build-dependencies]
-uniffi = { version = "=0.29.4", features = ["build"] }
+uniffi = { version = "=0.31.2", features = ["build"] }
 
 [dev-dependencies]
 lwk_bindings = { path = ".", features = ["test_env"]}  # needed to handle the way uniffi tests are launched

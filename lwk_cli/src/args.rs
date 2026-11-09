@@ -89,7 +89,7 @@ impl CliCommand {
         !matches!(
             self,
             CliCommand::Server(crate::args::ServerArgs {
-                command: ServerCommand::Start { .. },
+                command: ServerCommand::Start(..),
             }) | CliCommand::GenerateCompletion { .. }
         )
     }
@@ -99,7 +99,7 @@ impl CliCommand {
         !matches!(
             self,
             CliCommand::Server(crate::args::ServerArgs {
-                command: ServerCommand::Start { .. },
+                command: ServerCommand::Start(..),
             }) | CliCommand::GenerateCompletion { .. }
                 | CliCommand::Generate { .. }
         )
@@ -1027,14 +1027,12 @@ pub struct AuthConfig {
 impl AuthConfig {
     pub fn token_provider(self) -> Result<TokenProvider, anyhow::Error> {
         let oauth_fields = [
-            self.auth_token_url.clone(),
-            self.auth_client_id.clone(),
-            self.auth_client_secret.clone(),
+            &self.auth_token_url,
+            &self.auth_client_id,
+            &self.auth_client_secret,
         ];
 
-        let is_all_blockstream_present = oauth_fields.iter().all(|f| f.is_some());
-
-        if oauth_fields.iter().any(|f| f.is_some()) && !is_all_blockstream_present {
+        if oauth_fields.iter().any(|f| f.is_some()) && !oauth_fields.iter().all(|f| f.is_some()) {
             anyhow::bail!(
                 "All of the following must be set together for authentication:\n\
                          --auth-token-url     or env: AUTH_TOKEN_URL\n\
@@ -1043,7 +1041,11 @@ impl AuthConfig {
             );
         }
 
-        if is_all_blockstream_present {
+        if let (Some(url), Some(client_id), Some(client_secret)) = (
+            self.auth_token_url,
+            self.auth_client_id,
+            self.auth_client_secret,
+        ) {
             if self.auth_static_token.is_some() {
                 anyhow::bail!(
                     "Static token for authentication used with Blockstream API authentication"
@@ -1051,9 +1053,9 @@ impl AuthConfig {
             }
 
             return Ok(TokenProvider::Blockstream {
-                url: self.auth_token_url.expect("checked above"),
-                client_id: self.auth_client_id.expect("checked above"),
-                client_secret: self.auth_client_secret.expect("checked above"),
+                url,
+                client_id,
+                client_secret,
             });
         } else if let Some(token) = self.auth_static_token {
             return Ok(TokenProvider::Static(token));
@@ -1063,47 +1065,51 @@ impl AuthConfig {
     }
 }
 
+/// Arguments of `server start`
+#[derive(Debug, clap::Args)]
+pub struct ServerStartArgs {
+    /// Server URL, if not specified a reasonable default is used according to the network
+    #[arg(short, long)]
+    pub server_url: Option<String>,
+
+    /// Server type
+    #[arg(long, default_value = "electrum")]
+    pub server_type: ServerType,
+
+    #[arg(long)]
+    /// Needed only in regtest because public network have their official defaults
+    pub registry_url: Option<String>,
+
+    /// Timeout for RPC and HWW requests (seconds)
+    #[arg(long)]
+    pub timeout: Option<u64>,
+
+    /// Interval between blockchain scans (seconds)
+    #[arg(long)]
+    pub scanning_interval: Option<u64>,
+
+    /// AMP2 server URL, if not specified a reasonable default is used according to the network
+    #[arg(long, env)]
+    pub amp2_url: Option<String>,
+
+    /// AMP2 key origin xpub, if not specified a reasonable default is used according to the network
+    #[arg(long, env)]
+    pub amp2_keyorigin_xpub: Option<String>,
+
+    /// Persist blinders for sent outputs (experimental)
+    #[arg(long)]
+    pub with_experimental_blinders: bool,
+
+    /// Authentication parameters
+    #[command(flatten)]
+    pub auth: AuthConfig,
+}
+
 #[derive(Debug, Subcommand)]
 #[allow(clippy::large_enum_variant)]
 pub enum ServerCommand {
     /// Start the server
-    Start {
-        /// Server URL, if not specified a reasonable default is used according to the network
-        #[arg(short, long)]
-        server_url: Option<String>,
-
-        /// Server type
-        #[arg(long, default_value = "electrum")]
-        server_type: ServerType,
-
-        #[arg(long)]
-        /// Needed only in regtest because public network have their official defaults
-        registry_url: Option<String>,
-
-        /// Timeout for RPC and HWW requests (seconds)
-        #[arg(long)]
-        timeout: Option<u64>,
-
-        /// Interval between blockchain scans (seconds)
-        #[arg(long)]
-        scanning_interval: Option<u64>,
-
-        /// AMP2 server URL, if not specified a reasonable default is used according to the network
-        #[arg(long, env)]
-        amp2_url: Option<String>,
-
-        /// AMP2 key origin xpub, if not specified a reasonable default is used according to the network
-        #[arg(long, env)]
-        amp2_keyorigin_xpub: Option<String>,
-
-        /// Persist blinders for sent outputs (experimental)
-        #[arg(long)]
-        with_experimental_blinders: bool,
-
-        /// Authentication parameters
-        #[command(flatten)]
-        auth: AuthConfig,
-    },
+    Start(ServerStartArgs),
 
     /// Wait until an entire blockchain scan has been completed
     Scan,

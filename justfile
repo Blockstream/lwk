@@ -5,17 +5,44 @@ default:
 SIMPLICITY_FEATURES := if env_var_or_default("SIMPLICITY", "") != "" { "--features simplicity" } else { "" }
 LIB_EXTENSION := if os() == "macos" { "dylib" } else { "so" }
 
-# gobley 0.3.7 misreads u8/u16 return values on 32-bit ARM Android, which fails the UniFFI checksum
-# check once the app is AOT-compiled (https://github.com/gobley/gobley/issues/252). This revision
-# carries the fix proposed upstream in https://github.com/gobley/gobley/pull/297.
+# No gobley release supports UniFFI 0.31 yet. This revision is the UniFFI 0.31.2 port proposed
+# upstream in https://github.com/gobley/gobley/pull/289, plus the fix for u8/u16 return values
+# misread on 32-bit ARM Android (https://github.com/gobley/gobley/issues/252), which otherwise
+# fails the UniFFI checksum check once the app is AOT-compiled.
 GOBLEY_GIT := "https://github.com/angelix/gobley"
-GOBLEY_REV := "40cef27c59829ca97a71945928028f9ab4880305"
+GOBLEY_REV := "26632c5948d0f42865c03d94df9e07729cea6cfa"
 GOBLEY_ROOT := "target/gobley"
+
+# Third-party UniFFI generators must match the UniFFI version used by lwk_bindings.
+# Recipes reinstall them when the installed version differs, so a stale binary on PATH is not reused.
+UNIFFI_BINDGEN_GO_TAG := "v0.7.1+v0.31.0"
+UNIFFI_BINDGEN_CS_TAG := "v0.11.1+v0.31.0"
 
 # build the bindings lib: liblwk.so (as specified in lwk_bindings/Cargo.toml)
 build-bindings-lib:
     # a debug build would be fine if used only to generate interfaces files but some jobs use it to package it, thus release is necessary.
     cargo build --release -p lwk_bindings --features test_env {{SIMPLICITY_FEATURES}}
+
+# build liblwk in release from scratch in `target_dir` (deleted first), write the hashes of the artifacts to `out`
+build-reproducible out target_dir="target/reproducible":
+    rm -rf {{target_dir}}
+    cargo build --locked --release -p lwk_bindings --target-dir {{target_dir}}
+    mkdir -p {{out}}
+    cd {{target_dir}}/release && sha256sum liblwk.so liblwk.a | tee {{absolute_path(out)}}/sha256sums.txt
+
+# compare the artifact hashes of two `build-reproducible` outputs
+compare-reproducible a b:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for f in {{a}}/sha256sums.txt {{b}}/sha256sums.txt; do
+        test -f "$f" || { echo "missing $f" >&2; exit 2; }
+    done
+    if diff {{a}}/sha256sums.txt {{b}}/sha256sums.txt; then
+        echo "build is reproducible"
+    else
+        echo "build is NOT reproducible"
+        exit 1
+    fi
 
 # build the python interface "lwk.py"
 python-build-bindings: build-bindings-lib
@@ -61,19 +88,19 @@ kotlin: build-bindings-lib
 
 # Cross build the lib for aarch64-linux-android
 aarch64-linux-android:
-	cargo ndk -t aarch64-linux-android -o target/release/android/jniLibs build -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t aarch64-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
 
 # Cross build the lib for armv7-linux-androideabi
 armv7-linux-androideabi:
-	cargo ndk -t armv7-linux-androideabi -o target/release/android/jniLibs build -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t armv7-linux-androideabi -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
 
 # Cross build the lib for i686-linux-android
 i686-linux-android:
-	cargo ndk -t i686-linux-android -o target/release/android/jniLibs build -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t i686-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
 
 # Cross build the lib for x86_64-linux-android
 x86_64-linux-android:
-	cargo ndk -t x86_64-linux-android -o target/release/android/jniLibs build -p lwk_bindings {{SIMPLICITY_FEATURES}}
+	cargo ndk -t x86_64-linux-android -o target/release/android/jniLibs build --release -p lwk_bindings {{SIMPLICITY_FEATURES}}
 
 # After cross building all the lib for android put them in final dir
 android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
@@ -132,7 +159,7 @@ swift: ios ios-sim
 
 # build the Go interface "lwk/lwk.go"
 go-build-bindings: build-bindings-lib
-    which uniffi-bindgen-go || cargo install uniffi-bindgen-go --git https://github.com/NordSecurity/uniffi-bindgen-go --tag v0.5.0+v0.29.5
+    cargo install --list | grep -qF "uniffi-bindgen-go {{UNIFFI_BINDGEN_GO_TAG}} " || cargo install --locked --force uniffi-bindgen-go --git https://github.com/NordSecurity/uniffi-bindgen-go --tag {{UNIFFI_BINDGEN_GO_TAG}}
     mkdir -p lwk_bindings/go/lwk
     cp target/release/liblwk.{{LIB_EXTENSION}} lwk_bindings/go/lwk
     uniffi-bindgen-go --library lwk_bindings/go/lwk/liblwk.{{LIB_EXTENSION}} --out-dir lwk_bindings/go
@@ -146,7 +173,7 @@ go-test-bindings: go-build-bindings
     done
 
 csharp-windows: build-bindings-lib
-    which uniffi-bindgen-cs || cargo install uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.10.0+v0.29.4
+    cargo install --list | grep -qF "uniffi-bindgen-cs {{UNIFFI_BINDGEN_CS_TAG}} " || cargo install --locked --force uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag {{UNIFFI_BINDGEN_CS_TAG}}
     uniffi-bindgen-cs --library target/release/lwk.dll --out-dir target/release/csharp
     python scripts/patch_csharp_finalize.py target/release/csharp/lwk.cs
     cp target/release/lwk.dll target/release/csharp

@@ -38,7 +38,7 @@ impl From<DescriptorBlindingKey> for lwk_common::DescriptorBlindingKey {
 /// Options for a signing operation
 #[derive(uniffi::Object, Default)]
 pub struct SignOptions {
-    inner: lwk_signer::SignOptions,
+    pub(crate) inner: lwk_signer::SignOptions,
 }
 
 #[uniffi::export]

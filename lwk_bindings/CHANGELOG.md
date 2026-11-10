@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Python wheels no longer include the CycloneDX SBOM of the Rust dependencies (`lwk-*.dist-info/sboms/lwk_bindings.cyclonedx.json`), because it contains a build timestamp and a random serial number that prevent reproducible wheels.
 * Breaking: Upgrade UniFFI 0.29.4 -> 0.31.2. Bindings and native library must come from the same release, since UniFFI 0.31 changed method checksums. Built-in trait exports (`Display`, `Hash`, `Eq`) are now generated deterministically, which is required for reproducible builds.
   * C#: generated with uniffi-bindgen-cs 0.11.1. Record properties are now PascalCase (e.g. `FirstName` instead of `first_name`), object handles are `ulong` instead of `IntPtr`.
   * Go: generated with uniffi-bindgen-go 0.7.1.

@@ -79,6 +79,26 @@ async function runLiquidexTest() {
         // Verify the final balance
         assert.strictEqual(maker.balance().entries().get(asset.toString()), issuedAssetUnits);
         assert.strictEqual(taker.balance().entries().get(asset.toString()) || 0n, 0n);
+
+        // (maker) A single key wallet can make a proposal too, signing with its secret key
+        const makerSecretKey = lwk.SecretKey.fromBytes(new Uint8Array(32).fill(0xaa));
+        // Master tpub with the public key of makerSecretKey, waterfalls rejects single keys on regtest
+        const makerTpub = "tpubD6NzVbkrYhZ4WMCcYXEgDrM1AFATSGmrFyMnA2Dgx1Y551VueaE3iemHhQPAfjVzVC5PAG98AyGAkccSwkJgDhDrWL6Fp3nqcbH8kGfpsFe";
+        const viewKey = "11".repeat(32);
+        const makerSingleKey = new lwk.Wollet(network, new lwk.WolletDescriptor(`ct(${viewKey},elwpkh(${makerTpub}))`));
+        const singleKeyFundTxid = await fundAddress(makerSingleKey.address(null).address(), utxoSize, network, client);
+        await waitForTx(makerSingleKey, client, singleKeyFundTxid);
+
+        const singleKeyUtxo = makerSingleKey.utxos()[0].outpoint();
+        const singleKeyPset = new lwk.TxBuilder(network)
+            .liquidexMake(singleKeyUtxo, makerSingleKey.address(null).address(), issuedAssetUnits, asset)
+            .finish(makerSingleKey);
+
+        const singleKeySignedPset = makerSecretKey.signWithOptions(singleKeyPset, options);
+        const singleKeyProposal = lwk.UnvalidatedLiquidexProposal.fromPset(singleKeySignedPset);
+        const singleKeyPreviousTx = await client.getTx(singleKeyProposal.neededTx());
+        const singleKeyValidated = singleKeyProposal.validate(singleKeyPreviousTx);
+        assert.strictEqual(singleKeyValidated.input().amount(), utxoSize);
     } catch (error) {
         console.error("Liquidex test failed:", error);
         throw error;

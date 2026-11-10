@@ -13,7 +13,7 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 #[derive(Default)]
 pub struct SignOptions {
-    inner: lwk_signer::SignOptions,
+    pub(crate) inner: lwk_signer::SignOptions,
 }
 
 #[wasm_bindgen]

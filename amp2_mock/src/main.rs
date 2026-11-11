@@ -4,6 +4,7 @@ use lwk_signer::SwSigner;
 use lwk_wollet::elements::bitcoin::bip32::DerivationPath;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::str::FromStr;
 
 #[derive(Serialize)]
@@ -24,6 +25,11 @@ struct RegisterRequest {
 #[derive(Serialize)]
 struct RegisterResponse {
     wid: String,
+}
+
+#[derive(Serialize)]
+struct IsRegisteredResponse {
+    is_registered: bool,
 }
 
 #[derive(Deserialize)]
@@ -68,11 +74,14 @@ fn main() {
     let actual_addr = server.server_addr().to_ip().expect("not an IP address");
     eprintln!("amp2_mock listening on {actual_addr}");
 
+    let mut registered: HashSet<String> = HashSet::new();
+
     for mut request in server.incoming_requests() {
         let response = if request.method() == &tiny_http::Method::Options {
             response_with_cors(204, String::new())
         } else {
-            let (status, body) = match request.url() {
+            let url = request.url().to_string();
+            let (status, body) = match url.as_str() {
                 "/info/xpub" => {
                     let resp = InfoXpub {
                         keyorigin_xpub: keyorigin_xpub.clone(),
@@ -85,8 +94,17 @@ fn main() {
                     };
                     (200, serde_json::to_string(&resp).unwrap())
                 }
-                "/wallets/register" => handle_register(&mut request, &fingerprint.to_string()),
+                "/wallets/register" => {
+                    handle_register(&mut request, &fingerprint.to_string(), &mut registered)
+                }
                 "/wallets/sign" => handle_sign(&mut request, &signer),
+                path if path.starts_with("/wallets/") && path.ends_with("/is-registered") => {
+                    let wid = &path["/wallets/".len()..path.len() - "/is-registered".len()];
+                    let resp = IsRegisteredResponse {
+                        is_registered: registered.contains(wid),
+                    };
+                    (200, serde_json::to_string(&resp).unwrap())
+                }
                 _ => (404, err_json("not found")),
             };
 
@@ -109,7 +127,11 @@ fn header(name: &str, value: &str) -> tiny_http::Header {
     tiny_http::Header::from_bytes(name.as_bytes(), value.as_bytes()).unwrap()
 }
 
-fn handle_register(request: &mut tiny_http::Request, fingerprint: &str) -> (u16, String) {
+fn handle_register(
+    request: &mut tiny_http::Request,
+    fingerprint: &str,
+    registered: &mut HashSet<String>,
+) -> (u16, String) {
     let mut body = String::new();
     if request.as_reader().read_to_string(&mut body).is_err() {
         return (400, err_json("failed to read request body"));
@@ -135,6 +157,7 @@ fn handle_register(request: &mut tiny_http::Request, fingerprint: &str) -> (u16,
         Err(e) => return (400, err_json(&format!("invalid descriptor: {e}"))),
     };
 
+    registered.insert(wid.clone());
     let resp = RegisterResponse { wid };
     (200, serde_json::to_string(&resp).unwrap())
 }

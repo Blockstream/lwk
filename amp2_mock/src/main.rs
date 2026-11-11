@@ -57,7 +57,6 @@ fn main() {
         .expect("failed to derive xpub");
 
     let fingerprint = signer.fingerprint();
-    let keyorigin_xpub_master = format!("[{fingerprint}]{}", signer.xpub());
 
     let elip153_path = DerivationPath::from_str("m/153h").expect("valid path");
     let elip153_xpub = signer
@@ -77,12 +76,6 @@ fn main() {
                 "/info/xpub" => {
                     let resp = InfoXpub {
                         keyorigin_xpub: keyorigin_xpub.clone(),
-                    };
-                    (200, serde_json::to_string(&resp).unwrap())
-                }
-                "/info/xpub-master" => {
-                    let resp = InfoXpub {
-                        keyorigin_xpub: keyorigin_xpub_master.clone(),
                     };
                     (200, serde_json::to_string(&resp).unwrap())
                 }

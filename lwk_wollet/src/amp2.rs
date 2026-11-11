@@ -78,6 +78,11 @@ pub struct RegisterResponse {
     pub wid: String,
 }
 
+#[derive(Deserialize)]
+struct IsRegisteredResponse {
+    is_registered: bool,
+}
+
 #[derive(Serialize)]
 struct CosignRequest {
     pset: String,
@@ -327,6 +332,34 @@ impl Amp2 {
         }
         let j: RegisterResponse = response.json()?;
         Ok(j)
+    }
+
+    fn is_registered_url(&self, desc: &Amp2Descriptor) -> Result<String, crate::Error> {
+        let wid = desc.descriptor().dwid(self.network)?;
+        Ok(format!("{}/wallets/{wid}/is-registered", self.url))
+    }
+
+    /// Ask the AMP2 server whether an AMP2 wallet is registered
+    pub async fn is_registered(&self, desc: &Amp2Descriptor) -> Result<bool, crate::Error> {
+        let url = self.is_registered_url(desc)?;
+        let response = reqwest::Client::new().get(&url).send().await?;
+        if !response.status().is_success() {
+            return Err(error_for_status(&url, response).await);
+        }
+        let j: IsRegisteredResponse = response.json().await?;
+        Ok(j.is_registered)
+    }
+
+    /// Ask the AMP2 server whether an AMP2 wallet is registered
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn blocking_is_registered(&self, desc: &Amp2Descriptor) -> Result<bool, crate::Error> {
+        let url = self.is_registered_url(desc)?;
+        let response = reqwest::blocking::Client::new().get(&url).send()?;
+        if !response.status().is_success() {
+            return Err(error_for_status_blocking(&url, response));
+        }
+        let j: IsRegisteredResponse = response.json()?;
+        Ok(j.is_registered)
     }
 
     /// Ask the AMP2 server to cosign a PSET

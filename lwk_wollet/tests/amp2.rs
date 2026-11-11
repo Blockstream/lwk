@@ -39,8 +39,10 @@ fn test_amp2_flow() {
     // tokio runtime, so drive the async AMP2 calls with `block_on`.
     let rt = tokio::runtime::Runtime::new().unwrap();
 
+    assert!(!amp2.blocking_is_registered(&amp2_desc).unwrap());
     let register_resp = amp2.blocking_register(amp2_desc.clone()).unwrap();
     assert!(!register_resp.wid.is_empty());
+    assert!(amp2.blocking_is_registered(&amp2_desc).unwrap());
     let async_register_resp = rt.block_on(amp2.register(amp2_desc.clone())).unwrap();
     assert_eq!(register_resp.wid, async_register_resp.wid);
 

@@ -30,8 +30,14 @@ fn test_amp2_flow() {
         .descriptor_from_str(&user_keyorigin_xpub, &view_key)
         .unwrap();
 
+    // The test env and wallet use blocking clients, which cannot run inside a
+    // tokio runtime, so drive the async AMP2 calls with `block_on`.
+    let rt = tokio::runtime::Runtime::new().unwrap();
+
     let register_resp = amp2.blocking_register(amp2_desc.clone()).unwrap();
     assert!(!register_resp.wid.is_empty());
+    let async_register_resp = rt.block_on(amp2.register(amp2_desc.clone())).unwrap();
+    assert_eq!(register_resp.wid, async_register_resp.wid);
 
     let desc = amp2_desc.descriptor().to_string();
     let client = test_client_electrum(&env.electrum_url());
@@ -52,6 +58,8 @@ fn test_amp2_flow() {
     assert!(sigs > 0);
 
     let cosign_resp = amp2.blocking_cosign(&pset).unwrap();
+    let async_cosign_resp = rt.block_on(amp2.cosign(&pset)).unwrap();
+    assert_eq!(cosign_resp.pset, async_cosign_resp.pset);
     pset = cosign_resp.pset;
 
     w.send(&mut pset);

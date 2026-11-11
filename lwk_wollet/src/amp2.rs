@@ -463,7 +463,7 @@ mod test {
             "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)";
         let expected = "ct(slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67),elwsh(multi(2,[3d970d04/87'/1'/0']tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd/<0;1>/*,[c67f5991/87'/1'/0']tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj/<0;1>/*)))#6j2fne4s";
 
-        let amp2 = Amp2::new_testnet();
+        let amp2 = Amp2::new(KEYORIGIN_XPUB_TESTNET.to_string(), URL_TESTNET.to_string()).unwrap();
         let desc = amp2
             .descriptor(keysource, xpub, descriptor_blinding_key)
             .unwrap();
@@ -490,7 +490,7 @@ mod test {
         let signer =
             SwSigner::new_with_network(mnemonic, lwk_common::Network::TestnetLiquid).unwrap();
 
-        let amp2 = Amp2::new_testnet();
+        let amp2 = Amp2::new(KEYORIGIN_XPUB_TESTNET.to_string(), URL_TESTNET.to_string()).unwrap();
         let account = 0;
         let (user_keysource, user_xpub) =
             derive(&signer, &amp2.elip153_user_path(account).unwrap());
@@ -644,7 +644,7 @@ mod test {
         let (keysource, xpub) = user_key();
         let descriptor_blinding_key =
             "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)";
-        let amp2 = Amp2::new_testnet();
+        let amp2 = Amp2::new(KEYORIGIN_XPUB_TESTNET.to_string(), URL_TESTNET.to_string()).unwrap();
         let d = amp2
             .descriptor(keysource, xpub, descriptor_blinding_key)
             .unwrap();

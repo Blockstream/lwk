@@ -121,7 +121,12 @@ fn test_elip153_from_external_signer() {
     let signer = generate_signer();
     let other_signer = generate_signer();
 
-    let amp2 = Amp2::new_testnet();
+    let server_key = "[3d970d04/87h/1h/0h]tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
+    let amp2 = Amp2::new(
+        server_key.to_string(),
+        "https://amp2.example.com/".to_string(),
+    )
+    .unwrap();
     let account = 0;
 
     let user_path = amp2.elip153_user_path(account).unwrap();

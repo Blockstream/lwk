@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Added `Amp2::isRegistered()`.
 * Breaking: `Amp2::new()` takes a `network` parameter.
 * Removed `Amp2::new_testnet()`, use `Amp2::new()`.
 * Breaking: If a PSET has a non-default sighash, `Signer::sign()` and `SecretKey::sign()` now return an error. To sign with non-default sighashes, pass `SignOptions::allowSighashSingleAnyonecanpay()` or `SignOptions::dangerousAllowAnySighash()` to `Signer::signWithOptions()` or `SecretKey::signWithOptions()`

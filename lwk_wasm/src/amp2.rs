@@ -146,6 +146,12 @@ impl Amp2 {
         Ok(self.inner.register(desc.inner()).await?.wid)
     }
 
+    /// Ask the AMP2 server whether an AMP2 wallet is registered
+    #[wasm_bindgen(js_name = isRegistered)]
+    pub async fn is_registered(&self, desc: &Amp2Descriptor) -> Result<bool, Error> {
+        Ok(self.inner.is_registered(&desc.inner()).await?)
+    }
+
     /// Ask the AMP2 server to cosign a PSET
     pub async fn cosign(&self, pset: &Pset) -> Result<Pset, Error> {
         let pset = self.inner.cosign(&pset.clone().into()).await?.pset;

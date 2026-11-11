@@ -30,7 +30,9 @@ async function runAmp2Test() {
 
         const wollet = new lwk.Wollet(network, desc.descriptor());
 
+        assert.strictEqual(await amp2.isRegistered(desc), false);
         const dwid = await amp2.register(desc);
+        assert.strictEqual(await amp2.isRegistered(desc), true);
         assert.strictEqual(dwid, wollet.dwid());
 
         const fundTxid = await fundAddress(wollet.address(0).address(), BigInt(100_000), network, client);

@@ -6,7 +6,7 @@ use lwk_jade::TIMEOUT;
 use lwk_wollet::amp2::Amp2;
 use lwk_wollet::asyncr::{EsploraClientBuilder, WaterfallsClientBuilder};
 use lwk_wollet::clients::TokenProvider;
-use lwk_wollet::{amp2, ElectrumClientBuilder};
+use lwk_wollet::ElectrumClientBuilder;
 use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -51,8 +51,8 @@ impl Config {
             registry_url: "https://assets-testnet.blockstream.info/".into(),
             timeout: TIMEOUT,
             scanning_interval: consts::SCANNING_INTERVAL,
-            amp2_url: amp2::URL_TESTNET.into(),
-            amp2_keyorigin_xpub: amp2::KEYORIGIN_XPUB_TESTNET.into(),
+            amp2_url: "".into(),
+            amp2_keyorigin_xpub: "".into(),
             with_experimental_blinders: false,
             token_provider: TokenProvider::None,
             allow_plaintext_with_token: false,
@@ -182,14 +182,12 @@ impl Config {
         }
 
         if self.amp2_url.is_empty() {
-            return Err(Error::Generic(
-                "on regtest you have to specify --amp2-url".into(),
-            ));
+            return Err(Error::Generic("you have to specify --amp2-url".into()));
         }
 
         if self.amp2_keyorigin_xpub.is_empty() {
             return Err(Error::Generic(
-                "on regtest you have to specify --amp2-keyorigin-xpub".into(),
+                "you have to specify --amp2-keyorigin-xpub".into(),
             ));
         }
 

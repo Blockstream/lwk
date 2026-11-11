@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Breaking: for AMP2 testnet, now it's mandatory to specify `--amp2-url` and `--amp2-keyorigin-xpub`
 * Breaking: `signer sign` now refuses inputs with a non-default sighash type,
   error "refusing to sign input #N: unexpected <SIGHASH>, possibly malicious PSET".
   Pass `--allow-sighash-single-anyonecanpay` to sign LiquiDEX proposals from `liquidex make`,

@@ -1,6 +1,7 @@
 use lwk_common::Network;
 use lwk_common::{Bip, Signer};
 use lwk_signer::SwSigner;
+use lwk_wollet::elements::bitcoin::bip32::DerivationPath;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -8,6 +9,11 @@ use std::str::FromStr;
 #[derive(Serialize)]
 struct InfoXpub {
     keyorigin_xpub: String,
+}
+
+#[derive(Serialize)]
+struct InfoXpubElip153 {
+    elip153_xpub: String,
 }
 
 #[derive(Deserialize)]
@@ -53,6 +59,12 @@ fn main() {
     let fingerprint = signer.fingerprint();
     let keyorigin_xpub_master = format!("[{fingerprint}]{}", signer.xpub());
 
+    let elip153_path = DerivationPath::from_str("m/153h").expect("valid path");
+    let elip153_xpub = signer
+        .derive_xpub(&elip153_path)
+        .expect("failed to derive elip153 xpub");
+    let elip153_xpub = format!("[{fingerprint}/153h]{elip153_xpub}");
+
     let server = tiny_http::Server::http(&addr).expect("failed to bind");
     let actual_addr = server.server_addr().to_ip().expect("not an IP address");
     eprintln!("amp2_mock listening on {actual_addr}");
@@ -71,6 +83,12 @@ fn main() {
                 "/info/xpub-master" => {
                     let resp = InfoXpub {
                         keyorigin_xpub: keyorigin_xpub_master.clone(),
+                    };
+                    (200, serde_json::to_string(&resp).unwrap())
+                }
+                "/info/xpub-elip153" => {
+                    let resp = InfoXpubElip153 {
+                        elip153_xpub: elip153_xpub.clone(),
                     };
                     (200, serde_json::to_string(&resp).unwrap())
                 }

@@ -285,7 +285,12 @@ pub trait WolletState {
     fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)>;
     fn txs(&self) -> HashSet<Txid>;
     fn tip(&self) -> (Height, BlockHash);
-    fn timestamp(&self, height: Height) -> Option<Timestamp>;
+    /// Cached block timestamp at `height`, if known.
+    ///
+    /// Defaults to `None`, which makes scans download the header again.
+    fn timestamp(&self, _height: Height) -> Option<Timestamp> {
+        None
+    }
     fn last_unused(&self) -> LastUnused; // TODO change to &LastUnused when possible
     fn descriptor(&self) -> WolletDescriptor;
     fn wollet_status(&self) -> u64;

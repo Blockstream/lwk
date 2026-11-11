@@ -157,6 +157,11 @@ impl Amp2 {
         Ok(self.inner.blocking_register(desc.into())?.wid)
     }
 
+    /// Ask the AMP2 server whether an AMP2 wallet is registered
+    pub fn is_registered(&self, desc: &Amp2Descriptor) -> Result<bool, LwkError> {
+        Ok(self.inner.blocking_is_registered(&desc.into())?)
+    }
+
     /// Ask the AMP2 server to cosign a PSET
     pub fn cosign(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
         let pset = self.inner.blocking_cosign(&pset.inner())?.pset;

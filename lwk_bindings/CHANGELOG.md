@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Added `Amp2::is_registered()`.
 * Breaking: `Amp2::new()` takes a `network` parameter.
 * Removed `Amp2::new_testnet()`, use `Amp2::new()`.
 * Python wheels no longer include the CycloneDX SBOM of the Rust dependencies (`lwk-*.dist-info/sboms/lwk_bindings.cyclonedx.json`), because it contains a build timestamp and a random serial number that prevent reproducible wheels.

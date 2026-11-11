@@ -19,7 +19,9 @@ amp2 = Amp2(network, server_key, url)
 desc = amp2.descriptor_from_str(xpub, descriptor_blinding_key)
 assert expected_desc == str(desc)
 
+assert not amp2.is_registered(desc)
 dwid = amp2.register_wallet(desc)
+assert amp2.is_registered(desc)
 assert dwid == desc.descriptor().dwid(network)
 
 wollet = Wollet(network, desc.descriptor(), datadir=None)
@@ -61,7 +63,9 @@ view_keyorigin_xpub = signer.derive_xpub(view_path)
 desc_from_str = amp2.elip153_from_external_signer(account, user_keyorigin_xpub, view_keyorigin_xpub)
 assert str(desc.descriptor()) == str(desc_from_str.descriptor())
 
+assert not amp2.is_registered(desc)
 dwid = amp2.register_wallet(desc)
+assert amp2.is_registered(desc)
 
 wollet = Wollet(network, desc.descriptor(), datadir=None)
 client = ElectrumClient.from_url(env.electrum_url())

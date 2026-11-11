@@ -70,13 +70,6 @@ impl Amp2 {
         Ok(Self { inner })
     }
 
-    /// Construct an AMP2 context for Liquid Testnet
-    #[uniffi::constructor]
-    pub fn new_testnet() -> Self {
-        let inner = lwk_wollet::amp2::Amp2::new_testnet();
-        Self { inner }
-    }
-
     /// Create an AMP2 wallet descriptor from the keyorigin xpub of a signer
     pub fn descriptor_from_str(
         &self,

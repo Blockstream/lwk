@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Removed `Amp2::new_testnet()`, use `Amp2::new()`.
 * Breaking: update the re-exported `age` crate to 0.12. Its `fl!` localization macro dependency emitted arguments in random order, making builds non-deterministic. See the [age 0.12 changelog](https://github.com/str4d/rage/blob/main/age/CHANGELOG.md) for API changes.
 * Breaking: `AddressResult::new()` takes the full derivation path of the address, `None` if unknown, readable with the new `AddressResult::derivation_path()`.
 

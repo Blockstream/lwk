@@ -136,22 +136,6 @@ impl Amp2 {
         })
     }
 
-    /// Create a new AMP2 client with the default url and server key for the testnet network.
-    pub fn new_testnet() -> Self {
-        let server_xpub: Xpub = XPUB_TESTNET.parse().expect("valid xpub constant");
-        let server_fingerprint: Fingerprint =
-            FINGERPRINT_TESTNET.parse().expect("valid fingerprint");
-        let server_path_from_master: DerivationPath =
-            DERIVATION_PATH_TESTNET.parse().expect("valid path");
-        Self {
-            server_xpub,
-            server_fingerprint,
-            server_path_from_master,
-            url: URL_TESTNET.into(),
-            is_mainnet: false,
-        }
-    }
-
     /// Create an AMP2 descriptor ELIP153 compliant from an LWK Signer.
     pub fn elip153_from_signer<S: Signer>(
         &self,

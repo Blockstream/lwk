@@ -79,13 +79,13 @@ fn test_elip153_flow() {
 pub fn elip153_flow(env: &TestEnv, signer: &AnySigner) {
     let amp2_url = env.amp2_url();
 
-    let resp: serde_json::Value = reqwest::blocking::get(format!("{amp2_url}/info/xpub-master"))
+    let resp: serde_json::Value = reqwest::blocking::get(format!("{amp2_url}/info/xpub-elip153"))
         .unwrap()
         .json()
         .unwrap();
-    let server_keyorigin_xpub_master = resp["keyorigin_xpub"].as_str().unwrap();
+    let server_elip153_xpub = resp["elip153_xpub"].as_str().unwrap();
 
-    let amp2 = Amp2::new(server_keyorigin_xpub_master.to_string(), amp2_url).unwrap();
+    let amp2 = Amp2::new(server_elip153_xpub.to_string(), amp2_url).unwrap();
 
     let account = 0;
     let amp2_desc = amp2.elip153_from_signer(signer, account).unwrap();

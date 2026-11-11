@@ -20,17 +20,6 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use url::Url;
 
-/// The fingerprint of the AMP2 server key for the testnet network.
-pub const FINGERPRINT_TESTNET: &str = "3d970d04";
-/// The xpub of the AMP2 server key for the testnet network.
-pub const XPUB_TESTNET: &str = "tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
-/// The derivation path of the AMP2 server key for the testnet network.
-pub const DERIVATION_PATH_TESTNET: &str = "m/87h/1h/0h";
-/// The keyorigin xpub of the AMP2 server key for the testnet network.
-pub const KEYORIGIN_XPUB_TESTNET: &str = "[3d970d04/87h/1h/0h]tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
-/// The URL of the AMP2 server for the testnet network.
-pub const URL_TESTNET: &str = "https://amp2.testnet.blockstream.com/";
-
 /// The `purpose` field used to derive [`Amp2::elip153()`] keys: `1095585842`
 /// (hex `0x414d5032`, bytes `b"AMP2"`).
 const ELIP153_PURPOSE: u32 = 0x414d_5032;
@@ -420,23 +409,15 @@ mod test {
     use crate::Network;
     use elements::bitcoin::bip32::{DerivationPath, Fingerprint};
 
+    const KEYORIGIN_XPUB: &str = "[3d970d04/87h/1h/0h]tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
+    const URL: &str = "https://amp2.example.com/";
+
     fn user_key() -> (KeySource, Xpub) {
         let fp: Fingerprint = "c67f5991".parse().unwrap();
         let path: DerivationPath = "m/87'/1'/0'".parse().unwrap();
         let keysource = (fp, path);
         let xpub: Xpub = "tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj".parse().unwrap();
         (keysource, xpub)
-    }
-
-    #[test]
-    fn amp2_keyorigin() {
-        let s = format!(
-            "[{}/{}]{}",
-            FINGERPRINT_TESTNET,
-            &DERIVATION_PATH_TESTNET[2..],
-            XPUB_TESTNET
-        );
-        assert_eq!(KEYORIGIN_XPUB_TESTNET, s);
     }
 
     #[test]
@@ -447,7 +428,7 @@ mod test {
             "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)";
         let expected = "ct(slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67),elwsh(multi(2,[3d970d04/87'/1'/0']tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd/<0;1>/*,[c67f5991/87'/1'/0']tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj/<0;1>/*)))#6j2fne4s";
 
-        let amp2 = Amp2::new(KEYORIGIN_XPUB_TESTNET.to_string(), URL_TESTNET.to_string()).unwrap();
+        let amp2 = Amp2::new(KEYORIGIN_XPUB.to_string(), URL.to_string()).unwrap();
         let desc = amp2
             .descriptor(keysource, xpub, descriptor_blinding_key)
             .unwrap();
@@ -474,7 +455,7 @@ mod test {
         let signer =
             SwSigner::new_with_network(mnemonic, lwk_common::Network::TestnetLiquid).unwrap();
 
-        let amp2 = Amp2::new(KEYORIGIN_XPUB_TESTNET.to_string(), URL_TESTNET.to_string()).unwrap();
+        let amp2 = Amp2::new(KEYORIGIN_XPUB.to_string(), URL.to_string()).unwrap();
         let account = 0;
         let (user_keysource, user_xpub) =
             derive(&signer, &amp2.elip153_user_path(account).unwrap());
@@ -596,7 +577,7 @@ mod test {
                 format!("[{server_fp}/{server_path_from_master}]{server_xpub}")
             };
 
-            let amp2 = Amp2::new(server_keyorigin_xpub.clone(), URL_TESTNET.into()).unwrap();
+            let amp2 = Amp2::new(server_keyorigin_xpub.clone(), URL.into()).unwrap();
             let (user_keysource, user_xpub) =
                 derive(&signer, &amp2.elip153_user_path(account).unwrap());
             let (view_keysource, view_xpub) =
@@ -625,18 +606,17 @@ mod test {
     #[test]
     fn amp2_new() {
         // Success case
-        let amp2 = Amp2::new(KEYORIGIN_XPUB_TESTNET.to_string(), URL_TESTNET.to_string()).unwrap();
+        let amp2 = Amp2::new(KEYORIGIN_XPUB.to_string(), URL.to_string()).unwrap();
 
-        assert_eq!(amp2.url, URL_TESTNET);
+        assert_eq!(amp2.url, URL);
 
         // Invalid URL
-        let err =
-            Amp2::new(KEYORIGIN_XPUB_TESTNET.to_string(), "fake_url".to_string()).unwrap_err();
+        let err = Amp2::new(KEYORIGIN_XPUB.to_string(), "fake_url".to_string()).unwrap_err();
 
         assert!(matches!(err, crate::Error::Url(_)));
 
         // Invalid keyorigin xpub
-        let err = Amp2::new("fake_xpub".to_string(), URL_TESTNET.to_string()).unwrap_err();
+        let err = Amp2::new("fake_xpub".to_string(), URL.to_string()).unwrap_err();
 
         assert!(matches!(err, crate::Error::InvalidKeyOriginXpubError(_)));
 

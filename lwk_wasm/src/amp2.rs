@@ -1,4 +1,4 @@
-use crate::{DerivationPath, Error, Pset, Signer, WolletDescriptor};
+use crate::{DerivationPath, Error, Network, Pset, Signer, WolletDescriptor};
 
 use wasm_bindgen::prelude::*;
 
@@ -61,11 +61,12 @@ impl From<lwk_wollet::amp2::Amp2Descriptor> for Amp2Descriptor {
 impl Amp2 {
     /// Create a new AMP2 client
     ///
+    ///  * `network` - The network of the AMP2 server
     ///  * `server_key` - The keyorigin xpub of the AMP2 server key
     ///  * `url` - The URL of the AMP2 server
     #[wasm_bindgen(js_name = new)]
-    pub fn new(server_key: &str, url: &str) -> Result<Self, Error> {
-        let inner = lwk_wollet::amp2::Amp2::new(server_key.into(), url.into())?;
+    pub fn new(network: &Network, server_key: &str, url: &str) -> Result<Self, Error> {
+        let inner = lwk_wollet::amp2::Amp2::new(network.into(), server_key.into(), url.into())?;
         Ok(Self { inner })
     }
 

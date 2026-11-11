@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Breaking: `Amp2::new()` takes a `network` parameter.
 * Removed `Amp2::new_testnet()`, use `Amp2::new()`.
 * Python wheels no longer include the CycloneDX SBOM of the Rust dependencies (`lwk-*.dist-info/sboms/lwk_bindings.cyclonedx.json`), because it contains a build timestamp and a random serial number that prevent reproducible wheels.
 * Breaking: Upgrade UniFFI 0.29.4 -> 0.31.2. Bindings and native library must come from the same release, since UniFFI 0.31 changed method checksums. Built-in trait exports (`Display`, `Hash`, `Eq`) are now generated deterministically, which is required for reproducible builds.

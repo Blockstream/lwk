@@ -20,7 +20,12 @@ fn test_amp2_flow() {
         .unwrap();
     let server_keyorigin_xpub = resp["keyorigin_xpub"].as_str().unwrap();
 
-    let amp2 = Amp2::new(server_keyorigin_xpub.to_string(), amp2_url).unwrap();
+    let amp2 = Amp2::new(
+        env.elementsd_network(),
+        server_keyorigin_xpub.to_string(),
+        amp2_url,
+    )
+    .unwrap();
 
     let signer = generate_signer();
     let user_keyorigin_xpub = signer.keyorigin_xpub(Bip::Bip87, false).unwrap();
@@ -85,7 +90,12 @@ pub fn elip153_flow(env: &TestEnv, signer: &AnySigner) {
         .unwrap();
     let server_elip153_xpub = resp["elip153_xpub"].as_str().unwrap();
 
-    let amp2 = Amp2::new(server_elip153_xpub.to_string(), amp2_url).unwrap();
+    let amp2 = Amp2::new(
+        env.elementsd_network(),
+        server_elip153_xpub.to_string(),
+        amp2_url,
+    )
+    .unwrap();
 
     let account = 0;
     let amp2_desc = amp2.elip153_from_signer(signer, account).unwrap();
@@ -131,6 +141,7 @@ fn test_elip153_from_external_signer() {
 
     let server_key = "[3d970d04/87h/1h/0h]tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
     let amp2 = Amp2::new(
+        lwk_common::Network::TestnetLiquid,
         server_key.to_string(),
         "https://amp2.example.com/".to_string(),
     )

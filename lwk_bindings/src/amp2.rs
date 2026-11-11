@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use crate::{DerivationPath, DescriptorPublicKey, LwkError, Pset, Signer, WolletDescriptor};
+use crate::{
+    DerivationPath, DescriptorPublicKey, LwkError, Network, Pset, Signer, WolletDescriptor,
+};
 
 /// Context for actions interacting with AMP2
 #[derive(uniffi::Object)]
@@ -62,11 +64,12 @@ impl From<&Amp2Descriptor> for lwk_wollet::amp2::Amp2Descriptor {
 impl Amp2 {
     /// Create a new AMP2 client
     ///
+    ///  * `network` - The network of the AMP2 server
     ///  * `server_key` - The keyorigin xpub of the AMP2 server key
     ///  * `url` - The URL of the AMP2 server
     #[uniffi::constructor]
-    pub fn new(server_key: &str, url: &str) -> Result<Self, LwkError> {
-        let inner = lwk_wollet::amp2::Amp2::new(server_key.into(), url.into())?;
+    pub fn new(network: &Network, server_key: &str, url: &str) -> Result<Self, LwkError> {
+        let inner = lwk_wollet::amp2::Amp2::new(network.into(), server_key.into(), url.into())?;
         Ok(Self { inner })
     }
 

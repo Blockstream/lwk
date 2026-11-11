@@ -194,7 +194,7 @@ impl Config {
         let amp2_keyorigin_xpub = self.amp2_keyorigin_xpub.clone();
         let amp2_url = self.amp2_url.clone();
 
-        let amp_client = Amp2::new(amp2_keyorigin_xpub, amp2_url)?;
+        let amp_client = Amp2::new(self.network, amp2_keyorigin_xpub, amp2_url)?;
 
         Ok(amp_client)
     }

@@ -15,7 +15,7 @@ expected_desc = "ct(slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a80
 # tmp hardcoded blinding key
 descriptor_blinding_key = "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)"
 
-amp2 = Amp2(server_key, url)
+amp2 = Amp2(network, server_key, url)
 desc = amp2.descriptor_from_str(xpub, descriptor_blinding_key)
 assert expected_desc == str(desc)
 

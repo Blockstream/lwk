@@ -622,22 +622,6 @@ mod test {
         }
     }
 
-    #[ignore]
-    #[tokio::test]
-    async fn amp2_network_calls() {
-        let (keysource, xpub) = user_key();
-        let descriptor_blinding_key =
-            "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)";
-        let amp2 = Amp2::new(KEYORIGIN_XPUB_TESTNET.to_string(), URL_TESTNET.to_string()).unwrap();
-        let d = amp2
-            .descriptor(keysource, xpub, descriptor_blinding_key)
-            .unwrap();
-        let r = amp2.register(d).await.unwrap();
-        assert!(!r.wid.is_empty());
-
-        // TODO: test sign
-    }
-
     #[test]
     fn amp2_new() {
         // Success case

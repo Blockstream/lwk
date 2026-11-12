@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Breaking: update the re-exported `age` crate to 0.12. Its `fl!` localization macro dependency emitted arguments in random order, making builds non-deterministic. See the [age 0.12 changelog](https://github.com/str4d/rage/blob/main/age/CHANGELOG.md) for API changes.
+* Add `EsploraClientBuilder::proxy()` and `WaterfallsClientBuilder::proxy()` to send the requests through a proxy, e.g. Tor with `socks5h://127.0.0.1:9050`. Not available on wasm. Enables the `socks` feature of `reqwest`.
 * Breaking: `AddressResult::new()` takes the full derivation path of the address, `None` if unknown, readable with the new `AddressResult::derivation_path()`.
 
 ## 0.20.0

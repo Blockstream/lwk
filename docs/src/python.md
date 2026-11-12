@@ -47,3 +47,4 @@ str(lwk.Network.mainnet())
 * [PSET details](../../lwk_bindings/tests/bindings/pset_details.py) shows how to inspect and work with Partially Signed Elements Transactions
 * [Authenticated Esplora](../../lwk_bindings/tests/bindings/authenticated_esplora_client.py) connects to an authenticated Esplora/Waterfalls backend using OAuth2, a static token, or custom headers
 * [Authenticated Electrum](../../lwk_bindings/tests/bindings/authenticated_electrum_client.py) connects to an authenticated Electrum RPC proxy using OAuth2 or a static token
+* [Electrum through SOCKS5](../../lwk_bindings/tests/bindings/electrum_socks5.py) connects to an Electrum server through a SOCKS5 proxy, e.g. Tor

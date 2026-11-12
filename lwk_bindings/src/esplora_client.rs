@@ -210,6 +210,11 @@ pub struct EsploraClientBuilder {
     /// Maximum size in bytes of a single response, default is 64 MiB
     #[uniffi(default = None)]
     max_response_size: Option<u64>,
+    /// Proxy to send every request through, as a url, e.g. `socks5h://127.0.0.1:9050` for a
+    /// local Tor daemon. With `socks5h://` the host of the server is resolved by the proxy,
+    /// which `.onion` urls require; with `socks5://` it is resolved locally first.
+    #[uniffi(default = None)]
+    proxy: Option<String>,
 }
 
 /// A builder for the `WaterfallsClient`
@@ -235,6 +240,11 @@ pub struct WaterfallsClientBuilder {
     /// Maximum size in bytes of a single response, default is 64 MiB
     #[uniffi(default = None)]
     max_response_size: Option<u64>,
+    /// Proxy to send every request through, as a url, e.g. `socks5h://127.0.0.1:9050` for a
+    /// local Tor daemon. With `socks5h://` the host of the server is resolved by the proxy,
+    /// which `.onion` urls require; with `socks5://` it is resolved locally first.
+    #[uniffi(default = None)]
+    proxy: Option<String>,
 }
 
 impl From<EsploraClientBuilder> for lwk_wollet::clients::EsploraClientBuilder {
@@ -269,6 +279,9 @@ impl From<EsploraClientBuilder> for lwk_wollet::clients::EsploraClientBuilder {
             result =
                 result.max_response_size(usize::try_from(max_response_size).unwrap_or(usize::MAX));
         }
+        if let Some(proxy) = builder.proxy {
+            result = result.proxy(&proxy);
+        }
         result
     }
 }
@@ -300,6 +313,9 @@ impl From<WaterfallsClientBuilder> for lwk_wollet::clients::WaterfallsClientBuil
         if let Some(max_response_size) = builder.max_response_size {
             result =
                 result.max_response_size(usize::try_from(max_response_size).unwrap_or(usize::MAX));
+        }
+        if let Some(proxy) = builder.proxy {
+            result = result.proxy(&proxy);
         }
         result
     }
@@ -615,6 +631,7 @@ mod tests {
             }),
             scan_timeout: None,
             max_response_size: None,
+            proxy: None,
         };
         assert!(EsploraClient::from_builder(builder).is_ok());
 
@@ -634,6 +651,7 @@ mod tests {
             }),
             scan_timeout: None,
             max_response_size: None,
+            proxy: None,
         };
         assert!(EsploraClient::from_builder(builder).is_ok());
     }
@@ -652,6 +670,7 @@ mod tests {
             }),
             scan_timeout: None,
             max_response_size: None,
+            proxy: None,
         };
         assert!(WaterfallsClient::from_builder(builder).is_ok());
     }

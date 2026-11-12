@@ -4,6 +4,7 @@
 
 * Breaking: update the re-exported `age` crate to 0.12. Its `fl!` localization macro dependency emitted arguments in random order, making builds non-deterministic. See the [age 0.12 changelog](https://github.com/str4d/rage/blob/main/age/CHANGELOG.md) for API changes.
 * Breaking: `AddressResult::new()` takes the full derivation path of the address, `None` if unknown, readable with the new `AddressResult::derivation_path()`.
+* Add `ElectrumClientBuilder::socks5()` to connect to the Electrum server through a SOCKS5 proxy, e.g. Tor. The host of the server is resolved by the proxy, so `.onion` urls work.
 
 ## 0.20.0
 

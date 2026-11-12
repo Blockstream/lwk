@@ -70,6 +70,32 @@ This client is recommended for desktop, mobile, and server applications where in
 </section>
 </custom-tabs>
 
+### SOCKS5 proxy
+
+The Electrum client can connect through a SOCKS5 proxy, for example a local Tor daemon on `127.0.0.1:9050`. The host of the Electrum server is sent to the proxy and resolved there, not locally, so `.onion` urls work and no DNS query for the server leaves the machine.
+
+Only the Electrum connection goes through the proxy. With the `Blockstream` [token provider](#token-providers) the OAuth2 token is still fetched over a direct HTTPS connection.
+
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+let client = ElectrumClientBuilder::new("tcp://example.onion:50001")
+    .socks5("127.0.0.1:9050")
+    .build()?;
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+{{#include ../../lwk_bindings/tests/bindings/electrum_socks5.py:electrum_socks5}}
+```
+</section>
+</custom-tabs>
+
 ## Esplora
 
 The Esplora client is based on the [Esplora API](https://github.com/Blockstream/esplora/blob/master/API.md), a popular HTTP-based blockchain explorer API.

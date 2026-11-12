@@ -1,4 +1,4 @@
-use crate::{AssetId, EsploraClient, TxBuilder};
+use crate::{AssetId, Error, EsploraClient, TxBuilder};
 
 use wasm_bindgen::prelude::*;
 
@@ -68,14 +68,14 @@ impl Network {
 
     /// Return the default esplora client for this network
     #[wasm_bindgen(js_name = defaultEsploraClient)]
-    pub fn default_esplora_client(&self) -> EsploraClient {
+    pub fn default_esplora_client(&self) -> Result<EsploraClient, Error> {
         let url = match &self.inner {
             lwk_common::Network::Liquid => "https://blockstream.info/liquid/api",
             lwk_common::Network::TestnetLiquid => "https://blockstream.info/liquidtestnet/api",
             lwk_common::Network::CustomElements(_) => "127.0.0.1:3000",
         };
 
-        EsploraClient::new(self, url, false, 1, false).unwrap()
+        EsploraClient::new(self, url, false, 1, false)
     }
 
     /// Return true if the network is a mainnet network

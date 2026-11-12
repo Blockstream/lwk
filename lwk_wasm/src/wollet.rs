@@ -341,7 +341,7 @@ mod tests {
         let mut wollet = Wollet::new(&network, &descriptor).unwrap();
 
         let update = if with_internet {
-            let mut client = network.default_esplora_client();
+            let mut client = network.default_esplora_client().unwrap();
             client.full_scan(&wollet).await.unwrap().unwrap()
         } else {
             let bytes = lwk_wollet::elements::hex::decode_to_vec(include_str!(

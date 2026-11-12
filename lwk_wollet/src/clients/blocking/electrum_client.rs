@@ -5,7 +5,9 @@ use crate::Error;
 use crate::History;
 
 use electrum_client::ScriptStatus;
-use electrum_client::{AuthProvider, Client, ConfigBuilder, ElectrumApi, GetHistoryRes};
+use electrum_client::{
+    AuthProvider, Client, ConfigBuilder, ElectrumApi, GetHistoryRes, Socks5Config,
+};
 use elements::bitcoin::hashes::Hash as _;
 use elements::encode::deserialize as elements_deserialize;
 use elements::encode::serialize as elements_serialize;
@@ -158,6 +160,7 @@ fn is_auth_denied(error: &electrum_client::Error) -> bool {
 pub struct ElectrumClientBuilder {
     url: String,
     timeout: Option<Duration>,
+    socks5: Option<String>,
     token_provider: TokenProvider,
     allow_plaintext_with_token: bool,
 }
@@ -169,6 +172,7 @@ impl ElectrumClientBuilder {
         Self {
             url: url.to_string(),
             timeout: None,
+            socks5: None,
             token_provider: TokenProvider::None,
             allow_plaintext_with_token: false,
         }
@@ -177,6 +181,23 @@ impl ElectrumClientBuilder {
     /// Set the timeout for the Electrum client connection and requests.
     pub fn timeout(mut self, timeout: Duration) -> Self {
         self.timeout = Some(timeout);
+        self
+    }
+
+    /// Connect to the Electrum server through a SOCKS5 proxy, e.g. `127.0.0.1:9050` for a
+    /// local Tor daemon.
+    ///
+    /// `proxy` is the `host:port` of the proxy, optionally prefixed with `socks5://`.
+    ///
+    /// The host of the Electrum server is sent to the proxy as it is written in the url and
+    /// resolved there, not locally: `.onion` urls work, and no DNS query for the server
+    /// leaves this machine.
+    ///
+    /// Only the Electrum connection goes through the proxy. With
+    /// [`TokenProvider::Blockstream`] the OAuth2 token is still fetched over a direct HTTPS
+    /// connection.
+    pub fn socks5(mut self, proxy: &str) -> Self {
+        self.socks5 = Some(proxy.to_string());
         self
     }
 
@@ -231,7 +252,12 @@ impl ElectrumClientBuilder {
             ));
         }
         let auth = token_provider_auth(&self.token_provider)?;
-        let client = url.build_client_inner(self.timeout, auth.provider, auth.retry)?;
+        let client = url.build_client_inner(
+            self.timeout,
+            self.socks5.as_deref(),
+            auth.provider,
+            auth.retry,
+        )?;
         let header = client.block_headers_subscribe_raw()?;
         let tip: BlockHeader = elements_deserialize(&header.header)?;
 
@@ -349,14 +375,16 @@ impl ElectrumUrl {
             options.timeout.map(|t| Duration::from_secs(t as u64)),
             None,
             None,
+            None,
         )
     }
 
-    /// Build an electrum-client [`Client`] from the url, timeout, authorization provider and
-    /// optional `retry` override (`None` keeps electrum-client's default).
+    /// Build an electrum-client [`Client`] from the url, timeout, SOCKS5 proxy, authorization
+    /// provider and optional `retry` override (`None` keeps electrum-client's default).
     pub(crate) fn build_client_inner(
         &self,
         timeout: Option<Duration>,
+        socks5: Option<&str>,
         auth_provider: Option<AuthProvider>,
         retry: Option<u8>,
     ) -> Result<Client, Error> {
@@ -369,6 +397,7 @@ impl ElectrumUrl {
         };
         let mut builder = builder
             .timeout(timeout)
+            .socks5(socks5.map(Socks5Config::new))
             .authorization_provider(auth_provider);
         if let Some(retry) = retry {
             builder = builder.retry(retry);
@@ -795,6 +824,48 @@ mod tests {
             electrum_denial_variant(&nested),
             Some(Error::InsufficientCredits)
         ));
+    }
+
+    #[test]
+    fn socks5_proxy_is_asked_to_resolve_the_server() {
+        use super::ElectrumClientBuilder;
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+
+        // A SOCKS5 proxy that reads one CONNECT request and refuses it: enough to see that
+        // the client goes to the proxy, and hands it the server host name to resolve.
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let proxy = listener.local_addr().unwrap().to_string();
+        let handle = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut greeting = [0u8; 2];
+            stream.read_exact(&mut greeting).unwrap();
+            let mut methods = vec![0u8; greeting[1] as usize];
+            stream.read_exact(&mut methods).unwrap();
+            stream.write_all(&[0x05, 0x00]).unwrap(); // no authentication required
+            let mut head = [0u8; 5]; // version, command, reserved, address type, name length
+            stream.read_exact(&mut head).unwrap();
+            let mut name = vec![0u8; head[4] as usize];
+            stream.read_exact(&mut name).unwrap();
+            let mut port = [0u8; 2];
+            stream.read_exact(&mut port).unwrap();
+            // reply "host unreachable", bound address 0.0.0.0:0
+            stream
+                .write_all(&[0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0])
+                .unwrap();
+            (head, name, u16::from_be_bytes(port))
+        });
+
+        let result = ElectrumClientBuilder::new("tcp://example.onion:50001")
+            .socks5(&proxy)
+            .build();
+        assert!(result.is_err(), "the proxy refused the connection");
+
+        let (head, name, port) = handle.join().unwrap();
+        // CONNECT (0x01) to a domain name (0x03): the host is not resolved locally
+        assert_eq!(head[..4], [0x05, 0x01, 0x00, 0x03]);
+        assert_eq!(name, b"example.onion");
+        assert_eq!(port, 50001);
     }
 
     #[test]

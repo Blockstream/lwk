@@ -268,6 +268,7 @@ pub struct WolletConciseState {
     paths: HashMap<Script, (Chain, ChildNumber)>,
     scripts: HashMap<(Chain, ChildNumber), (Script, Option<BlindingPublicKey>)>,
     heights: HashMap<Txid, Option<Height>>,
+    timestamps: HashMap<Height, Timestamp>,
     tip: (Height, BlockHash),
     last_unused: LastUnused,
     utxo_only: bool,
@@ -284,6 +285,12 @@ pub trait WolletState {
     fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)>;
     fn txs(&self) -> HashSet<Txid>;
     fn tip(&self) -> (Height, BlockHash);
+    /// Cached block timestamp at `height`, if known.
+    ///
+    /// Defaults to `None`, which makes scans download the header again.
+    fn timestamp(&self, _height: Height) -> Option<Timestamp> {
+        None
+    }
     fn last_unused(&self) -> LastUnused; // TODO change to &LastUnused when possible
     fn descriptor(&self) -> WolletDescriptor;
     fn wollet_status(&self) -> u64;
@@ -364,6 +371,10 @@ impl WolletState for WolletConciseState {
         self.tip
     }
 
+    fn timestamp(&self, height: Height) -> Option<Timestamp> {
+        self.timestamps.get(&height).copied()
+    }
+
     fn last_unused(&self) -> LastUnused {
         self.last_unused.clone()
     }
@@ -415,6 +426,10 @@ impl WolletState for Wollet {
 
     fn tip(&self) -> (Height, BlockHash) {
         self.cache.tip
+    }
+
+    fn timestamp(&self, height: Height) -> Option<Timestamp> {
+        self.cache.timestamps.get(&height).copied()
     }
 
     fn last_unused(&self) -> LastUnused {
@@ -514,6 +529,7 @@ impl Wollet {
             paths: cache.paths.clone(),
             scripts: cache.scripts.clone(),
             heights: cache.heights().clone(),
+            timestamps: cache.timestamps.clone(),
             tip: cache.tip,
             last_unused: LastUnused {
                 internal: cache.last_unused_internal.load(atomic::Ordering::Relaxed),

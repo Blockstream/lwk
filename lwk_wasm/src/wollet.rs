@@ -54,6 +54,18 @@ impl Wollet {
         Ok(address_result.into())
     }
 
+    /// Get a wallet change address
+    ///
+    /// If a specific descriptor is given for change addresses  it's used to derive this address
+    /// Otherwise this is the same as `address()`
+    ///
+    /// If Some return the address at the given index,
+    /// otherwise the last unused address.
+    pub fn change(&self, index: Option<u32>) -> Result<AddressResult, Error> {
+        let address_result = self.inner.change(index)?;
+        Ok(address_result.into())
+    }
+
     /// Return the [ELIP152](https://github.com/ElementsProject/ELIPs/blob/main/elip-0152.mediawiki) deterministic wallet identifier.
     pub fn dwid(&self) -> Result<String, Error> {
         Ok(self
@@ -64,13 +76,9 @@ impl Wollet {
 
     /// Get the full derivation path for an address
     ///
-    /// Note: will be removed once we add the full path to lwk_wollet::AddressResult
-    ///
-    /// Deprecated: use `addressFullPathStr()` instead.
+    /// Deprecated: use `address(index).derivationPath()` instead.
     #[wasm_bindgen(js_name = addressFullPath)]
     pub fn address_full_path(&self, index: u32) -> Result<Vec<u32>, Error> {
-        // TODO we should add the full path to lwk_wollet::AddressResult
-
         let definite_desc = self
             .inner
             .wollet_descriptor()
@@ -89,11 +97,9 @@ impl Wollet {
 
     /// Get the full derivation path for an address, e.g. `"84'/1'/0'/0/3"`
     ///
-    /// Note: will be removed once we add the full path to lwk_wollet::AddressResult
+    /// Deprecated: use `address(index).derivationPath()` instead.
     #[wasm_bindgen(js_name = addressFullPathStr)]
     pub fn address_full_path_str(&self, index: u32) -> Result<String, Error> {
-        // TODO we should add the full path to lwk_wollet::AddressResult
-
         let definite_desc = self
             .inner
             .wollet_descriptor()
@@ -335,7 +341,7 @@ mod tests {
         let mut wollet = Wollet::new(&network, &descriptor).unwrap();
 
         let update = if with_internet {
-            let mut client = network.default_esplora_client();
+            let mut client = network.default_esplora_client().unwrap();
             client.full_scan(&wollet).await.unwrap().unwrap()
         } else {
             let bytes = lwk_wollet::elements::hex::decode_to_vec(include_str!(

@@ -4,7 +4,7 @@ use simplicityhl::elements::{taproot, Address, AddressParams, Script};
 
 use simplicityhl::simplicity::bitcoin::{secp256k1, XOnlyPublicKey};
 use simplicityhl::simplicity::hashes::{sha256, HashEngine};
-use simplicityhl::{Arguments, CompiledProgram};
+use simplicityhl::{Arguments, CompiledProgram, UnstableFeatures};
 
 use crate::error::ProgramError;
 
@@ -27,8 +27,9 @@ pub fn load_program_with_debug_symbols(
     arguments: Arguments,
     include_debug_symbols: bool,
 ) -> Result<CompiledProgram, ProgramError> {
-    let compiled = CompiledProgram::new(
+    let compiled = CompiledProgram::new_with_unstable(
         source,
+        &UnstableFeatures::all(),
         arguments,
         include_debug_symbols,
         Box::new(ElementsJetHinter::new()),

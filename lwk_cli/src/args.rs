@@ -1001,19 +1001,23 @@ impl std::fmt::Display for ServerType {
 #[derive(Debug, Args, Clone)]
 pub struct AuthConfig {
     /// Login URL for authenticated Esplora
-    #[arg(long, env)]
+    #[arg(long, env, requires_all = ["auth_client_id", "auth_client_secret"])]
     pub auth_token_url: Option<String>,
 
     /// Client ID for authenticated Esplora
-    #[arg(long, env)]
+    #[arg(long, env, requires_all = ["auth_token_url", "auth_client_secret"])]
     pub auth_client_id: Option<String>,
 
     /// Client secret for authenticated Esplora
-    #[arg(long, env)]
+    #[arg(long, env, requires_all = ["auth_token_url", "auth_client_id"])]
     pub auth_client_secret: Option<String>,
 
     /// Static token for authenticated Esplora
-    #[arg(long, env)]
+    #[arg(
+        long,
+        env,
+        conflicts_with_all = ["auth_token_url", "auth_client_id", "auth_client_secret"]
+    )]
     pub auth_static_token: Option<String>,
 
     /// Allow sending the token over a plaintext (`tcp://`) Electrum connection. Insecure; only
@@ -1025,43 +1029,22 @@ pub struct AuthConfig {
 
 #[allow(dead_code)] // the same issue as CliCommand
 impl AuthConfig {
-    pub fn token_provider(self) -> Result<TokenProvider, anyhow::Error> {
-        let oauth_fields = [
-            &self.auth_token_url,
-            &self.auth_client_id,
-            &self.auth_client_secret,
-        ];
-
-        if oauth_fields.iter().any(|f| f.is_some()) && !oauth_fields.iter().all(|f| f.is_some()) {
-            anyhow::bail!(
-                "All of the following must be set together for authentication:\n\
-                         --auth-token-url     or env: AUTH_TOKEN_URL\n\
-                         --auth-client-id     or env: AUTH_CLIENT_ID\n\
-                         --auth-client-secret or env: AUTH_CLIENT_SECRET"
-            );
-        }
-
+    pub fn token_provider(self) -> TokenProvider {
         if let (Some(url), Some(client_id), Some(client_secret)) = (
             self.auth_token_url,
             self.auth_client_id,
             self.auth_client_secret,
         ) {
-            if self.auth_static_token.is_some() {
-                anyhow::bail!(
-                    "Static token for authentication used with Blockstream API authentication"
-                )
-            }
-
-            return Ok(TokenProvider::Blockstream {
+            TokenProvider::Blockstream {
                 url,
                 client_id,
                 client_secret,
-            });
+            }
         } else if let Some(token) = self.auth_static_token {
-            return Ok(TokenProvider::Static(token));
+            TokenProvider::Static(token)
+        } else {
+            TokenProvider::None
         }
-
-        Ok(TokenProvider::None)
     }
 }
 

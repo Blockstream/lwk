@@ -81,3 +81,23 @@ taker.wait_for_tx(txid, client)
 assert(maker.balance()[asset] == issued_asset_units)   
 assert asset not in taker.balance()
 
+
+# (maker) A single key wallet can make a proposal too, signing with its secret key
+maker_secret_key = SecretKey.from_bytes(bytes.fromhex("aa" * 32))
+maker_public_key = "026a04ab98d9e4774ad806e302dddeb63bea16b5cb5f223ee77478e861bb583eb3"  # of "aa" * 32
+view_key = "11" * 32
+maker_single_key = Wollet(network, WolletDescriptor(f"ct({view_key},elwpkh({maker_public_key}))"), datadir=None)
+txid = node.send_to_address(maker_single_key.address(None).address(), utxo_size, asset=None)
+maker_single_key.wait_for_tx(txid, client)
+
+builder = network.tx_builder()
+utxo = maker_single_key.utxos()[0].outpoint()
+builder.liquidex_make(utxo, maker_single_key.address(None).address(), issued_asset_units, asset)
+pset = builder.finish(maker_single_key)
+
+options = SignOptions.allow_sighash_single_anyonecanpay()
+signed_pset = maker_secret_key.sign_with_options(pset, options)
+
+proposal = UnvalidatedLiquidexProposal.from_pset(signed_pset)
+validated_proposal = proposal.validate(client.get_tx(proposal.needed_tx()))
+assert validated_proposal.input().amount() == utxo_size

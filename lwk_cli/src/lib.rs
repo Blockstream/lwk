@@ -157,7 +157,7 @@ fn build_config(
     config.addr = addr;
     config.with_experimental_blinders = opts.with_experimental_blinders;
     config.allow_plaintext_with_token = opts.auth.auth_allow_plaintext_with_token;
-    config.token_provider = opts.auth.token_provider()?;
+    config.token_provider = opts.auth.token_provider();
     Ok(config)
 }
 

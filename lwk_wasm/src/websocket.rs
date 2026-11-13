@@ -78,9 +78,11 @@ impl WebSocketSerial {
         onmessage_callback.forget();
 
         // Wait for connection to open
-        let connection_promise = web_sys::js_sys::Promise::new(&mut |resolve, _reject| {
+        let connection_promise = web_sys::js_sys::Promise::new(&mut |resolve, reject| {
             let onopen_callback = Closure::wrap(Box::new(move |_event: Event| {
-                resolve.call0(&JsValue::NULL).unwrap();
+                if let Err(e) = resolve.call0(&JsValue::NULL) {
+                    let _ = reject.call1(&JsValue::NULL, &e);
+                }
             }) as Box<dyn FnMut(Event)>);
 
             websocket.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
@@ -133,8 +135,8 @@ impl Stream for WebSocketSerial {
 
                 if !buffer.is_empty() {
                     let read_len = std::cmp::min(buf.len(), buffer.len());
-                    for i in 0..read_len {
-                        buf[i] = buffer.pop_front().unwrap();
+                    for (dst, src) in buf.iter_mut().zip(buffer.drain(..read_len)) {
+                        *dst = src;
                     }
                     return Ok(read_len);
                 }
@@ -151,13 +153,13 @@ impl Stream for WebSocketSerial {
                     lwk_jade::Error::Generic(format!("setTimeout not a function: {:?}", e))
                 })?;
 
-            let promise = js_sys::Promise::new(&mut |resolve, _reject| {
-                set_timeout
-                    .call2(&JsValue::NULL, &resolve, &JsValue::from_f64(10.0))
-                    .map_err(|e| {
-                        lwk_jade::Error::Generic(format!("setTimeout call failed: {:?}", e))
-                    })
-                    .unwrap();
+            let promise = js_sys::Promise::new(&mut |resolve, reject| {
+                if let Err(e) =
+                    set_timeout.call2(&JsValue::NULL, &resolve, &JsValue::from_f64(10.0))
+                {
+                    let msg = JsValue::from_str(&format!("setTimeout call failed: {:?}", e));
+                    let _ = reject.call1(&JsValue::NULL, &msg);
+                }
             });
 
             wasm_bindgen_futures::JsFuture::from(promise)

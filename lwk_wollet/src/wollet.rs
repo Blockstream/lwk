@@ -604,10 +604,10 @@ impl Wollet {
             (Chain::External, None) => self.last_unused_external(),
         };
 
-        let address = self
-            .descriptor
-            .inner_address(index, self.network.address_params(), chain)?;
-        Ok(AddressResult::new(address, index))
+        let (address, derivation_path) =
+            self.descriptor
+                .inner_address(index, self.network.address_params(), chain)?;
+        Ok(AddressResult::new(address, index, derivation_path))
     }
 
     /// Get a wallet address
@@ -1465,7 +1465,7 @@ mod tests {
     use std::str::FromStr;
 
     use super::*;
-    use crate::elements::bitcoin::bip32::{Xpriv, Xpub};
+    use crate::elements::bitcoin::bip32::{DerivationPath, Xpriv, Xpub};
     use crate::elements::bitcoin::network::Network as BitcoinNetwork;
     use crate::elements::AddressParams;
     use crate::{DownloadTxResult, Update};
@@ -1570,6 +1570,34 @@ mod tests {
         assert_eq!(new_wollet(&desc_s_xpub).signers(), vec![fp_xpub]);
         assert_eq!(new_wollet(&desc_m_1single).signers(), vec![fp1, fp_single]);
         assert_eq!(new_wollet(&desc_m_12).signers(), vec![fp1, fp2]);
+    }
+
+    #[test]
+    fn test_address_derivation_path() {
+        let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
+        let xpub = "tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M";
+        let xprv = Xpriv::new_master(BitcoinNetwork::Regtest, &[0u8; 16]).unwrap();
+        let master_xpub = Xpub::from_priv(&EC, &xprv);
+
+        let signer1 = format!("[73c5da0a/84h/1h/0h]{xpub}/<0;1>/*");
+        let signer2 = format!("[11111111/48h/1h/0h/2h]{xpub}/<0;1>/*");
+
+        let cases = [
+            (format!("elwpkh({signer1})"), Some("m/84h/1h/0h/0/3")),
+            // Multisig with different paths
+            (format!("elwsh(multi(2,{signer1},{signer2}))"), None),
+            // No key origin
+            (format!("elwpkh({xpub}/<0;1>/*)"), None),
+            // No key origin, master xpub: depth is not trusted
+            (format!("elwpkh({master_xpub}/<0;1>/*)"), None),
+        ];
+
+        for (desc, expected) in cases {
+            let wollet = new_wollet(&format!("ct({view_key},{desc})"));
+            let address = wollet.address(Some(3)).unwrap();
+            let expected = expected.map(|p| DerivationPath::from_str(p).unwrap());
+            assert_eq!(address.derivation_path(), expected.as_ref(), "{desc}");
+        }
     }
 
     #[test]

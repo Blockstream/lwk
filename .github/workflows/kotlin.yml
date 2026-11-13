@@ -27,9 +27,11 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@1.91.0
         with:
-          targets: x86_64-linux-android, aarch64-linux-android, armv7-linux-androideabi, i686-linux-android, aarch64-apple-ios, aarch64-apple-ios-sim, x86_64-apple-ios
+          targets: x86_64-linux-android, aarch64-linux-android, armv7-linux-androideabi, i686-linux-android, aarch64-apple-ios, aarch64-apple-ios-sim, x86_64-apple-ios, aarch64-apple-darwin, x86_64-apple-darwin, aarch64-unknown-linux-gnu, x86_64-unknown-linux-gnu, aarch64-pc-windows-msvc, x86_64-pc-windows-msvc
+          # cargo-xwin uses the llvm-ar of the Rust toolchain as llvm-lib for the Windows libs
+          components: llvm-tools-preview
 
-      - run: brew install just
+      - run: brew install just zig
 
       - name: "Install NDK"
         run: |
@@ -38,6 +40,11 @@ jobs:
       - name: "Build Kotlin Multiplatform bindings"
         run: |
           just kotlin-multiplatform
+
+      - name: "Test JVM library"
+        working-directory: lwk_bindings/android_bindings
+        run: |
+          ./gradlew :lib:jvmTest --console=plain
 
       - name: "Build Android library"
         working-directory: lwk_bindings/android_bindings

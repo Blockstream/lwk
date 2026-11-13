@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+* Kotlin Multiplatform: the JVM artifact bundles the native library for macOS, Linux (glibc 2.17 or later) and Windows (no Visual C++ Redistributable needed), each on x86_64 and arm64
+* Kotlin Multiplatform: fixed loading the macOS JVM library on macOS 27, which rejected it with `mis-aligned LINKEDIT string pool`
+* Kotlin Multiplatform: the JVM artifact targets Java 17, so it no longer requires the Java version that built it
 * Added `Amp2::is_registered()`.
 * Breaking: `Amp2::new()` takes a `network` parameter.
 * Removed `Amp2::new_testnet()`, use `Amp2::new()`.

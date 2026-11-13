@@ -18,6 +18,25 @@ GOBLEY_ROOT := "target/gobley"
 UNIFFI_BINDGEN_GO_TAG := "v0.7.1+v0.31.0"
 UNIFFI_BINDGEN_CS_TAG := "v0.11.1+v0.31.0"
 
+# cargo-zigbuild and cargo-xwin cross build the Linux and Windows libs bundled in the KMP jvm jar
+CARGO_ZIGBUILD_VERSION := "0.24.0"
+CARGO_XWIN_VERSION := "0.23.1"
+
+# Versions of the MSVC CRT and Windows SDK that cargo-xwin downloads. It reuses its cache whatever the
+# versions in it, so each pair of versions gets its own cache directory.
+export XWIN_CRT_VERSION := "14.44.17.14"
+export XWIN_SDK_VERSION := "10.0.26100"
+export XWIN_CACHE_DIR := cache_directory() / "cargo-xwin" / ("crt-" + XWIN_CRT_VERSION + "-sdk-" + XWIN_SDK_VERSION)
+CROSS_TOOLS_ROOT := "target/cross-tools"
+CROSS_TOOLS_BIN := justfile_directory() / CROSS_TOOLS_ROOT / "bin"
+
+# JNA loads the native lib from the classpath directory named after the platform, for ex. darwin-aarch64
+JVM_RESOURCES := "lwk_bindings/android_bindings/lib/src/jvmMain/resources"
+
+# The Windows libs link the C runtime statically, so they load without the Visual C++ Redistributable.
+# The flag is appended to RUSTFLAGS, since a set RUSTFLAGS replaces the target rustflags.
+WINDOWS_RUSTFLAGS := "-C target-feature=+crt-static"
+
 # build the bindings lib: liblwk.so (as specified in lwk_bindings/Cargo.toml)
 build-bindings-lib:
     # a debug build would be fine if used only to generate interfaces files but some jobs use it to package it, thus release is necessary.
@@ -116,17 +135,69 @@ kotlin-multiplatform: ios ios-sim android jvm
     cp target/aarch64-apple-ios/release/liblwk.a lwk_bindings/android_bindings/lib/src/libs/ios-arm64/
     cp target/lipo-ios-sim/release/liblwk.a lwk_bindings/android_bindings/lib/src/libs/ios-simulator-arm64/
 
-jvm: aarch64-apple-darwin # x86_64-unknown-linux-gnu
-    mkdir -p lwk_bindings/android_bindings/lib/src/jvmMain/resources/darwin-aarch64
-    cp -a target/aarch64-apple-darwin/release/liblwk.dylib lwk_bindings/android_bindings/lib/src/jvmMain/resources/darwin-aarch64/
+# Build the desktop libs (macOS, Linux and Windows on x86_64 and arm64) and put them in the jvm resources
+jvm: aarch64-apple-darwin x86_64-apple-darwin aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu aarch64-pc-windows-msvc x86_64-pc-windows-msvc
+    mkdir -p {{JVM_RESOURCES}}/darwin-aarch64 {{JVM_RESOURCES}}/darwin-x86-64 {{JVM_RESOURCES}}/linux-aarch64 {{JVM_RESOURCES}}/linux-x86-64 {{JVM_RESOURCES}}/win32-aarch64 {{JVM_RESOURCES}}/win32-x86-64
+    cp -a target/aarch64-apple-darwin/release/liblwk.dylib {{JVM_RESOURCES}}/darwin-aarch64/
+    cp -a target/x86_64-apple-darwin/release/liblwk.dylib {{JVM_RESOURCES}}/darwin-x86-64/
+    cp -a target/aarch64-unknown-linux-gnu/release/liblwk.so {{JVM_RESOURCES}}/linux-aarch64/
+    cp -a target/x86_64-unknown-linux-gnu/release/liblwk.so {{JVM_RESOURCES}}/linux-x86-64/
+    cp -a target/aarch64-pc-windows-msvc/release/lwk.dll {{JVM_RESOURCES}}/win32-aarch64/
+    cp -a target/x86_64-pc-windows-msvc/release/lwk.dll {{JVM_RESOURCES}}/win32-x86-64/
+
+# Install the cargo subcommands used to cross build the Linux and Windows libs, cargo-zigbuild also requires zig (`brew install zig`)
+cross-tools:
+    cargo install --locked --root {{CROSS_TOOLS_ROOT}} cargo-zigbuild@{{CARGO_ZIGBUILD_VERSION}} cargo-xwin@{{CARGO_XWIN_VERSION}}
 
 # Build aarch64-apple-darwin
-aarch64-apple-darwin:
-    MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target aarch64-apple-darwin -p lwk_bindings {{SIMPLICITY_FEATURES}}
+aarch64-apple-darwin: (apple-darwin "aarch64-apple-darwin")
 
-# Build x86_64-unknown-linux-gnu
-x86_64-unknown-linux-gnu:
-    cargo build --release --target x86_64-unknown-linux-gnu -p lwk_bindings {{SIMPLICITY_FEATURES}}
+# Build x86_64-apple-darwin
+x86_64-apple-darwin: (apple-darwin "x86_64-apple-darwin")
+
+# Build a macOS dylib. The cargo strip runs rust-objcopy, which can leave the LINKEDIT string pool
+# mis-aligned, and dyld refuses to load such a dylib: the system strip is used instead. It removes the
+# local symbols too, loading the library needs only the exported ones.
+[private]
+apple-darwin target:
+    MACOSX_DEPLOYMENT_TARGET=11.0 CARGO_PROFILE_RELEASE_STRIP=false cargo build --release --target {{target}} -p lwk_bindings {{SIMPLICITY_FEATURES}}
+    /usr/bin/strip -x target/{{target}}/release/liblwk.dylib
+
+# Cross build aarch64-unknown-linux-gnu, linking glibc 2.17
+aarch64-unknown-linux-gnu: (linux-gnu "aarch64-unknown-linux-gnu")
+
+# Cross build x86_64-unknown-linux-gnu, linking glibc 2.17
+x86_64-unknown-linux-gnu: (linux-gnu "x86_64-unknown-linux-gnu")
+
+# Cross build a Linux lib with zig. Optimizing zig cc defines NDEBUG, unlike gcc and clang, and
+# simplicity-sys refuses to build without assertions: NDEBUG is undefined to compile as the other compilers.
+[private]
+linux-gnu target: cross-tools
+    PATH="{{CROSS_TOOLS_BIN}}:$PATH" CFLAGS_{{replace(target, "-", "_")}}=-UNDEBUG cargo zigbuild --release --target {{target}}.2.17 -p lwk_bindings {{SIMPLICITY_FEATURES}}
+
+# Cross build x86_64-pc-windows-msvc, the MSVC CRT and Windows SDK are downloaded on first use
+x86_64-pc-windows-msvc: cross-tools
+    PATH="{{CROSS_TOOLS_BIN}}:$PATH" RUSTFLAGS="${RUSTFLAGS:-} {{WINDOWS_RUSTFLAGS}}" cargo xwin build --release --target x86_64-pc-windows-msvc -p lwk_bindings {{SIMPLICITY_FEATURES}}
+
+# Cross build aarch64-pc-windows-msvc, the MSVC CRT and Windows SDK are downloaded on first use
+aarch64-pc-windows-msvc: cross-tools
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # On this target ring requires clang and the psm assembly is preprocessed only when not using clang-cl,
+    # thus clang compiles all the C code. The SDK headers are given in INCLUDE instead of the clang-cl /imsvc
+    # flags, so clang searches its own headers first and aws-lc gets the clang arm_neon.h.
+    export PATH="{{CROSS_TOOLS_BIN}}:$PATH"
+    export RUSTFLAGS="${RUSTFLAGS:-} {{WINDOWS_RUSTFLAGS}}"
+    # Assigned first, so a failing cargo xwin env stops the script: eval would ignore its exit status
+    xwin_env=$(cargo xwin env --target aarch64-pc-windows-msvc)
+    eval "$xwin_env"
+    # cargo xwin env moves RUSTFLAGS into the target rustflags and exports it empty, cargo would use the empty one
+    unset RUSTFLAGS
+    INCLUDE=$(echo "$CFLAGS_aarch64_pc_windows_msvc" | grep -o '/imsvc [^ ]*' | cut -d' ' -f2 | paste -sd ';' -)
+    export INCLUDE
+    export CC_aarch64_pc_windows_msvc=clang CXX_aarch64_pc_windows_msvc=clang
+    export CFLAGS_aarch64_pc_windows_msvc= CXXFLAGS_aarch64_pc_windows_msvc=
+    cargo build --release --target aarch64-pc-windows-msvc -p lwk_bindings {{SIMPLICITY_FEATURES}}
 
 # Build ios (works only on mac)
 ios: aarch64-apple-ios

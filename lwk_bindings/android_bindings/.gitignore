@@ -15,6 +15,7 @@
 local.properties
 *.so
 *.dylib
+*.dll
 *.a
 .kotlin
 

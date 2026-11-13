@@ -20,7 +20,12 @@ fn test_amp2_flow() {
         .unwrap();
     let server_keyorigin_xpub = resp["keyorigin_xpub"].as_str().unwrap();
 
-    let amp2 = Amp2::new(server_keyorigin_xpub.to_string(), amp2_url).unwrap();
+    let amp2 = Amp2::new(
+        env.elementsd_network(),
+        server_keyorigin_xpub.to_string(),
+        amp2_url,
+    )
+    .unwrap();
 
     let signer = generate_signer();
     let user_keyorigin_xpub = signer.keyorigin_xpub(Bip::Bip87, false).unwrap();
@@ -30,8 +35,16 @@ fn test_amp2_flow() {
         .descriptor_from_str(&user_keyorigin_xpub, &view_key)
         .unwrap();
 
+    // The test env and wallet use blocking clients, which cannot run inside a
+    // tokio runtime, so drive the async AMP2 calls with `block_on`.
+    let rt = tokio::runtime::Runtime::new().unwrap();
+
+    assert!(!amp2.blocking_is_registered(&amp2_desc).unwrap());
     let register_resp = amp2.blocking_register(amp2_desc.clone()).unwrap();
     assert!(!register_resp.wid.is_empty());
+    assert!(amp2.blocking_is_registered(&amp2_desc).unwrap());
+    let async_register_resp = rt.block_on(amp2.register(amp2_desc.clone())).unwrap();
+    assert_eq!(register_resp.wid, async_register_resp.wid);
 
     let desc = amp2_desc.descriptor().to_string();
     let client = test_client_electrum(&env.electrum_url());
@@ -52,6 +65,8 @@ fn test_amp2_flow() {
     assert!(sigs > 0);
 
     let cosign_resp = amp2.blocking_cosign(&pset).unwrap();
+    let async_cosign_resp = rt.block_on(amp2.cosign(&pset)).unwrap();
+    assert_eq!(cosign_resp.pset, async_cosign_resp.pset);
     pset = cosign_resp.pset;
 
     w.send(&mut pset);
@@ -71,13 +86,18 @@ fn test_elip153_flow() {
 pub fn elip153_flow(env: &TestEnv, signer: &AnySigner) {
     let amp2_url = env.amp2_url();
 
-    let resp: serde_json::Value = reqwest::blocking::get(format!("{amp2_url}/info/xpub-master"))
+    let resp: serde_json::Value = reqwest::blocking::get(format!("{amp2_url}/info/xpub-elip153"))
         .unwrap()
         .json()
         .unwrap();
-    let server_keyorigin_xpub_master = resp["keyorigin_xpub"].as_str().unwrap();
+    let server_elip153_xpub = resp["elip153_xpub"].as_str().unwrap();
 
-    let amp2 = Amp2::new(server_keyorigin_xpub_master.to_string(), amp2_url).unwrap();
+    let amp2 = Amp2::new(
+        env.elementsd_network(),
+        server_elip153_xpub.to_string(),
+        amp2_url,
+    )
+    .unwrap();
 
     let account = 0;
     let amp2_desc = amp2.elip153_from_signer(signer, account).unwrap();
@@ -121,7 +141,13 @@ fn test_elip153_from_external_signer() {
     let signer = generate_signer();
     let other_signer = generate_signer();
 
-    let amp2 = Amp2::new_testnet();
+    let server_key = "[3d970d04/87h/1h/0h]tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
+    let amp2 = Amp2::new(
+        lwk_common::Network::TestnetLiquid,
+        server_key.to_string(),
+        "https://amp2.example.com/".to_string(),
+    )
+    .unwrap();
     let account = 0;
 
     let user_path = amp2.elip153_user_path(account).unwrap();

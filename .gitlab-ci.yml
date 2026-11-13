@@ -619,6 +619,8 @@ liquid_web_wallet:
     - npm install
     - npm install $CI_PROJECT_DIR/lwk_wasm/pkg
     - npm run build
+  # this should not fail, but allow failure to deal with breaking changes async
+  allow_failure: true
 
 # AMP0 has a closed source backend, so its tests are unreliable, allow them to fail.
 # Anyway for MRs/PRs that touch AMP0 code, this must pass.

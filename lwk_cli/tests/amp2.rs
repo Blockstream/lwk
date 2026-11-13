@@ -32,7 +32,7 @@ fn test_amp2() {
         format!("{cli} amp2 cosign -p fake_pset"),
     ] {
         let err = sh_err(&cmd);
-        assert!(err.contains("on regtest you have to specify --amp2-url"));
+        assert!(err.contains("you have to specify --amp2-url"));
     }
 
     sh(&format!("{cli} server stop"));
@@ -54,7 +54,7 @@ fn test_amp2() {
         format!("{cli} amp2 cosign -p fake_pset"),
     ] {
         let err = sh_err(&cmd);
-        assert!(err.contains("on regtest you have to specify --amp2-keyorigin-xpub"));
+        assert!(err.contains("you have to specify --amp2-keyorigin-xpub"));
     }
 
     sh(&format!("{cli} server stop"));

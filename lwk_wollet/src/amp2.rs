@@ -10,7 +10,7 @@
 //! AMP2 is under development, expect breaking changes.
 //! </div>
 
-use crate::{WolletDescriptor, EC};
+use crate::{Network, WolletDescriptor, EC};
 use elements::bitcoin::bip32::{ChildNumber, DerivationPath, Fingerprint, KeySource, Xpub};
 use elements::hashes::sha256;
 use elements::hex::DisplayHex;
@@ -19,17 +19,6 @@ use lwk_common::{keyorigin_xpub_from_str, Signer};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use url::Url;
-
-/// The fingerprint of the AMP2 server key for the testnet network.
-pub const FINGERPRINT_TESTNET: &str = "3d970d04";
-/// The xpub of the AMP2 server key for the testnet network.
-pub const XPUB_TESTNET: &str = "tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
-/// The derivation path of the AMP2 server key for the testnet network.
-pub const DERIVATION_PATH_TESTNET: &str = "m/87h/1h/0h";
-/// The keyorigin xpub of the AMP2 server key for the testnet network.
-pub const KEYORIGIN_XPUB_TESTNET: &str = "[3d970d04/87h/1h/0h]tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
-/// The URL of the AMP2 server for the testnet network.
-pub const URL_TESTNET: &str = "https://amp2.testnet.blockstream.com/";
 
 /// The `purpose` field used to derive [`Amp2::elip153()`] keys: `1095585842`
 /// (hex `0x414d5032`, bytes `b"AMP2"`).
@@ -42,7 +31,7 @@ pub struct Amp2 {
     server_path_from_master: DerivationPath,
     server_fingerprint: Fingerprint,
     url: String,
-    is_mainnet: bool,
+    network: Network,
 }
 
 /// An AMP2 descriptor
@@ -89,6 +78,11 @@ pub struct RegisterResponse {
     pub wid: String,
 }
 
+#[derive(Deserialize)]
+struct IsRegisteredResponse {
+    is_registered: bool,
+}
+
 #[derive(Serialize)]
 struct CosignRequest {
     pset: String,
@@ -117,39 +111,27 @@ impl TryFrom<CosignResponseInner> for CosignResponse {
 impl Amp2 {
     /// Create a new AMP2 client
     ///
+    ///  * `network` - The network of the AMP2 server
     ///  * `server_key` - The keyorigin xpub of the AMP2 server key
     ///  * `url` - The URL of the AMP2 server
-    pub fn new(server_key: String, url: String) -> Result<Self, crate::Error> {
+    pub fn new(network: Network, server_key: String, url: String) -> Result<Self, crate::Error> {
         Url::from_str(&url).map_err(crate::UrlError::Url)?;
 
         let (keysource, server_xpub) = keyorigin_xpub_from_str(&server_key)?;
         let (server_fingerprint, server_path_from_master) =
             keysource.ok_or(crate::Error::MissingKeyorigin)?;
 
-        let is_mainnet = server_xpub.network.is_mainnet();
+        if server_xpub.network.is_mainnet() != network.is_mainnet() {
+            return Err(crate::Error::InvalidNetwork);
+        }
+
         Ok(Self {
             server_xpub,
             server_fingerprint,
             server_path_from_master,
             url,
-            is_mainnet,
+            network,
         })
-    }
-
-    /// Create a new AMP2 client with the default url and server key for the testnet network.
-    pub fn new_testnet() -> Self {
-        let server_xpub: Xpub = XPUB_TESTNET.parse().expect("valid xpub constant");
-        let server_fingerprint: Fingerprint =
-            FINGERPRINT_TESTNET.parse().expect("valid fingerprint");
-        let server_path_from_master: DerivationPath =
-            DERIVATION_PATH_TESTNET.parse().expect("valid path");
-        Self {
-            server_xpub,
-            server_fingerprint,
-            server_path_from_master,
-            url: URL_TESTNET.into(),
-            is_mainnet: false,
-        }
     }
 
     /// Create an AMP2 descriptor ELIP153 compliant from an LWK Signer.
@@ -182,7 +164,7 @@ impl Amp2 {
 
     /// ELIP153 `USER_PATH = m/purpose'/coin_type'/account'`
     pub fn elip153_user_path(&self, account_num: u32) -> Result<DerivationPath, crate::Error> {
-        let coin_type = if self.is_mainnet { 1776 } else { 1 };
+        let coin_type = if self.network.is_mainnet() { 1776 } else { 1 };
         Ok(DerivationPath::from(vec![
             ChildNumber::from_hardened_idx(ELIP153_PURPOSE)?,
             ChildNumber::from_hardened_idx(coin_type)?,
@@ -352,6 +334,34 @@ impl Amp2 {
         Ok(j)
     }
 
+    fn is_registered_url(&self, desc: &Amp2Descriptor) -> Result<String, crate::Error> {
+        let wid = desc.descriptor().dwid(self.network)?;
+        Ok(format!("{}/wallets/{wid}/is-registered", self.url))
+    }
+
+    /// Ask the AMP2 server whether an AMP2 wallet is registered
+    pub async fn is_registered(&self, desc: &Amp2Descriptor) -> Result<bool, crate::Error> {
+        let url = self.is_registered_url(desc)?;
+        let response = reqwest::Client::new().get(&url).send().await?;
+        if !response.status().is_success() {
+            return Err(error_for_status(&url, response).await);
+        }
+        let j: IsRegisteredResponse = response.json().await?;
+        Ok(j.is_registered)
+    }
+
+    /// Ask the AMP2 server whether an AMP2 wallet is registered
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn blocking_is_registered(&self, desc: &Amp2Descriptor) -> Result<bool, crate::Error> {
+        let url = self.is_registered_url(desc)?;
+        let response = reqwest::blocking::Client::new().get(&url).send()?;
+        if !response.status().is_success() {
+            return Err(error_for_status_blocking(&url, response));
+        }
+        let j: IsRegisteredResponse = response.json()?;
+        Ok(j.is_registered)
+    }
+
     /// Ask the AMP2 server to cosign a PSET
     pub async fn cosign(
         &self,
@@ -436,23 +446,15 @@ mod test {
     use crate::Network;
     use elements::bitcoin::bip32::{DerivationPath, Fingerprint};
 
+    const KEYORIGIN_XPUB: &str = "[3d970d04/87h/1h/0h]tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
+    const URL: &str = "https://amp2.example.com/";
+
     fn user_key() -> (KeySource, Xpub) {
         let fp: Fingerprint = "c67f5991".parse().unwrap();
         let path: DerivationPath = "m/87'/1'/0'".parse().unwrap();
         let keysource = (fp, path);
         let xpub: Xpub = "tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj".parse().unwrap();
         (keysource, xpub)
-    }
-
-    #[test]
-    fn amp2_keyorigin() {
-        let s = format!(
-            "[{}/{}]{}",
-            FINGERPRINT_TESTNET,
-            &DERIVATION_PATH_TESTNET[2..],
-            XPUB_TESTNET
-        );
-        assert_eq!(KEYORIGIN_XPUB_TESTNET, s);
     }
 
     #[test]
@@ -463,7 +465,12 @@ mod test {
             "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)";
         let expected = "ct(slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67),elwsh(multi(2,[3d970d04/87'/1'/0']tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd/<0;1>/*,[c67f5991/87'/1'/0']tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj/<0;1>/*)))#6j2fne4s";
 
-        let amp2 = Amp2::new_testnet();
+        let amp2 = Amp2::new(
+            Network::default_regtest(),
+            KEYORIGIN_XPUB.to_string(),
+            URL.to_string(),
+        )
+        .unwrap();
         let desc = amp2
             .descriptor(keysource, xpub, descriptor_blinding_key)
             .unwrap();
@@ -490,7 +497,12 @@ mod test {
         let signer =
             SwSigner::new_with_network(mnemonic, lwk_common::Network::TestnetLiquid).unwrap();
 
-        let amp2 = Amp2::new_testnet();
+        let amp2 = Amp2::new(
+            Network::TestnetLiquid,
+            KEYORIGIN_XPUB.to_string(),
+            URL.to_string(),
+        )
+        .unwrap();
         let account = 0;
         let (user_keysource, user_xpub) =
             derive(&signer, &amp2.elip153_user_path(account).unwrap());
@@ -612,7 +624,7 @@ mod test {
                 format!("[{server_fp}/{server_path_from_master}]{server_xpub}")
             };
 
-            let amp2 = Amp2::new(server_keyorigin_xpub.clone(), URL_TESTNET.into()).unwrap();
+            let amp2 = Amp2::new(network, server_keyorigin_xpub.clone(), URL.into()).unwrap();
             let (user_keysource, user_xpub) =
                 derive(&signer, &amp2.elip153_user_path(account).unwrap());
             let (view_keysource, view_xpub) =
@@ -638,39 +650,43 @@ mod test {
         }
     }
 
-    #[ignore]
-    #[tokio::test]
-    async fn amp2_network_calls() {
-        let (keysource, xpub) = user_key();
-        let descriptor_blinding_key =
-            "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)";
-        let amp2 = Amp2::new_testnet();
-        let d = amp2
-            .descriptor(keysource, xpub, descriptor_blinding_key)
-            .unwrap();
-        let r = amp2.register(d).await.unwrap();
-        assert!(!r.wid.is_empty());
-
-        // TODO: test sign
-    }
-
     #[test]
     fn amp2_new() {
         // Success case
-        let amp2 = Amp2::new(KEYORIGIN_XPUB_TESTNET.to_string(), URL_TESTNET.to_string()).unwrap();
+        let amp2 = Amp2::new(
+            Network::TestnetLiquid,
+            KEYORIGIN_XPUB.to_string(),
+            URL.to_string(),
+        )
+        .unwrap();
 
-        assert_eq!(amp2.url, URL_TESTNET);
+        assert_eq!(amp2.url, URL);
 
         // Invalid URL
-        let err =
-            Amp2::new(KEYORIGIN_XPUB_TESTNET.to_string(), "fake_url".to_string()).unwrap_err();
+        let err = Amp2::new(
+            Network::TestnetLiquid,
+            KEYORIGIN_XPUB.to_string(),
+            "fake_url".to_string(),
+        )
+        .unwrap_err();
 
         assert!(matches!(err, crate::Error::Url(_)));
 
         // Invalid keyorigin xpub
-        let err = Amp2::new("fake_xpub".to_string(), URL_TESTNET.to_string()).unwrap_err();
+        let err = Amp2::new(
+            Network::TestnetLiquid,
+            "fake_xpub".to_string(),
+            URL.to_string(),
+        )
+        .unwrap_err();
 
         assert!(matches!(err, crate::Error::InvalidKeyOriginXpubError(_)));
+
+        // Invalid network
+        let err =
+            Amp2::new(Network::Liquid, KEYORIGIN_XPUB.to_string(), URL.to_string()).unwrap_err();
+
+        assert!(matches!(err, crate::Error::InvalidNetwork));
 
         let desc_str = "ct(1111111111111111111111111111111111111111111111111111111111111111,elwsh(and_v(v:pk(026a04ab98d9e4774ad806e302dddeb63bea16b5cb5f223ee77478e861bb583eb3),multi(2,[342c8926/87h/1h/0h]tpubDDWUA7YvBHxdurKUrYFkdjsB59koHqvGRJ3j9zDhwMycxXHXz1ujTfHMB66K4rEWDM8BoDKDdJx3rVGp2qUSPnXVpQXi8qtnXqa96nPnZAH/0/*,[af9e5bc2/87h/1h/0h]tpubDDRPayLs2vBkRkyQ9X2BEhojxCy9vvZpjhubEVosz5pi66LuuAuyZQiUtsPBN5wSfhWLoMYM3gqVqT3Po4GpcWGUfPh8514ZBB9hfWFNEUA/0/*,[57411aec/87h/1h/0h]tpubDDmweWcTcRb54kZqy3Gv5JF8SjAyuoK3uPYXp24uz6nfsKjJojxjdZAang5HXDmtS8tg5CJntUC4fzn4aY5Dsg6Aphvq42vK9edmgX83NFg/0/*))))";
         let desc: WolletDescriptor = desc_str.parse().unwrap();

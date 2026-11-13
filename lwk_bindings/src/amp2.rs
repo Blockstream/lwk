@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use crate::{DerivationPath, DescriptorPublicKey, LwkError, Pset, Signer, WolletDescriptor};
+use crate::{
+    DerivationPath, DescriptorPublicKey, LwkError, Network, Pset, Signer, WolletDescriptor,
+};
 
 /// Context for actions interacting with AMP2
 #[derive(uniffi::Object)]
@@ -62,19 +64,13 @@ impl From<&Amp2Descriptor> for lwk_wollet::amp2::Amp2Descriptor {
 impl Amp2 {
     /// Create a new AMP2 client
     ///
+    ///  * `network` - The network of the AMP2 server
     ///  * `server_key` - The keyorigin xpub of the AMP2 server key
     ///  * `url` - The URL of the AMP2 server
     #[uniffi::constructor]
-    pub fn new(server_key: &str, url: &str) -> Result<Self, LwkError> {
-        let inner = lwk_wollet::amp2::Amp2::new(server_key.into(), url.into())?;
+    pub fn new(network: &Network, server_key: &str, url: &str) -> Result<Self, LwkError> {
+        let inner = lwk_wollet::amp2::Amp2::new(network.into(), server_key.into(), url.into())?;
         Ok(Self { inner })
-    }
-
-    /// Construct an AMP2 context for Liquid Testnet
-    #[uniffi::constructor]
-    pub fn new_testnet() -> Self {
-        let inner = lwk_wollet::amp2::Amp2::new_testnet();
-        Self { inner }
     }
 
     /// Create an AMP2 wallet descriptor from the keyorigin xpub of a signer
@@ -161,36 +157,14 @@ impl Amp2 {
         Ok(self.inner.blocking_register(desc.into())?.wid)
     }
 
+    /// Ask the AMP2 server whether an AMP2 wallet is registered
+    pub fn is_registered(&self, desc: &Amp2Descriptor) -> Result<bool, LwkError> {
+        Ok(self.inner.blocking_is_registered(&desc.into())?)
+    }
+
     /// Ask the AMP2 server to cosign a PSET
     pub fn cosign(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
         let pset = self.inner.blocking_cosign(&pset.inner())?.pset;
         Ok(Arc::new(pset.into()))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn amp2() {
-        let expected = "ct(slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67),elwsh(multi(2,[3d970d04/87'/1'/0']tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd/<0;1>/*,[c67f5991/87'/1'/0']tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj/<0;1>/*)))#6j2fne4s";
-        let descriptor_blinding_key =
-            "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)";
-        let k = "[c67f5991/87'/1'/0']tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj";
-        let amp2 = Amp2::new_testnet();
-        let d = amp2
-            .descriptor_from_str(k, descriptor_blinding_key)
-            .unwrap();
-        assert_eq!(d.descriptor().to_string(), expected);
-        // let _wid = amp2.register(&d).unwrap();
-
-        let server_key = "[3d970d04/87h/1h/0h]tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
-        let url = "http://127.0.0.1:5000";
-        let amp2 = Amp2::new(server_key, url).unwrap();
-        let d = amp2
-            .descriptor_from_str(k, descriptor_blinding_key)
-            .unwrap();
-        assert_eq!(d.descriptor().to_string(), expected);
     }
 }

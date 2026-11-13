@@ -11,7 +11,7 @@ async function runAmp2Test() {
 
         // from amp2 mock
         const serverKey = "[18778d8c]tpubD6NzVbkrYhZ4XpebgtJWPiggq824Dv4Y7zzdAqRn1BcmoWH5ff163zmB98FY1tEg518yPNG8hm3ghnHJwQ1qxynTDS7orfzQwwz45H9Hx7c";
-        const amp2 = lwk.Amp2.new(serverKey, AMP2_URL);
+        const amp2 = lwk.Amp2.new(network, serverKey, AMP2_URL);
 
         const mnemonic = new lwk.Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
         const signer = new lwk.Signer(mnemonic, network);
@@ -30,7 +30,9 @@ async function runAmp2Test() {
 
         const wollet = new lwk.Wollet(network, desc.descriptor());
 
+        assert.strictEqual(await amp2.isRegistered(desc), false);
         const dwid = await amp2.register(desc);
+        assert.strictEqual(await amp2.isRegistered(desc), true);
         assert.strictEqual(dwid, wollet.dwid());
 
         const fundTxid = await fundAddress(wollet.address(0).address(), BigInt(100_000), network, client);

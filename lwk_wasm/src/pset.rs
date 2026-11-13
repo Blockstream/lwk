@@ -113,6 +113,31 @@ impl Pset {
         let tx: Transaction = pset.extract_tx()?.into();
         Ok(tx)
     }
+
+    /// Blind this PSET in place as its last blinder.
+    ///
+    /// Unlike `PsetBuilder::blindLast()`, this completes a PSET received from a
+    /// counterparty, which may already hold outputs blinded by others. It blinds
+    /// the outputs whose blinder index is one of `input_indices` and balances the
+    /// transaction with the scalars the previous blinders left in the PSET. The
+    /// other outputs are left as they are.
+    ///
+    /// `secrets[i]` are the secrets of the input at `input_indices[i]`. Pass only
+    /// the inputs you own: you need no secrets of the other parties.
+    ///
+    /// NOTE: The secrets object is destroyed during the execution of the function, so the argument that was
+    /// passed in the JS code cannot be reused.
+    #[wasm_bindgen(js_name = blindLast)]
+    pub fn blind_last(
+        &mut self,
+        input_indices: &[u32],
+        secrets: Vec<TxOutSecrets>,
+    ) -> Result<(), Error> {
+        let inp_txout_sec = input_secrets(input_indices, &secrets)?;
+        self.inner
+            .blind_last(&mut thread_rng(), &EC, &inp_txout_sec)?;
+        Ok(())
+    }
 }
 
 impl Pset {

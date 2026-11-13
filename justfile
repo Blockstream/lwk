@@ -8,9 +8,12 @@ LIB_EXTENSION := if os() == "macos" { "dylib" } else { "so" }
 # No gobley release supports UniFFI 0.31 yet. This revision is the UniFFI 0.31.2 port proposed
 # upstream in https://github.com/gobley/gobley/pull/289, plus the fix for u8/u16 return values
 # misread on 32-bit ARM Android (https://github.com/gobley/gobley/issues/252), which otherwise
-# fails the UniFFI checksum check once the app is AOT-compiled.
+# fails the UniFFI checksum check once the app is AOT-compiled. On JVM it also loads the library
+# bundled in the jar by its absolute path: JNA would look the name up in the system library paths
+# first, which on macOS and Windows include the working directory, and load a library with the same
+# name found there instead. The revision is from the fork's uniffi-0.31 branch.
 GOBLEY_GIT := "https://github.com/angelix/gobley"
-GOBLEY_REV := "26632c5948d0f42865c03d94df9e07729cea6cfa"
+GOBLEY_REV := "437be63a3f81e4277419e65beab1b6a3d18b7f89"
 GOBLEY_ROOT := "target/gobley"
 
 # Third-party UniFFI generators must match the UniFFI version used by lwk_bindings.

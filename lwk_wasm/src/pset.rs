@@ -436,6 +436,35 @@ impl PsetOutputBuilder {
     }
 }
 
+/// Map each input index to the secrets of that input, from the parallel arrays
+/// the `blindLast` bindings take.
+#[cfg(feature = "simplicity")]
+fn input_secrets(
+    input_indices: &[u32],
+    secrets: &[TxOutSecrets],
+) -> Result<HashMap<usize, lwk_wollet::elements::TxOutSecrets>, Error> {
+    if input_indices.len() != secrets.len() {
+        return Err(Error::Generic(format!(
+            "input_indices length ({}) must match secrets length ({})",
+            input_indices.len(),
+            secrets.len()
+        )));
+    }
+
+    let mut inp_txout_sec = HashMap::with_capacity(input_indices.len());
+    for (&index, secret) in input_indices.iter().zip(secrets) {
+        if inp_txout_sec
+            .insert(index as usize, secret.into())
+            .is_some()
+        {
+            return Err(Error::Generic(format!(
+                "input_indices must be unique, duplicate index {index}"
+            )));
+        }
+    }
+    Ok(inp_txout_sec)
+}
+
 #[cfg(feature = "simplicity")]
 /// Builder for constructing a PSET from scratch
 #[wasm_bindgen]
@@ -489,27 +518,7 @@ impl PsetBuilder {
         input_indices: &[u32],
         secrets: Vec<TxOutSecrets>,
     ) -> Result<PsetBuilder, Error> {
-        if input_indices.len() != secrets.len() {
-            return Err(Error::Generic(format!(
-                "input_indices length ({}) must match secrets length ({})",
-                input_indices.len(),
-                secrets.len()
-            )));
-        }
-
-        let mut inp_txout_sec: HashMap<usize, lwk_wollet::elements::TxOutSecrets> =
-            HashMap::with_capacity(input_indices.len());
-        for (&index, secret) in input_indices.iter().zip(secrets.iter()) {
-            if inp_txout_sec
-                .insert(index as usize, secret.into())
-                .is_some()
-            {
-                return Err(Error::Generic(format!(
-                    "input_indices must be unique, duplicate index {index}"
-                )));
-            }
-        }
-
+        let inp_txout_sec = input_secrets(input_indices, &secrets)?;
         self.inner
             .blind_last(&mut thread_rng(), &EC, &inp_txout_sec)?;
         Ok(self)

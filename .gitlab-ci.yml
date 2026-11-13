@@ -32,7 +32,7 @@ stages:
   - deploy
 
 .base:
-  image: ${CI_REGISTRY_IMAGE}/lwk-builder@sha256:c60b075e5fa803e1014c28509b202fbe7c304fac8ba7f8a28c5ace52ddb8839c
+  image: ${CI_REGISTRY_IMAGE}/lwk-builder@sha256:bfffc3655c67a77457aefd4c244d9416c8145ead04139ec63930aa7343be6acd
   tags:
     - cloud
   retry:
@@ -186,18 +186,18 @@ test_clean:
   script:
     - cargo build
 
-test_no_default_features:
+test_features:
   stage: test
   needs: []
   extends: .base
-  # We need to polish how we feature gate our code
-  # However let's do things iteratively rather than all at once
-  # TODO: add RUSTFLAGS="-D warnings" to address warnings too
-  # TODO: test other crates too
-  # TODO: replace cargo build with cargo check --tests
+  # TODO: add -D warnings to RUSTFLAGS once feature-specific warnings are fixed.
+  variables:
+    RUSTFLAGS: "--cfg=web_sys_unstable_apis"
   script:
-    - cargo build -p lwk_wollet --no-default-features
-  allow_failure: true # TODO: remove once fixed
+    # Check crates separately; dev-dependencies can mask missing features.
+    - cargo hack check --workspace --each-feature --no-dev-deps --keep-going
+    # Also compile feature-gated tests, examples and benches.
+    - cargo hack check --workspace --each-feature --all-targets --locked --keep-going
 
 
 test_wollet:
@@ -619,6 +619,8 @@ liquid_web_wallet:
     - npm install
     - npm install $CI_PROJECT_DIR/lwk_wasm/pkg
     - npm run build
+  # this should not fail, but allow failure to deal with breaking changes async
+  allow_failure: true
 
 # AMP0 has a closed source backend, so its tests are unreliable, allow them to fail.
 # Anyway for MRs/PRs that touch AMP0 code, this must pass.

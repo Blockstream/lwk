@@ -1,3 +1,4 @@
+use crate::bitcoin::bip32::DerivationPath;
 use crate::cache::Timestamp;
 use crate::descriptor::Chain;
 use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOutSecrets, Txid};
@@ -229,12 +230,17 @@ impl UnvalidatedRecipient {
 pub struct AddressResult {
     address: Address,
     index: u32,
+    derivation_path: Option<DerivationPath>,
 }
 
 impl AddressResult {
     /// Create a new address result.
-    pub fn new(address: Address, index: u32) -> Self {
-        Self { address, index }
+    pub fn new(address: Address, index: u32, derivation_path: Option<DerivationPath>) -> Self {
+        Self {
+            address,
+            index,
+            derivation_path,
+        }
     }
 
     /// Get the address.
@@ -245,6 +251,14 @@ impl AddressResult {
     /// Get the derivation index of this address, the last element in the derivation path. In standard with-wildcard descriptors is the value replacing the wildcard.
     pub fn index(&self) -> u32 {
         self.index
+    }
+
+    /// Get the full derivation path from the master key.
+    ///
+    /// `None` if the wallet has no descriptor, a key has no origin,
+    /// or the keys have different paths.
+    pub fn derivation_path(&self) -> Option<&DerivationPath> {
+        self.derivation_path.as_ref()
     }
 }
 

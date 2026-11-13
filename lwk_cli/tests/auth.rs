@@ -1,22 +1,27 @@
+use clap::{error::ErrorKind, Parser};
+use lwk_cli::Cli;
 use lwk_test_util::{TestEnv, TestEnvBuilder};
 
 use crate::common::*;
 
 #[test]
 fn test_auth_err() {
-    let env = TestEnvBuilder::from_env().with_electrum().build();
-    let addr = get_available_addr();
-    let tmp = tempfile::tempdir().unwrap();
-    let datadir = tmp.path().display().to_string();
-    let server_url = format!("--server-url {}", &env.electrum_url());
-    let cli = format!("cli --addr {addr} -n regtest --datadir {datadir}");
-    let params = server_url;
+    let parse = |args: &str| {
+        let cmd = format!("cli -n regtest server start {args}");
+        Cli::try_parse_from(shellwords::split(&cmd).unwrap())
+            .unwrap_err()
+            .kind()
+    };
 
     // Blockstream auth requires all three fields set together (regardless of server type).
-    let err = sh_err(&format!(
-        "{cli} server start {params} --auth-token-url https://login --auth-client-id client_id"
-    ));
-    assert!(err.contains("All of the following must be set together for authentication:"))
+    assert_eq!(
+        parse("--auth-token-url https://login --auth-client-id client_id"),
+        ErrorKind::MissingRequiredArgument
+    );
+    assert_eq!(
+        parse("--auth-static-token t --auth-token-url u --auth-client-id i --auth-client-secret s"),
+        ErrorKind::ArgumentConflict
+    );
 }
 
 #[test]

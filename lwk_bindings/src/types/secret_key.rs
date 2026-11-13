@@ -1,5 +1,6 @@
 use crate::LwkError;
 use crate::Pset;
+use crate::SignOptions;
 use elements::bitcoin::secp256k1;
 use std::sync::Arc;
 
@@ -50,11 +51,19 @@ impl SecretKey {
         Ok(Arc::new(SecretKey { inner }))
     }
 
-    /// Sign the given `pset`
+    /// Sign a PSET with a given secret key
     pub fn sign(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
+        self.sign_with_options(pset, &SignOptions::default())
+    }
+
+    /// Sign a PSET with a given secret key and the given `options`
+    pub fn sign_with_options(
+        &self,
+        pset: &Pset,
+        options: &SignOptions,
+    ) -> Result<Arc<Pset>, LwkError> {
         let mut pset = pset.inner();
-        // TODO: allow passing `SignOptions`, either by breaking this signature or adding a new function
-        lwk_signer::sign_with_seckey(self.inner, &mut pset)?;
+        lwk_signer::sign_with_seckey_with_options(self.inner, &mut pset, &options.inner)?;
         Ok(Arc::new(pset.into()))
     }
 }

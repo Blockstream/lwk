@@ -327,7 +327,7 @@ mod tests {
         let mut wollet = amp0.wollet().unwrap();
 
         let network = Network::mainnet();
-        let mut client = network.default_esplora_client();
+        let mut client = network.default_esplora_client().unwrap();
         let update = client.full_scan(&wollet).await.unwrap().unwrap();
 
         wollet.apply_update(&update).unwrap();
@@ -359,7 +359,7 @@ mod tests {
         let mut wollet = amp0.wollet().unwrap();
 
         // Sync the wollet
-        let mut client = network.default_esplora_client();
+        let mut client = network.default_esplora_client().unwrap();
         let last_index = amp0.last_index();
         let update = client
             .full_scan_to_index(&wollet, last_index)

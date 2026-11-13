@@ -1,4 +1,4 @@
-use crate::{Error, Network, Script};
+use crate::{DerivationPath, Error, Network, Script};
 use lwk_wollet::elements::{self, AddressParams};
 use wasm_bindgen::prelude::*;
 
@@ -149,6 +149,15 @@ impl AddressResult {
     /// Return the derivation index of the address.
     pub fn index(&self) -> u32 {
         self.inner.index()
+    }
+
+    /// Return the full derivation path from the master key.
+    ///
+    /// `undefined` if the wallet has no descriptor, a key has no origin,
+    /// or the keys have different paths.
+    #[wasm_bindgen(js_name = derivationPath)]
+    pub fn derivation_path(&self) -> Option<DerivationPath> {
+        self.inner.derivation_path().cloned().map(Into::into)
     }
 }
 

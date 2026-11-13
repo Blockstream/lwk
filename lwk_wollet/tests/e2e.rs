@@ -3589,9 +3589,43 @@ fn test_singlekey() {
         .unwrap()
         .finish()
         .unwrap();
+    pset.inputs_mut()[0].sighash_type =
+        Some(elements::EcdsaSighashType::SinglePlusAnyoneCanPay.into());
 
-    sign_with_seckey(sk_a, &mut pset).unwrap();
-    sign_with_seckey(sk_b, &mut pset).unwrap();
+    // Default options refuse a non-default sighash
+    assert!(matches!(
+        sign_with_seckey(sk_a, &mut pset),
+        Err(SignError::NonDefaultSighash { index: 0, .. })
+    ));
+    assert!(pset.inputs()[0].partial_sigs.is_empty());
+
+    // Options that allow a different sighash still refuse it
+    let mut pset_single = pset.clone();
+    pset_single.inputs_mut()[0].sighash_type = Some(elements::EcdsaSighashType::Single.into());
+    assert!(matches!(
+        sign_with_seckey_with_options(
+            sk_a,
+            &mut pset_single,
+            &SignOptions::allow_sighash_single_anyonecanpay()
+        ),
+        Err(SignError::NonDefaultSighash { index: 0, .. })
+    ));
+
+    // Allowed non-default sighashes are signed
+    assert_eq!(
+        sign_with_seckey_with_options(
+            sk_a,
+            &mut pset,
+            &SignOptions::allow_sighash_single_anyonecanpay()
+        )
+        .unwrap(),
+        1
+    );
+    assert_eq!(
+        sign_with_seckey_with_options(sk_b, &mut pset, &SignOptions::dangerous_allow_any_sighash())
+            .unwrap(),
+        1
+    );
 
     // Finalize and send the PSET
     wallet.send(&mut pset);

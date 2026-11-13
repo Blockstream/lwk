@@ -1,3 +1,4 @@
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(clippy::wrong_self_convention)]
 #![warn(missing_docs)]
@@ -197,7 +198,7 @@ mod tests {
 
     async fn balance_test(desc: &str, network: Network, expected_at_least: u64) {
         let descriptor = WolletDescriptor::new(desc).unwrap();
-        let mut client = network.default_esplora_client();
+        let mut client = network.default_esplora_client().unwrap();
         let mut wollet = Wollet::new(&network, &descriptor).unwrap();
         let update = client.full_scan(&wollet).await.unwrap().unwrap();
         wollet.apply_update(&update).unwrap();

@@ -468,7 +468,7 @@ mod tests {
     #[wasm_bindgen_test]
     async fn test_boltz_session_builder() {
         let network = Network::mainnet();
-        let client = network.default_esplora_client();
+        let client = network.default_esplora_client().unwrap();
         let builder = BoltzSessionBuilder::new(&network, &client).unwrap();
         let session = builder.build().await.unwrap();
         let rescue_file = session.rescue_file().unwrap();

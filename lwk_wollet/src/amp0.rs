@@ -339,7 +339,7 @@ impl<S: Stream> Amp0<S> {
                 let address = self
                     .wollet_descriptor
                     .amp0_address(i, self.network.address_params())?;
-                Ok(AddressResult::new(address, i))
+                Ok(AddressResult::new(address, i, None))
             }
             None => {
                 // Get a new address from Green server
@@ -362,7 +362,7 @@ impl<S: Stream> Amp0<S> {
 
                 // Update last index
                 self.last_index = pointer;
-                Ok(AddressResult::new(address, pointer))
+                Ok(AddressResult::new(address, pointer, None))
             }
         }
     }

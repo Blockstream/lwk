@@ -1,4 +1,4 @@
-use crate::{Error, Pset};
+use crate::{Error, Pset, SignOptions};
 
 use lwk_wollet::elements::bitcoin::secp256k1;
 
@@ -50,11 +50,16 @@ impl SecretKey {
         self.inner.secret_bytes().to_vec()
     }
 
-    /// Sign the given `pset`
+    /// Sign a PSET with a given secret key
     pub fn sign(&self, pset: &Pset) -> Result<Pset, Error> {
+        self.sign_with_options(pset, &SignOptions::default())
+    }
+
+    /// Sign a PSET with a given secret key and the given `options`
+    #[wasm_bindgen(js_name = signWithOptions)]
+    pub fn sign_with_options(&self, pset: &Pset, options: &SignOptions) -> Result<Pset, Error> {
         let mut pset_inner = pset.clone().into();
-        // TODO: allow passing `SignOptions`, either by breaking this signature or adding a new function
-        lwk_signer::sign_with_seckey(self.inner, &mut pset_inner)?;
+        lwk_signer::sign_with_seckey_with_options(self.inner, &mut pset_inner, &options.inner)?;
         Ok(pset_inner.into())
     }
 }

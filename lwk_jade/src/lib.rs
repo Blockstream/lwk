@@ -262,17 +262,27 @@ fn create_jade_sign_req(
         };
         trusted_commitments.push(trusted_commitment);
 
+        // If the output seems a change output, mark it as "Change",
+        // this allows Jade to verify it's actually change.
+        // If that is the case, Jade avoids showing the output for confirmation.
+        // Note: for singlesig we don't verify on the host side that the output
+        // scriptpubkey matches the scriptpubkey derived from the descriptor and
+        // derivation path. Jade should verify that it's actually change, if it's
+        // not the output is shown to the user for confirmation. Verifying it on
+        // the host side (here) would require to have or fetch potentially
+        // multiple xpubs, which might degrade performance and increase complexity
+        // and we deem it not worth it.
         let mut change = None;
         for (_, (_, (fingerprint, path))) in output.tap_key_origins.iter() {
             if fingerprint == &my_fingerprint {
-                let is_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_CHAIN);
-                if is_change && output.script_pubkey.is_v1_p2tr() {
+                let seems_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_CHAIN);
+                if seems_change && output.script_pubkey.is_v1_p2tr() {
                     change = Some(Change {
                         address: SingleOrMulti::Single {
                             variant: Variant::Tr,
                             path: derivation_path_to_vec(path),
                         },
-                        is_change,
+                        is_change: seems_change,
                     });
                 }
             }
@@ -280,15 +290,15 @@ fn create_jade_sign_req(
         for (fingerprint, path) in output.bip32_derivation.values() {
             if fingerprint == &my_fingerprint {
                 // This ensures that path has at least 2 elements
-                let is_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_CHAIN);
-                if is_change {
+                let seems_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_CHAIN);
+                if seems_change {
                     if output.script_pubkey.is_v0_p2wpkh() {
                         change = Some(Change {
                             address: SingleOrMulti::Single {
                                 variant: Variant::Wpkh,
                                 path: derivation_path_to_vec(path),
                             },
-                            is_change,
+                            is_change: seems_change,
                         });
                     } else if output.script_pubkey.is_p2sh() {
                         if let Some(redeem_script) = output.redeem_script.as_ref() {
@@ -298,7 +308,7 @@ fn create_jade_sign_req(
                                         variant: Variant::ShWpkh,
                                         path: derivation_path_to_vec(path),
                                     },
-                                    is_change,
+                                    is_change: seems_change,
                                 });
                             }
                         }
@@ -310,7 +320,7 @@ fn create_jade_sign_req(
                                     let index = path[path.len() - 1];
                                     if let Ok(derived_witness_script) = details
                                         .descriptor
-                                        .derive_witness_script(is_change, index.into())
+                                        .derive_witness_script(seems_change, index.into())
                                     {
                                         if witness_script == &derived_witness_script {
                                             let mut paths = vec![];
@@ -332,7 +342,10 @@ fn create_jade_sign_req(
                                                         .to_string(),
                                                     paths,
                                                 },
-                                                is_change,
+                                                // for multisig we verified that the output scriptpubkey
+                                                // matches the derived one, so this is actually a change
+                                                // output
+                                                is_change: seems_change,
                                             });
                                             break; // No need to check for more multisigs
                                         }

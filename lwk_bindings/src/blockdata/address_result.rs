@@ -1,6 +1,6 @@
 //! Liquid address result
 
-use crate::Address;
+use crate::{Address, DerivationPath};
 use std::sync::Arc;
 
 /// Value returned from asking an address to the wallet.
@@ -28,6 +28,16 @@ impl AddressResult {
     pub fn index(&self) -> u32 {
         self.inner.index()
     }
+
+    /// Return the full derivation path from the master key.
+    ///
+    /// `None` if the wallet has no descriptor, a key has no origin,
+    /// or the keys have different paths.
+    pub fn derivation_path(&self) -> Option<Arc<DerivationPath>> {
+        self.inner
+            .derivation_path()
+            .map(|p| Arc::new(p.clone().into()))
+    }
 }
 
 #[cfg(test)]
@@ -44,6 +54,7 @@ mod tests {
         let wollet_address_result = lwk_wollet::AddressResult::new(
             elements::Address::from_str(address_str).unwrap(),
             index,
+            None,
         );
 
         let address_result: AddressResult = wollet_address_result.into();

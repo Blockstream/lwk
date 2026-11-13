@@ -274,6 +274,14 @@ impl LendingSession {
         details: RepaymentDetails,
     ) -> Result<RepayOfferTransaction, LendingError> {
         const FEE_ESTIMATE: u64 = 250;
+        const ACTIVE_COVENANT_VOUT: u32 = 0;
+
+        if details.active_covenant_outpoint.vout != ACTIVE_COVENANT_VOUT {
+            return Err(LendingError::Generic(format!(
+                "active covenant outpoint must reference output {ACTIVE_COVENANT_VOUT}, got {}",
+                details.active_covenant_outpoint.vout
+            )));
+        }
 
         let policy_asset = *self.network.policy_asset();
         let simplex_network = to_simplicity_network(self.network);
@@ -305,7 +313,7 @@ impl LendingSession {
 
         let covenant_txout = acceptance_tx
             .output
-            .get(details.active_covenant_outpoint.vout as usize)
+            .get(ACTIVE_COVENANT_VOUT as usize)
             .ok_or_else(|| {
                 LendingError::Generic("covenant output not found in acceptance tx".into())
             })?
@@ -845,6 +853,14 @@ impl LendingSession {
         details: LiquidateOfferDetails,
     ) -> Result<LiquidateOfferTransaction, LendingError> {
         const FEE_ESTIMATE: u64 = 250;
+        const ACTIVE_COVENANT_VOUT: u32 = 0;
+
+        if details.active_covenant_outpoint.vout != ACTIVE_COVENANT_VOUT {
+            return Err(LendingError::Generic(format!(
+                "active covenant outpoint must reference output {ACTIVE_COVENANT_VOUT}, got {}",
+                details.active_covenant_outpoint.vout
+            )));
+        }
 
         let policy_asset = *self.network.policy_asset();
         let simplex_network = to_simplicity_network(self.network);
@@ -882,7 +898,7 @@ impl LendingSession {
 
         let covenant_txout = acceptance_tx
             .output
-            .get(details.active_covenant_outpoint.vout as usize)
+            .get(ACTIVE_COVENANT_VOUT as usize)
             .ok_or_else(|| {
                 LendingError::Generic("covenant output not found in acceptance tx".into())
             })?

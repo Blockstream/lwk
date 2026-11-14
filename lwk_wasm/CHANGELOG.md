@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Added `Pset::blindLast()` to complete, as the last blinder, a PSET partially blinded by a counterparty.
 * Added `Amp2::isRegistered()`.
 * Breaking: `Amp2::new()` takes a `network` parameter.
 * Removed `Amp2::new_testnet()`, use `Amp2::new()`.

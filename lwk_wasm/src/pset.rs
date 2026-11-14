@@ -113,6 +113,31 @@ impl Pset {
         let tx: Transaction = pset.extract_tx()?.into();
         Ok(tx)
     }
+
+    /// Blind this PSET in place as its last blinder.
+    ///
+    /// Unlike `PsetBuilder::blindLast()`, this completes a PSET received from a
+    /// counterparty, which may already hold outputs blinded by others. It blinds
+    /// the outputs whose blinder index is one of `input_indices` and balances the
+    /// transaction with the scalars the previous blinders left in the PSET. The
+    /// other outputs are left as they are.
+    ///
+    /// `secrets[i]` are the secrets of the input at `input_indices[i]`. Pass only
+    /// the inputs you own: you need no secrets of the other parties.
+    ///
+    /// NOTE: The secrets object is destroyed during the execution of the function, so the argument that was
+    /// passed in the JS code cannot be reused.
+    #[wasm_bindgen(js_name = blindLast)]
+    pub fn blind_last(
+        &mut self,
+        input_indices: &[u32],
+        secrets: Vec<TxOutSecrets>,
+    ) -> Result<(), Error> {
+        let inp_txout_sec = input_secrets(input_indices, &secrets)?;
+        self.inner
+            .blind_last(&mut thread_rng(), &EC, &inp_txout_sec)?;
+        Ok(())
+    }
 }
 
 impl Pset {
@@ -436,6 +461,35 @@ impl PsetOutputBuilder {
     }
 }
 
+/// Map each input index to the secrets of that input, from the parallel arrays
+/// the `blindLast` bindings take.
+#[cfg(feature = "simplicity")]
+fn input_secrets(
+    input_indices: &[u32],
+    secrets: &[TxOutSecrets],
+) -> Result<HashMap<usize, lwk_wollet::elements::TxOutSecrets>, Error> {
+    if input_indices.len() != secrets.len() {
+        return Err(Error::Generic(format!(
+            "input_indices length ({}) must match secrets length ({})",
+            input_indices.len(),
+            secrets.len()
+        )));
+    }
+
+    let mut inp_txout_sec = HashMap::with_capacity(input_indices.len());
+    for (&index, secret) in input_indices.iter().zip(secrets) {
+        if inp_txout_sec
+            .insert(index as usize, secret.into())
+            .is_some()
+        {
+            return Err(Error::Generic(format!(
+                "input_indices must be unique, duplicate index {index}"
+            )));
+        }
+    }
+    Ok(inp_txout_sec)
+}
+
 #[cfg(feature = "simplicity")]
 /// Builder for constructing a PSET from scratch
 #[wasm_bindgen]
@@ -489,27 +543,7 @@ impl PsetBuilder {
         input_indices: &[u32],
         secrets: Vec<TxOutSecrets>,
     ) -> Result<PsetBuilder, Error> {
-        if input_indices.len() != secrets.len() {
-            return Err(Error::Generic(format!(
-                "input_indices length ({}) must match secrets length ({})",
-                input_indices.len(),
-                secrets.len()
-            )));
-        }
-
-        let mut inp_txout_sec: HashMap<usize, lwk_wollet::elements::TxOutSecrets> =
-            HashMap::with_capacity(input_indices.len());
-        for (&index, secret) in input_indices.iter().zip(secrets.iter()) {
-            if inp_txout_sec
-                .insert(index as usize, secret.into())
-                .is_some()
-            {
-                return Err(Error::Generic(format!(
-                    "input_indices must be unique, duplicate index {index}"
-                )));
-            }
-        }
-
+        let inp_txout_sec = input_secrets(input_indices, &secrets)?;
         self.inner
             .blind_last(&mut thread_rng(), &EC, &inp_txout_sec)?;
         Ok(self)
@@ -589,5 +623,87 @@ mod tests {
             pset.inner().global.tx_data.fallback_locktime,
             Some(lwk_wollet::elements::LockTime::from_consensus(100))
         );
+    }
+
+    /// Two parties swap assets, each blinding the output funded by its own
+    /// input: the first as a non-last blinder, the second with `blindLast` on
+    /// the PSET it received, knowing only the secrets of its own input.
+    #[cfg(feature = "simplicity")]
+    #[wasm_bindgen_test]
+    fn pset_blind_last_after_counterparty() {
+        use lwk_wollet::elements::confidential::{
+            Asset, AssetBlindingFactor, Nonce, Value, ValueBlindingFactor,
+        };
+        use lwk_wollet::elements::secp256k1_zkp::{Generator, PedersenCommitment, SecretKey};
+        use lwk_wollet::elements::{self, bitcoin};
+
+        const FEE: u64 = 100;
+        let mut rng = thread_rng();
+        // P2WPKH: blinding needs a script that is an address
+        let script = elements::Script::from([vec![0x00, 0x14], vec![7; 20]].concat());
+
+        // One confidential UTXO per party, each of a different asset
+        let utxos: Vec<(elements::TxOut, elements::TxOutSecrets)> = [(1u8, 5_000u64), (2, 7_000)]
+            .into_iter()
+            .map(|(asset, value)| {
+                let secrets = elements::TxOutSecrets::new(
+                    elements::AssetId::from_byte_array([asset; 32]),
+                    AssetBlindingFactor::new(&mut rng),
+                    value,
+                    ValueBlindingFactor::new(&mut rng),
+                );
+                let generator = Generator::new_blinded(
+                    &EC,
+                    secrets.asset.into_tag(),
+                    secrets.asset_bf.into_inner(),
+                );
+                let commitment =
+                    PedersenCommitment::new(&EC, value, secrets.value_bf.into_inner(), generator);
+                let txout = elements::TxOut {
+                    asset: Asset::Confidential(generator),
+                    value: Value::Confidential(commitment),
+                    nonce: Nonce::Null,
+                    script_pubkey: script.clone(),
+                    witness: Default::default(),
+                };
+                (txout, secrets)
+            })
+            .collect();
+
+        // Each party pays its asset to the other; the second also pays the fee
+        let mut inner = PartiallySignedTransaction::new_v2();
+        for (vout, (txout, _)) in utxos.iter().enumerate() {
+            let outpoint =
+                elements::OutPoint::new(elements::Txid::from_byte_array([0; 32]), vout as u32);
+            let mut input = Input::from_prevout(outpoint);
+            input.witness_utxo = Some(txout.clone());
+            inner.add_input(input);
+        }
+        for (index, (_, secrets)) in utxos.iter().enumerate() {
+            let blinding_key = bitcoin::PublicKey::new(SecretKey::new(&mut rng).public_key(&EC));
+            let amount = secrets.value - if index == 1 { FEE } else { 0 };
+            let mut output =
+                Output::new_explicit(script.clone(), amount, secrets.asset, Some(blinding_key));
+            output.blinder_index = Some(index as u32);
+            inner.add_output(output);
+        }
+        inner.add_output(Output::new_explicit(
+            elements::Script::new(),
+            FEE,
+            utxos[1].1.asset,
+            None,
+        ));
+
+        inner
+            .blind_non_last(&mut rng, &EC, &HashMap::from([(0, utxos[0].1)]))
+            .unwrap();
+
+        let mut pset = Pset::from(inner);
+        pset.blind_last(&[1], vec![utxos[1].1.into()]).unwrap();
+
+        let tx = pset.inner().extract_tx().unwrap();
+        assert!(tx.output[..2].iter().all(|o| o.value.is_confidential()));
+        let spent: Vec<_> = utxos.into_iter().map(|(txout, _)| txout).collect();
+        tx.verify_tx_amt_proofs(&EC, &spent).unwrap();
     }
 }

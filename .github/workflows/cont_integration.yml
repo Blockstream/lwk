@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
       - run: sudo apt-get update && sudo apt-get install -y libudev-dev
         if: ${{ matrix.os == 'ubuntu-22.04' }}
       - run: cargo build
@@ -42,7 +42,7 @@ jobs:
       runs-on: macos-15
       steps:
         - uses: actions/checkout@v6
-        - uses: dtolnay/rust-toolchain@1.91.0
+        - uses: dtolnay/rust-toolchain@1.100.0
           with:
             targets: x86_64-apple-ios,aarch64-apple-ios,aarch64-apple-ios-sim,aarch64-apple-darwin
         - run: brew install just xcodegen
@@ -53,7 +53,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
       - run: choco install just
       - run: just csharp-windows
       - run: ls target/release/csharp

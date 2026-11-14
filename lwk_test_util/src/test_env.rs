@@ -1,11 +1,13 @@
 use crate::amp2::Amp2D;
 use crate::auth::AuthStack;
 use crate::init_logging;
+#[cfg(unix)]
 use crate::lightningd::LightningD;
 use crate::registry::RegistryD;
 use crate::reserve_port;
 use crate::waterfalls::WaterfallsD;
 
+#[cfg(unix)]
 use clightningrpc::requests::AmountOrAll;
 use electrsd::bitcoind;
 use electrsd::electrum_client::ElectrumApi;
@@ -22,6 +24,7 @@ use lwk_common::Network;
 use serde_json::Value;
 use std::str::FromStr;
 use std::time::{Duration, Instant};
+#[cfg(unix)]
 use tempfile::TempDir;
 
 use lwk_containers::AssetRegistry;
@@ -41,17 +44,21 @@ pub struct TestEnvBuilder {
     electrs_bitcoin_exec: String,
     bitcoind_exec: String,
     bitcoincli_exec: String,
+    #[cfg(unix)]
     lightningd_exec: String,
     waterfalls_exec: String,
     registry_exec: String,
     amp2_exec: String,
+    #[cfg(unix)]
     anyswap_exec: String,
+    #[cfg(unix)]
     anyswap_config: String,
     with_electrum: bool,
     with_esplora: bool,
     with_bitcoin_esplora: bool,
     with_bitcoind: bool,
     with_bitcoincli: bool,
+    #[cfg(unix)]
     with_lightningd: bool,
     with_waterfalls: bool,
     waterfalls_max_txs_seen: Option<usize>,
@@ -60,6 +67,7 @@ pub struct TestEnvBuilder {
     with_amp2: bool,
     with_zmq: bool,
     with_auth: bool,
+    #[cfg(unix)]
     with_anyswap: bool,
     fedpeg_script: Option<String>,
 }
@@ -84,11 +92,14 @@ impl TestEnvBuilder {
         let electrs_bitcoin_exec = std::env::var("ELECTRS_BITCOIN_EXEC").unwrap_or_default();
         let bitcoind_exec = std::env::var("BITCOIND_EXEC").unwrap_or_default();
         let bitcoincli_exec = std::env::var("BITCOINCLI_EXEC").unwrap_or_default();
+        #[cfg(unix)]
         let lightningd_exec = std::env::var("LIGHTNINGD_EXEC").unwrap_or_default();
         let waterfalls_exec = std::env::var("WATERFALLS_EXEC").unwrap_or_default();
         let registry_exec = std::env::var("ASSET_REGISTRY_EXEC").unwrap_or_default();
         let amp2_exec = std::env::var("AMP2_MOCK_EXEC").unwrap_or_default();
+        #[cfg(unix)]
         let anyswap_exec = std::env::var("ANYSWAP_EXEC").unwrap_or_default();
+        #[cfg(unix)]
         let anyswap_config = std::env::var("ANYSWAP_CONFIG").unwrap_or_default();
 
         Self {
@@ -97,17 +108,21 @@ impl TestEnvBuilder {
             electrs_bitcoin_exec,
             bitcoind_exec,
             bitcoincli_exec,
+            #[cfg(unix)]
             lightningd_exec,
             waterfalls_exec,
             registry_exec,
             amp2_exec,
+            #[cfg(unix)]
             anyswap_exec,
+            #[cfg(unix)]
             anyswap_config,
             with_electrum: false,
             with_esplora: false,
             with_bitcoin_esplora: false,
             with_bitcoind: false,
             with_bitcoincli: false,
+            #[cfg(unix)]
             with_lightningd: false,
             with_waterfalls: false,
             waterfalls_max_txs_seen: None,
@@ -116,6 +131,7 @@ impl TestEnvBuilder {
             with_amp2: false,
             with_zmq: false,
             with_auth: false,
+            #[cfg(unix)]
             with_anyswap: false,
             fedpeg_script: None,
         }
@@ -152,6 +168,7 @@ impl TestEnvBuilder {
     }
 
     /// Start a CLN node, connected to a Bitcoin node
+    #[cfg(unix)]
     pub fn with_lightningd(mut self) -> Self {
         self.with_lightningd = true;
         self
@@ -214,6 +231,7 @@ impl TestEnvBuilder {
     }
 
     /// Start with anyswap
+    #[cfg(unix)]
     pub fn with_anyswap(mut self) -> Self {
         self.with_anyswap = true;
         self
@@ -253,12 +271,14 @@ impl TestEnvBuilder {
         if self.amp2_exec.is_empty() && self.with_amp2 {
             panic!("AMP2_MOCK_EXEC must be set");
         }
+        #[cfg(unix)]
         if self.lightningd_exec.is_empty() && self.with_lightningd {
             panic!("LIGHTNINGD_EXEC must be set");
         }
         if self.bitcoincli_exec.is_empty() && self.with_bitcoincli {
             panic!("BITCOINCLI_EXEC must be set");
         }
+        #[cfg(unix)]
         if self.with_lightningd && (!self.with_bitcoind || !self.with_bitcoincli) {
             panic!("lightningd requires 'with_bitcoind()' and 'with_bitcoincli()'");
         }
@@ -268,9 +288,11 @@ impl TestEnvBuilder {
         if self.with_auth && self.with_esplora && self.with_waterfalls {
             panic!("auth gateway fronts either esplora or waterfalls, not both (yet): enable only one of them with 'with_auth()'");
         }
+        #[cfg(unix)]
         if self.with_anyswap && (self.anyswap_exec.is_empty() || self.anyswap_config.is_empty()) {
             panic!("ANYSWAP_EXEC and ANYSWAP_CONFIG must be set");
         }
+        #[cfg(unix)]
         if self.with_anyswap
             && (!self.with_lightningd || !self.with_esplora || !self.with_bitcoin_esplora)
         {
@@ -454,9 +476,12 @@ impl TestEnvBuilder {
             None
         };
 
+        #[cfg(unix)]
         let mut anyswap_config_dir: Option<TempDir> = None;
+        #[cfg(unix)]
         let mut anyswap_url: Option<String> = None;
 
+        #[cfg(unix)]
         let lightningd = if self.with_lightningd {
             let node = bitcoind
                 .as_ref()
@@ -482,6 +507,7 @@ impl TestEnvBuilder {
             None
         };
 
+        #[cfg(unix)]
         let lightningd_anyswap = if self.with_anyswap {
             let node = bitcoind
                 .as_ref()
@@ -644,14 +670,18 @@ impl TestEnvBuilder {
             registryd,
             registry_v2d,
             amp2d,
+            #[cfg(unix)]
             lightningd,
+            #[cfg(unix)]
             lightningd_anyswap,
             zmq_endpoint,
             auth,
             esplora_url,
             waterfalls_url,
             electrum_url,
+            #[cfg(unix)]
             _anyswap_config_dir: anyswap_config_dir,
+            #[cfg(unix)]
             anyswap_url,
         }
     }
@@ -670,7 +700,9 @@ pub struct TestEnv {
     registryd: Option<RegistryD>,
     registry_v2d: Option<AssetRegistry>,
     amp2d: Option<Amp2D>,
+    #[cfg(unix)]
     lightningd: Option<LightningD>,
+    #[cfg(unix)]
     lightningd_anyswap: Option<LightningD>,
     zmq_endpoint: Option<String>,
     auth: Option<AuthStack>,
@@ -679,7 +711,9 @@ pub struct TestEnv {
     esplora_url: Option<String>,
     waterfalls_url: Option<String>,
     electrum_url: Option<String>,
+    #[cfg(unix)]
     _anyswap_config_dir: Option<TempDir>,
+    #[cfg(unix)]
     anyswap_url: Option<String>,
 }
 
@@ -730,6 +764,7 @@ impl TestEnv {
         self.amp2d.as_ref().unwrap().url().to_string()
     }
 
+    #[cfg(unix)]
     pub fn anyswap_url(&self) -> String {
         self.anyswap_url
             .clone()
@@ -762,12 +797,14 @@ impl TestEnv {
         self.auth.as_ref().unwrap().set_credits(credits)
     }
 
+    #[cfg(unix)]
     pub fn lightningd(&self) -> &LightningD {
         self.lightningd.as_ref().unwrap()
     }
 
     /// The CLN node running the `anyswap` plugin (requires `with_anyswap()`); it has a
     /// channel open with the plain node returned by [`TestEnv::lightningd`].
+    #[cfg(unix)]
     pub fn lightningd_anyswap(&self) -> &LightningD {
         self.lightningd_anyswap.as_ref().unwrap()
     }
@@ -1063,6 +1100,7 @@ impl TestEnv {
 
     // Functions for lightningd
 
+    #[cfg(unix)]
     fn fund_lightningd_(bitcoind: &Client, ln_node: &LightningD, amount_sat: u64) {
         let raw: Value = ln_node
             .client
@@ -1091,6 +1129,7 @@ impl TestEnv {
         }
     }
 
+    #[cfg(unix)]
     fn open_channel_(
         bitcoind: &Client,
         opener: &LightningD,

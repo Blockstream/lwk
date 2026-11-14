@@ -33,6 +33,8 @@ stages:
 
 .base:
   image: ${CI_REGISTRY_IMAGE}/lwk-builder@sha256:bfffc3655c67a77457aefd4c244d9416c8145ead04139ec63930aa7343be6acd
+  before_script: &install_rust_toolchain
+    - rustup toolchain install 1.100.0 --profile minimal --component rustfmt,clippy,llvm-tools-preview --target wasm32-unknown-unknown
   tags:
     - cloud
   retry:
@@ -88,6 +90,7 @@ stages:
     ELECTRS_IMAGE: harbor.blockstream.io/docker/boltz/electrs:latest
     NGINX_IMAGE: harbor.blockstream.io/docker/library/nginx:alpine
   before_script:
+    - *install_rust_toolchain
     - |
       if [ -n "$DOCKERHUB_MIRROR" ]; then
         export SCRIPTS_IMAGE="${DOCKERHUB_MIRROR}${SCRIPTS_IMAGE#harbor.blockstream.io/docker}"
@@ -182,7 +185,7 @@ fmt_clippy:
 test_clean:
   stage: test
   needs: []
-  image: rust:1.91
+  image: rust:1.100.0
   script:
     - cargo build
 

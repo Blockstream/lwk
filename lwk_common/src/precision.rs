@@ -144,8 +144,7 @@ mod test {
 
         let p = Precision::new(0).unwrap();
         let over_u64 = (1i128 << 65).to_string();
-        let exp = "out of range integral type conversion attempted";
-        assert_eq!(exp, p.string_to_sats(&over_u64).unwrap_err().to_string());
+        assert!(matches!(p.string_to_sats(&over_u64), Err(Error::From(_))));
 
         let p = Precision::new(8).unwrap();
         let max = i128::MAX.to_string();

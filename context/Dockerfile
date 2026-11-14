@@ -1,4 +1,4 @@
-FROM rust:1.91.0-trixie
+FROM rust:1.100.0-trixie
 
 RUN apt update -qq
 RUN apt upgrade --no-install-recommends -yqq
@@ -40,7 +40,7 @@ RUN rustup component add rustfmt
 RUN rustup component add clippy
 RUN rustup component add llvm-tools-preview
 RUN rustup target add wasm32-unknown-unknown
-RUN rustup install nightly # for docs building
+RUN rustup install nightly # doc_cfg requires nightly for docs building
 
 RUN cargo install cargo-audit@0.22.0 --locked
 RUN cargo install cargo-nextest@0.9.100 --locked

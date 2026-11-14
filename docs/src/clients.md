@@ -117,6 +117,34 @@ This client is ideal for web applications and scenarios where HTTP-based communi
 </section>
 </custom-tabs>
 
+### Proxy
+
+The Esplora and Waterfalls clients can send their requests through a proxy, for example a local Tor daemon on `socks5h://127.0.0.1:9050`. The proxy is given as a url with one of the schemes `socks5h`, `socks5`, `http` or `https`.
+
+With `socks5h://` the host of the server is sent to the proxy and resolved there, which `.onion` urls require. With `socks5://` the host is resolved locally first, so a DNS query for the server still leaves the machine.
+
+The OAuth2 token of the `Blockstream` [token provider](#token-providers) is fetched through the proxy too. A proxy cannot be set in the browser (wasm), where the browser decides how a request is routed.
+
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+let client = EsploraClientBuilder::new("http://example.onion/api", Network::Liquid)
+    .proxy("socks5h://127.0.0.1:9050")
+    .build()?;
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+{{#include ../../lwk_bindings/tests/bindings/esplora_proxy.py:esplora_proxy}}
+```
+</section>
+</custom-tabs>
+
 ## Waterfalls
 
 [Waterfalls](https://github.com/RCasatta/waterfalls) is an optimized blockchain indexer designed to significantly reduce the number of roundtrips required for wallet synchronization compared to traditional Esplora.

@@ -18,6 +18,11 @@ fn tx_key(txid: &Txid) -> String {
     format!("wollet:tx:{}", txid)
 }
 
+/// Height used to order txs, unconfirmed txs (`None`) are considered above any confirmed tx.
+fn height_sort_key(height: Option<Height>) -> Height {
+    height.unwrap_or(Height::MAX)
+}
+
 /// `Cache` is a cache of wallet data, like wallet transactions.
 /// It is fully reconstructable from the CT Descriptor and the blockchain.
 pub struct Cache {
@@ -318,11 +323,37 @@ impl Cache {
         let mut sorted: Vec<Txid> = self.heights.keys().cloned().collect();
         sorted.sort_by(|a, b| {
             // cannot panic here, sorted is heights keys
-            let ha = self.heights[a].unwrap_or(u32::MAX);
-            let hb = self.heights[b].unwrap_or(u32::MAX);
+            let ha = height_sort_key(self.heights[a]);
+            let hb = height_sort_key(self.heights[b]);
             hb.cmp(&ha).then(b.cmp(a))
         });
         self.sorted_txids = sorted;
+    }
+
+    /// Outpoints spent by the known txs (in `heights` but not in `skip`) that can spend an
+    /// output of a tx at `min_height` or above.
+    ///
+    /// A spending tx cannot confirm before the tx it spends, so only the txs at `min_height` or
+    /// above, and the unconfirmed ones, are read. `sorted_txids` is ordered by descending height
+    /// with unconfirmed txs first, so the iteration stops at the first lower tx. This assumes the
+    /// cached heights are consistent with each other, and requires `sorted_txids` to be rebuilt
+    /// after `heights` is updated.
+    fn spent_by_known_txs(
+        &self,
+        min_height: Option<Height>,
+        skip: &HashSet<&Txid>,
+        txs: &[(Txid, Transaction)],
+    ) -> HashSet<OutPoint> {
+        let min_key = height_sort_key(min_height);
+        self.sorted_txids
+            .iter()
+            .take_while(|txid| {
+                height_sort_key(self.heights.get(*txid).copied().flatten()) >= min_key
+            })
+            .filter(|txid| !skip.contains(txid))
+            .filter_map(|txid| self.tx_as_fallback(txid, txs))
+            .flat_map(|tx| tx.input.into_iter().map(|i| i.previous_output))
+            .collect()
     }
 
     fn update_unspent(
@@ -334,7 +365,7 @@ impl Cache {
     ) {
         let txids_new: HashSet<&Txid> = txid_height_new.iter().map(|(txid, _)| txid).collect();
 
-        let outputs_new: Vec<(OutPoint, Script)> = self
+        let mut outputs_new: Vec<(OutPoint, Script)> = self
             .unblinded
             .keys()
             .filter(|op| txids_new.contains(&op.txid))
@@ -346,6 +377,18 @@ impl Cache {
             })
             .filter(|(_, script)| self.paths.contains_key(script))
             .collect();
+
+        // A tx that is new to `heights` can have outputs already spent by a known tx, for example
+        // when it comes back after being deleted by a previous update, or when its spending tx
+        // was found first. Inputs of the txs in this update are removed below.
+        if let Some(min_height) = outputs_new
+            .iter()
+            .map(|(op, _)| self.heights.get(&op.txid).copied().flatten())
+            .min_by_key(|height| height_sort_key(*height))
+        {
+            let spent = self.spent_by_known_txs(min_height, &txids_new, new_txs);
+            outputs_new.retain(|(op, _)| !spent.contains(op));
+        }
 
         let inputs_new: HashSet<OutPoint> = txids_new
             .iter()

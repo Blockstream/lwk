@@ -19,18 +19,25 @@ pub struct WebSocketSerial {
 }
 
 impl WebSocketSerial {
+    /// Opens a WebSocket in binary mode, equivalent to `new_binary`
     pub async fn new(url: &str) -> Result<Self, Error> {
         Self::new_with_protocol(url, None, false).await
     }
 
+    /// Opens a WebSocket in binary mode
     pub async fn new_binary(url: &str) -> Result<Self, Error> {
         Self::new_with_protocol(url, None, false).await
     }
 
+    /// Opens a WebSocket in text mode
     pub async fn new_text(url: &str) -> Result<Self, Error> {
         Self::new_with_protocol(url, None, true).await
     }
 
+    /// Opens a WebSocket with an optional subprotocol
+    ///
+    /// With `text_mode` enabled, send UTF-8 text and buffer incoming text messages,
+    /// otherwise, send and buffer binary messages.
     pub async fn new_with_protocol(
         url: &str,
         protocol: Option<&str>,

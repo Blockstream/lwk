@@ -53,6 +53,7 @@ impl JadeWebSocket {
         })
     }
 
+    /// Disconnects from the device by logging out and closing the WebSocket connection.
     pub async fn disconnect(&self) -> Result<(), Error> {
         let _ = self.inner.logout().await;
         let stream = self.inner.stream().lock().await;
@@ -60,12 +61,14 @@ impl JadeWebSocket {
         Ok(())
     }
 
+    /// Returns the device's firmware version and status information.
     #[wasm_bindgen(js_name = getVersion)]
     pub async fn get_version(&self) -> Result<JsValue, Error> {
         let version = self.inner.version_info().await?;
         Ok(serde_wasm_bindgen::to_value(&version)?)
     }
 
+    /// Returns the device's master extended public key.
     #[wasm_bindgen(js_name = getMasterXpub)]
     pub async fn get_master_xpub(&self) -> Result<Xpub, Error> {
         self.inner.unlock().await?;
@@ -167,17 +170,20 @@ impl JadeWebSocket {
         Ok(pset.into())
     }
 
+    /// Returns the native SegWit singlesig descriptor with SLIP-77 blinding.
     pub async fn wpkh(&self) -> Result<WolletDescriptor, Error> {
         self.inner.unlock().await?;
         self.desc(lwk_common::Singlesig::Wpkh).await
     }
 
+    /// Returns the nested SegWit singlesig descriptor with SLIP-77 blinding.
     #[wasm_bindgen(js_name = shWpkh)]
     pub async fn sh_wpkh(&self) -> Result<WolletDescriptor, Error> {
         self.inner.unlock().await?;
         self.desc(lwk_common::Singlesig::ShWpkh).await
     }
 
+    /// Returns the descriptor of the multisig wallet registered under `name` with SLIP-77 blinding.
     pub async fn multi(&self, name: &str) -> Result<WolletDescriptor, Error> {
         self.inner.unlock().await?;
         let r = self.get_registered_multisig(name).await?;
@@ -190,6 +196,7 @@ impl JadeWebSocket {
             .into())
     }
 
+    /// Returns a list of registered multisig wallet names.
     #[wasm_bindgen(js_name = getRegisteredMultisigs)]
     pub async fn get_registered_multisigs(&self) -> Result<JsValue, Error> {
         self.inner.unlock().await?;
@@ -198,6 +205,8 @@ impl JadeWebSocket {
         Ok(serde_wasm_bindgen::to_value(&wallets_str)?)
     }
 
+    /// Returns the account extended public key with its key origin
+    /// for the given BIP standard and the network.
     #[wasm_bindgen(js_name = keyoriginXpub)]
     pub async fn keyorigin_xpub(&self, bip: &Bip) -> Result<String, Error> {
         self.inner.unlock().await?;
@@ -209,6 +218,9 @@ impl JadeWebSocket {
             .map_err(Error::Generic)?)
     }
 
+    /// Registers a multisig descriptor under `name`.
+    ///
+    /// Returns the device's registration result, or an error if the descriptor is unsupported.
     #[wasm_bindgen(js_name = registerDescriptor)]
     pub async fn register_descriptor(
         &self,

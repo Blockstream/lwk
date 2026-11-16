@@ -260,7 +260,11 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
     }
 }
 
-//https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.HidDevice.html#method.send_report_with_u8_slice
+/// Returns the first previously authorized HID device, or prompts the user to select
+/// a Ledger device. Returns an error if WebHID is unavailable or no device is selected.
+///
+/// Device selection uses the browser's
+/// [WebHID API](https://developer.mozilla.org/en-US/docs/Web/API/HID/requestDevice).
 #[wasm_bindgen(js_name = searchLedgerDevice)]
 pub async fn search_ledger_device() -> Result<HidDevice, Error> {
     let window =

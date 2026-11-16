@@ -21,7 +21,7 @@ pub struct WebSocketSerial {
 impl WebSocketSerial {
     /// Opens a WebSocket in binary mode, equivalent to `new_binary`
     pub async fn new(url: &str) -> Result<Self, Error> {
-        Self::new_with_protocol(url, None, false).await
+        Self::new_binary(url).await
     }
 
     /// Opens a WebSocket in binary mode

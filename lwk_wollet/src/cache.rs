@@ -374,9 +374,14 @@ impl Cache {
         // Remove inputs of new txs (they are spent now)
         self.unspent.retain(|o, _| !inputs_new.contains(o));
         // Remove outputs of deleted txs (after adding inputs, so that an output spent
-        // by another deleted tx does not remain in unspent)
-        self.unspent
-            .retain(|o, _| deleted_txids.iter().all(|txid| txid != &o.txid));
+        // by another deleted tx does not remain in unspent). A merged update can delete
+        // a tx and add it back: `update_heights` deletes before inserting, so the tx
+        // stays in the wallet and its outputs are kept.
+        let removed: HashSet<&Txid> = deleted_txids
+            .iter()
+            .filter(|txid| !txids_new.contains(txid))
+            .collect();
+        self.unspent.retain(|o, _| !removed.contains(&o.txid));
     }
 
     fn update_unspent_from_snapshot(

@@ -6,6 +6,7 @@
 * Removed `Amp2::new_testnet()`, use `Amp2::new()`; also removed old AMP2 testnet consts.
 * Breaking: update the re-exported `age` crate to 0.12. Its `fl!` localization macro dependency emitted arguments in random order, making builds non-deterministic. See the [age 0.12 changelog](https://github.com/str4d/rage/blob/main/age/CHANGELOG.md) for API changes.
 * Breaking: `AddressResult::new()` takes the full derivation path of the address, `None` if unknown, readable with the new `AddressResult::derivation_path()`.
+* Fix `Wollet::utxos()` missing the outputs of a transaction that a merged update deletes and adds back, for example a transaction applied with `Wollet::apply_transaction`, missing from the next scan and returned by a later one. The transaction was listed but its outputs were not counted in the balance. This affected wallets with merged updates (`WolletBuilder::with_merge_threshold()` or `WolletBuilder::with_stores()`) and a non-persisted transaction store, when the persisted updates were applied again, for example on reload.
 
 ## 0.20.0
 

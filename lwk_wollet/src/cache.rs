@@ -641,4 +641,53 @@ mod tests {
 
         assert_eq!(live.all_txids(), restored.all_txids());
     }
+
+    #[test]
+    fn test_merged_delete_and_readd_keeps_output() {
+        use crate::descriptor::Chain;
+        use elements::bitcoin::bip32::ChildNumber;
+        use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+        use elements::{AssetId, OutPoint, Script, TxOut, TxOutSecrets};
+
+        let script = Script::from(vec![0x51]);
+        // A pays one output to a wallet script.
+        let a = Transaction {
+            version: 2,
+            lock_time: elements::LockTime::ZERO,
+            input: vec![],
+            output: vec![TxOut {
+                script_pubkey: script.clone(),
+                ..Default::default()
+            }],
+        };
+        let a_txid = a.txid();
+        let a0 = OutPoint::new(a_txid, 0);
+
+        let mut cache = Cache::default();
+        cache
+            .paths
+            .insert(script, (Chain::External, ChildNumber::from(0)));
+        let secrets = TxOutSecrets::new(
+            AssetId::from_byte_array([1u8; 32]),
+            AssetBlindingFactor::zero(),
+            1000,
+            ValueBlindingFactor::zero(),
+        );
+        cache.extend_unblinded([(a0, secrets)]);
+
+        // `Update::merge` of "A new", "A deleted" and "A new" again lists A both as new
+        // and as deleted.
+        cache
+            .update(
+                &[(a_txid, Some(100))],
+                &[a_txid],
+                &[(a_txid, a)],
+                false,
+                vec![],
+                false,
+            )
+            .unwrap();
+        assert!(cache.heights().contains_key(&a_txid));
+        assert!(cache.unspent().contains_key(&a0));
+    }
 }

@@ -19,6 +19,7 @@ This section showcases a series of projects that are built on LWK or its compone
 |[Satsails](https://www.satsails.com/)| Wallet| Wallet| Dart|
 |[Shopstr](https://shopstr.store/)| Nostr Marketplace| Server| TypeScript|
 |[Ibis Wallet](https://github.com/aeonBTC/IbisWallet)| Atomic swaps| Wallet| Kotlin|
+|[EmVault](https://github.com/gmikeska/emvault)| Multisig custody| Library| Rust|
 
 
 Feel free to open a PR to add or remove your product.
@@ -152,6 +153,14 @@ A self-custody Bitcoin wallet for Android, inspired by Sparrow Wallet but built 
 Ibis has support fo BTC (via BDK), LBTC and LN (via LWK and Boltz).
 
 Ibis is open source, source available in the [Github repository](https://github.com/aeonBTC/IbisWallet)
+
+
+## EmVault
+[EmVault](https://github.com/gmikeska/emvault) is an open-source Rust multisig custody library for Bitcoin and Liquid, created by the [Emerald Foundation](https://emerald-foundation.com).
+
+EmVault uses LWK (`lwk_wollet` and `lwk_common`) for its Liquid support, with Electrum and Esplora/Waterfalls sync built on the LWK clients.
+
+EmVault is open source, source available in the [Github repository](https://github.com/gmikeska/emvault)
 
 
 # Unknown users

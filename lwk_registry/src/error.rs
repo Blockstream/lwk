@@ -34,6 +34,18 @@ pub enum Error {
     #[error("Invalid issuer pubkey")]
     InvalidIssuerPubkey,
 
+    #[error("Invalid initial issuer pubkey")]
+    InvalidInitialIssuerPubkey,
+
+    #[error("Issuer pubkey is not allowed in the version 2 of the contract")]
+    IssuerPubkeyInV2,
+
+    #[error("Missing issuer pubkey for the version 0 of the contract")]
+    MissingIssuerPubkey,
+
+    #[error("Missing initial issuer pubkey for the version 2 of the contract")]
+    MissingInitialIssuerPubkey,
+
     #[error(transparent)]
     StdIOError(#[from] std::io::Error),
 

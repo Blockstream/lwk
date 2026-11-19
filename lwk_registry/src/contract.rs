@@ -50,8 +50,22 @@ pub struct Contract {
     /// The entity of the asset, such as the domain of the issuer
     entity: Entity,
 
-    #[serde(deserialize_with = "serde_from_hex", serialize_with = "serde_to_hex")]
-    /// The public key of the issuer, 33 bytes long.
+    #[serde(
+        default,
+        deserialize_with = "serde_from_hex",
+        serialize_with = "serde_to_hex",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    /// The initial public key of the issuer, 33 bytes long. Version 2 only
+    initial_issuer_pubkey: Vec<u8>,
+
+    #[serde(
+        default,
+        deserialize_with = "serde_from_hex",
+        serialize_with = "serde_to_hex",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    /// The public key of the issuer, 33 bytes long. Version 0 only
     issuer_pubkey: Vec<u8>,
 
     /// The name of the asset
@@ -69,7 +83,7 @@ pub struct Contract {
     /// The ticker must be 3 to 24 characters long and can only contain letters, numbers, dots and hyphens.
     ticker: String,
 
-    /// The version of the contract, currently only 0 is supported
+    /// The version of the contract, currently only 0 and 2 are supported
     version: u8,
 }
 
@@ -82,6 +96,11 @@ impl Contract {
     /// The issuer public key.
     pub fn issuer_pubkey(&self) -> &[u8] {
         &self.issuer_pubkey
+    }
+
+    /// The initial issuer public key.
+    pub fn initial_issuer_pubkey(&self) -> &[u8] {
+        &self.initial_issuer_pubkey
     }
 
     /// The entity of the asset, such as the domain of the issuer.
@@ -114,10 +133,6 @@ impl Contract {
     /// If this method doesn't error the contract is semantically valid.
     /// Its publication can still fail when published if the proof on the domain is not valid.
     pub fn validate(&self) -> Result<(), Error> {
-        if self.version != 0 {
-            return Err(Error::InvalidVersion);
-        }
-
         if self.precision > 8 {
             return Err(Error::InvalidPrecision);
         }
@@ -125,15 +140,36 @@ impl Contract {
         if !RE_NAME.is_match(&self.name) {
             return Err(Error::InvalidName);
         }
+        if self.version == 2 && self.name.trim().is_empty() {
+            return Err(Error::InvalidName);
+        }
 
         if !RE_TICKER.is_match(&self.ticker) {
             return Err(Error::InvalidTicker);
         }
 
-        verify_pubkey(&self.issuer_pubkey).map_err(|_| Error::InvalidIssuerPubkey)?;
-
         let Entity::Domain(domain) = &self.entity;
         verify_domain_name(domain)?;
+
+        match self.version {
+            0 => {
+                if self.issuer_pubkey.is_empty() {
+                    return Err(Error::MissingIssuerPubkey);
+                }
+                verify_pubkey(&self.issuer_pubkey).map_err(|_| Error::InvalidIssuerPubkey)?;
+            }
+            2 => {
+                if self.initial_issuer_pubkey.is_empty() {
+                    return Err(Error::MissingInitialIssuerPubkey);
+                }
+                if !self.issuer_pubkey.is_empty() {
+                    return Err(Error::IssuerPubkeyInV2);
+                }
+                verify_pubkey(&self.initial_issuer_pubkey)
+                    .map_err(|_| Error::InvalidInitialIssuerPubkey)?;
+            }
+            _ => return Err(Error::InvalidVersion),
+        }
 
         Ok(())
     }
@@ -166,6 +202,7 @@ impl FromStr for Contract {
 pub struct ContractBuilder {
     entity: Option<Entity>,
     issuer_pubkey: Option<Vec<u8>>,
+    initial_issuer_pubkey: Option<Vec<u8>>,
     name: Option<String>,
     precision: Option<u8>,
     ticker: Option<String>,
@@ -183,6 +220,7 @@ impl ContractBuilder {
         Self {
             entity: None,
             issuer_pubkey: None,
+            initial_issuer_pubkey: None,
             name: None,
             precision: None,
             ticker: None,
@@ -197,6 +235,11 @@ impl ContractBuilder {
 
     pub fn issuer_pubkey(mut self, pk: Vec<u8>) -> Self {
         self.issuer_pubkey = Some(pk);
+        self
+    }
+
+    pub fn initial_issuer_pubkey(mut self, pk: Vec<u8>) -> Self {
+        self.initial_issuer_pubkey = Some(pk);
         self
     }
 
@@ -224,6 +267,7 @@ impl ContractBuilder {
         Ok(Contract {
             entity: self.entity.unwrap_or(Entity::Domain(String::new())),
             issuer_pubkey: self.issuer_pubkey.unwrap_or_default(),
+            initial_issuer_pubkey: self.initial_issuer_pubkey.unwrap_or_default(),
             name: self.name.unwrap_or_default(),
             precision: self.precision.unwrap_or(0),
             ticker: self.ticker.unwrap_or_default(),
@@ -302,6 +346,8 @@ mod tests {
         assert!(contract.validate().is_ok());
 
         contract.issuer_pubkey = vec![2];
+        assert!(contract.validate().is_err());
+        contract.issuer_pubkey = vec![];
         assert!(contract.validate().is_err());
         contract.issuer_pubkey = vec![2; 33];
         assert!(contract.validate().is_ok());

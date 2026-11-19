@@ -14,6 +14,7 @@ mod pegin;
 mod prune;
 #[cfg(feature = "registry")]
 mod registry;
+mod script_cache;
 mod spks;
 mod stores;
 mod test_jade;

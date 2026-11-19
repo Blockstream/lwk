@@ -397,6 +397,47 @@ mod tests {
     }
 
     #[test]
+    fn test_registry_v2() {
+        let contract_string = "{\"entity\":{\"domain\":\"example-issuer.com\"},\"initial_issuer_pubkey\":\"03566ecb682f1a49ccad62a6dbc5b4045d96d65912bbbb177b7121c27c01d91e6e\",\"name\":\"Example Dollar\",\"precision\":8,\"ticker\":\"EXUSD\",\"version\":2}";
+        let contract_value = serde_json::Value::from_str(contract_string).unwrap();
+        let contract = Contract::from_value(&contract_value).unwrap();
+        contract.validate().unwrap();
+        assert_eq!(
+            serde_json::to_string(&contract).unwrap(),
+            contract_string.to_string()
+        );
+        // From https://docs.liquid.net/docs/asset-registry-v2-register
+        assert_eq!(
+            contract.contract_hash().unwrap().to_string(),
+            "d0d6126a9574aaf930fead73d0859da1c807cc0756ae6ca77392fd14418c6f9e".to_string()
+        );
+
+        // Failing tests
+        let mut contract = Contract::from_value(&contract_value).unwrap();
+
+        contract.initial_issuer_pubkey = vec![2];
+        assert!(matches!(
+            contract.validate(),
+            Err(Error::InvalidInitialIssuerPubkey)
+        ));
+        contract.initial_issuer_pubkey = vec![];
+        assert!(matches!(
+            contract.validate(),
+            Err(Error::MissingInitialIssuerPubkey)
+        ));
+        contract.initial_issuer_pubkey = vec![2; 33];
+        assert!(contract.validate().is_ok());
+
+        contract.name = "   ".to_string();
+        assert!(matches!(contract.validate(), Err(Error::InvalidName)));
+        contract.name = "Example Dollar".to_string();
+        assert!(contract.validate().is_ok());
+
+        contract.issuer_pubkey = vec![2; 33];
+        assert!(matches!(contract.validate(), Err(Error::IssuerPubkeyInV2)));
+    }
+
+    #[test]
     fn entity_domain_returns_inner_domain() {
         let entity = Entity::Domain("example.com".to_string());
         assert_eq!(entity.domain(), "example.com");

@@ -1222,6 +1222,11 @@ impl EsploraClientBuilder {
         }
         let headers = (&self.headers).try_into().expect("Expected valid headers");
         let builder = reqwest::Client::builder().default_headers(headers);
+        #[cfg(not(target_arch = "wasm32"))]
+        let builder = match &self.proxy {
+            Some(proxy) => builder.proxy(reqwest::Proxy::all(proxy)?),
+            None => builder,
+        };
         let timeout = self
             .timeout
             .map(|t| std::time::Duration::from_secs(t as u64));
@@ -1575,6 +1580,50 @@ mod tests {
             .utxo_only(true)
             .build();
         assert!(client.is_err());
+    }
+
+    #[tokio::test]
+    async fn proxy_is_asked_to_resolve_the_server() {
+        use std::io::Write;
+
+        // A SOCKS5 proxy that reads one CONNECT request and refuses it: enough to see that
+        // the client goes to the proxy, and hands it the server host name to resolve.
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let proxy = format!("socks5h://{}", listener.local_addr().unwrap());
+        let handle = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut greeting = [0u8; 2];
+            stream.read_exact(&mut greeting).unwrap();
+            let mut methods = vec![0u8; greeting[1] as usize];
+            stream.read_exact(&mut methods).unwrap();
+            stream.write_all(&[0x05, 0x00]).unwrap(); // no authentication required
+            let mut head = [0u8; 5]; // version, command, reserved, address type, name length
+            stream.read_exact(&mut head).unwrap();
+            let mut name = vec![0u8; head[4] as usize];
+            stream.read_exact(&mut name).unwrap();
+            let mut port = [0u8; 2];
+            stream.read_exact(&mut port).unwrap();
+            // reply "host unreachable", bound address 0.0.0.0:0
+            stream
+                .write_all(&[0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0])
+                .unwrap();
+            (head, name, u16::from_be_bytes(port))
+        });
+
+        let mut client = EsploraClientBuilder::new("http://example.onion", Network::Liquid)
+            .proxy(&proxy)
+            .build()
+            .unwrap();
+        assert!(
+            client.tip().await.is_err(),
+            "the proxy refused the connection"
+        );
+
+        let (head, name, port) = handle.join().unwrap();
+        // CONNECT (0x01) to a domain name (0x03): the host is not resolved locally
+        assert_eq!(head[..4], [0x05, 0x01, 0x00, 0x03]);
+        assert_eq!(name, b"example.onion");
+        assert_eq!(port, 80);
     }
 
     /// Regression test for the 422 carve-out in `get_with_retry`.

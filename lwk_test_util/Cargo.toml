@@ -12,7 +12,6 @@ lwk_common = { version = "0.20.0" }
 lwk_containers = { version = "0.20.0" }
 
 electrsd = { version = "0.29.0", features = ["legacy"] }
-clightningrpc = "0.3.0-beta.8"
 elements-miniscript.workspace = true
 serde_json.workspace = true
 log.workspace = true
@@ -23,3 +22,6 @@ tempfile.workspace = true
 bip39 = "2.0.0"
 
 reqwest.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+clightningrpc = "0.3.0-beta.8"

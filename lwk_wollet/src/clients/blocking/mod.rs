@@ -156,7 +156,8 @@ pub trait BlockchainBackend {
     /// [BIP44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki#address-gap-limit).
     ///
     /// Returns `Some(Update)` if any changes were found during scanning, or `None` if no changes
-    /// were detected.
+    /// were detected. UTXO-only scans conservatively return an update because they replace
+    /// the unspent-output snapshot.
     ///
     /// To scan beyond the gap limit use [`BlockchainBackend::full_scan_to_index()`] instead.
     fn full_scan<S: WolletState>(&mut self, state: &S) -> Result<Option<Update>, Error> {
@@ -239,7 +240,8 @@ pub trait BlockchainBackend {
         let heights_in_db: HashSet<Height> =
             state.heights().iter().filter_map(|(_, h)| *h).collect();
         let heights_to_download: Vec<Height> = history_txs_heights_plus_tip
-            .difference(&heights_in_db)
+            .iter()
+            .filter(|height| state.timestamp(**height).is_none() || !heights_in_db.contains(height))
             .cloned()
             .collect();
         if !heights_to_download.is_empty() {
@@ -322,43 +324,49 @@ pub(crate) fn full_scan_to_index_default<B: BlockchainBackend + ?Sized, S: Wolle
     let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
     let new_txs = backend.download_txs(&history_txs_id, &scripts, state, &descriptor)?;
 
-    let history_txs_heights_plus_tip: HashSet<Height> = txid_height
+    // The tip header is already available, including after a same-height reorg.
+    let history_txs_heights: HashSet<Height> = txid_height
         .values()
         .filter_map(|e| *e)
-        .chain(std::iter::once(tip.height))
+        .filter(|height| *height != tip.height)
         .collect();
-    let timestamps =
-        backend.download_headers(&history_txs_heights_plus_tip, &height_blockhash, state)?;
+    let mut timestamps =
+        backend.download_headers(&history_txs_heights, &height_blockhash, state)?;
+    timestamps.push((tip.height, tip.time));
+    timestamps.retain(|(height, timestamp)| state.timestamp(*height) != Some(*timestamp));
 
-    let cache_last_unused_external = state.last_unused()[Chain::External];
-    let cache_last_unused_internal = state.last_unused()[Chain::Internal];
+    let cached_last_unused = state.last_unused();
+    let last_unused_changed = last_unused.external > cached_last_unused.external
+        || last_unused.internal > cached_last_unused.internal;
 
-    let last_unused_changed = cache_last_unused_external != last_unused.external
-        || cache_last_unused_internal != last_unused.internal;
+    let txid_height_new: Vec<_> = txid_height
+        .iter()
+        .filter(|(k, v)| match state.heights().get(*k) {
+            Some(e) => e != *v,
+            None => true,
+        })
+        .map(|(k, v)| (*k, *v))
+        .collect();
+    let txid_height_delete: Vec<_> = state
+        .heights()
+        .keys()
+        .filter(|k| !txid_height.contains_key(*k))
+        .cloned()
+        .collect();
 
     let changed = !new_txs.txs.is_empty()
+        || !new_txs.unblinds.is_empty()
+        || !txid_height_new.is_empty()
+        || !txid_height_delete.is_empty()
         || last_unused_changed
         || !scripts.is_empty()
         || !timestamps.is_empty()
-        || state.tip() != (tip.height, tip.block_hash());
+        || state.tip() != (tip.height, tip.block_hash())
+        // UTXO-only scans replace the unspent snapshot, even when it is empty.
+        || state.utxo_only();
 
     if changed {
-        log::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !timestamps.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timestamps.is_empty() );
-
-        let txid_height_new: Vec<_> = txid_height
-            .iter()
-            .filter(|(k, v)| match state.heights().get(*k) {
-                Some(e) => e != *v,
-                None => true,
-            })
-            .map(|(k, v)| (*k, *v))
-            .collect();
-        let txid_height_delete: Vec<_> = state
-            .heights()
-            .keys()
-            .filter(|k| !txid_height.contains_key(*k))
-            .cloned()
-            .collect();
+        log::debug!("scan found an update");
         let wollet_status = state.wollet_status();
 
         let scripts_with_blinding_pubkey: Vec<(_, _, _, _)> = scripts

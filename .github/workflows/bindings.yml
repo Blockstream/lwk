@@ -41,8 +41,7 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v6
-      - run: rm rust-toolchain.toml # otherwise try to use version specified in it
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
         with:
           targets: ${{ matrix.target }}
       - run: cargo build --release --target ${{ matrix.target }} -p lwk_bindings
@@ -81,7 +80,7 @@ jobs:
         with:
           name: bindings-x86_64-unknown-linux-gnu
           path: target/
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
       - run: |
           cargo install --locked uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --tag v0.10.0+v0.31.0
           uniffi-bindgen-cpp --library target/liblwk.so --out-dir target
@@ -102,7 +101,7 @@ jobs:
         with:
           name: bindings-x86_64-unknown-linux-gnu
           path: target/
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
       - run: |
           cargo install --locked uniffi-bindgen-cs --git https://github.com/NordSecurity/uniffi-bindgen-cs --tag v0.11.1+v0.31.0
           uniffi-bindgen-cs --library target/liblwk.so --out-dir target

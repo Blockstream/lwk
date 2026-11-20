@@ -140,7 +140,7 @@ Add a `just` recipe when adding a complex flow.
 ## Code Style Guidelines
 
 ### Rust Version
-- Rust toolchain: **1.91.0** (specified in `rust-toolchain.toml`)
+- Rust toolchain: **1.100.0** (specified in `rust-toolchain.toml`)
 - Edition: **2021**
 
 ### Dependencies

@@ -6,6 +6,7 @@ mod desc;
 mod fee;
 mod generate;
 mod http;
+#[cfg(unix)]
 mod lightningd;
 mod log;
 mod mnemonic;

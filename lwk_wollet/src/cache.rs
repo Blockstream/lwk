@@ -18,6 +18,11 @@ fn tx_key(txid: &Txid) -> String {
     format!("wollet:tx:{}", txid)
 }
 
+/// Height used to order txs, unconfirmed txs (`None`) are considered above any confirmed tx.
+fn height_sort_key(height: Option<Height>) -> Height {
+    height.unwrap_or(Height::MAX)
+}
+
 /// `Cache` is a cache of wallet data, like wallet transactions.
 /// It is fully reconstructable from the CT Descriptor and the blockchain.
 pub struct Cache {
@@ -318,11 +323,37 @@ impl Cache {
         let mut sorted: Vec<Txid> = self.heights.keys().cloned().collect();
         sorted.sort_by(|a, b| {
             // cannot panic here, sorted is heights keys
-            let ha = self.heights[a].unwrap_or(u32::MAX);
-            let hb = self.heights[b].unwrap_or(u32::MAX);
+            let ha = height_sort_key(self.heights[a]);
+            let hb = height_sort_key(self.heights[b]);
             hb.cmp(&ha).then(b.cmp(a))
         });
         self.sorted_txids = sorted;
+    }
+
+    /// Outpoints spent by the known txs (in `heights` but not in `skip`) that can spend an
+    /// output of a tx at `min_height` or above.
+    ///
+    /// A spending tx cannot confirm before the tx it spends, so only the txs at `min_height` or
+    /// above, and the unconfirmed ones, are read. `sorted_txids` is ordered by descending height
+    /// with unconfirmed txs first, so the iteration stops at the first lower tx. This assumes the
+    /// cached heights are consistent with each other, and requires `sorted_txids` to be rebuilt
+    /// after `heights` is updated.
+    fn spent_by_known_txs(
+        &self,
+        min_height: Option<Height>,
+        skip: &HashSet<&Txid>,
+        txs: &[(Txid, Transaction)],
+    ) -> HashSet<OutPoint> {
+        let min_key = height_sort_key(min_height);
+        self.sorted_txids
+            .iter()
+            .take_while(|txid| {
+                height_sort_key(self.heights.get(*txid).copied().flatten()) >= min_key
+            })
+            .filter(|txid| !skip.contains(txid))
+            .filter_map(|txid| self.tx_as_fallback(txid, txs))
+            .flat_map(|tx| tx.input.into_iter().map(|i| i.previous_output))
+            .collect()
     }
 
     fn update_unspent(
@@ -334,7 +365,7 @@ impl Cache {
     ) {
         let txids_new: HashSet<&Txid> = txid_height_new.iter().map(|(txid, _)| txid).collect();
 
-        let outputs_new: Vec<(OutPoint, Script)> = self
+        let mut outputs_new: Vec<(OutPoint, Script)> = self
             .unblinded
             .keys()
             .filter(|op| txids_new.contains(&op.txid))
@@ -346,6 +377,18 @@ impl Cache {
             })
             .filter(|(_, script)| self.paths.contains_key(script))
             .collect();
+
+        // A tx that is new to `heights` can have outputs already spent by a known tx, for example
+        // when it comes back after being deleted by a previous update, or when its spending tx
+        // was found first. Inputs of the txs in this update are removed below.
+        if let Some(min_height) = outputs_new
+            .iter()
+            .map(|(op, _)| self.heights.get(&op.txid).copied().flatten())
+            .min_by_key(|height| height_sort_key(*height))
+        {
+            let spent = self.spent_by_known_txs(min_height, &txids_new, new_txs);
+            outputs_new.retain(|(op, _)| !spent.contains(op));
+        }
 
         let inputs_new: HashSet<OutPoint> = txids_new
             .iter()
@@ -635,5 +678,115 @@ mod tests {
             .unwrap();
 
         assert_eq!(live.all_txids(), restored.all_txids());
+    }
+
+    #[test]
+    fn test_output_spent_by_known_tx_is_not_unspent() {
+        use crate::descriptor::Chain;
+        use elements::bitcoin::bip32::ChildNumber;
+        use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+        use elements::{AssetId, OutPoint, Script, TxIn, TxOut, TxOutSecrets};
+
+        let script = Script::from(vec![0x51]);
+        // A pays one output to a wallet script.
+        let a = Transaction {
+            version: 2,
+            lock_time: elements::LockTime::ZERO,
+            input: vec![],
+            output: vec![TxOut {
+                script_pubkey: script.clone(),
+                ..Default::default()
+            }],
+        };
+        let a_txid = a.txid();
+        let a0 = OutPoint::new(a_txid, 0);
+        // B spends A:0.
+        let b = Transaction {
+            version: 2,
+            lock_time: elements::LockTime::ZERO,
+            input: vec![TxIn {
+                previous_output: a0,
+                ..Default::default()
+            }],
+            output: vec![],
+        };
+        let b_txid = b.txid();
+        let secrets = TxOutSecrets::new(
+            AssetId::from_byte_array([1u8; 32]),
+            AssetBlindingFactor::zero(),
+            1000,
+            ValueBlindingFactor::zero(),
+        );
+
+        // (new txids with heights, deleted txids, downloaded txs)
+        type Step = (
+            Vec<(Txid, Option<u32>)>,
+            Vec<Txid>,
+            Vec<(Txid, Transaction)>,
+        );
+        let a_seen =
+            |height| -> Step { (vec![(a_txid, height)], vec![], vec![(a_txid, a.clone())]) };
+        let a_back = |height| -> Step { (vec![(a_txid, height)], vec![], vec![]) };
+        let b_seen =
+            |height| -> Step { (vec![(b_txid, height)], vec![], vec![(b_txid, b.clone())]) };
+        let a_missing: Step = (vec![], vec![a_txid], vec![]);
+
+        let cases: Vec<(&str, Vec<Step>, bool)> = vec![
+            (
+                // A drops out of the history for one scan while B stays, then comes back.
+                "re-added tx, confirmed spender",
+                vec![
+                    a_seen(Some(100)),
+                    b_seen(Some(101)),
+                    a_missing.clone(),
+                    a_back(Some(100)),
+                ],
+                false,
+            ),
+            (
+                "re-added tx, unconfirmed spender",
+                vec![
+                    a_seen(Some(100)),
+                    b_seen(None),
+                    a_missing.clone(),
+                    a_back(Some(100)),
+                ],
+                false,
+            ),
+            (
+                // B is found first, through another wallet script, then A is found.
+                "first seen tx, already known spender",
+                vec![b_seen(Some(101)), a_seen(Some(100))],
+                false,
+            ),
+            (
+                "first seen tx, already known spender in the same block",
+                vec![b_seen(Some(100)), a_seen(Some(100))],
+                false,
+            ),
+            (
+                "re-added tx, no spender",
+                vec![a_seen(Some(100)), a_missing, a_back(Some(100))],
+                true,
+            ),
+        ];
+
+        for (name, steps, expected_unspent) in cases {
+            let mut cache = Cache::default();
+            cache
+                .paths
+                .insert(script.clone(), (Chain::External, ChildNumber::from(0)));
+            cache.extend_unblinded([(a0, secrets)]);
+            for (new, deleted, txs) in steps {
+                cache
+                    .update(&new, &deleted, &txs, false, vec![], false)
+                    .unwrap();
+            }
+            assert_eq!(
+                cache.unspent().contains_key(&a0),
+                expected_unspent,
+                "{name}"
+            );
+        }
     }
 }

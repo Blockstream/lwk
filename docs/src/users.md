@@ -19,6 +19,7 @@ This section showcases a series of projects that are built on LWK or its compone
 |[Satsails](https://www.satsails.com/)| Wallet| Wallet| Dart|
 |[Shopstr](https://shopstr.store/)| Nostr Marketplace| Server| TypeScript|
 |[Ibis Wallet](https://github.com/aeonBTC/IbisWallet)| Atomic swaps| Wallet| Kotlin|
+|[GroupVault](https://groupvault.io)| Multisig custody| Wallet| Closed source|
 
 
 Feel free to open a PR to add or remove your product.
@@ -152,6 +153,14 @@ A self-custody Bitcoin wallet for Android, inspired by Sparrow Wallet but built 
 Ibis has support fo BTC (via BDK), LBTC and LN (via LWK and Boltz).
 
 Ibis is open source, source available in the [Github repository](https://github.com/aeonBTC/IbisWallet)
+
+
+## GroupVault
+[GroupVault](https://groupvault.io) is a multisig custody platform for groups and individuals, with vaults on both Bitcoin and Liquid.
+
+GroupVault uses LWK through [EmVault](https://github.com/gmikeska/emvault), the open-source custody library created by the Emerald Foundation, and uses LWK_wasm in the browser for Jade PSET signing.
+
+GroupVault is closed source.
 
 
 # Unknown users

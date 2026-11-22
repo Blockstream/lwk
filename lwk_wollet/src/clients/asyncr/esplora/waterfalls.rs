@@ -548,4 +548,70 @@ mod tests {
         };
         assert!(matches!(err, Error::EsploraHttpError { status: 422, .. }));
     }
+
+    #[tokio::test]
+    async fn full_scan_last_unused_spans_pages() {
+        let tx = lwk_test_util::liquid_block_1().txdata.remove(0);
+        let header = lwk_test_util::liquid_block_header_2_963_520();
+        let tip = header.block_hash();
+        let external = "elwpkh(tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/0/*)";
+        let seen = serde_json::json!([{ "txid": tx.txid(), "height": 0 }]);
+
+        // Index 0 used on the first page, index 3 used on the second page
+        let mut page0 = vec![serde_json::json!([]); 1_000];
+        page0[0] = seen.clone();
+        let mut page1 = vec![serde_json::json!([]); 5];
+        page1[3] = seen;
+        let page = |p: u16, history: Vec<serde_json::Value>| {
+            serde_json::json!({ "txs_seen": { external: history }, "page": p, "tip": tip })
+                .to_string()
+                .into_bytes()
+        };
+        let page0 = page(0, page0);
+        let page1 = page(1, page1);
+        let tx_raw = elements::encode::serialize(&tx);
+        let header_hex = elements::encode::serialize_hex(&header).into_bytes();
+        let tip_hex = tip.to_string().into_bytes();
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        thread::spawn(move || loop {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = vec![0u8; 8192];
+            let len = stream.read(&mut request).unwrap_or(0);
+            let request = String::from_utf8_lossy(&request[..len]);
+            let body = if request.starts_with("GET /v2/waterfalls") {
+                if request.contains("&page=0&") {
+                    &page0
+                } else {
+                    &page1
+                }
+            } else if request.starts_with("GET /tx/") {
+                &tx_raw
+            } else if request.starts_with("GET /block-height/") {
+                &tip_hex
+            } else {
+                &header_hex
+            };
+            let _ = write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            );
+            let _ = stream.write_all(body);
+        });
+
+        let mut client = WaterfallsClientBuilder::new(&format!("http://{addr}"), Network::Liquid)
+            .build()
+            .unwrap();
+        client.avoid_encryption();
+        let mut wollet = WolletBuilder::new(Network::Liquid, descriptor())
+            .build()
+            .unwrap();
+
+        let update = client.full_scan(&wollet).await.unwrap().unwrap();
+        wollet.apply_update(update).unwrap();
+
+        assert_eq!(wollet.address(None).unwrap().index(), 1_004);
+    }
 }

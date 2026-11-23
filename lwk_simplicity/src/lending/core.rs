@@ -168,6 +168,17 @@ impl LendingSession {
             .ok_or_else(|| LendingError::Generic("program vout out of bounds".into()))?
             .clone();
 
+        let auth_is_wallet_utxo = self.wollet.explicit_utxos()?.into_iter().any(|utxo| {
+            utxo.outpoint == factory.auth_utxo
+                && utxo.unblinded.asset == factory_asset_id
+                && utxo.unblinded.value == NFT_AMOUNT
+        });
+        if !auth_is_wallet_utxo {
+            return Err(LendingError::InvalidIssuanceFactory(
+                "factory auth UTXO is not an unspent wallet UTXO".into(),
+            ));
+        }
+
         let collateral_utxo =
             self.get_utxo(details.collateral_asset_id, details.collateral_amount, &[])?;
 

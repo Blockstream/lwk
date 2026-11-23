@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::Error;
 use wasm_bindgen::prelude::*;
 
@@ -51,8 +53,14 @@ impl Contract {
         Ok(Self { inner })
     }
 
+    /// Creates a `Contract` from its JSON string representation.
+    #[wasm_bindgen(js_name = fromString)]
+    pub fn from_string(contract: &str) -> Result<Contract, Error> {
+        let inner = lwk_wollet::Contract::from_str(contract)?;
+        Ok(Self { inner })
+    }
+
     /// Return the string representation of the contract.
-    // TODO: implement the viceversa Contract::from_str
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{self}")

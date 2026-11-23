@@ -727,4 +727,158 @@ mod tests {
 
         assert_eq!(live.all_txids(), restored.all_txids());
     }
+
+    #[test]
+    fn test_output_spent_by_known_tx_is_not_unspent() {
+        use crate::descriptor::Chain;
+        use elements::bitcoin::bip32::ChildNumber;
+        use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+        use elements::{AssetId, OutPoint, Script, TxIn, TxOut, TxOutSecrets};
+
+        let script = Script::from(vec![0x51]);
+        // A pays one output to a wallet script.
+        let a = Transaction {
+            version: 2,
+            lock_time: elements::LockTime::ZERO,
+            input: vec![],
+            output: vec![TxOut {
+                script_pubkey: script.clone(),
+                ..Default::default()
+            }],
+        };
+        let a_txid = a.txid();
+        let a0 = OutPoint::new(a_txid, 0);
+        // B spends A:0.
+        let b = Transaction {
+            version: 2,
+            lock_time: elements::LockTime::ZERO,
+            input: vec![TxIn {
+                previous_output: a0,
+                ..Default::default()
+            }],
+            output: vec![],
+        };
+        let b_txid = b.txid();
+        let secrets = TxOutSecrets::new(
+            AssetId::from_byte_array([1u8; 32]),
+            AssetBlindingFactor::zero(),
+            1000,
+            ValueBlindingFactor::zero(),
+        );
+
+        // (new txids with heights, deleted txids, downloaded txs)
+        type Step = (
+            Vec<(Txid, Option<u32>)>,
+            Vec<Txid>,
+            Vec<(Txid, Transaction)>,
+        );
+        let a_seen =
+            |height| -> Step { (vec![(a_txid, height)], vec![], vec![(a_txid, a.clone())]) };
+        let a_back = |height| -> Step { (vec![(a_txid, height)], vec![], vec![]) };
+        let b_seen =
+            |height| -> Step { (vec![(b_txid, height)], vec![], vec![(b_txid, b.clone())]) };
+        let a_missing: Step = (vec![], vec![a_txid], vec![]);
+        // C is an unrelated wallet tx.
+        let c = Transaction {
+            version: 2,
+            lock_time: elements::LockTime::ZERO,
+            input: vec![],
+            output: vec![],
+        };
+        let c_seen = |height| -> Step {
+            (
+                vec![(c.txid(), height)],
+                vec![],
+                vec![(c.txid(), c.clone())],
+            )
+        };
+
+        let cases: Vec<(&str, Vec<Step>, bool)> = vec![
+            (
+                // A drops out of the history for one scan while B stays, then comes back.
+                "re-added tx, confirmed spender",
+                vec![
+                    a_seen(Some(100)),
+                    b_seen(Some(101)),
+                    a_missing.clone(),
+                    a_back(Some(100)),
+                ],
+                false,
+            ),
+            (
+                "re-added tx, unconfirmed spender",
+                vec![
+                    a_seen(Some(100)),
+                    b_seen(None),
+                    a_missing.clone(),
+                    a_back(Some(100)),
+                ],
+                false,
+            ),
+            (
+                // B is found first, through another wallet script, then A is found.
+                "first seen tx, already known spender",
+                vec![b_seen(Some(101)), a_seen(Some(100))],
+                false,
+            ),
+            (
+                "first seen tx, already known spender in the same block",
+                vec![b_seen(Some(100)), a_seen(Some(100))],
+                false,
+            ),
+            (
+                // A comes back from a server that has not seen block 101 yet, while a previous
+                // scan cached B at 101.
+                "re-added tx reported unconfirmed, spender confirmed",
+                vec![
+                    a_seen(None),
+                    b_seen(None),
+                    (vec![(b_txid, Some(101))], vec![a_txid], vec![]),
+                    a_back(None),
+                ],
+                false,
+            ),
+            (
+                "re-added tx reported unconfirmed, spender confirmed below the last block",
+                vec![
+                    a_seen(None),
+                    b_seen(None),
+                    (vec![(b_txid, Some(101))], vec![a_txid], vec![]),
+                    c_seen(Some(102)),
+                    a_back(None),
+                ],
+                false,
+            ),
+            (
+                // A is first reported by a server that has not seen block 101 yet, then with its
+                // height.
+                "first seen tx reported unconfirmed, then confirmed",
+                vec![b_seen(Some(101)), a_seen(None), a_back(Some(101))],
+                false,
+            ),
+            (
+                "re-added tx, no spender",
+                vec![a_seen(Some(100)), a_missing, a_back(Some(100))],
+                true,
+            ),
+        ];
+
+        for (name, steps, expected_unspent) in cases {
+            let mut cache = Cache::default();
+            cache
+                .paths
+                .insert(script.clone(), (Chain::External, ChildNumber::from(0)));
+            cache.extend_unblinded([(a0, secrets)]);
+            for (new, deleted, txs) in steps {
+                cache
+                    .update(&new, &deleted, &txs, false, vec![], false)
+                    .unwrap();
+            }
+            assert_eq!(
+                cache.unspent().contains_key(&a0),
+                expected_unspent,
+                "{name}"
+            );
+        }
+    }
 }

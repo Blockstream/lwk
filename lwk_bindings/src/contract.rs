@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use crate::{types::AssetId, LwkError, TxIn};
@@ -64,6 +65,13 @@ impl Contract {
             .version(version)
             .build()?;
         inner.validate()?; // TODO validate should be the constructor
+        Ok(Arc::new(Self { inner }))
+    }
+
+    /// Construct a Contract from its JSON string representation.
+    #[uniffi::constructor]
+    pub fn from_string(contract: &str) -> Result<Arc<Self>, LwkError> {
+        let inner = lwk_wollet::Contract::from_str(contract)?;
         Ok(Arc::new(Self { inner }))
     }
 }

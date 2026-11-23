@@ -33,6 +33,7 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/authenticated_esplora_client.py",
     "tests/bindings/scan_limits.py",
     "tests/bindings/authenticated_electrum_client.py",
+    "tests/bindings/electrum_socks5.py",
     "tests/bindings/subscribe.py",
     "tests/bindings/subscribe_reconnecting.py",
     "tests/bindings/xpub.py",

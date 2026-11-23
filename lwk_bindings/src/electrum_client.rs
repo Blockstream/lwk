@@ -34,6 +34,11 @@ pub struct ElectrumClientBuilder {
     /// `tcp://` url is refused.
     #[uniffi(default = false)]
     allow_plaintext_with_token: bool,
+    /// SOCKS5 proxy to connect through, as `host:port`, e.g. `127.0.0.1:9050` for a local
+    /// Tor daemon. The host of the Electrum server is resolved by the proxy, not locally,
+    /// so `.onion` urls work.
+    #[uniffi(default = None)]
+    socks5: Option<String>,
 }
 
 impl From<ElectrumClientBuilder> for lwk_wollet::ElectrumClientBuilder {
@@ -47,6 +52,9 @@ impl From<ElectrumClientBuilder> for lwk_wollet::ElectrumClientBuilder {
         }
         if builder.allow_plaintext_with_token {
             result = result.allow_plaintext_with_token(true);
+        }
+        if let Some(socks5) = builder.socks5 {
+            result = result.socks5(&socks5);
         }
         result
     }

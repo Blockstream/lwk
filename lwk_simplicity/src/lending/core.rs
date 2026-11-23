@@ -27,7 +27,10 @@ use lending_contracts::utils::get_random_seed;
 
 use crate::lending::network::to_simplicity_network;
 use crate::lending::{client::AnyClient, indexer::response::FactoryDetailsResponse};
-use crate::lending::{error::LendingError, verification::parse_and_verify_lending_offer};
+use crate::lending::{
+    error::LendingError,
+    verification::{parse_and_verify_lending_offer, parse_and_verify_offer_acceptance},
+};
 
 pub struct LendingSession {
     network: Network,
@@ -271,6 +274,14 @@ impl LendingSession {
         details: RepaymentDetails,
     ) -> Result<RepayOfferTransaction, LendingError> {
         const FEE_ESTIMATE: u64 = 250;
+        const ACTIVE_COVENANT_VOUT: u32 = 0;
+
+        if details.active_covenant_outpoint.vout != ACTIVE_COVENANT_VOUT {
+            return Err(LendingError::Generic(format!(
+                "active covenant outpoint must reference output {ACTIVE_COVENANT_VOUT}, got {}",
+                details.active_covenant_outpoint.vout
+            )));
+        }
 
         let policy_asset = *self.network.policy_asset();
         let simplex_network = to_simplicity_network(self.network);
@@ -288,7 +299,8 @@ impl LendingSession {
         let creation_tx = self.get_transaction(&creation_txid)?;
         let (factory_auth_tx, factory_tx) = self.extract_auth_and_factory_tx(&creation_tx)?;
 
-        let offer = parse_and_verify_lending_offer(
+        let mut offer = parse_and_verify_offer_acceptance(
+            &acceptance_tx,
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
             simplex_network,
@@ -298,11 +310,10 @@ impl LendingSession {
 
         let offer_params = *offer.get_parameters();
         let total_debt = offer_params.offer_parameters.get_total_amount_to_repay();
-        let mut offer = LendingOffer::new_active(offer_params, total_debt);
 
         let covenant_txout = acceptance_tx
             .output
-            .get(details.active_covenant_outpoint.vout as usize)
+            .get(ACTIVE_COVENANT_VOUT as usize)
             .ok_or_else(|| {
                 LendingError::Generic("covenant output not found in acceptance tx".into())
             })?
@@ -642,7 +653,8 @@ impl LendingSession {
         let creation_tx = self.get_transaction(&creation_txid)?;
         let (factory_auth_tx, factory_tx) = self.extract_auth_and_factory_tx(&creation_tx)?;
 
-        let offer = parse_and_verify_lending_offer(
+        let offer = parse_and_verify_offer_acceptance(
+            &acceptance_tx,
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
             simplex_network,
@@ -841,6 +853,14 @@ impl LendingSession {
         details: LiquidateOfferDetails,
     ) -> Result<LiquidateOfferTransaction, LendingError> {
         const FEE_ESTIMATE: u64 = 250;
+        const ACTIVE_COVENANT_VOUT: u32 = 0;
+
+        if details.active_covenant_outpoint.vout != ACTIVE_COVENANT_VOUT {
+            return Err(LendingError::Generic(format!(
+                "active covenant outpoint must reference output {ACTIVE_COVENANT_VOUT}, got {}",
+                details.active_covenant_outpoint.vout
+            )));
+        }
 
         let policy_asset = *self.network.policy_asset();
         let simplex_network = to_simplicity_network(self.network);
@@ -857,7 +877,8 @@ impl LendingSession {
         let creation_tx = self.get_transaction(&creation_txid)?;
         let (factory_auth_tx, factory_tx) = self.extract_auth_and_factory_tx(&creation_tx)?;
 
-        let offer = parse_and_verify_lending_offer(
+        let offer = parse_and_verify_offer_acceptance(
+            &acceptance_tx,
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
             simplex_network,
@@ -875,12 +896,9 @@ impl LendingSession {
             });
         }
 
-        let total_debt = offer_params.offer_parameters.get_total_amount_to_repay();
-        let offer = LendingOffer::new_active(offer_params, total_debt);
-
         let covenant_txout = acceptance_tx
             .output
-            .get(details.active_covenant_outpoint.vout as usize)
+            .get(ACTIVE_COVENANT_VOUT as usize)
             .ok_or_else(|| {
                 LendingError::Generic("covenant output not found in acceptance tx".into())
             })?

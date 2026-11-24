@@ -208,6 +208,38 @@ pub(crate) fn parse_and_verify_issuance_factory(
     Ok(creation)
 }
 
+pub(crate) fn verify_issuance_factory_utxos(
+    factory: &IssuanceFactory,
+    factory_asset_id: AssetId,
+    auth_txout: &TxOut,
+    program_txout: &TxOut,
+) -> Result<(), LendingError> {
+    let factory_script = factory.get_script_pubkey();
+
+    let (auth_asset, auth_amount, auth_script) = parse_explicit(auth_txout)
+        .map_err(|msg| LendingError::InvalidIssuanceFactory(msg.to_string()))?;
+    if auth_asset != factory_asset_id
+        || auth_amount != 1
+        || auth_script == factory_script
+        || auth_script.is_op_return()
+    {
+        return Err(LendingError::InvalidIssuanceFactory(
+            "factory auth UTXO does not match the verified factory".to_string(),
+        ));
+    }
+
+    let (program_asset, program_amount, program_script) = parse_explicit(program_txout)
+        .map_err(|msg| LendingError::InvalidIssuanceFactory(msg.to_string()))?;
+    if program_asset != factory_asset_id || program_amount != 1 || program_script != factory_script
+    {
+        return Err(LendingError::InvalidIssuanceFactory(
+            "factory program UTXO does not match the verified factory".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
 pub(crate) fn parse_and_verify_lending_offer(
     tx: &Transaction,
     protocol_fee_keeper_asset_id: AssetId,

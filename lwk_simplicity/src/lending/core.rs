@@ -31,7 +31,7 @@ use crate::lending::{
     error::LendingError,
     verification::{
         parse_and_verify_issuance_factory, parse_and_verify_lending_offer,
-        parse_and_verify_offer_acceptance,
+        parse_and_verify_offer_acceptance, verify_issuance_factory_utxos,
     },
 };
 
@@ -178,6 +178,13 @@ impl LendingSession {
                 "factory auth UTXO is not an unspent wallet UTXO".into(),
             ));
         }
+
+        verify_issuance_factory_utxos(
+            &issuance_factory,
+            factory_asset_id,
+            &auth_txout,
+            &program_txout,
+        )?;
 
         let collateral_utxo =
             self.get_utxo(details.collateral_asset_id, details.collateral_amount, &[])?;

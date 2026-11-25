@@ -175,6 +175,7 @@ pub use lwk_common::{
 
 pub use lwk_common::FeeRate;
 pub use lwk_common::Network;
+pub use lwk_common::{verify_tx_inclusion, TxInclusionProof};
 
 #[cfg(feature = "prices")]
 pub use crate::prices::{

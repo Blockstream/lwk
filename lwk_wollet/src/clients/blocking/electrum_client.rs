@@ -5,12 +5,15 @@ use crate::Error;
 use crate::History;
 
 use electrum_client::ScriptStatus;
-use electrum_client::{AuthProvider, Client, ConfigBuilder, ElectrumApi, GetHistoryRes};
+use electrum_client::{
+    AuthProvider, Client, ConfigBuilder, ElectrumApi, GetHistoryRes, GetMerkleRes,
+};
 use elements::bitcoin::hashes::Hash as _;
 use elements::encode::deserialize as elements_deserialize;
 use elements::encode::serialize as elements_serialize;
 use elements::Address;
-use elements::{bitcoin, BlockHash, BlockHeader, Script, Transaction, Txid};
+use elements::{bitcoin, BlockHash, BlockHeader, Script, Transaction, TxMerkleNode, Txid};
+use lwk_common::TxInclusionProof;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -102,6 +105,35 @@ impl ElectrumClient {
     /// Ping the Electrum server
     pub fn ping(&self) -> Result<(), Error> {
         Ok(self.with_token_refresh(|client| client.ping())?)
+    }
+
+    // TODO: consider moving to `BlockchainBackend` once the esplora client implements it too.
+    /// Returns the merkle inclusion proof of each given transaction.
+    ///
+    /// **Experimental**: this API might change without notice.
+    pub fn get_tx_inclusion_proofs(
+        &self,
+        txs: &[(Txid, Height)],
+    ) -> Result<Vec<TxInclusionProof>, Error> {
+        let txs: Vec<(bitcoin::Txid, usize)> = txs
+            .iter()
+            .map(|(txid, height)| {
+                (
+                    bitcoin::Txid::from_byte_array(txid.to_byte_array()),
+                    *height as usize,
+                )
+            })
+            .collect();
+
+        self.with_token_refresh(|client| client.batch_transaction_get_merkle(&txs))?
+            .into_iter()
+            .map(|res| {
+                // Workaround: electrum-client keeps the branch in display byte order,
+                // see `tx_inclusion_proof`.
+                tx_inclusion_proof(res)
+                    .ok_or_else(|| Error::Generic("invalid merkle proof position".to_string()))
+            })
+            .collect()
     }
 
     /// Run an electrum call and, when the server denies it with an authentication error
@@ -326,6 +358,22 @@ impl BlockchainBackend for ElectrumClient {
             .map(|e| e.into_iter().map(Into::into).collect())
             .collect())
     }
+}
+
+fn tx_inclusion_proof(value: GetMerkleRes) -> Option<TxInclusionProof> {
+    // reverse as electrum-client's `utils::validate_merkle_proof` does
+    let branch = value
+        .merkle
+        .into_iter()
+        .map(|mut bytes| {
+            bytes.reverse();
+            TxMerkleNode::from_byte_array(bytes)
+        })
+        .collect();
+
+    let pos = u32::try_from(value.pos).ok()?;
+
+    Some(TxInclusionProof::new(branch, pos))
 }
 
 impl From<GetHistoryRes> for History {

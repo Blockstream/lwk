@@ -16,6 +16,7 @@ mod prune;
 mod registry;
 mod script_cache;
 mod spks;
+mod spv;
 mod stores;
 mod test_jade;
 mod test_ledger;

@@ -112,6 +112,10 @@ async function runIssueAssetTest() {
     const balanceAfterBurn = wollet.balance().entries().get(assetId.toString());
     assert.equal(balanceAfterBurn, issuedAsset + reissueAsset - burnAsset);
 
+    // Roundtrip V2 contract
+    const contractStr = '{"entity":{"domain":"example-issuer.com"},"initial_issuer_pubkey":"03566ecb682f1a49ccad62a6dbc5b4045d96d65912bbbb177b7121c27c01d91e6e","name":"Example Dollar","precision":8,"ticker":"EXUSD","version":2}';
+    assert.equal(lwk.Contract.fromString(contractStr).toString(), contractStr);
+
     console.log("Issue asset test passed");
   } catch (error) {
     console.error("Issue asset test failed:", error);

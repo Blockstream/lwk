@@ -28,6 +28,9 @@ pub enum LendingError {
         #[from] lending_contracts::programs::issuance_factory::IssuanceFactoryError,
     ),
 
+    #[error("Invalid issuance factory: {0}")]
+    InvalidIssuanceFactory(String),
+
     #[error("Invalid lending offer: {0}")]
     InvalidLendingOffer(String),
 

@@ -29,7 +29,10 @@ use crate::lending::network::to_simplicity_network;
 use crate::lending::{client::AnyClient, indexer::response::FactoryDetailsResponse};
 use crate::lending::{
     error::LendingError,
-    verification::{parse_and_verify_lending_offer, parse_and_verify_offer_acceptance},
+    verification::{
+        parse_and_verify_issuance_factory, parse_and_verify_lending_offer,
+        parse_and_verify_offer_acceptance, verify_issuance_factory_utxos,
+    },
 };
 
 pub struct LendingSession {
@@ -135,9 +138,20 @@ impl LendingSession {
             reissuance_flags: 0,
             network: to_simplicity_network(self.network),
         };
-        let issuance_factory = IssuanceFactory::new(issuance_factory_params);
 
-        // Fetch the prepare transaction to obtain the raw txouts for the factory utxos.
+        let factory_creation_tx = self.get_transaction(&factory.created_at_txid)?;
+        let verified_factory =
+            parse_and_verify_issuance_factory(&factory_creation_tx, issuance_factory_params)?;
+        if verified_factory.factory_asset_id != factory.factory_asset_id {
+            return Err(LendingError::InvalidIssuanceFactory(
+                "factory asset does not match the creation transaction".into(),
+            ));
+        }
+
+        let factory_asset_id = verified_factory.factory_asset_id;
+        let issuance_factory = verified_factory.factory;
+
+        // Fetch the transactions containing the current factory UTXOs.
         let prepare_tx = self.get_transaction(&factory.auth_utxo.txid)?;
         let program_tx = self.get_transaction(&factory.program_utxo.txid)?;
 
@@ -153,6 +167,24 @@ impl LendingSession {
             .get(factory.program_utxo.vout as usize)
             .ok_or_else(|| LendingError::Generic("program vout out of bounds".into()))?
             .clone();
+
+        let auth_is_wallet_utxo = self.wollet.explicit_utxos()?.into_iter().any(|utxo| {
+            utxo.outpoint == factory.auth_utxo
+                && utxo.unblinded.asset == factory_asset_id
+                && utxo.unblinded.value == NFT_AMOUNT
+        });
+        if !auth_is_wallet_utxo {
+            return Err(LendingError::InvalidIssuanceFactory(
+                "factory auth UTXO is not an unspent wallet UTXO".into(),
+            ));
+        }
+
+        verify_issuance_factory_utxos(
+            &issuance_factory,
+            factory_asset_id,
+            &auth_txout,
+            &program_txout,
+        )?;
 
         let collateral_utxo =
             self.get_utxo(details.collateral_asset_id, details.collateral_amount, &[])?;
@@ -180,7 +212,7 @@ impl LendingSession {
         ft.add_output(PartialOutput::new(
             auth_script,
             NFT_AMOUNT,
-            factory.factory_asset_id,
+            factory_asset_id,
         ));
 
         // - Input 1: program UTXO with borrower NFT issuance
@@ -1263,6 +1295,7 @@ impl LendingSessionBuilder {
 }
 
 pub struct FactoryDetails {
+    created_at_txid: Txid,
     factory_asset_id: AssetId,
     auth_utxo: OutPoint,
     program_utxo: OutPoint,
@@ -1289,6 +1322,7 @@ impl TryFrom<FactoryDetailsResponse> for FactoryDetails {
         ))?;
 
         Ok(Self {
+            created_at_txid: value.created_at_txid,
             factory_asset_id: value.factory_asset_id,
             auth_utxo: OutPoint {
                 txid: auth_utxo.txid,

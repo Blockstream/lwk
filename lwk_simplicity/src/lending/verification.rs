@@ -1,11 +1,13 @@
 use lending_contracts::programs::{
-    issuance_factory::{IssuanceFactory, IssuanceFactoryParameters},
+    issuance_factory::{IssuanceFactory, IssuanceFactoryCreation, IssuanceFactoryParameters},
     lending::LendingOffer,
     program::{MetadataProgram, SimplexProgram},
     script_auth::ScriptAuth,
 };
 use lending_contracts::utils::op_return_payload;
-use lwk_wollet::elements::{AssetId, OutPoint, Script, Transaction, TxIn, TxOut};
+use lwk_wollet::elements::{
+    confidential::Value, AssetBlindingNonce, AssetId, OutPoint, Script, Transaction, TxIn, TxOut,
+};
 use simplex::provider::SimplicityNetwork;
 
 use super::LendingError;
@@ -88,6 +90,153 @@ fn check_change_outputs<'a>(
             return Err("unexpected change output asset");
         }
     }
+    Ok(())
+}
+
+pub(crate) fn parse_and_verify_issuance_factory(
+    tx: &Transaction,
+    expected_parameters: IssuanceFactoryParameters,
+) -> Result<IssuanceFactoryCreation, LendingError> {
+    let creation = IssuanceFactory::try_from_tx(tx, expected_parameters.network)?;
+    let factory = &creation.factory;
+    let actual_parameters = *factory.get_parameters();
+
+    if actual_parameters.issuing_utxos_count != expected_parameters.issuing_utxos_count
+        || actual_parameters.reissuance_flags != expected_parameters.reissuance_flags
+    {
+        return Err(LendingError::InvalidIssuanceFactory(
+            "creation metadata does not match the expected factory parameters".to_string(),
+        ));
+    }
+
+    let expected_factory = IssuanceFactory::new(expected_parameters);
+    let factory_script = expected_factory.get_script_pubkey();
+    if factory.get_script_pubkey() != factory_script {
+        return Err(LendingError::InvalidIssuanceFactory(
+            "factory script does not match the expected parameters".to_string(),
+        ));
+    }
+
+    let factory_asset_id = creation.factory_asset_id;
+    let policy_asset = expected_parameters.network.policy_asset();
+    let metadata_index = IssuanceFactory::CREATION_METADATA_OUTPUT_INDEX;
+
+    (|| -> Result<(), &str> {
+        // Inputs: input 0 is the factory issuance
+        let Some([ref in0]) = tx.input.get(..1) else {
+            Err("too few inputs")?
+        };
+        if tx.input.len() > 1 {
+            Err("too many inputs")?
+        }
+
+        if in0.asset_issuance.is_null() {
+            Err("input 0 is not a factory issuance")?
+        }
+        if in0.asset_issuance.asset_blinding_nonce != AssetBlindingNonce::NEW_ISSUANCE {
+            Err("factory asset is not a new issuance")?
+        }
+        if in0.asset_issuance.amount.explicit() != Some(2) {
+            Err("factory issuance amount mismatch")?
+        }
+        if !matches!(
+            in0.asset_issuance.inflation_keys,
+            Value::Null | Value::Explicit(0)
+        ) {
+            Err("factory issuance must not create reissuance tokens")?
+        }
+        let (issued_asset, _token_asset) = in0.issuance_ids();
+        if issued_asset != factory_asset_id {
+            Err("factory asset does not match the issuance")?
+        }
+
+        // Outputs
+        let Some([ref out0, ref out1, ref out2]) = tx.output.get(..metadata_index + 1) else {
+            Err("too few outputs")?
+        };
+
+        // auth, program, metadata, change, fee
+        if tx.output.len() > 5 {
+            Err("too many outputs")?
+        }
+        if creation.auth_vout as usize != 0 || creation.program_vout as usize != 1 {
+            Err("non-canonical factory output layout")?
+        }
+
+        // Output 0: program auth output, factory asset, amount 1
+        let (auth_asset, auth_amount, auth_script) = parse_explicit(out0)?;
+        if auth_asset != factory_asset_id
+            || auth_amount != 1
+            || auth_script == factory_script
+            || auth_script.is_op_return()
+        {
+            Err("factory auth output mismatch")?
+        }
+
+        // Output 1: program output, same factory asset, amount 1
+        let (program_asset, program_amount, program_script) = parse_explicit(out1)?;
+        if program_asset != factory_asset_id
+            || program_amount != 1
+            || program_script != factory_script
+        {
+            Err("factory program output mismatch")?
+        }
+
+        // Output 2: OP_RETURN metadata
+        let (_, metadata_value, metadata_script) = parse_explicit(out2)?;
+        if !out2.is_null_data() || metadata_value != 0 || !metadata_script.is_op_return() {
+            Err("missing factory creation metadata")?
+        }
+        let actual_metadata =
+            op_return_payload(&metadata_script).ok_or("missing factory creation metadata")?;
+        if actual_metadata != factory.encode_metadata_op_return().as_slice() {
+            Err("factory creation metadata mismatch")?
+        }
+
+        // Change and fee outputs could only hold collateral or policy asset and must not
+        // replicate any of the protocol outputs.
+        check_change_outputs(
+            tx.output.iter().skip(metadata_index + 1),
+            &[&factory_script],
+            &[policy_asset],
+        )?;
+
+        Ok(())
+    })()
+    .map_err(|msg| LendingError::InvalidIssuanceFactory(msg.to_string()))?;
+
+    Ok(creation)
+}
+
+pub(crate) fn verify_issuance_factory_utxos(
+    factory: &IssuanceFactory,
+    factory_asset_id: AssetId,
+    auth_txout: &TxOut,
+    program_txout: &TxOut,
+) -> Result<(), LendingError> {
+    let factory_script = factory.get_script_pubkey();
+
+    let (auth_asset, auth_amount, auth_script) = parse_explicit(auth_txout)
+        .map_err(|msg| LendingError::InvalidIssuanceFactory(msg.to_string()))?;
+    if auth_asset != factory_asset_id
+        || auth_amount != 1
+        || auth_script == factory_script
+        || auth_script.is_op_return()
+    {
+        return Err(LendingError::InvalidIssuanceFactory(
+            "factory auth UTXO does not match the verified factory".to_string(),
+        ));
+    }
+
+    let (program_asset, program_amount, program_script) = parse_explicit(program_txout)
+        .map_err(|msg| LendingError::InvalidIssuanceFactory(msg.to_string()))?;
+    if program_asset != factory_asset_id || program_amount != 1 || program_script != factory_script
+    {
+        return Err(LendingError::InvalidIssuanceFactory(
+            "factory program UTXO does not match the verified factory".to_string(),
+        ));
+    }
+
     Ok(())
 }
 

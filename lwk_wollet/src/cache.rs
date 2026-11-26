@@ -374,9 +374,14 @@ impl Cache {
         // Remove inputs of new txs (they are spent now)
         self.unspent.retain(|o, _| !inputs_new.contains(o));
         // Remove outputs of deleted txs (after adding inputs, so that an output spent
-        // by another deleted tx does not remain in unspent)
-        self.unspent
-            .retain(|o, _| deleted_txids.iter().all(|txid| txid != &o.txid));
+        // by another deleted tx does not remain in unspent). A merged update can delete
+        // a tx and add it back: `update_heights` deletes before inserting, so the tx
+        // stays in the wallet and its outputs are kept.
+        let removed: HashSet<&Txid> = deleted_txids
+            .iter()
+            .filter(|txid| !txids_new.contains(txid))
+            .collect();
+        self.unspent.retain(|o, _| !removed.contains(&o.txid));
     }
 
     fn update_unspent_from_snapshot(
@@ -635,5 +640,54 @@ mod tests {
             .unwrap();
 
         assert_eq!(live.all_txids(), restored.all_txids());
+    }
+
+    #[test]
+    fn test_merged_delete_and_readd_keeps_output() {
+        use crate::descriptor::Chain;
+        use elements::bitcoin::bip32::ChildNumber;
+        use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+        use elements::{AssetId, OutPoint, Script, TxOut, TxOutSecrets};
+
+        let script = Script::from(vec![0x51]);
+        // A pays one output to a wallet script.
+        let a = Transaction {
+            version: 2,
+            lock_time: elements::LockTime::ZERO,
+            input: vec![],
+            output: vec![TxOut {
+                script_pubkey: script.clone(),
+                ..Default::default()
+            }],
+        };
+        let a_txid = a.txid();
+        let a0 = OutPoint::new(a_txid, 0);
+
+        let mut cache = Cache::default();
+        cache
+            .paths
+            .insert(script, (Chain::External, ChildNumber::from(0)));
+        let secrets = TxOutSecrets::new(
+            AssetId::from_byte_array([1u8; 32]),
+            AssetBlindingFactor::zero(),
+            1000,
+            ValueBlindingFactor::zero(),
+        );
+        cache.extend_unblinded([(a0, secrets)]);
+
+        // `Update::merge` of "A new", "A deleted" and "A new" again lists A both as new
+        // and as deleted.
+        cache
+            .update(
+                &[(a_txid, Some(100))],
+                &[a_txid],
+                &[(a_txid, a)],
+                false,
+                vec![],
+                false,
+            )
+            .unwrap();
+        assert!(cache.heights().contains_key(&a_txid));
+        assert!(cache.unspent().contains_key(&a0));
     }
 }

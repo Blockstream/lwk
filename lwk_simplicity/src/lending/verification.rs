@@ -1,4 +1,5 @@
 use lending_contracts::programs::{
+    asset_auth_vault::AssetAuthVault,
     issuance_factory::{IssuanceFactory, IssuanceFactoryCreation, IssuanceFactoryParameters},
     lending::LendingOffer,
     program::{MetadataProgram, SimplexProgram},
@@ -558,4 +559,145 @@ pub(crate) fn parse_and_verify_offer_acceptance(
     .map_err(|msg| LendingError::InvalidOfferAcceptance(msg.to_string()))?;
 
     Ok(active_offer)
+}
+
+pub(crate) fn parse_and_verify_offer_repayment(
+    repayment_tx: &Transaction,
+    acceptance_tx: &Transaction,
+    creation_tx: &Transaction,
+    protocol_fee_keeper_asset_id: AssetId,
+    network: SimplicityNetwork,
+    auth_tx: &Transaction,
+    factory_tx: &Transaction,
+) -> Result<LendingOffer, LendingError> {
+    const NFT_AMOUNT: u64 = 1;
+
+    let policy_asset = network.policy_asset();
+
+    let offer = parse_and_verify_offer_acceptance(
+        acceptance_tx,
+        creation_tx,
+        protocol_fee_keeper_asset_id,
+        network,
+        auth_tx,
+        factory_tx,
+    )?;
+
+    let params = *offer.get_parameters();
+    let collateral_asset = params.collateral_asset_id;
+    let collateral_amount = params.offer_parameters.collateral_amount;
+    let principal_asset = params.principal_asset_id;
+    let borrower_nft = params.borrower_nft_asset_id;
+
+    let total_debt = params.offer_parameters.get_total_amount_to_repay();
+    let total_protocol_fee = params.offer_parameters.get_total_protocol_fee();
+    let lender_vault_amount = total_debt.checked_sub(total_protocol_fee).ok_or_else(|| {
+        LendingError::InvalidOfferRepayment(
+            "total protocol fee exceeds total repayment amount".to_string(),
+        )
+    })?;
+    let protocol_fee_vault_amount = total_protocol_fee;
+
+    let active_offer_script = offer.get_script_pubkey();
+    let lender_vault = AssetAuthVault::new_finalized(params.get_lender_vault_parameters());
+    let lender_vault_script = lender_vault.get_script_pubkey();
+    let protocol_fee_vault =
+        AssetAuthVault::new_finalized(params.get_protocol_fee_vault_parameters());
+    let protocol_fee_vault_script = protocol_fee_vault.get_script_pubkey();
+
+    (|| -> Result<(), &str> {
+        // Inputs
+        let Some([ref in0, ref in1]) = repayment_tx.input.get(..2) else {
+            Err("too few inputs")?
+        };
+
+        // principal, fee funding
+        if repayment_tx.input.len() > 4 {
+            Err("too many inputs")?;
+        }
+
+        // Input 0: borrower NFT
+        // Burned in this transaction.
+        check_issuance(in0, None, None)?;
+
+        // Input 1: active offer covenant
+        // Spent to fully repay the loan and unlock the collateral.
+        check_issuance(in1, None, None)?;
+        let prev_out1 = get_prevout(acceptance_tx, in1.previous_output)?;
+        let (in1_asset, in1_value, in1_script) = parse_explicit(prev_out1)?;
+        if in1_asset != collateral_asset
+            || in1_value != collateral_amount
+            || in1_script != active_offer_script
+        {
+            Err("active covenant input invalid")?
+        }
+
+        // Remaining inputs fund the principal and fee.
+        for input in repayment_tx.input.iter().skip(2) {
+            check_issuance(input, None, None)?;
+        }
+
+        // Outputs
+        let Some([ref out0, ref out1, ref out2, ref out3]) = repayment_tx.output.get(..4) else {
+            Err("too few outputs")?
+        };
+
+        // principal change, fee, policy asset change
+        if repayment_tx.output.len() > 7 {
+            Err("too many outputs")?;
+        }
+
+        // Output 0: borrower NFT burn
+        let (out0_asset, out0_value, out0_script) = parse_explicit(out0)?;
+        if !out0_script.is_op_return() || out0_asset != borrower_nft || out0_value != NFT_AMOUNT {
+            Err("borrower NFT burn output invalid")?
+        }
+
+        // Output 1: finalized lender vault
+        let (out1_asset, out1_value, out1_script) = parse_explicit(out1)?;
+        if out1_asset != principal_asset
+            || out1_value != lender_vault_amount
+            || out1_script != lender_vault_script
+        {
+            Err("lender vault output mismatch")?
+        }
+
+        // Output 2: finalized protocol fee vault
+        let (out2_asset, out2_value, out2_script) = parse_explicit(out2)?;
+        if out2_asset != principal_asset
+            || out2_value != protocol_fee_vault_amount
+            || out2_script != protocol_fee_vault_script
+        {
+            Err("protocol fee vault output mismatch")?
+        }
+
+        // Output 3: collateral returned to the borrower
+        let (out3_asset, out3_value, out3_script) = parse_explicit(out3)?;
+        if out3_asset != collateral_asset
+            || out3_value != collateral_amount
+            || out3_script.is_op_return()
+            || out3_script == active_offer_script
+            || out3_script == lender_vault_script
+            || out3_script == protocol_fee_vault_script
+        {
+            Err("collateral return output invalid")?
+        }
+
+        // Change and fee outputs could only hold principal or policy asset and must not
+        // replicate any of the protocol outputs.
+        check_change_outputs(
+            repayment_tx.output.iter().skip(4),
+            &[
+                &active_offer_script,
+                &lender_vault_script,
+                &protocol_fee_vault_script,
+            ],
+            &[principal_asset, policy_asset],
+        )?;
+
+        Ok(())
+    })()
+    .map_err(|msg| LendingError::InvalidOfferRepayment(msg.to_string()))?;
+
+    Ok(offer)
 }

@@ -37,6 +37,9 @@ pub enum LendingError {
     #[error("Invalid offer acceptance: {0}")]
     InvalidOfferAcceptance(String),
 
+    #[error("Invalid offer repayment: {0}")]
+    InvalidOfferRepayment(String),
+
     #[error("Blinding error: {0}")]
     BlindingError(#[from] lwk_wollet::elements::pset::PsetBlindError),
 

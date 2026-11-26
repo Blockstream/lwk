@@ -31,7 +31,8 @@ use crate::lending::{
     error::LendingError,
     verification::{
         parse_and_verify_issuance_factory, parse_and_verify_lending_offer,
-        parse_and_verify_offer_acceptance, verify_issuance_factory_utxos,
+        parse_and_verify_offer_acceptance, parse_and_verify_offer_repayment,
+        verify_issuance_factory_utxos,
     },
 };
 
@@ -787,7 +788,19 @@ impl LendingSession {
         let creation_tx = self.get_transaction(&details.lending_creation_txid)?;
         let (factory_auth_tx, factory_tx) = self.extract_auth_and_factory_tx(&creation_tx)?;
 
-        let offer = parse_and_verify_lending_offer(
+        let repayment_tx = self.get_transaction(&details.repayment_txid)?;
+
+        let acceptance_txid = repayment_tx
+            .input
+            .get(1)
+            .ok_or_else(|| LendingError::Generic("repayment tx has no covenant input".into()))?
+            .previous_output
+            .txid;
+        let acceptance_tx = self.get_transaction(&acceptance_txid)?;
+
+        let offer = parse_and_verify_offer_repayment(
+            &repayment_tx,
+            &acceptance_tx,
             &creation_tx,
             details.protocol_fee_keeper_asset_id,
             simplex_network,
@@ -798,7 +811,6 @@ impl LendingSession {
 
         let finalized_vault = offer_params.get_lender_vault(0);
 
-        let repayment_tx = self.get_transaction(&details.repayment_txid)?;
         let vault_txout = repayment_tx
             .output
             .get(LENDER_VAULT_VOUT as usize)

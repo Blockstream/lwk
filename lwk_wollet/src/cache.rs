@@ -386,6 +386,9 @@ impl Cache {
     ) {
         let unspent = unspent
             .into_iter()
+            // As in `update_unspent`, an output that cannot be unblinded (e.g. sent to a wallet
+            // script with another blinding key) is not a wallet utxo.
+            .filter(|(op, _)| self.unblinded.contains_key(op))
             .filter_map(|(op, script)| {
                 self.unspent
                     .get(&op)

@@ -291,3 +291,6 @@ assert all(u.unblinded().value() == 1 for u in split_outputs)
 # Outputs without an explicit address get a fresh address each
 assert str(split_outputs[0].script_pubkey()) != str(split_outputs[1].script_pubkey())
 
+# Roundtrip of V2 contract
+contract_str = '{"entity":{"domain":"example-issuer.com"},"initial_issuer_pubkey":"03566ecb682f1a49ccad62a6dbc5b4045d96d65912bbbb177b7121c27c01d91e6e","name":"Example Dollar","precision":8,"ticker":"EXUSD","version":2}';
+assert str(Contract.from_string(contract_str)) == contract_str

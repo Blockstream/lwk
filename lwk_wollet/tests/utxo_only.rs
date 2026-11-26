@@ -111,6 +111,60 @@ fn test_esplora_waterfalls_utxo_only() {
         .all(|tx| !tx.outputs.is_empty()));
 }
 
+/// An output to a wallet script blinded with a key that is not the wallet's is unspent, so a
+/// utxo_only server returns it, but the wallet cannot unblind it: it must be ignored as in a
+/// full scan, instead of failing `balance()` and `utxos()` with "missing unblinded".
+#[test]
+fn test_waterfalls_utxo_only_cannot_unblind() {
+    let env = TestEnvBuilder::from_env().with_waterfalls().build();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let desc = WolletDescriptor::from_str(&desc).unwrap();
+
+    let network = Network::default_regtest();
+    let mut wollet = WolletBuilder::new(network, desc.clone()).build().unwrap();
+    let mut client = WaterfallsClientBuilder::new(&env.waterfalls_url(), network)
+        .build_blocking()
+        .unwrap();
+    let mut wollet_utxo_only = WolletBuilder::new(network, desc)
+        .utxo_only(true)
+        .build()
+        .unwrap();
+    let mut client_utxo_only = WaterfallsClientBuilder::new(&env.waterfalls_url(), network)
+        .utxo_only(true)
+        .build_blocking()
+        .unwrap();
+
+    let address = wollet.address(None).unwrap();
+    env.elementsd_sendtoaddress(address.address(), 1_000_000, None);
+    // Same script, blinded with a key unrelated to the wallet
+    let foreign_blinding_key = env.elementsd_getnewaddress().blinding_pubkey.unwrap();
+    let foreign = address
+        .address()
+        .to_unconfidential()
+        .to_confidential(foreign_blinding_key);
+    env.elementsd_sendtoaddress(&foreign, 20_000, None);
+    env.elementsd_generate(1);
+    std::thread::sleep(std::time::Duration::from_millis(2_000));
+
+    let update = client.full_scan(&wollet).unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
+    assert_eq!(wollet.utxos().unwrap().len(), 1);
+
+    let update = client_utxo_only
+        .full_scan(&wollet_utxo_only)
+        .unwrap()
+        .unwrap();
+    wollet_utxo_only.apply_update(update).unwrap();
+    assert_eq!(
+        wollet.balance().unwrap(),
+        wollet_utxo_only.balance().unwrap()
+    );
+    assert_eq!(wollet.utxos().unwrap(), wollet_utxo_only.utxos().unwrap());
+}
+
 #[test]
 fn test_waterfalls_utxo_only_with_dummy() {
     let env = TestEnvBuilder::from_env().with_waterfalls().build();

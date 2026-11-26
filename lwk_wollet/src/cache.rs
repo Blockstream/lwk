@@ -18,6 +18,11 @@ fn tx_key(txid: &Txid) -> String {
     format!("wollet:tx:{}", txid)
 }
 
+/// Height used to order txs, unconfirmed txs (`None`) are considered above any confirmed tx.
+fn height_sort_key(height: Option<Height>) -> Height {
+    height.unwrap_or(Height::MAX)
+}
+
 /// `Cache` is a cache of wallet data, like wallet transactions.
 /// It is fully reconstructable from the CT Descriptor and the blockchain.
 pub struct Cache {
@@ -318,11 +323,36 @@ impl Cache {
         let mut sorted: Vec<Txid> = self.heights.keys().cloned().collect();
         sorted.sort_by(|a, b| {
             // cannot panic here, sorted is heights keys
-            let ha = self.heights[a].unwrap_or(u32::MAX);
-            let hb = self.heights[b].unwrap_or(u32::MAX);
+            let ha = height_sort_key(self.heights[a]);
+            let hb = height_sort_key(self.heights[b]);
             hb.cmp(&ha).then(b.cmp(a))
         });
         self.sorted_txids = sorted;
+    }
+
+    /// Outpoints spent by the known txs (in `heights` but not in `skip`) with a
+    /// `height_sort_key` of `min_key` or above.
+    ///
+    /// A spending tx cannot confirm before the tx it spends, so to check the outputs of a tx
+    /// only the txs at its height or above, and the unconfirmed ones, need to be read.
+    /// `sorted_txids` is ordered by descending height with unconfirmed txs first, so the
+    /// iteration stops at the first lower tx. `Height::MIN` reads all the known txs. This
+    /// requires `sorted_txids` to be rebuilt after `heights` is updated.
+    fn spent_by_known_txs(
+        &self,
+        min_key: Height,
+        skip: &HashSet<&Txid>,
+        txs: &[(Txid, Transaction)],
+    ) -> HashSet<OutPoint> {
+        self.sorted_txids
+            .iter()
+            .take_while(|txid| {
+                height_sort_key(self.heights.get(*txid).copied().flatten()) >= min_key
+            })
+            .filter(|txid| !skip.contains(txid))
+            .filter_map(|txid| self.tx_as_fallback(txid, txs))
+            .flat_map(|tx| tx.input.into_iter().map(|i| i.previous_output))
+            .collect()
     }
 
     fn update_unspent(
@@ -331,10 +361,11 @@ impl Cache {
         deleted_txids: &[Txid],
         new_txs: &[(Txid, Transaction)],
         known_txids: &HashSet<Txid>,
+        readded_unconfirmed: &HashSet<Txid>,
     ) {
         let txids_new: HashSet<&Txid> = txid_height_new.iter().map(|(txid, _)| txid).collect();
 
-        let outputs_new: Vec<(OutPoint, Script)> = self
+        let mut outputs_new: Vec<(OutPoint, Script)> = self
             .unblinded
             .keys()
             .filter(|op| txids_new.contains(&op.txid))
@@ -346,6 +377,49 @@ impl Cache {
             })
             .filter(|(_, script)| self.paths.contains_key(script))
             .collect();
+
+        // A tx that is new to `heights` can have outputs already spent by a known tx, for example
+        // when it comes back after being deleted by a previous update, or when its spending tx
+        // was found first. Inputs of the txs in this update are removed below.
+        //
+        // Scans can read servers that are at different heights, so a tx can be reported
+        // unconfirmed while its spending tx is cached as confirmed, which is then not read.
+        // - For a tx coming back unconfirmed, all the known txs are read.
+        // - The unspent outputs of known txs in this update, for example whose height changed,
+        //   are checked again, so that an output added with an inconsistent height is removed
+        //   once a scan reports its height.
+        let known_in_update: HashSet<&Txid> = txids_new
+            .iter()
+            .copied()
+            .filter(|txid| known_txids.contains(*txid))
+            .collect();
+        let known_unspent: Vec<OutPoint> = if known_in_update.is_empty() {
+            Vec::new()
+        } else {
+            self.unspent
+                .keys()
+                .filter(|op| known_in_update.contains(&op.txid))
+                .copied()
+                .collect()
+        };
+        let min_key = if outputs_new
+            .iter()
+            .any(|(op, _)| readded_unconfirmed.contains(&op.txid))
+        {
+            Some(Height::MIN)
+        } else {
+            outputs_new
+                .iter()
+                .map(|(op, _)| op)
+                .chain(known_unspent.iter())
+                .map(|op| height_sort_key(self.heights.get(&op.txid).copied().flatten()))
+                .min()
+        };
+        if let Some(min_key) = min_key {
+            let spent = self.spent_by_known_txs(min_key, &txids_new, new_txs);
+            outputs_new.retain(|(op, _)| !spent.contains(op));
+            self.unspent.retain(|op, _| !spent.contains(op));
+        }
 
         let inputs_new: HashSet<OutPoint> = txids_new
             .iter()
@@ -508,6 +582,17 @@ impl Cache {
         use_unspent_snapshot: bool,
     ) -> Result<(), Error> {
         // TODO: cleanup this functions
+        // Txs coming back unconfirmed after a previous update deleted them, they are still in the
+        // txs store. A server reporting a tx as confirmed has seen its block, so the spending tx
+        // is at that height or above, while one reporting it as unconfirmed can be behind the
+        // cached spending tx.
+        let readded_unconfirmed: HashSet<Txid> = txid_height_new
+            .iter()
+            .filter(|(txid, height)| {
+                height.is_none() && !self.heights.contains_key(txid) && self.txids.contains(txid)
+            })
+            .map(|(txid, _)| *txid)
+            .collect();
         self.extend_all_txs(txs)?;
         // Txids known before this update, so `update_unspent` can distinguish new
         // txs from txs whose height only changed.
@@ -526,7 +611,13 @@ impl Cache {
         if use_unspent_snapshot || utxo_only {
             self.update_unspent_from_snapshot(unspent, txs);
         } else {
-            self.update_unspent(txid_height_new, deleted_txids, txs, &known_txids);
+            self.update_unspent(
+                txid_height_new,
+                deleted_txids,
+                txs,
+                &known_txids,
+                &readded_unconfirmed,
+            );
         }
         Ok(())
     }
@@ -635,5 +726,159 @@ mod tests {
             .unwrap();
 
         assert_eq!(live.all_txids(), restored.all_txids());
+    }
+
+    #[test]
+    fn test_output_spent_by_known_tx_is_not_unspent() {
+        use crate::descriptor::Chain;
+        use elements::bitcoin::bip32::ChildNumber;
+        use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+        use elements::{AssetId, OutPoint, Script, TxIn, TxOut, TxOutSecrets};
+
+        let script = Script::from(vec![0x51]);
+        // A pays one output to a wallet script.
+        let a = Transaction {
+            version: 2,
+            lock_time: elements::LockTime::ZERO,
+            input: vec![],
+            output: vec![TxOut {
+                script_pubkey: script.clone(),
+                ..Default::default()
+            }],
+        };
+        let a_txid = a.txid();
+        let a0 = OutPoint::new(a_txid, 0);
+        // B spends A:0.
+        let b = Transaction {
+            version: 2,
+            lock_time: elements::LockTime::ZERO,
+            input: vec![TxIn {
+                previous_output: a0,
+                ..Default::default()
+            }],
+            output: vec![],
+        };
+        let b_txid = b.txid();
+        let secrets = TxOutSecrets::new(
+            AssetId::from_byte_array([1u8; 32]),
+            AssetBlindingFactor::zero(),
+            1000,
+            ValueBlindingFactor::zero(),
+        );
+
+        // (new txids with heights, deleted txids, downloaded txs)
+        type Step = (
+            Vec<(Txid, Option<u32>)>,
+            Vec<Txid>,
+            Vec<(Txid, Transaction)>,
+        );
+        let a_seen =
+            |height| -> Step { (vec![(a_txid, height)], vec![], vec![(a_txid, a.clone())]) };
+        let a_back = |height| -> Step { (vec![(a_txid, height)], vec![], vec![]) };
+        let b_seen =
+            |height| -> Step { (vec![(b_txid, height)], vec![], vec![(b_txid, b.clone())]) };
+        let a_missing: Step = (vec![], vec![a_txid], vec![]);
+        // C is an unrelated wallet tx.
+        let c = Transaction {
+            version: 2,
+            lock_time: elements::LockTime::ZERO,
+            input: vec![],
+            output: vec![],
+        };
+        let c_seen = |height| -> Step {
+            (
+                vec![(c.txid(), height)],
+                vec![],
+                vec![(c.txid(), c.clone())],
+            )
+        };
+
+        let cases: Vec<(&str, Vec<Step>, bool)> = vec![
+            (
+                // A drops out of the history for one scan while B stays, then comes back.
+                "re-added tx, confirmed spender",
+                vec![
+                    a_seen(Some(100)),
+                    b_seen(Some(101)),
+                    a_missing.clone(),
+                    a_back(Some(100)),
+                ],
+                false,
+            ),
+            (
+                "re-added tx, unconfirmed spender",
+                vec![
+                    a_seen(Some(100)),
+                    b_seen(None),
+                    a_missing.clone(),
+                    a_back(Some(100)),
+                ],
+                false,
+            ),
+            (
+                // B is found first, through another wallet script, then A is found.
+                "first seen tx, already known spender",
+                vec![b_seen(Some(101)), a_seen(Some(100))],
+                false,
+            ),
+            (
+                "first seen tx, already known spender in the same block",
+                vec![b_seen(Some(100)), a_seen(Some(100))],
+                false,
+            ),
+            (
+                // A comes back from a server that has not seen block 101 yet, while a previous
+                // scan cached B at 101.
+                "re-added tx reported unconfirmed, spender confirmed",
+                vec![
+                    a_seen(None),
+                    b_seen(None),
+                    (vec![(b_txid, Some(101))], vec![a_txid], vec![]),
+                    a_back(None),
+                ],
+                false,
+            ),
+            (
+                "re-added tx reported unconfirmed, spender confirmed below the last block",
+                vec![
+                    a_seen(None),
+                    b_seen(None),
+                    (vec![(b_txid, Some(101))], vec![a_txid], vec![]),
+                    c_seen(Some(102)),
+                    a_back(None),
+                ],
+                false,
+            ),
+            (
+                // A is first reported by a server that has not seen block 101 yet, then with its
+                // height.
+                "first seen tx reported unconfirmed, then confirmed",
+                vec![b_seen(Some(101)), a_seen(None), a_back(Some(101))],
+                false,
+            ),
+            (
+                "re-added tx, no spender",
+                vec![a_seen(Some(100)), a_missing, a_back(Some(100))],
+                true,
+            ),
+        ];
+
+        for (name, steps, expected_unspent) in cases {
+            let mut cache = Cache::default();
+            cache
+                .paths
+                .insert(script.clone(), (Chain::External, ChildNumber::from(0)));
+            cache.extend_unblinded([(a0, secrets)]);
+            for (new, deleted, txs) in steps {
+                cache
+                    .update(&new, &deleted, &txs, false, vec![], false)
+                    .unwrap();
+            }
+            assert_eq!(
+                cache.unspent().contains_key(&a0),
+                expected_unspent,
+                "{name}"
+            );
+        }
     }
 }

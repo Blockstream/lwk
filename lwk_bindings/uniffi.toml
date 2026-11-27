@@ -6,3 +6,6 @@ cdylib_name = "lwk"
 
 [bindings.swift]
 module_name = "lwk"
+
+[bindings.csharp]
+access_modifier = "public"

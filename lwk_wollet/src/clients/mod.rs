@@ -66,6 +66,8 @@ pub struct EsploraClientBuilder {
     token_provider: TokenProvider,
     max_response_size: usize,
     scan_timeout: std::time::Duration,
+    #[cfg(not(target_arch = "wasm32"))]
+    proxy: Option<String>,
 }
 
 /// A builder for the [`crate::clients::asyncr::WaterfallsClient`] or [`crate::clients::blocking::WaterfallsClient`]
@@ -127,6 +129,8 @@ impl EsploraClientBuilder {
             token_provider: TokenProvider::None,
             max_response_size: DEFAULT_MAX_RESPONSE_SIZE,
             scan_timeout: DEFAULT_SCAN_TIMEOUT,
+            #[cfg(not(target_arch = "wasm32"))]
+            proxy: None,
         }
     }
 
@@ -211,6 +215,25 @@ impl EsploraClientBuilder {
         self.scan_timeout = scan_timeout;
         self
     }
+
+    /// Send every request through a proxy, e.g. `socks5h://127.0.0.1:9050` for a local Tor
+    /// daemon.
+    ///
+    /// `proxy` is the url of the proxy, with one of the schemes `socks5h`, `socks5`, `http`
+    /// or `https`; an invalid one makes `build` return an error.
+    ///
+    /// With `socks5h://` the host of the server is sent to the proxy and resolved there,
+    /// which `.onion` urls require. With `socks5://` the host is resolved locally first, so
+    /// a DNS query for the server still leaves this machine.
+    ///
+    /// The OAuth2 token of [`TokenProvider::Blockstream`] is fetched through the proxy too.
+    ///
+    /// Not available on wasm, where the browser decides how a request is routed.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn proxy(mut self, proxy: &str) -> Self {
+        self.proxy = Some(proxy.to_string());
+        self
+    }
 }
 
 #[cfg(feature = "esplora")]
@@ -280,6 +303,16 @@ impl WaterfallsClientBuilder {
     /// See [`EsploraClientBuilder::scan_timeout`].
     pub fn scan_timeout(mut self, scan_timeout: std::time::Duration) -> Self {
         self.inner.scan_timeout = scan_timeout;
+        self
+    }
+
+    /// Send every request through a proxy, e.g. `socks5h://127.0.0.1:9050` for a local Tor
+    /// daemon.
+    ///
+    /// See [`EsploraClientBuilder::proxy`].
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn proxy(mut self, proxy: &str) -> Self {
+        self.inner.proxy = Some(proxy.to_string());
         self
     }
 }

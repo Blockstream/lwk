@@ -782,6 +782,35 @@ mod tests {
     }
 
     #[test]
+    fn from_seed_with_network() {
+        use elements_miniscript::bitcoin::hex::FromHex;
+        let network = lwk_common::Network::Liquid;
+
+        // Same wallet as the mnemonic signer
+        let expected = SwSigner::new_with_network(lwk_test_util::TEST_MNEMONIC, network).unwrap();
+        let seed = expected.seed().unwrap();
+        let signer = SwSigner::from_seed_with_network(&seed, network).unwrap();
+        assert_eq!(signer.xpub(), expected.xpub());
+        assert_eq!(
+            signer.slip77_master_blinding_key().unwrap(),
+            expected.slip77_master_blinding_key().unwrap()
+        );
+        assert_eq!(
+            signer.derive_bip85_mnemonic(0, 12).unwrap(),
+            expected.derive_bip85_mnemonic(0, 12).unwrap()
+        );
+        assert_eq!(signer.seed(), Some(seed));
+        assert!(signer.mnemonic().is_none());
+
+        // BIP39 test vector with passphrase "TREZOR"
+        let seed = "c55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04";
+        let seed = <[u8; 64]>::from_hex(seed).unwrap();
+        let signer = SwSigner::from_seed_with_network(&seed, network).unwrap();
+        let root = signer.derive_xprv(&DerivationPath::master()).unwrap();
+        assert_eq!(root.to_string(), "xprv9s21ZrQH143K3h3fDYiay8mocZ3afhfULfb5GX8kCBdno77K4HiA15Tg23wpbeF1pLfs1c5SPmYHrEpTuuRhxMwvKDwqdKiGJS9XFKzUsAF");
+    }
+
+    #[test]
     fn signer_ecdsa_opt() {
         // Sign with the default option (low R) and then with the "no grind" option
         let mut signer = SwSigner::new_with_network(

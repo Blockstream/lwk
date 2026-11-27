@@ -20,6 +20,7 @@ This section showcases a series of projects that are built on LWK or its compone
 |[Shopstr](https://shopstr.store/)| Nostr Marketplace| Server| TypeScript|
 |[Ibis Wallet](https://github.com/aeonBTC/IbisWallet)| Atomic swaps| Wallet| Kotlin|
 |[EmVault](https://github.com/gmikeska/emvault)| Multisig custody| Library| Rust|
+|[GroupVault](https://groupvault.io)| Multisig custody| Wallet| Closed source|
 
 
 Feel free to open a PR to add or remove your product.
@@ -161,6 +162,14 @@ Ibis is open source, source available in the [Github repository](https://github.
 EmVault uses LWK (`lwk_wollet` and `lwk_common`) for its Liquid support, with Electrum and Esplora/Waterfalls sync built on the LWK clients.
 
 EmVault is open source, source available in the [Github repository](https://github.com/gmikeska/emvault)
+
+
+## GroupVault
+[GroupVault](https://groupvault.io) is a multisig custody platform for groups and individuals, with vaults on both Bitcoin and Liquid.
+
+GroupVault uses LWK through [EmVault](https://github.com/gmikeska/emvault), the open-source custody library created by the Emerald Foundation, and uses LWK_wasm in the browser for Jade PSET signing.
+
+GroupVault is closed source.
 
 
 # Unknown users

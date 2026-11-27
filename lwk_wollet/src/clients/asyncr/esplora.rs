@@ -762,6 +762,7 @@ impl EsploraClient {
                 // `Data::scripts` will be wrong too, this doesn't seem to impact the correctness of the scan.
                 let chain: Chain = (&desc).try_into().unwrap_or(Chain::External);
 
+                let page_offset = page * WATERFALLS_MAX_ADDRESSES as u32;
                 let max = chain_history
                     .iter()
                     .enumerate()
@@ -769,11 +770,10 @@ impl EsploraClient {
                     .map(|(i, _)| i as u32)
                     .max();
                 if let Some(max) = max {
-                    data.last_unused[chain] = max + 1;
+                    data.last_unused[chain] = page_offset + max + 1;
                 }
                 for (i, script_history) in chain_history.iter().enumerate() {
-                    let child =
-                        ChildNumber::from(page * WATERFALLS_MAX_ADDRESSES as u32 + i as u32);
+                    let child = ChildNumber::from(page_offset + i as u32);
                     let (script, blinding_pubkey, cached) = cache.get_or_derive(chain, child)?;
                     if !cached {
                         data.scripts

@@ -26,7 +26,7 @@ use lwk_common::{
     get_genesis_hash, input_has_non_default_sighash, is_taproot_input, SighashCtx, SighashError,
     Signer,
 };
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 /// Possible errors when signing with the software signer [`SwSigner`]
 #[derive(thiserror::Error, Debug)]
@@ -161,6 +161,7 @@ pub struct SwSigner {
     xprv: Xpriv,
     secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
     mnemonic: Option<Mnemonic>,
+    seed: Option<Zeroizing<[u8; 64]>>,
     ecdsa_sign_opt: EcdsaSignOpt,
     network: lwk_common::Network,
 }
@@ -189,22 +190,34 @@ impl SwSigner {
         mnemonic: &str,
         network: lwk_common::Network,
     ) -> Result<Self, NewError> {
-        let secp = Secp256k1::new();
         let mnemonic: Mnemonic = mnemonic.parse()?;
-        let seed = mnemonic.to_seed("");
+        let seed = Zeroizing::new(mnemonic.to_seed(""));
+        let mut signer = Self::from_seed_with_network(&seed, network)?;
+        signer.mnemonic = Some(mnemonic);
+        Ok(signer)
+    }
 
+    /// Creates a new software signer from the given BIP39 seed and network.
+    ///
+    /// Lets the caller derive the seed itself, e.g. with a passphrase or from a
+    /// non-English mnemonic. [`Self::mnemonic()`] returns `None`.
+    pub fn from_seed_with_network(
+        seed: &[u8; 64],
+        network: lwk_common::Network,
+    ) -> Result<Self, NewError> {
         let btc_network = if network.is_mainnet() {
             bitcoin::Network::Bitcoin
         } else {
             bitcoin::Network::Testnet
         };
 
-        let xprv = Xpriv::new_master(btc_network, &seed)?;
+        let xprv = Xpriv::new_master(btc_network, seed)?;
 
         Ok(Self {
             xprv,
-            secp,
-            mnemonic: Some(mnemonic),
+            secp: Secp256k1::new(),
+            mnemonic: None,
+            seed: Some(Zeroizing::new(*seed)),
             ecdsa_sign_opt: EcdsaSignOpt::default(),
             network,
         })
@@ -264,6 +277,7 @@ impl SwSigner {
             xprv,
             secp: Secp256k1::new(),
             mnemonic: None,
+            seed: None,
             ecdsa_sign_opt: EcdsaSignOpt::default(),
             network,
         })
@@ -298,9 +312,9 @@ impl SwSigner {
         Xpub::from_priv(&self.secp, &self.xprv)
     }
 
-    /// Return the seed of the signer if it has been initialized with the mnemonic (can't provide the seed if initialized with xprv)
+    /// Return the seed of the signer if it has been initialized with the mnemonic or the seed (can't provide the seed if initialized with xprv)
     pub fn seed(&self) -> Option<[u8; 64]> {
-        self.mnemonic.as_ref().map(|m| m.to_seed(""))
+        self.seed.as_deref().copied()
     }
 
     /// Return the mnemonic of the signer if it has been initialized with the mnemonic (can't provide the mnemonic if initialized with xprv)
@@ -330,7 +344,7 @@ impl SwSigner {
     ///
     /// # Returns
     /// * `Ok(Mnemonic)` - The derived BIP85 mnemonic
-    /// * `Err(SignError::Bip85MnemonicNotAvailable)` - If the signer was not initialized with a mnemonic
+    /// * `Err(SignError::Bip85MnemonicNotAvailable)` - If the signer was initialized with an xprv
     /// * `Err(SignError::Bip85Derivation)` - If BIP85 derivation fails
     ///
     /// # Example
@@ -349,12 +363,6 @@ impl SwSigner {
         index: u32,
         word_count: u32,
     ) -> Result<Mnemonic, SignError> {
-        // Check if we have a mnemonic available
-        let _mnemonic = self
-            .mnemonic
-            .as_ref()
-            .ok_or_else(|| SignError::Bip85MnemonicNotAvailable)?;
-
         // Convert the elements Xpriv to a standard bitcoin Xpriv for BIP85
         let seed = self
             .seed()
@@ -771,6 +779,35 @@ mod tests {
         assert_eq!(signer.xpub(), xpub);
         assert!(signer.mnemonic().is_none());
         assert!(signer.seed().is_none());
+    }
+
+    #[test]
+    fn from_seed_with_network() {
+        use elements_miniscript::bitcoin::hex::FromHex;
+        let network = lwk_common::Network::Liquid;
+
+        // Same wallet as the mnemonic signer
+        let expected = SwSigner::new_with_network(lwk_test_util::TEST_MNEMONIC, network).unwrap();
+        let seed = expected.seed().unwrap();
+        let signer = SwSigner::from_seed_with_network(&seed, network).unwrap();
+        assert_eq!(signer.xpub(), expected.xpub());
+        assert_eq!(
+            signer.slip77_master_blinding_key().unwrap(),
+            expected.slip77_master_blinding_key().unwrap()
+        );
+        assert_eq!(
+            signer.derive_bip85_mnemonic(0, 12).unwrap(),
+            expected.derive_bip85_mnemonic(0, 12).unwrap()
+        );
+        assert_eq!(signer.seed(), Some(seed));
+        assert!(signer.mnemonic().is_none());
+
+        // BIP39 test vector with passphrase "TREZOR"
+        let seed = "c55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04";
+        let seed = <[u8; 64]>::from_hex(seed).unwrap();
+        let signer = SwSigner::from_seed_with_network(&seed, network).unwrap();
+        let root = signer.derive_xprv(&DerivationPath::master()).unwrap();
+        assert_eq!(root.to_string(), "xprv9s21ZrQH143K3h3fDYiay8mocZ3afhfULfb5GX8kCBdno77K4HiA15Tg23wpbeF1pLfs1c5SPmYHrEpTuuRhxMwvKDwqdKiGJS9XFKzUsAF");
     }
 
     #[test]
